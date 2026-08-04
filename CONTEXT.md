@@ -10,7 +10,9 @@ they own.
 
 **Engine**:
 The part of corerules that is distributed — the rules logic and the interface. Carries no
-licensed content of its own.
+licensed content of its own. Native to AD&D 2e, not a generic RPG engine: it knows a closed set
+of 2e concepts and Content Packs supply instances, never new kinds. **Closed kinds, open
+enumerations** — the Engine owns the shape of a thing, the pack owns its contents.
 _Avoid_: core, app, platform
 
 **Content Pack**:
@@ -39,6 +41,8 @@ _Avoid_: monster sheet, creature, NPC
 A package from a Complete Handbook that modifies a parent class — restrictions, benefits,
 proficiencies. Meaningless without the class it attaches to.
 _Avoid_: subclass, archetype, specialisation, template
+_Collision_: PCGen, the nearest prior art, uses "kit" for a one-shot bundle of creation choices
+and "template" for a creature overlay. Neither is our meaning; say so when comparing.
 
 **Campaign**:
 A table's ongoing game: which rule options are in force, which Content Packs are loaded, and

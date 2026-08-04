@@ -9,7 +9,13 @@ questions. v1's scope is **creating and persisting AD&D 2nd Edition characters**
 ## Notes
 
 **Domain.** AD&D 2nd Edition: the core books (PHB, DMG) plus the PHBR "Complete Book of…"
-series. Old-school RPG character management.
+series. Old-school RPG character management. Wagner owns 100% of the published AD&D 1e and 2e
+material and his table exercises all of it, so the book list is never a scoping filter — scope by
+**mechanical shape** instead.
+
+**Release roadmap** (settled in [ticket 03](issues/03-which-complete-handbooks.md)):
+**v1** core + PHBR kits, class and racial · **v2** campaign settings, psionics, further books TBD
+· **v3** Player's Option.
 
 **Skills every session should consult.** `/grilling` and `/domain-modeling`. Keep the glossary
 in `CONTEXT.md` current as terms resolve — do not batch glossary updates.
@@ -29,11 +35,19 @@ in `CONTEXT.md` current as terms resolve — do not batch glossary updates.
   SmartScreen warnings and how to get past them on each OS.
 - **Release via GitHub Actions.** Wagner has never used Actions. Any ticket touching CI must
   produce a literal step-by-step checklist of the manual steps, not a pointer to documentation.
+- **The engine is native to AD&D 2e, not a generic RPG engine.** Serving AD&D was always the whole
+  intent. Closed set of object kinds, packs supply instances — but **closed kinds, open
+  enumerations**: the engine owns the shape, the pack owns the contents.
 
-**Permanent constraint.** Sync between clients — LAN or internet — is a certain future
-direction, deliberately excluded from v1. No v1 decision may foreclose it. In practice this
-means stable global identifiers rather than local autoincrements, and a persistence format
-that can be diffed and reconciled.
+**Permanent constraints.** Two, both of the same shape — excluded from v1, but no v1 decision may
+foreclose them:
+
+- **Sync between clients**, LAN or internet, is a certain future direction. In practice this means
+  stable global identifiers rather than local autoincrements, and a persistence format that can be
+  diffed and reconciled.
+- **v2 and v3** — campaign settings, psionics, Player's Option. In practice this means enumerations
+  stay open, the patch mechanism takes scope as a parameter, and the character records which packs
+  it was built against.
 
 **Language.** Artifacts in English. Conversation with Wagner in Portuguese.
 
@@ -41,15 +55,30 @@ that can be diffed and reconciled.
 
 <!-- one line per closed ticket: enough to judge relevance, then follow the link for detail -->
 
-_Nothing resolved yet — the map was charted in one session and resolves no tickets._
+- [Prior art: how existing tools model AD&D 2e content](issues/01-prior-art-2e-content-modelling.md)
+  — the engine-without-content architecture is proven three times over, but **nobody anywhere
+  models 2e's rules as loadable data**: PCGen has no 2e dataset and never did, the live Foundry
+  OSR systems compute nothing, and the Roll20 2e sheet hardcodes everything and has no kits. Borrow
+  Foundry's versioned manifest, typed lookup tables, class *group* as an entity, declarative
+  prerequisites and choices-not-derived-values character files; avoid name-as-identity, `.MOD`-style
+  patching, a game-global XP table, an undeclared type namespace, and above all any second
+  expression evaluator. "Engine computes, user supplies the tables" has no shipping precedent.
+- [Which Complete handbooks are in v1](issues/03-which-complete-handbooks.md) — **all of them, and
+  the book list was the wrong axis**: Wagner owns everything and his table plays everything, so
+  scope by mechanical shape. The series reduces to three shapes — kit-on-class, kit-on-race,
+  parallel subsystem — and v1 takes the first two. The engine is **native to 2e** (closed kinds,
+  open enumerations), which is affordable precisely because the edition is dead and its concept set
+  closed by history. Psionics and campaign settings go to v2 despite five settings being in active
+  play, because a setting is not content but a set of overrides to the central model; Player's
+  Option to v3. Both get the map's non-foreclosure treatment.
 
 ## Not yet specified
 
-- **Psionics as a parallel subsystem.** The Complete Psionics Handbook brings power scores,
-  PSPs and disciplines — not kits layered on the core model, but a second character subsystem.
-  Cannot be phrased sharply until the handbook scope and the content pack format settle.
 - **How book content actually gets into the tool.** The packs don't ship, so somebody types
-  them. Authoring? Import? A pack editor? Shape depends entirely on the pack format.
+  them. Authoring? Import? A pack editor? Shape depends entirely on the pack format. Data point
+  from ticket 01: PCGen's answer is text files plus an autoformatter plus a converter plus
+  editor syntax definitions, and its own docs concede list editing takes "a text-editing program
+  and patience". With Wagner owning 100% of the published material, the volume here is large.
 - **The derived-statistic computation model.** THAC0, saving throws, armour class,
   encumbrance — computed on read or stored on the character? Depends on whether the tool
   validates or merely records.
@@ -60,10 +89,23 @@ _Nothing resolved yet — the map was charted in one session and resolves no tic
 
 ## Out of scope
 
+- **Campaign settings** — Dark Sun, Dragonlance, Forgotten Realms, Ravenloft, Planescape, and the
+  rest. **v2**, ruled out by [ticket 03](issues/03-which-complete-handbooks.md) despite all five
+  being in active play at Wagner's table, because a setting is not more content: it is a set of
+  overrides to the central model. Dark Sun is the proof — everything it adds is data under the
+  2e-native decision *except* ability scores ranging 5–24 and a wild psionic talent on every
+  character. Whether a setting is just another pack or a first-class engine concept was put to
+  Wagner and deferred with it.
+- **Psionics** — the Complete Psionics Handbook's power scores, PSPs, sciences and devotions.
+  **v2**, ruled out by ticket 03. It is the one PHBR volume that is not additive: a second
+  character subsystem rather than kits layered on the core model. Noted risk, raised and
+  overruled: psionics is the format's hardest load test, and deferring it entirely — rather than
+  carrying a worked example in the v1 spec as proof of load — risks discovering in v2 that the
+  format cannot express it, which is exactly how PCGen failed.
 - **Player's Option** (Combat & Tactics, Skills & Powers, Spells & Magic) — these *replace*
   the core character model rather than extend it: Strength becomes Stamina + Muscle, character
   generation becomes point-buy, combat resolution is rewritten. That is a variant-configuration
-  problem, and a separate effort.
+  problem. **v3**, per ticket 03's roadmap.
 - **Unearthed Arcana** — 1st Edition; explicitly dropped during charting.
 - **Campaigns** — a genuinely second aggregate: which rule options are switched on, which packs
   are loaded, party membership, session state. Post-v1.
