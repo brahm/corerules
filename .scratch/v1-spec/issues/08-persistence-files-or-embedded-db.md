@@ -19,8 +19,12 @@ Weigh:
   replication story.
 - **Querying** — searching across characters and packs (every kit available to a 3rd-level
   dwarf fighter, say) is trivial in SQL and manual over files.
-- **Packaging cost** — SQLite in Electron means a native module, rebuilt per platform, which
-  complicates the CI matrix in ticket 09.
+- ~~**Packaging cost**~~ — **this axis is gone.** [Ticket 02's research](./02-electron-packaging-and-release.md)
+  established that `node:sqlite` is built into Electron (43.3.0 bundles Node 24.18.1; Stability 1.2,
+  no flag since Node 23.4.0), so SQLite costs zero native modules, zero per-platform rebuilds and
+  zero ASAR unpacking. Decide on backup, portability, sync and querying alone. One caveat to
+  discharge first: that was verified through Electron's issue tracker and Node's docs, not a
+  packaged-app spike — confirm with a five-minute test before relying on it.
 
 Also: where on disk? Each OS has a conventional application-data location, and Electron
 exposes them — but a user-visible, user-chosen folder may serve the backup story better.

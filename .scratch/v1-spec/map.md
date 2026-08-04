@@ -31,8 +31,12 @@ in `CONTEXT.md` current as terms resolve — do not batch glossary updates.
   Electron over Tauri because Tauri's system webviews (WebKitGTK / WebView2 / WKWebView) mean
   three rendering engines, which is precisely the cross-platform variance this project wants
   gone; Electron bundles Chromium and keeps the codebase in one language.
-- **Unsigned builds.** Not a commercial product. The README must document the Gatekeeper and
-  SmartScreen warnings and how to get past them on each OS.
+- **Unsigned builds.** Not a commercial product. **Amended by
+  [ticket 02](issues/02-electron-packaging-and-release.md):** the charting assumption that the
+  README can document a way past the warning on each OS is only true on Linux and mostly true on
+  Windows. It is false for Windows Smart App Control, which has no per-app override, and unknown
+  for macOS, where a genuinely unsigned arm64 build does not execute at all. "Unsigned" is a
+  per-OS posture, not one decision.
 - **Release via GitHub Actions.** Wagner has never used Actions. Any ticket touching CI must
   produce a literal step-by-step checklist of the manual steps, not a pointer to documentation.
 - **The engine is native to AD&D 2e, not a generic RPG engine.** Serving AD&D was always the whole
@@ -63,6 +67,15 @@ foreclose them:
   prerequisites and choices-not-derived-values character files; avoid name-as-identity, `.MOD`-style
   patching, a game-global XP table, an undeclared type namespace, and above all any second
   expression evaluator. "Engine computes, user supplies the tables" has no shipping precedent.
+- [Electron packaging and cross-platform release](issues/02-electron-packaging-and-release.md) —
+  **electron-builder** (pinned to 26.x; Forge has no AppImage or NSIS maker and no CI guide at
+  all), but the build tool was the easy question. The real finding is that **"unsigned" is not one
+  posture**: a config line on Linux, a five-click detour on Windows, and *the app does not start*
+  on macOS, where Apple Silicon refuses unsigned arm64 code and the resulting dialog has no Open
+  Anyway path. Ad-hoc signing is the mitigation, and whether it survives leaving the build machine
+  is unverified — ticket 12. Two findings move other tickets: **Fedora 45 makes `rpm` refuse
+  unsigned packages this autumn** (so AppImage is the primary Linux artifact), and **`node:sqlite`
+  is built into Electron**, which deletes ticket 08's packaging-cost axis entirely.
 - [Which Complete handbooks are in v1](issues/03-which-complete-handbooks.md) — **all of them, and
   the book list was the wrong axis**: Wagner owns everything and his table plays everything, so
   scope by mechanical shape. The series reduces to three shapes — kit-on-class, kit-on-race,
@@ -86,6 +99,10 @@ foreclose them:
   much of the generation pipeline v1 covers.
 - **Whether v1 includes advancement at all**, or stops at 1st-level creation. Adjacent to the
   generation-depth ticket but not the same question.
+- **Whether macOS is a v1 platform at all.** Ticket 02 turned "cross-platform" from a settled
+  premise into an open one: unsigned macOS may have no viable path, and Wagner develops on Fedora
+  with no known Mac access. Ticket 12 produces the fact; what the spec does if the answer is bad —
+  ZIP-only, untested-and-documented, or dropped — is not yet sharp enough to ticket.
 
 ## Out of scope
 
