@@ -1,0 +1,11 @@
+# Claude Code local settings — machine-specific, never shared
+.claude/settings.local.json
+.claude/.headroom_wrap_marker.json
+
+# Node
+node_modules/
+
+# Build output
+dist/
+out/
+release/
