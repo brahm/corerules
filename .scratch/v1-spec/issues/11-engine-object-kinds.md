@@ -2,7 +2,7 @@
 
 Type: grilling
 Status: open
-Blocked by: 04, 05
+Blocked by: 14
 
 ## Question
 
@@ -31,6 +31,15 @@ Test the result against the shapes v1 does not implement but must not foreclose 
 campaign settings. A kind that has to be *added* in v2 is a v1 mistake; a kind whose enumeration
 merely grows in v2 is correct.
 
-Depends on 04 (validate or record — a recording engine needs fewer kinds, since prerequisites and
-budgets stop being modelled) and 05 (generation pipeline depth — a kind nothing in the pipeline
-touches is not a v1 kind). Blocks 06.
+[Ticket 04](./04-validate-or-record.md) has already enlarged the set: hard validation means
+**prerequisite predicates, restrictions and slot budgets are themselves object kinds**, not just
+fields, and A3 adds one more — a pack's *declaration of which rule-sets it provides*, which the
+engine must model in order to tell "no restriction" apart from "not transcribed yet".
+
+[Ticket 05](./05-generation-pipeline-depth.md) settled the pipeline: v1 owns all of it, so no kind
+is excluded on the grounds that nothing touches it. It also adds **level events** as a candidate
+kind, since advancement makes a character a sequence rather than a snapshot, and **dice
+expressions**, since the tool rolls and generation methods come from the pack.
+
+Depends on [14](./14-multi-class-and-dual-class-model.md), which decides whether class is one kind
+or a collection with rules of its own. Blocks 06.

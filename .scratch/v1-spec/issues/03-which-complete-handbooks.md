@@ -30,6 +30,10 @@ material ever published — print, boxed sets, and the official TSR PDFs distrib
 combination the books allow. Any of the ~24 PHBR volumes can reach the table today. Scoping v1 by
 "which handbooks" was therefore the wrong axis.
 
+**Clarified while resolving [ticket 04](./04-validate-or-record.md):** "every combination" means
+every *legal* combination. The table plays by the book and expects the tool to hold them to it —
+which is why 04 landed on hard validation.
+
 The right axis is **mechanical shape**. The whole series reduces to three:
 
 1. **Kit attaching to a class** — every class handbook (Fighter's, Thief's, Wizard's, Bard's…).

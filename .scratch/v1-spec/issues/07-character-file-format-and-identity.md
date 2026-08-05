@@ -2,7 +2,7 @@
 
 Type: grilling
 Status: open
-Blocked by: 05
+Blocked by: 05, 14
 
 ## Question
 
@@ -19,6 +19,25 @@ What is a saved character?
   present at a **different version** with the entry changed or gone? A character that becomes
   unopenable because a pack moved is a data-loss bug.
 - **Portability** — is the file human-readable and hand-editable? Shareable with another
-  player as a single file?
+  player as a single file? **[Ticket 04](./04-validate-or-record.md) split this question in two:**
+  Wagner's packs are authored from his own RTF and PDF copies of the books, so a pack is derived
+  WotC content and sharing one is redistribution regardless of purchase, while a character is his
+  own creation. Sharing is plausibly yes for a character and no for a pack — and the spec must say
+  so explicitly rather than leave it implied, because the project's entire legal posture rests on
+  packs not circulating.
+- **Opening an invalid character** — 04 settled that loading never fails and that an invalid
+  character is *quarantined*: fully readable and printable, with everything that extends it
+  (levelling, XP, proficiencies, spells) locked until the violations clear. The file format has to
+  make that state representable and distinguishable from "not repairable here" — the missing-pack
+  case, which no edit to the character can fix.
 
-Depends on ticket 05: the file can't be shaped until it's known what a character contains.
+**[Ticket 05](./05-generation-pipeline-depth.md) enlarged this ticket rather than merely unblocking
+it.** Advancement is in v1, so a character is no longer a snapshot: it made choices *at each level*
+— hit point rolls, proficiency picks, spells learned — and under ticket 04's hard validation a
+choice's legality may depend on the level at which it was taken. **The character is a sequence of
+level events.** How much of that sequence the file keeps, and whether suppression state and past
+choices are stored or re-derived from it, is now this ticket's central question.
+
+Depends on 05 (what a character contains) and
+[14](./14-multi-class-and-dual-class-model.md) (how a character holds classes at all — one
+reference or an ordered set).

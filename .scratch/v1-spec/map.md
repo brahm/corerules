@@ -25,7 +25,10 @@ in `CONTEXT.md` current as terms resolve — do not batch glossary updates.
 - **FOSS engine, content supplied by the user.** corerules never bundles licensed 2e content.
   AD&D 2e has no SRD or open licence; the tables, kit descriptions and spell text are Wizards
   of the Coast IP. The engine computes the rules; the user brings the data, having bought the
-  books.
+  books. **Sharpened by [ticket 04](issues/04-validate-or-record.md):** the posture never depended
+  on how a pack was produced — Wagner authors his from his own RTF and PDF copies — it depends on
+  **packs not circulating**. A pack is derived WotC content; a character is the user's own work.
+  The spec must state that boundary rather than imply it.
 - **Single-user.** No accounts, no authentication, no permissions.
 - **Desktop application.** Electron, TypeScript + React, cross-platform (Linux/Windows/macOS).
   Electron over Tauri because Tauri's system webviews (WebKitGTK / WebView2 / WKWebView) mean
@@ -84,21 +87,34 @@ foreclose them:
   closed by history. Psionics and campaign settings go to v2 despite five settings being in active
   play, because a setting is not content but a set of overrides to the central model; Player's
   Option to v3. Both get the map's non-foreclosure treatment.
+- [Does the tool validate the rules, or merely record them?](issues/04-validate-or-record.md) —
+  **it validates, hard.** Illegal states are unrepresentable at the point of choice; the table
+  plays by the book and "every combination" always meant every *legal* combination. Since corerules
+  ships no content, the rules being enforced are Wagner's own transcription, which makes **the pack
+  format a small rules language — a constraint on tickets 06 and 11, not an option**. Packs
+  *declare* which rule-sets they provide (A3), so the engine can tell "no restriction" from "not
+  transcribed yet" and say which; that declaration also subsumes the house-rule escape hatch.
+  Loading a character never fails — an invalid one is **quarantined**: readable and printable, but
+  locked against anything that extends it. And the books are already digital: Wagner authors packs
+  from his own RTF and PDF copies, so authoring is extraction, not typing.
+- [Depth of the character generation pipeline](issues/05-generation-pipeline-depth.md) — **v1 owns
+  all of it.** Most was already forced by kits (proficiencies, equipment, money, spells are
+  preconditions of having kits at all); what this ticket decided is that **advancement is in**
+  — which turns a character from a snapshot into a sequence of level events — that **multi-class
+  and dual-class are both in**, and that **the tool rolls dice**, which obliges the pack's
+  expression language to carry dice semantics and not just arithmetic. Creation and levelling run
+  through a guided wizard, correction through direct sheet editing, with identical validation on
+  both paths. And automatic character construction is ruled out **permanently**, not deferred.
 
 ## Not yet specified
 
-- **How book content actually gets into the tool.** The packs don't ship, so somebody types
-  them. Authoring? Import? A pack editor? Shape depends entirely on the pack format. Data point
-  from ticket 01: PCGen's answer is text files plus an autoformatter plus a converter plus
-  editor syntax definitions, and its own docs concede list editing takes "a text-editing program
-  and patience". With Wagner owning 100% of the published material, the volume here is large.
 - **The derived-statistic computation model.** THAC0, saving throws, armour class,
-  encumbrance — computed on read or stored on the character? Depends on whether the tool
-  validates or merely records.
-- **The shape of the creation UI.** Guided wizard versus sheet-first editing. Depends on how
-  much of the generation pipeline v1 covers.
-- **Whether v1 includes advancement at all**, or stops at 1st-level creation. Adjacent to the
-  generation-depth ticket but not the same question.
+  encumbrance — computed on read or stored on the character? Ticket 04 settled that the engine
+  computes and validates, but not *when* — on read, or snapshotted onto the character.
+- **How the level-event history is shaped.** Ticket 05 made a character a sequence of choices per
+  level rather than a snapshot, and ticket 14 will add dual-class suppression state on top. How
+  much of that sequence the file keeps, and what is stored versus re-derived, is ticket 07's — but
+  the shape of the thing itself is not yet sharp.
 - **Whether macOS is a v1 platform at all.** Ticket 02 turned "cross-platform" from a settled
   premise into an open one: unsigned macOS may have no viable path, and Wagner develops on Fedora
   with no known Mac access. Ticket 12 produces the fact; what the spec does if the answer is bad —
@@ -127,6 +143,12 @@ foreclose them:
 - **Campaigns** — a genuinely second aggregate: which rule options are switched on, which packs
   are loaded, party membership, session state. Post-v1.
 - **Monster stat blocks** — HD, no class, no proficiencies. Not Characters at all.
+- **Automatic character construction** — a button that produces a finished NPC. Ruled out
+  **permanently** by [ticket 05](issues/05-generation-pipeline-depth.md), not deferred: corerules
+  builds step by step, on the model of TSR's AD&D Core Rules 2.0 and D&D Beyond. Rolling dice is a
+  rule and comes from the pack; choosing a kit and proficiencies for the user is *taste*, and no
+  source book contains it. Under ticket 04's hard validation it would also need a constraint solver
+  rather than a sampler, since naive sampling dead-ends.
 - **Multi-user / player logins** — accounts, permissions, GM-hidden data, live sync.
 - **Self-hosted or browser delivery** — a different product with a different persistence and
   security model. Returns, if ever, alongside multi-user.

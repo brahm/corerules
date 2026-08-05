@@ -2,7 +2,7 @@
 
 Type: grilling
 Status: open
-Blocked by: 04
+Blocked by: —
 
 ## Question
 
@@ -50,10 +50,11 @@ Questions to settle:
   concept, which ticket 03 deferred to v2.
 - **Ordering and conflict.** If two effects touch the same field, what resolves it — and is the
   resolution visible to the user, or silent?
-- **The seam with prerequisites.** A kit is a prerequisite predicate plus a bundle of effects.
-  If [ticket 04](./04-validate-or-record.md) lands on "record", does the predicate half survive
-  as a warning, or vanish?
+- **The seam with prerequisites.** A kit is a prerequisite predicate plus a bundle of effects, and
+  [ticket 04](./04-validate-or-record.md) settled that the predicate half is fully load-bearing:
+  validation is a hard block at the point of choice, so a kit whose prerequisites the character
+  fails is simply not offered. The predicate must also declare itself under 04's A3 rule — a kit
+  pack that does not announce it provides prerequisites gets no enforcement, and the user is told.
 
-Depends on 03 (which handbooks — racial kits and Humanoids' playable monster races may or may not
-be in scope) and 04 (validate or record — decides whether the predicate half is load-bearing).
-Blocks 06.
+Unblocked: 03 settled that both kit-on-class and kit-on-race are in v1, and 04 settled that
+prerequisites are enforced. Blocks 06.

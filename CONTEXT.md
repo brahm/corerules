@@ -17,7 +17,10 @@ _Avoid_: core, app, platform
 
 **Content Pack**:
 A bundle of AD&D 2e rules content — classes, kits, proficiencies, spells, equipment — supplied
-by the user and loaded by the Engine.
+by the user and loaded by the Engine. Carries not only the catalogue but the **rules**:
+prerequisites, restrictions and slot budgets, in a form the Engine evaluates. A pack also
+declares which rule-sets it provides, so the Engine can tell "unrestricted" from "not yet
+transcribed". Derived from the user's own books, and therefore does not circulate.
 _Avoid_: data pack, module, plugin, ruleset, library
 
 ### The game
