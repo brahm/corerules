@@ -47,7 +47,11 @@ corerules ships no content, so "dwarves cannot be paladins" is not in the engine
 transcription of PHB Table 6. **A validating engine therefore makes the pack format a small rules
 language.** Prerequisites, restrictions and slot budgets must be expressible in a form the engine
 can evaluate. This is a hard constraint on [ticket 06](./06-content-pack-format.md) and
-[ticket 11](./11-engine-object-kinds.md), not an option they get to weigh. Ticket 01's warning
+[ticket 11](./11-engine-object-kinds.md), not an option they get to weigh. **Corrected by ticket
+11:** the sentence below calling predicates, restrictions and budgets "object kinds" is imprecise —
+under 11's criterion they are **value types**, since nothing references a predicate by identity;
+it lives inside the kit that carries it. None of this ticket's decisions change; what changes is
+what ticket 06 must give identity to. Ticket 01's warning
 applies with full force: one evaluator, versioned, no fallback path, rounding semantics written
 down.
 

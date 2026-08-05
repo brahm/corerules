@@ -117,6 +117,20 @@ foreclose them:
   granted proficiencies as a **nominal debt** against future slots — a third kind of effect neither
   this ticket nor 10 had anticipated. A character carrying debt stays valid, because quarantine
   would deadlock: the debt is only payable by levelling, which quarantine locks.
+- [The engine's closed set of object kinds](issues/11-engine-object-kinds.md) — **a kind is
+  anything referenced by stable identity across a pack boundary**, and that criterion splits the
+  inventory three ways where the ticket expected one: pack kinds, character structures, and value
+  types that carry no identity at all (which corrects ticket 04's loose claim that predicates and
+  budgets are kinds). Every enumeration stays open except **rule-set names**, which must be the
+  engine's, since A3 cannot act on a declaration it does not understand. Weapon and non-weapon
+  proficiency are two kinds whose **slots are convertible currencies** — which makes slot type a
+  kind, and lets Player's Option add character points in v3 without breaking anything. Weapon,
+  armour and gear are three kinds; **magic items are in v1** as a property of them, and are the one
+  place corerules records rather than validates, since acquisition is DM fiat. Deity enters thin, on
+  this ticket's own test that a kind added in v2 is a v1 mistake. And **Kit, Deity and Subrace turn
+  out to be one closed shape used three times** — Wagner's proposal — which shrinks ticket 10, the
+  map's heaviest invention, from designing a kit mechanism to designing one applicable-modifier
+  mechanism.
 
 ## Not yet specified
 

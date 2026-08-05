@@ -4,6 +4,14 @@ Type: grilling
 Status: open
 Blocked by: —
 
+> **Scope changed by [ticket 11](./11-engine-object-kinds.md).** This ticket no longer designs a
+> kit mechanism. It designs **one applicable-modifier mechanism serving three kinds** — Kit, Deity
+> and Subrace — which carry the same closed shape (a binding to a target, a prerequisite predicate,
+> an ordered list of effects in three natures) and differ only in what they may target, whether
+> other records reference them, their cardinality rule and their abandonment rule. The
+> scope-as-a-parameter decision already below covers all three radii. This is less invention than
+> the ticket was created for, not more.
+
 ## Question
 
 A kit is authored in one book and modifies a class authored in another. In corerules that is

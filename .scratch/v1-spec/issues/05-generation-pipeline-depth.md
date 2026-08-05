@@ -111,6 +111,15 @@ already broken.
 The use case argued against this and lost: a DM who needs six guards and a captain for tonight is
 not helped much by step-by-step rolling. Recorded so the trade is visible, not hidden.
 
+### Gap found later, and closed elsewhere: magic items
+
+This ticket's pipeline listed starting money, equipment and encumbrance, and never mentioned magic
+items. [Ticket 11's](./11-engine-object-kinds.md) enumeration surfaced the omission: with
+advancement in v1, characters accumulate items that move AC, THAC0 and saving throws, so leaving
+them out would make the computed sheet disagree with the table. Settled there — **in v1, as a
+property of the Weapon / Armour / Gear kinds**, with acquisition unvalidated (DM fiat) and use
+validated.
+
 ### Decision — wizard to build, sheet to correct
 
 This resolves the map's "shape of the creation UI" fog, which was waiting on this ticket. Three

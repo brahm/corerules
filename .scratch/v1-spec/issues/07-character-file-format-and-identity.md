@@ -54,4 +54,12 @@ Three concrete demands fall out, and they are this ticket's real work:
 - **Proficiency debt is nominal.** An abandoned kit leaves the character owing *those specific
   proficiencies* against future slots, so the file stores a list, not a count.
 
-Unblocked: 05 settled what a character contains, 14 settled how it holds classes.
+**[Ticket 11](./11-engine-object-kinds.md) then named the character-side structures** this file has
+to carry: Character, Class arrangement, Level event, **Attachable binding** (one shape covering
+kit, deity and subrace), Proficiency debt, Weapon specialisation, Spellbook, Inventory. It also put
+**magic items in v1** as a property of the Weapon / Armour / Gear kinds — so an inventory is not a
+list of names but of things that modify computed values, and the file must reference them by
+pack-scoped identity like anything else.
+
+Unblocked: 05 settled what a character contains, 14 settled how it holds classes, 11 named the
+structures.

@@ -47,6 +47,20 @@ _Avoid_: subclass, archetype, specialisation, template
 _Collision_: PCGen, the nearest prior art, uses "kit" for a one-shot bundle of creation choices
 and "template" for a creature overlay. Neither is our meaning; say so when comparing.
 
+**Attachable**:
+The shape shared by Kit, Deity and Subrace — a binding to a target, a prerequisite predicate, and
+an ordered list of effects. They remain three distinct kinds: each declares what it may target,
+and each carries its own cardinality and abandonment rules. The shape is closed, not a general
+patching mechanism.
+_Avoid_: modifier, overlay, mixin, patch
+
+**Effect**:
+What an Attachable does, in one of exactly three natures. A **standing modifier** applies while
+the Attachable holds and stops when it does not. A **one-time grant** happens once and survives.
+An **obligation** consumes future budget — created when a Kit is abandoned, leaving its granted
+proficiencies owed against later slots.
+_Avoid_: bonus, buff, modifier (unqualified)
+
 **Campaign**:
 A table's ongoing game: which rule options are in force, which Content Packs are loaded, and
 which Characters belong to it.

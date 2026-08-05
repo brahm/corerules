@@ -30,7 +30,13 @@ the engine is only as capable as the pack format is expressive.
   language therefore needs distribution, dropping, rerolling and arrangement — not just arithmetic.
 - **Identity and versioning** — how a pack is named and versioned, whether packs can depend on
   or extend one another (a Complete handbook pack extending the core pack), and what happens
-  on conflict.
+  on conflict. **[Ticket 11](./11-engine-object-kinds.md) fixed what needs identity at all**: its
+  list A, and only that. Character structures live in the character file, and value types —
+  prerequisite predicates, effects, slot budgets, dice expressions — carry no identity and are never
+  referenced, which corrects a loose sentence in ticket 04.
+- **The one closed enumeration** — ticket 11: every enumeration stays open except **rule-set
+  names**, which must be the engine's, because A3 has packs declare which rule-sets they provide and
+  the engine cannot act on a name it does not understand.
 - **Trust** — packs come from outside. Does the format permit anything executable?
 
 Answers to 01 (prior art), 03 (handbook scope), 04 (validate or record), 10 (kit mechanism) and
