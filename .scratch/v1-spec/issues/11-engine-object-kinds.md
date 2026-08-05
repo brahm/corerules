@@ -2,7 +2,7 @@
 
 Type: grilling
 Status: open
-Blocked by: 14
+Blocked by: —
 
 ## Question
 
@@ -41,5 +41,16 @@ is excluded on the grounds that nothing touches it. It also adds **level events*
 kind, since advancement makes a character a sequence rather than a snapshot, and **dice
 expressions**, since the tool rolls and generation methods come from the pack.
 
-Depends on [14](./14-multi-class-and-dual-class-model.md), which decides whether class is one kind
-or a collection with rules of its own. Blocks 06.
+[Ticket 14](./14-multi-class-and-dual-class-model.md) settled that class is a **sum type**
+(`Single` | `Multi` | `Dual`) rather than one kind, and added three more candidates: **level
+events**, **kit bindings** (a kit binds to a named target — a class entry or the race — once, and
+never rebinds), and **proficiency debt**, which is nominal rather than numeric. It also rejected
+group-indexed class slots specifically because they would hardcode the group enumeration, which is
+the sharpest available example of this ticket's closed/open line.
+
+**One sub-point 14 handed over:** whether "one kit per character" is structural or an engine-known
+cardinality rule over a collection. Al-Qadim allows one kit per class and is a v2 setting, so a
+structurally fixed single kit would foreclose it against the map's standing constraint. Wagner
+ruled Al-Qadim out of consideration and did not settle the representation.
+
+Unblocked. Blocks 06.

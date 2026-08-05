@@ -2,7 +2,7 @@
 
 Type: grilling
 Status: open
-Blocked by: 05, 14
+Blocked by: —
 
 ## Question
 
@@ -38,6 +38,20 @@ choice's legality may depend on the level at which it was taken. **The character
 level events.** How much of that sequence the file keeps, and whether suppression state and past
 choices are stored or re-derived from it, is now this ticket's central question.
 
-Depends on 05 (what a character contains) and
-[14](./14-multi-class-and-dual-class-model.md) (how a character holds classes at all — one
-reference or an ordered set).
+**[Ticket 14](./14-multi-class-and-dual-class-model.md) then fixed the shape of the sequence**, so
+this ticket inherits rather than decides it: the class arrangement is a sum type
+(`Single` | `Multi` | `Dual`), and every advance records **which class went up, the die rolled, and
+what was chosen** — because hit points are *recorded randomness*, neither a choice nor a
+derivation, and multi-class totals cannot be reconstructed from levels alone. Dual-class
+suppression is derived from that record, never stored.
+
+Three concrete demands fall out, and they are this ticket's real work:
+
+- **Correcting a bad roll from 3rd level is an edit to history.** The sheet-side correction mode
+  that ticket 04 made mandatory must expose the timeline, not just current fields.
+- **A kit binds to a named target** — a specific class entry, or the race — once, at creation,
+  never rebound. The file has to carry that binding, not just the kit's identity.
+- **Proficiency debt is nominal.** An abandoned kit leaves the character owing *those specific
+  proficiencies* against future slots, so the file stores a list, not a count.
+
+Unblocked: 05 settled what a character contains, 14 settled how it holds classes.

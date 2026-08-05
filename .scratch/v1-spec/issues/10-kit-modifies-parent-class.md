@@ -39,6 +39,13 @@ Questions to settle:
   a sourced finding.)
 - **The vocabulary of effects.** Grant, forbid, replace, add-at-level, adjust-a-number. Is there
   a closed set of effect kinds, or does this become open-ended?
+  **[Ticket 14](./14-multi-class-and-dual-class-model.md) already established that it has three
+  natures, not two** — and the third was not anticipated by either ticket:
+  1. **standing modifier** — bonuses, penalties, restrictions, sphere access; removed on abandonment;
+  2. **one-time grant** — proficiencies, equipment, starting money; survives abandonment;
+  3. **obligation against future budget** — created *by* abandonment, consuming later proficiency
+     slots until the granted proficiencies are paid for. Nominal, not numeric: the character owes
+     *those* proficiencies, not a count.
 - **Composition.** Can a character carry more than one kit? Can a kit modify another kit? Racial
   kits from the racial handbooks layer differently from class kits — does one mechanism cover
   both? ([Ticket 03](./03-which-complete-handbooks.md) settled that both shapes are in v1, so
@@ -48,8 +55,13 @@ Questions to settle:
   the character's *class*. Same mechanism, wider radius. The v1 design must leave that radius
   expressible — without deciding now whether a setting is just another pack or a first-class
   concept, which ticket 03 deferred to v2.
-- **Ordering and conflict.** If two effects touch the same field, what resolves it — and is the
-  resolution visible to the user, or silent?
+- ~~**Ordering and conflict** between two kits~~ — **dropped.** Ticket 14 settled that a character
+  holds exactly one kit, bound at creation to a named target (a class entry, or the race) and never
+  rebound, so two kits with contradictory effects are unrepresentable. Conflict between a kit's
+  effects and the *base* record it patches still needs an answer; conflict between kits does not.
+- **Attachment survives what the character does later.** Ticket 14: on dual-classing the kit stays
+  with the **original** class, is not required to be compatible with the new one, and nothing is
+  checked at the switch. The binding is made once and never remade.
 - **The seam with prerequisites.** A kit is a prerequisite predicate plus a bundle of effects, and
   [ticket 04](./04-validate-or-record.md) settled that the predicate half is fully load-bearing:
   validation is a hard block at the point of choice, so a kit whose prerequisites the character

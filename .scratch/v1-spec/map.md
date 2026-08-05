@@ -105,6 +105,18 @@ foreclose them:
   expression language to carry dice semantics and not just arithmetic. Creation and levelling run
   through a guided wizard, correction through direct sheet editing, with identical validation on
   both paths. And automatic character construction is ruled out **permanently**, not deferred.
+- [How multi-class and dual-class are modelled](issues/14-multi-class-and-dual-class-model.md) —
+  the class arrangement is a **sum type** (`Single` | `Multi` | `Dual`), on the principle this
+  ticket named and which now governs the map: **structural for model incoherence, pack-declared for
+  game rules**. The engine owns the combination arithmetic, because **A3 governs validation, not
+  computation** — a missing validation rule is an unenforced restriction, but a missing computation
+  rule is a wrong number. Every advance is recorded event by event, since **hit points are recorded
+  randomness** — neither choice nor derivation — and multi-class totals cannot be rebuilt from
+  levels alone. One kit, bound at creation to a named target and never rebound; it stays with the
+  original class through dual-classing. Abandoning it strips bonuses and penalties but leaves the
+  granted proficiencies as a **nominal debt** against future slots — a third kind of effect neither
+  this ticket nor 10 had anticipated. A character carrying debt stays valid, because quarantine
+  would deadlock: the debt is only payable by levelling, which quarantine locks.
 
 ## Not yet specified
 
