@@ -73,5 +73,12 @@ referenced pack is absent, or present at a version where the target changed.** N
 settled — pack-scoped opaque IDs, display names as presentation — but the missing and moved cases
 are this ticket's.
 
+**[Ticket 06](./06-content-pack-format.md) then fixed what is being referenced**: a pack is a
+directory of JSON declared by a manifest, versioned Foundry-style with a three-way `compatibility`
+range. Two things bear directly here — **the character's active pack set is load-bearing, not
+decorative** (06 uses it to disambiguate `phb:set-snares` from `cbarb:set-snares`, so the file must
+record it precisely), and **the pack format carries its own version** separate from the engine's,
+which is a third version the character may have to reconcile against.
+
 Unblocked: 05 settled what a character contains, 14 settled how it holds classes, 11 named the
-structures, 10 made choices a layer.
+structures, 10 made choices a layer, 06 fixed what a reference points at.

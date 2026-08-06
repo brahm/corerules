@@ -21,7 +21,17 @@ by the user and loaded by the Engine. Carries not only the catalogue but the **r
 prerequisites, restrictions and slot budgets, in a form the Engine evaluates. A pack also
 declares which rule-sets it provides, so the Engine can tell "unrestricted" from "not yet
 transcribed". Derived from the user's own books, and therefore does not circulate.
+Concretely: a **directory** of **JSON** files whose contents a **manifest** declares — never
+discovered by scanning — versioned with a three-way compatibility range, citing book and page on
+every record, and carrying no executable code.
 _Avoid_: data pack, module, plugin, ruleset, library
+
+**Active pack set**:
+Which Content Packs a Character was built against, recorded on the Character itself rather than
+globally. Load-bearing, not decorative: it is what makes the PHB's *Set Snares* and the Complete
+Barbarian's *Set Snares* two different things a player never has to choose between, because only
+the books at their table are offered.
+_Avoid_: loaded packs, enabled books, library
 
 ### The game
 

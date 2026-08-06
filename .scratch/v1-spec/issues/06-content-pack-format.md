@@ -1,7 +1,7 @@
 # Content pack format
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: —
 
 ## Question
@@ -59,3 +59,114 @@ Inherited, and not to be reopened:
   distribution, dropping, rerolling and arrangement.
 - **One evaluator, versioned, no fallback path** (01), with rounding semantics written down and
   worked examples.
+
+## Answer
+
+The map called this the load-bearing decision of the project, and it arrived disarmed: five
+resolved tickets had already fixed the modelling. What was left was the format itself.
+
+### Decision — a pack is a directory
+
+Rejected: a single file, and an archive as the native form. An archive remains available for free
+as a transport wrapper if one is ever wanted; it is not the format.
+
+- **Diffability is the map's permanent sync constraint** — "a persistence format that can be diffed
+  and reconciled". Under a single file every typo correction rewrites megabytes; under a directory
+  it touches one small file. It is the same problem ticket 01 documented in PCGen's
+  thousand-column lines, on a different axis.
+- **A half-authored pack is the normal state.** A3 depends on the engine knowing what a pack
+  provides; a directory shows it in the structure — spells done, equipment empty — before any
+  parser runs.
+- **Hand repair.** Ticket 01 is explicit that text is fixed with an editor; a 5 MB JSON document is
+  not, in practice, and extraction from PDF will produce localised rubbish.
+
+The usual cost of a directory — "not one thing you can hand someone" — **does not apply here**,
+because [ticket 04](./04-validate-or-record.md) already settled that **packs do not circulate**.
+The licence posture removes the main reason to want a single file.
+
+### Decision — JSON, with a documented profile and JSON Schema
+
+The decisive argument is against YAML, which would otherwise win on readability: **YAML produces
+silently wrong values.** Type coercion turns `NO` into `false`, `1.20` into a float, `Yes` into a
+boolean. In a corpus of spell components, item names and version numbers typed out of PDF
+extraction, that is the exact class of bug this map has been designing against since ticket 01 —
+A3's honesty, ticket 10's reported conflicts, PCGen's `processBrokenParser`. **The project's whole
+posture is never to be silently wrong, and YAML is silently wrong by specification.**
+
+TOML sits badly on the data: almost everything here is a list of records, and arrays of tables get
+noisy fast. A bespoke format is ruled out by ticket 01, which is a twenty-year report on what
+becomes of bespoke formats.
+
+**JSON's real weakness — no comments — was already solved by an earlier decision.** Ticket 01
+requires book and page citation on every record. The main reason to want comments in a
+transcription is to note provenance and doubt; that becomes a **field**, which is validatable and
+searchable in a way a comment is not.
+
+Two consequences:
+
+- **Tables stay tables.** Ticket 01's named, typed lookup table is an object of arrays in JSON —
+  `{"warrior": {"paralyze": [16,10,...]}}` — compact, diffable and readable. No second syntax is
+  needed.
+- **Expressions stay strings.** `"floor(level/2)+1"` and `"4d6kh3"` are text the JSON carries and
+  the single evaluator interprets. The format does not interpret them.
+
+Accepted cost: JSON is tedious to edit by hand. How much that matters depends on
+[ticket 13](./13-how-packs-get-authored.md) — heavily if authoring is external in a text editor,
+barely if it goes through the tool.
+
+### Decision — the manifest declares the contents
+
+Rejected: a fixed layout the engine knows by filename, and self-describing files the engine
+discovers by scanning.
+
+Fixed layout collapses the diffability that chose a directory — the PHB's hundreds of spells would
+land in one `spells.json` when you would want them split by level or school. Scanning makes the
+engine's view depend on whatever happens to be on disk, so a leftover file from an earlier
+extraction joins the pack in silence — under hard validation, a false rule entering with nothing
+declared.
+
+**A manifest is A3 at the file level.** Ticket 04 settled that a pack declares what it provides and
+the engine distinguishes "does not restrict" from "not transcribed". Listing files is the same
+principle: declaration over discovery. It also makes the orphan file detectable by construction —
+present in the directory, absent from the manifest, reported.
+
+**Worth recording: here the prior art is good.** PCGen's `.pcc` does exactly this, listing its data
+files by type. Ticket 01 criticised much of PCGen; not this.
+
+### Decision — same name in two packs means two objects
+
+Ticket 01 left this to be answered here, with data: the Roll20 proficiency table has **217 distinct
+names and 224 entries**, because books define the same thing differently. `Set Snares` is
+Dexterity −1 in the PHB and Intelligence −1 in the Complete Barbarian's Handbook.
+
+Under pack-scoped IDs — ticket 01's central prescription — `phb:set-snares` and `cbarb:set-snares`
+**are already different things**. There is no collision to resolve: two proficiencies, different
+rules, different books. The books treat them that way; calling it a collision was our error.
+
+The alternative needs an identity that spans packs — something asserting these two *are* the same
+Set Snares. That is name-as-identity, which ticket 01 documented as PCGen's worst mistake and the
+sole reason its `migration.lst` exists.
+
+**And the disambiguation was already decided elsewhere.** Ticket 03 established, from the Roll20
+sheet's 21 per-character book toggles, that **a character records which packs it was built
+against**. That active set filters the list: a PHB-only character never sees the Complete
+Barbarian's version — not because the engine chose, but because that book is not on their table.
+
+Real cost: a character with both books active sees "Set Snares (PHB)" and "Set Snares (CBH)" in one
+list and must know which their table uses. That is honest — a table decision, not a tool decision —
+but it is interface friction, and the sheet must always show the source book, not only when
+ambiguous.
+
+### Settled by inheritance, recorded so they are not reopened
+
+- **Trust: a pack never carries code.** JSON executes nothing, and the expression grammar has no
+  assignment, loop or I/O, so it cannot express a side effect. Ticket 01's verdict stands — there is
+  no sandbox because there is nothing to isolate.
+- **Versioning follows Foundry's manifest**, which ticket 01 recommended with evidence: `id`,
+  `version`, and a three-way `compatibility` of `minimum` / `verified` / `maximum`, with
+  dependencies carrying their own ranges. PCGen has no pack version field at all, and ticket 01 was
+  explicit about not copying that.
+- **The schema is the engine's, and published.** Under ticket 11's closed kinds a pack cannot
+  introduce kinds, so it does not declare a schema — it conforms to one. The pack *format* carries
+  its own version, separate from the engine's: if the expression language must change, ticket 01's
+  prescription is a converter and a format version bump, never a second evaluator.

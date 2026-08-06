@@ -143,6 +143,17 @@ foreclose them:
   the same line ticket 11 drew for artifacts and charges. And **the character's own choices are the
   topmost layer**, so the sheet is one uniform resolution in which every value can say where it
   came from.
+- [Content pack format](issues/06-content-pack-format.md) — billed as the load-bearing decision of
+  the project, and it **arrived disarmed**: five resolved tickets had already fixed the modelling,
+  leaving only the format. A pack is a **directory** of **JSON**, declared by a **manifest** rather
+  than discovered by scanning — which is A3 at the file level, and makes an orphan file detectable
+  by construction. JSON beat YAML on one argument: **YAML is silently wrong by specification**
+  (`NO` → false, `1.20` → float), and never being silently wrong is this project's posture. Its lack
+  of comments was already answered, since ticket 01 requires book and page on every record.
+  Directory beat single-file partly because ticket 04 had removed the reason to want one — **packs
+  do not circulate**. And the same-name-in-two-books problem dissolved: under pack-scoped IDs
+  `phb:set-snares` and `cbarb:set-snares` are simply two proficiencies, disambiguated by the
+  character's active pack set, which ticket 03 had already put on the character.
 
 ## Not yet specified
 

@@ -2,7 +2,7 @@
 
 Type: grilling
 Status: open
-Blocked by: 06
+Blocked by: —
 
 ## Question
 
@@ -37,7 +37,21 @@ Questions to settle:
 - **The half-authored state is normal.** Ticket 01 recommended typed default values for exactly
   this reason. What does a partially authored pack do — load with gaps, or refuse?
 
-Depends on 06: the authoring path cannot be designed before the thing being authored has a shape.
+**Unblocked — [ticket 06](./06-content-pack-format.md) gave the thing being authored its shape:** a
+**directory** of **JSON** files whose contents are declared by a **manifest**, with book and page
+citation required on every record and expressions carried as strings.
+
+That sharpens this ticket's central question rather than answering it. 06 recorded that JSON is
+tedious to edit by hand, and said explicitly that how much this matters **depends on what is
+decided here** — heavily if authoring is external in a text editor, barely if it goes through the
+tool. So the question is no longer abstract:
+
+- A manifest-declared directory means an authoring path must maintain **two things in step** — the
+  files and the manifest. Hand-editing can desynchronise them; 06 made that detectable (an orphan
+  file is reported), not impossible.
+- Ticket 06 also settled that **the same proficiency defined by two books is two objects**, so
+  extraction must not deduplicate by name. The natural instinct when parsing 24 books is exactly
+  the wrong one.
 
 **Do not restate the licence position here** — it is settled and recorded on
 [ticket 07](./07-character-file-format-and-identity.md): packs are derived WotC content and do not
