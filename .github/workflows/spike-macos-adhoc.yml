@@ -35,7 +35,13 @@ jobs:
     runs-on: macos-latest
 
     steps:
+      # Pinned ref, deliberately. This workflow exists only to build the scaffold that
+      # lives on the spike branch, and the copy registered on main makes the branch
+      # dropdown a footgun: dispatching against main would check out a tree with no
+      # package.json. Hardcoding removes the choice.
       - uses: actions/checkout@v7.0.1
+        with:
+          ref: spike/macos-adhoc-signing
 
       - uses: actions/setup-node@v7.0.0
         with:
