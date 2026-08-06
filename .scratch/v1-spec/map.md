@@ -34,12 +34,17 @@ in `CONTEXT.md` current as terms resolve — do not batch glossary updates.
   Electron over Tauri because Tauri's system webviews (WebKitGTK / WebView2 / WKWebView) mean
   three rendering engines, which is precisely the cross-platform variance this project wants
   gone; Electron bundles Chromium and keeps the codebase in one language.
-- **Unsigned builds.** Not a commercial product. **Amended by
-  [ticket 02](issues/02-electron-packaging-and-release.md):** the charting assumption that the
-  README can document a way past the warning on each OS is only true on Linux and mostly true on
-  Windows. It is false for Windows Smart App Control, which has no per-app override, and unknown
-  for macOS, where a genuinely unsigned arm64 build does not execute at all. "Unsigned" is a
-  per-OS posture, not one decision.
+- **Unsigned builds.** Not a commercial product. **Amended twice, and the second amendment is
+  measured rather than researched.** [Ticket 02](issues/02-electron-packaging-and-release.md) found
+  that "unsigned" is a per-OS posture, not one decision — false for Windows Smart App Control, which
+  has no per-app override, and unknown for macOS.
+  [Ticket 12](issues/12-verify-adhoc-signed-macos-build.md) then settled macOS by building and
+  running it: **the graphical escape hatch does not exist there.** The app arrives quarantined,
+  reports itself *damaged*, and releasing it in System Settings does not help — only
+  `xattr -dr com.apple.quarantine` does. Signing and notarising at US$99/year was put and rejected;
+  macOS ships with a Terminal command in the README. So the charting assumption that the README can
+  document a way past the warning holds on Linux, mostly holds on Windows, and on macOS holds only
+  if "open Terminal" counts.
 - **Release via GitHub Actions.** Wagner has never used Actions. Any ticket touching CI must
   produce a literal step-by-step checklist of the manual steps, not a pointer to documentation.
 - **The engine is native to AD&D 2e, not a generic RPG engine.** Serving AD&D was always the whole
@@ -187,6 +192,14 @@ foreclose them:
   hash** rather than by add/remove events — because for years the common event is *modification*.
   That hash also repairs a hole ticket 07 had not noticed: drift detection keyed on a declared
   version would miss every typo fix, since nobody bumps a version for one.
+- [Verify an ad-hoc signed macOS build](issues/12-verify-adhoc-signed-macos-build.md) — the map's
+  one experiment, and it produced facts no amount of reading could. **electron-builder's
+  documentation is wrong**: an ad-hoc signature *does* survive leaving the build machine, and Apple
+  was right that quarantine is the obstacle. But the escape hatch turns out to be **worse than
+  ticket 02 inferred** — the app reports itself *damaged*, System Settings offers a release path,
+  and that path **does not work**. Only `xattr` does. macOS therefore ships in v1 with a Terminal
+  command in the README; notarising at US$99/year was rejected. A second Mac was never needed —
+  the CI runner is the building machine, and that claim was wrong every time it was repeated.
 
 ## Not yet specified
 

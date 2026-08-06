@@ -2,7 +2,7 @@
 
 Type: task
 Status: open
-Blocked by: 02, 12
+Blocked by: —
 
 ## Question
 
@@ -46,3 +46,23 @@ all. Constraints 02 already fixed, so this ticket does not re-derive them:
   (GitHub documents them functionally but never reproduces the strings), and the SmartScreen and
   Mark-of-the-Web dialog wording, which exists only in Microsoft community threads. **The README
   needs screenshots from a real Windows 11 machine.**
+
+**Unblocked. [Ticket 12](./12-verify-adhoc-signed-macos-build.md) settled macOS by experiment, and
+its findings are inputs here, not questions to reopen:**
+
+- **macOS ships, and the only way in is Terminal.** An ad-hoc signature *does* survive leaving the
+  build machine — electron-builder's documentation is wrong about that — but the app arrives
+  quarantined, shows *"…is damaged and can't be opened"*, and **releasing it in System Settings →
+  Privacy & Security does not work**. The README must give the command:
+  `xattr -dr com.apple.quarantine /Applications/corerules.app`. Signing and notarising at
+  US$99/year was put to Wagner and rejected.
+- **The build recipe is proven**: electron-builder 26.15.7, Electron 43.3.0, `mac.identity: "-"`,
+  `hardenedRuntime: true`, the two entitlements, on `macos-latest`. A working workflow exists on
+  the throwaway branch `spike/macos-adhoc-signing` and can be cribbed from.
+- **Four things the first run taught, all of which belong in the checklist**: a workflow on a side
+  branch is invisible until its file reaches the default branch; the branch dropdown on manual
+  dispatch defaults to the default branch and choosing wrong fails late; the push trigger never
+  fired at all, cause unknown; and npm's `latest` tag for electron-builder is genuinely stale, so
+  the version must be pinned explicitly.
+- **Cleanup this ticket owns**: delete the spike branch and
+  `.github/workflows/spike-macos-adhoc.yml` from `main` once a real release workflow exists.
