@@ -59,7 +59,17 @@ What an Attachable does, in one of exactly three natures. A **standing modifier*
 the Attachable holds and stops when it does not. A **one-time grant** happens once and survives.
 An **obligation** consumes future budget — created when a Kit is abandoned, leaving its granted
 proficiencies owed against later slots.
+Expressed by exactly six operations, each optionally conditioned by level or predicate:
+`adjust` · `grant` · `forbid` (beats `grant`) · `except` (pierces a prohibition, naming the
+subject rather than the prohibition) · `require` · `set` (two on one field is a reported conflict).
 _Avoid_: bonus, buff, modifier (unqualified)
+
+**Layer**:
+How the Engine computes a Character's view of anything. Nothing is ever overwritten: the base
+record and each Attachable contribute a layer, and the Character's own choices are the topmost
+one. Order never changes the answer — the operations commute by design — so provenance survives
+computation, which is what lets a refusal name its cause and an abandonment drop a layer.
+_Avoid_: override, patch, merge, cascade
 
 **Campaign**:
 A table's ongoing game: which rule options are in force, which Content Packs are loaded, and

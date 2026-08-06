@@ -1,7 +1,7 @@
 # How a kit modifies its parent class
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: —
 
 > **Scope changed by [ticket 11](./11-engine-object-kinds.md).** This ticket no longer designs a
@@ -78,3 +78,123 @@ Questions to settle:
 
 Unblocked: 03 settled that both kit-on-class and kit-on-race are in v1, and 04 settled that
 prerequisites are enforced. Blocks 06.
+
+## Answer
+
+The mechanism that had no prior art anywhere turns out to be four decisions, and none of them
+needed new machinery — three earlier tickets had already forced most of it.
+
+### Forced, not decided — an Attachable never touches the shared record
+
+It acts on **that character's view** of the target. Patching the shared record would apply the kit
+to every character using the class. This is one of the two axes on which PCGen's `.MOD` fails, and
+it has no reading in which it works.
+
+### Decision — layered resolution, not overwrite (B)
+
+Nothing is rewritten. The character's view of any value is computed by walking base record then
+layers. Rejected: effects overwriting fields on a copy of the base record.
+
+Three decisions already taken made this close to obligatory:
+
+- **Kit abandonment (ticket 14).** Abandoning removes standing modifiers but keeps one-time grants.
+  Under overwrite you would have to recompute from base and reapply everything except that kit's
+  standing modifiers — which requires knowing where each value came from, precisely the information
+  overwrite destroyed. Under layers, abandoning is **dropping a layer**.
+- **Magic items (ticket 11).** AC is armour plus magic plus Dexterity; that is already a stack.
+  Under overwrite, removing a ring means recomputing the sheet.
+- **Explained refusals (ticket 04).** Hard validation refuses choices, and the refusal was required
+  to name its cause. "Your kit forbids this" is only sayable if provenance survives the
+  computation, and overwrite erases provenance by construction.
+
+Layers also dissolve a question this ticket was created with: **conflict between an Attachable's
+effect and the base record** needs no rule of its own — it is resolved by the stack.
+
+Accepted cost: every derived read is a traversal, and the layer order becomes part of the spec
+rather than an implementation detail — which the next decision then removes.
+
+### Decision — operations are order-independent (ii)
+
+Rejected: an ordered sequence in which later layers see earlier results.
+
+**This is a direct application of ticket 01's findings.** Load-order dependence was the first of
+three verified problems with PCGen's `.MOD`, patched over with `RANK:` load priorities and
+`FORWARDREF:` declarations — and the same research was explicit about the remedy: cross-pack
+collisions must resolve "by an explicit, user-visible rule, not by load order". An ordered stack
+reimports `RANK:` wholesale. Order-independence means "which weapons may I use" has **one** answer
+regardless of how the packs were loaded.
+
+Two consequences:
+
+- **`set` cannot be silently resolved by order.** Two layers setting the same field become a
+  **reported conflict** — "kit X and deity Y disagree about hit die" — rather than a silent
+  last-loaded-wins. Same philosophy as ticket 04's A3: honest about what it cannot resolve.
+- **`forbid` beating `grant` requires an escape valve**, because some kits explicitly pierce a class
+  restriction. Hence `except` as a first-class operation, which also produces the user-facing
+  message for free.
+
+### Decision — the operation vocabulary closes at six
+
+`adjust` (sums into a number) · `grant` (unions into a set) · `forbid` (subtracts, beats `grant`) ·
+`except` (pierces a prohibition) · `require` (obliges a future choice by the character) · `set`
+(fixes a value, conflict-detecting).
+
+Each may be **conditioned** — by level, or by a predicate. That is a qualifier on an effect, not a
+seventh operation.
+
+`require` is not new: it is the third nature ticket 14 discovered, the same shape as proficiency
+debt.
+
+**`set` earns its place on an authoring argument, not a modelling one.** Without it, "grey elves get
++1 Int, −1 Str" would have to be transcribed as a *delta* against the generic elf. Wagner is
+extracting from RTF and PDF, so the natural act is to copy the book's number, not to compute a
+difference — and a vocabulary that demands mental arithmetic during transcription produces typos,
+which under hard validation become false rules.
+
+**The line for what does not fit already exists on the map.** Ticket 11 settled that a magic item
+whose mechanics fall outside the vocabulary — charges, curses, artifacts — is carried as text with
+nothing computed. Same line here: "must tithe 10%" has a mechanical part and becomes `adjust`;
+"never refuses a challenge" is text the sheet displays and the engine does not compute.
+
+Risk recorded: if some PHBR kit needs a seventh operation, that is discovered during transcription
+— late. The defence is that the edition is dead and the books are in hand today, so it is checkable
+before any code is written.
+
+### Two things that fell out while checking the vocabulary
+
+- **`except` names the *subject*, not the effect.** Piercing "that particular prohibition" would
+  require effects to have identity, contradicting ticket 11, which classed Effect as a value type.
+  Unnecessary: `except: long sword` means "long sword is permitted notwithstanding any prohibition"
+  — no effect ID, order-independent, and the semantics the books actually use.
+- **Radius is implied by the target**, not a field of its own. A binding pointing at a class entry
+  has that class's radius; at the race, the race's. v2's setting layer simply points at something
+  wider. A separate radius field could disagree with the target it accompanies.
+
+### Decision — the character's own choices are the topmost layer
+
+One uniform resolution model, not two. Rejected: layers from packs, choices from the character,
+combined at read time.
+
+- **Choices already fit the vocabulary.** Picking a proficiency is `grant`; buying equipment is
+  `grant`; spending a slot is `adjust`. Nothing needs inventing.
+- **It completes the provenance story** that decided the layering question. Every value on the sheet
+  traces to a layer, including "because you chose it". Under two mechanisms, half the sheet can
+  explain itself and half cannot.
+- **Ticket 05 already put choices in level events.** A level event carrying a `grant` *is* a layer
+  with a date; the two models converge with no effort, where two mechanisms would have to be kept
+  consistent by hand.
+
+Discomfort recorded and judged acceptable: it becomes structurally possible for a character to
+grant itself something its class forbids, since a `grant` is a `grant` wherever it comes from. The
+defence is that `forbid` beats `grant` by design and the wizard never offers the illegal choice —
+a resolution rule rather than a structural impossibility. Ticket 14 established a preference for
+structural where the incoherence is the model's; here it is not. "The character chose something" is
+always coherent. Whether it is *legal* is ticket 04's question.
+
+### Handed on
+
+**How an Attachable names its target across a pack boundary** is settled in principle by ticket 01
+— pack-scoped opaque IDs, never reused, display names as presentation only — and the closed kind
+system guarantees the target's shape, so no declared expectation is needed. But **what happens when
+the target's pack is absent, or present at a version where the target changed**, belongs to
+[ticket 07](./07-character-file-format-and-identity.md), which already carries it.

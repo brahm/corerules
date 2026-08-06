@@ -2,7 +2,7 @@
 
 Type: grilling
 Status: open
-Blocked by: 01, 03, 04, 10, 11
+Blocked by: —
 
 ## Question
 
@@ -39,5 +39,23 @@ the engine is only as capable as the pack format is expressive.
   the engine cannot act on a name it does not understand.
 - **Trust** — packs come from outside. Does the format permit anything executable?
 
-Answers to 01 (prior art), 03 (handbook scope), 04 (validate or record), 10 (kit mechanism) and
-11 (object kinds) all constrain this; resolve them first.
+**Unblocked — all five blockers are resolved, and between them they have already fixed most of this
+ticket's answer.** What remains is genuinely about the *format*: shape, syntax, schema declaration,
+versioning and trust. The modelling is done.
+
+Inherited, and not to be reopened:
+
+- **What needs identity** (11): pack kinds only. Character structures live in the character file;
+  value types — predicates, effects, slot budgets, dice expressions — are never referenced.
+- **The effect vocabulary** (10): six operations — `adjust`, `grant`, `forbid`, `except`, `require`,
+  `set` — closed, each optionally conditioned by level or predicate. Anything outside it is carried
+  as text with nothing computed.
+- **Order-independence** (10): the format must not permit a pack's meaning to depend on load order.
+  Two `set`s on one field are a reported conflict, not a last-wins. This is the direct remedy for
+  PCGen's `RANK:`, which ticket 01 identified as a verified failure.
+- **The rules language is mandatory** (04): prerequisites, restrictions and budgets must be
+  evaluable, and packs must declare which rule-sets they provide.
+- **Dice semantics** (05): generation methods are pack content, so the expression language needs
+  distribution, dropping, rerolling and arrangement.
+- **One evaluator, versioned, no fallback path** (01), with rounding semantics written down and
+  worked examples.

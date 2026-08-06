@@ -61,5 +61,17 @@ kit, deity and subrace), Proficiency debt, Weapon specialisation, Spellbook, Inv
 list of names but of things that modify computed values, and the file must reference them by
 pack-scoped identity like anything else.
 
+**[Ticket 10](./10-kit-modifies-parent-class.md) then made the character's own choices the topmost
+layer of one uniform resolution model** — picking a proficiency is a `grant`, buying equipment is a
+`grant`, spending a slot is an `adjust` — so a level event carrying an effect *is* a layer with a
+date. The character file is therefore not a record of state plus a separate record of history: it
+is a stack, and **provenance has to survive it**, because ticket 04's refusals must name their
+cause.
+
+10 also handed this ticket a question it had already been carrying: **what happens when a
+referenced pack is absent, or present at a version where the target changed.** Naming a target is
+settled — pack-scoped opaque IDs, display names as presentation — but the missing and moved cases
+are this ticket's.
+
 Unblocked: 05 settled what a character contains, 14 settled how it holds classes, 11 named the
-structures.
+structures, 10 made choices a layer.

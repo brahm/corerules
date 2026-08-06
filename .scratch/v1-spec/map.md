@@ -131,6 +131,18 @@ foreclose them:
   out to be one closed shape used three times** — Wagner's proposal — which shrinks ticket 10, the
   map's heaviest invention, from designing a kit mechanism to designing one applicable-modifier
   mechanism.
+- [How a kit modifies its parent class](issues/10-kit-modifies-parent-class.md) — the mechanism with
+  no prior art turned out to need **no new machinery**: three earlier tickets had already forced it.
+  An Attachable never touches the shared record, and it does not overwrite at all — the character's
+  view is computed as a **stack of layers**, because abandonment must drop a layer, magic items are
+  already a stack, and ticket 04's refusals must name their cause, which overwriting erases. The
+  operations are **order-independent by design**, which is the direct remedy for the load-order
+  dependence ticket 01 found in PCGen's `.MOD`; two `set`s on one field become a **reported
+  conflict** rather than last-loaded-wins. The vocabulary **closes at six** — `adjust`, `grant`,
+  `forbid`, `except`, `require`, `set` — with anything outside it carried as text and not computed,
+  the same line ticket 11 drew for artifacts and charges. And **the character's own choices are the
+  topmost layer**, so the sheet is one uniform resolution in which every value can say where it
+  came from.
 
 ## Not yet specified
 
