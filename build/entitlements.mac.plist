@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <!-- Electron's prebuilt frameworks carry Apple's Team ID; an ad-hoc signature does not.
+         Without this the app dies at launch with "not valid for use in process: mapping process
+         and mapped file (non-platform) have different Team IDs". -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+    <!-- V8 needs it. -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+  </dict>
+</plist>

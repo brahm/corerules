@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- Deliberately no CSP. This page loads nothing remote, so a policy would protect
+         against nothing — and `'self'` behaves unreliably under file:// origins, where it can
+         block the local script and leave the readout blank. Blank is the one outcome this
+         spike cannot afford, since the readout is the finding. The real app should carry a
+         CSP; this throwaway should not risk it. -->
+    <meta name="referrer" content="no-referrer" />
+    <title>corerules spike</title>
+    <style>
+      body {
+        font: 14px/1.6 -apple-system, system-ui, sans-serif;
+        margin: 0;
+        padding: 2.5rem;
+        color: #1d1d1f;
+        background: #fbfbfd;
+      }
+      h1 { font-size: 1.25rem; margin: 0 0 0.25rem; }
+      p.sub { margin: 0 0 1.75rem; color: #6e6e73; }
+      dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.4rem 1.25rem; margin: 0; }
+      dt { color: #6e6e73; }
+      dd { margin: 0; font-variant-numeric: tabular-nums; }
+      @media (prefers-color-scheme: dark) {
+        body { color: #f5f5f7; background: #1d1d1f; }
+        p.sub, dt { color: #98989d; }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>It launched.</h1>
+    <p class="sub">
+      That is the whole finding. Report this screen back, verbatim, along with any dialog
+      macOS showed before it.
+    </p>
+    <dl>
+      <dt>Architecture</dt><dd id="arch"></dd>
+      <dt>Platform</dt><dd id="platform"></dd>
+      <dt>Electron</dt><dd id="electron"></dd>
+      <dt>Chromium</dt><dd id="chrome"></dd>
+      <dt>Node</dt><dd id="node"></dd>
+    </dl>
+    <script src="renderer.js"></script>
+  </body>
+</html>

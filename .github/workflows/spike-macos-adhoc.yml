@@ -1,0 +1,75 @@
+# Wayfinder ticket 12 — throwaway spike.
+#
+# One question: does an ad-hoc signed Electron app run on a Mac that did not build it?
+# electron-builder's mac.md:102 says an ad-hoc signature means the app "will only run on the
+# machine it was built on"; Apple's developer guidance says ad-hoc signed code copies between
+# machines fine and quarantine is the real obstacle. Those cannot both be right.
+#
+# It builds twice so one run answers two open questions:
+#   adhoc     — the configuration ticket 02 recommends (mac.identity: "-")
+#   unsigned  — no signature at all, to confirm the "damaged and can't be opened" claim
+#               and whether that dialog really has no Open Anyway path
+#
+# Artifacts only. No release is published, so the default read-only GITHUB_TOKEN suffices and
+# no repository setting has to change before the first run.
+
+name: spike / macOS ad-hoc signing
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # macos-latest is macOS 26 on arm64 — the architecture the question is about, since Apple
+    # Silicon refuses unsigned arm64 while running translated x86_64 unsigned.
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24
+
+      # `ci` rather than `install`, since package-lock.json is committed — same versions every
+      # run, which matters when the run's whole purpose is to produce evidence.
+      - run: npm ci
+
+      - name: Build — ad-hoc signed
+        run: npx electron-builder --mac --publish never
+
+      - name: Build — genuinely unsigned
+        run: >-
+          npx electron-builder --mac --publish never
+          -c.mac.identity=null
+          -c.directories.output=dist-unsigned
+
+      - name: Show what was signed
+        # `codesign -dv` on both, so the run's log records what actually landed rather than
+        # what the config asked for. Ad-hoc signatures report "Signature=adhoc".
+        run: |
+          for build in dist dist-unsigned; do
+            echo "===== $build ====="
+            app=$(find "$build/mac-arm64" -maxdepth 1 -name '*.app' | head -1)
+            if [ -z "$app" ]; then echo "no .app found"; continue; fi
+            codesign -dv --verbose=4 "$app" 2>&1 || echo "codesign: no signature"
+            echo "--- verify ---"
+            codesign --verify --deep --strict --verbose=2 "$app" 2>&1 || echo "verify failed"
+          done
+
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: adhoc
+          path: |
+            dist/*.dmg
+            dist/*.zip
+
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: unsigned
+          path: |
+            dist-unsigned/*.dmg
+            dist-unsigned/*.zip

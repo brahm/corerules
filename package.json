@@ -1,0 +1,42 @@
+{
+  "name": "corerules-macos-spike",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Throwaway spike for wayfinder ticket 12. Answers one question: does an ad-hoc signed Electron app run on a Mac that did not build it?",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:mac": "electron-builder --mac --publish never"
+  },
+  "devDependencies": {
+    "electron": "43.3.0",
+    "electron-builder": "26.15.7"
+  },
+  "build": {
+    "appId": "com.brahm.corerules.spike",
+    "productName": "corerules-spike",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html"
+    ],
+    "mac": {
+      "identity": "-",
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "category": "public.app-category.games",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["arm64"]
+        }
+      ]
+    }
+  }
+}

@@ -9,3 +9,6 @@ node_modules/
 dist/
 out/
 release/
+
+# Spike build output (branch spike/macos-adhoc-signing)
+dist-unsigned/
