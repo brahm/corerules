@@ -166,6 +166,16 @@ foreclose them:
   auditability for a file that stays legible in a text editor. And **cross-user sharing is not a v1
   goal** — legal but not functional, since a character is useless without packs the recipient cannot
   be guaranteed to have transcribed under the same identifiers.
+- [How Content Packs get authored](issues/13-how-packs-get-authored.md) — the map's last chance to
+  grow v1, and it did not take it. **corerules does not author packs**: extraction is a script's
+  job, not a window's, and the tool's whole contribution is a validator that names the file, record
+  and field. A pack being a directory of JSON already puts the transcription under git, which an
+  embedded editor would fight. It also caught **a hole in A3** that no earlier ticket had: rule-set
+  declarations must scope to the subjects a pack *introduces*, or the Complete Barbarian's Handbook
+  would land a class the PHB's permit-list predates and make Barbarian unplayable. And **a malformed
+  pack does not load at all** — Wagner's call over a recommendation of partial loading, on the
+  ground that tolerating drift in a *valid* pack is no argument for tolerating corruption in an
+  invalid one. Corpus integrity is binary; incomplete is not invalid.
 
 ## Not yet specified
 
