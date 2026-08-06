@@ -15,6 +15,11 @@ Decisions to make:
 - where artifacts land (GitHub Releases) and how versions are numbered
 - how the README documents the unsigned-app warning, per OS, in terms a player at the table can
   follow
+- **where the app puts its files, per OS.** [Ticket 08](./08-persistence-files-or-embedded-db.md)
+  split them by ownership: content in a user-visible folder the user chooses, application state and
+  the derived cache in the OS convention path. The first-run default must be *visible* on all three
+  systems — `~/corerules` on Linux, Documents as the analogue on Windows and macOS — and the README
+  has to say where things land, since backup is the user's job by design.
 
 **This ticket is HITL and its output is a literal checklist.** Wagner has never used GitHub
 Actions. Everything requiring the GitHub web UI — repository settings, workflow permissions,

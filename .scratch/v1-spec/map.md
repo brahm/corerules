@@ -176,6 +176,17 @@ foreclose them:
   pack does not load at all** — Wagner's call over a recommendation of partial loading, on the
   ground that tolerating drift in a *valid* pack is no argument for tolerating corruption in an
   invalid one. Corpus integrity is binary; incomplete is not invalid.
+- [Persistence: files on disk or an embedded database](issues/08-persistence-files-or-embedded-db.md)
+  — the headline was already answered by 06 and 07, so what remained was placement and querying.
+  Storage splits **by who owns the data**: content in a user-visible folder the user picks, because
+  backup is the argument that produced the file formats and `~/.config` is never backed up;
+  application state and the derived cache in the OS path, precisely because they must *not* travel.
+  **No persistent index** — the whole corpus fits in memory, ticket 13 already forces the full pack
+  to be read, and SQL cannot evaluate the prerequisite predicates that make the interesting query
+  expensive. A **cache of the built form** does exist, on Wagner's insistence, **keyed by content
+  hash** rather than by add/remove events — because for years the common event is *modification*.
+  That hash also repairs a hole ticket 07 had not noticed: drift detection keyed on a declared
+  version would miss every typo fix, since nobody bumps a version for one.
 
 ## Not yet specified
 

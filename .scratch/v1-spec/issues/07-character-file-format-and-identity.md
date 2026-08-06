@@ -117,6 +117,12 @@ file order is chronological order with no extra field.
 The character records which pack version it was last validated against. On open, if the pack has
 moved, the engine re-validates and **reports what changed**. Loading still never fails (ticket 04).
 
+**Corrected by [ticket 08](./08-persistence-files-or-embedded-db.md): the recorded value is a
+content hash, not the declared version.** A version is a manifest field, and nobody bumps one for a
+typo fix — so under declared versions drift would go undetected in precisely the most frequent
+case, which is Wagner correcting transcription. 08 needed a per-pack content hash anyway to key its
+cache; the same hash serves here.
+
 **One option eliminated itself, and the reason is worth keeping.** The obvious answer to pack drift
 is for the character to snapshot the pack data it used. That is impossible here — not for size, but
 because ticket 04 settled that **characters may circulate and packs may not**. A character carrying
