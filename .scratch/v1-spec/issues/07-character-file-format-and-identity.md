@@ -1,7 +1,7 @@
 # Character file format and identity
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: —
 
 ## Question
@@ -82,3 +82,112 @@ which is a third version the character may have to reconcile against.
 
 Unblocked: 05 settled what a character contains, 14 settled how it holds classes, 11 named the
 structures, 10 made choices a layer, 06 fixed what a reference points at.
+
+## Answer
+
+Five tickets emptied into this one, but nearly all of it arrived **already decided** —
+representation by choices rather than derived values, the structures named by 11, the class
+arrangement as a sum type, event-by-event recording, the kit binding, nominal proficiency debt, the
+active pack set. What was genuinely open was identity, pack drift, and the file's own shape.
+
+### Decision — the character and every level event carry a UUIDv7
+
+Not individual choices within an event.
+
+The map's constraint is precise and was followed to the letter: sync is out of v1, but **no v1
+decision may foreclose it** — "stable global identifiers rather than local autoincrements". That
+does not say build sync. It says do not shut the door.
+
+**The argument is retrofit, not elegance.** With identity only on the character, reconciling two
+machines is a whole-file operation — last-writer-wins or a manual merge. With identity on each
+event, it is per-event: two machines that advanced different levels both land. And that difference
+**cannot be added later**, because characters created in v1 without event IDs will never carry the
+information. It is exactly the shape of decision the permanent constraint exists to catch. The cost
+is sixteen bytes per event.
+
+Identity on each *choice within* an event was rejected as building sync rather than leaving the
+door open: two machines editing the same event is a real conflict that no identifier scheme
+resolves, and it needs a human either way.
+
+**UUIDv7 over v4**: the same uniqueness guarantee, but time-ordered, so in an append-oriented log
+file order is chronological order with no extra field.
+
+### Decision — live references, with drift detection
+
+The character records which pack version it was last validated against. On open, if the pack has
+moved, the engine re-validates and **reports what changed**. Loading still never fails (ticket 04).
+
+**One option eliminated itself, and the reason is worth keeping.** The obvious answer to pack drift
+is for the character to snapshot the pack data it used. That is impossible here — not for size, but
+because ticket 04 settled that **characters may circulate and packs may not**. A character carrying
+pack data *is a pack in disguise*, and sharing it would distribute WotC-derived content. The
+project's entire legal posture would fall to a file-format decision.
+
+Rejected: silent live references, because ticket 04's whole posture is never to be wrong in
+silence, and a character whose THAC0 changed between two openings with no notice is exactly that —
+and indistinguishable from a bug.
+
+Rejected: quarantine on drift, on a practical argument. **Pack drift will be constant for years.**
+Wagner is transcribing 24 books; every extraction session moves some pack. Under quarantine every
+character would be locked on every pack edit, and quarantine blocks advancement — the tool would be
+unusable precisely during the period it is most in use. Same reasoning that rejected
+restrictive-by-omission in ticket 04.
+
+Live references also have a property that fits the way this corpus will be built: **a transcription
+fix propagates.** Correct the fighter's THAC0 once and every affected character corrects itself,
+with a report. Under pinned versions you would repair character by character — the worst outcome
+given that the transcription is hand-made and will contain errors.
+
+The **removed entry** case falls out: a dangling reference is not repairable by editing the
+character if the entry is genuinely gone, but is repairable by choosing another — and the engine can
+tell which case it is, because an opaque never-reused ID means a disappearance is a disappearance
+rather than a rename. This is precisely what PCGen's `migration.lst` tries and fails to remedy,
+because there identity was the display name.
+
+### Decision — cross-user sharing is not a v1 goal
+
+Portability means **across Wagner's own machines**. Ticket 04 established that a character may
+legally circulate, being his own work rather than derived content — but that is a legal fact, not a
+functional one.
+
+**A shared character is useless without the packs it references, and packs do not circulate.** The
+recipient would have to have transcribed the same books — and, under pack-scoped IDs, transcribed
+them **with the same pack identifiers**. If one names theirs `phb` and the other
+`players-handbook`, nothing resolves. For hand-authored packs there is no registry or convention
+that could guarantee it, and building one would be coordination machinery this project has no
+reason to own.
+
+The map's permanent constraint says "sync between clients — LAN or internet", and multi-user has
+been in *Out of scope* since charting. **This must be stated in the spec rather than left implied**:
+the wording carried over from ticket 04 — "shareable with another player as a single file" —
+suggests it works, and it does not.
+
+### Decision — corrections rewrite in place
+
+Ticket 14 established that fixing a bad roll from 3rd level is an edit to history. It rewrites the
+event; the wrong value is gone. Rejected: a strictly append-only log where a correction is a new
+event superseding the old.
+
+Consistency with the identity decision above is the reason. Append-only correction is what makes
+automatic reconciliation work — two machines correcting the same event would not conflict, both
+corrections landing with the later winning — and that is *sync*, which the map said not to build.
+Under rewrite, that case becomes a conflict needing a human, which is the same standard already
+accepted for event-level identity.
+
+Rewriting also keeps the file legible: under append-only the character has a raw state and an
+effective state, so reading it means applying corrections over events, and the correction UI must
+show the second while editing the first. For a format that gets opened in a text editor when
+something goes wrong, that is one layer of indirection between the user and the problem.
+
+**Recorded as the cost: auditability is gone.** Under rewrite, "why did my hit points change?" has
+no answer in the file, because the old value no longer exists.
+
+### Settled by precedent, not by decision
+
+- **A character is a single JSON file** — unlike a pack, which is a directory. Packs are directories
+  because they are enormous and half-authored; a character is neither, and it is the thing one
+  actually hands to someone. Same JSON profile, same validator, same tooling.
+- **Quarantine is derived, never stored.** Validation runs on open and the result *is* the state.
+  Same precedent ticket 14 set for dual-class suppression.
+- **Provenance is likewise derived**, not stored: under ticket 10's layers, walking the stack
+  produces it.

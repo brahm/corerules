@@ -154,6 +154,18 @@ foreclose them:
   do not circulate**. And the same-name-in-two-books problem dissolved: under pack-scoped IDs
   `phb:set-snares` and `cbarb:set-snares` are simply two proficiencies, disambiguated by the
   character's active pack set, which ticket 03 had already put on the character.
+- [Character file format and identity](issues/07-character-file-format-and-identity.md) — a **single
+  JSON file**, where the character *and every level event* carry a **UUIDv7**. Event-level identity
+  is the map's permanent constraint doing its job: it cannot be added later, since v1 characters
+  without it could never be reconciled per-event. References to packs stay **live, with drift
+  detection** — the file records the pack version it was last validated against and reports what
+  moved — because a transcription fix should propagate to every affected character, and quarantining
+  on drift would lock the tool during the years of transcription. Snapshotting pack data into the
+  character eliminated itself: **a character carrying pack data is a pack in disguise**, which would
+  collapse the licence posture. Corrections rewrite history in place rather than appending, trading
+  auditability for a file that stays legible in a text editor. And **cross-user sharing is not a v1
+  goal** — legal but not functional, since a character is useless without packs the recipient cannot
+  be guaranteed to have transcribed under the same identifiers.
 
 ## Not yet specified
 

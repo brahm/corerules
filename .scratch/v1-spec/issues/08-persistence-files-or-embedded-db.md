@@ -2,7 +2,7 @@
 
 Type: grilling
 Status: open
-Blocked by: 07
+Blocked by: —
 
 ## Question
 
@@ -29,4 +29,16 @@ Weigh:
 Also: where on disk? Each OS has a conventional application-data location, and Electron
 exposes them — but a user-visible, user-chosen folder may serve the backup story better.
 
-Depends on ticket 07: the storage medium follows from what a character file is.
+**Unblocked — and much of the headline question is already answered.**
+[Ticket 06](./06-content-pack-format.md) made a pack a **directory of JSON**, and
+[ticket 07](./07-character-file-format-and-identity.md) made a character a **single JSON file**.
+Plain files are therefore the source of truth, decided on their own merits in both tickets rather
+than here. Two questions remain, and they are the real ones:
+
+- **Where on disk**, given that backup and portability were the arguments that produced the file
+  formats in the first place.
+- **Whether a derived index exists alongside them.** The querying axis is the one thing files did
+  not answer — "every kit available to a 3rd-level dwarf fighter" is trivial in SQL and manual over
+  files. An index that is *derived* and rebuildable is a different proposition from a database that
+  is the source of truth, and ticket 02's finding that `node:sqlite` ships inside Electron means it
+  costs no native module. Confirm that with a packaged-app spike before relying on it.

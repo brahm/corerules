@@ -128,3 +128,10 @@ own copies is one thing; a pack derived from the books leaving the machine is re
 WotC IP regardless of purchase. Ticket 07 currently asks whether a file is "shareable with another
 player as a single file"; the answer is plausibly yes for a **character** and no for a **pack**,
 and the spec must say so explicitly rather than leave it implied.
+
+**Sharpened by [ticket 07](./07-character-file-format-and-identity.md):** "plausibly yes for a
+character" is true legally and false functionally. A character is useless without the packs it
+references, and under pack-scoped IDs the recipient would need to have transcribed the same books
+*under the same pack identifiers* — which nothing can guarantee for hand-authored packs.
+Cross-user sharing is therefore **not a v1 goal**; portability means across the user's own
+machines. The spec must state that limitation, because this ticket's wording implies otherwise.

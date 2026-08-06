@@ -37,8 +37,18 @@ _Avoid_: loaded packs, enabled books, library
 
 **Character**:
 A fully statted individual built by AD&D 2e's character generation rules. The central entity
-of the tool.
+of the tool. Persisted as a single JSON file: not a snapshot but a **sequence of Level Events**,
+each carrying its own UUIDv7, from which everything derived is recomputed. Portable across the
+user's own machines; not shareable with another user, because it is meaningless without Content
+Packs that user cannot be guaranteed to have transcribed under the same identifiers.
 _Avoid_: PC, hero, sheet
+
+**Level Event**:
+One advance in a Character's history — which class went up, the die rolled, what was chosen.
+Carries its own identity, because hit points are **recorded randomness**: neither a choice nor a
+derivation, and not reconstructible from levels alone once a Character holds more than one class.
+Corrections rewrite the event in place; the old value does not survive.
+_Avoid_: level-up, history entry, audit record
 
 **NPC**:
 A role a Character carries, distinguishing who controls it. Not a separate kind of thing — an
