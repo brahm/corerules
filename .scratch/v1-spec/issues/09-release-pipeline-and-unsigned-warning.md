@@ -260,8 +260,16 @@ Three separate stories. They are not variations of one warning.
 
 ### Cleanup
 
-`.github/workflows/spike-macos-adhoc.yml` is removed from `main` as part of resolving this ticket —
+`.github/workflows/spike-macos-adhoc.yml` was removed from `main` as part of resolving this ticket —
 it was only ever there so GitHub would register the workflow for manual dispatch, and that job is
-done. **The branch `spike/macos-adhoc-signing` is kept**, because it holds the only proven macOS
-build recipe and the real release workflow does not exist yet. Delete it once implementation has
-one.
+done.
+
+**The branch `spike/macos-adhoc-signing` was then deleted too**, on Wagner's instruction, rather
+than being kept until implementation had a release workflow. The runnable scaffold is gone; **the
+recipe is not.** It survives in three committed places: [`spec.md`](../spec.md) §10.2 (the
+`mac.identity` block and both entitlement keys), Part 3 of this ticket (what the workflow must do),
+and [ticket 12](./12-verify-adhoc-signed-macos-build.md) (the run that proved it works, with its
+Electron and electron-builder versions).
+
+What was lost is the CI verification, not the configuration — rebuilding a minimal Electron app to
+re-test would be an afternoon, and the result is already recorded.
