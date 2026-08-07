@@ -215,17 +215,21 @@ foreclose them:
 
 ## Not yet specified
 
-- **The derived-statistic computation model.** THAC0, saving throws, armour class,
-  encumbrance — computed on read or stored on the character? Ticket 04 settled that the engine
-  computes and validates, but not *when* — on read, or snapshotted onto the character.
-- **How the level-event history is shaped.** Ticket 05 made a character a sequence of choices per
-  level rather than a snapshot, and ticket 14 will add dual-class suppression state on top. How
-  much of that sequence the file keeps, and what is stored versus re-derived, is ticket 07's — but
-  the shape of the thing itself is not yet sharp.
-- **Whether macOS is a v1 platform at all.** Ticket 02 turned "cross-platform" from a settled
-  premise into an open one: unsigned macOS may have no viable path, and Wagner develops on Fedora
-  with no known Mac access. Ticket 12 produces the fact; what the spec does if the answer is bad —
-  ZIP-only, untested-and-documented, or dropped — is not yet sharp enough to ticket.
+<!-- see "Fog of war": in-scope fog you can't ticket yet; graduates as the frontier advances -->
+
+_Empty. Every patch that stood here was answered by a ticket written after it:_
+
+- ~~The derived-statistic computation model~~ — settled by
+  [ticket 10](issues/10-kit-modifies-parent-class.md): nothing is ever stored, the character's view
+  of any value is computed by walking the layer stack, and
+  [ticket 07](issues/07-character-file-format-and-identity.md) confirmed provenance is derived too.
+- ~~How the level-event history is shaped~~ — settled by
+  [ticket 14](issues/14-multi-class-and-dual-class-model.md): every advance records which class went
+  up, the die rolled and what was chosen, each event carrying a UUIDv7, with corrections rewriting
+  in place.
+- ~~Whether macOS is a v1 platform at all~~ — settled by
+  [ticket 12](issues/12-verify-adhoc-signed-macos-build.md) by experiment: it ships, with a Terminal
+  command in the README.
 
 ## Out of scope
 
