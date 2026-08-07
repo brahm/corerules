@@ -200,6 +200,18 @@ foreclose them:
   and that path **does not work**. Only `xattr` does. macOS therefore ships in v1 with a Terminal
   command in the README; notarising at US$99/year was rejected. A second Mac was never needed —
   the CI runner is the building machine, and that claim was wrong every time it was repeated.
+- [Release pipeline and the unsigned-app warning](issues/09-release-pipeline-and-unsigned-warning.md)
+  — **a pushed tag builds; the release is born a draft**, so the only click in the process is
+  publishing. Manual dispatch was rejected on this map's own evidence: ticket 12 proved its branch
+  dropdown defaults wrong and fails late. **SemVer with the major tied to the roadmap** — major 1 is
+  the v1 milestone — which is affordable only because ticket 06 gave the pack format its own
+  version, so the break that matters already has a number. **AppImage, NSIS, DMG**, one per OS:
+  rpm is out because Fedora 45 will make it refuse unsigned packages on Wagner's own distribution
+  within months of v1, and shipping a promise with an expiry date is worse than not shipping it.
+  The ticket's deliverable is the checklist itself — one-time setup, cutting a release, what the
+  workflow must do, and three genuinely different README stories, since "unsigned" means `chmod +x`
+  on Linux, two clicks on Windows unless Smart App Control blocks you outright, and a Terminal
+  command on macOS.
 
 ## Not yet specified
 
