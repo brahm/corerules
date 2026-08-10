@@ -105,3 +105,12 @@ The AD&D 2nd Edition Player's Handbook and Dungeon Master's Guide.
 The PHBR "Complete Book of…" / "Complete …'s Handbook" series. Layers kits, proficiencies and
 some classes onto the Core Books.
 _Avoid_: red books, brown books, the completes
+
+**Corpus**:
+The body of Content Packs that has actually been transcribed — not one pack, and not the books.
+The distinction that earns it a place here: **Engine scope is which mechanical shapes are
+understood; Corpus scope is which books exist as packs.** They are different axes and they move at
+different speeds — the Engine's is fixed by a spec, the Corpus grows book by book over years. A
+partial Corpus is the normal state rather than a broken one, which is precisely what A3 exists to
+make honest.
+_Avoid_: library, collection, database, the books
