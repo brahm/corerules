@@ -16,8 +16,11 @@ This ticket runs all of it against real books and produces real packs.
 
 ## What it must produce
 
-1. **The slice, transcribed**, in the corpus's home ([ticket 02](./02-where-the-corpus-lives.md)) —
-   never in this repository.
+1. **The slice, transcribed**, in the corpus's home — never in this repository.
+   [Ticket 02](./02-where-the-corpus-lives.md) resolved: that home is a **private repository cloned
+   to the `spec.md` §8 content path on `/home`**, which *is* the Engine's content folder. So the
+   slice is transcribed straight into the directory the Engine reads, and the correction loop is
+   live from the first record.
 2. **A pack that passes the mechanical checker**, with the failures found along the way recorded
    rather than quietly fixed. What the checker caught is the evidence that
    [ticket 10](./10-mechanical-verification.md) chose the right checks.

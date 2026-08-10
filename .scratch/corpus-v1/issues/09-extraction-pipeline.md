@@ -28,6 +28,13 @@ avoids the question entirely. **Ticket 04 is forbidden from doing this; this tic
 pipeline will be re-run every time a parser improves, for years. Decide whether identical input must
 give byte-identical output, and if not, what is allowed to vary.
 
+**3b. The shape of its configuration.** [Ticket 02](./02-where-the-corpus-lives.md) settled that the
+pipeline lives in the public repository, the corpus in a private one, and the sources on disk outside
+git — connected by **configured paths, never a submodule**. So the pipeline takes **three paths**:
+sources, corpus, and its own output location. Decide whether that is an env var, a config file, or
+CLI arguments, and where the **source hash manifest** is verified — ticket 02 put the manifest in the
+public repository precisely so the pipeline can check its inputs before running.
+
 **4. What language it is written in.** The schema (ticket 05) has two consumers — this pipeline and
 the Engine — and §7.2's one-evaluator rule means the expression language must not be implemented
 twice from a description. TypeScript would share code with the Engine; Python has the better

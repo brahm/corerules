@@ -1,0 +1,40 @@
+# Source integrity manifest — AD&D Core Rules 2.0
+#
+# Decided by ticket 02: the sources are NOT version-controlled, they are hashed.
+# Git solves change; these files never change. What they need is IDENTITY —
+# proof that the pipeline ran over these exact bytes.
+#
+# This matters because ticket 03 established that at least two byte-different
+# DMG variants are in circulation, and that this corpus is PRE-ERRATA (TSR
+# issued official PHB/DMG corrections the CD does not contain). Without these
+# hashes, "the DMG" is an ambiguous phrase.
+#
+# A SHA-256 is a fingerprint, not the content — publishing it distributes
+# nothing and lets anyone holding the same CD verify they hold the same material.
+#
+# Paths are relative to the sources root and are recorded as they were on the
+# machine that generated this file; the hashes are what identify the material.
+# Verify with:  sha256sum -c sources.sha256
+#
+6a99e6528ead73abcc89d6a02e9fe909dbe70df07bbc24543e3921f910000fae  books/armsbk.rtf
+3f21d2d094297748d9d07242968963ca6bad1cbbc295718635eb23f40b88390d  books/bardbk.rtf
+539b3a9fbe84b9a0de66a5d358c17badbe4867ddf154973fcacc81bc36d7b2dd  books/dmgbk.rtf
+c7e8b7a4b293f279441b31775972098b70333faf3570d550bf64de095ee389d2  books/dohlcbk.rtf
+456ded1ac9652ea586930693c4496af801d34d2c1bfb818aebf73448216b0621  books/druidbk.rtf
+afd42d99be97e3f5d003665332280e08e90f0fe597b8f9b6cc708a8fd8ddc181  books/dwarfbk.rtf
+4bd8e90321c8206fc66e954fc1a819a27f7f7d674af2f0999a5652eb01deb03c  books/elfbk.rtf
+3885eb910bdbb5064213c600f3acf05be4b449eae72b097f34575320a46c4819  books/fightrbk.rtf
+91bbdd655eaa8ea45ec495229eba53cc8b525193076fa72519cadab95dec45a2  books/gnmhlfbk.rtf
+bac02798a8fff540182e0afd5517e6a16d2c7425b9868af9b4f1088b7e751a65  books/monbk.rtf
+276fd414b9979ef6651868ab89ae02ff48d4af86edbbc964a27c8273af3b4bb1  books/paladnbk.rtf
+3f80ed28afd0b9ebfcce00bf872115eb696c156044636f0d6319ae4fe81c9982  books/phbbk.rtf
+a69f5c9de361fcfefd8c49ffeaefff0ffbb15809e1a355409b710ded19f53e19  books/poctbk.rtf
+147054c40036d3cbec3247cda3326429c63245fbeedecf3ff899fc2d05332bbd  books/posmbk.rtf
+4da077148043cd445e1792d40bb1f8974864aad31f6f6cd75a61d09d9d3bb869  books/pospbk.rtf
+73bfeb640347e0a560d8546382860791dd17c2ae4ebaaa62d91d2796d3f96115  books/priestbk.rtf
+94415d70c054a1f142cdf8d86118fb858e72068d73edb60aa6d05732bb5995ec  books/rangerbk.rtf
+e5c726a9f47a274e7b909576c305993d1c332af578471c05ed0a9b95a206c26d  books/thiefbk.rtf
+ce8dfb9321310ccca906a84f3990cacac776bf1eb36715b4ba67b1049bc6b97a  books/tomebk.rtf
+1dbc4e41ce0d498ee9a05fad4a79de3f6dea41f022cde2cb59dbad2428494ec4  books/wizardbk.rtf
+65ac08f0340664775024fbcb45314024e39fe79cf88cb77e758253157ce0dde7  iso/add_core_rules_2_expansion.iso
+ce72e89ecf7b87f15bfbb3525570f3800cbe7340eb9b0154f6b7f9d5661f5fdd  iso/add_core_rules_2.iso

@@ -145,6 +145,23 @@ RTF ignores by specification. The corpus is clean.
 
 <!-- one line per closed ticket: enough to judge relevance, then follow the link for detail -->
 
+- [Where the corpus lives and how it is version-controlled](issues/02-where-the-corpus-lives.md) —
+  **a private remote is backup, not circulation**: `spec.md` §1's posture exists so a pack never
+  reaches *another user*, and a private repository has an audience of one. What settled it is that
+  §8 already made backup the user's job, and a corpus of years of transcription living on one machine
+  plus a removable card on the same desk is the project's largest single point of failure. **The
+  corpus repository *is* the Engine's content folder** — one directory, not two, because the
+  correction loop closes tightest, ticket 08's content-hash cache was built for exactly this, and two
+  copies reintroduce the stale second source of truth §8 rejected. The `.git` inside it is free
+  because §7.1 requires declaration over discovery. **Sources are not version-controlled — they are
+  hashed**: git solves change and the sources never change, while ticket 03's two byte-different DMG
+  variants make *identity* the real requirement, and the hash manifest can live in the **public**
+  repository because a fingerprint is not the content. Third-party reference artifacts get the same
+  treatment. **Sibling checkouts, never a submodule** — a submodule would publish the private
+  repository's URL in the public one's `.gitmodules` while breaking every third-party clone. Measured
+  along the way and load-bearing: **the corpus sits on a removable exFAT card**, which is the worst
+  case for thousands of small JSON files under constant write, so the working tree moves to `/home`
+  and the card becomes the third copy.
 - [Prior art: has anyone already extracted the Core Rules 2.0 corpus?](issues/03-prior-art-core-rules-extraction.md)
   — the literal answer is the expected negative: **nobody has parsed the RTF**, which is what
   justifies [ticket 09](issues/09-extraction-pipeline.md) building a pipeline rather than adopting
