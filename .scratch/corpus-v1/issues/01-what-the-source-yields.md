@@ -1,7 +1,7 @@
 # What each pack kind actually yields at source
 
 Type: task
-Status: open
+Status: resolved
 Blocked by: —
 
 ## Question
@@ -86,6 +86,76 @@ The map's Notes carry the measurements already taken. Do not repeat them.
 **No book text in this repository.** Field labels, headings and counts only — never a paragraph of
 body text, never a table's contents. See the map's hard constraint. Findings go in
 `research/01-what-the-source-yields.md`, under the same rule.
+
+## Answer
+
+Full measurement: [`research/01-what-the-source-yields.md`](../research/01-what-the-source-yields.md).
+Both renditions, all 13 v1 books.
+
+**The headline contradicts what both earlier tickets assumed: neither rendition wins, and the split
+is per book.** Ticket 03 said the HTML solves tables; its correction said the HTML fails on kits.
+Both are true only on average. In the **Complete Paladin's, Ranger's and Book of Elves the RTF
+exposes no kit structure at all** — `paladnbk` has 70 labelled lines across 58 distinct labels, none
+of them record fields — while the HTML carries individually titled kit pages. In the **Complete
+Thief's the RTF finds 24 kits to the HTML's 7.** A pipeline reading one rendition loses whole books
+either way.
+
+**Tables: HTML everywhere, but the argument is ambiguity, not volume.** A first pass suggested the
+RTF held more rows in 8 of 13 books; that was tab-indented prose being counted as data. Under a
+strict definition the HTML wins in all thirteen — and the real point is that an RTF tab line cannot
+be told from indented prose without a heuristic that has both false positives and false negatives,
+while `<TR>` needs none. **But HTML table markup is unevenly applied** — 578 tables in the PHB, **1**
+in the Complete Priest's Handbook — and where it is absent the HTML is *worse* than the RTF.
+
+**Four record shapes, where the ticket expected one:** Kit (~146 records, 8 books, five reliable
+co-occurring labels), Priest specialty (60 records, ten fields, sharing nothing with a kit), Subrace
+(5 records, mapping cleanly onto §4.1's Subrace attachable), and Spell (the largest population).
+**This graduates the map's fog patch about the Complete Priest's Handbook**: the shape is a priest
+specialty class, and which kind it becomes is now a modelling decision for
+[ticket 05](./05-pack-schema.md) rather than a source question.
+
+**The PHB's 67 numbered tables map almost one-to-one onto §3.1's kinds** — the research file carries
+the table. Two confirmations fall out: the experience-level tables are **keyed by class group**,
+which is §3.1's claim that class group is a real modelling entity rather than a UI grouping; and
+**Coin appears as a table of exchange rates**, which is the convertible-currency kind arriving as
+data exactly as §3.1 predicted.
+
+**The label vocabulary is regular but not uniform, and now quantified.** `Nonweapon Proficiencies`
+splits three ways and the Priest's Handbook merges it with the weapon field entirely; a naive
+single-label regex undercounts by 44% on that field and by **100%** on three whole books.
+
+### Two findings that change other tickets
+
+**Page numbers do not exist in either rendition** — zero `\page`, bookmarks, footnotes or hyperlinks
+in the RTF; zero page text or `<META>` in the HTML. `spec.md` §7.1 requires **book and page on every
+record**. That requirement is **unmeetable from this corpus**, and ticket 05 must replace it. The
+natural substitute is book plus the record's own source anchor, which is reproducible and
+machine-checkable where a page number would have been neither.
+
+**The renditions share no identifier.** Reading tables from one and kit prose from the other means
+aligning by heading text — a real component of [ticket 09](./09-extraction-pipeline.md).
+
+### Bucket assignment
+
+**Mechanical:** the numbered tables, read from HTML where `<TABLE>` exists; record boundaries where
+`<TITLE>` exists. **Regular but ambiguous:** kit records in the 8 RTF-bearing books, spell records
+given the PHB/handbook layout split, the proficiency-label variants. **Judgement:** all
+`Special Benefits`/`Special Hindrances` prose, every Paladin/Ranger/Elf kit, and Alignment, Language,
+Sphere and Deity, which are prose everywhere.
+
+### Measurement caution for later sessions
+
+**`grep` on this machine is `ugrep`**, and flag combinations like `-oc` silently produced wrong
+counts in a first pass. Every number here comes from a Python census instead. Re-measure that way or
+verify the grep first.
+
+### The highest-value follow-up, left open
+
+**Whether the HTML's untitled files are continuation pages or independent records.** Title coverage
+ranges from **28%** (Paladin) to **94%** (Priest), and in the Complete Fighter's Handbook the
+untitled 47% of files hold ~70% of the text. If they are continuations the HTML is far more usable
+than this measurement credits; if they are records, far less. It decides how much of the HTML is
+worth reading, and [ticket 09](./09-extraction-pipeline.md) should settle it before choosing a seam.
 
 ## Two things already known to be waiting here
 

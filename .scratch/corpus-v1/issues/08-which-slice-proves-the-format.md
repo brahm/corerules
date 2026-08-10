@@ -25,6 +25,23 @@ closable only by real data:
 - **#4 — the six-operation vocabulary may prove insufficient** for some PHBR kit, and the spec says
   this is checkable now because the books are in hand.
 
+## What ticket 01's measurement does to the candidates
+
+[Ticket 01](./01-what-the-source-yields.md) supplies the counts this ticket was waiting on, and it
+sharpens the candidate list rather than just filling it in:
+
+- **~146 kit records** across 8 books, and **60 priest specialty records** with a ten-field shape
+  sharing nothing with a kit. A slice of "one handbook's kits" is 16–29 records — a session's work,
+  not a season's.
+- **A slice must now name its rendition.** Since the split is per book, the Complete Dwarves or
+  Gnomes & Halflings (kits in *both*, ~1:1) prove the format while proving nothing about the
+  alignment problem; the Complete Paladin's or Ranger's (HTML only) or Thief's (RTF-dominant) prove
+  the format *and* exercise the harder pipeline. That is a real trade, and the ticket must choose it
+  deliberately.
+- **Subrace is nearly free**: 5 records in the Complete Book of Elves, mapping onto §4.1's third
+  Attachable. Adding them tests the claim that Kit, Deity and Subrace are one shape used three times
+  — which no other slice would touch — at a cost of five records.
+
 ## Candidates, with the case for each
 
 - **One Complete handbook's kits plus the PHB tables they modify.** The charting hunch. Exercises

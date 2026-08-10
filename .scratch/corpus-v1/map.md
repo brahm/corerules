@@ -145,6 +145,23 @@ RTF ignores by specification. The corpus is clean.
 
 <!-- one line per closed ticket: enough to judge relevance, then follow the link for detail -->
 
+- [What each pack kind actually yields at source](issues/01-what-the-source-yields.md) — the
+  bottleneck ticket, and it contradicts what the two research tickets had assumed: **neither
+  rendition wins, and the split is per book.** The Complete Paladin's, Ranger's and Book of Elves
+  expose **no kit structure at all** in the RTF — `paladnbk` has 70 labelled lines across 58 distinct
+  labels, none of them fields — while the HTML carries individually titled kit pages; the Complete
+  Thief's runs the other way, 24 kits in the RTF against 7 in the HTML. **A pipeline reading one
+  rendition loses whole books either way.** On tables the HTML wins in all thirteen books, but the
+  argument is **ambiguity, not volume** — a first count suggesting the RTF held more rows was
+  tab-indented prose being counted as data — and HTML table markup is unevenly applied, from 578
+  tables in the PHB to **1** in the Complete Priest's. **Four record shapes** appeared where the
+  ticket expected one — Kit (~146 records), Priest specialty (60, ten fields), Subrace (5, mapping
+  onto §4.1), Spell — and the **PHB's 67 numbered tables map almost one-to-one onto §3.1's kinds**,
+  confirming both that experience tables are keyed by class group and that Coin arrives as a table of
+  exchange rates. **Page numbers exist in neither rendition**, so `spec.md` §7.1's requirement of book
+  *and page* on every record is **unmeetable from this corpus** and ticket 05 must replace it. One
+  measurement caution recorded for every later session: **`grep` here is `ugrep`** and its flag
+  combinations silently produced wrong counts, so every number came from a Python census instead.
 - [Where the corpus lives and how it is version-controlled](issues/02-where-the-corpus-lives.md) —
   **a private remote is backup, not circulation**: `spec.md` §1's posture exists so a pack never
   reaches *another user*, and a private repository has an audience of one. What settled it is that
@@ -209,11 +226,13 @@ RTF ignores by specification. The corpus is clean.
   until [ticket 05](issues/05-pack-schema.md) exists and [ticket 09](issues/09-extraction-pipeline.md)
   has said whether re-extraction is cheap. If re-running the pipeline is cheap and deterministic,
   migration may not be a problem at all — which is why this is fog and not a ticket.
-- **Whether the ~59 Complete Priest's records are Deity, Class, or something the spec lacks.**
-  Measurement 3 above found a second record shape with ten fields that do not resemble a kit.
-  `spec.md` §3.1 lists both Deity and Class as pack kinds and §4.1 makes Deity an Attachable, but
-  which one these are — or whether they are a priest *specialty class*, which is a third reading —
-  needs [ticket 01](issues/01-what-the-source-yields.md) to characterise them first.
+- ~~Whether the Complete Priest's records are Deity, Class, or something the spec lacks~~ —
+  **graduated by [ticket 01](issues/01-what-the-source-yields.md)**, which characterised them:
+  **60 records with a ten-field shape** — `Duties of the Priest`, `Followers and Strongholds`,
+  `Possible Symbols`, `Powers`, `Weapon and Armor Restrictions`, `Other Limitations`,
+  `Spheres of Influence`, `Minimum Ability Scores`, `Races Allowed`, `Alignment` — sharing nothing
+  with a kit. The source question is answered; **which kind they become is now a modelling decision
+  inside [ticket 05](issues/05-pack-schema.md)**, not fog.
 - **The ergonomics of correction over a multi-year haul.** Ticket 13 of the v1 map settled that spot
   correction happens in a text editor and accepted the cost. Whether that survives contact with
   years of it is a real question, but it cannot be asked until something has actually been

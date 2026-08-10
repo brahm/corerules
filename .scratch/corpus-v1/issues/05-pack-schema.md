@@ -40,10 +40,25 @@ their own ranges, **plus the A3 rule-set declarations** — which §5.1 says sco
 pack introduces and cannot be derived from contents. And the file list: §7.1 requires declaration
 over discovery, with a file present but unlisted **reported**.
 
-**5. Book and page citation as a validated field.** §7.1 makes this the answer to JSON's lack of
-comments. Decide its shape now — free text, or structured (book id, page, table number) — because
+**5. Book and page citation — and §7.1's requirement cannot be met.**
+[Ticket 01](./01-what-the-source-yields.md) measured it: **page numbers exist in neither rendition.**
+Zero `\page`, bookmarks, footnotes or hyperlinks in the RTF; zero page text and zero `<META>` in the
+HTML. §7.1 makes book-and-page citation the answer to JSON's lack of comments and requires it on
+every record — **so the spec requires a field the corpus cannot supply.**
+
+This ticket has to replace it, and the substitution is not cosmetic: the point of the field is that
+provenance be *validatable*. Ticket 01's suggestion is **book plus the record's own source anchor**
+(HTML filename, or RTF line offset), which is reproducible and machine-checkable where a page number
+would have been neither — but an anchor is only stable while the parser's segmentation is, which ties
+it to [ticket 07](./07-identity-and-id-stability.md). Decide the shape here, and decide it early:
 it appears on every record in the corpus and changing it later is the most expensive migration
 available.
+
+**6. Which kind the Complete Priest's records become.** Graduated from the map's fog by ticket 01,
+which characterised them: **60 records, ten fields**, sharing nothing with a kit. §3.1 lists both
+Deity and Class; §4.1 makes Deity an Attachable. A third reading — a priest *specialty class* — is
+what the fields actually describe. This is now a modelling decision, and the source question behind
+it is closed.
 
 **6. Where the schema physically lives**, given the pipeline is published here and the Engine does
 not exist yet. It must be findable by a repository that has not been created.

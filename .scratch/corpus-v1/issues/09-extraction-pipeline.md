@@ -50,6 +50,23 @@ keep the manifest in step, which §7.1 requires and hand-editing can desynchroni
 question that makes or breaks a re-runnable pipeline, and it is closely tied to ticket 07: an edit
 that is overwritten on re-run is not a correction, it is a rehearsal.
 
+## What ticket 01 forces on the architecture
+
+[Ticket 01](./01-what-the-source-yields.md) measured both renditions and the result constrains item 1
+harder than ticket 04 did:
+
+- **The pipeline must read both renditions.** Not as an optimisation — the Complete Paladin's,
+  Ranger's and Book of Elves have no kit structure in the RTF at all, and the Complete Thief's has
+  three times more in the RTF than in the HTML. Reading one loses whole books.
+- **So alignment is a first-class stage.** The two renditions share **no identifier**; joining a
+  table read from the HTML to kit prose read from the RTF is by heading text, and that stage owns its
+  own error modes.
+- **Rendition choice is per book and per kind**, not global. The research file carries the table.
+- **Settle the untitled-file question first.** Ticket 01's highest-value open item: HTML `<TITLE>`
+  coverage ranges from 28% (Paladin) to 94% (Priest), and it is unknown whether untitled files are
+  continuation pages of a titled record or independent records. That answer decides how much of the
+  HTML is usable, so it comes before the seam is chosen — not after.
+
 ## What ticket 04 already supplied
 
 [Ticket 04](./04-llm-assisted-extraction.md) answers **item 1** and supplies the evidence for
