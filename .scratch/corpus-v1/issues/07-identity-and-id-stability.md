@@ -22,6 +22,18 @@ by strangers with the same display names.
 
 Nothing in `spec.md` addresses this, because in the v1 map a pack was something that already existed.
 
+## The anchor already exists — ticket 05 defined it
+
+[Ticket 05](./05-pack-schema.md) put two provenance fields on every record: a `section` heading chain
+for humans, and an **`anchor`** — rendition plus file or line offset — for machines. It defined the
+anchor **deliberately as the artifact this ticket would otherwise invent**, so option 2 below is no
+longer hypothetical: the source-position data exists, on every record, whether or not identity
+derives from it.
+
+So the question narrows. It is no longer *what could an ID derive from* but **should the ID be the
+anchor, or something that outlives it** — given ticket 04's finding that the anchor moves whenever
+the parser's segmentation changes, which early on is the common event.
+
 ## What has to be decided
 
 **1. What an ID is derived from.** Three shapes, each with a real failure mode:

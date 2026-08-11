@@ -1,7 +1,7 @@
 # The pack schema, version 0.1
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 01, 04
 
 ## Question
@@ -60,7 +60,7 @@ Deity and Class; §4.1 makes Deity an Attachable. A third reading — a priest *
 what the fields actually describe. This is now a modelling decision, and the source question behind
 it is closed.
 
-**6. Where the schema physically lives**, given the pipeline is published here and the Engine does
+**7. Where the schema physically lives**, given the pipeline is published here and the Engine does
 not exist yet. It must be findable by a repository that has not been created.
 
 ## What this ticket must not do
@@ -68,6 +68,120 @@ not exist yet. It must be findable by a repository that has not been created.
 **Do not re-open §3's kind list or §4's six operations.** Those are settled. If ticket 01 finds
 something the six operations cannot express, that is **v1 spec known unknown #4 firing** — record it
 as a finding against the v1 spec, do not silently add a seventh operation here.
+
+## Answer
+
+**This ticket writes the spine, not the whole schema.** The per-kind record shapes are deferred to
+[ticket 14](./14-record-shapes-for-the-slice.md), which is blocked by the slice choice.
+
+The ticket's own warning decided it: *designing for the books already read*. Twenty-seven record
+shapes designed before a single record is transcribed is that error at maximum exposure — and
+[ticket 13](./13-transcribe-the-proving-slice.md) exists precisely to report what the books force a
+change to, saying a "everything worked" result should be disbelieved. The shock absorber is already
+mandated by §7.3: the format carries its own version and a converter path. Meanwhile **the two
+tickets blocked on this one — [07](./07-identity-and-id-stability.md) and
+[10](./10-mechanical-verification.md) — need only the spine.**
+
+Correction owed to the map: the advice that ticket 05 should precede
+[ticket 08](./08-which-slice-proves-the-format.md) holds only in the narrow sense that 08 wants the
+spine. Running 08 first would have lost nothing.
+
+### Decision 1 — JSON Schema is canonical; TypeScript is generated
+
+Rejected: TypeScript-first with zod/valibot/typebox and JSON Schema generated.
+
+The discriminator is **when** the schema is written. It is authored *here*, before the Engine exists.
+TypeScript-first would make the schema's home a TypeScript project — the one language this authoring
+effort has no reason to be in — to serve a pipeline that may be Python and a consumer that has not
+been written.
+
+Three supporting arguments point the same way. §7.3 says the schema is **published**, which implies a
+language-neutral artifact. Generation JSON Schema → TypeScript is mature and **one-directional**,
+which eliminates drift by construction. And [ticket 04](./04-llm-assisted-extraction.md) identified a
+**third consumer nobody had named** — a constrained decoder, if ticket 09 uses structured output —
+which reads JSON Schema natively.
+
+**Recorded so it is not rediscovered:** the schema will never be the whole check. Ticket 04
+established that recursive schemas are unsupported by structured outputs and that numeric ranges and
+string lengths are not decoder-enforceable. **Two enforcement tiers exist regardless of this
+choice** — what the schema declares, and what the §7.6 validator checks.
+
+### Decision 2 — provenance is a section path *and* a source anchor
+
+§7.1 required book **and page**, and [ticket 01](./01-what-the-source-yields.md) established that
+page numbers exist in neither rendition. The replacement is not one field but two, because the page
+number was quietly doing two jobs:
+
+- **`section` — the heading chain** (*Complete Fighter's Handbook → Warrior Kits → Myrmidon*). For a
+  human holding the printed book, findable through its own table of contents. Present in both
+  renditions; the HTML nearly hands it over, since `<TITLE>` already reads `Myrmidon (Comp. Fighter's
+  Handbook)`.
+- **`anchor` — rendition plus file or line offset.** For the machine: relocating the record on
+  re-extraction, and diffing.
+
+**The anchor is deliberately the same artifact ticket 07 will weigh as a source-position identity.**
+Defined once here, used there — rather than both tickets inventing it separately.
+
+**Rejected: a hand-filled page field.** Wagner owns the printed books, so page numbers are
+*obtainable* — by hand, plausibly for ~146 kits and 67 tables, implausibly for ~500 spells. A
+provenance field filled for part of the corpus is exactly the **silently incomplete** state this
+project rejects everywhere: it is why A3 exists, why YAML was refused, and why a malformed pack does
+not load. A field that only sometimes carries provenance is worse than none, because it looks
+complete. If page is ever wanted, the coherent form is **optional and declared**, on the A3 pattern,
+so it cannot lie.
+
+### Decision 3 — the Complete Priest's records are **Deity**, and Deity enters fat
+
+Rejected: Class, and Kit.
+
+**Kit self-destructs on §6.4.** A kit is bound at creation, never rebound, and may be **abandoned** —
+losing benefits and penalties and leaving proficiencies as debt. Applied here that reads *abandon
+being a priest of war and remain a priest*, which is not an operation the game has. When a kind's
+central operation is meaningless on a record, the record is not that kind.
+
+**Class fails on a measurement:** ticket 01 found no experience progression in `priestbk`. These
+records **inherit** the Priest's. Modelling them as Class would invent a class that delegates almost
+everything to another one.
+
+**Deity fits §4.1 without forcing anything** — its table already gives Deity the target *a priest
+class entry*, referenced by other records, one per target, which is exactly this relationship. And
+the fields are portfolio, not class mechanics: symbols, duties, spheres of influence.
+
+**The correction this forces**, recorded rather than buried: [v1 ticket 11](../../v1-spec/issues/11-engine-object-kinds.md)
+decided *"Deity enters thin"* and justified it with its own test that a kind added in v2 is a v1
+mistake. Sixty records of ten fields are not thin. **Ticket 11 was right that Deity exists and wrong
+about its size.** §4.1's shape survives — target, predicate, ordered effects — but a Deity's effect
+list is long, and **Deity will exercise §4.3's six operations harder than any kit will**. That is
+direct input to [ticket 08](./08-which-slice-proves-the-format.md).
+
+### Decision 4 — the manifest records the source bytes the pack came from
+
+Beyond §7.3's Foundry-style `id` / `version` / three-way `compatibility` / dependencies, §5.1's A3
+declarations and §7.1's declared file list, the manifest carries a **source provenance block**: which
+source files, **by SHA-256**, this pack was derived from, and from which rendition.
+
+Decision 2 forces it. An anchor points *into a file*, and without knowing which file the anchor means
+nothing — and file identity is the hash, because [ticket 02](./02-where-the-corpus-lives.md)
+established that **"the DMG" is ambiguous** with two byte-different variants in circulation. A pack
+claiming to derive from "the DMG" inherits that ambiguity whole; one naming a hash inherits none.
+
+It also opens drift detection in a direction nothing else covers: if the source is ever replaced — a
+better rip, or the errata'd edition this corpus lacks — **the pack knows it is stale.**
+
+### Decision 5 — one file per kind
+
+Rejected: one file per record, and one file per book section.
+
+One file per record makes git's diff perfect and everything else worse: thousands of entries in the
+manifest, and record-derived filenames colliding on the **case-insensitive exFAT** mirror ticket 02
+put on the card. Mirroring book sections binds the pack to the parser's segmentation, which decision
+2 already identified as the unstable part. Per kind is stable, is the unit the schema validates, and
+keeps the manifest legible.
+
+### Decision 6 — the schema lives in this public repository
+
+The only repository that exists, and §7.3 says published. How the Engine later consumes it — copy,
+package, whatever — is the Engine's problem, not a constraint on where the source of truth lives.
 
 ## The thing most likely to go wrong
 

@@ -55,6 +55,15 @@ rejected or extended:
 - **A3 coherence.** §5.1 already requires a declared-but-empty rule-set to be reported as suspicious;
   decide what else about the declaration is checkable.
 
+**What the spine already hands this ticket.** [Ticket 05](./05-pack-schema.md) settled that
+enforcement is **two-tiered by necessity**: JSON Schema declares what it can, and everything it
+cannot — recursive structures, numeric ranges, string lengths, and every cross-field rule — falls to
+the validator. **That second tier is this ticket.** The schema is not a checker that happens to be
+incomplete; the split is structural, and the checks below live on the far side of it. Two new
+checkable facts also arrive with the spine: every record carries a `section` and an `anchor`, and the
+manifest names its source files by hash — so *"does this record's anchor resolve in the source this
+manifest claims"* is now a mechanical check that nothing else performs.
+
 **Where the checker lives**, and this is not a detail: `spec.md` §7.6 says the Engine's *whole*
 contribution to authoring is a validator that names file, record and field. That validator does not
 exist yet either. Decide whether this checker **is** that validator, grows into it, or is a separate

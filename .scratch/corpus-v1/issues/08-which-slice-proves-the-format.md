@@ -25,6 +25,22 @@ closable only by real data:
 - **#4 — the six-operation vocabulary may prove insufficient** for some PHBR kit, and the spec says
   this is checkable now because the books are in hand.
 
+## A fourth candidate, from ticket 05
+
+[Ticket 05](./05-pack-schema.md) resolved the Complete Priest's records as **Deity**, and in doing so
+corrected v1 ticket 11's expectation that Deity would enter thin: **60 records of ten fields each.**
+
+That makes them a serious candidate this ticket did not have. **Deity will exercise §4.3's six
+operations harder than any kit** — spheres of influence, granted powers, weapon and armour
+restrictions, follower rules and duties, all on one record. If the point of a proving slice is to
+stress the format where it has no precedent, the heaviest Attachable in the corpus is a strong
+answer, and it tests §4.1's claim that Kit, Deity and Subrace are one shape from the direction most
+likely to break it.
+
+Against it: the Complete Priest's Handbook has **1 HTML table** in the whole book, so a Deity slice
+proves almost nothing about the table pipeline — and ticket 01 showed table handling is where the
+two renditions differ most.
+
 ## What ticket 01's measurement does to the candidates
 
 [Ticket 01](./01-what-the-source-yields.md) supplies the counts this ticket was waiting on, and it

@@ -145,6 +145,26 @@ RTF ignores by specification. The corpus is clean.
 
 <!-- one line per closed ticket: enough to judge relevance, then follow the link for detail -->
 
+- [The pack schema, version 0.1](issues/05-pack-schema.md) — **the spine only**, and the per-kind
+  record shapes deferred to [ticket 14](issues/14-record-shapes-for-the-slice.md), on the ticket's own
+  warning about *designing for the books already read*: twenty-seven shapes written before a single
+  record is transcribed is that error at maximum exposure, and the two tickets blocked here need only
+  the spine. **JSON Schema is canonical, TypeScript generated** — the discriminator being *when* the
+  schema is written, since TypeScript-first would put its home in the one language this effort has no
+  reason to be in, and ticket 04 named a third consumer nobody had: a constrained decoder, which
+  reads JSON Schema natively. **Provenance becomes two fields, not one**, because the page number
+  §7.1 demanded was quietly doing two jobs: a `section` heading chain a human can find in a printed
+  book, and an `anchor` a machine can relocate — the anchor deliberately being the same artifact
+  ticket 07 will weigh as identity. A hand-filled page field was rejected as the *silently incomplete*
+  state A3 exists to prevent. **The Complete Priest's records are Deity** — Kit self-destructs on
+  §6.4, since "abandon being a priest of war and remain a priest" is not an operation the game has,
+  and Class fails because ticket 01 found no experience progression — which forces a **correction to
+  [v1 ticket 11](../v1-spec/issues/11-engine-object-kinds.md): it was right that Deity exists and
+  wrong that it enters thin**, and Deity will now exercise §4.3's six operations harder than any kit.
+  **The manifest names its source files by hash**, because an anchor points into a file and ticket 02
+  established that "the DMG" is ambiguous without one — which also lets a pack notice its own source
+  has been replaced. **One file per kind**, since per-record filenames would collide on the
+  case-insensitive exFAT mirror and per-section would bind the pack to the parser's segmentation.
 - [What each pack kind actually yields at source](issues/01-what-the-source-yields.md) — the
   bottleneck ticket, and it contradicts what the two research tickets had assumed: **neither
   rendition wins, and the split is per book.** The Complete Paladin's, Ranger's and Book of Elves
