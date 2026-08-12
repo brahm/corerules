@@ -157,6 +157,23 @@ RTF ignores by specification. The corpus is clean.
 
 <!-- one line per closed ticket: enough to judge relevance, then follow the link for detail -->
 
+- [The human review protocol](issues/11-human-review-protocol.md) — the reviewer compares a record
+  against **its own source passage**, not the printed book and not the Engine, whose behaviour the
+  ticket called the strongest test but which **does not exist yet**. Side-by-side is already paid for:
+  ticket 05's `anchor` delivers the source next to the record with nothing to search. That forces a
+  scoping worth stating — **the review verifies extraction fidelity, not corpus fidelity**; a TSR
+  digitisation error or the pre-errata problem is a corpus-level fact pinned by ticket 02's hashes,
+  and loading per-record review with it would add a problem review cannot solve. **A review that
+  finds nothing leaves no trace in git** — a correction is a commit, a confirmation is silence — so
+  attestation goes in a **ledger keyed by record id and content hash**, the hash making a stale
+  review mechanically detectable rather than confidently wrong. Reviewing is **risk-ranked with a
+  mandatory floor**, and the ranking signal is **never the model**: ticket 04 measured
+  self-consistency at ρ 0.10–0.30, so model confidence is *worse than random*. The floor is
+  structural rather than cautious — ticket 10 is nearly blind on the judgement half, so risk-ranking
+  without a floor degenerates into reviewing nothing. And the number ticket 04 said nobody had:
+  **5–15 minutes per judgement record — about 3–9 hours for the proving slice and 17–52 for the v1
+  tier's Attachables**, a prediction ticket 13 must check, with the trigger written down: if it
+  holds, reviewing everything is affordable and the risk-ranking is unnecessary.
 - [Mechanical verification](issues/10-mechanical-verification.md) — the checks divide **twice, and
   neither division was a preference**. By what a failure *means*: **invariants** admit no judgement
   and **fail the pipeline run**, while **divergences** are statistical and expected — the two
