@@ -55,6 +55,18 @@ rejected or extended:
 - **A3 coherence.** §5.1 already requires a declared-but-empty rule-set to be reported as suspicious;
   decide what else about the declaration is checkable.
 
+**A whole check arrived from ticket 09, and it is free.** The pipeline now parses the **HTML only**,
+keeping the **RTF as an independent second rendition to diff against** — because the two disagree by
+a few percent per field, in both directions (HTML finds 131 `Description` to the RTF's 104; the RTF
+finds 128 `Equipment` to the HTML's 97). That is a **non-model reference**, which
+[ticket 04](./04-llm-assisted-extraction.md) established is the only kind that detects this error
+class, and it costs nothing because both renditions are already on disk.
+
+**This ticket owns that comparison.** Per book and per field: record counts, field counts, and record
+boundaries. Where the renditions agree, confidence; where they disagree, a location to look. Note
+what it is *not* — it cannot check faithfulness to the printed book, only that two independent
+digitisations of it tell the same story.
+
 **What the spine already hands this ticket.** [Ticket 05](./05-pack-schema.md) settled that
 enforcement is **two-tiered by necessity**: JSON Schema declares what it can, and everything it
 cannot — recursive structures, numeric ranges, string lengths, and every cross-field rule — falls to

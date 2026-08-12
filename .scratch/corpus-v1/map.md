@@ -157,6 +157,24 @@ RTF ignores by specification. The corpus is clean.
 
 <!-- one line per closed ticket: enough to judge relevance, then follow the link for detail -->
 
+- [The extraction pipeline](issues/09-extraction-pipeline.md) — the ticket that **inverted and then
+  shrank**. Its question stopped being *how do we join two renditions* and became *is the RTF needed
+  at all*, and the measurement closed it: the HTML does not merely win on record boundaries, **it
+  marks up the field labels themselves** (`<I>Weapon Proficiencies:</I>`), which beats
+  labels-by-typographic-convention because the parser never has to infer what is a heading. So **the
+  HTML is the only parse target and the alignment stage disappears**. The RTF is kept for the one
+  role that survives: the two renditions' field counts **disagree by a few percent in both
+  directions**, and that is precisely the check ticket 04 established as the only kind that works —
+  a reference that is not the model, already on disk, free. **Local models only**: ticket 02 had
+  already kept verbatim book text off third-party services, and **inference is a stronger form of
+  egress than storage**; ticket 04 had measured that reproducibility exists only under a local pin;
+  and decision 1 removed the cost objection by shrinking the model's share to the judgement half —
+  hundreds of field values, not 1.27M words. **Python**, because ticket 05 made JSON Schema canonical
+  precisely so the pipeline need not be TypeScript and ticket 06 left no evaluator to share. And
+  **git is the overlay**: the corpus repository *is* the Engine's content folder, so a correction is
+  a commit, re-extraction produces a diff, and `git add -p` is the adjudication tool — rejecting a
+  separate correction layer as the same *second source of truth able to go quietly stale* that §8
+  refused.
 - [Which slice proves the format](issues/08-which-slice-proves-the-format.md) — **the Complete
   Thief's 24 kits, the five PHB thieving-skill tables they adjust, six to eight Deity records, and
   all five Elves subraces**: about 40 records, a session's work. Three arms rather than one, because

@@ -33,6 +33,13 @@ This ticket runs all of it against real books and produces real packs.
 5. **A measured cost per record**, by bucket, so the remaining books can be estimated instead of
    guessed. This is the number [ticket 12](./12-how-much-tool.md) needs and the one that turns "the
    rest is mechanical work" from a hope into a plan.
+6. **A verdict on local-model draft quality**, required by
+   [ticket 09](./09-extraction-pipeline.md)'s decision 2. That decision accepted a 7–30B local model
+   against a frontier one on exactly the half that needs judgement, on the ground that
+   [ticket 11](./11-human-review-protocol.md) reviews it regardless so the model produces a draft
+   rather than a verdict. **If the draft is bad enough, reviewing costs more than writing from
+   scratch** — and this slice is the first and cheapest place that becomes visible. Measure it; do
+   not assume it.
 
 ## The slice, named
 
