@@ -47,9 +47,25 @@ contact.
    for the first time, and [ticket 05](./05-pack-schema.md) established that **Deity will exercise
    them harder than any kit** — sixty records of ten fields each.
 
+## Known unknown #4 already fired — this ticket must express the answer
+
+[Ticket 15](./15-dice-and-generation-methods.md) found what the v1 spec predicted might be there:
+**31 occurrences, inside kit effect fields, of halving, division or explicit rounding** — *"at twice
+the normal cost"*, *"experience level divided by three (rounded down), plus one"*, *"creatures whose
+Hit Dice total no greater than half her level"*. None fits §4.3's six operations, and the last is a
+predicate carrying arithmetic against ticket 06's decision.
+
+The resolution was **a small closed set of computed operands** — `half(<scalar>)`,
+`<scalar>/N rounded down` — not a seventh operation: `adjust` still sums, and only its *operand*
+widens, so the count of six and the order-independence both survive. **Rounding is a property of the
+operand**, which is where §7.2's requirement finally lands.
+
+This ticket has to give that a shape in the schema, on both sides — an effect's operand **and** a
+predicate's value, since the arithmetic appears in both.
+
 ## What this ticket must not do
 
-**Do not add a seventh operation.** If the slice's records cannot be expressed in `adjust`, `grant`,
+**Do not add a seventh operation** — beyond the computed operands above, which are already decided. If the slice's records cannot be expressed in `adjust`, `grant`,
 `forbid`, `except`, `require`, `set`, that is **v1 spec known unknown #4 firing** — record it as a
 finding against the v1 spec and surface it, rather than quietly widening the vocabulary here.
 

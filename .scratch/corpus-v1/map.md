@@ -157,6 +157,19 @@ RTF ignores by specification. The corpus is clean.
 
 <!-- one line per closed ticket: enough to judge relevance, then follow the link for detail -->
 
+- [Dice notation and generation methods](issues/15-dice-and-generation-methods.md) — measurement
+  reframed it as it reframed ticket 06. The dice semantics §7.2 demands are **almost absent**: the
+  133 `drop`/`reroll`/`arrange` occurrences were mostly ordinary English, and the whole tier holds
+  **8** cases of `NdM` near *drop/keep/best/lowest*, while **1,474 of 2,146 notations sit in
+  tab-delimited lines** — dice are table cell values, not prose expressions. So notation is a
+  **string with a schema `pattern`**, `NdM±k`, and here ticket 06's structure argument deliberately
+  **does not transfer**: what killed strings for predicates was opacity to the schema, and a regular
+  grammar is fully validatable at tier one. The notation/method line needs no judgement either —
+  **generation methods are the PHB's six**, `drop lowest` being Method V rather than notation. But
+  the ticket's orphan turned into its largest finding: rounding was expected to belong to the Engine,
+  and **division appears in pack data** — 31 occurrences inside kit effect fields, which §4.3's six
+  operations cannot express. **Known unknown #4 has fired**, resolved by a closed set of computed
+  operands that keeps the operation count at six and gives rounding a home where the division lives.
 - [Identity: who mints pack-scoped IDs](issues/07-identity-and-id-stability.md) — **the last
   structural question on the map**, and measurement removed its central objection. The case against
   source-position IDs was that they move when the parser's segmentation moves; on the HTML there is
@@ -338,6 +351,17 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    enters fat.** ([Ticket 05](issues/05-pack-schema.md)) Sixty records of ten fields. Right that
    Deity exists, wrong about its size, and it will exercise §4.3's six operations harder than any
    kit.
+5. **§4.3's six operations cannot express the corpus — known unknown #4 has fired.**
+   ([Ticket 15](issues/15-dice-and-generation-methods.md)) Measured inside kit effect fields:
+   **31 occurrences** of halving, division or explicit rounding — *"at twice the normal cost"*,
+   *"experience level divided by three (rounded down), plus one"*, *"creatures whose Hit Dice total
+   no greater than half her level"*. `adjust` sums; there is no scale or divide, and the last example
+   is a predicate carrying arithmetic against ticket 06's decision that predicates have none.
+   Resolved by a **small closed set of computed operands** — `half(<scalar>)`,
+   `<scalar>/N rounded down` — which keeps the operation count at six and preserves
+   order-independence, since `adjust` still sums and only its *operand* widens. **This is the first
+   correction against a closed decision rather than a premise**, and it is where §7.2's rounding
+   requirement finally lands.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack
