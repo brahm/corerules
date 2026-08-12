@@ -157,6 +157,22 @@ RTF ignores by specification. The corpus is clean.
 
 <!-- one line per closed ticket: enough to judge relevance, then follow the link for detail -->
 
+- [Mechanical verification](issues/10-mechanical-verification.md) — the checks divide **twice, and
+  neither division was a preference**. By what a failure *means*: **invariants** admit no judgement
+  and **fail the pipeline run**, while **divergences** are statistical and expected — the two
+  renditions disagree a few percent per field — so they enter a **committed baseline**, known ones
+  passing and a *new* one failing. That snapshot is the load-bearing part: without it the divergence
+  report becomes exactly what v1 ticket 13 refused, *a list nobody reads because it is never empty*.
+  And by **what each side can see**: the pipeline has the sources and the Engine never will, since a
+  pack carrying its sources would be the error §6.5 forbade; the Engine has the active pack set and
+  the pipeline never will, since cross-pack references and A3's union do not exist until a second
+  pack does. **Even referential integrity splits** — within-pack to the pipeline, between-pack to the
+  Engine — so §7.2's ban on implementing one thing twice does not bite, because neither side can do
+  the other's job. The boundary is written as a test rather than a negotiated split: *does that side
+  have the data?* What none of it claims is faithfulness — the cross-rendition check establishes only
+  that two digitisations agree, not that either matches the page, and the map's accepted asymmetry
+  is now visible in the table: **tables carry exact redundancy to exploit and kits carry almost
+  none.**
 - [Dice notation and generation methods](issues/15-dice-and-generation-methods.md) — measurement
   reframed it as it reframed ticket 06. The dice semantics §7.2 demands are **almost absent**: the
   133 `drop`/`reroll`/`arrange` occurrences were mostly ordinary English, and the whole tier holds

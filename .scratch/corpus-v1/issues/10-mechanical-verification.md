@@ -1,7 +1,7 @@
 # Mechanical verification: what the checker checks
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 05
 
 ## Question
@@ -87,6 +87,91 @@ contribution to authoring is a validator that names file, record and field. That
 exist yet either. Decide whether this checker **is** that validator, grows into it, or is a separate
 authoring-side instrument — noting §7.2's standing prohibition on the same thing being implemented
 twice from a description.
+
+## Answer
+
+### Decision 1 — two response classes, because the checks are not one kind
+
+A pack that is merely *wrong* is well-formed, so §7.5's refuse-to-load cannot apply and the natural
+output is a warning. **This project has already ruled that warnings do not work**:
+[v1 ticket 13](../../v1-spec/issues/13-how-packs-get-authored.md) rejected partial loading precisely
+because *"warnings ignored for months would leave characters built against a corpus full of holes"*.
+
+So the checks split by what a failure *means*:
+
+- **Invariants** either hold or are broken, and admit no judgement: `id` must equal a function of
+  `anchor`, every reference must resolve, an anchor must exist in the source the manifest names, an
+  ability minimum cannot be 25. **A broken invariant fails the pipeline run.** The corpus cannot be
+  committed clean with one outstanding.
+- **Divergences** are statistical and *expected*: the two renditions disagree by a few percent per
+  field ([ticket 09](./09-extraction-pipeline.md)), and blocking on them would stop the pipeline on
+  day one. **Known divergence is recorded and committed as a baseline; a *new* divergence fails.**
+
+**The baseline snapshot is the load-bearing part of this decision.** Without it the divergence report
+becomes exactly what v1 ticket 13 refused — a list nobody reads because it is never empty. With it,
+the list is empty by construction and any growth is a signal. It is the same mechanism as a test
+snapshot or a linter baseline, and it is the only one that stops warnings rotting into noise.
+
+Accepted cost: the pipeline becomes stricter to run, and a badly calibrated check blocks legitimate
+work. Mitigated by invariants being few and objective — every one is a consequence of a decision
+already taken elsewhere, not a new judgement.
+
+Rejected: **the Engine flagging at load**. By then the error is in the corpus and committed; the cheap
+point of intervention is extraction.
+
+### Decision 2 — two checkers, and the boundary is visibility
+
+Rejected: one checker in the pipeline (§7.5 still requires the Engine to refuse malformed packs, and
+schema alone cannot catch a broken cross-pack reference), and expressing the rules as interpreted
+data (building a rule engine to avoid writing two functions, and creating the third language §7.2
+warns about).
+
+**§7.2's prohibition does not bite, because the checks divide themselves by what each side can see —
+and neither side can do the other's job.**
+
+**The pipeline has the sources; the Engine never will.** A pack does not carry its sources — that
+would be the same error §6.5 forbade when it said a Character carrying pack data *is a pack in
+disguise*.
+
+**The Engine has the active pack set; the pipeline never will.** A pack is extracted alone;
+cross-pack references resolve only at load, and §5.1's A3 union rule does not exist until a second
+pack does.
+
+Even referential integrity splits this way: **within**-pack references are the pipeline's,
+**between**-pack references are the Engine's.
+
+| Pipeline (has the sources) | class |
+|---|---|
+| `id` agrees with `anchor` — functionally related by [ticket 07](./07-identity-and-id-stability.md) | invariant |
+| anchor resolves in the source file the manifest names | invariant |
+| source hashes match the manifest ([ticket 02](./02-where-the-corpus-lives.md)) | invariant |
+| manifest file list matches the directory; an orphan file is reported (§7.1) | invariant |
+| within-pack references resolve | invariant |
+| range plausibility, data-driven rather than hardcoded (§2's open enumerations) | invariant |
+| row and column sums where a table carries exact redundancy | invariant |
+| record counts against the book's own numbered index | divergence |
+| cross-rendition record, field and boundary counts | divergence |
+| table progressions — constant steps, monotonicity where the rules impose it | divergence |
+
+| Engine (has the active pack set) | |
+|---|---|
+| cross-pack references resolve — a failure is §7.5's refuse-to-load | |
+| A3 coherence, including §5.1's declared-but-empty rule-set reported as suspicious | |
+| plausibility against enumerations another pack extended | |
+
+**The boundary is written as a test, not a negotiated division of labour**: if someone later wants to
+move a check, the question is objective — *does that side have the data?*
+
+### What this does not claim, restated because it stays true
+
+**None of this verifies faithfulness.** Every check above is internal consistency, and a perfectly
+consistent transcription of the wrong table passes all of them. The cross-rendition check is the
+closest thing to an external reference and it still only establishes that **two independent
+digitisations of the same book agree** — not that either matches the printed page.
+
+**The asymmetry the map accepted stands and is now visible in the table above**: tables carry
+invariants with exact redundancy to exploit, kits carry almost none. **Tables end up with a stronger
+guarantee than kits**, and that is a choice, not an oversight.
 
 ## What this ticket must not claim
 
