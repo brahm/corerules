@@ -50,6 +50,22 @@ That makes an estimate part of this ticket's deliverable, not an afterthought. I
 the sampling decision above a real decision rather than a preference — "review everything" has a
 number attached, and the number is what rules it in or out.
 
+## The slice this protocol is designed against
+
+[Ticket 08](./08-which-slice-proves-the-format.md) resolved: **~40 records** — 24 Complete Thief's
+kits, 6–8 Deity, 5 Subrace, plus 5 PHB tables. Small enough that the protocol can be tried in full
+rather than sampled, which is the one chance this ticket gets to calibrate before the corpus makes
+full review impossible.
+
+Two properties of the slice shape this ticket directly:
+
+- **It was chosen for representativeness, not extremity**, precisely so it can serve as a permanent
+  regression test. So reviewing it measures the *ordinary* cost per record, which is the number
+  ticket 04 said nobody has estimated — not a worst case.
+- **The tables are mechanical and the Attachables are judgement.** The 5 PHB tables belong to
+  [ticket 10](./10-mechanical-verification.md); the ~37 Attachable records are this ticket's whole
+  subject. That split is the hybrid decision arriving concretely rather than in principle.
+
 ## Why this is blocked by ticket 08 and not by 10
 
 The protocol has to be designed against real reviewing, and the proving slice is the first real

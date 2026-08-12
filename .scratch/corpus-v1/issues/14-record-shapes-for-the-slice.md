@@ -27,10 +27,16 @@ contact.
 
 ## What has to be decided
 
-1. **Which kinds the slice needs.** Falls out of [ticket 08](./08-which-slice-proves-the-format.md),
-   which is why this is blocked by it. Expect the kit-or-Deity record plus whatever `spec.md` §3.1
-   kinds its effects reference — proficiencies, weapons, armour, spheres — since an Attachable that
-   cannot resolve its references proves nothing.
+1. **~~Which kinds the slice needs~~ — settled.** [Ticket 08](./08-which-slice-proves-the-format.md)
+   chose the slice, and it needs **ten kinds, not twenty-seven**:
+
+   > Kit · Deity · Subrace · Thieving skill · Lookup table · Weapon proficiency ·
+   > Non-weapon proficiency · Class · Race · Ability
+
+   That bound is the deferral in [ticket 05](./05-pack-schema.md) paying off. Note that **all three
+   Attachable arms are present**, which is deliberate: §4.1's claim that they are one shape used
+   three times is what this slice exists to test, and the schema is where that claim either holds or
+   visibly does not.
 2. **The record shape for each**, against [ticket 01](./01-what-the-source-yields.md)'s measurement
    of what the source yields, per rendition.
 3. **How §3's three-way split is enforced in the schema.** Pack kinds require identity; value types

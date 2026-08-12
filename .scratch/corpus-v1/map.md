@@ -145,6 +145,23 @@ RTF ignores by specification. The corpus is clean.
 
 <!-- one line per closed ticket: enough to judge relevance, then follow the link for detail -->
 
+- [Which slice proves the format](issues/08-which-slice-proves-the-format.md) — **the Complete
+  Thief's 24 kits, the five PHB thieving-skill tables they adjust, six to eight Deity records, and
+  all five Elves subraces**: about 40 records, a session's work. Three arms rather than one, because
+  **§4.1 is the largest single piece of invention in the spec** — v1 ticket 11 records that "Kit,
+  Deity and Subrace are one closed shape used three times" shrank ticket 10 from designing a kit
+  mechanism to designing one applicable-modifier mechanism, so half the Attachable architecture rests
+  on it — and **a kit-only slice cannot test it at all**, while Subrace costs five records.
+  The ticket had called format-stress versus pipeline-stress "a real trade"; **for kits it is not
+  one**, since they exist in 8 books of differing rendition difficulty, so *what* to transcribe and
+  *which book* are independent axes. The Complete Thief's was chosen less for its 24-against-7
+  rendition gap than for what thief kits **drag in**: adjusting thieving-skill percentages pulls in
+  the PHB's five tables, which makes the slice test the cross-pack reference where §5.1's A3 union
+  lives, `adjust` on a lookup table, and tables at all — answering the objection that sank a
+  Deity-only slice. It favours **representativeness over extremity**, because ticket 04 keeps it
+  forever as the regression test and a set chosen for hard cases cannot later say whether the
+  pipeline regressed or the case was always pathological. Psionics is explicitly **untouched** — v1
+  known unknown #3 stands unchanged.
 - [The expression language](issues/06-expression-language.md) — **the ticket split**, dice and
   generation methods moving to [ticket 15](issues/15-dice-and-generation-methods.md). What reframed
   it was a measurement: the ticket assumed the grammar had to cover what the books say, and what the

@@ -34,6 +34,19 @@ This ticket runs all of it against real books and produces real packs.
    guessed. This is the number [ticket 12](./12-how-much-tool.md) needs and the one that turns "the
    rest is mechanical work" from a hope into a plan.
 
+## The slice, named
+
+[Ticket 08](./08-which-slice-proves-the-format.md) chose it: **the Complete Thief's Handbook's 24
+kits** (7 in the HTML — the widest rendition gap in the corpus), **the five PHB thieving-skill tables
+those kits adjust** (26–30), **six to eight Complete Priest's Deity records** sampled for
+representativeness, and **all five Complete Book of Elves subraces**. About 40 records and 5 tables.
+
+Two things that ticket asks this one to honour. **All three Attachable arms are present on purpose** —
+§4.1's claim that Kit, Deity and Subrace are one shape is the largest invention in the spec and is
+untestable with one arm. And the slice **deliberately proves nothing about psionics, spells,
+equipment breadth, or the HTML-only failure case**; do not let a passed slice be reported as a
+validated format.
+
 ## Keep the slice — it becomes the gold standard
 
 Adopted from [ticket 04](./04-llm-assisted-extraction.md). The hand-transcribed slice must be
