@@ -1,0 +1,325 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/brahm/corerules/schema/pack-0.1.schema.json",
+  "title": "corerules Content Pack, format version 0.1",
+  "description": "Canonical schema, authored by the corpus-v1 map (ticket 05 spine, ticket 14 shapes). Covers the ten kinds the proving slice needs, not all 27. Enforcement is two-tiered: what is declared here, and what the validator checks. Recursive structures, numeric ranges and cross-field rules are the validator's.",
+
+  "$defs": {
+
+    "id": {
+      "description": "Pack-scoped, opaque, derived from the source anchor (ticket 07). '#n' discriminates records sharing one source file.",
+      "type": "string",
+      "pattern": "^[a-z0-9-]+:[A-Za-z0-9_-]+(#[0-9]+)?$"
+    },
+
+    "provenance": {
+      "description": "Ticket 05: replaces §7.1's book-and-page, which this corpus cannot supply. 'section' is for a human holding the printed book; 'anchor' is for the machine, and is what the id derives from.",
+      "type": "object",
+      "properties": {
+        "section": {
+          "description": "Heading chain, outermost first.",
+          "type": "array", "items": { "type": "string" }, "minItems": 1
+        },
+        "anchor": {
+          "type": "object",
+          "properties": {
+            "rendition": { "enum": ["webhelp", "rtf"] },
+            "file": { "type": "string" },
+            "ordinal": { "type": "integer", "minimum": 1 }
+          },
+          "required": ["rendition", "file"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["section", "anchor"],
+      "additionalProperties": false
+    },
+
+    "interpretation": {
+      "description": "Ticket 11: the book is ambiguous and this record is a reading. Absent means the source was unambiguous — never that nobody looked.",
+      "type": "object",
+      "properties": {
+        "note": { "type": "string", "minLength": 1 },
+        "confidence": { "enum": ["reading", "guess"] }
+      },
+      "required": ["note", "confidence"],
+      "additionalProperties": false
+    },
+
+    "scalar": {
+      "description": "Ticket 06: the only scalars a predicate or operand may name. 'level' is ALWAYS qualified by class — the unqualified form does not exist, because §6.1's sum type means Fighter 5 / Mage 4 has no 'level 5'.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": { "ability": { "$ref": "#/$defs/id" } },
+          "required": ["ability"], "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": { "level": { "$ref": "#/$defs/id" } },
+          "required": ["level"], "additionalProperties": false
+        }
+      ]
+    },
+
+    "operand": {
+      "description": "Ticket 15: known unknown #4 fired — 31 corpus occurrences of halving, division and rounding inside kit effects. NOT a seventh operation: 'adjust' still sums, only its operand widens. Used by effects AND by predicate values, since the arithmetic appears on both sides.",
+      "oneOf": [
+        { "type": "integer" },
+        { "$ref": "#/$defs/computedOperand" }
+      ]
+    },
+
+    "computedOperand": {
+      "description": "Closed set, not general arithmetic. Rounding is a property of the operand — which is where §7.2's requirement finally lands.",
+      "type": "object",
+      "properties": {
+        "of": { "$ref": "#/$defs/scalar" },
+        "divideBy": { "type": "integer", "minimum": 2 },
+        "multiplyBy": { "type": "integer", "minimum": 2 },
+        "round": { "enum": ["down", "up"] }
+      },
+      "required": ["of", "round"],
+      "additionalProperties": false
+    },
+
+    "condition": {
+      "description": "Ticket 06: closed, flat, conjunction only. No 'or' — genuine disjunction between subjects occurs 4 times in 1.23M words; race lists are membership and unless/except are §4.3's 'except'.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "subject": { "$ref": "#/$defs/scalar" },
+            "op": { "enum": ["gte", "lte", "eq", "neq"] },
+            "value": { "$ref": "#/$defs/operand" }
+          },
+          "required": ["subject", "op", "value"], "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "member": { "$ref": "#/$defs/scalar" },
+            "anyOfIds": { "type": "array", "items": { "$ref": "#/$defs/id" }, "minItems": 1 }
+          },
+          "required": ["member", "anyOfIds"], "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "has": { "type": "string", "description": "kind name" },
+            "ref": { "$ref": "#/$defs/id" }
+          },
+          "required": ["has", "ref"], "additionalProperties": false
+        }
+      ]
+    },
+
+    "predicate": {
+      "description": "A flat list; every condition must hold.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/condition" }
+    },
+
+    "effect": {
+      "description": "§4.3's six operations as a discriminated union, so an operation carrying the wrong fields is UNREPRESENTABLE rather than merely invalid — §5's 'illegal states are unrepresentable', and §6.1's principle: structural for model incoherence, pack-declared for game rules.",
+      "type": "object",
+      "properties": {
+        "op": { "enum": ["adjust", "grant", "forbid", "except", "require", "set"] },
+        "when": { "$ref": "#/$defs/predicate" },
+        "text": { "type": "string", "description": "§4.3: anything outside the vocabulary is carried as text and not computed." }
+      },
+      "required": ["op"],
+      "oneOf": [
+        {
+          "properties": { "op": { "const": "adjust" }, "field": { "type": "string" }, "by": { "$ref": "#/$defs/operand" }, "when": true, "text": true },
+          "required": ["op", "field", "by"], "additionalProperties": false
+        },
+        {
+          "properties": { "op": { "const": "grant" }, "kind": { "type": "string" }, "ref": { "$ref": "#/$defs/id" }, "when": true, "text": true },
+          "required": ["op", "kind", "ref"], "additionalProperties": false
+        },
+        {
+          "properties": { "op": { "const": "forbid" }, "kind": { "type": "string" }, "ref": { "$ref": "#/$defs/id" }, "when": true, "text": true },
+          "required": ["op", "kind", "ref"], "additionalProperties": false
+        },
+        {
+          "description": "§4.3: 'except' names the SUBJECT, not the prohibition — which is what keeps Effects from needing identity (§3.3).",
+          "properties": { "op": { "const": "except" }, "kind": { "type": "string" }, "ref": { "$ref": "#/$defs/id" }, "when": true, "text": true },
+          "required": ["op", "kind", "ref"], "additionalProperties": false
+        },
+        {
+          "properties": { "op": { "const": "require" }, "kind": { "type": "string" }, "count": { "type": "integer", "minimum": 1 }, "from": { "type": "array", "items": { "$ref": "#/$defs/id" } }, "when": true, "text": true },
+          "required": ["op", "kind", "count"], "additionalProperties": false
+        },
+        {
+          "properties": { "op": { "const": "set" }, "field": { "type": "string" }, "to": { "$ref": "#/$defs/operand" }, "when": true, "text": true },
+          "required": ["op", "field", "to"], "additionalProperties": false
+        }
+      ]
+    },
+
+    "record": {
+      "description": "What every pack kind carries. Value types (§3.3) deliberately do NOT reference this: they have no id, which is how §3's three-way split is enforced structurally.",
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1, "description": "Presentation only. Never identity — §7.3." },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "interpretation": { "$ref": "#/$defs/interpretation" }
+      },
+      "required": ["id", "name"]
+    },
+
+    "attachable": {
+      "description": "§4.1: ONE closed shape used three times. Kit, Deity and Subrace each extend this and add only their target and cardinality — the two things §4.1 says they cannot share. Expressed structurally so that if the claim is wrong, it breaks here rather than after transcription.",
+      "allOf": [{ "$ref": "#/$defs/record" }],
+      "properties": {
+        "prerequisite": { "$ref": "#/$defs/predicate" },
+        "effects": { "type": "array", "items": { "$ref": "#/$defs/effect" } }
+      },
+      "required": ["effects"]
+    }
+  },
+
+  "type": "object",
+  "properties": {
+
+    "manifest": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "formatVersion": { "const": "0.1" },
+        "compatibility": {
+          "description": "§7.3, Foundry-style three-way range.",
+          "type": "object",
+          "properties": { "minimum": { "type": "string" }, "verified": { "type": "string" }, "maximum": { "type": "string" } },
+          "required": ["minimum", "verified"], "additionalProperties": false
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": { "id": { "type": "string" }, "minimum": { "type": "string" }, "maximum": { "type": "string" } },
+            "required": ["id"], "additionalProperties": false
+          }
+        },
+        "provenanceMode": {
+          "description": "Ticket 12: §5.1 says the house-rule escape hatch IS the pack, so provenance cannot be unconditionally mandatory. Declared rather than inferred — A3 applied to provenance.",
+          "enum": ["extracted", "hand-authored"]
+        },
+        "sources": {
+          "description": "Ticket 05: which source bytes this pack came from. Ticket 02 established that 'the DMG' is ambiguous with two byte-different variants in circulation.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": { "type": "string" },
+              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+              "rendition": { "enum": ["webhelp", "rtf"] }
+            },
+            "required": ["path", "sha256", "rendition"], "additionalProperties": false
+          }
+        },
+        "declares": {
+          "description": "A3 (§5.1). Rule-set names are the Engine's closed enumeration — §3.4's single exception to open enumerations. Declarations scope to the subjects this pack introduces; the Engine unions them.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "files": {
+          "description": "§7.1: declaration over discovery. A file present but unlisted is reported.",
+          "type": "array", "items": { "type": "string" }, "minItems": 1
+        }
+      },
+      "required": ["id", "name", "version", "formatVersion", "compatibility", "provenanceMode", "files"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": { "properties": { "provenanceMode": { "const": "extracted" } }, "required": ["provenanceMode"] },
+          "then": { "required": ["sources"] }
+        }
+      ]
+    },
+
+    "kits": {
+      "type": "array",
+      "items": {
+        "allOf": [{ "$ref": "#/$defs/attachable" }],
+        "properties": {
+          "target": { "description": "§4.1: a class entry, or the race.", "$ref": "#/$defs/id" },
+          "cardinality": { "const": "one-per-target" }
+        },
+        "required": ["target"]
+      }
+    },
+
+    "deities": {
+      "type": "array",
+      "items": {
+        "allOf": [{ "$ref": "#/$defs/attachable" }],
+        "properties": {
+          "target": { "description": "§4.1: a priest class entry.", "$ref": "#/$defs/id" },
+          "cardinality": { "const": "one-per-target" },
+          "referenceable": { "const": true }
+        },
+        "required": ["target"]
+      }
+    },
+
+    "subraces": {
+      "type": "array",
+      "items": {
+        "allOf": [{ "$ref": "#/$defs/attachable" }],
+        "properties": {
+          "target": { "description": "§4.1: the race. §3.1: a Subrace is a Race with a parent reference.", "$ref": "#/$defs/id" },
+          "cardinality": { "const": "one-per-target" },
+          "referenceable": { "const": true }
+        },
+        "required": ["target"]
+      }
+    },
+
+    "abilities":            { "type": "array", "items": { "allOf": [{ "$ref": "#/$defs/record" }] } },
+    "races":                { "type": "array", "items": { "allOf": [{ "$ref": "#/$defs/record" }] } },
+    "classes": {
+      "type": "array",
+      "items": {
+        "allOf": [{ "$ref": "#/$defs/record" }],
+        "properties": { "group": { "$ref": "#/$defs/id" } },
+        "required": ["group"]
+      }
+    },
+    "weaponProficiencies":    { "type": "array", "items": { "allOf": [{ "$ref": "#/$defs/record" }] } },
+    "nonweaponProficiencies": {
+      "type": "array",
+      "items": {
+        "allOf": [{ "$ref": "#/$defs/record" }],
+        "properties": {
+          "group": { "$ref": "#/$defs/id" },
+          "slotCost": { "type": "integer", "minimum": 1 },
+          "abilityCheck": { "$ref": "#/$defs/scalar" },
+          "modifier": { "type": "integer" }
+        }
+      }
+    },
+    "thievingSkills":       { "type": "array", "items": { "allOf": [{ "$ref": "#/$defs/record" }] } },
+
+    "lookupTables": {
+      "description": "§3.1: named, typed table. XP progressions, THAC0, saving-throw matrices and thieving-skill adjustments are instances of it, owned by their class, group or race.",
+      "type": "array",
+      "items": {
+        "allOf": [{ "$ref": "#/$defs/record" }],
+        "properties": {
+          "keyedBy": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "columns": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "rows": { "type": "array", "items": { "type": "array" } }
+        },
+        "required": ["keyedBy", "columns", "rows"]
+      }
+    }
+  },
+
+  "required": ["manifest"],
+  "additionalProperties": false
+}

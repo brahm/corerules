@@ -157,6 +157,22 @@ RTF ignores by specification. The corpus is clean.
 
 <!-- one line per closed ticket: enough to judge relevance, then follow the link for detail -->
 
+- [Record shapes for the proving slice's kinds](issues/14-record-shapes-for-the-slice.md) — **the
+  map's last decision, and it produced a file**:
+  [`schema/pack-0.1.schema.json`](schema/pack-0.1.schema.json), eleven `$defs` and ten kinds, valid
+  against draft 2020-12. **§4.1's claim is expressed structurally rather than by resemblance** — one
+  `$defs/attachable` that Kit, Deity and Subrace each extend with only their `target` and
+  `cardinality`, the two things §4.1 says they cannot share — so the claim that *shrank v1 ticket 10
+  from designing a kit mechanism to designing one applicable-modifier mechanism* now meets resistance
+  in the schema as well as in reality. First evidence: all three arms fit with nothing forced, which
+  is schema-level agreement only. **The six operations are a discriminated union**, so an `adjust`
+  without an operand is *unrepresentable* rather than invalid — §5's own opening line, and §6.1's
+  principle that model incoherence is structural. Writing it surfaced a fit invisible in prose:
+  §4.3's *`except` names the subject* and §3.3's *Effects carry no identity* are **the same
+  requirement**. §3's three-way split is enforced by what value types **do not reference** — they
+  never `allOf` the record base, so they cannot acquire an `id` by accident. And provenance is
+  conditional on the manifest's declared mode, which is how a hand-authored house-rule pack stays
+  writable without weakening anything.
 - [How much tool, and where it lives](issues/12-how-much-tool.md) — **the question this map was
   opened with, answered last and by measurement.** Eleven resolutions left exactly one piece needing
   something that does not exist, and for a mechanical reason: **nobody types a SHA-256 by hand.** So

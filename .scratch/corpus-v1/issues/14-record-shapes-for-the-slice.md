@@ -1,7 +1,7 @@
 # Record shapes for the proving slice's kinds
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 05, 08
 
 ## Question
@@ -76,6 +76,91 @@ record, which §5.1 explicitly supports — *"the escape hatch is the pack"*. So
 **extracted** or **hand-authored**, and the per-record provenance requirement follows from the
 declaration rather than being unconditional. Express both halves: what an extracted pack owes, and
 what a hand-authored one does not.
+
+## Answer
+
+**Artifact: [`schema/pack-0.1.schema.json`](../schema/pack-0.1.schema.json)** — eleven `$defs`, ten
+kinds, valid against draft 2020-12. This ticket produced a file, not only decisions.
+
+### Decision 1 — §4.1's claim is expressed structurally, not by resemblance
+
+`$defs/attachable` is a single shape; **Kit, Deity and Subrace each `allOf` it and add only their
+`target` and `cardinality`** — the two things §4.1 says they cannot share. §4.1's third column is
+encoded too: `referenceable: true` on Deity and Subrace, absent on Kit.
+
+Rejected: **three independent shapes** — which makes the claim decorative, since nothing breaks when
+they drift apart. Rejected: **one kind with a discriminator**, which §4.1 explicitly refuses when it
+says they remain distinct kinds because cardinality is the one thing they cannot share.
+
+Why this matters more than it looks: [v1 ticket 11](../../v1-spec/issues/11-engine-object-kinds.md)
+records that this claim **shrank ticket 10 from designing a kit mechanism to designing one
+applicable-modifier mechanism**. Half the Attachable architecture rests on it, and it had never been
+tested. Now it meets resistance twice — **in the schema, here, and in reality, in
+[ticket 13](./13-transcribe-the-proving-slice.md)**.
+
+**First evidence, and it is weak on purpose:** all three arms fit the shared base with nothing forced.
+That is schema-level agreement only. Ticket 13 is the real test.
+
+### Decision 2 — the six operations are a discriminated union
+
+Each of `adjust`, `grant`, `forbid`, `except`, `require`, `set` carries exactly the fields its verb
+needs, with `additionalProperties: false` on each arm. **An `adjust` without an operand is
+unrepresentable**, not merely invalid.
+
+The governing principle is the map's own: §5 opens with *illegal states are unrepresentable at the
+point of choice*, and §6.1 applied it literally in making the class arrangement a sum type —
+**structural for model incoherence, pack-declared for game rules**. An `adjust` with no operand is
+not a rule a pack might have failed to transcribe; it is incoherence. So it is structural.
+
+It is also a layer argument: [ticket 05](./05-pack-schema.md) fixed that the schema declares what it
+can and the rest falls to the validator. A discriminated union puts combination-legality in **tier
+one**; a single flat shape would push it to tier two for no reason.
+
+**Writing it surfaced a fit that was invisible in prose:** §4.3 says `except` names the *subject*
+rather than the prohibition, and §3.3 forbids Effects from carrying identity. Those are the same
+requirement — naming the prohibition would have forced prohibitions to have ids. The schema shows
+them as one constraint.
+
+### Decision 3 — the computed operand is a value type used on both sides
+
+`$defs/operand` is `oneOf: [integer, computedOperand]`, and `$defs/computedOperand` carries
+`of` (a scalar), `divideBy` or `multiplyBy`, and a **required** `round`.
+
+Both `adjust.by` and `set.to` reference it — and so does a **condition's `value`**, which is what
+[ticket 15](./15-dice-and-generation-methods.md) meant by *the arithmetic appears on both sides*.
+`§7.2`'s rounding requirement is satisfied by `round` being required rather than defaulted: the
+schema makes it impossible to write a division without saying which way it rounds.
+
+**The operation count stays at six.** `adjust` still sums; only its operand widened.
+
+### Decision 4 — §3's three-way split is enforced by what value types do *not* reference
+
+`$defs/record` carries `id`, `name`, `provenance`, `interpretation`, and **every pack kind
+`allOf`s it**. Value types — operand, condition, predicate, effect, scalar — **simply do not
+reference it**, and each closes with `additionalProperties: false`.
+
+So a value type cannot acquire an `id` by accident. §3's criterion is enforced by the shape of the
+document rather than by a rule someone must remember.
+
+### Decision 5 — provenance is conditional on the manifest's declaration
+
+The manifest carries `provenanceMode: extracted | hand-authored`, and an `if/then` makes `sources`
+required only when extracted. That is [ticket 12](./12-how-much-tool.md)'s finding expressed:
+§5.1 says *the escape hatch is the pack*, so a hand-authored house-rule pack must be writable, and
+the way to allow it without weakening anything is **declaration rather than inference** — A3 applied
+to provenance.
+
+### Decision 6 — `interpretation` is a record field, not an attestation
+
+[Ticket 11](./11-human-review-protocol.md)'s requirement: `{note, confidence}` with `confidence` one
+of `reading` or `guess`. **Absence means the source was unambiguous — never that nobody looked**,
+which is why review attestation stays in the ledger and out of the record.
+
+### Where it lives
+
+`schema/pack-0.1.schema.json` in this public repository, per ticket 05. Format version `0.1`, born
+under §7.3's own version and converter machinery, which is the shock absorber for everything ticket
+13 is about to break.
 
 ## What this ticket must not do
 
