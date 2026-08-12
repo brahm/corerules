@@ -55,6 +55,12 @@ rejected or extended:
 - **A3 coherence.** §5.1 already requires a declared-but-empty rule-set to be reported as suspicious;
   decide what else about the declaration is checkable.
 
+**Ticket 07 added a check that costs nothing to run and catches a silent class.** IDs are now
+`<pack>:<file-stem>` — a *function* of the anchor — so **`id` and `anchor` must agree on every
+record, by construction**. A record where they disagree means either a hand-edit that moved one
+without the other, or a parser change that renumbered. Neither is visible any other way, and both are
+exactly the silent-corruption class this ticket exists for.
+
 **A whole check arrived from ticket 09, and it is free.** The pipeline now parses the **HTML only**,
 keeping the **RTF as an independent second rendition to diff against** — because the two disagree by
 a few percent per field, in both directions (HTML finds 131 `Description` to the RTF's 104; the RTF

@@ -157,6 +157,21 @@ RTF ignores by specification. The corpus is clean.
 
 <!-- one line per closed ticket: enough to judge relevance, then follow the link for detail -->
 
+- [Identity: who mints pack-scoped IDs](issues/07-identity-and-id-stability.md) — **the last
+  structural question on the map**, and measurement removed its central objection. The case against
+  source-position IDs was that they move when the parser's segmentation moves; on the HTML there is
+  barely any segmentation to move — **133 kits in 133 files and 57 Deity in 57 files, one to one with
+  no exceptions**, a boundary TSR drew in 1996 on an ISO that cannot change and whose hash ticket 02
+  recorded. So the ID is **`<pack>:<file-stem>`**, and the ticket's third option — a persistent
+  anchor-to-ID registry — **costs nothing because it already exists**: ticket 09 made git the overlay
+  and the pack the registry, so the ID is written into the record and committed, and a later parser
+  deriving something else surfaces as a diff rather than a silent renumbering. **"Never reused" stops
+  being a rule and becomes a property**, since a function of an immutable source cannot collide.
+  Content-derived hashing was rejected decisively: under it **fixing a comma deletes one record and
+  creates another**, destroying every live reference §6.5 depends on at every correction. Multi-record
+  files take a positional ordinal persisted the same way — a name-derived discriminator being
+  name-as-identity through the back door. Accepted and recorded: identity is tied to **one rendition
+  of one product**, so the first time a new source enters, somebody maps by hand.
 - [The extraction pipeline](issues/09-extraction-pipeline.md) — the ticket that **inverted and then
   shrank**. Its question stopped being *how do we join two renditions* and became *is the RTF needed
   at all*, and the measurement closed it: the HTML does not merely win on record boundaries, **it
