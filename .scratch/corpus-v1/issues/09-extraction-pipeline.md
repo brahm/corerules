@@ -50,7 +50,30 @@ keep the manifest in step, which §7.1 requires and hand-editing can desynchroni
 question that makes or breaks a re-runnable pipeline, and it is closely tied to ticket 07: an edit
 that is overwritten on re-run is not a correction, it is a rehearsal.
 
-## What ticket 01 forces on the architecture
+## ⚠ Ticket 01's constraint was measured wrong — re-read this before item 1
+
+The block below said the pipeline **must** read both renditions because whole books have kits only in
+one. **The first half of that is void.** Re-measured in Python, the HTML carries **one titled page
+per kit in every book** and at least the RTF's count everywhere, including the three books where the
+RTF exposes nothing. The Complete Thief's "24 RTF against 7 HTML" was ugrep skipping binaries.
+
+So the question this ticket now owns is the **opposite** of what was written: not *how do we join two
+renditions*, but **is the RTF needed at all?**
+
+Its remaining candidates are narrow and worth testing rather than assuming:
+
+- **Field contents.** The HTML wins on *boundaries*; whether its `<P>`/`<FONT>` markup preserves
+  within-record structure as well as the RTF's tabs is unmeasured.
+- **A second independent extraction to diff against.** [Ticket 04](./04-llm-assisted-extraction.md)
+  established that a check only works when its reference is not the model — and two renditions of the
+  same book are exactly such a reference, free of charge.
+
+**If the answer is "HTML only", the alignment stage disappears** and this ticket gets substantially
+smaller. Settle it before choosing a seam.
+
+The untitled-file precondition is **gone**: there are no untitled files.
+
+## ~~What ticket 01 forces on the architecture~~ (see correction above)
 
 [Ticket 01](./01-what-the-source-yields.md) measured both renditions and the result constrains item 1
 harder than ticket 04 did:

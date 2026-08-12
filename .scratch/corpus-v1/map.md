@@ -70,9 +70,14 @@ and all eleven Completes. It is a RoboHELP export with **real `<TABLE>`/`<TR>`/`
 `<TITLE>`s that name the record and the book. It is not abridged (85,897 words for the Complete
 Fighter's Handbook against the RTF's 84,360).
 
-**The two renditions are good at opposite things** — see ticket 03 for the measurement. HTML wins
-decisively on tables; RTF wins on kits, because 70% of the HTML's text sits in files with no
-`<TITLE>` and only one kit in the Complete Fighter's Handbook has a page of its own.
+**The HTML rendition is better, and not narrowly.** All **3,603** v1-tier WebHelp files carry a
+non-empty `<TITLE>`, it gives **one titled page per kit in every book**, and it carries at least the
+RTF's kit count everywhere — including the three books where the RTF exposes no kit structure at all.
+It also wins decisively on tables.
+
+> An earlier version of this note said the two renditions were "good at opposite things", with the
+> RTF winning on kits. **That was wrong**, and it was a tooling failure: see the ugrep caution below.
+> The RTF's remaining value is narrow and is [ticket 09](issues/09-extraction-pipeline.md)'s question.
 
 1. **No table is a table.** Zero `\trowd` markup in all 20 files; every table was flattened into
    tab-delimited paragraphs. It survives anyway — the PHB has 161 numbered tables and they come out
@@ -91,7 +96,14 @@ decisively on tables; RTF wins on kits, because 70% of the HTML's text sits in f
    (`source file could not be loaded`, from the mount and from local disk, with a clean profile). A
    70-line Python stripper works and is kept at [`tools/dertf.py`](tools/dertf.py). Available:
    Python 3.14.6, Node 24.18.1, jq 1.8.1.
-5. **Hardware, measured while resolving [ticket 04](issues/04-llm-assisted-extraction.md).** The
+5. **`grep` on this machine is `ugrep`, and it silently skips files it classifies as binary.** The
+   WebHelp's cp1252 HTML qualifies, so **every grep-based HTML measurement in this map was an
+   undercount** until it was redone in Python — on the Complete Fighter's Handbook it skipped 47% of
+   the files, and it produced two published findings that were simply false (see the corrections on
+   [tickets 01](issues/01-what-the-source-yields.md) and
+   [03](issues/03-prior-art-core-rules-extraction.md)). **Measure with Python, or pass `grep -a`.**
+   [`tools/census.py`](tools/census.py) exists for this reason.
+6. **Hardware, measured while resolving [ticket 04](issues/04-llm-assisted-extraction.md).** The
    workstation is **14 GiB RAM (~9.3 GiB available), Radeon 860M integrated, no discrete GPU, and no
    inference runtime installed** — a practical local-model ceiling around 7–9B at Q4. The **M1 Max
    with 32 GB is the only viable local inference host**, at roughly one overnight run for a full
@@ -201,15 +213,17 @@ RTF ignores by specification. The corpus is clean.
   has been replaced. **One file per kind**, since per-record filenames would collide on the
   case-insensitive exFAT mirror and per-section would bind the pack to the parser's segmentation.
 - [What each pack kind actually yields at source](issues/01-what-the-source-yields.md) — the
-  bottleneck ticket, and it contradicts what the two research tickets had assumed: **neither
-  rendition wins, and the split is per book.** The Complete Paladin's, Ranger's and Book of Elves
-  expose **no kit structure at all** in the RTF — `paladnbk` has 70 labelled lines across 58 distinct
-  labels, none of them fields — while the HTML carries individually titled kit pages; the Complete
-  Thief's runs the other way, 24 kits in the RTF against 7 in the HTML. **A pipeline reading one
-  rendition loses whole books either way.** On tables the HTML wins in all thirteen books, but the
-  argument is **ambiguity, not volume** — a first count suggesting the RTF held more rows was
-  tab-indented prose being counted as data — and HTML table markup is unevenly applied, from 578
-  tables in the PHB to **1** in the Complete Priest's. **Four record shapes** appeared where the
+  bottleneck ticket. **Corrected after the fact**: its HTML numbers came from ugrep and were
+  undercounts, so its headline claim that *neither rendition wins and the split is per book* was an
+  artifact. **The HTML is uniformly better for record boundaries** — all 3,603 files titled, one
+  titled page per kit in every book, at least the RTF's kit count everywhere. What survives is the
+  **RTF's poverty**, measured in Python: the Complete Paladin's, Ranger's and Book of Elves expose no
+  kit structure in the RTF at all — `paladnbk` has 70 labelled lines across 58 distinct labels, none
+  of them fields. What the RTF is still *for* became [ticket 09](issues/09-extraction-pipeline.md)'s
+  question. On tables the HTML wins in all thirteen books, and the argument is **ambiguity, not
+  volume** — a first count suggesting the RTF held more rows was tab-indented prose being counted as
+  data — though its markup is unevenly applied, from 692 tables in the PHB to **3** in the Complete
+  Priest's. **Four record shapes** appeared where the
   ticket expected one — Kit (~146 records), Priest specialty (60, ten fields), Subrace (5, mapping
   onto §4.1), Spell — and the **PHB's 67 numbered tables map almost one-to-one onto §3.1's kinds**,
   confirming both that experience tables are keyed by class group and that Coin arrives as a table of
@@ -241,11 +255,11 @@ RTF ignores by specification. The corpus is clean.
   twice**, and every extraction anyone has ever done from it used the *other* rendition. Both CD
   images are on this machine; the expansion holds **13,099 HTML files with real table markup**,
   covering the whole v1 tier — so the map's hardest measured obstacle, *"no table is a table"*, is a
-  property of **the RTF rendition, not the corpus**. The research's page-structure claim was then
-  **corrected by reading the disc**: 70% of the Complete Fighter's Handbook's text sits in files with
-  no `<TITLE>`, and **only one kit has a page of its own**. So the renditions are good at opposite
-  things and **the kits fall on the wrong side** — HTML for tables, RTF for kits, and ticket 01 now
-  owns both. Two collisions with the v1 spec surfaced: **page numbers are not recoverable from the
+  property of **the RTF rendition, not the corpus**. A "correction" claiming the HTML fails on kits
+  was then published against the research and **was itself wrong** — ugrep again — so the research
+  agent, working from an importer's regexes and six sample pages, read this corpus more accurately
+  than a session holding the disc. **Every kit has its own titled page.** Two collisions with the v1
+  spec surfaced: **page numbers are not recoverable from the
   RTF** (zero `\page`, verified) against §7.1's requirement of book *and page* on every record, and
   the two renditions **share no identifier**, so anything reading from both owns an alignment problem
   by heading text. Four external cross-check datasets were found for

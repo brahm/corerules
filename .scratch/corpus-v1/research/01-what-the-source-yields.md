@@ -6,6 +6,44 @@ in **both renditions** — the RTF in `books/` and the RoboHELP HTML in `/WEBHEL
 
 **No book text appears in this file.** Counts, field labels, headings and table titles only.
 
+---
+
+## ⚠ CORRECTION — the HTML measurements below were wrong, and in one direction
+
+Re-measured before [ticket 09](../issues/09-extraction-pipeline.md), in Python. **Every HTML figure
+in this file that came from a shell `grep` was an undercount**, because `grep` here is **ugrep**,
+which silently skips files it classifies as binary — and these HTML files carry cp1252 high bytes.
+On the Complete Fighter's Handbook it skipped **47% of the files**.
+
+The caution written in the Method section below turned out to apply to this file's own HTML numbers.
+The Python-based RTF numbers are unaffected.
+
+**What was wrong:**
+
+| Claim | Truth |
+|---|---|
+| "124 of CFH's 264 files carry no `<TITLE>`"; coverage 28%–94% | **All 3,603 v1-tier files carry a non-empty `<TITLE>`.** The coverage range is void. |
+| "Only one kit — Myrmidon — has a titled page of its own" | **Every kit has one.** Verified by title: CFH yields Amazon, Barbarian, Beast Rider, Berserker, Cavalier, Gladiator, Myrmidon, Noble Warrior, Peasant Hero, Pirate/Outlaw, Samurai, Savage, Swashbuckler, Wilderness Warrior — 14. CTH yields 18, likewise one per page. |
+| "Neither rendition wins, the split is per book" | **The HTML carries at least the RTF's kit count in every book**, including the three where the RTF exposes none. Kit records: CBD 26→32, CBE 0→13, CBGH 29→30, CBH 18→21, CDH 22→27, CFH 16→34, CPAH 0→21, CPRH 11→78, CRH 0→20, CTH 24→32, CWH 3→12. |
+| Table counts (§2) | All undercounts. PHB 578→**692**, DMG 133→**233**, CFH 7→**40**, CBE 3→**22**, CTH 44→**55**. The conclusion strengthens rather than reverses. |
+| "The Complete Priest's has 1 HTML table" | 3. Still almost none — that point survives qualitatively. |
+
+**What survives unchanged**, because it was measured in Python: the four record shapes; the ~146 kit
+and 60 priest counts; the label-variant analysis; the PHB's 67 numbered tables and their mapping to
+§3.1's kinds; and the RTF's own poverty in the Complete Paladin's, Ranger's and Book of Elves.
+
+**Page numbers, re-verified:** the finding stands with a refinement. There is **no per-record page
+field** and **no `<META>` at all**; what exists is an in-prose cross-reference (`page 42`) in **48 of
+2,840 files — 1.7%** — which cannot serve as a record's own provenance. §7.1's requirement remains
+unmeetable and [ticket 05](../issues/05-pack-schema.md)'s replacement stands.
+
+**The corrected headline:** the WebHelp is **uniformly better for record boundaries**, giving one
+titled page per kit in every book measured — including the three the RTF cannot serve at all. The
+RTF's remaining value is narrower than this file claimed and is the open question
+[ticket 09](../issues/09-extraction-pipeline.md) should settle.
+
+---
+
 ## Method, and one correction to how it was measured
 
 Counts come from a Python census (`^[ \t]*Label:[ \t]`, counting lines) rather than shell greps.

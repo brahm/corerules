@@ -92,6 +92,13 @@ body text, never a table's contents. See the map's hard constraint. Findings go 
 Full measurement: [`research/01-what-the-source-yields.md`](../research/01-what-the-source-yields.md).
 Both renditions, all 13 v1 books.
 
+> **⚠ Corrected after the fact.** Every HTML figure in the original answer came from a shell `grep`,
+> and `grep` here is **ugrep**, which silently skips files it classifies as binary — which these
+> cp1252 HTML files are. It skipped 47% of the Complete Fighter's Handbook. The caution this ticket
+> itself recorded turned out to apply to its own numbers. See the Correction block at the top of the
+> research file; the corrected headline is at the end of this answer. **The RTF numbers, measured in
+> Python, are unaffected.**
+
 **The headline contradicts what both earlier tickets assumed: neither rendition wins, and the split
 is per book.** Ticket 03 said the HTML solves tables; its correction said the HTML fails on kits.
 Both are true only on average. In the **Complete Paladin's, Ranger's and Book of Elves the RTF
@@ -149,13 +156,31 @@ Sphere and Deity, which are prose everywhere.
 counts in a first pass. Every number here comes from a Python census instead. Re-measure that way or
 verify the grep first.
 
-### The highest-value follow-up, left open
+### ~~The highest-value follow-up~~ — measured, and it dissolved the question
 
-**Whether the HTML's untitled files are continuation pages or independent records.** Title coverage
-ranges from **28%** (Paladin) to **94%** (Priest), and in the Complete Fighter's Handbook the
-untitled 47% of files hold ~70% of the text. If they are continuations the HTML is far more usable
-than this measurement credits; if they are records, far less. It decides how much of the HTML is
-worth reading, and [ticket 09](./09-extraction-pipeline.md) should settle it before choosing a seam.
+There are **no untitled files**. All 3,603 v1-tier WebHelp pages carry a non-empty `<TITLE>`; the
+28%–94% coverage range was ugrep skipping binaries. The question of whether untitled files were
+continuations or records does not exist.
+
+### The corrected headline
+
+**The WebHelp is uniformly better for record boundaries**, not per-book better. It gives **one titled
+page per kit in every book measured** — the Complete Fighter's yields Amazon, Barbarian, Beast Rider,
+Berserker, Cavalier, Gladiator, Myrmidon, Noble Warrior, Peasant Hero, Pirate/Outlaw, Samurai,
+Savage, Swashbuckler and Wilderness Warrior; the Complete Thief's yields eighteen the same way. And
+it carries **at least the RTF's kit count in every book**, including the three where the RTF exposes
+none.
+
+So the original claim — *neither rendition wins, the split is per book* — was an artifact. What
+survives is the **RTF's poverty**, which was measured in Python and is real: the Complete Paladin's,
+Ranger's and Book of Elves have no kit structure in the RTF at all. What does not survive is the idea
+that the RTF wins anywhere on record boundaries.
+
+**What the RTF is still for is now the open question**, and it belongs to
+[ticket 09](./09-extraction-pipeline.md). Its remaining candidates are narrow: field *contents* where
+the HTML's markup discards structure the tabs preserved, and a second independent extraction to diff
+against — which [ticket 04](./04-llm-assisted-extraction.md) says is the only kind of check that
+works.
 
 ## Two things already known to be waiting here
 

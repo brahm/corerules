@@ -124,6 +124,24 @@ cheapest test of a structural claim this project will ever get, and
 [ticket 05](./05-pack-schema.md) has just shown the second arm is far larger than the spec assumed,
 which is exactly the kind of surprise that should make "same shape" suspect.
 
+### ⚠ One supporting argument below is void; the choice is not
+
+The "24 RTF against 7 HTML, the largest measured" rendition gap **does not exist**. It came from
+ugrep skipping binary-classified HTML files (see the corrections on
+[tickets 01](./01-what-the-source-yields.md) and [03](./03-prior-art-core-rules-extraction.md)).
+Re-measured, the Complete Thief's HTML carries **18 kits, one titled page each** — Acrobat,
+Adventurer, Assassin, Bandit, Beggar, Bounty Hunter, Buccaneer, Burglar, Cutpurse, Fence,
+Investigator, Scout, Smuggler, Spy, Swashbuckler, Swindler, Thug, Troubleshooter.
+
+**The slice does not change**, because the gap was explicitly the *lesser* reason. What chose the
+Complete Thief's was what its kits drag in — the thieving-skill tables, the PHB link, and `adjust`
+on a lookup table — and all of that is untouched.
+
+Two consequences worth carrying: the slice is **~18 kits, not 24** (the RTF's 24 counted label lines,
+not records — [ticket 14](./14-record-shapes-for-the-slice.md) pins the true count), and the claim
+that this slice "exercises the harder pipeline" is now **unsupported**. It exercises the format; the
+rendition question moved to [ticket 09](./09-extraction-pipeline.md).
+
 ### Why the Complete Thief's, and the axis the ticket thought was a trade
 
 The ticket called format-stress versus pipeline-stress "a real trade". **For kits it is not one** —

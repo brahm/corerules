@@ -81,7 +81,31 @@ Two of the research's structural claims check out exactly:
 - **`<TITLE>` names the record and the book**: `Credits (Comp. Fighter's Handbook)`,
   `Ability Scores (Comp. Fighter's Handbook)`.
 
-### Correction — the research overstates it, and the overstatement lands on the kits
+### ⚠ The correction below was itself wrong — the research was right
+
+Re-measured in Python before [ticket 09](./09-extraction-pipeline.md). **The correction in the next
+section is void**, and the original research's claim — that the WebHelp is one structured record per
+page — holds.
+
+The error was `grep`: on this machine it is **ugrep**, which silently skips files it deems binary,
+and these cp1252 HTML files qualify. It skipped 47% of the Complete Fighter's Handbook, which is
+where "124 of 264 files carry no `<TITLE>`" and "only one kit has a page of its own" came from.
+
+**The truth:** all **3,603** v1-tier WebHelp files carry a non-empty `<TITLE>`, and **every kit has
+its own titled page** — the Complete Fighter's yields fourteen by name (Amazon, Barbarian, Beast
+Rider, Berserker, Cavalier, Gladiator, Myrmidon, Noble Warrior, Peasant Hero, Pirate/Outlaw, Samurai,
+Savage, Swashbuckler, Wilderness Warrior), the Complete Thief's eighteen. The HTML carries at least
+the RTF's kit count in **every** book, including the three the RTF cannot serve.
+
+So the research agent, working from an importer's regexes, six sample pages and a fan mirror, read
+this corpus more accurately than a session with the disc in hand did. The failure was mine and it was
+a tooling failure, not a reasoning one — which is exactly why the ugrep caution is recorded in the
+map's Notes.
+
+**The section below is left standing rather than deleted**, because it records what was believed and
+on what evidence.
+
+### ~~Correction — the research overstates it, and the overstatement lands on the kits~~ (VOID)
 
 The research had no access to the disc and inferred page structure from an importer's regexes, six
 sample pages and a fan mirror. Measured against the actual image, the WebHelp is **not** one titled
