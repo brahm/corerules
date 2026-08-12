@@ -145,6 +145,24 @@ RTF ignores by specification. The corpus is clean.
 
 <!-- one line per closed ticket: enough to judge relevance, then follow the link for detail -->
 
+- [The expression language](issues/06-expression-language.md) — **the ticket split**, dice and
+  generation methods moving to [ticket 15](issues/15-dice-and-generation-methods.md). What reframed
+  it was a measurement: the ticket assumed the grammar had to cover what the books say, and what the
+  books say is **English** — 1,478 "may not"/"cannot", 968 "must be", 595 "or more" in 1.23M words.
+  **The corpus contains no expressions**; every predicate is written by hand, so the design target is
+  hand-writability at volume and checkability, not source coverage. Hence a **closed, flat predicate
+  vocabulary** — the same discipline §4.3 already applies one level up, decoder-enforceable where a
+  recursive grammar is not, and it **dissolves §7.2's identifier requirement instead of satisfying
+  it**, since with typed subjects there is no formula string to substitute into and PCGen's
+  `Illumination`-contains-`MIN` becomes a category of bug that cannot occur. **Conjunction only** —
+  measured, not argued: genuine disjunction between subjects occurs **4 times** in the whole corpus,
+  while the 90 race lists are set membership and the 803 `unless`/`except` are §4.3's `except`.
+  **Subjects derive from §3.1's kinds** via `has(kind, id)` so a v2 kind gains predicate reach for
+  free, with ability and level the only scalars — and **`level` is always qualified by class**, the
+  unqualified form not existing, because §6.1's sum type means `Fighter 5 / Mage 4` has no "level 5".
+  Finally **predicates are structure, not strings**, which contradicts §7.1 deliberately and
+  **dissolves this ticket's own trap**: PCGen's disease was three live parsers, and under structure
+  there is no parser at all.
 - [The pack schema, version 0.1](issues/05-pack-schema.md) — **the spine only**, and the per-kind
   record shapes deferred to [ticket 14](issues/14-record-shapes-for-the-slice.md), on the ticket's own
   warning about *designing for the books already read*: twenty-seven shapes written before a single
@@ -235,6 +253,31 @@ RTF ignores by specification. The corpus is clean.
   thing that reliably *localises* the error class. Ticket 01's three buckets are confirmed with one
   correction: **the ambiguous middle belongs to the parser, not the model.** Cost cannot carry this
   decision (~$10–$100 a pass); **human review hours dominate and no ticket has estimated them.**
+
+## Corrections owed to the v1 spec
+
+<!-- accumulating; whoever updates spec.md needs exactly this list -->
+
+This map keeps finding that the v1 spec decided correctly on premises that measurement has since
+changed. None of these is an oversight in `spec.md`; each is a conclusion that did not survive
+contact with the corpus. Collected here so the eventual spec update has one place to read.
+
+1. **§7.1 requires book *and page* citation on every record — the corpus has no page numbers.**
+   Verified in both renditions ([ticket 01](issues/01-what-the-source-yields.md)). Replaced by a
+   `section` heading chain plus a machine `anchor`
+   ([ticket 05](issues/05-pack-schema.md)).
+2. **§7.1 says expressions stay strings — they are structure instead.**
+   ([Ticket 06](issues/06-expression-language.md)) The decision was right for the general nested
+   language §7.1 assumed; the language changed, and with a closed flat vocabulary structure removes
+   the parser entirely, which is what §7.2's one-evaluator rule was defending against.
+3. **[v1 ticket 11](../v1-spec/issues/11-engine-object-kinds.md) decided "Deity enters thin" — it
+   enters fat.** ([Ticket 05](issues/05-pack-schema.md)) Sixty records of ten fields. Right that
+   Deity exists, wrong about its size, and it will exercise §4.3's six operations harder than any
+   kit.
+4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
+   refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
+   tables were already delimited, not because a model reads them — so the inference that a pack
+   editor's value drops proportionally does not follow.
 
 ## Not yet specified
 

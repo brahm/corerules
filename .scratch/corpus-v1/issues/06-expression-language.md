@@ -1,7 +1,7 @@
 # The expression language: grammar, dice, rounding
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 01
 
 ## Question
@@ -64,6 +64,104 @@ never the decoder's. Weigh that when choosing between a recursive grammar and a 
 Flagged at charting. It plausibly splits into **grammar and evaluation semantics** on one side and
 **dice and generation methods** on the other. Split it if the session finds that shape; do not force
 one answer to cover both if they are not one decision.
+
+## Answer
+
+**The ticket split, as it suspected it would.** Dice notation and generation methods moved to
+[ticket 15](./15-dice-and-generation-methods.md); this ticket kept the predicate language.
+
+### The measurement that reframed it
+
+The ticket assumed the grammar had to *cover what the books say*. Measured over the 13 v1 books, what
+the books say is **English**:
+
+| | |
+|---|---|
+| 2,146 dice notations, **61 distinct forms** | + 383 with modifiers, 133 `drop`/`reroll`/`arrange` |
+| 554 ability-with-number references | 386 "at Nth level", 61 "every N levels" |
+| 595 "or more/better/higher" | 336 "no more than/less than" |
+| 968 "must be" | **1,478 "may not"/"cannot"** |
+
+**The corpus contains no expressions.** Every predicate is written by hand by the transcriber. So the
+design target is not source coverage — it is **hand-writability at volume, and checkability**.
+
+### Decision 1 — a closed, flat predicate vocabulary
+
+Rejected: a general language with arithmetic, functions and parenthesised nesting.
+
+Four independent arguments converge:
+
+- **§4.3 already set this discipline one level up** — six closed operations, with *anything outside
+  the vocabulary carried as text and not computed*. A closed predicate vocabulary is the same rule
+  one level down, not a new invention.
+- **A flat vocabulary is decoder-enforceable and a recursive one is not**
+  ([ticket 04](./04-llm-assisted-extraction.md)). Parentheses are what make it recursive.
+- **It dissolves §7.2's identifier requirement rather than satisfying it.** There is no formula
+  string to substitute text into. A predicate's subject is a typed field, so PCGen's
+  `Illumination`-contains-`MIN` failure is not a bug to avoid — it is a category of bug that cannot
+  occur.
+- **Dice is a different thing**: 61 distinct notations with drop and arrange semantics, and §3.3
+  already lists *dice expression* as a **value type**, not a predicate. Carrying both in one grammar
+  is what made this ticket too big.
+
+Accepted cost, and it is the project's standing posture: some rule will not fit and becomes displayed
+text rather than computed rule — as with effects outside the six operations and magic items whose
+mechanics do not fit.
+
+### Decision 2 — conjunction only; no boolean combination
+
+A predicate is a **flat list of conditions, all of which must hold**, plus set membership. No `or`,
+no nesting.
+
+**Measured rather than argued: genuine disjunction between different subjects occurs 4 times in
+1.23M words.** What looked like it needed `or` is covered by something else — the 90 race lists
+("X, Y, or Z") are **set membership**, and the 803 `unless`/`except` occurrences are §4.3's `except`
+operation, which already exists and already pierces a prohibition by naming its subject.
+
+An `or` connective would cost grammar, cost decoder-enforceability, and force a precedence decision —
+for four cases. Those four are handled the standing way: carried as text, or split into two records.
+
+### Decision 3 — subjects derive from §3.1's kinds; scalars are the closed part
+
+Rejected: a separate closed enumeration of subjects, which would duplicate the kind list and be able
+to drift from it.
+
+- **`has(<kind>, <id>)`** for anything carrying identity. §2's *closed kinds, open enumerations*
+  already governs this, so a kind added in v2 gains predicate reach for free and the language is
+  never touched.
+- **A small closed list of scalars** — ability and level. The measurement says almost nothing else
+  appears in requirement position.
+
+**`level` is always qualified by class, and the unqualified form does not exist in the language.**
+§6.1 made the class arrangement a sum type: `Fighter 5 / Mage 4` has no "level 5". A kit requiring
+5th level requires it *of which class* — and dual-class freezes the original. Left implicit this
+produces predicates transcribed with one meaning and evaluated with another, thousands of times. The
+cost is verbosity on every level predicate; what it buys is that the question is never open.
+
+### Decision 4 — predicates are structure, not strings
+
+**This contradicts `spec.md` §7.1**, which says *"expressions stay strings the single evaluator
+interprets"*. Recorded as a deliberate departure, not an oversight.
+
+**It dissolves this ticket's own trap instead of avoiding it.** The trap was that the pipeline's
+validator becomes a second implementation — and PCGen's disease was three live parsers plus
+`processBrokenParser`. **Under structure there is no parser at all**, so there cannot be a second
+one.
+
+Two further gains: predicate correctness moves from the validator up into the schema, since a string
+is opaque to JSON Schema while a flat object is fully validatable (this is
+[ticket 05](./05-pack-schema.md)'s two-tier split, with predicates moving to tier one); and **git can
+diff a predicate**, which was ticket 02's argument for the whole corpus and does not work on an
+opaque string.
+
+Accepted cost: verbosity, thousands of times, in a text editor.
+
+**The defence of departing from §7.1:** it decided correctly for the language it assumed. Strings
+make sense when the language is general and nested. Decision 1 changed the language, and §7.1's
+conclusion did not survive the change of premise.
+
+**No separate version marker.** §7.3 already versions the pack format and the language is part of it;
+a second number is one more thing to desynchronise.
 
 ## The trap
 
