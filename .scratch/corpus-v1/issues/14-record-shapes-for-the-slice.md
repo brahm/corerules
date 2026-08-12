@@ -63,6 +63,20 @@ operand**, which is where §7.2's requirement finally lands.
 This ticket has to give that a shape in the schema, on both sides — an effect's operand **and** a
 predicate's value, since the arithmetic appears in both.
 
+## Two requirements handed to this ticket by later resolutions
+
+**A record needs somewhere to say "the book is ambiguous and this is my reading."**
+[Ticket 11](./11-human-review-protocol.md) found the reviewer has no place to record an
+interpretation as distinct from an extraction. That is a property of the record, not an attestation,
+so it is a schema field and it lands here.
+
+**A pack declares its provenance mode.** [Ticket 12](./12-how-much-tool.md) found that
+[ticket 05](./05-pack-schema.md)'s mandatory `section` and `anchor` forbid a hand-authored house-rule
+record, which §5.1 explicitly supports — *"the escape hatch is the pack"*. So the manifest declares
+**extracted** or **hand-authored**, and the per-record provenance requirement follows from the
+declaration rather than being unconditional. Express both halves: what an extracted pack owes, and
+what a hand-authored one does not.
+
 ## What this ticket must not do
 
 **Do not add a seventh operation** — beyond the computed operands above, which are already decided. If the slice's records cannot be expressed in `adjust`, `grant`,

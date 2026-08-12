@@ -157,6 +157,21 @@ RTF ignores by specification. The corpus is clean.
 
 <!-- one line per closed ticket: enough to judge relevance, then follow the link for detail -->
 
+- [How much tool, and where it lives](issues/12-how-much-tool.md) — **the question this map was
+  opened with, answered last and by measurement.** Eleven resolutions left exactly one piece needing
+  something that does not exist, and for a mechanical reason: **nobody types a SHA-256 by hand.** So
+  the tool is four commands and one template — `extract`, `check`, `review`, `attest` — where review
+  **generates a static page** rather than being an application. That is nearly free by an accident of
+  ticket 09: making the WebHelp the only parse target means every record's source **is already an
+  HTML file**, and ticket 05's anchor points at it, so side-by-side is a template with no framework,
+  no state and no server. **The original request's premise did not survive**: it asked for a tool
+  reading "pdf, rtf, html, txt or any other format" and the answer is **one format**, not because
+  generality is hard but because the corpus does not need it. And the map closed a door the spec had
+  deliberately left open without noticing — mandatory `anchor` forbids a house rule, which §5.1
+  supports outright — so **a pack declares its provenance mode**, extracted or hand-authored, with
+  the per-record requirement following the declaration. A3 applied to provenance: declare rather than
+  infer. **The prediction recorded in this ticket before any measurement held, and undershot** — the
+  surviving interface is for reviewing, and is not even a review application.
 - [The human review protocol](issues/11-human-review-protocol.md) — the reviewer compares a record
   against **its own source passage**, not the printed book and not the Engine, whose behaviour the
   ticket called the strongest test but which **does not exist yet**. Side-by-side is already paid for:
@@ -384,6 +399,13 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    enters fat.** ([Ticket 05](issues/05-pack-schema.md)) Sixty records of ten fields. Right that
    Deity exists, wrong about its size, and it will exercise §4.3's six operations harder than any
    kit.
+6. **Mandatory provenance forbids a house-rule pack, which §5.1 explicitly supports.**
+   ([Ticket 12](issues/12-how-much-tool.md)) This map closed a door the spec left open and did not
+   notice: [ticket 05](issues/05-pack-schema.md) made `section` and `anchor` required on every record
+   and had the manifest name its sources by hash, and a hand-authored record has none of the three —
+   while §5.1 says *"A3 subsumes the house-rule escape hatch. The escape hatch is the pack."*
+   Resolved by having **the pack declare its provenance mode**, extracted or hand-authored, with the
+   per-record requirement following from the declaration. A3 applied to provenance.
 5. **§4.3's six operations cannot express the corpus — known unknown #4 has fired.**
    ([Ticket 15](issues/15-dice-and-generation-methods.md)) Measured inside kit effect fields:
    **31 occurrences** of halving, division or explicit rounding — *"at twice the normal cost"*,
