@@ -1682,9 +1682,59 @@ deliberately as the gaps:
   [ticket 11](./11-human-review-protocol.md)'s cost estimate: **the second of a near-duplicate pair
   costs a fraction of the first**, and the corpus has more such pairs than the kit count suggests.
 
+### Session 28 — the Forestwalker, and arithmetic over a collection of other creatures
+
+Twelve effects, the most in the slice, and two shapes nothing else has produced.
+
+### Finding 60 — a modifier whose value is a **count of other things**
+
+> …a successful Tracking check with a **−1 penalty for each non-Forestwalker in the party** (**−2 for
+> each horse, mule, or other four-footed animal** accompanying the party).
+
+[Finding 49](#finding-49--a-third-of-all-kits-adjust-a-reaction-roll-and-most-qualify-it) established
+that the corpus conditions on **the other party**, singular. This computes a number by **counting a
+collection** of them, sorted by kind. Measured, five kits — and what is counted is different every
+time:
+
+| kit | counts |
+|---|---|
+| **Forestwalker** | non-Forestwalkers in the party, and quadrupeds, at different rates |
+| Bilker | *"a cumulative +1 for **each previous time** the Bilker has used this ability on him or her"* — **past events**, per target |
+| Animal Master | *"+1 for each **slot spent on Training**"* — the character's own spending |
+| Patrician | *"−1 for **each dwarf he fails to adequately equip**, until it reaches 0"* — obligations, with a **floor** |
+| Noble Warrior | per night per person — pricing, not a character effect |
+
+Only the Animal Master's is plausibly within reach: slots spent is character state, so
+`{of: {slotsSpentOnTraining}}` would work if the Engine tracks it. The rest need to count **things
+outside the character sheet**, and the Bilker's counts **events in the campaign's past, per victim**.
+
+The Patrician's *"until it reaches 0"* is finding 28's missing combiner again, in its floor form. It
+keeps appearing beside other gaps rather than alone.
+
+### Finding 61 — a benefit the player buys with movement, at the table
+
+The Forestwalker's three movement benefits are one mechanic with a dial:
+
+- full speed through tangled undergrowth, **or**
+- normal speed and Move Silently through it with **no check**, **or**
+- half speed and the party's tracks are concealed.
+
+This is not a condition on state and not a choice made at character creation. It is a **trade the
+player elects, per scene, and can elect differently next scene**. `require` chooses once and is
+recorded; `when` tests a fact. Nothing represents *"spend this to get that, whenever you like"*.
+
+Carried as text, and worth flagging as probably out of scope rather than missing: a character sheet
+that recorded which speed the halfling is walking at today would be tracking play, not rules.
+
+The record also supplies a **seventh earmark** (*"must spend an **initial** proficiency slot on a
+missile weapon"* — finding 59), an eighth open list (*"such as a club or a small quarterstaff"*), a
+terrain-conditioned bonus, a permit-list, an item-property prohibition, and a reaction penalty that is
+**negated membership on the other party** — findings 7 and 49 in one clause. Twelve effects, six
+distinct known gaps, and two new ones.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 56** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 57** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
