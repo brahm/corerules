@@ -1426,9 +1426,68 @@ The record is also the **second and third use of `forbid`** — *"precludes lear
 greater divination or conjuring/summoning schools"* — and the first on a genuinely closed category,
 since 2e's schools of magic are enumerable. `except` remains unused at 23 records.
 
+### Session 23 — the Imagemaker, and `except` finds its one case
+
+### Finding 52 — `except` is needed exactly once in 134 kits
+
+> The Imagemaker gains the Ventriloquism proficiency **(normally available only to rogues)** as a free
+> proficiency as soon as this kit is selected.
+
+That is a standing prohibition being **pierced by naming its subject**, which is precisely what §4.3's
+`except` is specified to do — and without it the `grant` beside it would be refused by the rogue-only
+rule. **First use in 24 modelled records**, after [finding 39](#finding-39--after-17-records-five-of-six-operations-are-used-and-except-is-not)
+proposed it for removal.
+
+Measured, so the answer is a number rather than a reprieve: searching all 134 kits for a clause that
+grants something the rules otherwise deny returns **three matches, of which two are false** — the
+Bounty Hunter's *"despite the fact that…"* and the CPAH Squire's *"Despite their reputation…"* are
+narrative. **One real case.**
+
+So finding 39's proposal is withdrawn and replaced by something sharper. `except` is not dead weight;
+it is **the operation the corpus needs least often**, at roughly 1 in 134 against `grant`'s 44 uses in
+24 records. Keeping it is right — a format that could not express *"you may take the rogue-only
+proficiency"* would fail on a real kit — but the running tally is now:
+
+| | uses in 24 records |
+|---|---:|
+| `adjust` | 45 |
+| `grant` | 44 |
+| `require` | 34 |
+| `set` | 16 |
+| `forbid` | 7 |
+| `except` | **1** |
+
+**All six operations are now exercised, and none has been found missing.** Known unknown #4 asked
+whether six operations suffice. On the evidence of 24 hand-modelled records across seven books, the
+answer is **yes, and the shortfall was never in the operations** — it is in operands, conditions, and
+above all in subjects.
+
+The same record supplies the **third cancelling-adjust carve-out**, and the contrast with the `except`
+above it is the useful part. *"Creatures that would not normally be fooled by illusions do not suffer
+the −2 penalty"* exempts from a **penalty**, not from a **prohibition** — so it takes the Acrobat's
+form, not `except`'s. Two exception-shaped sentences in one record, needing two different mechanisms,
+and the difference is exactly whether the thing being escaped is a prohibition.
+
+### Finding 53 — the corpus writes randomness in a second notation
+
+*"Illusions requiring concentration last for **2–12 rounds** after the caster ceases concentrating."*
+Also *"a fuse set for 1–10 rounds"*, *"blind for 1–6 rounds"*, *"5–10 gp per month"* (the CPAH
+Squire).
+
+Measured: **18 kits, 36 occurrences** of a bare `N–M <unit>` range. Forms include `1-4`, `1-6`,
+`1-10`, `2-12`, `1-12`, `6-12`, `30-50`, `6-7`.
+
+The dice pattern implemented in [finding 42](#finding-42--ticket-15s-dice-decision-was-settled-and-never-implemented-now-it-is)
+rejects every one of them. Some are dice wearing a different coat — `1-6` is `1d6`, `2-12` is `2d6`,
+`1-10` is `1d10` — and **converting them is a derivation, not a transcription**, the same class of
+move as the Mercenary's CNF expansion. Others are not dice at all: **`30-50` and `6-7` have no die
+that produces them**, so they are a range a person picks or a DM rules within.
+
+So ticket 15's notation question was answered for one of the two notations the corpus actually uses.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 51** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 52** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 

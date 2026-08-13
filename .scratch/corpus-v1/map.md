@@ -511,12 +511,14 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    in `pack-0.1.schema.json`; a settled decision produced no artifact, and silence fails no
    validation. Now implemented as a value type — and widened, because the stated grammar `NdM±k`
    misses the **4.7%** written `NdM×k` (`4d4x10`, `3d6x5`).
-13. **Known unknown #4 is answering in an unexpected direction: the corpus wants richer OPERANDS and
-   CONDITIONS, never a seventh operation.** ([Ticket 13](issues/13-transcribe-the-proving-slice.md)
-   finding 39) Across 17 hand-modelled records and 106 effects, five of the six operations are used —
-   `grant` 34, `adjust` 32, `require` 24, `set` 13, `forbid` 3 — and **`except` has never been needed
-   once**. Both places it looked inevitable were better served by cancelling adjusts. The set may be
-   one operation too LARGE, which is the opposite of what the known unknown feared.
+13. **Known unknown #4 has answered: six operations suffice, and the shortfall is elsewhere.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) findings 39 and 52) Across **24
+   hand-modelled records from seven books**, all six are now exercised — `adjust` 45, `grant` 44,
+   `require` 34, `set` 16, `forbid` 7, `except` **1** — and **none has been found missing**. `except`
+   waited 24 records for the Imagemaker's rogue-only proficiency, and a search of all 134 kits finds
+   that one real case: it is the least-needed operation, not a redundant one. What the corpus actually
+   wants is richer **operands**, richer **conditions**, and above all more **subjects** — see
+   correction 17.
 11. **§4.3 can sum and overwrite, and the corpus sometimes needs neither.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 28) Three kits state a bonus is
    **not** cumulative — take the greater (Assassin), a ceiling (Pathfinder), apply once regardless of
