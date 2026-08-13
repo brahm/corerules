@@ -484,6 +484,14 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    there is nothing between them. Crucially this does **not** threaten order-independence, since a
    `max` combiner is commutative: what fails is **additivity**, which the design had been treating as
    the same property. Small at 3 of 138 kits, and recorded rather than repaired.
+12. **The extractor flattens away the level at which the corpus marks force.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 35) `Required:` and `Recommended:`
+   are sub-labels **inside** a field, present in eight of nine books — 100% of CTH and CWH kits, 0% of
+   CBGH's. They are the vocabulary that says whether a field binds, and findings 22 and 24 concluded
+   force was unmarked precisely because CBGH, the one flat book, was the one read closest. The fix is
+   structural rather than new: the two field strategies are **per-level, not per-book** — markup at
+   level one, typography at level two — so `fields_typographic` already does it. Deferred because it
+   changes every extracted record and the slice is the gold standard.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

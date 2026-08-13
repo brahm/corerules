@@ -954,9 +954,84 @@ short — there is no *place* kind in v1 and no record of what happened at the t
 boundary it is rather than as a defect: **an effect can be conditioned on the character, and the
 world is not the character.**
 
+### Session 15 — both Burglars, and the field layer turns out to have two levels
+
+*"Model the Burglar"* is ambiguous, which is finding 32 arriving in practice rather than in a table.
+**Both were modelled** — `cth:DD05813` and `cbgh:DD04926` — and they coexist with nothing to resolve:
+different ids, different targets, different effects, one name. §7.3 held under its first real load.
+
+They are also a study in contrast. The CBGH Burglar carries five effects; the CTH Burglar carries
+**one**, its `Special Benefits` and `Special Hindrances` both reading `None.` — finding 16's
+mechanically-empty third, now with a modelled example.
+
+### Finding 35 — force is carried one level down, and the extractor was flattening it
+
+The CTH Burglar's proficiencies read:
+
+> **Required:** Alertness, Looting. **Recommended:** Begging, Gather Intelligence, Jumping…
+
+Both sit **inside** the single `Nonweapon Proficiencies` field. Measured across nine books, as kits
+having at least one sub-label nested in a field:
+
+| book | kits | with a sub-label |
+|---|---:|---:|
+| CTH, CWH | 18, 10 | **100 %** |
+| CFH | 14 | 93 % |
+| CPAH | 12 | 58 % |
+| CRH | 14 | 36 % |
+| CBD, CDH | 24, 14 | 21 % |
+| **CBGH** | 28 | **0 %** |
+
+And the sub-label vocabulary is exactly the force vocabulary: **`Recommended` 46, `Required` 32,
+`Bonus Proficiencies` 14.**
+
+**This substantially revises findings 22 and 24.** Those concluded that no field name carries force
+and every sentence must be read. That is true of the **top-level** name — and in eight of nine books
+the force *is* marked, one level down, in a small closed vocabulary. The extractor has been
+**discarding the exact signal it needed**, and CBGH is the outlier that hid it: the one book with no
+sub-labels is the book whose fields were read most closely.
+
+The structure of the fix is the pleasing part. **The two strategies are not per-book alternatives;
+they are per-level.** `Required:` and `Recommended:` are **plain text inside a marked-up field** — so
+the markup books use markup at level one and *typography* at level two, and
+[`fields_typographic`](../tools/extract.py) is already the right tool for it. CBGH is simply
+typographic at both levels, and flat.
+
+Not implemented here. It changes what every extracted record contains, and the slice is
+[the gold standard](#keep-the-slice--it-becomes-the-gold-standard) — re-cutting it belongs in its own
+pass with the diff adjudicated, not appended to a modelling session.
+
+A smaller thing found while checking: some sub-labels *are* marked up, **malformed** —
+`<I>Skill Progression: The</I>` swallows the following word, so the label regex never sees it. It
+costs about **1%** of label candidates and most of those were never labels (`At 8th level`,
+`Chapter 8` are cross-references). Perhaps half a dozen genuine field labels are lost corpus-wide.
+Small, and recorded as small.
+
+### Finding 36 — the cancelling-adjust technique generalises
+
+> …suffering a **−1 penalty on all attack rolls in melee**. However, attacks made as a **backstab are
+> not affected** by this penalty.
+
+Modelled as **−1 on melee attacks and +1 on backstabs**, which nets to zero for a backstab exactly as
+written. This is the same move the Acrobat's halfling/gnome carve-out needed, and it works for the
+same reason: §4.3's adjusts commute, so an exemption is a cancelling adjust rather than a special
+form.
+
+Two independent carve-outs, two arms, one technique. **`except` was never needed for either** — it
+pierces prohibitions, and neither of these is a prohibition. That is worth stating positively, since
+most of this ticket's recent findings have been gaps: **the operation set is doing real work here that
+a naive design would have needed a seventh operation for.**
+
+The CBGH Burglar's benefit is the counterweight, and the sharpest single sentence in the slice:
+*"At first level the Burglar gains an additional 10% to Open Locks **or** Move Silently. Each time he
+or she gains a new level, the Burglar receives a **+5% bonus that can be applied to either of the
+above two talents or to Find and Remove Traps**."* That is finding 13's choice-between-effects and
+finding 21's level scaling **in one clause, recurring at every level, allocated by the player**.
+Nothing in the format touches it.
+
 ### Still not done
 
-The judgement pass on the remaining **29 of 40** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 41** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
