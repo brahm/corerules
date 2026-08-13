@@ -446,6 +446,16 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    re-read rather than discarded: ticket 06 objected to *grammar, nesting and precedence*, and a
    one-level clause has none of the three, so the decision was right about what it was defending and
    wrong only about how much the corpus asked for.
+8. **[Ticket 09](issues/09-extraction-pipeline.md)'s "field labels are markup" holds for twelve of
+   thirteen v1 books.** ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 12) *The
+   Complete Book of Gnomes and Halflings* carries labels on **3%** of its pages against 15–42% for
+   every sibling handbook, and the thirteen it has are adventure-hook titles rather than fields. Its
+   records are typographic: the Homesteader's prerequisite is a sentence inside a paragraph. **The
+   page layer survives** — `<TITLE>` is present and one record per titled page still holds — so the
+   repair is a second field parser for one book, not a new premise. Unresolved, and deliberately so:
+   the slice's Stout was hand-authored instead, which is the only evidence the corpus has about the
+   hand-authoring path. Note the sting: **the two kits that forced correction 7 are in this book**,
+   found by an RTF text census rather than by the pipeline — a point for ticket 09's rejected arm.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

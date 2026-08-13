@@ -350,11 +350,88 @@ written (finding 11).
 **What §4.1 did not get tested on is `cardinality`.** All three arms are `one-per-target` in this
 slice, so the field is present and unexercised.
 
+### Session 5 — the Subrace arm, from the one book the pipeline cannot read
+
+### Finding 12 — one v1 book carries no field markup at all
+
+[Ticket 09](./09-extraction-pipeline.md) made WebHelp the only parse target because field labels are
+carried as `<I>Label:</I>` markup rather than typographic convention. Running the subrace extractor
+over **CBGH** — *The Complete Book of Gnomes and Halflings* — returns **0 records from 112 pages**.
+
+Measured across all twenty book directories, as pages carrying at least one label:
+
+| | |
+|---|---|
+| every other *Complete* handbook | **15–42 %** |
+| **CBGH** | **3 %** — 13 labels total, and they are *adventure-hook titles*, not fields |
+
+The Homesteader's page has three `<B>` tags: `Table of Contents` and two empty. Its fields are
+typographic — *"Roads to Adventure:"* sits in running prose — and **its prerequisite is a sentence
+in the middle of a paragraph**.
+
+So ticket 09's decision holds for twelve of thirteen v1 books and fails completely, not partially,
+for the thirteenth. What still holds there is the *page* rule: `<TITLE>` is present and correct, one
+record per titled page. **It is the field layer that is missing, not the record layer** — which is
+the difference between "write a second parser" and "start over".
+
+And the irony is worth recording rather than smoothing away: **the two kits that forced the schema
+repair in finding 10 live in the only book the parser cannot read.** They were found by a text census
+of the RTF, not by the pipeline — which is a point in favour of ticket 09's *rejected* arm, the one
+that kept both renditions.
+
+### Finding 13 — disjunction in an *effect* has no operation, and the clause repair does not reach it
+
+The Stout's ability line reads:
+
+> Ability Score Adjustments: **-1 to Strength; +1 to either Dexterity or Constitution**
+
+The second half is **one adjust the player chooses between**. Finding 10's repair does not touch
+this: a `clause` is a **test**, and this is a **choice**. Nor does `require`, which counts a choice
+of **ids** — *pick two weapon proficiencies* — not a choice of **effects**.
+
+**Modelled deliberately wrong**, as +1 Dexterity carrying an `UNMODELLED CHOICE` marker, so the
+record errs in a visible direction instead of silently dropping a bonus the character is owed.
+
+This is the third gap of the same family — finding 11's permit-list and follower counts, and now
+this. All three are **§4.3 lacking an operation**, and all three were invisible until an arm other
+than the Kit was modelled.
+
+### Finding 14 — an embedded table collides with its host record
+
+`Table 6: Stout Ability Scores` is real `<TABLE>` markup **inside the subrace's page**. Run the table
+extractor on it and it produces a `lookupTable` with `id: cbgh:DD04891` — **the same id the subrace
+record takes**, because [ticket 07](./07-identity-and-id-stability.md) derives identity from source
+position and both records are at the same position.
+
+It also takes the **wrong name**: `Stout`, the page title, rather than `Table 6: Stout Ability
+Scores`, the caption sitting in a `<B>` just outside the `<TABLE>`. Finding 6's tables each owned a
+page, so page title *was* caption; that coincidence is what the extractor encoded.
+
+Both are consequences of the same unstated assumption — **one page, one record** — which ticket 07
+already knew was false for subraces and handled with an ordinal. The ordinal disambiguates records of
+the *same* kind. Nothing disambiguates two records of *different* kinds from one page.
+
+Here it was resolved by **not emitting the table**: its two columns are the subrace's own prerequisite
+and caps, so a table record would duplicate the pack's own data. That is a reading, and the record
+says so.
+
+### What the Subrace arm did to §4.1
+
+**All three arms now carry effects, and §4.1 held on all three.** The Stout validates against the
+shared `attachable` with no strain: a target, six prerequisite conditions, thirteen effects.
+
+But the arm was only reachable by hand. **Every other record in the slice was extracted and then
+judged; this one was authored end to end**, because finding 12 left nothing to extract. That makes it
+the slice's only evidence about the hand-authoring path — and it validates identically, which is what
+[ticket 12](./12-how-much-tool.md)'s `provenanceMode` was designed to allow.
+
+`cardinality` remains unexercised: all three arms are `one-per-target`.
+
 ### Still not done
 
-The judgement pass on the remaining **29 of 31** Attachables · the measured cost per record against
+The judgement pass on the remaining **29 of 32** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction · local-model draft quality ·
-a Subrace modelled by hand, which is the one §4.1 arm still carrying no effects.
+**a second parser for CBGH**, which finding 12 turned from an unknown into a scoped job.
 
 **The remaining work is the expensive half**, and two records in, the cost is not yet measurable for
 the reason that matters: **both hand-modelled records spent most of their time finding format gaps,
@@ -363,9 +440,8 @@ is front-loaded and disappears once the format stops moving — so timing a reco
 the wrong thing, and ticket 11's prediction stays unchecked until a record passes through changing
 nothing.
 
-**Two of the three §4.1 arms now carry effects.** The Subrace arm is the remaining test, and finding
-10 gives it a specific job: the `A ∧ (B ∨ C)` prerequisites are in the gnome-and-halfling book, so
-the arm that is untested and the gap that is unrepaired meet in the same pages.
+**All three §4.1 arms now carry effects and the claim held on all three** — which is the single
+largest thing this ticket was built to find out, and it came back positive.
 
 ## What it must not do
 
