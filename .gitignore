@@ -9,3 +9,7 @@ node_modules/
 dist/
 out/
 release/
+
+# Python
+__pycache__/
+*.pyc
