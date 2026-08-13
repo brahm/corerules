@@ -1224,9 +1224,62 @@ Worth stating plainly: this one probably should not be modelled even if it could
 sheet that silently flips a bonus because of a past betrayal is a **rule the table remembers**, not a
 computation — and the layer model's promise is that a refusal can name its cause.
 
+### Session 19 — the Cartographer, and the slice does not resolve
+
+### Finding 45 — **every** reference in the proving slice is dangling
+
+Counting the ids the slice's effects and prerequisites point at:
+
+| | |
+|---|---:|
+| records defined | 53 |
+| distinct ids referenced | **80** |
+| **references that resolve inside the pack** | **0** |
+
+Not one. `phb:` 66, `cbgh:` 8, `crh:` 5, `cprh:` 1.
+
+Two different problems wearing one number. The 66 `phb:` references are **another pack** —
+`phb:halfling`, `phb:short-sword`, `phb:tumbling` — and [ticket 10](./10-mechanical-verification.md)
+correctly put cross-pack integrity on the Engine, because a pack cannot see the packs it points at.
+The PHB has simply never been transcribed; the slice contains five of its tables and none of its
+races, classes or proficiencies. The other 14 are ids **minted while modelling** for kit-local
+abilities — `cbgh:freeze-in-place`, `crh:photographic-memory` — which no record anywhere defines.
+
+**The slice validates with 0 schema errors and could not be loaded.** That gap is exactly the shape
+[ticket 08](./08-which-slice-proves-the-format.md) warned about when it said *"do not let a passed
+slice be reported as a validated format"*, and it went unnoticed for nineteen sessions because
+**nothing was counting**. The checker reported schema errors and unmodelled records and said nothing
+about references.
+
+Now it does — [`validate.py`](../tools/validate.py) reports them grouped by prefix, **without
+failing**, because a pack pointing outward is normal and a pack *all* of whose references point
+outward is worth knowing about. That is implementing ticket 10's split, not revising it.
+
+What this costs the ticket is honesty about what has been proved. The slice demonstrates that the
+**shapes** are expressible. It demonstrates nothing yet about whether the pieces **fit together**, and
+the two are easy to confuse when the validator is green.
+
+### Finding 46 — a kit that invents a proficiency
+
+> Upon reaching second level, halflings using this kit gain a **unique proficiency: Cartography**.
+
+The kit does not grant an existing thing; it **defines a new one**, in its own prose, and the
+definition is three sentences of what the proficiency can and cannot do. The schema has a top-level
+`nonweaponProficiencies` kind, so there is somewhere for it to live — but the pack must now **produce
+a record the source never presents as a record**, extracted from the middle of a kit's field.
+
+That is a boundary case for [ticket 07](./07-identity-and-id-stability.md)'s source-position identity:
+what is the anchor of a proficiency that has no page? The best available answer is the kit's page, and
+then two records share it — which is finding 14's embedded-table collision arriving from a completely
+different direction.
+
+The record also lands two clean wins worth noting against the run of gaps: *"Kender Cartographers
+specialise in the hoopak"* is a **subrace-conditioned effect** that models exactly, and the
+second-level Cartography grant is another level gate, which finding 23 established works.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 47** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 48** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 

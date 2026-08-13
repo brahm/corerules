@@ -16,7 +16,7 @@ records still awaiting the judgement pass, and files the manifest never declared
 
 Usage:  validate.py <pack-dir>
 """
-import json, sys, pathlib
+import json, sys, pathlib, collections
 
 try:
     import jsonschema
@@ -53,6 +53,35 @@ def main():
 
     unmodelled = [r["id"] for arr, recs in doc.items() if arr != "manifest"
                   for r in recs if r.get("effectsModelled") is False]
+
+    # Ticket 13 finding 45. Ticket 10 puts cross-pack referential integrity on the Engine,
+    # correctly — a pack cannot see the packs it points at. But nothing was COUNTING the
+    # references, so nobody noticed that not one of the proving slice's 75 resolved. Report
+    # them, grouped by prefix, without failing: a pack that points outward is normal, and a
+    # pack every one of whose references points outward is worth knowing about.
+    defined, refs = set(), collections.Counter()
+
+    def walk(conds):
+        for c in conds or []:
+            for cc in c.get("anyOf", [c]):
+                for i in cc.get("anyOfIds", []):
+                    refs[i] += 1
+                if "ref" in cc:
+                    refs[cc["ref"]] += 1
+
+    for arr, recs in doc.items():
+        if arr == "manifest":
+            continue
+        for r in recs:
+            defined.add(r["id"])
+            walk(r.get("prerequisite"))
+            for e in r.get("effects", []):
+                if "ref" in e:
+                    refs[e["ref"]] += 1
+                for i in e.get("from", []):
+                    refs[i] += 1
+                walk(e.get("when"))
+    unresolved = collections.Counter(i.split(":")[0] for i in refs if i not in defined)
     undeclared = sorted(p.name for p in pack.glob("*.json")
                         if p.name != "manifest.json" and p.name not in manifest.get("files", []))
 
@@ -64,6 +93,10 @@ def main():
     if unmodelled:
         print(f"  awaiting the judgement pass: {len(unmodelled)} of {total} "
               f"(effectsModelled: false — not 'no effects')")
+    if unresolved:
+        n = sum(unresolved.values())
+        print(f"  references resolved by the Engine, not here: {n} of {len(refs)} "
+              f"({', '.join(f'{k}: {v}' for k, v in unresolved.most_common())})")
     return 1 if errors or missing else 0
 
 

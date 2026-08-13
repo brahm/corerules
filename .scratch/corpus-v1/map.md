@@ -480,6 +480,12 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    level. The closed set has halving and division and nothing that multiplies by a level. Known
    unknown #4 firing a second time, in a second form. **A third of them declare a starting level**
    (finding 23), so a bare `perLevel(N)` would be wrong on those — the repair needs an offset.
+16. **The proving slice validates and would not load: 0 of its 80 references resolve.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 45) 66 point at a `phb:` pack never
+   transcribed, 14 at ids minted while modelling. Ticket 10 rightly puts cross-pack integrity on the
+   Engine, but **nothing was counting**, so the gap sat unseen for nineteen sessions behind a green
+   validator. The checker now reports them without failing. The slice proves the SHAPES are
+   expressible and says nothing yet about whether the pieces fit together.
 14. **`require.from` is a closed list, and two thirds of kits write open ones.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 43) *"a concealable hand weapon
    **such as** a dagger, knife, or hand axe"* — **91 of 134 kits (68%)** carry `such as`, `e.g.` or
