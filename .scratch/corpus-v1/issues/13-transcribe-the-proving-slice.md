@@ -1277,9 +1277,57 @@ The record also lands two clean wins worth noting against the run of gaps: *"Ken
 specialise in the hoopak"* is a **subrace-conditioned effect** that models exactly, and the
 second-level Cartography grant is another level gate, which finding 23 established works.
 
+### Session 20 — the Mercenary, and the predicate/effect asymmetry appears a second time
+
+### Finding 47 — the corpus counts, and only the effect side can count back
+
+> A halfling Mercenary must have ability scores of at least 13 in **two of these categories**:
+> Strength, Dexterity, and Constitution.
+
+Measured across 134 kits, **7 occurrences of `k of n`** — and they split cleanly:
+
+| use | kits | expressible? |
+|---|---:|---|
+| choosing **k things** — *"may choose two of the following skills"*, *"up to four of the weapons"* | 6 | **yes**, `require count: k, from: [...]` |
+| a **predicate** counting how many conditions hold | **1** | **no** |
+
+This is **finding 27's asymmetry, exactly repeated one level up**. There, disjunction came free on
+the effect side because `from` *is* a choice set, and had to be added to the predicate as `anyOf`.
+Here, counting comes free on the effect side because `require` *has* a `count`, and the predicate has
+nothing. Two different capabilities, one structural cause: **an effect entry is an action that
+already carries a selection; a predicate entry is a single truth value.**
+
+**Modelled by expanding to conjunctive normal form** — `(S∨D) ∧ (S∨C) ∧ (D∨C)` — which is exactly
+equivalent and which the clause repair accepts unchanged, verified. But it is a **derivation, not a
+transcription**: the record no longer resembles the sentence, and a reviewer comparing the two must
+reconstruct the algebra. That is precisely what `interpretation` exists to flag, and it is flagged.
+
+It is affordable only because the corpus asks once, for two-of-three. In general `k of n` needs
+**C(n, n−k+1)** clauses — three here, twenty for three-of-six — so the CNF escape is a property of
+this instance rather than a general answer.
+
+### Finding 48 — an earmarked grant
+
+> the halfling Mercenary receives **two extra weapon proficiency slots** upon reaching second level.
+> **The slots must be used to purchase a weapon specialization**, if he or she does not already have
+> one.
+
+The `adjust` lands cleanly — slots are a value, +2 at second level is a level-gated adjust, both
+established. What has no form is the **earmark**: the resource is granted *and its spending is
+constrained*. `require` says the player must choose something; it does not say that a *previously
+granted* resource is the thing that must pay for it.
+
+The escape clause is finding 7's negation again — *"if he or she does not already have one"* — and
+worth noting because it shows how that gap compounds: the earmark cannot be expressed, and neither
+can the condition under which it lapses.
+
+The same field also modifies a **price**: *"can specialize in the bow at a cost of only two
+proficiency slots (not three)"*. Carried as a `set` on a cost field, which works only if the Engine
+holds costs as fields — an assumption this record makes and no ticket has confirmed.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 48** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 49** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
