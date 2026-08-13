@@ -461,6 +461,20 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    recovering the field layer does not recover the prerequisites. Note the sting that remains:
    **the two kits that forced correction 7 are in this book**, found by an RTF text census rather
    than by the pipeline — a point for ticket 09's rejected arm.
+9. **A `lookupTable` never says what it is a table *of*, and v1 known unknown #2 has fired.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 20) The first record to address a
+   table — the Tumbler, which zeroes two thieving base scores — exposed that nothing connects its
+   effect on `thiefSkill.openLocks` to `phb:DD01501`. The table's **id is source-derived**, so it
+   identifies a passage rather than a purpose, and its **name is presentation only** by §7.3. Its rows
+   are keyed by book prose (`"Open Locks"`), not ids. So *"the Engine computes and the user supplies
+   the tables"* is missing its middle term: **supplying a table is not enough if nothing says what
+   slot it fills.** Unresolved and deliberately unticketed here — it is a schema decision of finding
+   7's weight and should not be made in passing.
+10. **[Ticket 15](issues/15-computed-operands.md)'s computed operands do not cover scaling by level.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 21) *"+2% per level thereafter"*.
+   Measured over the effect fields of **138 kits across nine books: 12 (9%)** scale something by
+   level. The closed set has halving and division and nothing that multiplies by a level. Known
+   unknown #4 firing a second time, in a second form.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

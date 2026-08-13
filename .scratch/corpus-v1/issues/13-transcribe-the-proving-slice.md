@@ -577,9 +577,77 @@ corpus, twice. And both hit the same small gap twice more: a `require` whose cho
 so the `from` list is dropped and the constraint survives only as text. Three occurrences now, across
 two kinds and two books.
 
+### Session 9 — the Tumbler, and the first record that touches a table
+
+Seven effects, and the densest record the slice holds. It is also **the first record to interact with
+the PHB tables**, which is the reason [ticket 08](./08-which-slice-proves-the-format.md) put them in
+the slice — they had sat there unexercised through nine sessions.
+
+### Finding 19 — `Special Hindrances` reaches into a table, and the layer model handles it
+
+> their base scores to Open Locks and Detect Noise **begin at 0**, not at the levels (10% and 15%)
+> listed on Table 26 … **The bonuses and penalties specified on Tables 27–29 are not affected.**
+
+Two `set` effects, and the book's own scoping sentence is **the layer model stated in prose**: replace
+the base, leave the modifiers standing. §4.3's operations commute, so this needs no special handling —
+`set` lands on the base layer and Tables 27–29 keep applying above it. **The strongest confirmation
+of order-independence the corpus has offered**, because it is the book insisting on it rather than us.
+
+### Finding 20 — a lookupTable has no declared role, and its rows are keyed by prose
+
+This is the finding that matters, and it only became visible because a record finally addressed a
+table.
+
+The Tumbler's effect names the field `thiefSkill.openLocks`. The table is `phb:DD01501`, keyed by
+`Skill` with a row `["Open Locks", "10%"]`. **Nothing in the pack connects them.**
+
+- **The table declares no role.** `lookupTable` carries `keyedBy`, `columns` and `rows` — and an id
+  and a name. The id is source-derived (`DD01501` is a *filename*), so it identifies a passage, not a
+  purpose. The name is `Table 26: Thieving Skill Base Scores`, and [§7.3](../v1-spec/spec.md) says a
+  name is **presentation only, never identity**. So the Engine has no supported way to find *the*
+  thieving-skill base table among a pack's tables.
+- **The rows are keyed by book prose.** `"Open Locks"` is a string, not `phb:open-locks`. Even once
+  the table is found, matching its rows to the Engine's vocabulary is string-matching English.
+
+This is **v1 known unknown #2 firing** — *"Engine computes, user supplies the tables" has no shipping
+precedent* — and this ticket exists partly to give it its first evidence. The evidence is negative in
+a specific, fixable way: **supplying a table is not enough if nothing says what it is a table of.**
+The manifest's `declares` is A3's rule-set list and does not cover this.
+
+Not repaired here. It is a schema decision of the same weight as finding 10's, and it wants its own
+ticket rather than an edit made in passing.
+
+### Finding 21 — two more operand and condition shapes
+
+**Level scaling.** *"+10% to Climb Walls at first level; this bonus increases by +2% per level
+thereafter."* [Ticket 15](./15-computed-operands.md)'s closed set covers halving and division;
+**scaling by level is not in it**. Measured over **138 kits across nine books**, counting only the
+effect-carrying fields: **12 kits (9%)** scale something by level — the Breachgnome's proficiency
+slots, the Treetender's languages, the Tunnelrat's sight range, the Urchin's Pick Pockets, the
+Samurai, the Witch, the Wu Jen. Nine percent is far above the threshold that misled finding 10, and
+the measurement was taken on the record population rather than on raw book text for exactly that
+reason.
+
+**Combat-round conditions have no subject.** *"−6 to AC in rounds in which the Tumbler wins
+initiative and elects to forgo all other actions."* The predicate names abilities, level, class, race
+and membership — **all character state**. This is round state, and there is nothing to name it with.
+Carried as text.
+
+### Finding 22 — the field name is not evidence
+
+*"The Tumbler **must** take Jumping, Juggling, and Tightrope Walking"* — in the field called
+**Recommended** Nonweapon Proficiencies.
+
+[Finding 8](#finding-8--half-the-fields-produce-no-effects-at-all) read that field as advice, which
+it is **25 times out of 27**; the Tumbler and the Cartographer are the exceptions. A rule that holds
+93% of the time is worse than one that never holds, because it invites automation and then fails
+quietly on the two records that matter. **The sentence is the evidence; the label is a hint.**
+
+Modelled as `require` with `count == len(from)`, which is how the corpus writes a forced selection.
+
 ### Still not done
 
-The judgement pass on the remaining **29 of 34** Attachables · the measured cost per record against
+The judgement pass on the remaining **29 of 35** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
