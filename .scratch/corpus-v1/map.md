@@ -433,6 +433,17 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    order-independence, since `adjust` still sums and only its *operand* widens. **This is the first
    correction against a closed decision rather than a premise**, and it is where §7.2's rounding
    requirement finally lands.
+7. **[Ticket 06](issues/06-expression-language.md)'s "conjunction only" rests on a bad measurement,
+   and two v1 kits break it.** ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 10)
+   Disjunction was measured at **4 occurrences** with a regex that required *ability → number →
+   `or` → ability*; the corpus writes *ability → `or` → ability → number*, which occurs **38** times.
+   The halfling **Homesteader** and the **Bandit** need `A ∧ (B ∨ C)` in a single prerequisite, which
+   a flat AND-list cannot express. **Unlike the six corrections above, this one is not yet resolved**
+   — the schema keeps its shape and retracts only the number, because ticket 06's decision was a
+   choice made on evidence and the evidence, not the reasoning, is what failed. The minimal repair is
+   one clause type: a predicate entry that is either a condition or an `anyOf` of conditions.
+   **This is the second correction against a closed decision, and the first caused by our own
+   measurement error rather than by the corpus being surprising.**
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

@@ -244,15 +244,124 @@ Three decisions paid off on contact:
   cannot be checked by the pack alone. That confirms ticket 10's split putting cross-pack referential
   integrity on the Engine.
 
+### Session 4 — the Deity arm, and a measurement that was simply wrong
+
+Modelling a **Deity** by hand, because §4.1's claim that Kit, Deity and Subrace are one shape is
+only tested when all three arms carry **effects** rather than schema shape.
+
+### Finding 9 — the chapter apparatus recurs in a second book and a second kind
+
+The first Deity record in the committed slice was **`Priesthoods`** — the *Designing Faiths*
+template page, whose fields read *"This paragraph describes the usual alignment of such a god…"*.
+It carries every field label a real deity carries, **including the marker**, so it parses perfectly
+and is not a record. It was record #1 of 8, so the sample was taken straight through it.
+
+Finding 1 found two of these by hand in CTH. This makes it **two books and two kinds**, which
+promotes it from a CTH quirk to a property of the WebHelp: *a chapter that documents a record
+format does so using the format*.
+
+The interesting part is the attempt to mechanise it. Apparatus pages have a giveaway — they
+**describe** their fields instead of filling them — and a detector keyed on that opening scores
+**1 hit, 0 false positives across CPRH's 57 pages**. Run against CTH it catches **neither** known
+apparatus page.
+
+**So the detector is a hint for a human reading a new book, never a gate**, and the exclusion list
+in `extract.py` is human-maintained by measured conclusion rather than by default. Finding 1 is
+strengthened, not solved.
+
+### Finding 10 — ticket 06's disjunction measurement was wrong by an order of magnitude
+
+The Agriculture deity says *"Wisdom **or** Constitution 16 means +5% experience"*.
+[Ticket 06](./06-expression-language.md) measured genuine disjunction at **4 occurrences** and
+closed the question on that evidence — and the schema's `condition` still carries that number.
+
+The regex required *ability → number → `or` → ability*. The corpus mostly writes
+*ability → `or` → ability → number*. Re-measured across the eight RTF kit books:
+
+| form | count |
+|---|---:|
+| `<Ab> N … or … <Ab>` — what ticket 06 measured | 4 |
+| **`<Ab> or <Ab> N` — never measured** | **38** |
+| `<Ab> or <Ab>`, any continuation | 56 |
+
+Where it lands matters more than the count. **37 are effect conditions** — the prime-requisite
+experience bonus — and **the `effect` union does not reference `condition` at all**; its `when` is
+a `predicate`, the same flat conjunction. But the rest are worse:
+
+> The halfling **Homesteader** must have a Strength of at least 12 **and** an Intelligence **or**
+> Wisdom of at least 12.
+> A **Bandit** PC should have a Charisma of at least 12 **and** a Strength **or** Constitution of at
+> least 13.
+
+That is `A ∧ (B ∨ C)` — conjunction *and* disjunction in one prerequisite, in v1-tier kits, in the
+Subrace book the slice already draws from. **A flat list where "every condition must hold" cannot
+express it**, so these two kits are not transcribable as the schema stands.
+
+The minimal repair is one clause type — a `predicate` entry that is *either* a condition *or* an
+`anyOf` of conditions, keeping the top level a flat AND. Both examples are that shape. **This
+reopens a decision the map recorded as settled, so it is not applied here** — but the number it was
+decided on is retracted in the schema text.
+
+A coda from the same sweep: *"Intelligence or Wisdom, whichever is higher"* (**5 occurrences**) is
+not disjunction at all — it is **max() over two scalars**, a computed operand absent from
+[ticket 15](./15-computed-operands.md)'s closed set of halving and rounding.
+
+### Finding 11 — two shapes the Deity arm has and the Kit arm did not
+
+Agriculture produced **17 effects**, and three of them cannot be said:
+
+- **The permit-list has no operation.** *"Weapons Permitted: bill, flails (both), hand-throwing
+  axe, scythe, sickle"* means **only those**. §4.3 has `forbid` and `except`, but `forbid` takes a
+  single `ref` and there is no wildcard, so "everything, minus these" cannot be written. `set` does
+  not rescue it either: `operand` is an integer or a computed operand, never a list of ids. Recorded
+  as grants, which **loses the prohibition on everything unnamed**.
+- **Armour is worse than a list.** *"All non-magical non-metal armour"* is a **predicate over
+  items**, not an enumeration — there is nothing to enumerate against.
+- **`grant` has no count.** Followers arrive as *one 5th-, one 3rd-, one 2nd- and ten 1st-level
+  priests*. `require` has a `count`, but it counts a **choice the player has yet to make**, which
+  this is not.
+
+Note that the first two are the same gap the Acrobat met from the other side. There, race exclusion
+**inverted into an A3 permit-list** and that was recorded as a confirmation. Here the permit-list is
+an **effect**, not a prerequisite, and A3 is a manifest-level declaration — so the inversion is not
+available and the gap is real.
+
+### What the Deity arm did to §4.1
+
+**The claim held where it was doing work.** Target, prerequisite and an ordered list of effects fit
+a deity with no strain: the whole record validates unchanged against the shared `attachable`, and
+the four-condition prerequisite — alignment, two ability minima, a race permit-list — is the same
+machinery the Acrobat used.
+
+**`interpretation` earned its place a second time, and for the same reason.** The XP rule reads
+*+5% for one prime requisite at 16, +10% for both*; the layer model wants **two additive +5
+adjusts**, which produces the same numbers — the identical decomposition the Acrobat's *"+1, rising
+to +2"* required. Twice on two records is a pattern, not a coincidence: **the book states totals,
+the layer model wants increments.**
+
+The same field also forced a second reading: major access to Summoning is granted as its **three
+named spells** rather than the sphere minus everything else, because the subtraction cannot be
+written (finding 11).
+
+**What §4.1 did not get tested on is `cardinality`.** All three arms are `one-per-target` in this
+slice, so the field is present and unexercised.
+
 ### Still not done
 
-The five PHB thieving-skill tables the kits adjust · the judgement pass turning field prose into §4.3
-effects · the measured cost per record against [ticket 11](./11-human-review-protocol.md)'s 5–15
-minute prediction · local-model draft quality.
+The judgement pass on the remaining **29 of 31** Attachables · the measured cost per record against
+[ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction · local-model draft quality ·
+a Subrace modelled by hand, which is the one §4.1 arm still carrying no effects.
 
-**The remaining work is the expensive half.** Everything above is the mechanical pass, and it took
-one session for 31 records. The judgement pass is what ticket 11 priced at 3–9 hours for this slice,
-and none of it has been done — so the prediction it exists to check is still unchecked.
+**The remaining work is the expensive half**, and two records in, the cost is not yet measurable for
+the reason that matters: **both hand-modelled records spent most of their time finding format gaps,
+not transcribing.** The Acrobat produced findings 7 and 8; Agriculture produced 10 and 11. That cost
+is front-loaded and disappears once the format stops moving — so timing a record now would measure
+the wrong thing, and ticket 11's prediction stays unchecked until a record passes through changing
+nothing.
+
+**Two of the three §4.1 arms now carry effects.** The Subrace arm is the remaining test, and finding
+10 gives it a specific job: the `A ∧ (B ∨ C)` prerequisites are in the gnome-and-halfling book, so
+the arm that is untested and the gap that is unrepaired meet in the same pages.
 
 ## What it must not do
 

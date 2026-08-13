@@ -26,6 +26,25 @@ KINDS = {
     "subrace": {"marker": "Additional Experience Cost", "array": "subraces", "multi": True},
 }
 
+# Chapter apparatus wearing a record's clothes. A chapter's template page carries the same
+# field labels as the records it describes — including the marker — so it parses perfectly
+# and is not a record. Ticket 13's finding 1 found two by hand in CTH; finding 9 found a
+# third in CPRH, in a different kind, which is what makes this a property of the WebHelp
+# rather than one book's quirk.
+#
+# THIS LIST IS HUMAN-MAINTAINED, and that is a measured conclusion, not laziness. A
+# detector keyed on the giveaway — an apparatus page *describes* its fields ("This
+# paragraph describes the usual alignment...") instead of filling them — scores 1/1 with no
+# false positives across CPRH's 57 pages, and then catches NEITHER of CTH's two. Each book
+# writes its apparatus differently. So the signature is a hint for a human reading a new
+# book, never a gate.
+EXCLUDE = {
+    "Priesthoods",          # CPRH — the Designing Faiths template
+    "Kits and Thief Types",  # CTH — chapter preamble
+    "Creating New Kits",     # CTH — chapter appendix
+}
+
+
 # A record's name sits in plain text immediately before its first field label. The HTML
 # gives it no markup at all — no heading, no bold, no larger font — so this is a rule a
 # human writes once and a parser then applies forever: ticket 04's 'regular but ambiguous'
@@ -162,7 +181,7 @@ def main():
     spec = KINDS[kind]
     target = f"{pack_id}:target"
 
-    records, parsed_all, skipped = [], [], 0
+    records, parsed_all, skipped, excluded = [], [], 0, 0
     for f in sorted((wh / book).glob("*.HTM")):
         raw = f.read_text(encoding="cp1252", errors="replace")
         if spec["multi"]:
@@ -173,6 +192,9 @@ def main():
                 skipped += 1
                 continue
             for n, rec in enumerate(found, 1):
+                if rec["name"] in EXCLUDE:
+                    excluded += 1
+                    continue
                 rec["file"] = f.name
                 parsed_all.append(rec)
                 records.append(to_record(rec, pack_id, target, ordinal=n))
@@ -181,6 +203,9 @@ def main():
             if p is None:
                 skipped += 1
                 continue
+            if p["name"] in EXCLUDE:
+                excluded += 1
+                continue
             parsed_all.append(p)
             records.append(to_record(p, pack_id, target))
 
@@ -188,7 +213,8 @@ def main():
         json.dump({spec["array"]: records}, sys.stdout, indent=2, ensure_ascii=False)
         return 0
 
-    print(f"{book}: {len(records)} records, {skipped} pages skipped")
+    print(f"{book}: {len(records)} records, {skipped} pages skipped, "
+          f"{excluded} apparatus pages excluded by hand")
     labels = {}
     for p in parsed_all:
         for k in p["fields"]:
