@@ -297,10 +297,14 @@ That is `A ∧ (B ∨ C)` — conjunction *and* disjunction in one prerequisite,
 Subrace book the slice already draws from. **A flat list where "every condition must hold" cannot
 express it**, so these two kits are not transcribable as the schema stands.
 
-The minimal repair is one clause type — a `predicate` entry that is *either* a condition *or* an
-`anyOf` of conditions, keeping the top level a flat AND. Both examples are that shape. **This
-reopens a decision the map recorded as settled, so it is not applied here** — but the number it was
-decided on is retracted in the schema text.
+**Repaired, by one clause type** — a `predicate` entry is *either* a condition *or* an `anyOf` of
+conditions, keeping the top level a flat AND. Verified to accept both kits, and to reject nested
+`anyOf`, single-term disjunctions and clauses with extra keys. The 36 existing records revalidate
+untouched, because a pure conjunction is still a clause.
+
+Worth naming why the repair was cheap: ticket 06's stated objection to `or` was **grammar, nesting
+and precedence**, not disjunction itself. A one-level clause has none of the three, so the argument
+survived its own evidence being wrong. The decision was right about what it was protecting.
 
 A coda from the same sweep: *"Intelligence or Wisdom, whichever is higher"* (**5 occurrences**) is
 not disjunction at all — it is **max() over two scalars**, a computed operand absent from

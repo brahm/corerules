@@ -141,7 +141,7 @@
       "additionalProperties": false
     },
     "condition": {
-      "description": "Ticket 06: closed, flat, conjunction only. RETRACTED IN PART by ticket 13's finding 10 — the '4 occurrences in 1.23M words' this was decided on was a bad measurement: the regex required '<Ab> N ... or ... <Ab>' and the corpus writes '<Ab> or <Ab> N', which occurs 38 times. Genuine disjunction is real and two v1 kits (halfling Homesteader, Bandit) need 'A and (B or C)', which a flat AND-list cannot express. The shape is UNCHANGED here because reopening ticket 06's decision is not a schema edit's call; the number it rested on is withdrawn. Race lists are still membership and unless/except are still §4.3's 'except'.",
+      "description": "Ticket 06: a closed, flat vocabulary — compare, member, has. Race lists are membership and unless/except are §4.3's 'except'. Boolean combination lives one level up in 'clause', never here: a condition is a leaf, which is what keeps the evaluator a loop instead of a recursive descent.",
       "oneOf": [
         {
           "type": "object",
@@ -207,11 +207,35 @@
         }
       ]
     },
+    "clause": {
+      "description": "Ticket 13 finding 10, repairing ticket 06. Disjunction was measured at 4 occurrences by a regex that required '<Ab> N ... or ... <Ab>'; the corpus writes '<Ab> or <Ab> N', which occurs 38 times, and two v1 kits — the halfling Homesteader and the Bandit — state 'Strength 12 AND (Intelligence OR Wisdom) 12'. So a clause is a condition or a disjunction of conditions, and NOTHING ELSE: one level, no recursion, no 'or' of 'and'. Both corpus examples are that shape, and it keeps the evaluator flat, which is what ticket 06 was actually defending. Negation is still absent — finding 7's 33 occurrences remain text.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/condition"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "anyOf": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/condition"
+              },
+              "minItems": 2
+            }
+          },
+          "required": [
+            "anyOf"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
     "predicate": {
-      "description": "A flat list; every condition must hold.",
+      "description": "A flat list of clauses; every clause must hold. Ticket 13 finding 10 widened the entries from conditions to clauses, so a single entry may be a disjunction.",
       "type": "array",
       "items": {
-        "$ref": "#/$defs/condition"
+        "$ref": "#/$defs/clause"
       }
     },
     "effect": {

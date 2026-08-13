@@ -438,12 +438,14 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    Disjunction was measured at **4 occurrences** with a regex that required *ability → number →
    `or` → ability*; the corpus writes *ability → `or` → ability → number*, which occurs **38** times.
    The halfling **Homesteader** and the **Bandit** need `A ∧ (B ∨ C)` in a single prerequisite, which
-   a flat AND-list cannot express. **Unlike the six corrections above, this one is not yet resolved**
-   — the schema keeps its shape and retracts only the number, because ticket 06's decision was a
-   choice made on evidence and the evidence, not the reasoning, is what failed. The minimal repair is
-   one clause type: a predicate entry that is either a condition or an `anyOf` of conditions.
+   a flat AND-list cannot express. Resolved by **one clause type**: a predicate is a flat list of
+   clauses, and a clause is a condition or an `anyOf` of conditions — one level, no recursion. A pure
+   conjunction is unchanged, so every record written before the repair still validates.
    **This is the second correction against a closed decision, and the first caused by our own
-   measurement error rather than by the corpus being surprising.**
+   measurement error rather than by the corpus being surprising** — which is why the reasoning was
+   re-read rather than discarded: ticket 06 objected to *grammar, nesting and precedence*, and a
+   one-level clause has none of the three, so the decision was right about what it was defending and
+   wrong only about how much the corpus asked for.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

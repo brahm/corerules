@@ -121,6 +121,36 @@ operation, which already exists and already pierces a prohibition by naming its 
 An `or` connective would cost grammar, cost decoder-enforceability, and force a precedence decision —
 for four cases. Those four are handled the standing way: carried as text, or split into two records.
 
+#### Amended by [ticket 13](./13-transcribe-the-proving-slice.md) finding 10 — the four was a bad count
+
+**The measurement above is withdrawn.** The regex required *ability → number → `or` → ability*. The
+corpus overwhelmingly writes *ability → `or` → ability → number*, which occurs **38** times; 56 with
+any continuation. Thirty-seven of those are the prime-requisite experience bonus, but the remainder
+are prerequisites, and two of them are v1-tier kits:
+
+> The halfling **Homesteader** must have a Strength of at least 12 **and** an Intelligence **or**
+> Wisdom of at least 12.
+> A **Bandit** PC should have a Charisma of at least 12 **and** a Strength **or** Constitution of at
+> least 13.
+
+Neither of the standing escapes works on these. Carrying it as text abandons the prerequisite the
+Engine exists to enforce, and splitting into two records would make **two Homesteaders**, which
+[ticket 07](./07-identity-and-id-stability.md) identifies by source position — there is one page.
+
+**Repair, applied: a predicate is a flat list of `clause`, and a clause is a condition or an `anyOf`
+of conditions.** One level, no recursion, no `or` of `and`. Both corpus examples are exactly that
+shape, and it is verified to reject nested `anyOf`, single-term disjunctions, and clauses carrying
+extra keys. A pure conjunction is unchanged, so **every record written before the repair still
+validates**.
+
+What survives from the reasoning above is the part that was never about the count: the objection was
+to *grammar, nesting and precedence*, and a one-level clause has none of the three. **The evaluator
+stays a loop.** Set membership still covers the 90 race lists and `except` still covers the 803
+`unless` occurrences — those two arguments were independent of the bad number and remain load-bearing.
+
+**Negation is still absent.** Finding 7's 33 occurrences of *"no armour"* and *"unencumbered"* are
+untouched by this repair and remain carried as text.
+
 ### Decision 3 — subjects derive from §3.1's kinds; scalars are the closed part
 
 Rejected: a separate closed enumeration of subjects, which would duplicate the kind list and be able
