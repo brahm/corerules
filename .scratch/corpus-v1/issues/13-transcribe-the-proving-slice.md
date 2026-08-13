@@ -530,9 +530,56 @@ The measurement is deliberately conservative — it detects *numeric* mechanics,
 *"may use thieves' cant"* would be missed. The Homesteader's own two fields were read directly and
 contain nothing mechanical at all.
 
+### Session 8 — the Bandit, twice
+
+Second and last of finding 10's kits: `Charisma ≥ 12 AND (Strength ≥ 13 OR Constitution ≥ 13)`.
+Three effects, all `require`. Both kits that broke ticket 06 are now transcribed and validate.
+
+### Finding 17 — the corpus states non-restriction explicitly, which is A3 in the source
+
+`Thieving Skill Emphasis: Any.` `Special Hindrances: None.` *"any secondary skill is acceptable."*
+
+Counted across CTH, CBGH and CPRH — **67 of 1,057 fields consist of nothing but `Any.` or `None.`**,
+with 5 more saying it in a sentence. **6.8% of all fields exist solely to say that they do not
+restrict.**
+
+The book is not being redundant. It is making exactly the distinction
+[A3](../v1-spec/spec.md) was invented for — *"does not restrict"* against *"nobody has said"* — and
+it makes it **per field**, by printing a field whose entire content is its own emptiness. A record
+whose `Special Hindrances` reads `None.` is complete. A record with no such field is not the same
+thing, and the corpus knows it.
+
+This is the first evidence that A3 describes the source rather than only the format. It also settles
+why `effectsModelled` had to be a declaration: **a modelled record with no effects is a thing the
+corpus produces sixty-seven times**, and an empty array cannot tell you which of the two states it is.
+
+### Finding 18 — the first name collision, and §7.3 was right
+
+The slice now holds **two kits called Bandit**: `cth:DD05809` and `cbgh:DD04924`. They are not the
+same kit reprinted. Compared field by field, their `Role` text is **1.4% similar**, they share three
+field labels, and their characterisations are opposites — *"vicious characters, desperate, cunning,
+and cruel"* against *"Bandits consider themselves equalizers of wealth."*
+
+Nothing had to be decided to absorb this. [Ticket 07](./07-identity-and-id-stability.md)'s
+source-position ids separate them without a tiebreaker, and §7.3's *"name is presentation only, never
+identity"* is what makes two records with one name unremarkable rather than a conflict. **This is the
+first time either rule has been load-bearing** — both were arguments before this record, and now one
+of them is holding something up.
+
+The practical warning is for the review page ([ticket 12](./12-how-much-tool.md)): it must never
+identify a record to a human by name alone.
+
+### What the two CBGH kits added, and what they did not
+
+Both are **prerequisite plus proficiency choices and nothing else** — finding 16's third of the
+corpus, twice. And both hit the same small gap twice more: a `require` whose choice is bounded by a
+**category the corpus never enumerates** — *"at least one melee weapon"*, *"any dwarven tongue"* —
+so the `from` list is dropped and the constraint survives only as text. Three occurrences now, across
+two kinds and two books.
+
 ### Still not done
 
-The judgement pass on the remaining **29 of 33** Attachables · the measured cost per record against
+The judgement pass on the remaining **29 of 34** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
