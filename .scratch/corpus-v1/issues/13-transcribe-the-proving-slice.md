@@ -1912,9 +1912,57 @@ carries no mechanical weight and the format has no place for it, which is correc
 third time (after the paladin Squire's mount likelihoods and the Forestwalker's *"most are
 Tallfellows"*) that the corpus has stated a **preference rather than a rule**.
 
+### Session 33 — the Oracle, and an overdue note about scope
+
+### The purest case of finding 16, and a useful one
+
+Nine fields, **one effect**. No prerequisite of any kind. `Weapon Proficiencies` says *"any weapon
+allowed for the standard cleric"*; `Equipment` says *"any he or she desires"*. The whole of
+`Special Benefits` is:
+
+> When the Oracle performs any spell of the sphere of divination, he or she will receive **(from the
+> DM)** unusually reliable and accurate information. **The specifics of this benefit vary by spell, of
+> course.**
+
+And the whole of `Special Hindrances` is stubbornness.
+
+This is worth recording precisely because **nothing is wrong with it**. The kit is not badly written
+and the format is not failing — the book has handed a benefit to the DM in as many words, and an
+Engine that tried to compute it would be inventing a rule its source declines to make. A record with
+one grant and `effectsModelled: true` is the *correct* transcription, and it is only legible as
+correct because [finding 2](#finding-2--the-schema-accepted-a-semantically-empty-record-fixed) made
+that flag a declaration.
+
+### The slice is no longer the slice ticket 08 defined
+
+**27 of CBGH's 28 kits are now modelled**, and CBGH is not in ticket 08's slice at all. That ticket
+named the Complete Thief's kits, the five PHB tables, six to eight Deity records and the five Elf
+subraces — *"about 40 records"* — and said plainly: **"Do not transcribe beyond the slice."**
+
+What the pack actually holds:
+
+| | records |
+|---|---:|
+| ticket 08's slice, as defined | ~36 |
+| **CBGH kits added since** | **27** |
+| CPAH, CRH, CBD records added | 4 |
+| **total** | **67** |
+
+Each addition was directed, one record at a time, so this is not drift — but the ticket's own
+instruction has been superseded without the ticket saying so, and that is exactly the kind of silent
+divergence this map keeps catching elsewhere. **Recorded here rather than left to be discovered.**
+
+The expansion has earned its cost: CBGH is the book that produced findings 12, 35, 37, 57 and most of
+the subject findings, none of which the defined slice would have reached, because the defined slice
+contains no book that breaks the parser and no kit with a second subject. But the warning in ticket 08
+still stands and now needs restating with more force: **a pack of 67 records covering seven books
+proves the shapes, and still proves nothing about psionics, spells, equipment breadth, or whether any
+of it loads** — [finding 45](#finding-45--every-reference-in-the-proving-slice-is-dangling) having
+shown that none of its 119 references resolve.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 61** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 62** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
