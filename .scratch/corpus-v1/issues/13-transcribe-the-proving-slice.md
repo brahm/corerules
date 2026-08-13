@@ -761,9 +761,76 @@ the sight **works exactly like infravision**. That is a comparison, not an ident
 `phb:infravision` would let it stack with a subrace that already grants it — the Stout, in this very
 book — so it is granted as a kit-local ability instead.
 
+### Session 12 — the Breachgnome, one thing that works and one that does not
+
+### Finding 27 — the effect list gives conjunction-of-disjunction for free
+
+*"The Breachgnome must have a proficiency in the use of the short sword **and either** the hammer
+**or** axe."*
+
+That is `A ∧ (B ∨ C)` — **the exact shape that forced finding 10's schema repair** — and in an effect
+it needs no repair at all. Two `require` entries: the array conjoins them, and each `from` list is the
+disjunction. The format already had it.
+
+The asymmetry is worth understanding rather than just noting, because it says what the two halves
+are. **A predicate entry is a test** — one truth value, so combining tests needs a combinator, which
+is why `anyOf` had to be added. **An effect entry is an action with a built-in choice set** — `from`
+*is* a disjunction, so the array of effects is already conjunctive normal form.
+
+So finding 10's repair was not a general gap in the format's handling of *or*. It was specific to the
+predicate, and the effect side had solved the same problem by a different route before anyone looked.
+
+### Finding 28 — three kits state that a bonus does **not** add, and `adjust` only sums
+
+The book also says the opposite of what §4.3 assumes. Measured across 138 kits:
+
+| | occurrences | kits |
+|---|---:|---:|
+| the book states an effect **is** cumulative | 10 | 9 |
+| the book states an effect is **not** cumulative | **3** | **3** |
+
+The Breachgnome is in the first row — *"cumulative with any applicable size and Dexterity bonuses"* —
+and that row is the layer model working for free. The second row is three distinct non-additive
+shapes:
+
+- **Assassin** — *"+5% with herbalism… +10% with healing… **These bonuses are not cumulative**."*
+  Take the greater, not the sum.
+- **Pathfinder** — *"his base chance of getting lost… **will not exceed 20%**. This is not cumulative
+  with other benefits."* A **ceiling** on a computed value.
+- **Giant Killer** — *"−2 penalty for the infuriating follower. **This effect is not cumulative with
+  additional followers**."* Applies once regardless of how many sources supply it.
+
+**§4.3 has `adjust`, which sums, and `set`, which overwrites — and nothing in between.**
+
+One precision that makes this much less alarming than it first reads, and it is the difference
+between two properties the design has been treating as one. The layer model's guarantee is
+**order-independence**, and `max` is commutative and associative, so a ceiling or a take-the-greater
+combiner **preserves it completely**. What these three break is **additivity**, not commutativity. The
+gap is a missing *combiner*, not a threat to the model — and at 3 of 138 kits it is small, which is
+why it is recorded rather than repaired.
+
+### Finding 29 — "the book states totals, the layer model wants increments" is now a rule
+
+*"−1 to AC if an object is within 3' of either side; if both sides are protected, the bonus is −2."*
+
+Modelled as **two additive −1 adjusts**, and this time **the book confirms the decomposition itself**
+by adding that the bonus is cumulative with size and Dexterity bonuses.
+
+Fourth occurrence, across all three Attachable arms: the Acrobat's *"+1, rising to +2"*, Agriculture's
+*"+5% for one prime requisite, +10% for both"*, and now this. **`interpretation` has been earned on
+every hand-modelled record that states a graded value**, which makes this a property of the corpus's
+prose style rather than a series of individual readings — and a candidate for the drafting model to
+be told about explicitly.
+
+The Breachgnome also contributes a fourth scaling shape to finding 26: *one slot every two levels,
+the first at third* — `floor((level − 1) / 2)`. [Ticket 15](./15-computed-operands.md) **has**
+division with rounding down; it is the **offset** that defeats it, since bare `level / 2` pays at
+fourth level where the book pays at third and fifth. First scaling record in division form rather
+than multiplication.
+
 ### Still not done
 
-The judgement pass on the remaining **29 of 37** Attachables · the measured cost per record against
+The judgement pass on the remaining **29 of 38** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 

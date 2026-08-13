@@ -476,6 +476,13 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    level. The closed set has halving and division and nothing that multiplies by a level. Known
    unknown #4 firing a second time, in a second form. **A third of them declare a starting level**
    (finding 23), so a bare `perLevel(N)` would be wrong on those — the repair needs an offset.
+11. **§4.3 can sum and overwrite, and the corpus sometimes needs neither.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 28) Three kits state a bonus is
+   **not** cumulative — take the greater (Assassin), a ceiling (Pathfinder), apply once regardless of
+   sources (Giant Killer) — against ten that state one **is**. `adjust` sums, `set` overwrites, and
+   there is nothing between them. Crucially this does **not** threaten order-independence, since a
+   `max` combiner is commutative: what fails is **additivity**, which the design had been treating as
+   the same property. Small at 3 of 138 kits, and recorded rather than repaired.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack
