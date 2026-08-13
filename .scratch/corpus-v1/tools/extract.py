@@ -127,17 +127,32 @@ KINDS = {
 #
 # THIS LIST IS HUMAN-MAINTAINED, and that is a measured conclusion, not laziness. A
 # detector keyed on the giveaway — an apparatus page *describes* its fields ("This
-# paragraph describes the usual alignment...") instead of filling them — scores 1/1 with no
-# false positives across CPRH's 57 pages, and then catches NEITHER of CTH's two. Each book
-# writes its apparatus differently. So the signature is a hint for a human reading a new
-# book, never a gate.
+# paragraph describes the usual alignment...", "Ability score minimums are listed here")
+# instead of filling them — finds 5 of the 12 pages below, across four books, with no false
+# positives. It misses the other seven because CTH and CBGH write their templates as
+# ordinary prose. So it is a good HINT GENERATOR for a book nobody has read yet, and never
+# a gate: run it, read what it flags, and read the book anyway.
+# Keyed by (book, name) and NOT by name alone. Ticket 13's finding 32 measured 10 kit
+# names shared across two books each, so a bare name is not a safe key for dropping a
+# record: an apparatus name in one book could be a real kit in another and would vanish
+# silently. Twelve pages, nine books — 'Creating New Kits' alone appears in four.
 EXCLUDE = {
-    "Priesthoods",          # CPRH — the Designing Faiths template
-    "Kits and Thief Types",  # CTH — chapter preamble
-    "Creating New Kits",     # CTH — chapter appendix
-    "Structure of the Kits",      # CBGH — the gnome chapter's template
-    "The Structure of the Kits",  # CBGH — and the halfling chapter's, worded differently
+    ("CTH",  "Kits and Thief Types"),      # chapter preamble
+    ("CTH",  "Creating New Kits"),
+    ("CBD",  "Creating New Kits"),
+    ("CFH",  "Creating New Kits"),
+    ("CWH",  "Creating New Kits"),
+    ("CBGH", "Structure of the Kits"),     # the gnome chapter's template
+    ("CBGH", "The Structure of the Kits"),  # and the halfling chapter's, worded differently
+    ("CFH",  "Kits and Warriors"),
+    ("CWH",  "The Wizard Kits"),
+    ("CPAH", "Kit Subsections"),
+    ("CRH",  "Kit Subsections"),
+    ("CPRH", "Priesthoods"),               # the Designing Faiths template
 }
+# Five of these were found not by reading but by the name-collision check of finding 32:
+# 'Kit Subsections' appearing in two books is what a template page looks like from the
+# outside. The detector described above then confirmed them.
 
 
 # A record's name sits in plain text immediately before its first field label. The HTML
@@ -287,7 +302,7 @@ def main():
                 skipped += 1
                 continue
             for n, rec in enumerate(found, 1):
-                if rec["name"] in EXCLUDE:
+                if (book, rec["name"]) in EXCLUDE:
                     excluded += 1
                     continue
                 rec["file"] = f.name
@@ -298,7 +313,7 @@ def main():
             if p is None:
                 skipped += 1
                 continue
-            if p["name"] in EXCLUDE:
+            if (book, p["name"]) in EXCLUDE:
                 excluded += 1
                 continue
             parsed_all.append(p)

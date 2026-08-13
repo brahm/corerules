@@ -887,9 +887,76 @@ It is also a concrete argument for [ticket 10](./10-mechanical-verification.md)'
 this sentence requires the Rock Gnome record, which lives in another part of the corpus, so it is
 cross-record integrity and belongs to the Engine.
 
+### Session 14 — the Smuggler, and a check that found four more template pages
+
+### Finding 32 — name collisions are systematic, and looking for them found apparatus
+
+Finding 18 recorded one collision (Bandit) and treated it as a curiosity that ticket 07 absorbed.
+Measured across nine books, **11 of 138 kits share a name with a kit in another book** — Bandit,
+Burglar, Guardian, Patrician, Savage, Smuggler, Squire, Stalker, Swashbuckler, Trader… **8%, not an
+oddity.** §7.3's *"name is presentation only, never identity"* is doing real work at that rate.
+
+The useful part was accidental. One collision was **`Kit Subsections`, in CPAH and CRH** — and a
+*kit* name appearing in two books is one thing, while a name like that appearing in two books is
+another. Both are chapter apparatus. Chasing it turned up **four more template pages in four books**:
+
+| book | page |
+|---|---|
+| CFH | `Kits and Warriors` |
+| CWH | `The Wizard Kits` |
+| CPAH, CRH | `Kit Subsections` |
+
+**Twelve apparatus pages in nine books**, where finding 1 found two and finding 9 found a third.
+`Creating New Kits` alone appears in **four** books. So the exclusion list was not nearly complete,
+and the thing that exposed it was a check written for an unrelated purpose.
+
+It also **corrects finding 9's conclusion.** That finding tested the apparatus detector on two books,
+watched it miss both of CTH's, and concluded that each book writes its apparatus differently. Broadened,
+the detector finds **5 of the 12 across four books with no false positives** — it fails on CTH and
+CBGH, which write their templates as ordinary prose. So it is a genuinely useful **hint generator for
+a book nobody has read yet**, which is more than finding 9 credited it with, and still never a gate.
+
+### The exclusion list was keyed wrong, and the same measurement proves it
+
+`EXCLUDE` matched on **name alone**. With 8% of kit names shared across books, that is a live hazard:
+an apparatus name in one book could be a real kit in another and would be dropped in silence. Now
+keyed by **(book, name)**. No record changed — the bug had not fired yet — which is the only good
+time to fix one.
+
+### Finding 33 — `require.count` is a plain integer, and some counts grow
+
+> Smugglers … gain the ability to speak an additional language **every other level, starting at
+> second level**.
+
+The growing thing here is a **count**, not a value — and `require` takes `count: integer` where
+`adjust` takes an operand that ticket 15 can widen. So a scaling quantity has to be expressed as an
+`adjust` on a slot field rather than as the `require` it actually is.
+
+Two useful details. **This particular series is `floor(level / 2)`, which
+[ticket 15](./15-computed-operands.md)'s existing division operand covers exactly** — unlike the
+Breachgnome's `floor((level − 1) / 2)`. So the obstruction is not the arithmetic; it is *where the
+arithmetic is allowed to appear*. And the Smuggler is the **first record in the slice to use a `has`
+condition** — *"a Smuggler who possesses the Local History proficiency gains +4 to reaction checks"* —
+which means all three condition forms from [ticket 06](./06-expression-language.md) have now been
+exercised by real records.
+
+### Finding 34 — scope qualifiers, and the pack has no vocabulary for place
+
+Three of this record's clauses bind an effect to somewhere or something the format cannot name:
+
+- *"Local History **for areas on their regular routes**"*
+- *"+4 to reaction checks **in that area**"*
+- *"the new language must be one he or she **has had contact with** during the previous two levels"*
+
+The first two are **geography**; the third is **play history**. Both are legitimately outside a
+character sheet, and unlike the operand gaps they are not a case of the format being one feature
+short — there is no *place* kind in v1 and no record of what happened at the table. Recorded as the
+boundary it is rather than as a defect: **an effect can be conditioned on the character, and the
+world is not the character.**
+
 ### Still not done
 
-The judgement pass on the remaining **29 of 39** Attachables · the measured cost per record against
+The judgement pass on the remaining **29 of 40** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
