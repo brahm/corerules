@@ -127,11 +127,59 @@ Field prose is now deliberately **not** carried into the record: it is book text
 already points at it through ticket 05's anchor, which is how ticket 12's review page fetches the
 source. Carrying it would duplicate the corpus inside the pack — the shape §6.5 forbids.
 
-### Not done
+### Session 2 — all three Attachable arms extracted and committed
 
-Deity · Subrace · the five PHB tables · the judgement pass that turns field prose into §4.3 effects ·
-the measured cost per record against ticket 11's 5–15 minute prediction · local-model draft quality ·
-writing any of it into the corpus repository.
+**The slice's mechanical half is in the corpus repository**: 18 Complete Thief's kits, 8 Complete
+Priest's Deity records, 5 Complete Book of Elves subraces. **31 records, validating whole against
+`pack-0.1`.**
+
+### Finding 4 — the ordinal works, and §4.1's three arms share one extractor
+
+[Ticket 07](./07-identity-and-id-stability.md)'s decision 2 is exercised for the first time:
+`cbe:DD04777#1` … `#5`, five subraces in one file, ordinals carried into the anchor as well as the
+id. It works.
+
+More useful: **one extractor handles all three arms**, differing only in which label marks a record
+and whether the file holds one or many. That is the first *external* evidence for §4.1's claim —
+[ticket 14](./14-record-shapes-for-the-slice.md) showed the three fit one schema shape, and this
+shows they fit one parser. Both are still short of the real test, which is whether they fit one set
+of **effects**.
+
+### Finding 5 — record names carry no markup at all
+
+The subrace names are in **plain text**: no heading, no bold, not even a larger font. Measured on the
+page — `<FONT SIZE>` is uniform, there are no non-label `<B>` runs.
+
+So the rule is positional, and it took two attempts to state: the first record's name is the proper
+noun before its first field label, and every later one follows the *previous* record's final field.
+That is a rule a human writes once and a parser applies forever —
+[ticket 04](./04-llm-assisted-extraction.md)'s middle bucket on the parser side, arriving concretely.
+
+**It came out 4 of 5 correct.** `Half-Elf` could not be separated from the prose that follows it,
+because English pluralisation turns *elf* into *elves* and no stem rule catches it. **Polishing
+stopped there deliberately** — teaching the regex English morphology is the over-fitting ticket 04
+warned about, and *one name in five needed a human* is the measurement rather than the defect.
+
+### The two human interventions, which is the number that matters
+
+Across 31 records the mechanical pass needed exactly two:
+
+1. **Excluding two chapter-apparatus pages by name** — finding 1, and unavoidable, since their field
+   sets are identical to a real kit's.
+2. **Correcting one subrace name** — finding 5.
+
+Both are *boundary and naming*, not content. Neither is a rule that generalises to the next book, and
+both belong to the written-once-by-a-human layer.
+
+### Still not done
+
+The five PHB thieving-skill tables the kits adjust · the judgement pass turning field prose into §4.3
+effects · the measured cost per record against [ticket 11](./11-human-review-protocol.md)'s 5–15
+minute prediction · local-model draft quality.
+
+**The remaining work is the expensive half.** Everything above is the mechanical pass, and it took
+one session for 31 records. The judgement pass is what ticket 11 priced at 3–9 hours for this slice,
+and none of it has been done — so the prediction it exists to check is still unchecked.
 
 ## What it must not do
 
