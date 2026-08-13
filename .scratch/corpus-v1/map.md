@@ -480,6 +480,17 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    level. The closed set has halving and division and nothing that multiplies by a level. Known
    unknown #4 firing a second time, in a second form. **A third of them declare a starting level**
    (finding 23), so a bare `perLevel(N)` would be wrong on those — the repair needs an offset.
+14. **`require.from` is a closed list, and two thirds of kits write open ones.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 43) *"a concealable hand weapon
+   **such as** a dagger, knife, or hand axe"* — **91 of 134 kits (68%)** carry `such as`, `e.g.` or
+   `etc.` Every `from` written against an exemplary list is a false precision that will refuse a legal
+   choice, confidently, which is the one failure this Engine exists to avoid. Unresolved; the fix is
+   probably a flag on the list rather than an operation.
+15. **Ticket 15's dice grammar rejects 121 real corpus values, and had never reached the schema.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 42) The word `dice` did not appear
+   in `pack-0.1.schema.json`; a settled decision produced no artifact, and silence fails no
+   validation. Now implemented as a value type — and widened, because the stated grammar `NdM±k`
+   misses the **4.7%** written `NdM×k` (`4d4x10`, `3d6x5`).
 13. **Known unknown #4 is answering in an unexpected direction: the corpus wants richer OPERANDS and
    CONDITIONS, never a seventh operation.** ([Ticket 13](issues/13-transcribe-the-proving-slice.md)
    finding 39) Across 17 hand-modelled records and 106 effects, five of the six operations are used —

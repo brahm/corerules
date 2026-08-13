@@ -1158,9 +1158,75 @@ memory is a level-gated `grant`, which finding 23 established works. The rest is
 book **terrain is a spine field** (`Primary Terrain`), so finding 34's geography gap is not incidental
 here: it is the axis the kit is built on.
 
+### Session 18 — both Traders, and a decision that never reached the artifact
+
+### Finding 42 — ticket 15's dice decision was settled and never implemented; **now it is**
+
+The dwarf Trader starts with **`4d4x10 gp`**. Checking how the schema validates that turned up the
+real answer: **the string `dice` does not appear in `pack-0.1.schema.json` at all.**
+[Ticket 15](./15-computed-operands.md)'s decision 1 — *dice notation is a string with a validated
+pattern* — was decided, argued at length, and never written down in the artifact it was about.
+
+That is a different failure from the ones this ticket keeps finding. Everywhere else the schema was
+**wrong**; here it was **silent**, and silence does not fail a validation, so nothing caught it. The
+tell was a value the schema had no opinion about.
+
+Implemented as a `$defs/dice` value type — §3.3, no id, never referenced by `record`. It is **not yet
+referenced by any kind**, because the kinds that carry dice are outside the slice, and that is stated
+in the definition rather than left to be discovered.
+
+**And implementing it corrected the decision.** Ticket 15 states the grammar as **`NdM±k`**. Measured
+over the v1 RTF, 2,574 notations:
+
+| form | count | share |
+|---|---:|---:|
+| `NdM` | 2,006 | 77.9 % |
+| `NdM±k` | 447 | 17.4 % |
+| **`NdM×k`** | **121** | **4.7 %** |
+
+`4d4x10`, `3d6x5`, `6d4x10`. **A pattern faithful to the stated grammar would reject 121 real corpus
+values.** The multiplier is admitted, as is a bare `d10` with no count, for the same reason: the
+corpus writes it.
+
+### Finding 43 — two thirds of kits give **examples**, not enumerations
+
+> …a concealable hand weapon **such as** a dagger, knife, or hand axe.
+
+Three options are named and the set is explicitly open. That is neither of the two states finding 30
+identified — it is a third: **the corpus enumerates and then declares the enumeration incomplete.**
+
+Measured across 134 kits: **91 (68 %) contain `such as`, `for example`, `e.g.` or `etc.`**
+
+That number reframes `require.from` badly. A `from` list is a **closed** set of options, and in two
+thirds of kits the book has signalled that its lists are illustrative. Every `from` written by a
+transcriber against an exemplary list is a **false precision** — it will refuse a legal character
+choice, and refuse it *confidently*, which is the failure mode this Engine exists to avoid. Recorded
+without a repair: the fix is probably a flag on the list rather than a new operation, but that is a
+schema decision.
+
+The same record supplies the **inverse of the permit-list problem**, and it is worth putting beside
+finding 11. The ranger Stalker's *"limited to blowgun, dagger, dart…"* cannot be said. The dwarf
+Trader's *"…and otherwise, they may be proficient in any weapon they choose"* is **said exactly, with
+two `require`s and no prohibition at all.** The format handles required-subset-then-free perfectly and
+only-these not at all.
+
+### Finding 44 — an effect that a play event rewrites
+
+> A Trader gains a **+1 reaction bonus** from merchants and other traders… **If he cheats on a deal
+> and is later discovered, the bonus changes to a −2 penalty.**
+
+Not a condition on character state, and not the DM adjudicating a case. The effect's **own value is
+rewritten permanently by something that happened at the table**. Finding 34 recorded play history as a
+condition the pack cannot name; this is play history as a **mutation of the record's own content**,
+which is further out still.
+
+Worth stating plainly: this one probably should not be modelled even if it could be. A character
+sheet that silently flips a bonus because of a past betrayal is a **rule the table remembers**, not a
+computation — and the layer model's promise is that a refusal can name its cause.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 45** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 47** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
