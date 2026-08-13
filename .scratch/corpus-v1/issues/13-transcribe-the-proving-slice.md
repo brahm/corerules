@@ -65,6 +65,74 @@ A hand-verified slice is the only reference of that kind this effort will ever p
 keeping it converts a one-off demonstration into ongoing verification at no extra cost. Every later
 pipeline change can be re-run against it.
 
+## Progress — the mechanical half of the kits, and three findings
+
+**Not resolved.** What follows is the first execution session; the ticket stays open.
+
+### A gap this ticket exposed before doing any work
+
+The map's Notes say this effort carries execution and name tickets 01, 09 and 10 as producing running
+code. **Ticket 09 produced a decision, not a pipeline** — so this ticket depended on code no ticket
+owned writing. [`tools/extract.py`](../tools/extract.py) is that code, written here rather than
+chartered as a fifteenth ticket.
+
+### Done
+
+**The Complete Thief's kits, mechanically extracted: 20 records, 0 schema errors.** The extractor
+reads the WebHelp, finds records by their marked field labels, and emits identity, provenance, target
+and cardinality.
+
+### Finding 1 — record boundary detection is **not** mechanical, correcting ticket 01
+
+[Ticket 01](./01-what-the-source-yields.md) put *record boundaries in the HTML where `<TITLE>` exists*
+in the **mechanical** bucket. Running it says otherwise.
+
+The extractor returns **20 records where 18 are kits**. The two extras are `Kits and Thief Types` and
+`Creating New Kits` — chapter apparatus. And they are not sloppy matches: **their field sets are
+identical to a real kit's.** `Kits and Thief Types` carries the same ten labels as `Assassin`,
+because it is the chapter that *explains* each field.
+
+**No field-based heuristic can separate them.** They are structurally identical and semantically
+different, which is the *regular but ambiguous* bucket in its purest form — landing on record
+**boundary**, which ticket 01 had assumed was the safe half. The rule that separates them is written
+once by a human, per [ticket 04](./04-llm-assisted-extraction.md)'s finding that the middle bucket
+belongs on the parser side.
+
+### Finding 2 — the schema accepted a semantically empty record; **fixed**
+
+The first run validated **cleanly**, which was the bad outcome. A mechanically extracted kit carrying
+`effects: []` and no modelled rules **validated as a complete kit with no effects**.
+
+That is **A3's own distinction missing one level down.** §5.1 put it on the pack — *does not
+restrict* versus *not yet transcribed* — and a record needs it for the same reason, because
+extraction produces the incomplete state **by construction** and the corpus lives in it for years.
+
+Fixed in the schema: `effectsModelled` is now **required** on every Attachable. The extractor emits
+`false`, and the 20 records are now honest rather than merely valid. Declared rather than inferred,
+exactly as A3 is.
+
+### Finding 3 — expressing §4.1 structurally costs the ability to close the object
+
+Closing the kind objects with `unevaluatedProperties: false` — to stop the extractor smuggling a
+`_fields` key into a pack — **rejected `id`, `name` and `effects` as well**. It does not see through
+the `allOf` → `$ref` chain that [ticket 14](./14-record-shapes-for-the-slice.md) chose in order to
+make §4.1's one-shape-three-times claim load-bearing.
+
+So there is a real trade, discovered by running it: **the shared Attachable base and a cheaply closed
+object do not compose in JSON Schema.** Decision 1 of ticket 14 is worth its price, but the price is
+that extra properties fall to the validator — [ticket 10](./10-mechanical-verification.md)'s tier
+two — rather than being refused by the schema. Recorded rather than worked around.
+
+Field prose is now deliberately **not** carried into the record: it is book text, and the record
+already points at it through ticket 05's anchor, which is how ticket 12's review page fetches the
+source. Carrying it would duplicate the corpus inside the pack — the shape §6.5 forbids.
+
+### Not done
+
+Deity · Subrace · the five PHB tables · the judgement pass that turns field prose into §4.3 effects ·
+the measured cost per record against ticket 11's 5–15 minute prediction · local-model draft quality ·
+writing any of it into the corpus repository.
+
 ## What it must not do
 
 **Do not transcribe beyond the slice.** The temptation at the end of a working pipeline is to keep
