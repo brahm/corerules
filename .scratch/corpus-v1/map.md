@@ -528,13 +528,15 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    that one real case: it is the least-needed operation, not a redundant one. What the corpus actually
    wants is richer **operands**, richer **conditions**, and above all more **subjects** — see
    correction 17.
-11. **§4.3 can sum and overwrite, and the corpus sometimes needs neither.**
+11. **§4.3 can sum and overwrite, and five records want a CLAMP between them.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 28) Three kits state a bonus is
    **not** cumulative — take the greater (Assassin), a ceiling (Pathfinder), apply once regardless of
    sources (Giant Killer) — against ten that state one **is**. `adjust` sums, `set` overwrites, and
    there is nothing between them. Crucially this does **not** threaten order-independence, since a
    `max` combiner is commutative: what fails is **additivity**, which the design had been treating as
-   the same property. Small at 3 of 138 kits, and recorded rather than repaired.
+   the same property. Now five records (finding 63): caps in the Tunnelrat and Pathfinder, floors in
+   the Bilker, Highborn and Patrician. **The cheapest repair this map has identified with the most
+   evidence behind it** — a bound on a value, not a new subject.
 12. **The extractor flattens away the level at which the corpus marks force.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 35) `Required:` and `Recommended:`
    are sub-labels **inside** a field, present in eight of nine books — 100% of CTH and CWH kits, 0% of

@@ -1732,9 +1732,55 @@ terrain-conditioned bonus, a permit-list, an item-property prohibition, and a re
 **negated membership on the other party** — findings 7 and 49 in one clause. Twelve effects, six
 distinct known gaps, and two new ones.
 
+### Session 29 — the Bilker, which is almost entirely procedure
+
+Four effects from ten fields, and two of the four exist only to **name** a procedure so the review
+page can reach it. The book closes the benefit itself with *"a Bilker's larger schemes and scams
+should be left to the player character to create and enact"* — **the source declining to make a
+rule**, which is the cleanest possible answer to what an Engine should do with it.
+
+### Finding 62 — arithmetic across two character sheets
+
+> The Bilker's **Dexterity score is subtracted from the mark's Wisdom score** (to a minimum Wisdom
+> of 0). The victim must then roll that number or less on 1d20.
+
+And again for the smoothtalk: *"the Bilker's **Charisma** is subtracted from the victim's
+**Wisdom**"*.
+
+This is the third and sharpest step of the same escalation:
+
+| | |
+|---|---|
+| [finding 49](#finding-49--a-third-of-all-kits-adjust-a-reaction-roll-and-most-qualify-it) | **condition on** the other party — 27 kits |
+| [finding 51](#finding-51--an-effect-whose-subject-is-a-spell-or-the-creature-you-cast-it-at) | **effect lands on** the other party — 10 kits |
+| [finding 60](#finding-60--a-modifier-whose-value-is-a-count-of-other-things) | **count** a collection of others — 5 kits |
+| **finding 62** | **compute across two sheets** — **2 kits** |
+
+Two: this record and the Buffoon's *"the difference between the Buffoon's and the spellcaster's
+levels"*. `computedOperand.of` names a scalar **on the character**, and there is no syntax for
+*someone else's* Wisdom. Rarest of the four, and the one that would need the most.
+
+### Finding 63 — the clamp now has five records behind it
+
+`(to a minimum Wisdom of 0)`. Measured across the kits, explicit floors appear in **3** — the Bilker,
+the Highborn and the Patrician, the last two both *"until it reaches 0"* on a reaction bonus — and
+this ticket has already recorded caps in the **Tunnelrat** (*"to a maximum of 60 feet"*) and the
+**Pathfinder** (*"will not exceed 20%"*).
+
+So [finding 28](#finding-28--three-kits-state-that-a-bonus-does-not-add-and-adjust-only-sums)'s
+missing combiner is no longer a three-record curiosity: **five records want a clamp**, in both
+directions, and finding 28 already established the crucial point that **a clamp preserves
+order-independence** because `min` and `max` commute. Of everything this ticket has proposed, this is
+now the cheapest repair with the most evidence behind it — a bound on a value, not a new subject.
+
+Also here, and already known: the smoothtalk's *"cumulative +1 for each previous time the Bilker has
+used this ability **on him or her**"* is finding 60's play-history count, and its *"+1 to +5,
+depending on the nature of the suggestion"* is finding 56's bounded DM discretion — a range the DM
+picks within, not a value and not free adjudication.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 57** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 58** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
