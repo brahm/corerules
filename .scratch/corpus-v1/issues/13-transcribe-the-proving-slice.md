@@ -480,11 +480,61 @@ seventeen the judgement pass must read the page, not the record's fields — whi
 The two kits from finding 10 are the specific case: **the Homesteader and the Bandit now come out of
 the pipeline**, and their prerequisites still have to be read off the page by a human.
 
+### Session 7 — the Homesteader, which closes the loop
+
+The kit that forced finding 10's schema repair, now **extracted by the pipeline it was invisible to**
+and modelled by hand. Its prerequisite is the first real use of the clause repair:
+
+```
+Strength ≥ 12  AND  (Intelligence ≥ 12  OR  Wisdom ≥ 12)
+```
+
+It validates. The repair works end to end on the record that demanded it.
+
+**Finding 13 is narrower than it looked.** Four of the Homesteader's five effects are choices —
+*either short bow or sling*, *either knife or short sword*, *Agriculture or Animal Handling*,
+*either Hunting or Fishing* — and **`require` expresses all four**, because they are choices between
+**ids**. The Stout's gap is specifically a choice between **effects**: *+1 to either Dexterity or
+Constitution* is two `adjust`s, and `require` counts things, not operations. So §4.3 handles the
+common case and fails the rarer one, which is a much better position than finding 13 suggested.
+
+One small gap remains: these are **bonus** proficiencies, granted at no slot cost, and nothing in
+`require` says a choice is free. Carried as text.
+
+### Finding 16 — a third of kits have no numeric mechanics at all
+
+The Homesteader's `Special Benefits` reads *"is likely to end up a very wealthy halfling, having
+earned the respect of the new community"*, and its `Special Hindrances` that *"he or she has to do
+just about everything on his or her own"*. **The two fields that exist to carry a kit's mechanical
+identity carry none.**
+
+Measured over both books' kits, as fields containing any numeric mechanic — a signed modifier, a
+percentage, dice, a saving throw, an armour class:
+
+| | kits | `Special Benefits` | `Special Hindrances` | **neither** |
+|---|---:|---:|---:|---:|
+| CTH | 18 | 9 | 3 | **8 (44 %)** |
+| CBGH | 28 | 18 | 8 | **7 (25 %)** |
+
+**Fifteen of forty-six kits — a third — are mechanically just a prerequisite plus proficiency
+choices.** The Homesteader is not an outlier; it is in the *less* empty of the two books.
+
+Two consequences, and both are good news. **The judgement pass is cheaper than
+[ticket 11](./11-human-review-protocol.md) priced it** — for a third of kits there is nothing to
+model past the fields the parser already isolates. And **a modelled record with a short effect list
+is normal rather than suspect**, which is precisely why `effectsModelled` had to be declared rather
+than inferred from an empty array: without it, this third of the corpus is indistinguishable from
+untranscribed.
+
+The measurement is deliberately conservative — it detects *numeric* mechanics, so a benefit like
+*"may use thieves' cant"* would be missed. The Homesteader's own two fields were read directly and
+contain nothing mechanical at all.
+
 ### Still not done
 
-The judgement pass on the remaining **29 of 32** Attachables · the measured cost per record against
-[ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction · local-model draft quality ·
-**a second parser for CBGH**, which finding 12 turned from an unknown into a scoped job.
+The judgement pass on the remaining **29 of 33** Attachables · the measured cost per record against
+[ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
+come down for a third of them · local-model draft quality.
 
 **The remaining work is the expensive half**, and two records in, the cost is not yet measurable for
 the reason that matters: **both hand-modelled records spent most of their time finding format gaps,
