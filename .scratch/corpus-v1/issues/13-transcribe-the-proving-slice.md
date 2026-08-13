@@ -2006,9 +2006,72 @@ spells, or magical weaponry"* is the corpus stating **additivity across four ind
 the layer model's central claim, asserted by the book, in the last record of the book that produced
 the most objections to it.
 
+### Session 35 — into CTH, and finding 35's repair, implemented
+
+Turning to the book [ticket 08](./08-which-slice-proves-the-format.md) actually named. CTH marks
+**100% of its kits with sub-labels**, so [finding 35](#finding-35--force-is-carried-one-level-down-and-the-extractor-was-flattening-it)'s
+deferred repair was directly in the way: modelling sixteen kits while reading `Required:` and
+`Recommended:` off the page by eye is doing sixteen times what the parser should do once.
+
+**Implemented.** `split_sublabels` is the same rule as `fields_typographic` applied one level down —
+a capitalised short phrase, then a colon — and `parse` now returns `parts` beside `fields`, so every
+existing caller is untouched. Measured across the eight markup books: **CTH 40 sub-labels, CFH 50,
+CWH 28, CBD 6, CDH 3, CBGH 0**, and the vocabulary is exactly `Required`, `Recommended`,
+`Bonus Proficiencies`.
+
+### Finding 69 — the second level also recovers fields the markup **lost**
+
+An unexpected dividend. `Special Hindrances` and `Optional Rule` do not appear in the Buccaneer's
+top-level fields at all, and `Secondary Skills` does not appear in the Beggar's — the `<I>` markup
+failed on them, and the sub-label parser found them.
+
+Counting only labels that the **same book** marks up as a top-level field in at least two other
+records — so a genuine markup failure rather than a book's habit:
+
+| book | fields lost and recovered |
+|---|---:|
+| CPAH | 11 — incl. **4 `Special Hindrances`**, 3 `Special Benefits` |
+| CBD | 6 — incl. 3 `Wealth Options` |
+| CRH | 5 |
+| CTH | 4 |
+| CFH, CDH | 4 |
+| **total** | **31** |
+
+Four `Special Hindrances` fields silently absent is not a cosmetic loss — that is a kit's entire set
+of drawbacks vanishing. [Session 15](#finding-35--force-is-carried-one-level-down-and-the-extractor-was-flattening-it)
+justified this repair on force alone; it also fixes **31 missing fields**, and neither the schema nor
+the validator could ever have detected them, because a record with no `Special Hindrances` is
+perfectly valid.
+
+### The first record that is genuinely empty, and correct
+
+**The Adventurer.** Every field reads `Any.` or `None.`, and its `Description` says the kit *"has no
+requirements beyond those of the thief class itself"*. Modelled as **no prerequisite, no effects,
+`effectsModelled: true`**.
+
+That is the state [finding 2](#finding-2--the-schema-accepted-a-semantically-empty-record-fixed)
+invented the flag for, and **this is the first record in the corpus to occupy it**. Thirty-four
+sessions after the flag was added to stop an *unfinished* record from looking complete, a genuinely
+complete and genuinely empty record has arrived — and it is legible as such only because of it.
+
+### Finding 70 — a fifth `except`, and a fifth undercount
+
+> Assassins, **unlike thieves of other kits, are permitted** the use of any weapon.
+
+[Finding 54](#finding-54--except-has-four-cases-not-one-and-one-of-them-carries-a-cost) re-measured
+`except` to four cases using a pattern that required *"unlike most/other …"* followed by
+**`can`, `may`, `is able` or `gains`**. The book writes **`are permitted`**. Five cases, and the
+**fifth undercount in this ticket from a pattern narrower than the corpus** — now so regular that the
+map's method note predicted it.
+
+Two things the Assassin models cleanly and worth recording against the run of gaps: *"the base chance
+is the Assassin's **level multiplied by 5%**"* is `{of: level, multiplyBy: 5}` exactly, and the
+**Intelligence bands** — 13–15, 16–17, 18 — are three adjusts each gated by a `gte` **and** an `lte`,
+which the flat conjunctive predicate expresses with no repair at all.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 63** Attachables · the measured cost per record against
+The judgement pass on the remaining **24 of 63** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 

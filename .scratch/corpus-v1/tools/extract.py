@@ -73,6 +73,40 @@ def fields_typographic(raw):
     return head, [(a, b) for a, b in out]
 
 
+# --- the SECOND field level -----------------------------------------------------------
+#
+# Ticket 13's finding 35: in eight of nine kit books the force of a field — whether it
+# binds or advises — is carried by a sub-label INSIDE the field, in plain text, in a small
+# closed vocabulary: `Required:`, `Recommended:`, `Bonus Proficiencies:`. CTH and CWH mark
+# 100% of their kits this way and CBGH marks none, which is why findings 22 and 24 read
+# force as unmarked: they were taken from the one flat book.
+#
+# So the two strategies are per-LEVEL, not per-book. A markup book is markup at level one
+# and typographic at level two. This is that second level, and it is deliberately the same
+# shape of rule as `fields_typographic` — a capitalised short phrase, then a colon.
+SUBLABEL = re.compile(r"(?:^|(?<=[.;])\s)([A-Z][A-Za-z'&/-]*(?:\s+[A-Za-z'&/-]+){0,2}):\s+")
+
+
+def split_sublabels(value):
+    """(sublabel, text) pairs within one field's value; sublabel is None for the lead-in.
+
+    Returns a single (None, value) pair when the field has no sub-labels, so callers need
+    no special case for the flat books.
+    """
+    marks = list(SUBLABEL.finditer(value))
+    if not marks:
+        return [(None, value)]
+    out = []
+    if marks[0].start():
+        lead = value[:marks[0].start()].strip()
+        if lead:
+            out.append((None, lead))
+    for i, m in enumerate(marks):
+        end = marks[i + 1].start() if i + 1 < len(marks) else len(value)
+        out.append((m.group(1).strip(), value[m.end():end].strip()))
+    return out
+
+
 HEADING_WORDS = 5
 
 
@@ -257,6 +291,9 @@ def parse(path: pathlib.Path, marker: str, strategy="markup"):
     if not any(label == marker for label, _ in pairs):
         return None
     fields = dict(pairs)
+    # The second field level (finding 35). `fields` stays flat so every existing caller is
+    # unaffected; `parts` carries the structure the judgement pass needs.
+    parts = {label: split_sublabels(value) for label, value in pairs}
 
     # Title carries the book: "Bounty Hunter (Comp. Thief's Handbook)"
     name, _, book = title.partition("(")
@@ -267,6 +304,7 @@ def parse(path: pathlib.Path, marker: str, strategy="markup"):
         "book": book.rstrip(")").strip(),
         "file": path.name,
         "fields": fields,
+        "parts": parts,
     }
 
 

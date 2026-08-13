@@ -551,8 +551,10 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    CBGH's. They are the vocabulary that says whether a field binds, and findings 22 and 24 concluded
    force was unmarked precisely because CBGH, the one flat book, was the one read closest. The fix is
    structural rather than new: the two field strategies are **per-level, not per-book** — markup at
-   level one, typography at level two — so `fields_typographic` already does it. Deferred because it
-   changes every extracted record and the slice is the gold standard.
+   level one, typography at level two — so `fields_typographic` already does it. **Resolved in
+   session 35**, and it recovered more than force: **31 top-level fields** across seven books that the
+   `<I>` markup silently dropped, including four whole `Special Hindrances` fields in CPAH. Neither
+   the schema nor the validator could have caught those, since a record without that field is valid.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack
