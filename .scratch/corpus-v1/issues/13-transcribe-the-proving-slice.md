@@ -171,6 +171,79 @@ Across 31 records the mechanical pass needed exactly two:
 Both are *boundary and naming*, not content. Neither is a rule that generalises to the next book, and
 both belong to the written-once-by-a-human layer.
 
+### Session 3 — the tables, and the first record modelled by hand
+
+**The slice's mechanical half is complete: 36 records, 0 schema errors** — 18 kits, 8 Deity,
+5 Subrace, and the 5 PHB thieving-skill tables.
+
+### Finding 6 — the corpus duplicates its own tables, and one copy disagrees
+
+Each PHB table appears **twice**: once in the chapter (`Thieving Skill Base Scores-- Table 26`) and
+once in an appendix (`Table 26: Thieving Skill Base Scores`). Same table, two files, two title
+formats — **two anchors, and therefore two ids under
+[ticket 07](./07-identity-and-id-stability.md)'s source-derived scheme.**
+
+Worse: **Table 29's two copies differ.** Compared cell by cell, the difference is confined to the
+**header rows** — one carries a footnote asterisk and breaks a column label differently — and all
+eight data rows are identical. So the corpus is internally inconsistent in presentation but not in
+data, this time.
+
+Two consequences. **A human picks the canonical copy** — the chapter one was taken, being in reading
+order. And [ticket 10](./10-mechanical-verification.md) gains a check nobody had considered: a
+**within-rendition duplicate detector**, keyed on the table number the book itself prints. Every
+cross-check the map had designed compares *renditions*; this one compares a rendition against itself.
+
+### Finding 7 — the predicate vocabulary has no negation, and ticket 06 never measured it
+
+Modelling the Acrobat by hand hit it on the first record. *"+2 if the Acrobat is wearing no armor
+(and, under the optional encumbrance rules, is unencumbered)"* — **"no armour" and "unencumbered" are
+negations**, and [ticket 06](./06-expression-language.md)'s closed vocabulary has `compare`, `member`
+and `has`, with no `not`.
+
+Measured across the eight RTF kit books, inside effect fields:
+
+| form | count | covered? |
+|---|---:|---|
+| `not` / `never` / `cannot` — mostly prohibitions | 464 | **yes**, §4.3's `forbid` |
+| **`no <thing>` / `without` / `unencumbered`** | **33** | **no — predicate negation** |
+| `ought not` / `should not` — race exclusions | 5 | yes, inverted to an A3 permit-list |
+
+**Thirty-three, the same order as the 31 occurrences that fired known unknown #4.**
+
+And the reason it was missed is precise rather than careless: ticket 06 asked *"does the predicate
+admit boolean combination?"*, measured **disjunction** at 4 occurrences, and closed the question on
+that evidence. **Negation was never measured.** The question was answered correctly for the data it
+looked at.
+
+Carried as text and not computed for now, per the standing posture — but recorded here because
+33 is above the line the map has been using.
+
+### Finding 8 — half the fields produce no effects at all
+
+Of the Acrobat's six populated fields, **three yield nothing computable**: `Weapon Proficiencies`
+says the kit uses what thieves normally use, `Nonweapon Proficiencies` lists *Recommended* — advice,
+not a grant, exactly as [ticket 01](./01-what-the-source-yields.md) predicted — and
+`Skill Progression` is pure counsel about which skills to raise.
+
+**The judgement pass therefore has less to do than the field count suggests**, and what it does have
+is concentrated in `Special Benefits` and `Races`. That should move
+[ticket 11](./11-human-review-protocol.md)'s hour estimate down, and it is the first evidence either
+way.
+
+### What the modelling confirmed
+
+Three decisions paid off on contact:
+
+- **`interpretation` earned its place on the very first record.** The book says *+1, rising to +2*;
+  the layer model wants **two additive adjusts**, which produces the same numbers. That is a reading,
+  and now it says so.
+- **Order-independence held.** The halfling/gnome carve-out — *may take the kit but do not gain the
+  jumping and tightrope bonuses* — models as a **cancelling `adjust`** conditioned on race. It works
+  precisely because §4.3's operations commute.
+- **Race exclusion inverts into an A3 permit-list**, which requires the full race enumeration and so
+  cannot be checked by the pack alone. That confirms ticket 10's split putting cross-pack referential
+  integrity on the Engine.
+
 ### Still not done
 
 The five PHB thieving-skill tables the kits adjust · the judgement pass turning field prose into §4.3
