@@ -620,8 +620,10 @@ ticket rather than an edit made in passing.
 ### Finding 21 — two more operand and condition shapes
 
 **Level scaling.** *"+10% to Climb Walls at first level; this bonus increases by +2% per level
-thereafter."* [Ticket 15](./15-computed-operands.md)'s closed set covers halving and division;
-**scaling by level is not in it**. Measured over **138 kits across nine books**, counting only the
+thereafter."* **> RETRACTED IN PART by session 22's finding 50: this said ticket 15's set does not
+scale by level, and `computedOperand` carries `multiplyBy` — it does. What actually defeats these is
+the OFFSET, and only when it sits inside a division. The measurement below stands; the diagnosis did
+not.** Measured over **138 kits across nine books**, counting only the
 effect-carrying fields: **12 kits (9%)** scale something by level — the Breachgnome's proficiency
 slots, the Treetender's languages, the Tunnelrat's sight range, the Urchin's Pick Pockets, the
 Samurai, the Witch, the Wu Jen. Nine percent is far above the threshold that misled finding 10, and
@@ -1126,14 +1128,14 @@ interesting than either "yes" or "no". The corpus wants **richer operands and ri
 it has not once wanted a seventh *operation*. If anything the set is one too large: **`except` is a
 candidate for removal**, and every remaining session should be watched for a case that needs it.
 
-### Finding 40 — ticket 15 fixed the rounding direction, and the corpus rounds both ways
+### Finding 40 — VOID. Retracted by finding 50
 
 > *"use half the Intelligence score, **rounded up**"* — CRH Stalker, and again in the Feralan.
 
-[Ticket 15](./15-computed-operands.md) settled `half(<scalar>)` and `<scalar>/N` **rounded down**.
-Measured over the same kit-record population: **rounding up in 2 kits, rounding down in 1.** The
-numbers are small, and the point does not depend on their size — the operand hard-codes a direction
-the corpus does not hold constant. **Direction has to be a parameter.**
+**This finding was wrong and is withdrawn in full.** It claimed the operand hard-codes rounding
+down. `computedOperand.round` is `{"enum": ["down", "up"]}` — the direction was **already** a
+parameter, and had been since ticket 15 was implemented. The measurement it rested on (rounding up in
+2 kits, down in 1) is accurate and simply has no consequence.
 
 ### Finding 41 — a kit whose target is a multiclass
 
@@ -1358,9 +1360,75 @@ proposed, and is now the best-evidenced of them.
 The rest of the Sheriff is finding 16 again: a `require` of three named weapons, and `Special
 Hindrances` describing long hours and rude interruptions.
 
+### Session 22 — the Vanisher, and a correction that runs back through four sessions
+
+### Finding 50 — the operand was never as poor as findings 21, 26 and 40 said
+
+Modelling the Vanisher's *"the duration of the spell is **doubled**"* meant checking whether
+multiplication existed. It does. `$defs/computedOperand` reads:
+
+```json
+{ "of": <scalar>, "divideBy": ≥2, "multiplyBy": ≥2, "round": ["down","up"] }
+```
+
+**`multiplyBy` was always there, and `round` was always a parameter.** So:
+
+- **Finding 40 is void in full.** It claimed the operand hard-codes rounding down and that direction
+  must become a parameter. It already was one.
+- **Findings 21 and 26 are wrong in their diagnosis.** Scaling by level *is* expressible —
+  `{of: {level: …}, multiplyBy: 10}`. Their measurements stand; the cause they assigned does not.
+
+**The root cause is the mirror of [finding 42](#finding-42--ticket-15s-dice-decision-was-settled-and-never-implemented-now-it-is).**
+There, a decision existed and the artifact was silent. Here, the artifact was **richer than the
+prose** — ticket 15's text says *"`half(<scalar>)`, `<scalar>/N rounded down`"* and the schema it
+produced is more general than its own description. Both times the mistake was **reading the ticket
+instead of the artifact.**
+
+Four records carried wrong `UNMODELLED` markers and are corrected in the slice:
+
+| record | rule | now |
+|---|---|---|
+| Smuggler | one language every other level from 2nd | `divideBy: 2, round: down` — **exact** |
+| Tunnelrat | 10 ft per level, max 60 | `multiplyBy: 10`; **only the cap is unmodelled** |
+| Tumbler | +10% at 1st, +2% per level after | **`+8` and `2 × level`** |
+| Urchin | +5% per level from 2nd | **`−5` and `5 × level`** |
+
+The last two are the interesting repair, and it is the layer model earning its keep for a fifth time:
+**an additive offset does not need an operand, because a constant `adjust` beside the multiple
+produces it.** `8 + 2L` is 10 at first level; `−5 + 5L` is 0 at first, 5 at second, 10 at third.
+
+That also sharpens what is genuinely missing, from "offsets" to something much narrower. **An offset
+*inside a division* cannot be absorbed that way, because `floor` is not linear** — the Breachgnome's
+*one slot every two levels, the first at third* is `floor((L−1)/2)`, and no constant beside
+`floor(L/2)` reproduces it. **One record in the slice, not four.** Ticket 15's operand set is in far
+better shape than four sessions of this ticket claimed.
+
+### Finding 51 — an effect whose subject is a spell, or the creature you cast it at
+
+The Vanisher's benefits do not land on the Vanisher:
+
+- *"The **duration of the spell** is doubled."* — the subject is a spell being cast.
+- *"**Saving throws** against the effects of these spells suffer a −2 penalty."* — the target's roll.
+- *"Characters or creatures that could normally see invisible objects **must make a successful
+  Intelligence check, with a −4 penalty**."* — an observer's roll.
+
+[Finding 49](#finding-49--a-third-of-all-kits-adjust-a-reaction-roll-and-most-qualify-it) measured
+27 kits whose effect is **conditioned by** another party. This is a step further: the effect **lands
+on** another party. Measured across 134 kits, **10 (7%)** do it — the Imagemaker, the Anagakok, the
+Savage Wizard among them.
+
+Smaller than the reaction case and harder, because a second subject in a *condition* is a lookup while
+a second subject in an *effect* means the pack can modify a creature it has never seen. Worth stating
+as a boundary the format may simply decline: an Attachable that edits other creatures is not an
+Attachable any more.
+
+The record is also the **second and third use of `forbid`** — *"precludes learning any spells from the
+greater divination or conjuring/summoning schools"* — and the first on a genuinely closed category,
+since 2e's schools of magic are enumerable. `except` remains unused at 23 records.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 50** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 51** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 

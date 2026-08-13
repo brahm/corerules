@@ -474,7 +474,15 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    the tables"* is missing its middle term: **supplying a table is not enough if nothing says what
    slot it fills.** Unresolved and deliberately unticketed here — it is a schema decision of finding
    7's weight and should not be made in passing.
-10. **[Ticket 15](issues/15-computed-operands.md)'s computed operands do not cover scaling by level.**
+10. **RETRACTED. [Ticket 15](issues/15-computed-operands.md)'s operands cover more than this map said.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 50) `computedOperand` carries
+   `multiplyBy` and rounds **both** ways, so scaling by level was always expressible and so was
+   rounding up. What is genuinely missing is far narrower: an offset **inside a division**
+   (`floor((level−1)/2)`, one record), since an additive offset is absorbed by a constant `adjust`
+   beside the multiple. The error was reading the ticket's prose instead of the schema — the exact
+   mirror of correction 15, where a decision produced no artifact and here the artifact outran its own
+   description. The stricken text follows.
+   ~~[Ticket 15](issues/15-computed-operands.md)'s computed operands do not cover scaling by level.~~
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 21) *"+2% per level thereafter"*.
    Measured over the effect fields of **138 kits across nine books: 12 (9%)** scale something by
    level. The closed set has halving and division and nothing that multiplies by a level. Known
