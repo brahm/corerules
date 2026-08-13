@@ -1638,9 +1638,53 @@ party, round state, a roll made by someone else, arithmetic across two subjects,
 in one clause. Nothing new, but it is the densest single example of finding 49's second subject the
 slice has produced.
 
+### Session 27 — the Mouseburglar, and the earmark turns out to be a class of effect
+
+### Finding 59 — six kits constrain the spending of a resource they do not grant
+
+> At first level he or she must **divide the 60 discretionary points** between these three abilities.
+
+[Finding 48](#finding-48--an-earmarked-grant) recorded the Mercenary's *"the slots must be used to
+purchase a weapon specialization"* as an **earmarked grant** — one record, one shape. It is not one
+record, and the framing was slightly wrong.
+
+The 60 discretionary points are the **thief class's** resource, not this kit's. The kit grants
+nothing here; it **constrains where an existing resource may go**. Measured:
+
+| | kits |
+|---|---:|
+| constrain the spending of discretionary points | **5** — Assassin, CTH Burglar, Mouseburglar, Tumbler, Stalker |
+| constrain the spending of granted proficiency slots | 1 — Mercenary |
+
+**Six of 134**, and the shape is the same in both rows: *this pool, spent only on these.* So the gap
+is not "a grant with an earmark" but **an effect that restricts an allocation the Engine already
+owns** — which is a cleaner thing to name and a smaller thing to add, since the resource already
+exists on the character.
+
+`require` is the closest form and it is genuinely the wrong one: it means *choose N things* and this
+means *distribute a quantity among these*. Written as `require` with `count: 60` and marked, because
+the alternative was to invent a grant the book does not make.
+
+### What recurred, which is now the more useful signal
+
+Nothing else in this record is new, and after 28 modelled records that is worth tracking as
+deliberately as the gaps:
+
+- **The recurring player-allocated per-level bonus** — *"another 5% that can be applied to any one of
+  Open Locks, Move Silently, Find/Remove Traps, or Read Languages"* — is the **second** kit with this
+  exact shape, after the CBGH Burglar. Two of 134, and both in one book.
+- **The backstab carve-out** is the **fourth** exception modelled as a cancelling adjust, and it is
+  word-for-word the Burglar's. The technique has now absorbed every exception-to-a-penalty the slice
+  has met, against `except`'s four exception-to-a-prohibition cases. **The split holds cleanly at
+  eight instances.**
+- The Mouseburglar and the CBGH Burglar are near-duplicates — same class, same book, same benefit
+  shape, same hindrance. Which is a small piece of evidence for
+  [ticket 11](./11-human-review-protocol.md)'s cost estimate: **the second of a near-duplicate pair
+  costs a fraction of the first**, and the corpus has more such pairs than the kit count suggests.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 55** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 56** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
