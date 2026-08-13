@@ -1960,9 +1960,55 @@ proves the shapes, and still proves nothing about psionics, spells, equipment br
 of it loads** — [finding 45](#finding-45--every-reference-in-the-proving-slice-is-dangling) having
 shown that none of its 119 references resolve.
 
+### Session 34 — the Archer completes a whole book
+
+**All 28 of CBGH's kits are now modelled by hand** — the first complete book in the corpus, and the
+one that started as *"the book the parser cannot read"* in [finding 12](#finding-12--one-v1-book-carries-no-field-markup-at-all).
+
+### Finding 67 — a permission that is degraded rather than denied
+
+> The Archer can gain normal proficiency in **only one melee weapon**. He or she **can spend
+> proficiency slots on others but will always wield them with a −1 penalty** on all attack rolls.
+
+Neither `forbid` nor `except`. The character **may take the thing, worse** — which is a third
+position between permitted and prohibited that §4.3 has no vocabulary for. The `adjust` carries the
+penalty; what it cannot carry is the scope, *every melee weapon after the first*, which is per-item
+state the predicate cannot reach.
+
+One kit, and per the map's method note that is a lower bound written in ordinary English, so the true
+figure is unknown rather than one. Recorded for the shape, not the count: it sits beside
+[finding 65](#finding-65--cannot-and-refuse-are-different-words-and-the-corpus-means-them-differently)'s
+hard/soft verbs as a **third** grade of restriction, and unlike a disposition this one **is**
+mechanical.
+
+### Finding 68 — an election between two effects, made per use
+
+> …the Archer can choose to make a called shot with **increased accuracy or extended range, but not
+> both at the same time**.
+
+The called shot is one ability with two mutually exclusive outcomes, chosen **per shot**. That
+compounds two known gaps —
+[finding 13](#finding-13--disjunction-in-an-effect-has-no-operation-and-the-clause-repair-does-not-reach-it)'s
+choice between effects and [finding 61](#finding-61--a-benefit-the-player-buys-with-movement-at-the-table)'s
+trade elected at the table — and adds exclusivity, which neither had. **Two kits**: this one and the
+CRH Stalker's *"in one (but not both) of the following ways"*.
+
+The trade itself is priced in things the format has no subjects for: forgoing initiative, firing once
+that round, and losing the benefit if struck first. And the extended range is *"the weapon's medium
+range added to its long range"* — arithmetic over **the weapon's** properties, which is
+[finding 51](#finding-51--an-effect-whose-subject-is-a-spell-or-the-creature-you-cast-it-at)'s missing
+subject in its fourth guise: after the spell, the creature, and the other character's sheet, now the
+item.
+
+Worth ending the book on the positive that came with it: the Archer's *"+2 bonus is **in addition to**
+any other attack bonuses the character might have due to Dexterity, weapon specialization, bless
+spells, or magical weaponry"* is the corpus stating **additivity across four independent sources** —
+the layer model's central claim, asserted by the book, in the last record of the book that produced
+the most objections to it.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 62** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 63** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
