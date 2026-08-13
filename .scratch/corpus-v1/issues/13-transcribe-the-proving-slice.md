@@ -1537,9 +1537,63 @@ Its `Special Hindrances` supply the counterweight and it is finding 11's oldest 
 Agriculture: *"weapons where **more than 10% of the weight is metal**"* is a predicate over item
 properties. There is nothing to enumerate and no operation that takes a property test.
 
+### Session 25 — the Rocktender, and a condition with nowhere to live
+
+### Finding 55 — a gate on the whole record, which the schema has no slot for
+
+> A Rocktender can **only cast spells or use one of his or her special abilities** when he or she is
+> in **direct contact with unhewn rock**.
+
+That is not a condition on an effect. It is a switch on **every effect the record has**, and the
+schema has two places for conditions and neither is it:
+
+| | asks |
+|---|---|
+| `prerequisite` | may this character **take** the kit? |
+| `when` on an effect | does **this effect** apply? |
+| **missing** | does **any of this** apply right now? |
+
+Repeating the condition as a `when` on all six effects is the obvious workaround and it fails anyway,
+because the condition names the **environment**. Contact with unhewn rock is not a fact about the
+character — it is finding 34's geography and finding 49's second subject arriving in a third guise.
+
+Measured, and read as a **lower bound** per the map's new method note: **2 kits of 134**. The other is
+the Cavalier, and the pairing is the useful part — the Rocktender's gate is **environmental**, the
+Cavalier's is a **play event** (*"loses all his special benefits until such time as he repents"*).
+Same structural need, two unrelated causes, which suggests the shape is real even though the count is
+tiny.
+
+### Finding 56 — the book bounds the DM rather than deferring to him
+
+> …the DM can allow **up to a 1 in 10 chance of failure, but no greater**.
+
+[Finding 25](#finding-25--a3-declares-rule-sets-at-the-manifest-and-effects-cannot-name-them) sorted
+DM adjudication into the row that *should not be modelled* — 14 kits saying *"at the DM's
+discretion"*, which is the absence of a rule and correctly left alone.
+
+This is different. The book hands the DM a decision **and then fences it**: any failure chance he
+likes, provided it does not exceed 10%. That is a **rule about discretion**, and it is exactly the
+kind of thing the Engine could enforce — a ceiling on a DM-set value — while still leaving the value
+to him.
+
+One occurrence, so it changes nothing on its own. Recorded because it means finding 25's fourth row
+is not homogeneous: *"the DM decides"* and *"the DM decides, within this bound"* are different
+statements, and only the first is unmodellable in principle.
+
+### What else the record carried
+
+All of it already known, which is itself the useful signal — **this is the first record in five
+sessions to produce no new gap in its effects**, only new instances of old ones:
+
+- *"will never use metallic weapons"* and *"will only bear weapons of stone"* — finding 11's permit-list
+  and an item-property predicate, on one axis, in one record.
+- *"1–12 hours of warning… 1–6 hours"* — finding 53's bare ranges, twice.
+- *"always gets the largest possible type"* of summoned earth elemental — finding 51's second subject,
+  and a value that is the maximum of a distribution rather than a number.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 53** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 54** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
