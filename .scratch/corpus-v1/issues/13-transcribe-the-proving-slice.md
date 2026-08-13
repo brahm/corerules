@@ -1778,9 +1778,50 @@ used this ability **on him or her**"* is finding 60's play-history count, and it
 depending on the nature of the suggestion"* is finding 56's bounded DM discretion — a range the DM
 picks within, not a value and not free adjudication.
 
+### Session 30 — the Traveler, and a shape regex cannot count
+
+### Finding 64 — effects that land on your **allies**, and a measurement that failed both ways
+
+> A Traveler who has time to tell friends and allies an inspiring story before they enter a combat
+> **gives them the same attack and saving throw bonuses as a bless spell**. …his or her music offers
+> immunity to song-based charm attacks **to all within earshot**, but **only so long as the Traveler
+> can keep playing non-stop**.
+
+[Finding 51](#finding-51--an-effect-whose-subject-is-a-spell-or-the-creature-you-cast-it-at) measured
+effects landing on **opponents** — 10 kits — with a pattern built around *"saving throws against…
+suffer"*. Neither of these clauses would match it, because helping your friends is written in
+completely different words from hurting your enemies.
+
+**And the re-measurement failed in the other direction.** A pattern loose enough to catch *"gives
+them…"* returns **32 kits**, of which most are narrative — the Beggar's *"give them whatever meager
+scraps can be spared"*, the Trader's *"friends and become acquainted"*, and a Battlerager **spell
+list** that happened to contain the word *friends*. Tightening it to require a mechanical token
+nearby returns **4**, one of which is a false positive (*"gives **her** a −1 penalty"* — the pronoun
+matched).
+
+So the honest answer is **three confirmed and no reliable count** — the Traveler, the Barbarian and
+the Savage Wizard.
+
+This is worth adding to the map's method note as its second half. The counts in this ticket that held
+up were all keyed on **jargon**: *"reaction roll"*, *"per level"*, *"discretionary points"*, `NdM`.
+This shape is written in **ordinary English**, and there regex brackets badly in both directions at
+once — a loose pattern drowns in prose and a tight one misses the paraphrases. **Where the corpus uses
+plain language for a mechanic, counting it needs reading, not matching.**
+
+### What the record showed besides
+
+Its **+2 to Reaction Rolls is unconditional** — *"to all Reaction Rolls, due to the character's innate
+goodwill"* — which is rare enough to be worth naming: of the 48 kits that adjust a reaction, 27
+qualify it by the other party, and this one simply does not. The gap in finding 49 is real but it is
+not universal, and a plain `adjust` still covers the unqualified case.
+
+The bless-equivalent bonus is also **finding 58's grant-by-citation aimed at a spell** rather than at
+another class's ability, which widens that finding's referent: a pack may need to point at spells,
+class abilities, and proficiencies it does not define.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 58** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 59** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 

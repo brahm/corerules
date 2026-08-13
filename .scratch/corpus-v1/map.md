@@ -407,6 +407,14 @@ phrasing noticed becomes the pattern. The two fixes that worked were to **run ag
 records rather than raw text**, and to **allow words between the terms**. Neither eliminates the
 problem; both shrink it. Treat a small count as "at least this many", never as "only this many".
 
+**And it only works at all on jargon.** Every count here that held up was keyed on a phrase the books
+use as a term of art — *"reaction roll"*, *"per level"*, *"discretionary points"*, `NdM`. Ticket 13's
+finding 64 tried to count a mechanic the corpus writes in **ordinary English** — an effect that helps
+your allies — and the patterns bracketed it uselessly: loose gave 32 matches drowned in narrative,
+tight gave 4 including a false positive, and the truth was 3. **Where the corpus states a mechanic in
+plain language, counting it requires reading and not matching**, and no count of that kind belongs in
+this map without saying so.
+
 ## Corrections owed to the v1 spec
 
 <!-- accumulating; whoever updates spec.md needs exactly this list -->
