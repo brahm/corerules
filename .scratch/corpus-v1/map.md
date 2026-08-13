@@ -437,8 +437,9 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    and two v1 kits break it.** ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 10)
    Disjunction was measured at **4 occurrences** with a regex that required *ability → number →
    `or` → ability*; the corpus writes *ability → `or` → ability → number*, which occurs **38** times.
-   The halfling **Homesteader** and the **Bandit** need `A ∧ (B ∨ C)` in a single prerequisite, which
-   a flat AND-list cannot express. Resolved by **one clause type**: a predicate is a flat list of
+   **Four kits** need disjunction in a prerequisite — the Homesteader and Bandit as `A ∧ (B ∨ C)`,
+   the Goblinsticker and Smuggler as a bare `A ∨ B` — which a flat AND-list cannot express. (The
+   count was first published as two; see finding 10's correction.) Resolved by **one clause type**: a predicate is a flat list of
    clauses, and a clause is a condition or an `anyOf` of conditions — one level, no recursion. A pure
    conjunction is unchanged, so every record written before the repair still validates.
    **This is the second correction against a closed decision, and the first caused by our own

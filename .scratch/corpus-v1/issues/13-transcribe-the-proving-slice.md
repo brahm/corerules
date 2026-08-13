@@ -828,9 +828,68 @@ division with rounding down; it is the **offset** that defeats it, since bare `l
 fourth level where the book pays at third and fifth. First scaling record in division form rather
 than multiplication.
 
+### Session 13 — the Goblinsticker, and finding 10's count was wrong too
+
+### Correction to finding 10 — four kits, not two
+
+*"A character must have a **Strength or Constitution** score of at least 15 in order to choose this
+kit."*
+
+Finding 10 named the Homesteader and the Bandit. The regex that found them required
+`<Ab> or <Ab> of at least`, and this sentence puts **`score`** between the ability and the number.
+**The third narrow pattern in this ticket to undercount**, after the one that produced finding 10
+itself and the one that mismeasured level-scaling offsets in session 10.
+
+Re-measured over the extracted kit records — the right population, prose and fields together, with a
+pattern that allows words between the terms:
+
+| kit | shape |
+|---|---|
+| Goblinsticker | `Str ≥ 15 ∨ Con ≥ 15` — **pure disjunction** |
+| Smuggler | `Cha ≥ 13 ∨ Int ≥ 13` — **pure disjunction** |
+| Homesteader | `Str ≥ 12 ∧ (Int ≥ 12 ∨ Wis ≥ 12)` |
+| Bandit | `Cha ≥ 12 ∧ (Str ≥ 13 ∨ Con ≥ 13)` |
+
+**Four of 138 kits, and all four in CBGH** — the disjunctive prerequisite is one book's house style,
+not a corpus-wide habit. The clause repair covers both shapes unchanged; a pure disjunction is a
+predicate holding exactly one `anyOf` clause, which is the first time that degenerate form has been
+exercised.
+
+The lesson is not about this measurement. **Three times now, a pattern written to find a shape has
+found a fraction of it** — and each time the fix was to run against extracted records rather than raw
+text, and to allow words between the terms. That is worth carrying to any future measurement in this
+map.
+
+### Finding 30 — a required choice whose options no pack contains
+
+*"At first level the Goblinsticker must **declare the hated foe** of his or her life."*
+
+Every other `require` in the slice either enumerates its options in `from` or is bounded by a category
+the corpus declines to enumerate — *"any dwarven tongue"*, *"one melee weapon"*. This one is
+different in kind: the options are **creature types**, and no v1 pack contains creatures at all. The
+Monstrous Manual is [out of scope](../map.md).
+
+So `from` is absent not because the transcription is lazy but because **the referent does not exist in
+v1 and will not**. That is a third state beside "enumerated" and "category unenumerated", and it is
+the one that cannot be fixed by transcribing more.
+
+### Finding 31 — the book asserts cross-arm stacking
+
+*"This bonus … is cumulative with other gnome benefits, including the **Rock Gnome's** standard +1
+attack bonus versus goblins and kobolds."*
+
+A **Kit** effect that the source explicitly stacks with a **Subrace** effect. §4.1's claim is that the
+three Attachable arms are one shape; §4.3's is that their effects commute. Here the book itself
+composes a kit's bonus with a subrace's and states the result — **the layer model working across
+arms, asserted by the source rather than by us.**
+
+It is also a concrete argument for [ticket 10](./10-mechanical-verification.md)'s split: verifying
+this sentence requires the Rock Gnome record, which lives in another part of the corpus, so it is
+cross-record integrity and belongs to the Engine.
+
 ### Still not done
 
-The judgement pass on the remaining **29 of 38** Attachables · the measured cost per record against
+The judgement pass on the remaining **29 of 39** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 

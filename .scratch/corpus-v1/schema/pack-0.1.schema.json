@@ -208,7 +208,7 @@
       ]
     },
     "clause": {
-      "description": "Ticket 13 finding 10, repairing ticket 06. Disjunction was measured at 4 occurrences by a regex that required '<Ab> N ... or ... <Ab>'; the corpus writes '<Ab> or <Ab> N', which occurs 38 times, and two v1 kits — the halfling Homesteader and the Bandit — state 'Strength 12 AND (Intelligence OR Wisdom) 12'. So a clause is a condition or a disjunction of conditions, and NOTHING ELSE: one level, no recursion, no 'or' of 'and'. Both corpus examples are that shape, and it keeps the evaluator flat, which is what ticket 06 was actually defending. Negation is still absent — finding 7's 33 occurrences remain text.",
+      "description": "Ticket 13 finding 10, repairing ticket 06. Disjunction was measured at 4 occurrences by a regex that required '<Ab> N ... or ... <Ab>'; the corpus writes '<Ab> or <Ab> N', which occurs 38 times, and four v1 kits need it: the Homesteader and Bandit as 'A and (B or C)', the Goblinsticker and Smuggler as a bare 'A or B'. So a clause is a condition or a disjunction of conditions, and NOTHING ELSE: one level, no recursion, no 'or' of 'and'. Both corpus examples are that shape, and it keeps the evaluator flat, which is what ticket 06 was actually defending. Negation is still absent — finding 7's 33 occurrences remain text.",
       "oneOf": [
         {
           "$ref": "#/$defs/condition"
