@@ -1591,9 +1591,56 @@ sessions to produce no new gap in its effects**, only new instances of old ones:
 - *"always gets the largest possible type"* of summoned earth elemental — finding 51's second subject,
   and a value that is the maximum of a distribution rather than a number.
 
+### Session 26 — the Buffoon, and two multiclass kits named by two different rules
+
+### Finding 57 — the extractor named one kit from `<TITLE>` and another from the heading; **fixed**
+
+The Buffoon came out as **`Buffoon (Thief/Illusionist)`** and the Stalker as **`Stalker`** — from the
+same book, both multiclass kits, both with the qualifier printed on the page.
+
+The cause is that the two naming rules never met. The Buffoon's page is **section-titled**
+(`Multiclass Kits`), so [session 6](#session-6--the-second-parser-and-what-it-cannot-reach)'s
+`heading_name` took chunk 2 and got the full name. The Stalker's page is **record-titled**, so
+`heading_name` declined and `<TITLE>` won — and `<TITLE>` says `Stalker` where the printed heading
+says `Stalker (Fighter/Thief)`. **The qualifier survived by accident in one record and was discarded
+by accident in the other.**
+
+Fixed: when the page is record-titled, the heading is preferred if it **extends** the title. It fires
+on exactly one record corpus-wide, cannot rename anything (only lengthen), and the slice's Stalker is
+renamed to match. That is the third naming rule in one book — `<TITLE>`, section-titled, and now
+title-extending — which is the price of finding 12's typographic parser and worth restating: **CBGH
+needed a second field parser and it also needs its own naming rules.**
+
+### Finding 58 — an ability granted by citing another class
+
+> This has the **same effect as the bard's ability to influence reactions** (explained on **page 42**
+> of the Player's Handbook). Second, he or she can counter the effects of songs and poetry used as
+> magical attacks (see **page 44**).
+
+Two of the Buffoon's three benefits are **defined by pointing at another class**. The pack grants an
+id it does not define and *cannot* define, because the referent is a paragraph in a book rather than a
+record — and the citation is **by page number**, which
+[ticket 01](./01-what-the-source-yields.md) established the corpus otherwise does not have.
+[Ticket 05](./05-pack-schema.md) replaced page citation with a section chain and an anchor for exactly
+that reason; here the *content* cites a page, which is a different thing and outside that decision.
+
+This is the friendliest form of [finding 45](#finding-45--every-reference-in-the-proving-slice-is-dangling)'s
+dangling reference: `phb:bard-influence-reactions` is not a transcription gap that more work closes —
+it is the corpus **deliberately** reusing a rule by naming it. If the PHB pack ever exists with that
+ability as a record, the reference resolves and nothing else changes. That is the cross-pack model
+working as designed, and it is the first record where a dangling reference is the *right answer*
+rather than a debt.
+
+The remaining benefit stacks three unmodellable conditions in one sentence — the Buffoon must **share
+a language** with the spellcaster, must **win initiative**, and the *caster* then rolls a Wisdom check
+which the DM may optionally modify by **the difference between the two characters' levels**. Other
+party, round state, a roll made by someone else, arithmetic across two subjects, and an optional rule,
+in one clause. Nothing new, but it is the densest single example of finding 49's second subject the
+slice has produced.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 54** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 55** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 

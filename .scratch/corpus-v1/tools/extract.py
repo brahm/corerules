@@ -98,6 +98,24 @@ def heading_name(head):
     return None
 
 
+def richer_heading(head, title):
+    """The printed heading, when it says more than <TITLE> does.
+
+    Ticket 13 finding 57. On a record-titled page chunk 1 repeats the title — but not
+    always verbatim: DD04872's <TITLE> is `Stalker` and its heading is
+    `Stalker (Fighter/Thief)`, which is the kit's multiclass target. Taking <TITLE> there
+    threw the qualifier away, while DD04871's `Buffoon (Thief/Illusionist)` kept it purely
+    because that page is section-titled and so the name came from chunk 2 instead. Two
+    multiclass kits in one book, named by two different rules.
+
+    Only fires when the heading EXTENDS the title, so it cannot rename anything.
+    """
+    if len(head) < 2:
+        return None
+    h = head[1]
+    return h if h != title and h.startswith(title) and len(h) > len(title) else None
+
+
 STRATEGIES = {"markup": fields_markup, "typographic": fields_typographic}
 
 # Per book, where it departs from the default. The marker lives here too: CBGH's subraces
@@ -243,7 +261,7 @@ def parse(path: pathlib.Path, marker: str, strategy="markup"):
     # Title carries the book: "Bounty Hunter (Comp. Thief's Handbook)"
     name, _, book = title.partition("(")
     if strategy == "typographic":
-        name = heading_name(head) or name
+        name = heading_name(head) or richer_heading(head, name.strip()) or name
     return {
         "name": name.strip(),
         "book": book.rstrip(")").strip(),
