@@ -1029,9 +1029,74 @@ above two talents or to Find and Remove Traps**."* That is finding 13's choice-b
 finding 21's level scaling **in one clause, recurring at every level, allocated by the player**.
 Nothing in the format touches it.
 
+### Session 16 — both Squires, and the field vocabulary is not closed
+
+### Finding 37 — two books have a shared spine and a per-*kit* tail
+
+The map's charting notes say *"the label vocabulary is per book family."* That holds for seven of the
+nine kit books and **fails completely for two.**
+
+| book | kits | distinct labels | used by exactly **one** kit | fields per kit |
+|---|---:|---:|---:|---:|
+| CRH | 14 | **99** | **74** | 15–25 |
+| CPAH | 12 | 46 | 29 | 7–19 |
+
+Both keep a spine — `Description`, `Requirements`, `Role`, `Secondary Skills`, the proficiency
+fields, `Armor/Equipment`. Past that the labels are **the names of the effects themselves**:
+`Animal Telepathy`, `Empathic Shock`, `No Fortress`, `Unruly Allies`, `Sanctuary`, `Extra Tithes`,
+`Punishment Buffer`. In CRH, **three quarters of all labels appear once in the book.**
+
+**This invalidates finding 16's measurement outside the books it was taken from.** That finding
+counted numeric mechanics in `Special Benefits` and `Special Hindrances`. In CPAH those fields are
+**empty on 10 of 12 kits**, and in CRH on **13 of 14** — not because the kits have no benefits, but
+because the benefits have their own names. Run the same count there and it would report the opposite
+of the truth. Finding 16's number stands for CTH and CBGH, where it was taken, **and must not be
+extended.**
+
+The consequence for the pipeline is mixed and mostly good. The extractor never needed an allow-list —
+it reads whatever labels a page carries — so **nothing breaks**. And a per-kit label is *information*:
+`Empathic Shock` names its effect where `Special Hindrances` merely locates it, which is more for the
+judgement pass to work with, not less. What it does refute is any plan that keys behaviour off a
+fixed set of field names, and any measurement that assumes one.
+
+### Finding 38 — the partner: a fifth subject the predicate cannot name
+
+The halfling Squire is bound to another **player character**:
+
+- *"+2 to NPC Reaction Rolls made for members of **that race**"* — the partner's race.
+- *"can reach two levels higher … however, he or she **cannot pass the level of his or her partner**."*
+- *"when the halfling goes up in level and at least **half the experience** came from tasks performed
+  **with his or her partner**, he can add one proficiency slot, filling it with a proficiency **his or
+  her partner holds**."*
+
+Not a transient opponent and not an NPC reaction — a **persistent binding to a second character
+sheet**, plus a condition on *how experience was earned*. It joins campaign configuration, the other
+party, combat-round state and DM adjudication on the list of things a character-only predicate cannot
+see.
+
+The level-limit bonus itself is a genuine `adjust` and worth noting as a positive: 2e racial level
+limits are a value the Engine holds, so `+2` lands cleanly. It is only the ceiling that escapes — and
+even a *numeric* ceiling would escape, per finding 28.
+
+### What the paladin Squire contributes
+
+Two effects, and the kit is essentially a **social position**: a stipend, a mount, a chain of
+obedience. Its `Requirements` field says *"there are no rigid requirements"*, so its prerequisite is
+empty **by the book** rather than by omission — which is finding 17's explicit non-restriction
+reaching the prerequisite rather than an effect.
+
+It also contributes two shapes nothing else has:
+
+- **A range that is not dice.** *"typically 5–10 gp per month."*
+  [Ticket 15](./15-computed-operands.md) settled dice as a string with a pattern; this is neither an
+  integer nor dice notation.
+- **A weighting rather than a rule.** Mounts: unicorns and pegasi *"rarely"*, medium and light war
+  horses *"most likely"*. Not a permit-list, not a prohibition — a **likelihood**, which no operation
+  in §4.3 expresses and which arguably should not be modelled at all.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 41** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 43** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 

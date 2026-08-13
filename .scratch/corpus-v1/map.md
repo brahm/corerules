@@ -82,7 +82,10 @@ It also wins decisively on tables.
 1. **No table is a table.** Zero `\trowd` markup in all 20 files; every table was flattened into
    tab-delimited paragraphs. It survives anyway — the PHB has 161 numbered tables and they come out
    as clean tab-separated rows with a header line and a consistent column count.
-2. **Kits are regular, but the label vocabulary is per book family.** Roughly **100 kit records**
+2. **Kits are regular, but the label vocabulary is per book family** — *and in two books it is per
+   KIT.* ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 37: CRH uses 99 distinct
+   labels across 14 kits, 74 of them once; CPAH 46 across 12. Both keep a spine and then name each
+   benefit as its own field. Any measurement keyed on `Special Benefits` reads them as empty.) Roughly **100 kit records**
    carry `Weapon Proficiencies` (106), `Role` (99), `Special Benefits` (99), `Special Hindrances`
    (98), `Secondary Skills` (98). Others vary: `Equipment` 81, `Wealth Options` 51, `Description`
    44. `Nonweapon Proficiencies` splits across two labels — 52 plus 54 `Bonus Nonweapon
