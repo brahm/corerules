@@ -1819,9 +1819,58 @@ The bless-equivalent bonus is also **finding 58's grant-by-citation aimed at a s
 another class's ability, which widens that finding's referent: a pack may need to point at spells,
 class abilities, and proficiencies it does not define.
 
+### Session 31 — the Healer, and the corpus's own distinction between a rule and a disposition
+
+### Finding 65 — *cannot* and *refuse* are different words and the corpus means them differently
+
+> Healers **refuse** to wear armor in all but the most dire circumstances.
+
+Compare the Forestwalker's *"may **only** wear leather armor"* and the gnome Stalker's *"**cannot**
+use a shield or wear any type of metal armor"*. Measured:
+
+| | kits |
+|---|---:|
+| *cannot / may not / will never* use, wear, carry | **21** |
+| *refuse / eschew / disdain / avoid* | **4** — Buccaneer, Stalker, Forestwalker, Healer |
+
+Four is small, and the useful part is not the count but **where the two live**. The soft phrasings sit
+in `Equipment` and in narrative asides; the hard ones sit in `Special Hindrances`. The gnome Stalker
+carries **both about the same object** — its `Equipment` says it *"disdains the use of a shield"* and
+its `Special Hindrances` says it *"cannot use a shield"*.
+
+So a transcriber meeting *"eschews armour"* must not emit a `forbid`, and meeting it **beside** a
+`cannot` must not emit two effects. This is not the same as [finding 24](#finding-24--no-field-name-carries-force-in-either-direction),
+which said the field name never carries force — here the *verb* carries it reliably, and the field
+tells you which of two statements about one object is the binding one.
+
+**A disposition is not a rule**, and the corpus is careful about the difference in a way that the
+`forbid` operation cannot record. Modelled as: nothing at all, which is the right answer.
+
+### Finding 66 — a third scaling axis: per die of the spell
+
+> The Healer gains a **+1 hit point bonus per die rolled** to all cure wounds spells he or she casts.
+
+Not per level, and not a count of creatures. The multiplier is **the number of dice the spell itself
+rolls** — so `cure light wounds` at 1d8 gains +1 and a bigger cure gains more. **Two kits**: this one,
+and the CRH Greenwood Ranger taking *"+1 hit point per die of damage"* from fire, which is the same
+axis pointing the other way.
+
+`computedOperand.of` takes a `scalar`, and a scalar is an ability or a class-qualified level. A
+property of the spell being cast is neither — it is [finding 51](#finding-51--an-effect-whose-subject-is-a-spell-or-the-creature-you-cast-it-at)'s
+missing subject appearing inside an **operand** rather than as the target of an effect.
+
+### A resource reduced rather than granted
+
+*"The Healer **only receives one** weapon proficiency slot at first level."* Worth pairing with the
+Mercenary's *"two extra weapon proficiency slots"*: the same field, moved in both directions by two
+kits in one book. `set` carries this one because the book states a total, and `adjust` carried the
+Mercenary's because the book stated a change — which is the first time in the slice that the choice
+between those two operations was made by **how the sentence is written** rather than by what is being
+modelled.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 59** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 60** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
