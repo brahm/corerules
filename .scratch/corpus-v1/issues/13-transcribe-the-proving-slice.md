@@ -1325,9 +1325,42 @@ The same field also modifies a **price**: *"can specialize in the bow at a cost 
 proficiency slots (not three)"*. Carried as a `set` on a cost field, which works only if the Engine
 holds costs as fields — an assumption this record makes and no ticket has confirmed.
 
+### Session 21 — the Sheriff, and "the other party" is the corpus's second condition
+
+### Finding 49 — a third of all kits adjust a reaction roll, and most qualify it
+
+The Sheriff and the Mercenary are the same sentence with the sign reversed, four pages apart:
+
+| | |
+|---|---|
+| **Sheriff** | *"+2 on all NPC Reaction Rolls made for **halfling NPCs** (as long as the other character **knows of the Sheriff's rank**)"* |
+| **Mercenary** | *"a **−2 penalty** on Reaction Rolls"* — from halflings, and only those who know what he does for a living |
+
+That symmetry prompted the measurement, and it is much larger than one book:
+
+| | kits | |
+|---|---:|---|
+| adjust a reaction roll | **48 of 134** | **36 %** |
+| …qualified by **the other party** | **27** | who they are, or what race |
+| …requiring the other party to **know** something | 6 | the Assassin, the CTH Bandit, the Beggar, the Berserker, the Cavalier, the Sheriff |
+
+[Finding 25](#finding-25--a3-declares-rule-sets-at-the-manifest-and-effects-cannot-name-them) listed
+*"the other party"* as one row of a table, evidenced by a single record. It is not a row. **The
+reaction roll is a mechanic in over a third of the corpus's kits, and it is relational by
+construction** — *how does this NPC react to you* has no meaning without the NPC. A character-only
+predicate cannot condition it, and 27 kits do.
+
+This changes the shape of that gap. Campaign configuration wants a small closed enumeration; the
+combat round wants transient state; DM adjudication should never be modelled. **The other party wants
+a second subject** — which is a larger thing to add than any of the operand repairs this ticket has
+proposed, and is now the best-evidenced of them.
+
+The rest of the Sheriff is finding 16 again: a `require` of three named weapons, and `Special
+Hindrances` describing long hours and rude interruptions.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 49** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 50** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 

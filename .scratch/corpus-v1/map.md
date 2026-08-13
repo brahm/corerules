@@ -480,6 +480,12 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    level. The closed set has halving and division and nothing that multiplies by a level. Known
    unknown #4 firing a second time, in a second form. **A third of them declare a starting level**
    (finding 23), so a bare `perLevel(N)` would be wrong on those — the repair needs an offset.
+17. **The best-evidenced missing piece is a SECOND SUBJECT, not an operand.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 49) **48 of 134 kits (36%)** adjust a
+   reaction roll and **27 qualify it by the other party** — its race, its trade, whether it knows
+   something about the character. The mechanic is relational by construction: *how does this NPC react
+   to you* has no meaning without the NPC. Larger to add than any operand repair this map has
+   proposed, and now better evidenced than all of them.
 16. **The proving slice validates and would not load: 0 of its 80 references resolve.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 45) 66 point at a `phb:` pack never
    transcribed, 14 at ids minted while modelling. Ticket 10 rightly puts cross-pack integrity on the
