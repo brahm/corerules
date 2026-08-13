@@ -480,6 +480,12 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    level. The closed set has halving and division and nothing that multiplies by a level. Known
    unknown #4 firing a second time, in a second form. **A third of them declare a starting level**
    (finding 23), so a bare `perLevel(N)` would be wrong on those — the repair needs an offset.
+13. **Known unknown #4 is answering in an unexpected direction: the corpus wants richer OPERANDS and
+   CONDITIONS, never a seventh operation.** ([Ticket 13](issues/13-transcribe-the-proving-slice.md)
+   finding 39) Across 17 hand-modelled records and 106 effects, five of the six operations are used —
+   `grant` 34, `adjust` 32, `require` 24, `set` 13, `forbid` 3 — and **`except` has never been needed
+   once**. Both places it looked inevitable were better served by cancelling adjusts. The set may be
+   one operation too LARGE, which is the opposite of what the known unknown feared.
 11. **§4.3 can sum and overwrite, and the corpus sometimes needs neither.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 28) Three kits state a bonus is
    **not** cumulative — take the greater (Assassin), a ceiling (Pathfinder), apply once regardless of

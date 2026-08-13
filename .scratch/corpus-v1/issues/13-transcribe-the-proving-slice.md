@@ -1094,9 +1094,73 @@ It also contributes two shapes nothing else has:
   horses *"most likely"*. Not a permit-list, not a prohibition — a **likelihood**, which no operation
   in §4.3 expresses and which arguably should not be modelled at all.
 
+### Session 17 — both Stalkers, and the first evidence *against* growing the operation set
+
+### Finding 39 — after 17 records, five of six operations are used and `except` is not
+
+Every finding since session 9 has been a gap. This one runs the other way. Across the **17
+hand-modelled records and their 106 effects**:
+
+| operation | uses |
+|---|---:|
+| `grant` | 34 |
+| `adjust` | 32 |
+| `require` | 24 |
+| `set` | 13 |
+| `forbid` | **3** — all three first used here |
+| **`except`** | **0** |
+
+`forbid` waited seventeen records for the gnome Stalker's *"cannot use a shield or wear any type of
+metal armor"*. **`except` has still never been needed** — and the two places it looked inevitable were
+both better served without it:
+
+- the Acrobat's *"halflings and gnomes do not gain the jumping bonus"*,
+- the Burglar's *"attacks made as a backstab are not affected by this penalty"*,
+
+both modelled as **cancelling adjusts** (finding 36). And the gnome Stalker supplies the third case
+from the other direction: *"not even elven chain"* is the book **closing** the usual exception to a
+metal-armour ban in advance, which a plain `forbid` covers exactly.
+
+So the running verdict on **known unknown #4** — *six operations may not suffice* — is more
+interesting than either "yes" or "no". The corpus wants **richer operands and richer conditions**, and
+it has not once wanted a seventh *operation*. If anything the set is one too large: **`except` is a
+candidate for removal**, and every remaining session should be watched for a case that needs it.
+
+### Finding 40 — ticket 15 fixed the rounding direction, and the corpus rounds both ways
+
+> *"use half the Intelligence score, **rounded up**"* — CRH Stalker, and again in the Feralan.
+
+[Ticket 15](./15-computed-operands.md) settled `half(<scalar>)` and `<scalar>/N` **rounded down**.
+Measured over the same kit-record population: **rounding up in 2 kits, rounding down in 1.** The
+numbers are small, and the point does not depend on their size — the operand hard-codes a direction
+the corpus does not hold constant. **Direction has to be a parameter.**
+
+### Finding 41 — a kit whose target is a multiclass
+
+The gnome Stalker's `<TITLE>` reads `Stalker`; the page's own heading reads **`Stalker
+(Fighter/Thief)`**. §4.1 says a kit's target is a class entry or the race, and §6.1 makes a character's
+classes a **sum type** — so this is the first record whose target is that sum rather than a member of
+it. Nothing in the schema resisted, since `target` is an id; what is untested is whether the Engine
+can attach to a multiclass entry at all.
+
+It is also the third place a record's real identity was **outside `<TITLE>`**, after session 6's
+section-titled kits and the CTH Burglar's prerequisite living in its `Description`.
+
+### What the ranger Stalker showed
+
+The extreme of finding 37, and a **third structural level**: 18 fields, `Special Benefits` empty, the
+benefits carried by `Tracking`, `Stealth Abilities`, `Interrogation` and `Photographic Memory` — each
+a named field containing **bulleted sub-items**. Field → sub-label → bullet.
+
+Two of its clauses land cleanly and are worth recording as wins: *"hide in shadows … when wearing
+armor of AC 6 or less"* is a plain `compare` on character state, and the 10th-level photographic
+memory is a level-gated `grant`, which finding 23 established works. The rest is terrain — and in this
+book **terrain is a spine field** (`Primary Terrain`), so finding 34's geography gap is not incidental
+here: it is the axis the kit is built on.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 43** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 45** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
