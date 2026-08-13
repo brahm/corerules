@@ -698,9 +698,72 @@ finding 17's explicit non-restriction in a new phrasing. And the Urchin's first-
 as a human child is a **degraded form of the Disguise proficiency with no id to name it** — carried
 as text on the level-2 grant it precedes.
 
+### Session 11 — the Tunnelrat, and the shape of everything the predicate cannot see
+
+Eight effects, and **four of them carry conditions the predicate has no subject for.** Taken
+together they stop being separate gaps and become one: the predicate can only name **the character**,
+and the corpus routinely conditions on things that are not the character.
+
+| the condition names | example | occurrences |
+|---|---|---|
+| the **campaign's configuration** | *"if weapon specialization is used in the campaign"* | **13 kits (9%)** |
+| the **other party** in an interaction | *"−2 on Reaction Checks made for NPC halflings"* | this record |
+| the **combat round's** state | the Tumbler's *"in rounds in which he wins initiative"* | session 9 |
+| the DM's **adjudication** | *"at the DM's discretion"*, *"with the DM's permission"* | **14 kits (10%)** |
+
+The last row is the one that should not be repaired. **DM adjudication is not a missing subject; it
+is the absence of a rule**, and a format that tried to express it would be claiming to compute
+something the book explicitly hands to a person. It is listed here so it stays *deliberately*
+unmodelled rather than looking like an oversight.
+
+### Finding 25 — A3 declares rule-sets at the manifest, and effects cannot name them
+
+*"If weapon specialization is used in the campaign, the Tunnelrat must have a melee weapon
+specialization by third level."*
+
+That is exactly what [A3](../v1-spec/spec.md) is for — a **declared campaign configuration** — and
+§3.4 already calls rule-set names *"the Engine's closed enumeration, the single exception to open
+enumerations."* The measurement supports that generosity: across 138 kits the corpus names
+essentially **two** optional rule-sets, **encumbrance** and **weapon specialization**.
+
+But `declares` sits on the **manifest** and says which rule-sets the *pack* covers. Here an
+**individual effect** is conditional on one, and a `when` clause cannot name a rule-set. So the pack
+can say *"I cover weapon specialization"* and cannot say *"this requirement applies only when it is
+in use."*
+
+Unlike the other three rows above, this one has an obvious and cheap repair — a condition variant
+naming a rule-set from the closed enumeration — and it is left unmade for the same reason as
+finding 10: it reopens a settled decision.
+
+**This was already present in the very first record modelled.** The Acrobat's *"under the optional
+encumbrance rules, is unencumbered"* was recorded in finding 7 as a **negation** problem, and the
+optional-rule half went unnoticed. Two gaps in one clause, one seen.
+
+### Finding 26 — level scaling has three parameters, not one
+
+*"The range of this sight is equal to **10' per level** of the Tunnelrat (**to a maximum of 60'**)."*
+
+Three records now, three parameters:
+
+| record | shape |
+|---|---|
+| Tumbler | `10 + 2 × level` — a **base** |
+| Urchin | `5 × (level − 1)` — an **offset** |
+| Tunnelrat | `min(10 × level, 60)` — a **cap** |
+
+A `perLevel(N)` operand would be wrong on all three. Whatever [ticket 15](./15-computed-operands.md)
+adopts needs a multiplier, a start level and a ceiling — and the three appeared in the first three
+scaling records anyone looked at, which suggests the parameter set is being *observed* rather than
+guessed at.
+
+Also here, and worth naming because it is a modelling trap rather than a format gap: the book says
+the sight **works exactly like infravision**. That is a comparison, not an identity. Granting
+`phb:infravision` would let it stack with a subrace that already grants it — the Stout, in this very
+book — so it is granted as a kit-local ability instead.
+
 ### Still not done
 
-The judgement pass on the remaining **29 of 36** Attachables · the measured cost per record against
+The judgement pass on the remaining **29 of 37** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
