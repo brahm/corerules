@@ -398,6 +398,15 @@ RTF ignores by specification. The corpus is clean.
   correction: **the ambiguous middle belongs to the parser, not the model.** Cost cannot carry this
   decision (~$10–$100 a pass); **human review hours dominate and no ticket has estimated them.**
 
+## A method note this map earned the hard way
+
+**Every count in this effort taken by a regex over prose is a LOWER BOUND.** Four times a pattern
+written to find a shape found a fraction of it — ticket 13's findings 10, 32, 50's population, and 54
+— and the cause was identical each time: English says the same thing several ways, and the first
+phrasing noticed becomes the pattern. The two fixes that worked were to **run against extracted
+records rather than raw text**, and to **allow words between the terms**. Neither eliminates the
+problem; both shrink it. Treat a small count as "at least this many", never as "only this many".
+
 ## Corrections owed to the v1 spec
 
 <!-- accumulating; whoever updates spec.md needs exactly this list -->

@@ -1443,6 +1443,13 @@ grants something the rules otherwise deny returns **three matches, of which two 
 Bounty Hunter's *"despite the fact that…"* and the CPAH Squire's *"Despite their reputation…"* are
 narrative. **One real case.**
 
+> **Corrected in session 24 to four.** That pattern required *"normally available only"*, *"otherwise
+> forbidden"*, *"despite"* or *"even though"*, and the corpus also writes *"**Unlike most priests**,
+> Treetenders can use bows"*. Re-measured: **4 kits of 134 (3%)** — the Imagemaker, the Treetender,
+> the Champion (twice) and the Vermin Slayer. **The fourth undercount in this ticket caused by a
+> pattern narrower than the corpus.** The conclusion below is unchanged in kind and wrong by 4× in
+> degree.
+
 So finding 39's proposal is withdrawn and replaced by something sharper. `except` is not dead weight;
 it is **the operation the corpus needs least often**, at roughly 1 in 134 against `grant`'s 44 uses in
 24 records. Keeping it is right — a format that could not express *"you may take the rogue-only
@@ -1455,7 +1462,7 @@ proficiency"* would fail on a real kit — but the running tally is now:
 | `require` | 34 |
 | `set` | 16 |
 | `forbid` | 7 |
-| `except` | **1** |
+| `except` | **1**, and 4 cases exist |
 
 **All six operations are now exercised, and none has been found missing.** Known unknown #4 asked
 whether six operations suffice. On the evidence of 24 hand-modelled records across seven books, the
@@ -1485,9 +1492,54 @@ that produces them**, so they are a range a person picks or a DM rules within.
 
 So ticket 15's notation question was answered for one of the two notations the corpus actually uses.
 
+### Session 24 — the Treetender, and a fourth narrow pattern
+
+### Finding 54 — `except` has four cases, not one, and one of them carries a cost
+
+> **Unlike most priests**, Treetenders can use bows.
+
+2e bars priests from edged and missile weapons; this names that restriction and pierces it. Which
+means [finding 52](#finding-52--except-is-needed-exactly-once-in-134-kits)'s *"one real case"* was
+measured with a pattern that did not include the phrasing the corpus actually used. Re-measured:
+
+| kit | clause |
+|---|---|
+| Imagemaker | Ventriloquism, *"normally available only to rogues"* |
+| **Treetender** | *"Unlike most priests…can use bows"* |
+| Champion (CBD) | *"Unlike other warrior/priests, he may specialize"* — and *"this is an exception to the restriction against multi-class characters"* |
+| Vermin Slayer (CBD) | *"metal armor may be worn, **even though this causes their thief skills to be negated**"* |
+
+**4 kits of 134 (3%), five clauses.** Finding 52's conclusion — `except` earns its place and is the
+least-used operation — survives; its number was wrong by 4×.
+
+**This is the fourth time in this ticket that a pattern has undercounted the corpus**, after
+finding 10's disjunction, session 10's scaling offsets, and finding 32's `score` between the ability
+and the number. The pattern is now itself a finding: *every* count in this ticket taken from a regex
+over prose should be read as **a lower bound**, and the recurring cause is the same — English says
+the same thing several ways and the first phrasing found becomes the pattern.
+
+The Vermin Slayer's case adds a shape `except` does not have. *"Metal armor may be worn, even though
+this causes their thief skills to be negated"* is a **pierce that carries a cost**: the prohibition
+is lifted and a penalty arrives with it. Two effects under the layer model — an `except` and an
+`adjust` — but the book presents them as one clause with a causal link, and nothing records that the
+second is the price of the first.
+
+### What the Treetender modelled cleanly
+
+Worth noting because [finding 50](#finding-50--the-operand-was-never-as-poor-as-findings-21-26-and-40-said)
+has just corrected the record on operands: *"one additional woodland language per level, starting at
+third"* models as **`−2` beside the bare level scalar**, giving one at 3rd and two at 4th. Note
+`multiplyBy` has `minimum: 2`, so *"one per level"* is not a multiple at all — it is
+`{of: {level: …}}` on its own, which the operand permits. The offset is absorbed by a constant, as
+finding 50 established.
+
+Its `Special Hindrances` supply the counterweight and it is finding 11's oldest gap, unchanged since
+Agriculture: *"weapons where **more than 10% of the weight is metal**"* is a predicate over item
+properties. There is nothing to enumerate and no operation that takes a property test.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 52** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 53** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
