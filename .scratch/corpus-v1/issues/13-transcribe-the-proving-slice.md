@@ -1868,9 +1868,53 @@ Mercenary's because the book stated a change — which is the first time in the 
 between those two operations was made by **how the sentence is written** rather than by what is being
 modelled.
 
+### Session 32 — the Leaftender, which confirms rather than surprises
+
+### Finding 65 confirmed inside a single sentence
+
+> Leaftenders **cannot** use metal armor and **will not** use leather armor. They may, however, use
+> wooden shields.
+
+[Last session](#finding-65--cannot-and-refuse-are-different-words-and-the-corpus-means-them-differently)
+inferred the hard/soft distinction from 25 records across nine books, and it could still have been an
+artefact of different authors in different chapters. Here **one author puts both verbs in one
+sentence, about two objects, and switches between them deliberately.** The metal is a rule; the
+leather is a preference.
+
+Modelled as **one** `forbid`, and that is the whole point of the finding: a transcriber who read
+past the verb would have emitted two.
+
+### The Leaftender is the Treetender with a level ladder
+
+The two priest kits — one gnome, one halfling, forty pages apart — grant **the same three
+abilities**:
+
+| ability | Treetender | Leaftender |
+|---|---|---|
+| pass through overgrowth without a trace | from the start | **2nd level** |
+| identify plants, animals, pure water | from the start | **3rd level** |
+| immunity to charm by woodland creatures | 3rd level | **5th level** |
+
+So the ids are **reused** — `cbgh:pass-without-trace` and its siblings now appear in two records —
+which is the first place in the slice where two Attachables deliberately refer to the same thing.
+That is what a shared id vocabulary is *for*, and it happened without any mechanism beyond a human
+noticing. Worth recording because [ticket 10](./10-mechanical-verification.md)'s cross-record checker
+can catch the failure mode — the same ability minted twice under two ids — but nothing can catch it
+being **missed**, which is the more likely error at scale.
+
+Three clean level-gated grants, one permit-list, two proficiency grants, and one forbid. **The second
+record in the slice to produce no new gap** — after the Rocktender — and by now that is the signal
+worth watching: [ticket 08](./08-which-slice-proves-the-format.md) said the slice's job is a verdict,
+and a run of records that only instantiate known gaps is what the approach to one looks like.
+
+One small thing with nowhere to go: the weapon list is given *"in order of preference"*. The ordering
+carries no mechanical weight and the format has no place for it, which is correct — but it is the
+third time (after the paladin Squire's mount likelihoods and the Forestwalker's *"most are
+Tallfellows"*) that the corpus has stated a **preference rather than a rule**.
+
 ### Still not done
 
-The judgement pass on the remaining **28 of 60** Attachables · the measured cost per record against
+The judgement pass on the remaining **28 of 61** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
