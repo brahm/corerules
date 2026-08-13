@@ -474,7 +474,8 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 21) *"+2% per level thereafter"*.
    Measured over the effect fields of **138 kits across nine books: 12 (9%)** scale something by
    level. The closed set has halving and division and nothing that multiplies by a level. Known
-   unknown #4 firing a second time, in a second form.
+   unknown #4 firing a second time, in a second form. **A third of them declare a starting level**
+   (finding 23), so a bare `perLevel(N)` would be wrong on those — the repair needs an offset.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

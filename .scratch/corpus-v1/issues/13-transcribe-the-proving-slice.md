@@ -645,9 +645,62 @@ quietly on the two records that matter. **The sentence is the evidence; the labe
 
 Modelled as `require` with `count == len(from)`, which is how the corpus writes a forced selection.
 
+### Session 10 — the Urchin, and the line between what level can and cannot do
+
+Two effects, and they sit on opposite sides of a line worth naming.
+
+### Finding 23 — level-*gated* effects work; level-*scaled* operands do not
+
+> Upon reaching **second level**, the Urchin gains the Disguise proficiency in full.
+> … a **+5% bonus per level** to Pick Pockets, starting at second level (+5% at 2nd, +10% at 3rd).
+
+The first is a `grant` with `when: [level ≥ 2]` and it **expresses exactly**. The second is
+`5 × (level − 1)` and has no operand. Same subject, same record, one sentence apart.
+
+So the format's level story is precisely half built: **it can say *when* something arrives and not
+*how much* of it arrives.** That is a sharper statement of finding 21 than the Tumbler could give,
+because the Tumbler's scaling had no gated sibling to contrast with.
+
+**Any repair to [ticket 15](./15-computed-operands.md) must carry a start level.** Re-measured on
+finding 21's own population — same books, same fields, same pattern, so the numbers compose:
+
+| | |
+|---|---:|
+| kits with level scaling | **12 of 138 (9%)** |
+| …that declare a starting level | **4 (33%)** |
+| …that gloss the series with an example | 3 (25%) |
+
+A bare `perLevel(N)` operand would be **wrong on a third of them**, paying out at first level where
+the book starts at second. The corpus is unusually helpful here: a quarter of these spell the series
+out — *"+5% at 2nd level, +10% at 3rd level"* — so the intended formula is not in doubt, only
+unexpressible.
+
+### Finding 24 — no field name carries force, in either direction
+
+Finding 22 caught the field named *Recommended* stating a requirement. The Urchin gives the mirror
+case, in a field with an imperative name:
+
+| | `Weapon Proficiencies` says | read as |
+|---|---|---|
+| Bandit | *"**should be proficient** in the short bow or hand crossbow"* | requirement |
+| Urchin | *"Urchins **tend toward** easily-concealed weapons (dagger, darts, sling, quarterstaff)"* | flavour |
+
+Same field, same book, adjacent pages, opposite force. So the earlier statement was too narrow: it is
+not that one field name is unreliable, it is that **the field name never carries force at all**. The
+label tells you the subject; only the sentence tells you whether it binds. Every field must be read.
+
+That is a real cost on [ticket 09](./09-extraction-pipeline.md)'s pipeline and a real bound on what a
+draft can be trusted to decide — and it is the same shape as finding 1, one level down: structurally
+identical, semantically different, no heuristic available.
+
+Two smaller things, both already-known shapes recurring. `Secondary Skills: **Any or none.**` is
+finding 17's explicit non-restriction in a new phrasing. And the Urchin's first-level ability to pass
+as a human child is a **degraded form of the Disguise proficiency with no id to name it** — carried
+as text on the level-2 grant it precedes.
+
 ### Still not done
 
-The judgement pass on the remaining **29 of 35** Attachables · the measured cost per record against
+The judgement pass on the remaining **29 of 36** Attachables · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
