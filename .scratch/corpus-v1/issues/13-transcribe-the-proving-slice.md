@@ -2130,9 +2130,68 @@ result worth reporting:
   `None.`, absent — while its `Races` field refers to *"the special benefit/hindrance of this kit"*.
   **The book points at a field it did not print.**
 
+### Session 37 — the judgement pass is complete, and it found a record that was simply wrong
+
+**All 68 records now carry effects.** `effectsModelled: false` appears nowhere in the pack. Ticket
+13's judgement pass, which [session 3](#session-3--the-tables-and-the-first-record-modelled-by-hand)
+called *"the expensive half"* and which nothing had touched, is done for the slice.
+
+### Finding 73 — a record that was wrong for thirty-five sessions, and validated throughout
+
+The Complete Book of Elves puts all its subraces on one page, which is why
+[ticket 07](./07-identity-and-id-stability.md)'s ordinal exists. Reading it to model it:
+
+- The page names **six** subraces — Aquatic, Drow, Grey, Half-Elf, High Elf, Sylvan.
+- It carries **five** marker groups.
+- The mechanical pass produced five records and named the fourth **`Half-Elf Half-elves`**.
+
+The fourth record is the **High Elf**. The book states that the half-elf *"is not truly a subrace of
+elves"* and has *"no adjustments or advantages and disadvantages to note here"* — so it has no
+fields at all, and everything the extractor gave record #4 belongs to the high elf. **The record has
+carried the wrong name and the wrong provenance since session 2**, through every validation run, and
+nothing could have caught it: a subrace named `Half-Elf` with a high elf's `+1 Dexterity, −1
+Constitution` is perfectly well-formed.
+
+The same page cost a second field. **The Drow's `Ability Score Adjustments` label is missing from the
+markup** — its text sits in the tail of the Aquatic Elf's last field — so the Drow's `+2 Dexterity,
++1 Intelligence, −2 Charisma` had to be read off the page. Five records, one wrong name, one lost
+field, and a clean validation the whole time.
+
+This is the strongest evidence the ticket has produced for its own premise. [Ticket 04](./04-llm-assisted-extraction.md)
+kept the slice as a **gold standard** on the argument that *a check only works if its reference is not
+the model*; here the reference had to be **a person reading the source**, because every mechanical
+check the effort owns said the record was fine.
+
+### Finding 74 — the tier-one checker caught its first real authoring error
+
+Modelling the seven deities, ids for the granted powers were built by substituting `-` for `:`,
+producing `cprh-DD05531-power`. The validator refused all nine:
+
+```
+INVALID  deities/1/effects/10: ... is not valid under any of the given schemas
+```
+
+**First time in thirty-seven sessions that the pack-visible checker caught a mistake in a
+hand-written record.** [Ticket 10](./10-mechanical-verification.md) exists to make that happen, and
+until now it had only ever confirmed things that were already right — which is exactly how a check
+looks in the interval before it earns its cost.
+
+Worth pairing with finding 73 deliberately: **the same session shows the checker catching a
+malformed id and missing a wrong record entirely.** That is the boundary of what tier one can be
+asked to do, drawn by two live examples rather than by argument.
+
+### What the deities confirmed about §4.1
+
+Seven records of ten fields each, all validating against the shared `attachable` unchanged. The arm
+is regular to the point of monotony — alignment, two ability minima, a race permit-list, sphere
+grants, a granted power, a follower roster — and **that regularity is the result**: after the Kit
+arm's 46 records and their sixty-odd distinct gaps, the Deity arm produced **one** new shape, the
+Arts priesthood's *"only 6-sided hit dice, not 8-sided"*, which is finding 71's class-table
+substitution in its simplest possible form.
+
 ### Still not done
 
-The judgement pass on the remaining **12 of 63** Attachables — the 7 CPRH deities and 5 CBE subraces · the measured cost per record against
+~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
