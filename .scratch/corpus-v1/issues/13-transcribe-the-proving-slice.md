@@ -2069,9 +2069,70 @@ is the Assassin's **level multiplied by 5%**"* is `{of: level, multiplyBy: 5}` e
 **Intelligence bands** — 13–15, 16–17, 18 — are three adjusts each gated by a `gte` **and** an `lte`,
 which the flat conjunctive predicate expresses with no repair at all.
 
+### Session 36 — CTH complete, and ticket 08's slice is finally transcribed
+
+**All 18 Complete Thief's kits are modelled**, which closes the first item ticket 13 was written to
+produce. Two whole books now stand finished, and they are the two extremes of the corpus: the one
+with no field markup at all and the one that marks every kit twice over.
+
+### Finding 71 — an effect that swaps one class's table for another's
+
+> With this, the Swashbuckler's *"weapon of choice,"* the thief is able to fight with the **THAC0 of a
+> fighter of his experience level**.
+
+`set` names the field. What it cannot name is where the value comes from: **another class's
+progression, read at this character's level**. It is not a number, not a computed operand over a
+scalar, and not a lookup the pack could supply — it is the Engine's fighter table, indexed by a thief.
+
+That is [finding 20](#finding-20--a-lookuptable-has-no-declared-role-and-its-rows-are-keyed-by-prose)'s
+problem arriving from the opposite direction. There, a pack supplied a table and nothing said what it
+was a table *of*. Here an effect needs to *read* a table the Engine owns, and nothing lets it say
+which.
+
+### Finding 72 — degraded permission is a pattern, not a curiosity
+
+[Finding 67](#finding-67--a-permission-that-is-degraded-rather-than-denied) recorded the Archer's
+*"only one melee weapon, others at −1"* as one record. CTH has three more, in two distinct grades:
+
+| kit | the degradation |
+|---|---|
+| Bounty Hunter | non-thief weapons permitted, but **each costs two slots** |
+| Thug | the same, *"to gain proficiency in one requires an extra slot"* |
+| **Spy** | **may USE non-thief weapons, but may never take proficiency in them** |
+| Archer (CBGH) | may take further melee weapons, **at a permanent −1** |
+
+The Spy's is the sharpest and the one `except` handles worst: **permission and competence come
+apart**, and `except` lifts a prohibition whole. Four records across two books, and none of them is a
+`forbid` — the corpus's restrictions are far more often *priced* than *closed*.
+
+### The two records that carry a probability
+
+*"Usually **(90%)** none"* (Cutpurse) and *"Most often **(80% of the time, say)** a Swashbuckler has
+no secondary skills"* (Swashbuckler). A **likelihood attached to a character property at creation** —
+neither an effect nor a prerequisite, and the third distinct place the corpus has stated a
+probability rather than a rule, after the paladin Squire's mounts and the Forestwalker's Tallfellows.
+
+### What CTH confirmed rather than added
+
+The book is dense with instances of gaps already recorded, which after two complete books is the
+result worth reporting:
+
+- **Nine of eighteen kits have `Special Benefits: None.` and `Special Hindrances: None.`** — half the
+  book, and exactly [finding 16](#finding-16--a-third-of-kits-have-no-numeric-mechanics-at-all)'s
+  measurement holding on the population it was taken from.
+- The **Scout** produced the first adjust over a **category of fields** — *"−5% on all thieves'
+  skills"* is eight separate values, written as eight adjusts because `adjust.field` names one field
+  and there is no wildcard. That is finding 11's missing wildcard appearing in the *other* half of the
+  format.
+- The **Thug** needs an earmark and a clamp in one sentence: 40 points to allocate, *"up to 30 of them
+  in a single ability"*.
+- The **Troubleshooter** has **no `Special Benefits` or `Special Hindrances` field at all** — not
+  `None.`, absent — while its `Races` field refers to *"the special benefit/hindrance of this kit"*.
+  **The book points at a field it did not print.**
+
 ### Still not done
 
-The judgement pass on the remaining **24 of 63** Attachables · the measured cost per record against
+The judgement pass on the remaining **12 of 63** Attachables — the 7 CPRH deities and 5 CBE subraces · the measured cost per record against
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction, which finding 16 says should
 come down for a third of them · local-model draft quality.
 
