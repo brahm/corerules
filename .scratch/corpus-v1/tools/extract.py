@@ -17,6 +17,99 @@ LABEL = re.compile(r"<([IB])>\s*([A-Z][A-Za-z0-9 /'&,-]{2,40}):\s*</\1>", re.I)
 TAGS = re.compile(r"<[^>]+>")
 WS = re.compile(r"\s+")
 
+# --- the field layer, which is the only layer that differs between books -------------
+#
+# Ticket 13's finding 12: CBGH carries field labels on 3% of its pages where every
+# sibling handbook carries them on 15-42%, because its fields are TYPOGRAPHIC — a label
+# opens a paragraph, in plain text, with no markup at all. What survives there is the
+# page layer: <TITLE> is correct and one record still occupies one titled page.
+#
+# So the repair is one pluggable layer, not a second program. Both strategies return the
+# same thing — the prose before the first label, then ordered (label, value) pairs — and
+# everything downstream (names, ids, provenance, records) has one code path.
+
+PARA = re.compile(r"<P>\s*</P>|</?P>|<BR>", re.I)
+# A typographic label: begins a paragraph, capitalised, at most four words, then a colon.
+# Bounded at four because 'Recommended Nonweapon Proficiencies' is three and the longest
+# real field in the book; unbounded, it starts eating sentences that happen to contain a
+# colon.
+TEXT_LABEL = re.compile(r"^([A-Z][A-Za-z'&/-]*(?:\s+[A-Za-z'&/-]+){0,3}):\s+(.+)$")
+NAV = re.compile(r"\s*Table of Contents\s*$", re.I)
+
+
+def fields_markup(raw):
+    """Twelve of the thirteen v1 books: <I>Label:</I> or <B>Label:</B>."""
+    marks = list(LABEL.finditer(raw))
+    if not marks:
+        return [clean(raw)], []
+    out = []
+    for i, m in enumerate(marks):
+        end = marks[i + 1].start() if i + 1 < len(marks) else len(raw)
+        out.append((m.group(2).strip(), clean(raw[m.end():end])))
+    return [clean(raw[:marks[0].start()])], out
+
+
+def fields_typographic(raw):
+    """CBGH: the label opens a paragraph and carries no markup.
+
+    Worked in paragraph chunks rather than by slicing the raw HTML between matches. The
+    obvious alternative — one regex over the raw bytes, anchored on <P> — was tried and
+    disagreed with a plain-text census by eleven occurrences, because arbitrary FONT/B/A
+    tags interleave between the paragraph break and the first letter. The convention IS
+    the paragraph, so the parser splits on paragraphs.
+    """
+    head, out = [], []
+    for chunk in PARA.split(raw):
+        t = NAV.sub("", clean(chunk))
+        if not t:
+            continue
+        m = TEXT_LABEL.match(t)
+        if m:
+            out.append([m.group(1).strip(), m.group(2).strip()])
+        elif out:
+            out[-1][1] += " " + t   # a field's value running past its own paragraph
+        else:
+            head.append(t)
+    return head, [(a, b) for a, b in out]
+
+
+HEADING_WORDS = 5
+
+
+def heading_name(head):
+    """The record's own name, when the page is titled after its SECTION instead.
+
+    CBGH gives the first kit of each class section the section's page — so DD04865 is
+    titled 'Fighter Kits' and is the Breachgnome, and DD04917 is titled 'Fighter Kits'
+    and is the Archer. Taking <TITLE> there produces two records called 'Fighter Kits'
+    and loses both real names.
+
+    The page is regular about it: chunk 0 is the title line, chunk 1 repeats it as a
+    heading, and chunk 2 is EITHER the record's own heading or the first line of prose.
+    A heading is short and does not end a sentence, which separates 'Breachgnome' and
+    'The Archer' from 'These gnomes are considered eccentric...'. Returns None when the
+    title is already the name.
+    """
+    if len(head) < 3:
+        return None
+    t = head[2]
+    if len(t.split()) <= HEADING_WORDS and not t.endswith((".", "!", "?", ":")):
+        return t
+    return None
+
+
+STRATEGIES = {"markup": fields_markup, "typographic": fields_typographic}
+
+# Per book, where it departs from the default. The marker lives here too: CBGH's subraces
+# are delimited by 'Infravision', not by CBE's 'Additional Experience Cost' — the field
+# vocabulary is a property of the BOOK, not of the kind, and assuming otherwise is what
+# returned 0 records from 112 pages. So is packing: CBE puts five subraces on one page and
+# CBGH gives each its own, so 'multi' is a book's habit too, not a kind's nature.
+BOOKS = {
+    "CBGH": {"strategy": "typographic",
+             "kinds": {"subrace": {"marker": "Infravision", "multi": False}}},
+}
+
 # Per kind: the label that appears exactly once per record, and the target it attaches to.
 # Ticket 07 measured kit and deity at 1:1 with files; subrace is the exception — five in one
 # file — which is what exercises the '#n' ordinal.
@@ -42,6 +135,8 @@ EXCLUDE = {
     "Priesthoods",          # CPRH — the Designing Faiths template
     "Kits and Thief Types",  # CTH — chapter preamble
     "Creating New Kits",     # CTH — chapter appendix
+    "Structure of the Kits",      # CBGH — the gnome chapter's template
+    "The Structure of the Kits",  # CBGH — and the halfling chapter's, worded differently
 }
 
 
@@ -119,23 +214,21 @@ def split_multi(raw, marker, book=""):
     return out
 
 
-def parse(path: pathlib.Path, marker: str):
+def parse(path: pathlib.Path, marker: str, strategy="markup"):
     raw = path.read_text(encoding="cp1252", errors="replace")
     t = TITLE.search(raw)
     if not t:
         return None
     title = clean(t.group(1))
-    marks = list(LABEL.finditer(raw))
-    if not any(m.group(2).strip() == marker for m in marks):
+    head, pairs = STRATEGIES[strategy](raw)
+    if not any(label == marker for label, _ in pairs):
         return None
-
-    fields = {}
-    for i, m in enumerate(marks):
-        end = marks[i + 1].start() if i + 1 < len(marks) else len(raw)
-        fields[m.group(2).strip()] = clean(raw[m.end():end])
+    fields = dict(pairs)
 
     # Title carries the book: "Bounty Hunter (Comp. Thief's Handbook)"
     name, _, book = title.partition("(")
+    if strategy == "typographic":
+        name = heading_name(head) or name
     return {
         "name": name.strip(),
         "book": book.rstrip(")").strip(),
@@ -178,7 +271,9 @@ def main():
         return 2
     wh, book, pack_id = pathlib.Path(args[0]), args[1], args[2]
     kind = args[3] if len(args) > 3 else "kit"
-    spec = KINDS[kind]
+    profile = BOOKS.get(book, {})
+    strategy = profile.get("strategy", "markup")
+    spec = {**KINDS[kind], **profile.get("kinds", {}).get(kind, {})}
     target = f"{pack_id}:target"
 
     records, parsed_all, skipped, excluded = [], [], 0, 0
@@ -199,7 +294,7 @@ def main():
                 parsed_all.append(rec)
                 records.append(to_record(rec, pack_id, target, ordinal=n))
         else:
-            p = parse(f, spec["marker"])
+            p = parse(f, spec["marker"], strategy)
             if p is None:
                 skipped += 1
                 continue

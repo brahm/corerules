@@ -452,10 +452,15 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    every sibling handbook, and the thirteen it has are adventure-hook titles rather than fields. Its
    records are typographic: the Homesteader's prerequisite is a sentence inside a paragraph. **The
    page layer survives** — `<TITLE>` is present and one record per titled page still holds — so the
-   repair is a second field parser for one book, not a new premise. Unresolved, and deliberately so:
-   the slice's Stout was hand-authored instead, which is the only evidence the corpus has about the
-   hand-authoring path. Note the sting: **the two kits that forced correction 7 are in this book**,
-   found by an RTF text census rather than by the pipeline — a point for ticket 09's rejected arm.
+   repair was a second field parser for one book, not a new premise. **Resolved: 0 records became 38**,
+   with the other books extracting identically. Two assumptions fell with it: the field vocabulary
+   belongs to the **book** rather than the kind (CBGH delimits subraces by `Infravision`, CBE by
+   `Additional Experience Cost`), and the **page title is not always the record's name** — CBGH gives
+   the first kit of each class section the section's page. What the repair does *not* reach is
+   finding 15: **17 of 28 CBGH kits state their prerequisite in prose, outside any field**, so
+   recovering the field layer does not recover the prerequisites. Note the sting that remains:
+   **the two kits that forced correction 7 are in this book**, found by an RTF text census rather
+   than by the pipeline — a point for ticket 09's rejected arm.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

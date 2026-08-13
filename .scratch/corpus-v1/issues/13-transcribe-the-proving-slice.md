@@ -427,6 +427,59 @@ the slice's only evidence about the hand-authoring path — and it validates ide
 
 `cardinality` remains unexercised: all three arms are `one-per-target`.
 
+### Session 6 — the second parser, and what it cannot reach
+
+**Finding 12 is resolved: CBGH goes from 0 records to 38** — 28 kits and 10 subraces — with the other
+three books extracting identically to before.
+
+It is **one pluggable layer, not a second program**, which is what finding 12 predicted: the page
+layer survived, so only the field layer needed replacing. Both strategies return the same thing —
+the paragraphs before the first label, then ordered `(label, value)` pairs — and names, ids,
+provenance and records keep one code path.
+
+Three things the writing turned up, each a correction to an assumption rather than a bug:
+
+**The convention is the paragraph, so the parser splits on paragraphs.** The obvious implementation —
+one regex over the raw HTML anchored on `<P>` — was written first and **disagreed with a plain-text
+census by eleven occurrences**, because arbitrary `FONT`/`B`/`A` tags interleave between the
+paragraph break and the first letter. Matching offsets in markup to model a convention that is not
+markup is the wrong shape.
+
+**The field vocabulary belongs to the BOOK, not to the kind.** CBGH's subraces are delimited by
+`Infravision`; CBE's by `Additional Experience Cost`. The kind is the same and the marker is not.
+Packing too: CBE puts five subraces on one page, CBGH gives each its own — so `multi` is a book's
+habit, not a kind's nature. **Assuming otherwise is exactly what returned 0 records from 112 pages**,
+and the marker had looked like a property of *subrace* only because one book had been read.
+
+**The page title is not always the record's name.** CBGH gives the first kit of each class section
+the section's own page, so `DD04865` is titled *Fighter Kits* and is the **Breachgnome**, and
+`DD04917` is titled *Fighter Kits* and is the **Archer**. Taking `<TITLE>` produced two records named
+*Fighter Kits* and lost both real names. The page is regular about it — chunk 0 is the title line,
+chunk 1 repeats it, chunk 2 is either the record's heading or the first line of prose — and a heading
+is short and does not end a sentence. **Nine of the 28 kits are named this way**, and they were
+initially miscounted as chapter apparatus, because a section-titled record and a section page look
+identical until you read the fields.
+
+### Finding 15 — recovering the fields does not recover the prerequisites
+
+The Homesteader parses to nine clean fields and **not one of them contains its prerequisite**, which
+sits in the descriptive prose above them. Counted across both books, over records that state one:
+
+| | prerequisite in a labelled field | in prose only |
+|---|---:|---:|
+| CTH | 10 | **0** |
+| CBGH | 5 | **17** |
+
+So CBGH differs not only in *how a label is marked* but in **what is a field at all**. Seventeen of
+its twenty-eight kits keep the prerequisite outside the field structure entirely.
+
+This bounds the second parser honestly: **it recovers the field layer and stops there.** For those
+seventeen the judgement pass must read the page, not the record's fields — which is the same posture
+[ticket 04](./04-llm-assisted-extraction.md) already takes, arriving now from a second direction.
+
+The two kits from finding 10 are the specific case: **the Homesteader and the Bandit now come out of
+the pipeline**, and their prerequisites still have to be read off the page by a human.
+
 ### Still not done
 
 The judgement pass on the remaining **29 of 32** Attachables · the measured cost per record against
