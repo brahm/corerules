@@ -2189,6 +2189,51 @@ arm's 46 records and their sixty-odd distinct gaps, the Deity arm produced **one
 Arts priesthood's *"only 6-sided hit dice, not 8-sided"*, which is finding 71's class-table
 substitution in its simplest possible form.
 
+### Session 38 — into CRH, the structural extreme
+
+The book [finding 37](#finding-37--two-books-have-a-shared-spine-and-a-per-kit-tail) identified as
+the corpus's worst case: **99 distinct labels across 13 kits, 74 used exactly once**, 15–25 fields per
+record, benefits as named fields with bulleted sub-items, and terrain as a spine field. If the
+pipeline survives CRH it survives v1.
+
+A fourteenth apparatus page found on arrival — `List of Kits`, whose `Description` field is the
+**Beastmaster's**, because the page concatenates every kit in the chapter.
+
+### Finding 75 — the follower is a subject with its own sheet
+
+> An attuned falcon receives a **+2 bonus to all attack rolls**, except when fighting **its species
+> enemy** (when it receives a +4 bonus). … When fighting on behalf of a Falconer, an attuned falcon
+> **never needs to make a morale check**.
+
+The Falconer's kit gives a **falcon** an attack bonus, a species enemy of its own rolled on its own
+table, and an exemption from morale. This is past everything the subject findings have recorded:
+
+| finding | subject |
+|---|---|
+| 49 | the other party, as a **condition** |
+| 51 | the other party, as a **target** |
+| 62 | another character's **sheet**, as an operand |
+| **75** | a creature **this kit creates**, with stats **derived from the kit** |
+
+Findings 49–62 all point at someone who already exists. Here the pack **brings a second sheet into
+being** and then modifies it. The effects are written against `follower.attunedFalcon.*` so they stay
+visible, and nothing in §4.3 or §3 says such a path means anything.
+
+### Finding 76 — a kit that **reduces** its class
+
+The Explorer's own named fields include `Limited Animal Empathy` — *"an Explorer does not develop
+animal empathy to the degree of other rangers"* — `Few Followers`, and `No Fortifications`
+(*"he will never build a castle or any other fortification"*).
+
+Across four previous books a kit added, restricted a choice, or priced something. **These take away
+abilities the class already has.** `forbid` handles the fortification because it is total; nothing
+handles *"to a lesser degree"*, which is [finding 67](#finding-67--a-permission-that-is-degraded-rather-than-denied)'s
+degraded permission applied to a **class feature** rather than to equipment.
+
+The Explorer also produced the first **anti-scaling** statement in the corpus: Survival works in all
+terrains, and *"assigning additional slots to this proficiency **does not enhance its use in any
+way**"*. The format can add to a value; it has no way to say *and no more will be added*.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against

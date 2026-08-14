@@ -200,6 +200,7 @@ EXCLUDE = {
     ("CWH",  "The Wizard Kits"),
     ("CPAH", "Kit Subsections"),
     ("CRH",  "Kit Subsections"),
+    ("CRH",  "List of Kits"),      # the chapter list; its Description is the Beastmaster's
     ("CPRH", "Priesthoods"),               # the Designing Faiths template
 }
 # Five of these were found not by reading but by the name-collision check of finding 32:
