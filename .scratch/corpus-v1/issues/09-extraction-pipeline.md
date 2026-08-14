@@ -172,7 +172,12 @@ Deliberately deferred by [ticket 04](./04-llm-assisted-extraction.md) and decide
   longer has a factual basis.
 
 **Accepted risk, to be measured rather than assumed:** a local 7–30B model against a frontier one, on
-exactly the half that needs judgement. The counterweight is that
+exactly the half that needs judgement.
+
+> **It was never measured.** [Ticket 13](./13-transcribe-the-proving-slice.md)'s deliverable 6 was the
+> measurement and is abandoned (finding 149), because across 1,233 records **the judgement half was
+> never done by a model** — by hand for 187 Attachables, by a program for 51 priesthoods. The risk
+> below therefore stands assumed, which is what this decision said it would not do. The counterweight is that
 [ticket 11](./11-human-review-protocol.md) reviews the judgement half regardless, so the model
 produces a draft rather than a verdict — but if the draft is bad enough, reviewing costs more than
 writing from scratch and this decision pays for itself in human hours.

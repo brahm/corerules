@@ -1,7 +1,7 @@
 # Transcribe the proving slice end to end
 
 Type: task
-Status: open
+Status: resolved — session 71
 Blocked by: 05, 06, 08, 09, 10, 14, 15
 
 ## Question
@@ -4314,7 +4314,7 @@ time. Nothing in it is new measurement; what changed is that it now says the sam
 | **3. A verdict on the schema and the expression language** | **Done.** The books forced **22 commits to the schema**, every change recorded before it was made. |
 | **4. A verdict on the three known unknowns** | **Done.** #4 answered (six suffice), #2 resolved, **#1 open and the largest thing this effort found**. |
 | **5. A measured cost per record** | **Not delivered**, and declared rather than fabricated. |
-| **6. A verdict on local-model draft quality** | **Not attempted.** |
+| **6. A verdict on local-model draft quality** | **Abandoned explicitly** — see [finding 149](#finding-149--the-judgement-half-was-done-twice-and-never-by-a-model). |
 
 **Deliverable 5 was never measurable for a reason that held to the last session.** It asked for a cost
 per record so the remaining books could be estimated. Almost every record's time went into *finding
@@ -4356,6 +4356,52 @@ opening the file instead of the note about the file.
 count was a lower bound, and the corpus's own markup is unreliable *per label*, not per page
 ([finding 128](#finding-128--the-markup-loses-individual-labels-not-whole-pages)). The map earned that
 note the hard way and it should be the first line of any successor's method.
+
+### Session 71 — deliverable 6 abandoned, and the ticket closed
+
+### Finding 149 — the judgement half was done twice, and never by a model
+
+Deliverable 6 is **abandoned explicitly**, and the reason is stronger than *"we ran out of sessions"*.
+
+[Ticket 09](./09-extraction-pipeline.md)'s decision 2 chose a local 7–30B model for the judgement half
+and named its own accepted risk: *"a local model against a frontier one, on exactly the half that needs
+judgement… to be measured rather than assumed."* Deliverable 6 was that measurement.
+
+**It was never taken because the mechanism was never used.** Across 1,233 records and 1,910 effects,
+the judgement half was done twice and neither time by a model:
+
+- **by hand**, for 187 Attachables, one record at a time, over roughly fifty sessions;
+- **by a program**, for the Complete Priest's 51 remaining priesthoods, because that book's 59 records
+  share one ten-field shape and the mapping from field to effect is a rule rather than a reading
+  ([finding 129](#finding-129--the-first-tool-that-does-the-judgement-half)).
+
+So the pipeline as actually executed **never had a model in it**, and a measurement of draft quality
+would have been a measurement of a step that did not exist.
+
+**What abandoning it costs, stated plainly.** Ticket 09's decision 2 stands on an unmeasured risk. Its
+counterweight — *"[ticket 11](./11-human-review-protocol.md) reviews the judgement half regardless, so
+the model produces a draft rather than a verdict"* — is still an argument rather than a finding, and
+the failure mode it names (*"if the draft is bad enough, reviewing costs more than writing from
+scratch"*) has never been tested. Anyone who reaches for a local model on the remaining books inherits
+that risk untouched. That is a **correction owed to the map**, not a thing this ticket solved.
+
+**What it can offer instead**, and it narrows the question rather than answering it: the bar a model
+would have to clear is now known. On a book with one repeating shape, **a hundred lines of rules did
+the judgement half and stated its own refusals better than a human doing it fifty-one times, because a
+program cannot get bored** ([finding 130](#finding-130--what-a-rule-cannot-do-it-marks)). On the other
+ten books — where `Special Benefits` is free prose that could say anything — no program was possible
+and no model was tried. **The question was never "model or human"; it is "which books have a shape",
+and this ticket answered that one.**
+
+### The ticket closes
+
+Deliverables 1–4 delivered, 5 declared unmeasurable with its purpose served by
+[ticket 16](./16-the-plan-for-the-remaining-books.md), 6 abandoned above. **Status: resolved.**
+
+The map's execution ticket ran for 71 sessions, produced **1,233 records, 149 findings, 22 schema
+commits and 38 corrections owed to the v1 spec**, and reached the verdict it was opened to reach. What
+it did not reach is stated in [What the slice proves, and what it does not](#what-the-slice-proves-and-what-it-does-not),
+and the largest single item there is not a deliverable at all: **nothing has ever loaded this pack.**
 
 ### Still not done
 

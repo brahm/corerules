@@ -10,10 +10,25 @@ The map is done when a **proving slice** has been transcribed end to end, the sc
 expression language are fixed at `0.x`, and the remaining books are mechanical work with no
 decisions left inside them.
 
-The first two clauses are done. [Ticket 16](issues/16-the-plan-for-the-remaining-books.md) measured the
-third, found **four decisions still inside the remaining books**, and **all four are now taken** — what
-a spell record is for, what a `classes` record carries, how much of the DMG is in scope, and the permit
-lists. What is left is volume with a known method.
+**All sixteen tickets are resolved.** Taking the destination's three clauses in order:
+
+- **The proving slice is transcribed end to end.** 1,233 records across 20 kinds, 1,910 effects, 3,990
+  of 3,992 references resolving, 0 schema errors — and the two that do not resolve are an ambiguity in
+  the source and a weapon a book names without describing.
+- **The schema and the expression language are at `0.1`** and the ticket that kept moving them is
+  closed. They were changed **22 times**, every change recorded before it was made. They are *settled*
+  in the sense that nothing open is pushing on them; they are **not proven stable**, and the honest
+  statement is that the last two changes came in the final ten sessions.
+- **The remaining books are mechanical work.** [Ticket 16](issues/16-the-plan-for-the-remaining-books.md)
+  measured the claim rather than asserting it, found **four decisions still inside**, and all four were
+  taken; its mechanical list is now empty too, so what is left of the v1 tier is the DMG's
+  character-generation chapters and whatever a successor decides the untranscribed class and race
+  entries are worth.
+
+**What the map did not reach is one sentence: nothing has ever loaded this pack.** No Engine exists.
+The schema validates and the references resolve, and neither is a program building a character —
+[ticket 13](issues/13-transcribe-the-proving-slice.md)'s verdict says so in its own words, and A3 is
+why it can.
 
 This effort is the sequel to [the v1 spec map](../v1-spec/map.md), which specified an Engine that
 ships no content and then stopped at the point where content has to exist.
@@ -726,6 +741,18 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    *"non-halflings"* closed only because the player races are a closed list of six — there is no list
    of dwarven clans anywhere. And the Guardian shows a marker can understate the format: its effect
    already wrote `opponent.savingThrow` and marked itself unmodelled anyway.
+39. **[Ticket 09](issues/09-extraction-pipeline.md) decision 2's accepted risk was never measured, and
+   the ticket that was to measure it is closed.** ([Ticket 13](issues/13-transcribe-the-proving-slice.md)
+   finding 149) Decision 2 chose a local 7–30B model for the judgement half and named its own risk *"to
+   be measured rather than assumed"*; ticket 13's deliverable 6 was that measurement, and it is
+   abandoned. **The reason is that the mechanism was never used**: across 1,233 records the judgement
+   half was done by hand for 187 Attachables and by a PROGRAM for 51 priesthoods, and never by a model.
+   Its counterweight — that ticket 11 reviews the half regardless, so the model drafts rather than
+   decides — remains an argument, and the failure it names (*"if the draft is bad enough, reviewing
+   costs more than writing from scratch"*) is untested. **Anyone reaching for a local model on the
+   remaining books inherits that risk untouched.** What the effort can offer instead is the bar: on the
+   one book with a repeating shape, a hundred lines of rules did the judgement half and stated its own
+   refusals better than a human doing it fifty-one times.
 23. **The Engine's field vocabulary is far larger than the schema's, and nothing checks it.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 110) A `when` clause describes the
    CHARACTER — its subject is an ability or a level — and never his opponent. So every target-scoped
