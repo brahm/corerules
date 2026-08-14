@@ -1,0 +1,134 @@
+# Map: the corerules Engine, v1
+
+## Destination
+
+**A corerules v1 that runs** — the Electron desktop application specified by
+[`../v1-spec/spec.md`](../v1-spec/spec.md), creating and persisting AD&D 2nd Edition characters from
+Content Packs the user supplies.
+
+The map is done when a character can be **created, advanced and persisted** against the transcribed
+corpus, and the application ships to Wagner's own machine.
+
+This effort is the sequel to [the corpus map](../corpus-v1/map.md), which produced the pack this
+Engine loads and closed with the sentence this map exists to falsify: **nothing has ever loaded this
+pack.**
+
+## Notes
+
+**Domain.** AD&D 2nd Edition character generation. The lineage is three maps deep: the
+[v1 spec map](../v1-spec/map.md) specified an Engine that ships no content; the
+[corpus map](../corpus-v1/map.md) built the content that Engine would load; this one builds the
+Engine. Each closed where the next had to start.
+
+**Language.** Artifacts in English. Conversation with Wagner in Portuguese.
+
+### What this map inherits, and what is wrong with it
+
+The unusual thing about this map's starting position is that **its specification is known to be
+wrong in 42 specific places, and the list is written down.** The corpus map's
+[corrections owed to the v1 spec](../corpus-v1/map.md#corrections-owed-to-the-v1-spec) is not a
+backlog of bugs; it is 42 conclusions that did not survive contact with the books, collected so that
+whoever implements has one thing to read. **Nine were already fixed in the schema itself**; 33 are
+owed to `spec.md`.
+
+That is a gift and a hazard. The gift is that no implementation session has to rediscover them. The
+hazard is that **`spec.md` still says the superseded thing**, and a session that reads it without the
+corrections list will build the wrong Engine. Ticket 01 exists for exactly this.
+
+| inherited | state |
+|---|---|
+| [`spec.md`](../v1-spec/spec.md) — 13 sections, product surface and technical shape | **written before any content existed**; wrong in 42 places |
+| `pack-0.1.schema.json` — 20 kinds, six operations, layer model | settled, changed 22 times by transcription, **nothing open pushing on it** |
+| the pack — 1,233 records, 1,910 effects, 99.9% of references resolving | **never loaded by anything** |
+| `validate.py`, `verdict.py` | run both before believing anything written in either prior map |
+
+### Settled during charting — do not re-litigate
+
+These come from the v1 spec map and are **not reopened by this map**. They were charting decisions
+there and remain charting decisions here.
+
+- **FOSS engine, content supplied by the user.** corerules never bundles licensed 2e content. The
+  boundary is that **packs do not circulate**; a character is the user's own work.
+- **Single-user.** No accounts, no authentication, no permissions.
+- **Desktop application.** Electron, TypeScript + React, cross-platform. Electron over Tauri so there
+  is one rendering engine rather than three.
+- **Unsigned builds**, with the per-OS posture the v1 spec map measured: Linux fine, Windows mostly,
+  macOS only if *"open Terminal and run `xattr -dr com.apple.quarantine`"* counts as a way past.
+- **Release via GitHub Actions**, with literal step-by-step checklists rather than pointers to
+  documentation — Wagner has never used Actions.
+- **Native to AD&D 2e, not a generic RPG engine.** Closed set of object kinds, open enumerations: the
+  Engine owns the shape, the pack owns the contents.
+- **The corpus is never sent to a third-party API**, and the private corpus repository is never
+  mirrored into this one.
+
+### Permanent constraints
+
+Excluded from v1, but no decision here may foreclose them: **sync between clients** (so: stable
+global identifiers, a diffable persistence format) and **v2/v3** — campaign settings, psionics,
+Player's Option (so: enumerations stay open, the character records which packs it was built against).
+
+### What the corpus map proved that changes how to build this
+
+Four results are load-bearing for implementation and are easy to miss in 149 findings:
+
+1. **Six operations suffice.** All six used across 1,910 effects, none ever found missing. The
+   evaluator can be written against a closed set.
+2. **§4.1's three Attachable arms are one shape** — held for 238 records without a per-arm exception.
+   One `attachable` code path, not three.
+3. **The layer model absorbed everything that looked like it needed a new feature** — offsets,
+   cancelling exceptions, conjunction-of-disjunction. Order-independence held everywhere it was
+   tested.
+4. **21% of effects carry an `UNMODELLED` marker**, and the spec has no concept of one. See ticket 02;
+   this is the biggest gap between what was specified and what was built.
+
+## Decisions so far
+
+<!-- one line per closed ticket: enough to judge relevance, then follow the link for detail -->
+
+_None yet — the map has just been charted. Four tickets are open:_
+
+- **[01 — Which spec does the Engine implement?](issues/01-which-spec-does-the-engine-implement.md)**
+  33 corrections are owed to `spec.md` and unwritten there, so the document a session reads still says
+  the superseded thing. Decides what day one reads. **Every other ticket inherits the answer.**
+- **[02 — What the Engine does with an UNMODELLED effect](issues/02-what-the-engine-does-with-an-unmodelled-effect.md)**
+  380 marked effects; the spec does not contain the word. A3 is the right idea at the wrong grain, and
+  §5.2's line splits the markers badly: 122 are validation-shaped and survivable, 81 are computation-
+  shaped and each is a wrong number.
+- **[03 — Precedence when two Attachables contradict](issues/03-precedence-when-two-attachables-contradict.md)**
+  The corpus map's one unclosed hole, and the Engine is the first thing that has to actually resolve
+  it. Commutation says nothing about inconsistency.
+- **[04 — First light](issues/04-first-light.md)** *(task)* The experiment the corpus map named and
+  could not perform. Cheap, and it makes the other three concrete.
+
+**Suggested order: 04 first.** It is the only one that produces evidence rather than consuming it, and
+the corpus map's most expensive lesson was that a conclusion held in prose goes wrong by itself.
+
+## Not yet specified
+
+<!-- in-scope fog you can't ticket yet; graduates as the frontier advances -->
+
+- **Whether the schema is the Engine's internal model or only its wire format.** A pack is JSON shaped
+  for transcription and review; a character sheet is computed by walking layers. Whether the Engine
+  keeps records in the pack's shape or normalises on load cannot be asked sharply until something has
+  loaded a pack once and the cost of either is visible.
+- **What the review page of [corpus ticket 12](../corpus-v1/issues/12-how-much-tool.md) becomes.** That
+  ticket built tooling for a human checking a transcription; the Engine has to show provenance to a
+  *player* who is not checking anything. Whether those are the same surface is a product question that
+  needs a running app to look at.
+- **Whether psionics can be expressed at all.** The v1 spec's known unknown 3, raised and overruled:
+  deferring psionics entirely risks discovering in v2 that the format cannot hold it, which is how
+  PCGen failed. This map does not implement psionics, but the first Engine that computes anything is
+  the first thing that could cheaply *test* the format against one psionic power.
+
+## Out of scope
+
+- **Transcribing more of the corpus.** [The corpus map](../corpus-v1/map.md) closed with a plan and an
+  empty mechanical list; adding books is that map's work resumed, not this one's. This Engine must run
+  against what exists.
+- **v2 and v3** — campaign settings, psionics, Player's Option. Inherited from the v1 spec map's
+  roadmap and unchanged.
+- **Rewriting the spec.** Ticket 01 decides *whether and when* `spec.md` is updated; it does not turn
+  this map into a documentation effort.
+- **A generalised authoring product for third parties.** Preserved, not built — as in both prior maps.
+- **Anything the v1 spec put out of scope** in its §12, unchanged: campaign management, encounter
+  running, monsters, the DM's side of the table.
