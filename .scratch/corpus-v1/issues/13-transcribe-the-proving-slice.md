@@ -3382,6 +3382,56 @@ variations on one shape and the format was designed around them; races are a dif
 proving slice never proved anything about it. **The v1 format's coverage claim should be read as
 'Attachables' and not as 'the rules'.**
 
+### Session 58 — alignment, and a kind that is a shape rather than a label
+
+The last of [finding 99](#finding-99--the-pack-has-ten-kinds-and-the-corpus-references-fifteen)'s four
+homeless kinds. Nine records, one page. **461 records, 0 schema errors, and reference resolution goes
+from 81% to 86% of 853 occurrences** — the single largest jump any one kind has produced.
+
+### Finding 113 — the nine alignments are a product, and the record says so
+
+The obvious transcription is nine labels. The PHB opens the chapter differently: alignment *"is
+divided into two sets of attitudes: order and chaos, and good and evil"*, and the nine are what
+**combining** them produces. So the record carries **`ethos` and `morality`**, and the label is what
+falls out.
+
+The kind has **no `effects` array**, and that is a claim, not an omission: nothing in the alignment
+chapter is a mechanic. It is the second kind after `abilities` whose entire purpose is **to be
+conditioned on** rather than to do anything — which is why `phb:alignment` appears in 14 prerequisites
+as a pseudo-scalar and never once as a target.
+
+`phb:true-neutral` keeps its name. Every other combination is written as its two axes and this one is
+not, so the id follows the source rather than the pattern.
+
+### Finding 114 — the axes paid for themselves in one query
+
+With the axes present, every alignment prerequisite in the pack can be **tested against them** rather
+than read. Fourteen clauses:
+
+| what the clause actually is | clauses |
+|---|---:|
+| an axis slice — *any good*, *any chaotic*, *any neutral* | 7 |
+| the complement of one — *any non-lawful* | 1 |
+| all but one alignment | 2 |
+| a genuinely explicit list | 4 |
+
+**Ten of fourteen say something a sentence could say**, and all ten are stored as enumerated ids
+because `anyOfIds` is the only membership the format has.
+
+The nuance is what makes this worth recording. **Four of them are the pack's expansion of a rule the
+book stated** — the Jester's *any chaotic*, the Feralan's *cannot be lawful*, the Gallant's and
+Gypsy-bard's *cannot be X* — and all four already carried an interpretation note saying so, which is
+the transcription practice holding up under a check it was never designed for. **The other six are the
+book's own enumeration**: the Complete Priest's Handbook writes *"his priests may be chaotic good,
+neutral good, or lawful good"* where the Complete Bard's writes *"any chaotic"*. So the pack is
+faithful wherever the source enumerates and lossy exactly where the source generalises, and until now
+nothing could tell those two apart.
+
+This does not reopen the condition vocabulary — [the verdict](#the-verdict) already counts conditions
+and subjects as the format's largest shortfall, 109 of 258 unmodelled clauses, and this is one more
+instance of it. What is new is that **the pack can now measure its own lossiness on this axis**, which
+is what a shape buys over a label.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against

@@ -1070,6 +1070,39 @@
           }
         ]
       }
+    },
+    "alignments": {
+      "description": "Ticket 13 finding 113. The last of finding 99's four homeless kinds — alignments, spheres, schools of magic and armour — and the one the corpus points at hardest: 49 of the pack's 166 unresolved reference occurrences. A closed list of nine, and NOT a flat one. The PHB opens the chapter by saying alignment 'is divided into two sets of attitudes: order and chaos, and good and evil', and that the nine are what COMBINING them produces — so the record carries the two axes, not just the label. An alignment has no effects: nothing in the PHB's chapter is a mechanic, which is why the kind has a shape and no `effects` array.",
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/record"
+          }
+        ],
+        "properties": {
+          "ethos": {
+            "enum": [
+              "lawful",
+              "neutral",
+              "chaotic"
+            ],
+            "description": "The order-and-chaos axis."
+          },
+          "morality": {
+            "enum": [
+              "good",
+              "neutral",
+              "evil"
+            ],
+            "description": "The good-and-evil axis."
+          }
+        },
+        "required": [
+          "ethos",
+          "morality"
+        ]
+      }
     }
   },
   "required": [

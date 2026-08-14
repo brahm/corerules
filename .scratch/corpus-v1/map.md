@@ -586,6 +586,18 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    those effects are the dwarves' book, **an effect may now carry its own provenance** — a record turns
    out to be a meeting place for several books, and the finest grain that needs an anchor is the
    effect, not the record.
+26. **RESOLVED — alignment is a shape, not a label, and it was the corpus's loudest dangling id.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) findings 113 and 114) The last of finding
+   99's four homeless kinds, and the one that mattered most: **49 of 166 unresolved reference
+   occurrences**, closed by nine records. The PHB says alignment *is divided into two sets of
+   attitudes* and the nine are what combining them produces, so the record carries `ethos` and
+   `morality` and the label falls out. That immediately bought a check nothing could run before:
+   **ten of the pack's fourteen alignment prerequisites are an axis slice or its complement** — *any
+   good*, *any chaotic*, *any non-lawful* — stored as enumerated ids because `anyOfIds` is the only
+   membership the format has. Four are the pack expanding a rule the book stated, and **all four
+   already carried an interpretation note saying so**; the other six are the book's own enumeration.
+   The pack is faithful where the source enumerates and lossy where it generalises, and until now
+   nothing could tell the two apart.
 23. **The Engine's field vocabulary is far larger than the schema's, and nothing checks it.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 110) A `when` clause describes the
    CHARACTER — its subject is an ability or a level — and never his opponent. So every target-scoped
