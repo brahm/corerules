@@ -2290,6 +2290,64 @@ The book also settled a question left open in
 notations are the same thing written twice and converting one to the other is the source's own move,
 not the transcriber's. It does not rescue `30-50` or `6-7`, which no die produces.
 
+### Session 40 — CWH complete: eight books, 89 records
+
+**All nine Complete Wizard's kits are modelled**, and CWH is the opposite of CRH structurally: a tight
+16-label spine, only two labels used once, and `Preferred Schools` / `Barred Schools` as first-class
+fields. A fifteenth apparatus page found on arrival — `The Kits`, whose `Description` is the
+**Academician's**, the same shape as CRH's `List of Kits`.
+
+### Finding 79 — the dice pattern was wrong about grouping; **fixed**
+
+The Amazon Sorceress starts with **`(1d4 + 1) x 10 gp`**, and the pattern implemented in
+[finding 42](#finding-42--ticket-15s-dice-decision-was-settled-and-never-implemented-now-it-is)
+rejected it. That pattern assumed the grammar `NdM [×K] [±J]` **in that order**; the corpus also
+writes **`(NdM ± J) × K`**, which is not a notation variant but **different arithmetic** — the
+grouping changes the result.
+
+Measured over the v1 RTF: **14 occurrences**, 0.5%. Small, and one of them is the **wizard class's
+standard starting money**, which every kit in this book restates. Widened, and the widening is the
+third correction to a value type this ticket has made by meeting a record that used it.
+
+Worth noting what did **not** need widening. The Patrician gets *"an extra 150 gp **in addition to**
+the standard (1d4+1) x 10"*, and that composes as a **dice value and a constant beside it** — the
+layer model absorbing an offset again, exactly as it did for the scaling in finding 50. The format
+needs a richer *notation*, not a richer *expression language*.
+
+### Finding 80 — a kit that restricts character construction itself
+
+The **Witch**:
+
+- *"not allowed an initial Weapon Proficiency, **nor can she acquire a Weapon Proficiency as she
+  advances in level**"* — a permanent denial, of which the format can state only the starting value;
+- *"Witches **do not earn bonuses to their experience for high ability scores**"* — a **derivation
+  suppressed**, like the Greenwood Ranger's Dexterity bonus to AC;
+- *"Witches **cannot be multi-classed or dual-classed**."*
+
+The last one is new in eight books. Every other effect in 89 records modifies **a character**; this
+one restricts **how a character may be built** — §6.1's class sum type, which is the Engine's own
+structure rather than anything on a sheet. An Attachable that constrains the shape of the character it
+attaches to is a different thing from an Attachable that changes its values.
+
+### What the wizard book said about spells
+
+The reason for choosing this book was that the slice contains no spell records and CWH is the corpus's
+spell-heaviest kit book. The answer is milder than expected:
+
+- **`Barred Schools` is enumerable and `forbid` fits it perfectly** — the second natural home for that
+  operation after CRH's `Barred`, and between them **20 of the pack's 27 `forbid`s** now sit on a list
+  the book actually printed.
+- **`Preferred Schools` is advice** — *"tend to be drawn to"*, *"are among the most frequently
+  encountered"* — and yields nothing, which is finding 16 in the spell domain.
+- The genuinely hard case is the Wu Jen's *"any one spell that is **three or more levels lower than
+  his level**"* — a comparison between **a spell's level and the caster's**, which is
+  [finding 62](#finding-62--arithmetic-across-two-character-sheets)'s cross-subject arithmetic with a
+  spell on one side.
+
+So the spell domain did not produce a new class of problem. It produced **more instances of the
+subject problem**, which after eight books is the only structural gap that has grown every time it was
+measured.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against

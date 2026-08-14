@@ -198,6 +198,7 @@ EXCLUDE = {
     ("CBGH", "The Structure of the Kits"),  # and the halfling chapter's, worded differently
     ("CFH",  "Kits and Warriors"),
     ("CWH",  "The Wizard Kits"),
+    ("CWH",  "The Kits"),          # the chapter list; its Description is the Academician's
     ("CPAH", "Kit Subsections"),
     ("CRH",  "Kit Subsections"),
     ("CRH",  "List of Kits"),      # the chapter list; its Description is the Beastmaster's

@@ -102,9 +102,9 @@
       ]
     },
     "dice": {
-      "description": "Ticket 15 decision 1, implemented here by ticket 13 finding 42 — the decision was settled and the schema had no pattern at all. A §3.3 VALUE TYPE: no id, never referenced by `record`. Not yet referenced by any kind either, because the kinds that carry dice (generation methods, wealth options) are outside the proving slice. The decision states the grammar as 'NdM+-k'. Measured over the v1 RTF: 2,574 notations, of which 77.9% are NdM and 17.4% NdM+-k — and 4.7% (121) are NdM x k, which that grammar REJECTS. So the multiplier is admitted. A bare 'd10' with no count is admitted for the same reason: the corpus writes it.",
+      "description": "Ticket 15 decision 1, implemented here by ticket 13 finding 42 — the decision was settled and the schema had no pattern at all. A §3.3 VALUE TYPE: no id, never referenced by `record`. Not yet referenced by any kind either, because the kinds that carry dice (generation methods, wealth options) are outside the proving slice. The decision states the grammar as 'NdM+-k'. Measured over the v1 RTF: 2,574 notations, of which 77.9% are NdM and 17.4% NdM+-k — and 4.7% (121) are NdM x k, which that grammar REJECTS. So the multiplier is admitted. A bare 'd10' with no count is admitted for the same reason: the corpus writes it. WIDENED by finding 79: the first pattern assumed the grammar 'NdM [xK] [±J]' in that order, and the corpus also writes '(NdM ± J) x K' — 14 occurrences including the wizard's standard starting money, '(1d4+1) x 10 gp'. Grouping changes the arithmetic, so this is not a notation variant but a different expression, and the first pattern silently rejected it.",
       "type": "string",
-      "pattern": "^[0-9]*d[0-9]+(?:[x*][0-9]+)?(?:[+-][0-9]+)?$"
+      "pattern": "^(?:[0-9]*d[0-9]+(?:[x*][0-9]+)?(?:[+-][0-9]+)?|\\([0-9]*d[0-9]+(?:[+-][0-9]+)?\\)[x*][0-9]+)$"
     },
     "operand": {
       "description": "Ticket 15: known unknown #4 fired — 31 corpus occurrences of halving, division and rounding inside kit effects. NOT a seventh operation: 'adjust' still sums, only its operand widens. Used by effects AND by predicate values, since the arithmetic appears on both sides.",
