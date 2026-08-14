@@ -809,6 +809,17 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    more books will add spells; the 23 secondary skills are a closed table, so only the two colliders
    move. The checker now reports duplicates, counted apart from schema errors **because JSON Schema
    cannot express uniqueness that spans arrays.**
+41. **A proficiency's score belongs to the (proficiency, GROUP) pair, and the transcription flattened
+   it away.** ([Engine ticket 04](../engine-v1/issues/04-first-light.md)) The Complete Book of Dwarves
+   **replaces** the PHB's five proficiency groups with six of its own — no Wizard, plus Crafts and
+   Special Background — and **nine proficiencies appear in two of the six**, three of them scored
+   differently in each: Navigation 0 / −3, Herbalism 0 / −2, and Survival at **one slot with no check
+   in one group and two slots with an Intelligence check in another.** The session-55 reading compared
+   the page against the PHB as one list and produced 32 unconditioned effects, two of which landed on
+   the same field with different values — a contradiction inside a single record, invisible to every
+   check the corpus effort ran and found by the first program to compute a sheet. Rebuilt as 41
+   effects, each conditioned on its group. **Slot cost varies too**, so this is not a modifier
+   footnote: it is the shape of the fact.
 23. **The Engine's field vocabulary is far larger than the schema's, and nothing checks it.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 110) A `when` clause describes the
    CHARACTER — its subject is an ability or a level — and never his opponent. So every target-scoped

@@ -194,6 +194,67 @@ be part of identity.**
 this at all, because uniqueness spans arrays and a JSON Schema sees one array at a time. Verified by
 introducing a collision on purpose.
 
+## The Navigation contradiction, run down
+
+Result 2 said the source contradicts itself. **It does not.** Reading the page properly:
+
+**The Complete Book of Dwarves replaces the PHB's five proficiency groups with six of its own** —
+GENERAL, CRAFTS, WARRIOR, THIEF, PRIEST, SPECIAL BACKGROUND. No Wizard, because dwarves cannot be
+wizards, and two the PHB has no equivalent for. Its opening sentence says so outright: *"Dwarves may
+draw proficiencies from the groups below, instead of those on pages 54-55 of the Player's Handbook."*
+
+**Nine proficiencies appear in two of the six groups, and three are scored differently in each:**
+
+| | | |
+|---|---|---|
+| Navigation | General **0** | Special Background **−3** |
+| Herbalism | Crafts **0** | Priest **−2** |
+| Survival | Warrior **1 slot, no check** | Special Background **2 slots, Intelligence, 0** |
+
+So the score belongs to the **(proficiency, group)** pair, and Survival shows it is not only the
+modifier — the **slot cost** varies too. The session-55 modelling flattened the six tables into one
+comparison against the PHB and produced 32 unconditioned `set` effects, of which two landed on the same
+field with different values.
+
+**Rebuilt: 41 effects, each conditioned on the group it came from.**
+
+```
+set proficiency.navigation.modifier to -3
+  when member {field: "proficiency.navigation.group"} anyOfIds [cbd:special-background]
+```
+
+The contradiction is gone because the two effects no longer both apply — and on a sheet where the
+character has not bought Navigation at all, **both are correctly skipped as undecidable rather than
+treated as false**, which is the distinction the loader was written to keep.
+
+The six groups are now records. `openTo` on them names **a race** rather than a class group, because
+that is what the book does.
+
+### And the collision had been deleting the fighter's hit dice
+
+Fixing the eight duplicate ids did something result 3 said was missing. The sheet now shows:
+
+```
+hitDice.perLevel              1d10
+hitDice.maxLevel              9
+hitPoints.perLevelAfterMax    3
+```
+
+Those come from the **Warrior class group**, reached through `phb:fighter`'s `group` field — and
+before the fix, `by_id["phb:warrior"]` returned the *proficiency* group, which has no effects. **The
+collision was not cosmetic: it was silently deleting the only combat numbers in the pack.**
+
+Result 3 stands otherwise — there is still no THAC0, no armour class, no experience — but its cause
+was two things, not one, and only running the loader could separate them.
+
+### Two more the re-reading exposed
+
+- **`Slow Respiration` was missing entirely.** A CBD proficiency, one slot, no check. The session-55
+  extractor was comparing that page against the PHB's list and **had nowhere to put a proficiency the
+  PHB does not have.** Now a record.
+- **Animal Lore's dwarven modifier is printed `0/+1`** — two values where the operand admits one, and
+  the page never says what selects between them. Recorded as 0 and marked.
+
 ### What this says about the other tickets
 
 - **[02](./02-what-the-engine-does-with-an-unmodelled-effect.md)** — a real character touched **four**
