@@ -43,7 +43,13 @@ def record(path, pack_id):
         "name": name,
         "provenance": {"section": [book.rstrip(")").strip(), name],
                        "anchor": {"rendition": "webhelp", "file": path.name}},
-        "keyedBy": [cols[0] or "key"],
+        # Ticket 13 resolved known unknown #2: a table must declare the FIELD PATH it fills and key
+        # its rows by id. Neither can be inferred from the markup, so both are emitted empty and a
+        # human fills them — which is the same posture as the apparatus list, and for the same
+        # reason: the source does not say.
+        "supplies": "",
+        "keyedBy": {"kind": "id"},
+        "_keyColumn": cols[0] or "key",
         "columns": [c for c in cols[1:] if c] or [f"col{i}" for i in range(1, len(body[0]))],
         "rows": body,
     }

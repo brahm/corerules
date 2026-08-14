@@ -114,6 +114,9 @@
         },
         {
           "$ref": "#/$defs/computedOperand"
+        },
+        {
+          "$ref": "#/$defs/tableValue"
         }
       ]
     },
@@ -455,6 +458,48 @@
         "effects",
         "effectsModelled"
       ]
+    },
+    "tableAxis": {
+      "description": "How one axis of a table is keyed. Ticket 13's resolution of known unknown #2 found the axes HETEROGENEOUS: Table 26 keys on a thieving skill (an id), Table 28 on a Dexterity score (an integer), and Table 30 on a level BAND ('1-4', '5-8'). One kind would have fitted none of them.",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "id",
+            "integer",
+            "range"
+          ]
+        },
+        "vocabulary": {
+          "$ref": "#/$defs/id",
+          "description": "Required when kind is 'id': which enumeration the keys are drawn from, so the checker can refuse an unknown one."
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "tableValue": {
+      "description": "Ticket 13 finding 71: the Swashbuckler 'fights with the THAC0 of a FIGHTER of his experience level' — an effect that must READ a table belonging to another class. Names the field the table supplies, whose context it belongs to, and the index to read it at.",
+      "type": "object",
+      "properties": {
+        "supplies": {
+          "type": "string"
+        },
+        "of": {
+          "$ref": "#/$defs/id",
+          "description": "Whose table — a class entry, usually another class than the character's."
+        },
+        "at": {
+          "$ref": "#/$defs/scalar"
+        }
+      },
+      "required": [
+        "supplies",
+        "at"
+      ],
+      "additionalProperties": false
     }
   },
   "type": "object",
@@ -762,12 +807,16 @@
           }
         ],
         "properties": {
+          "supplies": {
+            "type": "string",
+            "description": "Ticket 13 finding 20 and its resolution: a table had an id derived from its source FILE, a name §7.3 says is never identity, and nothing saying what it was a table OF — so the Engine could not find the one it needed. It now names the FIELD PATH it fills, in the same vocabulary the effects use: a table supplying `thiefSkill` answers for `thiefSkill.openLocks`. Chosen over a second closed enumeration so that §3.4 keeps its single exception. Tables that supply no field — a list of permitted weapons, say — carry no `supplies` and the Engine does not consume them, which is A3's distinction applied to tables."
+          },
           "keyedBy": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "minItems": 1
+            "$ref": "#/$defs/tableAxis"
+          },
+          "columnsAre": {
+            "$ref": "#/$defs/tableAxis",
+            "description": "Present when the COLUMNS are a second axis rather than plain headings — Table 27 is (skill x race), Table 28 its transpose."
           },
           "columns": {
             "type": "array",
