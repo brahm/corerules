@@ -428,6 +428,37 @@ tight gave 4 including a false positive, and the truth was 3. **Where the corpus
 plain language, counting it requires reading and not matching**, and no count of that kind belongs in
 this map without saying so.
 
+## The verdict, measured
+
+[Ticket 13](issues/13-transcribe-the-proving-slice.md) delivered it over **182 hand-modelled records
+from fifteen books** — every kit in the v1 tier — carrying **1,121 effects**.
+
+| | |
+|---|---:|
+| effects the format expressed cleanly | **77 %** |
+| **records expressed completely** | **29 %** (52 of 177) |
+
+Both numbers matter and they disagree on purpose: the operations work nearly always, and records
+rarely close, because one unsayable clause leaves a fourteen-effect kit incomplete. For an Engine
+whose promise is to name the rule that refused, the second number is the binding one.
+
+- **Known unknown #4 — six operations may not suffice — is answered: they suffice.** All six used,
+  none ever missing, no clause in 1,121 effects wanted a seventh. `except` is the least needed at 13
+  uses and is not redundant.
+- **The shortfall is conditions and subjects**, 109 of the 258 unmodelled clauses — the predicate can
+  name the character and nothing else, and the corpus conditions on the other party, the terrain, the
+  round, the campaign and the past. Operands are the next 46.
+- **Known unknown #2 has fired negatively** (correction 16 below): a `lookupTable` never declares what
+  it is a table *of*, and an effect cannot name a table it needs to read. **This is the premise the
+  design rests on and it is unresolved.**
+- **§4.1 held for 177 records across three arms**, and breaks in exactly one place: two Attachables
+  can contradict each other (correction 18), which commutation does not address.
+
+**What it does not prove**, stated as [ticket 08](issues/08-which-slice-proves-the-format.md) required:
+none of the pack's 496 references resolve, nothing was tested about psionics, spells-as-records,
+equipment or the DMG, the cost per record was never measured, and local-model drafting was never
+tried. **A pack that has never been loaded is a demonstration, not a validation.**
+
 ## Corrections owed to the v1 spec
 
 <!-- accumulating; whoever updates spec.md needs exactly this list -->

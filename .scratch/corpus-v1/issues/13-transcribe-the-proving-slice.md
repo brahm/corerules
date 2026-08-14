@@ -2754,6 +2754,125 @@ scaling operand would still fail this record.
   the corpus has asked for, after hated foes, familial species, sacred animals, chosen terrains,
   guarded sites, chosen undead, totem animals and bonded mounts.
 
+## THE VERDICT
+
+Deliverables 3 and 4. Measured over **182 records, 177 of them carrying effects, 1,121 effects in
+total**, transcribed by hand from **fifteen books** — every kit in the v1 tier's Complete handbooks,
+plus eight Deity records, five Subraces and five PHB tables.
+
+### The headline number
+
+| | |
+|---|---:|
+| effects expressed **without a marker** | **863 (77%)** |
+| effects carrying an `UNMODELLED` marker | 258 (23%) |
+| **records expressed completely, with no marker anywhere** | **52 of 177 (29%)** |
+
+**The format says three quarters of what the corpus says, and finishes fewer than a third of its
+records.** Those two numbers point in opposite directions and both are true: the *operations* work
+almost always, and the *records* rarely close, because one unsayable clause in a fourteen-effect kit
+leaves the record incomplete.
+
+For a tool whose promise is *"it tells you which rule refused and which book that rule came from"*,
+the second number is the one that binds. A pack of 177 records can answer that question fully for 52
+of them.
+
+The spread by book is wide and diagnostic:
+
+| book | records | complete | | book | records | complete |
+|---|---:|---:|---|---|---:|---:|
+| CBH | 17 | **76%** | | CBE | 16 | 50% |
+| CDH | 14 | 50% | | CTH | 18 | 44% |
+| CFH | 14 | 29% | | CPAH | 15 | 27% |
+| CBGH | 29 | 24% | | CRH | 14 | 7% |
+| **CBD, CWH, CPRH** | 40 | **0%** | | | | |
+
+A book is not a random sample of difficulty. CBH's kits are proficiencies and named abilities; CBD's
+every record carries a reaction penalty qualified by clan, and CPRH's every record carries a
+permit-list and a follower roster. **Three books produced no complete record at all.**
+
+### Known unknown #4 — *six operations may not suffice*. **Answered: they suffice.**
+
+| | uses | share |
+|---|---:|---:|
+| `grant` | 570 | 50.8 % |
+| `adjust` | 235 | 21.0 % |
+| `require` | 121 | 10.8 % |
+| `forbid` | 96 | 8.6 % |
+| `set` | 86 | 7.7 % |
+| `except` | 13 | 1.2 % |
+
+**All six are used, none was ever found missing, and in 1,121 effects not one clause needed a seventh
+operation.** `except` waited 24 records for its first case and ends at 13 uses — the least needed and
+not redundant, since a format that could not say *"you may take the rogue-only proficiency"* would
+fail on real kits.
+
+This is the answer nobody predicted. The known unknown feared the operation set was too small; the
+measurement says it is **exactly right**, and that every shortfall is elsewhere.
+
+### Where the shortfall actually is
+
+Classifying all 258 markers by what the format could not say:
+
+| | count | |
+|---|---:|---|
+| **conditions** | **78** | the other party, terrain, round state, campaign configuration, play history |
+| **operands and values** | **46** | bare ranges, dice in effects, per-die scaling, cross-sheet arithmetic |
+| **subjects** | **31** | a spell, a follower, an opponent, a second character sheet |
+| shapes | 14 | permit-lists, item-property predicates |
+| earmarks and scopes | 13 | *this pool, spent only on these* |
+| reductions and substitutions | 12 | *replacing them with*, *to a lesser degree* |
+| choices and elections | 9 | *one or the other, but not both* |
+| caps and clamps | 6 | *to a maximum of*, *until it reaches 0* |
+| frequencies and triggers | 5 | *once per week*, *on a roll of 14 or more* |
+| unclassified | 44 | |
+
+**Conditions and subjects together are 109 of 258 — 42% of everything the format could not say.** Add
+operands and the three account for 60%.
+
+So the verdict on [ticket 06](./06-expression-language.md)'s expression language is the mirror of the
+one on §4.3. The predicate's **vocabulary** is adequate — `compare`, `member` and `has` were all
+exercised and none was found wanting. What is inadequate is its **reach**: a predicate can name the
+character and nothing else, and the corpus routinely conditions on the world.
+
+### The three known unknowns
+
+**#1 — the kit mechanism has no prior art.** §4.1's claim that Kit, Deity and Subrace are one shape
+**held for 177 records across three arms**, and held without strain: the shared `attachable` never
+needed a per-arm exception. One thing breaks it, and it is
+[finding 90](#finding-90--a-kit-that-overrules-a-deity-with-the-book-stating-the-precedence): three
+CBD kits take their weapons from the character's **Deity**, and the Vindicator overrides its religion
+by name. **Two Attachables can contradict each other**, and §4.3's commutation — the property that
+makes the layer model work — has nothing to say about contradiction. That is the single largest hole
+the corpus found, and it is a hole in the arms' *composition*, not in their shape.
+
+**#2 — "the Engine computes, the user supplies the tables" has no shipping precedent.** **Fired,
+negatively**, at [finding 20](#finding-20--a-lookuptable-has-no-declared-role-and-its-rows-are-keyed-by-prose):
+a `lookupTable` has an id derived from its source file, a name that §7.3 says is never identity, and
+**no declaration of what it is a table of**. Its rows are keyed by book prose. The Engine cannot find
+the table it needs, and [finding 71](#finding-71--an-effect-that-swaps-one-classs-table-for-anothers)
+showed the same wall from the other side — the Swashbuckler needs to *read* the fighter's THAC0
+progression and cannot name it. **This is unresolved and it is the premise the whole design rests on.**
+
+**#4** — answered above.
+
+### What the slice proves, and what it does not
+
+**Proved.** The shapes are expressible. The six operations suffice. The three Attachable arms are one
+shape. Order-independence held everywhere it was tested, and the layer model repeatedly absorbed
+things that looked like they needed new features — offsets as constants beside a multiple
+([finding 50](#finding-50--the-operand-was-never-as-poor-as-findings-21-26-and-40-said)), exceptions
+as cancelling adjusts ([finding 36](#finding-36--the-cancelling-adjust-technique-generalises)), CNF
+for free on the effect side ([finding 27](#finding-27--the-effect-list-gives-conjunction-of-disjunction-for-free)).
+
+**Not proved, and stated as plainly as ticket 08 asked.** **None of the pack's 496 references
+resolve** — it validates and would not load. Nothing was tested about psionics, spells as records,
+equipment breadth, or the DMG. The cost per record was never measured, so
+[ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction is still unchecked, and
+[ticket 09](./09-extraction-pipeline.md)'s local-model draft quality was never tried at all. **A pack
+of 182 records that has never been loaded by anything is a demonstration, not a validation**, and the
+distinction is the same one A3 exists to keep.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against
