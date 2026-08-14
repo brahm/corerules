@@ -2773,7 +2773,7 @@ races.
 | effects expressed **without a marker** | **1,386 (77%)** | **1,497 (78%)** |
 | effects carrying an `UNMODELLED` marker | 405 (23%) | 415 (22%) |
 | **records complete** | **51 of 228 (22%)** | 53 of 253 (21%) |
-| references resolving | — | **1,951 of 1,985 (98%)** |
+| references resolving | — | **3,813 of 4,052 (94%)** |
 
 The pack is 1,023 records; the 770 in kinds with no `effects` array — spells, proficiencies, weapons,
 alignments, tables — are records, never incomplete ones, because they have nothing to express.
@@ -3785,6 +3785,90 @@ just makes it impossible to ignore.
 **The completion rate fell from 29% to 22%** for the same reason, and the fall is honest: the Complete
 Priest's was already 0-of-8 complete and is now 0-of-59. **No book in this corpus resists the format
 harder**, and it is the one book a program could model.
+
+### Session 63 — the five proficiency books, four of which have none
+
+**1,094 records, 0 schema errors.** [Ticket 16](./16-the-plan-for-the-remaining-books.md)'s item 5 said
+five books had unread proficiencies. The measurement says otherwise, and chasing it opened a hole in
+the checker that had been widening for thirteen sessions.
+
+### Finding 132 — four of the five books have no proficiency chapter at all
+
+The Complete Book of Elves, the Gnomes and Halflings', the Druid's and the Wizard's: **no proficiency
+table, no new proficiency, nothing to transcribe.** The Elves' one page on the subject is advice about
+which *existing* proficiencies suit an elf; the Druid's one page expands Agriculture procedurally.
+
+The Fighter's does have a chapter, and what is in it is **not a nonweapon proficiency**: three PHB
+proficiencies expanded into crafting procedures, and a **weapon-group system**. So the plan's item 5
+was a block of five and is a block of one — and the one contains something the plan did not know was
+there.
+
+### Finding 133 — a group you can buy is not a group that is printed
+
+Table 44's `isGroup` is a **printing convention**: `Bow` heads its variants and scores nothing. The
+Complete Fighter's makes grouping a **rule** — a Tight Group costs **two** weapon proficiency slots and
+a Broad Group **three**, and a third list names the weapons that belong to no group and must be bought
+one at a time.
+
+So `weaponProficiency` gains `groupKind`, `slotCost` and `members`: **20 groups over 143 members**,
+which cross books — a Fencing Blades group holds Table 44's dagger beside this book's rapier. It is the
+group/member split of [finding 119](#finding-119--a-class-is-two-layers-and-the-corpus-uses-both-interchangeably)
+a fourth time, and the first time the group is a thing a character can *spend* on.
+
+**46 new weapons** come with it, in Table 44's own eight columns. Two hazards: the footnote marker is a
+`<FONT SIZE="1">` span glued to the name, and the table nests **two deep** — `Sword` / `  Katana` /
+`    One-handed` — where a single `parent` variable made Rapier a child of Katana. `Sabre` and
+`Wakizashi` are printed at the top level beside `Sword` rather than under it; the records follow the
+printed indentation rather than correcting the book, and say so.
+
+Four ids the pack had been carrying as `cth:` — stiletto, main-gauche, rapier, sabre — and `phb:net`
+are all described **here**. [Finding 105](#finding-105--a-packs-ids-encode-the-order-its-books-were-transcribed-in)'s
+problem, fixed by moving five references.
+
+### Finding 134 — every proficiency had a group and nothing defined one
+
+83 reference occurrences to `phb:general`, `phb:rogue`, `cbd:new`, `crh:new`. The five PHB groups are
+Table 37's own headings and are now records. **`<book>:new` was an id the extractor invented** for
+proficiencies whose group the book does not state; 54 records now carry **no group at all**, which is
+A3's distinction rather than a placeholder.
+
+The same sweep found Table 26's row key hand-typed as `phb:hear-noise` where the book prints
+**Detect Noise** and the pack's own record says `phb:detect-noise` — a table that did not match the
+records it keys, in the pack for thirteen sessions.
+
+### Finding 135 — the checker was seeing 48% of the pack's references
+
+None of the above was visible because **the reference walker was a hand-listed set of paths**: target,
+prerequisite, `effects.ref`, `effects.from`, `when`. Every kind added since session 50 put ids
+somewhere that list did not mention — `members` on a weapon group, `group` on a proficiency, `schools`
+and `spheres` on a spell, `combines` on a class, row keys and column headings on a table.
+
+| | hand-listed paths | every id-shaped string |
+|---|---:|---:|
+| reference occurrences | 1,985 | **4,052** |
+| distinct ids | 246 | 321 |
+
+**The walker now collects every string shaped like an id**, which is mechanical and cannot fall behind
+a new kind. `vocabulary` is the one exclusion, because it names a *kind* rather than a record.
+
+This is [finding 117](#finding-117--the-most-repeated-reference-in-the-pack-was-never-counted) again
+and it was not learned the first time. The repair there was to add `target` to the list; the repair
+here is to **delete the list**. *A tool that reads a structure by walking a list of its parts is a tool
+that will be wrong again the next time the structure grows.*
+
+### What the complete sweep says now
+
+**3,813 of 4,052 occurrences resolve (94%), over 289 of 321 distinct ids.** And the remainder is no
+longer a long tail — **198 of the 239 unresolved occurrences are two ids**:
+
+`phb:race` (133) and `phb:alignment` (65) are **pseudo-scalars**. §6.1's `scalar` admits
+`{ability: id}` and `{level: id}`, so a transcriber needing to condition on a character's race wrote
+`{ability: "phb:race"}` — and race is not an ability, and no record answers to that id. Five more do
+the same: `phb:subrace`, `cdh:druid-branch`, `phb:spell-duration`, `phb:tracking-base`.
+
+**The scalar vocabulary is too narrow by exactly the things a character most obviously is**, and the
+type abuse has been sitting in 200 conditions since the first kit was modelled, unmeasurable until the
+walker could see it.
 
 ### Still not done
 

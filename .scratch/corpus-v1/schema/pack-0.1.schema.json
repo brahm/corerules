@@ -946,6 +946,26 @@
           },
           "damageLarge": {
             "type": "string"
+          },
+          "groupKind": {
+            "enum": [
+              "tight",
+              "broad",
+              "none"
+            ],
+            "description": "Ticket 13 finding 133. Table 44's `isGroup` is a printing convention — `Bow` heads its variants. The Complete Fighter's turns grouping into a RULE: a Tight Group costs two proficiency slots and a Broad Group three, and `none` names the weapons that belong to no group and must be bought one at a time. So a group can now be bought, which a heading never could."
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/id"
+            },
+            "description": "The weapons in the group, across books: a Fencing Blades group holds Table 44's dagger beside this book's rapier."
+          },
+          "slotCost": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Weapon proficiency slots to buy the whole group. Absent on a `none` group, which cannot be bought."
           }
         },
         "description": "Ticket 14 declared this kind with NO fields, before anything was transcribed. Its shape is Table 44's columns, set in session 51 the same way the nonweapon proficiency's four fields turned out to be Table 37's four columns — the book's own table IS the record shape."
@@ -1236,6 +1256,26 @@
         "properties": {
           "covers": {
             "type": "string"
+          }
+        }
+      }
+    },
+    "proficiencyGroups": {
+      "description": "Ticket 13 finding 134. Every nonweapon proficiency has carried a `group` since session 50 and NOTHING DEFINED ONE — 83 reference occurrences, invisible because the checker walked a hand-listed set of paths and `group` was not on it. Table 37 prints five: the groups a class may buy from, which is a fact about the CLASS and not about the proficiency, exactly as §4.1's Attachable arms are about the character. `<book>:new` was an id the extractor invented for proficiencies whose group the book does not state; those now carry no group at all, which is A3.",
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/record"
+          }
+        ],
+        "properties": {
+          "openTo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/id"
+            },
+            "description": "The class groups that may buy from it, where Table 37 says so."
           }
         }
       }

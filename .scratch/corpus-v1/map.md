@@ -444,7 +444,7 @@ why it is a program and not a paragraph.
 |---|---:|---:|
 | effects the format expressed cleanly | **77 %** | **78 %** |
 | **records expressed completely** | **22 %** (51 of 228) | 21 % (53 of 253) |
-| references resolving | — | **98 %** of 1,985 occurrences |
+| references resolving | — | **94 %** of 4,052 occurrences |
 
 Both numbers matter and they disagree on purpose: the operations work nearly always, and records
 rarely close, because one unsayable clause leaves a fourteen-effect kit incomplete. For an Engine
@@ -473,7 +473,7 @@ never measured, and local-model drafting was never tried. **A pack that has neve
 demonstration, not a validation.**
 
 One line of the original verdict has been **half overturned by measurement rather than argument**: it
-said *none of the pack's 496 references resolve*, and **98% now do** — closed by transcribing the
+said *none of the pack's 496 references resolve*, and **94% of a corpus twice as large now do** — closed by transcribing the
 things the kits point at, over eleven sessions and no design change. The last two blocks were
 `classes`, which every Attachable names, and the permit-list placeholders, which turned out not to be
 records at all (correction 27). What remains is **34 ids**, a third of them the creature and terrain
@@ -647,6 +647,27 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    is correct; the aggregate now describes **how many records a book has** as much as how often the
    format fails. The verdict's shortfall table must be read with that in mind, and it was already half
    true of the hand pass.
+31. **The reference checker walked a hand-listed set of paths and saw half the pack.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 135) Every kind added since session
+   50 put ids somewhere the list did not mention — `members`, `group`, `schools`, `spheres`,
+   `combines`, table row keys — so the checker counted **1,985 of 4,052** references. It now walks
+   every string shaped like an id. This is correction to correction: finding 117 added `target` to the
+   list; the real repair was to **delete the list**. *A tool that reads a structure by walking a list
+   of its parts will be wrong again the next time the structure grows.*
+32. **The scalar vocabulary is too narrow by exactly the things a character most obviously is.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 135) §6.1's `scalar` admits
+   `{ability: id}` and `{level: id}` and nothing else, so a transcriber conditioning on race wrote
+   `{ability: "phb:race"}`. **`phb:race` is referenced 133 times and `phb:alignment` 65** — 198 of the
+   239 references that still do not resolve — beside `phb:subrace`, `cdh:druid-branch`,
+   `phb:spell-duration` and `phb:tracking-base`. The abuse has been in the pack since the first kit and
+   was unmeasurable until the walker could see it. Race and alignment are now RECORDS, so the repair is
+   a third scalar arm, not new content.
+33. **A weapon group you can buy is not a weapon group that is printed.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 133) Table 44's `isGroup` is a
+   heading. The Complete Fighter's makes grouping a rule: a Tight Group costs **two** proficiency slots
+   and a Broad Group **three**, and some weapons belong to no group at all. 20 groups over 143 members
+   that cross books. The group/member split for the fourth time, and the first where the group is a
+   thing a character spends on.
 23. **The Engine's field vocabulary is far larger than the schema's, and nothing checks it.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 110) A `when` clause describes the
    CHARACTER — its subject is an ability or a level — and never his opponent. So every target-scoped

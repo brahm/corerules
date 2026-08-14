@@ -153,10 +153,10 @@ Each of these is volume with a known method and no decision inside it.
 4. ~~**The 48 remaining CPRH Deities**~~ — **done in session 62**, and there were **51**: three were
    being dropped for one unmarked label (finding 127). Modelled by a program, which this book alone
    earns (finding 129).
-5. **The five unread proficiency books** — CBE, CBGH, CDH, CFH, CWH. The three compiled-table books are
-   done; these five need their own reading, which is
-   [finding 81](./13-transcribe-the-proving-slice.md#finding-81--a-third-label-convention-and-an-omission-with-no-symptom)'s lesson repeated: a book's markup is
-   its own.
+5. ~~**The five unread proficiency books**~~ — **read in session 63, and four of them have no
+   proficiency chapter at all** (finding 132). The Fighter's has one, and what is in it is a
+   weapon-group system and 46 new weapons, not proficiencies. This item was
+   a block of five and was a block of one.
 6. **The remaining lookup tables** — the PHB prints 76 and the DMG 110; 6 are transcribed. `extract_tables.py`
    emits `supplies` and the row keys empty for a human, deliberately.
 7. **Terrains and creature vocabulary** — `cdh:forest`, `phb:orc`, and the fourteen creature names now

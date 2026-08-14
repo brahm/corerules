@@ -16,7 +16,33 @@ records still awaiting the judgement pass, and files the manifest never declared
 
 Usage:  validate.py <pack-dir>
 """
-import json, sys, pathlib, collections
+import re, json, sys, pathlib, collections
+
+# Ticket 13 finding 135. This walked a HAND-LISTED set of paths — target, prerequisite,
+# effects.ref, effects.from, when — and every kind added since put ids somewhere the list
+# did not mention: `members` on a weapon group, `group` on a proficiency, `schools` and
+# `spheres` on a spell, `combines` on a class. The checker was seeing 1,985 of the pack's
+# 4,110 references. It now walks EVERY string shaped like an id, which is mechanical and
+# cannot fall behind a new kind.
+#
+# `vocabulary` is excluded because it names a KIND, not a record — the one place an
+# id-shaped string is deliberately not a reference.
+ID_SHAPED = re.compile(r"^[a-z][a-z0-9]*:[a-z0-9][a-z0-9-]*$")
+NOT_A_REFERENCE = {"vocabulary"}
+
+
+def collect(node, refs, key=None):
+    if isinstance(node, str):
+        if key not in NOT_A_REFERENCE and ID_SHAPED.match(node):
+            refs[node] += 1
+    elif isinstance(node, list):
+        for x in node:
+            collect(x, refs, key)
+    elif isinstance(node, dict):
+        for k, v in node.items():
+            if k != "id":
+                collect(v, refs, k)
+
 
 try:
     import jsonschema
@@ -66,38 +92,12 @@ def main():
     # them, grouped by prefix, without failing: a pack that points outward is normal, and a
     # pack every one of whose references points outward is worth knowing about.
     defined, refs = set(), collections.Counter()
-
-    def walk(conds):
-        for c in conds or []:
-            for cc in c.get("anyOf", [c]):
-                for i in cc.get("anyOfIds", []):
-                    refs[i] += 1
-                if "ref" in cc:
-                    refs[cc["ref"]] += 1
-
     for arr, recs in doc.items():
         if arr == "manifest":
             continue
         for r in recs:
             defined.add(r["id"])
-            # Ticket 13 finding 117: `target` was never walked, and it is an Attachable's
-            # MOST repeated reference — every kit names the class it attaches to. 171 of the
-            # pack's 177 targets pointed at nothing and no count showed it.
-            t = r.get("target")
-            for i in ([t] if isinstance(t, str) else
-                      list(t.values()) if isinstance(t, dict) else t or []):
-                if isinstance(i, str):
-                    refs[i] += 1
-                elif isinstance(i, list):
-                    for x in i:
-                        refs[x] += 1
-            walk(r.get("prerequisite"))
-            for e in r.get("effects", []):
-                if "ref" in e:
-                    refs[e["ref"]] += 1
-                for i in e.get("from", []):
-                    refs[i] += 1
-                walk(e.get("when"))
+            collect(r, refs)
     unresolved = collections.Counter(i.split(":")[0] for i in refs if i not in defined)
     undeclared = sorted(p.name for p in pack.glob("*.json")
                         if p.name != "manifest.json" and p.name not in manifest.get("files", []))
