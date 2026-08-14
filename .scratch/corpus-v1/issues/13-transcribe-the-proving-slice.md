@@ -2773,7 +2773,7 @@ races.
 | effects expressed **without a marker** | **1,386 (77%)** | **1,483 (78%)** |
 | effects carrying an `UNMODELLED` marker | 405 (23%) | 415 (22%) |
 | **records complete** | **51 of 237 (22%)** | 53 of 270 (20%) |
-| references resolving | — | **3,939 of 3,952 (99.7%)** |
+| references resolving | — | **3,954 of 3,956 (99.9%)** |
 
 The pack is 1,218 records; the 948 in kinds with no `effects` array — spells, proficiencies, weapons,
 tables, creatures — are records, never incomplete ones, because they have nothing to express.
@@ -4066,6 +4066,67 @@ and the multi-class and dual-class arrangements.
 
 **None of the ten is a creature, a terrain, a proficiency group, a class, an alignment or a scalar** —
 every category that has produced a finding in this ticket is now closed.
+
+### Session 67 — the last seven, and two references left in the pack
+
+**1,232 records, 0 schema errors, 3,954 of 3,956 reference occurrences resolve.** Two ids remain, and
+both are unresolved for a stated reason rather than a missing session.
+
+### Finding 143 — `grantedAbilities` was never about abilities
+
+Six of the seven are things a kit **takes away**: no stronghold, no followers, never Grand Druid, no
+multi-classing. None can be a `defines`, and the reason is exact —
+[finding 101](#finding-101--216-of-the-packs-references-can-never-resolve-and-should-not-exist)'s
+`defines` is for what a record **brings into being**, and a kit that says *"no stronghold"* is removing
+something **the class** brought into being. It must reference.
+
+The kind that already held such things is `grantedAbilities`, whose description said it holds *"class
+abilities that kits reference"* — `phb:bard-spellcasting`, cited by three bard kits that take it away.
+What it actually holds is broader: **anything the rules grant or permit that a record may remove.** A
+stronghold at 9th level, the bard's followers, the rank of Grand Druid, the permission to multi-class.
+
+The effect's own `kind` keeps naming the concept — `stronghold`, `follower`, `rank`,
+`classArrangement` — exactly as `bard-spellcasting` has always been cited as `kind: ability`. **The
+array is a home; the `kind` is the meaning**, and they were never required to agree.
+
+The seventh, `phb:holy-symbol`, goes to `limitations` instead, because the only record that cites it
+**lifts** it — the Savage's ceremonial scars stand in for it — and `except` is what that kind exists
+to serve.
+
+### Finding 144 — one class feature under three words, and the effects had already agreed
+
+The fighter's entry writes *"a castle or stronghold"*, the ranger's *"castles, forts, or
+strongholds"*, the bard's *"a stronghold"*. `phb:fortification` was minted from the ranger's wording
+and `phb:stronghold` from the bard's, by transcribers reading different books —
+[finding 105](#finding-105--a-packs-ids-encode-the-order-its-books-were-transcribed-in) again, in its
+purest form.
+
+What makes this one sharp: **all five citing effects declare `kind: "stronghold"`.** The transcribers
+disagreed about the id and agreed about the concept, in the same file, and nothing compared the two.
+A checker that asked *"do two ids of the same `kind` mean the same thing?"* could not have answered it,
+but a human reading five effects side by side sees it at once — which is
+[ticket 12](./12-how-much-tool.md)'s division of labour landing exactly where it predicted.
+
+### Finding 145 — the corpus states its own attribution, once
+
+The Complete Ranger's Table 58 prints eight weapons and then a row that reads **"Optional Weapons from
+The Complete Fighter"**, followed by the belaying pin, main-gauche, stiletto, cutlass, rapier and
+sabre.
+
+That is the book saying, in its own words, what [finding 105](#finding-105--a-packs-ids-encode-the-order-its-books-were-transcribed-in)
+wanted and never had: **which book introduces a thing.** Session 63 moved those weapons to `cfh:` ids
+by reading the Fighter's asterisk convention; the Ranger's table confirms it independently, and the
+eight above the line become `crh:` records — closing `crh:machete`, which is where this began.
+
+### The two that are left
+
+| | |
+|---|---|
+| `phb:axe` | Table 44 prints a **battle axe** and a **hand or throwing axe** and no plain axe. Which one a Gnome Fighter kit meant is not recoverable from the id, and guessing would be worse than leaving it. |
+| `cbgh:hoopak` | *"Kender Cartographers will of course specialize in their national weapon, the hoopak."* The Complete Book of Gnomes and Halflings **names it and never describes it** — it belongs to a Dragonlance supplement outside the v1 tier. |
+
+**Neither is a transcription backlog.** One is an ambiguity in the source, the other a reference out of
+the corpus, and A3 exists so a pack can say both plainly instead of pretending.
 
 ### Still not done
 

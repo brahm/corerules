@@ -444,7 +444,7 @@ why it is a program and not a paragraph.
 |---|---:|---:|
 | effects the format expressed cleanly | **77 %** | **78 %** |
 | **records expressed completely** | **22 %** (51 of 237) | 20 % (53 of 270) |
-| references resolving | — | **99.7 %** of 3,952 occurrences |
+| references resolving | — | **99.9 %** of 3,956 occurrences |
 
 Both numbers matter and they disagree on purpose: the operations work nearly always, and records
 rarely close, because one unsayable clause leaves a fourteen-effect kit incomplete. For an Engine
@@ -473,7 +473,8 @@ never measured, and local-model drafting was never tried. **A pack that has neve
 demonstration, not a validation.**
 
 One line of the original verdict has been **half overturned by measurement rather than argument**: it
-said *none of the pack's 496 references resolve*, and **3,835 of 3,854 now do** — closed by transcribing the
+said *none of the pack's 496 references resolve*, and **3,954 of 3,956 now do** — the two that
+remain being an ambiguity in the source and a reference out of the corpus, not a backlog — closed by transcribing the
 things the kits point at, over eleven sessions and no design change. The last two blocks were
 `classes`, which every Attachable names, and the permit-list placeholders, which turned out not to be
 records at all (correction 27). What remains is **34 ids**, a third of them the creature and terrain

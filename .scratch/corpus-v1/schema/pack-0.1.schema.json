@@ -1202,14 +1202,20 @@
       }
     },
     "grantedAbilities": {
-      "description": "The eleven abilities used by MORE THAN ONE record. Everything used once is defined inline by the effect that grants it (`defines`, finding 101); these eleven are shared, and several are not kit inventions at all but CLASS abilities that kits reference — `phb:bard-spellcasting` is cited by three bard kits that take it away.",
+      "description": "The eleven abilities used by MORE THAN ONE record. Everything used once is defined inline by the effect that grants it (`defines`, finding 101); these eleven are shared, and several are not kit inventions at all but CLASS abilities that kits reference — `phb:bard-spellcasting` is cited by three bard kits that take it away. WIDENED by ticket 13 finding 143. What the kind actually holds is broader than 'ability': it is ANYTHING THE RULES GRANT OR PERMIT THAT A RECORD MAY TAKE AWAY — a stronghold at 9th level, the bard's followers, the rank of Grand Druid, the permission to multi-class. None of these can be a `defines`, because `defines` is for what a record BRINGS INTO BEING and a kit that says 'no stronghold' is removing something the CLASS brought into being. The effect's own `kind` keeps naming the concept — `stronghold`, `follower`, `rank`, `classArrangement` — exactly as `phb:bard-spellcasting` has always been cited as `kind: ability`.",
       "type": "array",
       "items": {
         "allOf": [
           {
             "$ref": "#/$defs/record"
           }
-        ]
+        ],
+        "properties": {
+          "grantedBy": {
+            "$ref": "#/$defs/id",
+            "description": "The class that grants it, where one does."
+          }
+        }
       }
     },
     "alignments": {

@@ -146,7 +146,7 @@ restriction that exists elsewhere, and those elsewheres are real PHB rules that 
 
 Each of these is volume with a known method and no decision inside it.
 
-1. **The CBD Patrician** — one record, closes the slice. *(minutes)* — still owed.
+1. **The CBD Patrician** — one record, closes the slice. *(minutes)* — **the only item left.**
 2. ~~**Classes**~~ — **done in session 60**: 19 records, 171 references closed.
 3. ~~**Secondary skills**~~ — **done in session 61**: Table 36's 23, and seven more hand-minted slugs
    corrected on the way (finding 125).
