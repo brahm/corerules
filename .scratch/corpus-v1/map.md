@@ -443,7 +443,7 @@ why it is a program and not a paragraph.
 | | attachables | whole pack |
 |---|---:|---:|
 | effects the format expressed cleanly | **79 %** | **80 %** |
-| **records expressed completely** | **23 %** (54 of 238) | 21 % (56 of 271) |
+| **records expressed completely** | **23 %** (55 of 238) | 21 % (57 of 271) |
 | references resolving | — | **99.9 %** of 3,956 occurrences |
 
 Both numbers matter and they disagree on purpose: the operations work nearly always, and records
@@ -457,9 +457,14 @@ rate than any Complete handbook, and a 163-record majority absorbed it without a
   uses and is not redundant. **The mix is a property of the kind, not the format**: six races moved
   `set` from 7.7% to 11.9% of all effects, because a Kit hands you things and a Race states what a
   number is.
-- **The shortfall is conditions and subjects**, 115 of the 262 unmodelled clauses — the predicate can
-  name the character and nothing else, and the corpus conditions on the other party, the terrain, the
-  round, the campaign and the past. Operands are the next 61.
+- **The shortfall is conditions**, and [ticket 13](issues/13-transcribe-the-proving-slice.md) finding
+  147 says what that actually means. *The predicate can name the character and nothing else* was the
+  wrong diagnosis: once a scalar could name a field path, naming the other party cost nothing. What
+  blocks the rest is **a vocabulary the books never enumerate** (clan, craft, culture, social class,
+  profession), **a comparison between two characters** (*"dwarves of OTHER clans"*, *"the PARTNER's
+  race"*), and **the other party's knowledge** — which four books invented independently and no pack
+  can hold. Only the second is a language feature; the first wants content and the third is table
+  state.
 - **Known unknown #2 fired negatively and is now RESOLVED** (correction 16b): a table declares the
   **field path it supplies**, and a `tableValue` operand lets an effect read one. The repair cost a
   discovery — the tables' axes are heterogeneous, keyed by id, integer or level band — and leaves four
@@ -705,6 +710,15 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    **no program can catch it**, since the only signal is a human reading prose beside a schema that
    moved. The 33 were findable at all because the transcriber had written down *what he was waiting
    for* — a convention invented in passing, and worth keeping deliberately.
+38. **'The predicate can name the character and nothing else' was the wrong diagnosis.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) findings 147 and 148) Reading all eighteen
+   other-party markers one at a time: **five close outright, four close halfway, nine do not move** —
+   and the nine are four different problems. A vocabulary the books never enumerate; a comparison
+   between two characters; the other party's KNOWLEDGE, which four books invented independently; and a
+   value rewritten by a play event. Only the comparison is a language feature. The Forestwalker's
+   *"non-halflings"* closed only because the player races are a closed list of six — there is no list
+   of dwarven clans anywhere. And the Guardian shows a marker can understate the format: its effect
+   already wrote `opponent.savingThrow` and marked itself unmodelled anyway.
 23. **The Engine's field vocabulary is far larger than the schema's, and nothing checks it.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 110) A `when` clause describes the
    CHARACTER — its subject is an ability or a level — and never his opponent. So every target-scoped

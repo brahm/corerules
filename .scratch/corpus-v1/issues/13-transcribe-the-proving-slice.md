@@ -2770,9 +2770,9 @@ races.
 |---|---:|---:|
 | records carrying effects | 238 | 271 |
 | effects | 1,803 | 1,910 |
-| effects expressed **without a marker** | **1,427 (79%)** | **1,524 (80%)** |
-| effects carrying an `UNMODELLED` marker | 376 (21%) | 386 (20%) |
-| **records complete** | **54 of 238 (23%)** | 56 of 271 (21%) |
+| effects expressed **without a marker** | **1,433 (79%)** | **1,530 (80%)** |
+| effects carrying an `UNMODELLED` marker | 370 (21%) | 380 (20%) |
+| **records complete** | **55 of 238 (23%)** | 57 of 271 (21%) |
 | references resolving | — | **3,954 of 3,956 (99.9%)** |
 
 The pack is 1,218 records; the 948 in kinds with no `effects` array — spells, proficiencies, weapons,
@@ -2854,7 +2854,10 @@ All 262 markers, by what the format could not say:
 | declaring no category | 30 | |
 
 **Conditions and subjects together are 115 of 262 — 44% of everything the format could not say.** Add
-operands and the three account for 67%. The session-48 hand pass reached the same ranking with 44
+operands and the three account for 67%. [Finding 147](#finding-147--the-subject-was-never-the-hard-part)
+sharpens what that means: the SUBJECT was never the hard part, and what blocks the rest is a
+vocabulary the books never enumerate, a comparison between two characters, or a second character's
+knowledge. The session-48 hand pass reached the same ranking with 44
 markers it could not classify; the difference is [finding 115](#finding-115--the-markers-were-classifying-themselves-all-along),
 not a change in the corpus.
 
@@ -4187,6 +4190,64 @@ marker is prose, and the only signal is a human reading it beside a schema that 
 found because they said *no effect operand references it* — the transcriber had written down **what he
 was waiting for**. That convention, invented in passing, is the only thing that made a sweep possible,
 and it is worth keeping deliberately.
+
+### Session 69 — the judgement pass over the other-party markers
+
+The eighteen markers [finding 146](#finding-146--a-marker-records-what-the-format-could-not-do-then)
+left unswept, read one at a time. **Five close outright, four close halfway, nine do not move** — and
+the nine sort into four different problems that had all been filed as one.
+
+| | |
+|---|---|
+| **closed** | Highborn, Tunnelrat, Forestwalker, Vanisher, Guardian |
+| **halved** | Mercenary, Sheriff, Assassin, Fence |
+| **open** | Clansdwarf, Craft Priest ×2, Hearth Guard, Trader, Windrider, Buffoon, Treetender, Squire, Beggar |
+
+79% of attachable effects now express cleanly and **55 of 238 records are complete**, against 51 two
+sessions ago.
+
+### Finding 147 — the subject was never the hard part
+
+The verdict has carried *"the predicate can name the character and nothing else"* as the format's
+largest shortfall since session 48. Reading all eighteen, **that sentence was diagnosing the wrong
+thing.** Once [finding 136](#finding-136--the-predicate-could-not-name-what-a-character-is-so-it-lied)
+let a scalar name a field path, naming the other party cost nothing —
+`member {field: "reactor.race"} anyOfIds [phb:halfling]` and the Tunnelrat is done.
+
+What actually blocks the other nine is four distinct problems:
+
+- **A vocabulary the books never enumerate.** Seven of the nine turn on a *clan*, a *craft*, a
+  *culture*, a *social class*, a *profession*, or *"woodland creatures"* — categories the corpus names
+  in prose and never lists. The Forestwalker's *"non-halflings"* closed only because the player races
+  are a **closed list of six**, so a negation could be enumerated; there is no list of dwarven clans
+  anywhere in the Complete Book of Dwarves.
+- **A comparison between two parties.** *"Dwarves of OTHER clans"*, *"his OWN clan"*, the Squire's
+  *"NPCs of the PARTNER's race"*. The condition is not character-against-constant but
+  character-against-character, and `anyOfIds` takes a constant list.
+- **The other party's knowledge.** All four halved markers stop at the same place: the Mercenary's
+  halflings *"who KNOW what he does for a living"*, the Sheriff's NPC who knows his rank, the
+  Assassin's who is aware of his profession, the Fence *"if their profession is recognized"*. **Four
+  books invented the same mechanic**, and it is a fact about what a second character has learned during
+  play, which no pack can hold.
+- **A value rewritten by an event.** The Trader's +1 *"changes to a −2 if he cheats on a deal and is
+  later discovered"*. Not a condition on state at all.
+
+**That is a much better answer than the one the verdict has been giving**, and it changes what a v2
+would do about it: three of the four want *content* (enumerate the vocabularies) or *nothing* (knowledge
+is table state); only the relative comparison is a language feature.
+
+### Finding 148 — a transcriber wrote the right model and disbelieved it
+
+The Guardian's effect reads `adjust opponent.savingThrow by -2` and carries
+**`UNMODELLED SUBJECT: the penalty lands on the enemy.`** The path already says the penalty lands on
+the enemy. The marker is not describing a gap in the pack — it is describing the transcriber's
+**disbelief that a field path could name someone other than the character**, written before
+[finding 141](#finding-141--the-third-scalar-arm-had-already-solved-the-biggest-shortfall-in-one-class-of-case)
+established that it can. The Vanisher's was the same rule written the other way, with the path
+*missing* the prefix the marker asked for.
+
+A marker can be wrong in the direction nobody checks: **not overstating what the format does, but
+understating it.**
 
 ### Still not done
 
