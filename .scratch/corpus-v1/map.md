@@ -398,6 +398,19 @@ RTF ignores by specification. The corpus is clean.
   correction: **the ambiguous middle belongs to the parser, not the model.** Cost cannot carry this
   decision (~$10–$100 a pass); **human review hours dominate and no ticket has estimated them.**
 
+18. **Two Attachables can contradict each other, and §4.3's commutation does not help.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 90) Three CBD kits take their
+   permitted weapons from the character's **Deity**, and the Vindicator requires battle axe and
+   warhammer *"regardless of the restrictions imposed by their religion."* A `forbid` from one arm and
+   a `require` from another are not order-dependent — they are **inconsistent**, and the book resolves
+   it with a precedence the pack has nowhere to record. **Bigger than any missing operand**, because
+   the layer model's central guarantee is silent on it.
+19. **The corpus defines records relative to other records; the format stores only absolutes.**
+   (Findings 88 and 89) The Vindicator is *"all the special benefits of Battleragers"* minus one plus
+   one; the Gnome Professor's prerequisite is the class's *"with Intelligence and Charisma switched"*.
+   Modelling both meant expanding to absolute values, which produces the right character and loses the
+   relationship — a correction to the Battlerager will never reach the Vindicator.
+
 ## A method note this map earned the hard way
 
 **Every count in this effort taken by a regex over prose is a LOWER BOUND.** Four times a pattern

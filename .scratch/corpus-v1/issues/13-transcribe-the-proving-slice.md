@@ -2554,6 +2554,57 @@ Two smaller confirmations worth recording because they are *positive*:
   language"* — **the only prohibition in 122 records justified by setting rather than by mechanics**,
   and it models as an ordinary `forbid`. The format does not need to know why.
 
+### Session 45 — CBD complete: twelve books, 143 records
+
+**All 24 Complete Book of Dwarves kits are modelled.** The three race books — gnomes and halflings,
+elves, dwarves — are now finished, and CBD has the **tightest spine in the corpus**: 13 labels, two
+used once, against CRH's 99 and 74.
+
+### Finding 89 — a kit defined as **another kit plus a delta**
+
+> Vindicators gain **all the special benefits of Battleragers**, but are not allowed to specialize in
+> any weapon. … Vindicators have **the same hindrances as Battleragers, except that** members of their
+> own religion do not react to them with a negative penalty.
+
+**Inheritance between Attachables.** §4.1 says Kit, Deity and Subrace are one shape used three times;
+it says nothing about one record being defined **in terms of another**. The schema has no `extends`,
+and modelling it meant **copying the Battlerager's effects by hand and applying two deltas** — which
+produces the right character and **loses the relationship entirely**. A reader of the pack cannot tell
+that the Vindicator is a Battlerager variant, and a correction to the Battlerager will not reach it.
+
+This is the same loss as [finding 88](#finding-88--two-records-define-a-prerequisite-by-transformation)'s
+prerequisites-by-permutation, one level up: **the corpus defines records relative to other records,
+and the format only stores absolutes.**
+
+### Finding 90 — a kit that **overrules a Deity**, with the book stating the precedence
+
+The same record: Vindicators must be proficient in battle axe and warhammer **"regardless of the
+restrictions imposed by their religion."**
+
+Three CBD kits take their permitted weapons **from the character's deity** — the Temple Guard's must
+be *"representative of his religion"*, the Pariah may use *"any weapon not forbidden by his
+religion"* — so the Kit arm and the Deity arm speak about the same field. And here the book says
+which one wins.
+
+§4.3's operations commute, which is what makes the layer model work — and **commutation is exactly
+what has no answer when two layers contradict**. `forbid` from the Deity and `require` from the Kit
+are not order-dependent; they are simply inconsistent, and the book resolves it with a precedence rule
+the pack has nowhere to put. This is the first place in twelve books where **two Attachables conflict
+on the same subject**, and it is worth stating plainly: it is a bigger hole than any missing operand,
+because the layer model's central guarantee does not address it.
+
+### Smaller things this book confirmed
+
+- **Finding 84's XP-purchased upgrade appears twice**, word for word, in the Outcast and the Pariah —
+  so it is a book-level device rather than one kit's quirk.
+- The **Rapid Response Rider's** mount has *"at least 75% of its possible hit points. Roll hit points
+  normally; if they come to less than 75%…"* — [finding 63](#finding-63--the-clamp-now-has-five-records-behind-it)'s
+  clamp applied to **recorded randomness**, which §6.2 says is neither choice nor derivation.
+- The **Pest Controller's** reaction penalty excludes *"Vermin Slayers and Wayfinders"* — a condition
+  that names **two other kits**, so an Attachable conditions on which Attachables the other party has.
+- Three **OCR artefacts** — `B2` and `B10%` for minus signs, and `miner access` for *minor* in CRH.
+  The corpus is not clean, and nothing in the pipeline would notice.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against

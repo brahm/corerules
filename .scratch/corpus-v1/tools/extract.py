@@ -219,6 +219,7 @@ EXCLUDE = {
     ("CTH",  "Kits and Thief Types"),      # chapter preamble
     ("CTH",  "Creating New Kits"),
     ("CBD",  "Creating New Kits"),
+    ("CBD",  "The Composition of the Kits"),
     ("CFH",  "Creating New Kits"),
     ("CWH",  "Creating New Kits"),
     ("CBGH", "Structure of the Kits"),     # the gnome chapter's template
