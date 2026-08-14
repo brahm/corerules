@@ -4399,7 +4399,7 @@ Deliverables 1–4 delivered, 5 declared unmeasurable with its purpose served by
 [ticket 16](./16-the-plan-for-the-remaining-books.md), 6 abandoned above. **Status: resolved.**
 
 The map's execution ticket ran for 71 sessions, produced **1,233 records, 149 findings, 22 schema
-commits and 38 corrections owed to the v1 spec**, and reached the verdict it was opened to reach. What
+commits and 42 corrections owed to the v1 spec**, and reached the verdict it was opened to reach. What
 it did not reach is stated in [What the slice proves, and what it does not](#what-the-slice-proves-and-what-it-does-not),
 and the largest single item there is not a deliverable at all: **nothing has ever loaded this pack.**
 

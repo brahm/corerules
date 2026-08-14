@@ -1,5 +1,11 @@
 # Map: the v1 Content Pack corpus
 
+> **CLOSED — 2026-08-14, after 71 working sessions.** All sixteen tickets resolved. The proving slice
+> is transcribed, the schema and expression language are at `0.1` with nothing open pushing on them,
+> and the remaining books are mechanical work. What this map did not do is stated in the Destination
+> below and in [ticket 13's verdict](issues/13-transcribe-the-proving-slice.md#the-verdict), and the
+> handoff is the **42 corrections owed to the v1 spec**.
+
 ## Destination
 
 The **v1 corpus as loadable Content Packs** — the PHB, the DMG and the eleven Complete handbooks
@@ -29,6 +35,35 @@ decisions left inside them.
 The schema validates and the references resolve, and neither is a program building a character —
 [ticket 13](issues/13-transcribe-the-proving-slice.md)'s verdict says so in its own words, and A3 is
 why it can.
+
+### What this map hands over
+
+Three things, in the order a successor needs them.
+
+**1. The 42 corrections owed to the v1 spec.** The list below is the deliverable, not a byproduct.
+None of the 42 is an oversight in `spec.md`; each is a conclusion that did not survive contact with
+the corpus, and they are collected in one place so the spec update has one thing to read. **Nine are
+marked RESOLVED because this map fixed them in the schema itself**; the other 33 are owed, and the
+numbering carries its own history — `16b` through `16e` are one correction that turned out to be
+four.
+
+**2. A pack, and the two tools that keep it honest.** `validate.py` asserts what
+[ticket 10](issues/10-mechanical-verification.md) chose and reports what it deliberately does not
+assert; `verdict.py` re-measures the whole verdict in a second, because
+[finding 116](issues/13-transcribe-the-proving-slice.md#finding-116--the-verdict-was-a-number-that-goes-stale-by-itself)
+established that a measurement kept in prose goes wrong by itself. **Anyone continuing this work
+should run both before believing anything written here.**
+
+**3. The one hole nothing closed.** Known unknown #1: **two Attachables can contradict each other**,
+and §4.3's commutation — the property the whole layer model rests on — has nothing to say about
+contradiction. Named at session 33, untouched at session 71, and transcribing 1,000 more records never
+brought it closer, because it is a hole in *composition* rather than in shape.
+
+### The successor
+
+**Building the Engine**, which this map ruled out of its own scope and produced both halves for: the
+schema it will consume and the corpus it will load. The first thing that Engine does — loading this
+pack and building one character — is also the validation this map could not perform on itself.
 
 This effort is the sequel to [the v1 spec map](../v1-spec/map.md), which specified an Engine that
 ships no content and then stopped at the point where content has to exist.
@@ -866,12 +901,19 @@ contact with the corpus. Collected here so the eventual spec update has one plac
 
 <!-- see "Fog of war": in-scope fog you can't ticket yet; graduates as the frontier advances -->
 
-- **What happens to an already-transcribed corpus when the schema breaks.** The format version and
-  a converter are mandated by `spec.md` §7.3, but the *migration* of tens of thousands of records
-  authored against `0.1` is not the same problem as versioning the format. Can't be phrased sharply
-  until [ticket 05](issues/05-pack-schema.md) exists and [ticket 09](issues/09-extraction-pipeline.md)
-  has said whether re-extraction is cheap. If re-running the pipeline is cheap and deterministic,
-  migration may not be a problem at all — which is why this is fog and not a ticket.
+_Empty at close. Both live patches were answered by doing the work:_
+
+- ~~**What happens to an already-transcribed corpus when the schema breaks**~~ — **graduated by
+  experience.** The schema changed **22 times while records already existed**, and every migration was
+  a script written in the same session that made the change: `set startingWealth to 0` became a dice
+  value across 33 records, `{ability: "phb:race"}` became `{field: "race"}` across 206, two ids merged
+  into one across five effects. **Not one needed a converter, and not one was deferred.** The fog
+  asked whether re-extraction would be cheap enough to make migration a non-problem; the answer is
+  sharper and different — **re-extraction is cheap for the mechanical half and ruinous for the
+  judgement half** (fifty sessions of hand-modelling), so the pipeline is never re-run to migrate.
+  What made it survivable is that a pack is JSON and each change was small enough to script. **A
+  change that could not be scripted was never attempted**, and that constraint deserves stating: it
+  shaped the schema as much as the corpus did.
 - ~~Whether the Complete Priest's records are Deity, Class, or something the spec lacks~~ —
   **graduated by [ticket 01](issues/01-what-the-source-yields.md)**, which characterised them:
   **60 records with a ten-field shape** — `Duties of the Priest`, `Followers and Strongholds`,
@@ -879,10 +921,16 @@ contact with the corpus. Collected here so the eventual spec update has one plac
   `Spheres of Influence`, `Minimum Ability Scores`, `Races Allowed`, `Alignment` — sharing nothing
   with a kit. The source question is answered; **which kind they become is now a modelling decision
   inside [ticket 05](issues/05-pack-schema.md)**, not fog.
-- **The ergonomics of correction over a multi-year haul.** Ticket 13 of the v1 map settled that spot
-  correction happens in a text editor and accepted the cost. Whether that survives contact with
-  years of it is a real question, but it cannot be asked until something has actually been
-  transcribed and used.
+- ~~**The ergonomics of correction over a multi-year haul**~~ — **graduated, with a caveat that is the
+  real finding.** Spot correction in a text editor held across 71 sessions and 1,233 records. But
+  **it held only where a checker made the error findable.** The reference check caught five separate
+  classes of hand-minted id error that nothing else could
+  ([finding 96](issues/13-transcribe-the-proving-slice.md#finding-96--the-resolution-check-found-errors-nothing-else-could));
+  the errors **no checker could see** survived for tens of sessions — a kit dropped because a
+  transcriber matched by name (40 sessions), 33 markers describing a format that had stopped existing
+  (3 sessions), a table row key that did not match the record it keyed (13 sessions). **The ergonomics
+  of correction are the ergonomics of detection**, and over a multi-year haul the binding constraint
+  is not how fast you can edit a file but whether anything will ever tell you the file is wrong.
 
 ## Out of scope
 
