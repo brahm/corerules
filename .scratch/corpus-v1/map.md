@@ -10,6 +10,11 @@ The map is done when a **proving slice** has been transcribed end to end, the sc
 expression language are fixed at `0.x`, and the remaining books are mechanical work with no
 decisions left inside them.
 
+The first two clauses are done. [Ticket 16](issues/16-the-plan-for-the-remaining-books.md) measures the
+third and **does not grant it**: the remaining books are mechanical *once four decisions are made* —
+what a spell record is for, what a `classes` record carries, how much of the DMG is in scope, and the
+permit lists that no transcription closes. Three are a session each; the first has never been asked.
+
 This effort is the sequel to [the v1 spec map](../v1-spec/map.md), which specified an Engine that
 ships no content and then stopped at the point where content has to exist.
 
@@ -439,7 +444,7 @@ why it is a program and not a paragraph.
 |---|---:|---:|
 | effects the format expressed cleanly | **77 %** | **79 %** |
 | **records expressed completely** | **30 %** (53 of 177) | 30 % (55 of 183) |
-| references resolving | — | **86 %** of 853 occurrences |
+| references resolving | — | **72 %** of 1,030 occurrences |
 
 Both numbers matter and they disagree on purpose: the operations work nearly always, and records
 rarely close, because one unsayable clause leaves a fourteen-effect kit incomplete. For an Engine
@@ -467,9 +472,10 @@ nothing was tested about psionics, spells-as-records, equipment or the DMG, the 
 never measured, and local-model drafting was never tried. **A pack that has never been loaded is a
 demonstration, not a validation.**
 
-One line of the original verdict has been **overturned by measurement rather than argument**: it said
-*none of the pack's 496 references resolve*, and 86% now do — closed by transcribing the things the
-kits point at, over nine sessions and no design change.
+One line of the original verdict has been **half overturned by measurement rather than argument**: it
+said *none of the pack's 496 references resolve*, and 72% now do — closed by transcribing the things
+the kits point at, over nine sessions and no design change. **171 of the 288 that remain are a single
+missing kind**, `classes`: every Attachable names the class it attaches to, and no class exists.
 
 ## Corrections owed to the v1 spec
 

@@ -92,6 +92,16 @@ def references(doc):
     for recs in doc.values():
         for r in recs:
             defined.add(r["id"])
+            # Ticket 13 finding 117: `target` was never walked, and it is an Attachable's
+            # MOST repeated reference — every kit names the class it attaches to.
+            t = r.get("target")
+            for i in ([t] if isinstance(t, str) else
+                      list(t.values()) if isinstance(t, dict) else t or []):
+                if isinstance(i, str):
+                    refs[i] += 1
+                elif isinstance(i, list):
+                    for x in i:
+                        refs[x] += 1
             walk(r.get("prerequisite"))
             for e in r.get("effects", []):
                 if "ref" in e:

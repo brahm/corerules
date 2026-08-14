@@ -2940,12 +2940,14 @@ records, equipment breadth, or the DMG. The cost per record was never measured, 
 that has never been loaded by anything is a demonstration, not a validation**, and the distinction is
 the same one A3 exists to keep.
 
-**Referential integrity was the loudest of these and is now largely closed.** At session 48 *none of
-the pack's 496 references resolved*; today **736 of 853 occurrences resolve (86%)**, over 177 of 270
+**Referential integrity was the loudest of these and is now half closed.** At session 48 *none of the
+pack's 496 references resolved*; today **742 of 1,030 occurrences resolve (72%)**, over 177 of 284
 distinct ids. What closed it was transcribing the things the kits point at — the PHB's proficiencies,
-weapons, races, thieving skills and alignments — and the remaining 117 occurrences are a long tail of
-92 ids, no single one of which is worth a session. **This is the one line of the original verdict that
-measurement has simply overturned**, and it took nine sessions rather than a design change.
+weapons, races, thieving skills and alignments.
+
+**171 of the 288 that remain are one missing kind**: every Attachable names the class it attaches to
+and `phb:fighter` does not exist ([finding 117](#finding-117--the-most-repeated-reference-in-the-pack-was-never-counted)).
+The rest is a long tail of 92 ids, no single one of which is worth a session.
 
 ### Session 50 — the PHB's proficiencies, and the first references that resolve
 
@@ -3501,6 +3503,26 @@ Running it now also **validates the hand pass** rather than replacing it: on the
 tool reproduces session 48 to within two effects and one record, and the entire difference is
 explained by work this ticket recorded at the time. The measurement was sound; only its shelf life was
 wrong.
+
+### Finding 117 — the most repeated reference in the pack was never counted
+
+Writing [ticket 16](./16-the-plan-for-the-remaining-books.md) meant asking what the pack still points
+at. It points, 177 times, at **`target`** — the class a kit attaches to, the race a subrace belongs to
+— and the checker **never walked that field**. It walked effects and prerequisites and stopped.
+
+**171 of those 177 resolve to nothing**, because `phb:fighter` does not exist. So the figure this
+ticket published two sessions ago, *86% of 853 occurrences*, was measured over a population that
+excluded an Attachable's **defining** reference. Corrected: **742 of 1,030, or 72%**, and the verdict
+above now says so.
+
+The blind spot has a cause worth naming. `target` is not *in* the effect list — it is the field that
+says who the effects apply to — so a walker written by reading the `effect` schema never sees it. The
+same one-level-up omission as [finding 35](#finding-35--the-extractor-flattens-away-the-level-at-which-the-corpus-marks-force),
+where sub-labels were invisible because the extractor read one level of markup. **A tool that reads a
+structure by walking one of its parts will silently be right about that part.**
+
+And the number it was hiding is the plan's headline: **one missing kind accounts for 59% of everything
+that does not resolve.**
 
 ### Still not done
 
