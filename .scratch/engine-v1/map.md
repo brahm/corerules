@@ -39,7 +39,7 @@ corrections list will build the wrong Engine. Ticket 01 exists for exactly this.
 |---|---|
 | [`spec.md`](../v1-spec/spec.md) — 13 sections, product surface and technical shape | **written before any content existed**; wrong in 42 places |
 | `pack-0.1.schema.json` — 20 kinds, six operations, layer model | settled, changed 22 times by transcription, **nothing open pushing on it** |
-| the pack — 1,233 records, 1,910 effects, 99.9% of references resolving | **never loaded by anything** |
+| the pack — 1,233 records, 1,910 effects, 99.9% of references resolving | **loaded once**, by [ticket 04](issues/04-first-light.md); eight ids collide and the sheet has no combat numbers |
 | `validate.py`, `verdict.py` | run both before believing anything written in either prior map |
 
 ### Settled during charting — do not re-litigate
@@ -85,7 +85,16 @@ Four results are load-bearing for implementation and are easy to miss in 149 fin
 
 <!-- one line per closed ticket: enough to judge relevance, then follow the link for detail -->
 
-_None yet — the map has just been charted. Four tickets are open:_
+- **[04 — First light](issues/04-first-light.md)** — **resolved.** A program loads the pack and
+  computes a character. The prediction held: **no gap was in the six operations, every gap was a
+  join.** Eight ids are defined twice because the namespace carries no kind and `validate.py` built a
+  set; two `set` layers contradict *inside one record* because the Complete Book of Dwarves prints
+  Navigation twice; **the sheet has no combat numbers at all**, because 15 of 19 class records are
+  untranscribed and the class is what supplies them; the pack holds deltas and nothing holds the base;
+  a table read returns `"+4"` where the contract says an integer; and two mutually exclusive marked
+  bonuses summed into a wrong number on the first character anyone builds.
+
+_Three tickets remain open:_
 
 - **[01 — Which spec does the Engine implement?](issues/01-which-spec-does-the-engine-implement.md)**
   33 corrections are owed to `spec.md` and unwritten there, so the document a session reads still says
@@ -97,11 +106,11 @@ _None yet — the map has just been charted. Four tickets are open:_
 - **[03 — Precedence when two Attachables contradict](issues/03-precedence-when-two-attachables-contradict.md)**
   The corpus map's one unclosed hole, and the Engine is the first thing that has to actually resolve
   it. Commutation says nothing about inconsistency.
-- **[04 — First light](issues/04-first-light.md)** *(task)* The experiment the corpus map named and
-  could not perform. Cheap, and it makes the other three concrete.
-
-**Suggested order: 04 first.** It is the only one that produces evidence rather than consuming it, and
-the corpus map's most expensive lesson was that a conclusion held in prose goes wrong by itself.
+**All three are now better posed than when they were charted**, which was the point of running 04
+first. Ticket 02 has a measured exposure — four marked effects on a real character, one of them
+demonstrably wrong. Ticket 03 turns out **not to be reachable in the current pack at all**, because
+the transcription sidestepped the contradiction with a marker. Ticket 01 has its first evidence that
+the corrections list is not a frozen document: **three more corrections came out of one afternoon.**
 
 ## Not yet specified
 
