@@ -2236,7 +2236,7 @@ way**"*. The format can add to a value; it has no way to say *and no more will b
 
 ### Session 39 — CRH complete: the third book, and the one that pays with class features
 
-**All 13 Complete Ranger's kits are modelled.** The pack holds **80 records** across seven books, and
+**All 13 Complete Ranger's kits are modelled.** *(Corrected in session 42: the book has **14**; the Warden was being dropped for a missing marker label.)* The pack holds **80 records** across seven books, and
 the structural extreme did not break the pipeline — the same extractor, the same schema, no new
 strategy. Finding 37's per-kit vocabulary turned out to cost nothing, because the parser never
 depended on knowing the labels.
@@ -2392,6 +2392,66 @@ reads *"Adjustments to be added to, or subtracted from, the base ability scores 
 characters."* It has its own marker and would have become a sixth subrace. The scoped fix avoids it;
 it is recorded because a template group inside a shared page is a shape finding 9's detector was never
 designed for.
+
+### Session 42 — the elf kits, and six more records that were never extracted
+
+**All eleven Complete Book of Elves kits are modelled**, including the **Bladesinger**. The pack
+reaches **100 records** across nine books.
+
+### Finding 82 — one bad tag drops a whole record, and six were lost that way
+
+The Spellfilcher has every field a CBE kit has **except `Role`**, which is the marker, so it was
+dropped. That prompted a check nobody had written: **pages that share four or more labels with their
+book's spine and lack the marker**. Stripping the ten known apparatus pages, six real kits were being
+silently discarded:
+
+| book | kit |
+|---|---|
+| CBD | Outcast |
+| CBE | Spellfilcher |
+| CPAH | Equerry, Ghosthunter, Militarist |
+| **CRH** | **Warden** |
+
+**The CRH is therefore not complete**, and [session 39](#session-39--crh-complete-the-third-book-and-the-one-that-pays-with-class-features)
+reported it as such. It has 14 kits, not 13, and CPAH has 15 rather than 12. Corrected here rather
+than left standing.
+
+The cause splits in two, and only one half is a heuristic:
+
+- The **Equerry, Ghosthunter, Militarist and Warden** print `Role:` **in their text** and the `<I>`
+  markup fails on it. So the marker test now reads **both field levels** — the same repair as
+  [finding 69](#finding-69--the-second-level-also-recovers-fields-the-markup-lost), and not a guess:
+  it is the label the book printed.
+- The **Outcast and Spellfilcher** have **no `Role` field at all**. Those need an `INCLUDE` list,
+  human-maintained, the exact mirror of `EXCLUDE` — one drops apparatus that parses, the other keeps
+  records that do not. Both are human because
+  [finding 1](#finding-1--record-boundary-detection-is-not-mechanical-correcting-ticket-01)
+  established record boundaries are not mechanical.
+
+This is the third instance of the class [finding 81](#finding-81--a-third-label-convention-and-an-omission-with-no-symptom)
+named: **an omission with no symptom**. A missing record is not invalid, not dangling, and not
+counted. The check that found these — *spine overlap without the marker* — is now the only tool in
+the effort that can see one, and it should be run against every book before any of them is called
+complete.
+
+### Finding 83 — a Kit that points at Subraces
+
+Every CBE kit carries a **`Suggested Elf Subraces`** field: *"Grey elf, high elf, sylvan elf."*
+
+It is advisory — *suggested* — so it models as nothing. But it is the **first field in nine books
+where one Attachable arm names another**, and §4.1's claim is precisely that the three arms are one
+shape. A kit recommending subraces is the corpus treating them as composable, which is what the shape
+predicts, stated by the source rather than inferred.
+
+### What the elf kits added
+
+Little that is new, and after nine books that continues to be the point. The **Archer** compounds a
+permit-list with finding 67's degraded permission in one sentence — only three melee weapons, and
+*"even then"* a −1 — and gives finding 68's per-use election a second book. The **Windrider** gates
+its **whole record by level** (*"no benefits until… typically 4th"*), which unlike the Rocktender's
+environmental gate **is** expressible. The **Herbalist** adds a chosen-terrain parameter to the list
+that already holds the Feralan's familial species, the Goblinsticker's hated foe, the Seeker's sacred
+animal and the Undead Slayer's chosen undead.
 
 ### Still not done
 

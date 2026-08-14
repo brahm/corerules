@@ -206,6 +206,15 @@ KINDS = {
 # names shared across two books each, so a bare name is not a safe key for dropping a
 # record: an apparatus name in one book could be a real kit in another and would vanish
 # silently. Twelve pages, nine books — 'Creating New Kits' alone appears in four.
+# The mirror of EXCLUDE, and needed for the same reason. Finding 82: two records carry no
+# `Role` field AT ALL — not unmarked, absent — and are otherwise complete kits. EXCLUDE drops
+# apparatus that parses; INCLUDE keeps records that do not. Both are human-maintained because
+# finding 1 established that record boundaries are not mechanical.
+INCLUDE = {
+    ("CBD", "DD04642"),   # Outcast
+    ("CBE", "DD04787"),   # Spellfilcher
+}
+
 EXCLUDE = {
     ("CTH",  "Kits and Thief Types"),      # chapter preamble
     ("CTH",  "Creating New Kits"),
@@ -220,6 +229,7 @@ EXCLUDE = {
     ("CPAH", "Kit Subsections"),
     ("CRH",  "Kit Subsections"),
     ("CRH",  "List of Kits"),      # the chapter list; its Description is the Beastmaster's
+    ("CBE",  "Elf PC Kits"),        # the chapter template
     ("CPRH", "Priesthoods"),               # the Designing Faiths template
 }
 # Five of these were found not by reading but by the name-collision check of finding 32:
@@ -309,12 +319,16 @@ def parse(path: pathlib.Path, marker: str, strategy="markup", labels="colon"):
     title = clean(t.group(1))
     head, pairs = (fields_markup(raw, labels) if strategy == "markup"
                    else STRATEGIES[strategy](raw))
-    if not any(label == marker for label, _ in pairs):
+    parts = {label: split_sublabels(value) for label, value in pairs}
+    # The marker test reads BOTH levels. Ticket 13 finding 82: the CPAH Equerry and the CRH
+    # Warden print `Role:` in their text and the <I> markup fails on it, so a marker test
+    # that looks only at top-level labels drops a whole record for one bad tag. Reading the
+    # sub-label layer here is not a heuristic — it is the same label the book printed.
+    if not (any(label == marker for label, _ in pairs)
+            or any(sub == marker for ps in parts.values() for sub, _ in ps)
+            or (path.parent.name, path.stem) in INCLUDE):
         return None
     fields = dict(pairs)
-    # The second field level (finding 35). `fields` stays flat so every existing caller is
-    # unaffected; `parts` carries the structure the judgement pass needs.
-    parts = {label: split_sublabels(value) for label, value in pairs}
 
     # Title carries the book: "Bounty Hunter (Comp. Thief's Handbook)"
     name, _, book = title.partition("(")
