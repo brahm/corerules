@@ -10,10 +10,10 @@ The map is done when a **proving slice** has been transcribed end to end, the sc
 expression language are fixed at `0.x`, and the remaining books are mechanical work with no
 decisions left inside them.
 
-The first two clauses are done. [Ticket 16](issues/16-the-plan-for-the-remaining-books.md) measures the
-third and **does not grant it**: the remaining books are mechanical *once four decisions are made* —
-what a spell record is for, what a `classes` record carries, how much of the DMG is in scope, and the
-permit lists that no transcription closes. Three are a session each; the first has never been asked.
+The first two clauses are done. [Ticket 16](issues/16-the-plan-for-the-remaining-books.md) measured the
+third, found **four decisions still inside the remaining books**, and **all four are now taken** — what
+a spell record is for, what a `classes` record carries, how much of the DMG is in scope, and the permit
+lists. What is left is volume with a known method.
 
 This effort is the sequel to [the v1 spec map](../v1-spec/map.md), which specified an Engine that
 ships no content and then stopped at the point where content has to exist.
@@ -435,16 +435,16 @@ this map without saying so.
 
 ## The verdict, measured
 
-[Ticket 13](issues/13-transcribe-the-proving-slice.md) delivered it over **183 hand-modelled records
-from fifteen books** carrying **1,222 effects**, inside a pack of **461 records**. Every figure here is
+[Ticket 13](issues/13-transcribe-the-proving-slice.md) delivered it over **202 hand-modelled records
+from fifteen books** carrying **1,242 effects**, inside a pack of **972 records**. Every figure here is
 produced by [`tools/verdict.py`](tools/verdict.py) and re-runs in a second — see finding 116, which is
 why it is a program and not a paragraph.
 
 | | attachables | whole pack |
 |---|---:|---:|
 | effects the format expressed cleanly | **77 %** | **79 %** |
-| **records expressed completely** | **30 %** (53 of 177) | 30 % (55 of 183) |
-| references resolving | — | **89 %** of 1,034 occurrences |
+| **records expressed completely** | **29 %** (51 of 177) | 26 % (53 of 202) |
+| references resolving | — | **97 %** of 993 occurrences |
 
 Both numbers matter and they disagree on purpose: the operations work nearly always, and records
 rarely close, because one unsayable clause leaves a fourteen-effect kit incomplete. For an Engine
@@ -473,10 +473,11 @@ never measured, and local-model drafting was never tried. **A pack that has neve
 demonstration, not a validation.**
 
 One line of the original verdict has been **half overturned by measurement rather than argument**: it
-said *none of the pack's 496 references resolve*, and **89% now do** — closed by transcribing the
-things the kits point at, over ten sessions and no design change. The last big block was `classes`,
-which every Attachable names and none of which existed; what remains is 109 occurrences over 92 ids,
-about a quarter of them permit-list placeholders that no transcription closes.
+said *none of the pack's 496 references resolve*, and **97% now do** — closed by transcribing the
+things the kits point at, over eleven sessions and no design change. The last two blocks were
+`classes`, which every Attachable names, and the permit-list placeholders, which turned out not to be
+records at all (correction 27). What remains is **34 ids**, a third of them the creature and terrain
+vocabulary that no kind holds.
 
 ## Corrections owed to the v1 spec
 
@@ -616,6 +617,22 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    already carried an interpretation note saying so**; the other six are the book's own enumeration.
    The pack is faithful where the source enumerates and lossy where it generalises, and until now
    nothing could tell the two apart.
+27. **RESOLVED — a permit-list placeholder is not a record, and the operation says which repair it needs.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 124) Of 56 dangling effect
+   references, **33 were the complement of a set the record itself states** — *weapons outside the
+   Explorer's list*, *armour other than leather*. Nothing in any book to point at, ever. They become
+   `defines`, finding 101's mechanism, and the id disappears. The eleven reached by **`except` are a
+   different problem**: `except` alone among the six has no `defines`, because its meaning is to lift a
+   restriction that exists ELSEWHERE — and those elsewheres are real PHB rules, which get a small
+   `limitations` kind. The operation's own shape sorted the two, which is the strongest evidence yet
+   that §4.3's six are carved at the joints.
+28. **A record with no effects was counting as expressed completely.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 126) Nineteen class records moved the
+   completion rate from 30% to 35% while adding **no expression at all** — fifteen have an empty
+   effects array, carry no marker, and passed a test that was measuring the **absence of a complaint**
+   rather than the presence of an answer. Corrected in `verdict.py`, and the corrected rates are two
+   records lower than every figure this map has published, session 48's hand pass included. It is
+   finding 116 paying off: a verdict that re-runs produced a five-point jump that was wrong on sight.
 23. **The Engine's field vocabulary is far larger than the schema's, and nothing checks it.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 110) A `when` clause describes the
    CHARACTER — its subject is an ability or a level — and never his opponent. So every target-scoped
@@ -749,6 +766,12 @@ contact with the corpus. Collected here so the eventual spec update has one plac
 
 ## Out of scope
 
+- **The DMG's chapters 9-15 — combat, treasure, encounters, NPCs, vision, time, miscellany.**
+  **765 of its 965 pages**, ruled out by [ticket 16](issues/16-the-plan-for-the-remaining-books.md)
+  decision 3: the Engine ships character generation and advancement, and those chapters are the DM's
+  table. Chapters 1-8 cover the PHB's own subjects and stay in; **one page of them is not optional**,
+  `DD00223`'s Table 7, which carries the racial level limits the PHB explicitly sends the player to
+  the DM for. A3 makes the exclusion an honest state rather than a debt.
 - **The PDF-only handbooks** — Complete Book of Humanoids, Barbarian's, Ninja's, Necromancers,
   Villains and the rest. Ruled out with the corpus-tier decision above. A different pipeline, and
   A3 makes their absence an honest state rather than a broken one. Ironically this puts the

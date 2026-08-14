@@ -2768,14 +2768,17 @@ races.
 
 | | attachables | whole pack |
 |---|---:|---:|
-| records carrying effects | 177 | 183 |
-| effects | 1,121 | 1,222 |
-| effects expressed **without a marker** | **865 (77%)** | **960 (79%)** |
-| effects carrying an `UNMODELLED` marker | 256 (23%) | 262 (21%) |
-| **records complete, no marker anywhere** | **53 of 177 (30%)** | 55 of 183 (30%) |
+| records carrying effects | 177 | 202 |
+| effects | 1,121 | 1,242 |
+| effects expressed **without a marker** | **865 (77%)** | **976 (79%)** |
+| effects carrying an `UNMODELLED` marker | 256 (23%) | 266 (21%) |
+| **records complete** | **51 of 177 (29%)** | 53 of 202 (26%) |
+| references resolving | — | **959 of 993 (97%)** |
 
-The pack is 461 records; the 278 in kinds with no `effects` array — proficiencies, weapons,
+The pack is 972 records; the 770 in kinds with no `effects` array — spells, proficiencies, weapons,
 alignments, tables — are records, never incomplete ones, because they have nothing to express.
+*Complete* means the record has effects, none is marked, and nobody flagged it unfinished — see
+[finding 126](#finding-126--a-record-with-no-effects-was-counting-as-expressed-completely).
 
 **The format says roughly four fifths of what the corpus says, and finishes fewer than a third of its
 records.** Those two numbers point in opposite directions and both are true: the *operations* work
@@ -3591,6 +3594,102 @@ undead, thieving skills scored across four tables, followers and strongholds.
 That is the flag working exactly as [finding 2](#finding-2--the-schema-accepted-a-semantically-empty-record-fixed)
 intended. **171 references now resolve to a record that honestly says it is unfinished**, which is
 strictly better than 171 references resolving to nothing, and it is what makes the pack loadable.
+
+### Session 61 — ticket 16's remaining three decisions, taken
+
+**972 records, 0 schema errors, and 97% of 993 reference occurrences resolve.** The pack more than
+doubled: 470 spells, 23 secondary skills, 6 limitations, Table 7 and the four experience tables.
+
+### Finding 121 — the spell corpus is regular in its fields and irregular in its markup
+
+470 pages carry the six printed fields without exception. Everything that went wrong went wrong in the
+**markup**, and every one of them silently truncates:
+
+| | |
+|---|---|
+| a long value wraps into the **next row's** cell with no label | `Area of Effect: 1 creature or` / `object per 2 rds.` |
+| the school parenthetical has **four** markup variants | `<B>(X)</B>`, `<B> <P></P> (X)`, `<B>(X) <P></P> </B>`, and one page on a different RoboHELP template using `COLOR="RED"` |
+| five pages write the field label **singular** | `Component:` for `Components:` |
+| one title omits the space | `--2nd Level`, worth one whole spell |
+
+The first regex written for each of these was the one that fits the commonest case, and each missed
+between 1 and 12 records. **This is the map's method note arriving for the sixth time**, and it is now
+worth stating as a rule: on this corpus, *a first-pass regex is a hypothesis about a convention the
+book never promised to keep.*
+
+### Finding 122 — the corpus names its own schools two different ways
+
+The chapter fixes nine schools. **The spell pages abbreviate them**: `Evocation` for
+Invocation/Evocation, `Conjuration` for Conjuration/Summoning, `Phantasm` for Illusion. And **43 of
+303 wizard spells belong to more than one school**, so the field is a list, not a value.
+
+Two things make this recordable rather than guessable:
+
+- **`Divination` resolves by the book's own rule.** DD01473 says lesser divination is every divination
+  spell of 4th level or less and greater divination is 5th or higher. So the spell's own level
+  decides which of the two ids it gets, and **nothing is inferred** — the rule is printed.
+- **The printed string is kept.** `schoolAsPrinted` holds the parenthetical verbatim beside the ids,
+  because the mapping from `Evocation` to `phb:invocation-evocation` is a *reading* and a reviewer has
+  to be able to check it. Same for `Elemental (Fire)`, whose four sub-spheres have no records: the
+  parenthetical survives and the id is the sphere.
+
+`All Schools` — one spell — maps to nothing, and is left that way.
+
+### Finding 123 — 30 spell names are two different spells
+
+`Know Alignment`, `Detect Magic`, `Gate`: **30 of 440 names are both a wizard and a priest spell**, and
+none collides inside a class. Three of them were already in the pack **as bare names**, referenced by
+kits — `phb:detect-magic` named two spells and nothing could tell, because neither existed.
+
+So the id is qualified by the caster **always**, not only on collision. Qualifying only on collision
+would rename `phb:bless` the day a wizard Bless is transcribed, which is exactly the instability
+[ticket 07](./07-identity-and-id-stability.md) exists to prevent. The eleven references were rewritten,
+and the caster was **derivable from the referring record's own target** in every case: a ranger and a
+paladin cast priest spells.
+
+### Finding 124 — a complement is not a record; it is a definition
+
+[Ticket 16](./16-the-plan-for-the-remaining-books.md)'s decision 4, and it turned out to have a clean
+answer. Of 56 dangling effect references, **33 were the complement of a set the record itself
+states** — `weapons outside the Explorer's list`, `armour other than leather`, `metal weapons larger
+than a knife`. There is nothing in any book to point at, and there never will be. They are now
+`defines` — [finding 101](#finding-101--216-of-the-packs-references-can-never-resolve-and-should-not-exist)'s
+mechanism, which the transcriber had available and reached for an id instead.
+
+But **`except` alone among the six operations has no `defines`**, and that is not an oversight: its
+whole meaning is to lift a restriction that exists *somewhere else*. Eleven effects use it, and the
+somewhere-elses are real PHB rules — the thief's weapon list, the wizard's, the two-weapon penalty. So
+a small `limitations` kind, six records, owned by the class that imposes them. **The operation's shape
+told us which repair each reference needed**, which is the strongest argument yet that the six are
+carved at the joints.
+
+### Finding 125 — the resolution check paid for the fifth time
+
+Fixing the references surfaced **seven more hand-minted slugs that pointed at nothing**:
+`phb:farming` for `Farmer`, `phb:bowyer` for `Bowyer/Fletcher`, `phb:tailor` for `Tailor/Weaver`,
+`phb:limner`, `phb:trapper`, `phb:woodworker`, `phb:staff` for `Quarterstaff`, `phb:war-hammer` for
+`Warhammer`. Every one plausible, every one schema-valid, every one wrong —
+[finding 96](#finding-96--the-resolution-check-found-errors-nothing-else-could)'s class, five sessions
+later, in a fifth kind.
+
+`phb:axe` is **left unresolved on purpose**: Table 44 has a battle axe and a hand axe and no plain axe,
+so which one a Gnome Fighter kit meant is not recoverable from the id.
+
+### Finding 126 — a record with no effects was counting as expressed completely
+
+Adding nineteen class records moved the whole-pack completion rate from **30% to 35%** while adding no
+expression whatsoever: fifteen of them have an empty `effects` array, carry no marker, and therefore
+passed the test for *"no marker anywhere"*.
+
+The metric was measuring **the absence of a complaint** rather than the presence of an answer. Fixed
+in [`verdict.py`](../tools/verdict.py): complete now means the record **has** effects, **none** is
+marked, and **nobody flagged it unfinished**. The corrected rates are **29% of attachables and 26% of
+everything modelled** — and the honest reading of the drop is that the earlier numbers, including
+session 48's hand pass, were about two records too kind.
+
+**This is [finding 116](#finding-116--the-verdict-was-a-number-that-goes-stale-by-itself) paying off
+two sessions after it was written.** A verdict in a markdown heading could not have caught this; a
+verdict that re-runs on every pack change produced a 5-point jump that was obviously wrong on sight.
 
 ### Still not done
 

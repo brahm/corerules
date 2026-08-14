@@ -73,8 +73,13 @@ def measure(records):
     withfx = [r for r in records if "effects" in r]
     fx = [e for r in withfx for e in r["effects"]]
     marked = [e for e in fx if MARKER in (e.get("text") or "")]
+    # Ticket 13 finding 126. A record with an EMPTY effects array carries no marker and so
+    # counted as `expressed completely` — which is exactly backwards, and the nineteen class
+    # records made it visible by moving the rate from 30% to 35% while adding no expression
+    # at all. Complete means: it has effects, none is marked, and nobody flagged it unfinished.
     complete = [r for r in withfx
-                if not any(MARKER in (e.get("text") or "") for e in r["effects"])]
+                if r["effects"] and r.get("effectsModelled") is not False
+                and not any(MARKER in (e.get("text") or "") for e in r["effects"])]
     return withfx, fx, marked, complete
 
 
@@ -143,8 +148,7 @@ def main():
         if "effects" in r:
             per[book(r)].append(r)
     for b, rs in sorted(per.items(), key=lambda kv: -len(kv[1])):
-        c = sum(1 for r in rs
-                if not any(MARKER in (e.get("text") or "") for e in r["effects"]))
+        c = len(measure(rs)[3])
         print(f"  {b:<8}{len(rs):>5}{c:>6} complete  ({100*c/len(rs):.0f}%)")
 
     print("\nOPERATIONS")

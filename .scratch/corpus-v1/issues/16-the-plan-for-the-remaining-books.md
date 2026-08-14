@@ -1,6 +1,6 @@
 # The plan for the remaining books
 
-Status: open
+Status: resolved — all four decisions taken in ticket 13 session 61
 
 ## Why this exists
 
@@ -68,7 +68,13 @@ So the *extraction* is trivial. The decision is what the record is **for**:
 - **As a full effect model.** What the spell *does* is a paragraph of prose. This is out of the
   question for v1 and should be said so explicitly rather than left as an implied ambition.
 
-**Recommendation: label plus the six printed fields as opaque strings.** The strings are exactly what
+**TAKEN: label plus the six printed fields as opaque strings.** 470 records. What the recommendation
+did not foresee is that the *fields* are perfectly regular and the *markup* is not — four variants of
+the school parenthetical, values that wrap into the next row, five singular labels
+([finding 121](./13-transcribe-the-proving-slice.md#finding-121--the-spell-corpus-is-regular-in-its-fields-and-irregular-in-its-markup)) —
+and that the corpus names its own schools two different ways
+([finding 122](./13-transcribe-the-proving-slice.md#finding-122--the-corpus-names-its-own-schools-two-different-ways)).
+The reasoning as written: The strings are exactly what
 the book prints, A3 makes an unparsed string honest, and nothing forces the expression language to grow
 across 469 records to serve a question the Engine has not been asked. **This is the single largest
 decision left and it is one ticket's worth of argument, not one session's.**
@@ -106,9 +112,14 @@ vocabularies at once, with one column naming two classes. See
 | chapters 1–8 — ability scores, races, classes, alignment, proficiencies, money, magic, experience | 200 | **the same subjects as the PHB** |
 | chapters 9–15 — combat, treasure, encounters, NPCs, vision, time, miscellany | 765 | the DM's table |
 
-The Engine ships character generation and advancement. On that reading **765 of the DMG's 965 pages are
-out of scope**, and the honest move is to say so in the manifest rather than leave them as a debt — A3
-exists for precisely this.
+**TAKEN: chapters 9–15 are out of scope; chapter 2's Table 7 is in.** The Engine ships character
+generation and advancement, so **765 of the DMG's 965 pages are the DM's table** and are declared out
+of scope in [the map](../map.md#out-of-scope) rather than left as a debt.
+
+One correction to this ticket's own wording: the manifest is **not** the place for that statement.
+`manifest.declares` is A3's rule-set enumeration — §3.4's single exception to open enumerations — and a
+scope statement is not a rule-set name. Scope lives in the map, which is where this methodology keeps
+it.
 
 One page is not optional: **`DD00223`, Table 7, Racial Class and Level Limits.** The PHB states the
 human's unlimited advancement, contrasts it with every other race, and then
@@ -124,19 +135,21 @@ About **25 unresolved ids are placeholders**, not records: `weapons-outside-expl
 named — a book bounding a choice rather than naming its members — and **transcribing every remaining
 book will not remove a single one.**
 
-This is the one place where the plan cannot say *"mechanical"*. It is a format question
-([correction 15](../map.md)) with 25 measured instances, and it is the last thing standing between the
-pack and a clean reference report.
+**TAKEN, and it had a clean answer the plan did not see**: a complement is not a record, it is the
+record's own sentence, so it becomes a `defines` and the id disappears — 33 of them. The eleven reached
+by `except` are different, because `except` alone has no `defines`: its meaning is to lift a
+restriction that exists elsewhere, and those elsewheres are real PHB rules that get a small
+`limitations` kind. **The operation's shape told us which repair each reference needed.** See
+[finding 124](./13-transcribe-the-proving-slice.md#finding-124--a-complement-is-not-a-record-it-is-a-definition).
 
 ## The mechanical remainder, in order of value
 
 Each of these is volume with a known method and no decision inside it.
 
-1. **The CBD Patrician** — one record, closes the slice. *(minutes)*
+1. **The CBD Patrician** — one record, closes the slice. *(minutes)* — still owed.
 2. ~~**Classes**~~ — **done in session 60**: 19 records, 171 references closed.
-3. **Secondary skills** — PHB Table 36. 18 ids referenced, one closed table, no kind yet.
-   `groom`, `scribe`, `forester`, `fisher`, `hunter`, `navigator`, `trapper`, `farmer`, `mason`,
-   `tailor`, `woodworker`, `bowyer`, `gambler`, `jeweler`, `limner`. *(one session)*
+3. ~~**Secondary skills**~~ — **done in session 61**: Table 36's 23, and seven more hand-minted slugs
+   corrected on the way (finding 125).
 4. **The 48 remaining CPRH Deities** — the extractor already returns all 56, and the eight transcribed
    ones proved the shape. The most *record-dense* block left after spells. *(several sessions)*
 5. **The five unread proficiency books** — CBE, CBGH, CDH, CFH, CWH. The three compiled-table books are
@@ -148,8 +161,7 @@ Each of these is volume with a known method and no decision inside it.
 7. **Terrains and creature vocabulary** — `cdh:forest`, `phb:orc`, and the fourteen creature names now
    living inside field-path strings ([correction 23](../map.md)). Small, and it is a *kind* question
    before it is a volume one.
-8. **Spells** — 469 records, after decision 1. Mechanical the moment the decision is made, and the
-   largest single block in the corpus.
+8. ~~**Spells**~~ — **done in session 61**: 470 records, the largest single block in the corpus.
 
 ## So: is the rest mechanical?
 
@@ -165,3 +177,17 @@ books, and one of them (spells) is big enough to deserve its own ticket. The hon
 
 That is a materially different claim from *"no decisions left"*, and it is the one the measurement
 supports.
+
+
+## Where this leaves the map's third clause
+
+All four decisions are taken, so the sentence the ticket was opened to test can now be answered.
+
+**The remaining books are mechanical work.** What is left is item 4 (48 Complete Priest's Deities),
+item 5 (five unread proficiency books), item 6 (the remaining lookup tables), item 7 (terrains and the
+creature vocabulary) and the CBD Patrician — volume with a known method, no decision inside any of it.
+
+Two things are *not* mechanical and are not in the remaining books either: **the format's own gaps**,
+which [ticket 13's verdict](./13-transcribe-the-proving-slice.md#the-verdict) measures and the map's
+corrections list carries, and **the 34 references that still dangle** — a third of them the creature
+and terrain vocabulary that no kind holds, which is a kind question, not a volume one.

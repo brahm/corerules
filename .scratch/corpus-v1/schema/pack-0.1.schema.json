@@ -1065,7 +1065,7 @@
       }
     },
     "spells": {
-      "description": "Only the spells the pack REFERENCES are transcribed — twelve of the PHB's several hundred. A3 makes that legitimate rather than incomplete: the manifest declares what the pack covers, and a spell nobody grants is not a debt.",
+      "description": "Ticket 16 decision 1, taken: a spell is a REFERENCEABLE LABEL plus the six fields the book prints, kept as the book prints them. `Duration: 1 rd./level` stays a string — parsing it would grow the expression language across 470 records to answer a question the Engine has not been asked, since character generation casts nothing, and A3 makes an unparsed string honest rather than incomplete. What the spell DOES is prose and is not transcribed at all; that is stated here rather than left as an implied ambition.",
       "type": "array",
       "items": {
         "allOf": [
@@ -1087,8 +1087,64 @@
           },
           "school": {
             "$ref": "#/$defs/id"
+          },
+          "schools": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/id"
+            },
+            "minItems": 1,
+            "description": "43 of 303 wizard spells belong to MORE THAN ONE school, so this is a list. The spell pages abbreviate — `Evocation` for Invocation/Evocation, `Phantasm` for Illusion — and `Divination` resolves to the greater or the lesser school BY THE BOOK'S OWN RULE: 5th level or higher is greater. See ticket 13 finding 122."
+          },
+          "schoolAsPrinted": {
+            "type": "string",
+            "description": "The parenthetical exactly as the page prints it, kept because the mapping onto the nine schools is a reading and the reader must be able to check it."
+          },
+          "spheres": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/id"
+            },
+            "minItems": 1,
+            "description": "24 of 167 priest spells name more than one sphere."
+          },
+          "sphereAsPrinted": {
+            "type": "string",
+            "description": "`Elemental (Fire)` — the four elemental sub-spheres have no records, so the parenthetical survives here and the id is the sphere."
+          },
+          "reversible": {
+            "type": "boolean",
+            "description": "65 spells print `Reversible` above the stat block. The reverse spell's own name is in the prose and is NOT transcribed."
+          },
+          "range": {
+            "type": "string",
+            "description": "As printed."
+          },
+          "components": {
+            "type": "string",
+            "description": "As printed: `V, S, M`."
+          },
+          "duration": {
+            "type": "string",
+            "description": "As printed: `1 rd./level`."
+          },
+          "castingTime": {
+            "type": "string",
+            "description": "As printed."
+          },
+          "areaOfEffect": {
+            "type": "string",
+            "description": "As printed."
+          },
+          "savingThrow": {
+            "type": "string",
+            "description": "As printed: `Neg.`, `1/2`, `None`."
           }
-        }
+        },
+        "required": [
+          "level",
+          "casterClass"
+        ]
       }
     },
     "armor": {
@@ -1149,6 +1205,39 @@
           "ethos",
           "morality"
         ]
+      }
+    },
+    "limitations": {
+      "description": "Ticket 16 decision 4, taken. Most of the pack's dangling ids were COMPLEMENTS — `weapons outside the Explorer's list`, `armor other than leather` — and a complement is not a record: it is the record's own sentence, so it becomes a `defines` (finding 101) and the id disappears. But eleven of them are reached by `except`, which alone among the six operations has NO `defines`, because its whole meaning is to lift a restriction that exists SOMEWHERE ELSE. Those somewhere-elses are real PHB rules — the thief's weapon list, the wizard's, the two-weapon penalty — and they get records here, owned by the class or the combat rule that imposes them. A limitation has no effects: it is a thing to be pointed AT.",
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/record"
+          }
+        ],
+        "properties": {
+          "imposedBy": {
+            "$ref": "#/$defs/id",
+            "description": "The class whose rule this is, where one owns it."
+          }
+        }
+      }
+    },
+    "secondarySkills": {
+      "description": "Table 36's twenty-two, referenced by six kits and defined by nothing until now. The book names most of them as a PAIR — `Bowyer/Fletcher`, `Trapper/Furrier`, `Limner/Painter` — and the ids follow the book, not the half a transcriber happened to write (finding 96, fifth instance). `covers` is the parenthetical gloss the table prints, which is the only thing distinguishing a Forester from a Hunter.",
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/record"
+          }
+        ],
+        "properties": {
+          "covers": {
+            "type": "string"
+          }
+        }
       }
     }
   },
