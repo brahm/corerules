@@ -435,16 +435,16 @@ this map without saying so.
 
 ## The verdict, measured
 
-[Ticket 13](issues/13-transcribe-the-proving-slice.md) delivered it over **202 hand-modelled records
-from fifteen books** carrying **1,242 effects**, inside a pack of **972 records**. Every figure here is
+[Ticket 13](issues/13-transcribe-the-proving-slice.md) delivered it over **253 modelled records from
+fifteen books** carrying **1,912 effects**, inside a pack of **1,023 records**. Every figure here is
 produced by [`tools/verdict.py`](tools/verdict.py) and re-runs in a second — see finding 116, which is
 why it is a program and not a paragraph.
 
 | | attachables | whole pack |
 |---|---:|---:|
-| effects the format expressed cleanly | **77 %** | **79 %** |
-| **records expressed completely** | **29 %** (51 of 177) | 26 % (53 of 202) |
-| references resolving | — | **97 %** of 993 occurrences |
+| effects the format expressed cleanly | **77 %** | **78 %** |
+| **records expressed completely** | **22 %** (51 of 228) | 21 % (53 of 253) |
+| references resolving | — | **98 %** of 1,985 occurrences |
 
 Both numbers matter and they disagree on purpose: the operations work nearly always, and records
 rarely close, because one unsayable clause leaves a fourteen-effect kit incomplete. For an Engine
@@ -473,7 +473,7 @@ never measured, and local-model drafting was never tried. **A pack that has neve
 demonstration, not a validation.**
 
 One line of the original verdict has been **half overturned by measurement rather than argument**: it
-said *none of the pack's 496 references resolve*, and **97% now do** — closed by transcribing the
+said *none of the pack's 496 references resolve*, and **98% now do** — closed by transcribing the
 things the kits point at, over eleven sessions and no design change. The last two blocks were
 `classes`, which every Attachable names, and the permit-list placeholders, which turned out not to be
 records at all (correction 27). What remains is **34 ids**, a third of them the creature and terrain
@@ -633,6 +633,20 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    rather than the presence of an answer. Corrected in `verdict.py`, and the corrected rates are two
    records lower than every figure this map has published, session 48's hand pass included. It is
    finding 116 paying off: a verdict that re-runs produced a five-point jump that was wrong on sight.
+29. **The `<I>` markup loses individual labels, and nothing looks wrong when it does.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) findings 127 and 128) Across the Complete
+   Priest's 59 records, **26 field instances are absent from the markup and present in the plain
+   text** — in 19 of the 59, including four records with no `Alignment` field at all, which would have
+   produced four priesthoods with no alignment requirement. A 100% recovery rate from the text is the
+   finding: the tag is unreliable **per label**, not per page, so a reader that trusts it loses a
+   scatter of fields across a third of a book silently. Three whole records were dropped the same way.
+30. **A uniform modeller turns the marker histogram into a census of the book.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 131) One book took `grant` from
+   46.7% to **61.2%** of all effects and pushed two marker categories up by 51 each, because the same
+   two refusals — the permit-list and the follower roster — are true of every priesthood. Each marker
+   is correct; the aggregate now describes **how many records a book has** as much as how often the
+   format fails. The verdict's shortfall table must be read with that in mind, and it was already half
+   true of the hand pass.
 23. **The Engine's field vocabulary is far larger than the schema's, and nothing checks it.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 110) A `when` clause describes the
    CHARACTER — its subject is an ability or a level — and never his opponent. So every target-scoped

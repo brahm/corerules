@@ -213,6 +213,13 @@ KINDS = {
 INCLUDE = {
     ("CBD", "DD04642"),   # Outcast
     ("CBE", "DD04787"),   # Spellfilcher
+    # Finding 127: three Complete Priest's priesthoods print `Duties of the Priest` in the
+    # text with no <I> markup on that ONE label, while carrying nine of the ten fields. The
+    # marker test dropped all three — finding 82's class, in a fourth book, and the reason
+    # the plan said 48 deities remained when there were 51.
+    ("CPRH", "DD05555"),  # Healing
+    ("CPRH", "DD05582"),  # Sun
+    ("CPRH", "DD05583"),  # Thunder
 }
 
 EXCLUDE = {
@@ -233,6 +240,11 @@ EXCLUDE = {
     ("CRH",  "List of Kits"),      # the chapter list; its Description is the Beastmaster's
     ("CBE",  "Elf PC Kits"),        # the chapter template
     ("CPRH", "Priesthoods"),               # the Designing Faiths template
+    # Not a priesthood: a cross-reference paragraph saying the Druid is detailed in the PHB
+    # and shares ground with seven of these entries. It parsed to nothing because it carries
+    # no labels at all, so it was already absent — DECLARED here so the absence is a
+    # statement rather than an accident, which is A3 applied to the extractor.
+    ("CPRH", "Druid"),
 }
 # Five of these were found not by reading but by the name-collision check of finding 32:
 # 'Kit Subsections' appearing in two books is what a template page looks like from the

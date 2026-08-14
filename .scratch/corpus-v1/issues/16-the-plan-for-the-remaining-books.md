@@ -24,7 +24,7 @@ what a spell record is *for* — is the largest open question in the effort and 
 | | at source | in the pack | |
 |---|---:|---:|---|
 | kits | 173 | **172** | one lost, see below |
-| Deities (CPRH) | 56 | 8 | |
+| Deities (CPRH) | **59** | **59** | ✅ three were being dropped |
 | Subraces | ~6 | 6 | |
 | PHB nonweapon proficiencies | 65 | 65 | ✅ |
 | proficiencies the handbooks add | ? | 54 | six books read, five unread |
@@ -150,8 +150,9 @@ Each of these is volume with a known method and no decision inside it.
 2. ~~**Classes**~~ — **done in session 60**: 19 records, 171 references closed.
 3. ~~**Secondary skills**~~ — **done in session 61**: Table 36's 23, and seven more hand-minted slugs
    corrected on the way (finding 125).
-4. **The 48 remaining CPRH Deities** — the extractor already returns all 56, and the eight transcribed
-   ones proved the shape. The most *record-dense* block left after spells. *(several sessions)*
+4. ~~**The 48 remaining CPRH Deities**~~ — **done in session 62**, and there were **51**: three were
+   being dropped for one unmarked label (finding 127). Modelled by a program, which this book alone
+   earns (finding 129).
 5. **The five unread proficiency books** — CBE, CBGH, CDH, CFH, CWH. The three compiled-table books are
    done; these five need their own reading, which is
    [finding 81](./13-transcribe-the-proving-slice.md#finding-81--a-third-label-convention-and-an-omission-with-no-symptom)'s lesson repeated: a book's markup is

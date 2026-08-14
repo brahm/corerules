@@ -2768,15 +2768,17 @@ races.
 
 | | attachables | whole pack |
 |---|---:|---:|
-| records carrying effects | 177 | 202 |
-| effects | 1,121 | 1,242 |
-| effects expressed **without a marker** | **865 (77%)** | **976 (79%)** |
-| effects carrying an `UNMODELLED` marker | 256 (23%) | 266 (21%) |
-| **records complete** | **51 of 177 (29%)** | 53 of 202 (26%) |
-| references resolving | — | **959 of 993 (97%)** |
+| records carrying effects | 228 | 253 |
+| effects | 1,791 | 1,912 |
+| effects expressed **without a marker** | **1,386 (77%)** | **1,497 (78%)** |
+| effects carrying an `UNMODELLED` marker | 405 (23%) | 415 (22%) |
+| **records complete** | **51 of 228 (22%)** | 53 of 253 (21%) |
+| references resolving | — | **1,951 of 1,985 (98%)** |
 
-The pack is 972 records; the 770 in kinds with no `effects` array — spells, proficiencies, weapons,
+The pack is 1,023 records; the 770 in kinds with no `effects` array — spells, proficiencies, weapons,
 alignments, tables — are records, never incomplete ones, because they have nothing to express.
+**The 77% has not moved in fourteen sessions and three books**, which is the most stable number this
+effort has produced.
 *Complete* means the record has effects, none is marked, and nobody flagged it unfinished — see
 [finding 126](#finding-126--a-record-with-no-effects-was-counting-as-expressed-completely).
 
@@ -3690,6 +3692,99 @@ session 48's hand pass, were about two records too kind.
 **This is [finding 116](#finding-116--the-verdict-was-a-number-that-goes-stale-by-itself) paying off
 two sessions after it was written.** A verdict in a markdown heading could not have caught this; a
 verdict that re-runs on every pack change produced a 5-point jump that was obviously wrong on sight.
+
+### Session 62 — the Complete Priest's 51, modelled by a program
+
+**1,023 records, 0 schema errors, 98% of 1,985 reference occurrences resolve.** The Complete Priest's
+Handbook is complete: 59 priesthoods, 784 effects.
+
+### Finding 127 — three more records dropped for one unmarked label
+
+The plan said 48 priesthoods remained. There were **51**. `Healing`, `Sun` and `Thunder` print
+`Duties of the Priest` in their text with **no `<I>` markup on that one label**, while carrying nine of
+the ten fields — so the marker test dropped all three.
+
+This is [finding 82](#finding-82--the-marker-test-drops-a-record-for-one-missing-label)'s class in a
+**fourth** book, and the mechanism finding 82 built — `INCLUDE`, keyed by page — is what fixes it.
+
+The same pass found `DD05544`, titled `Druid`, which is **not** a priesthood: it is a cross-reference
+paragraph saying the Druid is detailed in the PHB. It was already absent because it carries no labels
+at all, and it is now in `EXCLUDE` — **an absence that was accidental is now declared**, which is A3
+applied to the extractor rather than to the pack.
+
+### Finding 128 — the markup loses individual labels, not whole pages
+
+Chasing the three led to the general case. Across the 59 records, **26 field instances are missing from
+the markup — and every single one is present in the plain text**, in 19 of the 59 records:
+
+| field | lost | in the text |
+|---|---:|---:|
+| Nonweapon and Weapon Proficiencies | 7 | 7 |
+| Weapon and Armor Restrictions | 4 | 4 |
+| Powers | 4 | 4 |
+| Alignment | 4 | 4 |
+| Duties of the Priest | 3 | 3 |
+| Possible Symbols, Other Limitations, Races Allowed | 4 | 4 |
+
+A 100% recovery rate is the whole finding: **the `<I>` tag is unreliable per label, not per page**, so
+a reader that trusts it loses a scatter of fields across a third of the book and nothing looks wrong.
+Four records had **no Alignment field at all** by that route, which would have silently produced four
+priesthoods with no alignment requirement.
+
+The modeller therefore reads the plain text first and lets the markup override it. That is not a
+heuristic: it is **the same label the book printed**, which is exactly the argument finding 82 made one
+level up.
+
+### Finding 129 — the first tool that does the judgement half
+
+[Ticket 09](./09-extraction-pipeline.md) split the pipeline: the extractor does the mechanical half and
+turning field prose into §4.3 effects is judgement, done by a human. [`model_deities.py`](../tools/model_deities.py)
+does the judgement half for one book, and the reason it can is specific and worth stating:
+
+**the Complete Priest's is the only book whose records share one shape.** 59 entries, the same ten
+fields, in the same order, phrased the same way — `Major Access to A, B, C`, `Wisdom 16 means +10%
+experience`, `The followers are received at 9th level`. Where a kit's `Special Benefits` is free prose
+that could say anything, a priesthood's `Spheres of Influence` is a form.
+
+So the mapping from field to effect is **a rule and not a reading**, and every rule was taken off the
+eight records modelled by hand in sessions 44-46 and applied unchanged. Two are worth naming:
+
+- **`Wisdom or Constitution 16 means +5%; Wisdom and Constitution 16 means +10%`** becomes two `+5`
+  layers, the second conditioned on both. I checked this expecting the hand pass to be wrong and it is
+  **right** — the second layer sums onto the first exactly when the book says +10%, which is §4.4 used
+  precisely as designed.
+- **`any lawful alignment`** is expanded through the alignment records' own `ethos` and `morality`
+  rather than a name list — [finding 114](#finding-114--the-axes-paid-for-themselves-in-one-query)'s
+  axes, three sessions later, doing work rather than being measured.
+
+### Finding 130 — what a rule cannot do, it marks
+
+**21 of the 51 carry an interpretation note**, and they are two shapes the format has no room for:
+
+- **13 `Option:` clauses** — *"evil priests can substitute major access to Healing for major access to
+  Protection, but can only use the reversed versions"*. A choice between two grants, which is
+  [correction 25](../map.md)'s missing sequencing seen from another side.
+- **11 accesses restricted in place** — *"Elemental (the priest may only use spells whose names include
+  Fire, Flame, Heat, Pyrotechnics)"*. The grant is to a sphere and the restriction is a **predicate
+  over the spells inside it**, which is the permit-list problem one level down.
+
+Neither was invented by the modeller and neither is guessed at. **A program that must state its
+refusals writes better markers than a human doing it fifty-one times**, because it cannot get bored.
+
+### Finding 131 — a uniform modeller distorts the marker histogram
+
+Adding one book moved `grant` from 46.7% to **61.2%** of all effects and pushed *shapes* to 87 markers
+and *composition* to 64 — because the modeller applies the same two markers, the permit-list and the
+follower roster, to **all 51 records**.
+
+Those markers are true one at a time. In aggregate they now say more about **how many priesthoods the
+book has** than about how often the format fails. The verdict's marker table is a census of the
+corpus's fields as much as of the format's gaps, and that was already half true of the hand pass — this
+just makes it impossible to ignore.
+
+**The completion rate fell from 29% to 22%** for the same reason, and the fall is honest: the Complete
+Priest's was already 0-of-8 complete and is now 0-of-59. **No book in this corpus resists the format
+harder**, and it is the one book a program could model.
 
 ### Still not done
 
