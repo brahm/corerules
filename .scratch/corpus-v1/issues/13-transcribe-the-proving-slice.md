@@ -2234,6 +2234,62 @@ The Explorer also produced the first **anti-scaling** statement in the corpus: S
 terrains, and *"assigning additional slots to this proficiency **does not enhance its use in any
 way**"*. The format can add to a value; it has no way to say *and no more will be added*.
 
+### Session 39 — CRH complete: the third book, and the one that pays with class features
+
+**All 13 Complete Ranger's kits are modelled.** The pack holds **80 records** across seven books, and
+the structural extreme did not break the pipeline — the same extractor, the same schema, no new
+strategy. Finding 37's per-kit vocabulary turned out to cost nothing, because the parser never
+depended on knowing the labels.
+
+### Finding 77 — this book's kits pay for their benefits by **giving class features back**
+
+The pattern [finding 76](#finding-76--a-kit-that-reduces-its-class) noticed in the Explorer is how the
+whole book works:
+
+| kit | what it surrenders |
+|---|---|
+| Explorer | animal empathy *"to a lesser degree"*, ≤2 concurrent followers, no fortifications |
+| Giant Killer | one nonweapon slot only; **tracking narrowed to giants** |
+| Feralan | spells limited to the animal sphere, no fortifications, no money |
+| Greenwood Ranger | no armour, **no Dexterity bonus to AC**, spells limited to the plant sphere |
+| Justifier | one nonweapon slot, less spell access, a **reduced** species-enemy penalty |
+| Mountain Man | fewer spells, no fortifications, one possession over 15 gp |
+| **Sea Ranger** | **neither Move Silently nor Hide in Shadows** |
+| Seeker | an hour of meditation daily |
+
+Across CTH and CBGH a kit added, chose, or priced. **Here it trades.** And the Sea Ranger states the
+trade outright — *"the Sea Ranger has **neither** of these abilities, **replacing** them with Sea Legs
+and Aquatic Combat"* — which is the shape the format handles worst: it can write the two `forbid`s and
+the two `grant`s, and nothing records that **they are one exchange**.
+
+The Greenwood Ranger's *"he gets **no Dexterity bonus** to his armor class"* is sharper still. That is
+not a value adjusted but **a derivation suppressed** — the Engine computes AC from Dexterity, and this
+kit switches that computation off. `set` writes values; no operation disables a rule.
+
+### Finding 78 — a prerequisite the pack declares incomplete
+
+> A Seeker must have a Wisdom score of 15 or more. **A particular religion may impose additional
+> requirements, as determined by the DM.**
+
+The record states its prerequisite and then says **there may be more, decided elsewhere**. Everything
+this ticket has recorded about A3 concerns whether a pack **covers** a rule; this is a pack whose
+prerequisite is **open by design**, and a validating record would assert a completeness the book
+explicitly disclaims.
+
+### What CRH confirmed, and the `Barred` field
+
+Two of its kits carry a **`Barred` field** — an enumerated list of forbidden proficiencies — which is
+**the first natural home `forbid` has found in 80 records**. Every other prohibition in the pack has
+been a permit-list written as a placeholder id, because the corpus says *"limited to"* far more often
+than it says *"may not take"*. Here it says the second, in a list, and the operation fits without
+strain.
+
+The book also settled a question left open in
+[finding 53](#finding-53--the-corpus-writes-randomness-in-a-second-notation). The Forest Runner writes
+*"2–5 **(1d4+1)** rounds"* — **the book glosses its own bare range with dice notation**, so the two
+notations are the same thing written twice and converting one to the other is the source's own move,
+not the transcriber's. It does not rescue `30-50` or `6-7`, which no die produces.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against
