@@ -228,6 +228,7 @@ EXCLUDE = {
     ("CWH",  "The Kits"),          # the chapter list; its Description is the Academician's
     ("CPAH", "Kit Subsections"),
     ("CRH",  "Kit Subsections"),
+    ("CBH",  "Kit Subsections"),
     ("CRH",  "List of Kits"),      # the chapter list; its Description is the Beastmaster's
     ("CBE",  "Elf PC Kits"),        # the chapter template
     ("CPRH", "Priesthoods"),               # the Designing Faiths template

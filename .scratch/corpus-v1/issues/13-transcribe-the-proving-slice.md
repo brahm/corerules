@@ -2502,6 +2502,58 @@ practice, **he loses his mounted combat bonuses**"* — the Cavalier's shape fro
 [finding 55](#finding-55--a-gate-on-the-whole-record-which-the-schema-has-no-slot-for), scoped to two
 named effects rather than to the whole record.
 
+### Session 44 — CBH complete: eleven books, 122 records
+
+**All 17 Complete Bard's kits are modelled**, plus an eighteenth apparatus page. The pack is at
+**122 records across eleven books**, and every one of them carries effects.
+
+### Finding 87 — every kit in this book carries **per-kit racial level limits**
+
+The `Qualifications` field routinely reads:
+
+> Elves can advance up to **15th level** as Minstrels, while half-elves are limited to **12th**.
+> Demihumans can become Heralds of up to **6th level**. Gnomes can rise to **8th** as Riddlemasters.
+
+A **table of (race → maximum level) belonging to the Attachable**, not to the class. 2e's racial level
+limits are a *class* rule; here **every one of seventeen kits carries its own**, and no other book in
+eleven does this even once.
+
+This is the sharpest instance yet of an Attachable editing something that is not on the character
+sheet. [Finding 80](#finding-80--a-kit-that-restricts-character-construction-itself) recorded the
+Witch forbidding multi-classing; here a kit rewrites the **advancement ceiling per race**, which the
+Engine derives from class and race together.
+
+### Finding 88 — two records define a prerequisite by **transformation**
+
+- **Gnome Professor**: *"The standard qualifications for Intelligence and Charisma are **switched**."*
+- **Halfling Whistler**: *"qualifying Intelligence is **lowered to 10**"*, and *"**prime requisites**
+  for Whistlers are…"* — reassigning which abilities earn the experience bonus.
+- **Dwarven Chanter**: *"they have **no Intelligence qualification** (unlike most bards)"* — a
+  standard prerequisite **removed**.
+
+The prerequisite is not stated; it is **derived from the class's own by permuting, lowering, or
+dropping a term**. A `predicate` is a list of conditions and has no way to say *"the class's list,
+with these two swapped"* — so all three were expanded to absolute values, which is the same
+derivation-not-transcription problem as
+[finding 47](#finding-47--the-corpus-counts-and-only-the-effect-side-can-count-back)'s CNF expansion,
+and it loses the fact that the record is defined **relative to** something.
+
+### What the bard book confirmed
+
+It is the third book after CRH and CWH whose kits **pay in class features**, and the demi-bards pay
+hardest: the Dwarven Chanter, Gnome Professor and Halfling Whistler each surrender the bard's
+spellcasting outright, and three kits lose the 10th-level written-magic ability by name.
+
+Two smaller confirmations worth recording because they are *positive*:
+
+- The **Meistersinger** has a **`Barred` weapons list** — *"the following weapons are forbidden"* —
+  the **third natural home** `forbid` has found, after CRH's and CWH's. And its followers are
+  **replaced** rather than removed: *"their animal companions serve as their followers"*, which is the
+  Sea Ranger's substitution in a second book.
+- The **Skald** cannot take reading/writing *"because the Skald's society does not have a written
+  language"* — **the only prohibition in 122 records justified by setting rather than by mechanics**,
+  and it models as an ordinary `forbid`. The format does not need to know why.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against
