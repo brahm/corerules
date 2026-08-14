@@ -586,6 +586,26 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    those effects are the dwarves' book, **an effect may now carry its own provenance** — a record turns
    out to be a meeting place for several books, and the finest grain that needs an anchor is the
    effect, not the record.
+23. **The Engine's field vocabulary is far larger than the schema's, and nothing checks it.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 110) A `when` clause describes the
+   CHARACTER — its subject is an ability or a level — and never his opponent. So every target-scoped
+   bonus moves into the field path: `attackRoll.melee.vsOrc`, `opponent.attackRoll.titan`. **Fourteen
+   creature names now live inside path strings**, in a pack with no kind that holds a creature, so
+   nothing resolves them and a typo is invisible. Six race records produced **41 distinct paths**
+   against 163 kits' 80. The path is a string on purpose, but it is also the escape hatch, and this is
+   correction 15's strongest evidence.
+24. **RESOLVED — `dice` was a value type that no operand could hold.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 109) Finding 42 noted that the
+   `dice` pattern was referenced by nothing and could not say why. This is why: every demihuman
+   detection ability is `N on 1dM`, `operand` admitted only integers, computed operands and table
+   values, and **converting `1-5 on 1d6` to 83% is inference A3 forbids**. `operand` gains a fourth
+   arm, `{rollAtMost, on}` — **17 occurrences across six records, zero in 1,121 kit effects.**
+25. **Commutativity forbids a fall-through, and one record needs one.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 111) A halfling has a 15% chance of
+   infravision to 60 feet and, **failing that**, a 25% chance of it to 30 feet. A single chance is a
+   field; two that fall through are not, because §4.3's layers SUM. No seventh operation is missing —
+   what is missing is **sequence**, and order-independence is exactly the guarantee that forbids it.
+   The first place where that guarantee costs something measurable.
 22. **A race book overrides the core rules' own numbers, and one id cannot hold two values.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 106) The Complete Book of Dwarves
    re-scores **28 of the PHB's 75 proficiencies** — Armorer at 1 slot and 0 where the PHB says 2 and

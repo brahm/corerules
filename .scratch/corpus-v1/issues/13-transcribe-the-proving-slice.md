@@ -3296,6 +3296,92 @@ records where there had been six silently empty ones**, and the pack now disting
 no effects"* from *"nobody has transcribed them yet"* — which is [finding 2](#finding-2--the-schema-accepted-a-semantically-empty-record-fixed)'s
 whole argument, arriving in a kind that did not exist when it was made.
 
+### Session 57 — the six races' own entries, and what a race asks for that a kit never did
+
+The five `effectsModelled: false` races are transcribed, and so is the dwarf's **own** entry — which
+had been missing. **69 PHB effects: 40 `adjust`, 27 `set`, 2 `grant`.** Table 9 joins the pack as a
+sixth lookup table. 452 records, 0 schema errors, no new unresolved references, and the judgement-pass
+line is gone.
+
+Races turn out to exercise parts of the format that 1,121 kit effects never touched.
+
+### Finding 109 — `dice` was a value type that nothing was allowed to hold
+
+Every demihuman detection ability is one shape: **`1-5 on 1d6`, `1-7 on 1d10`, `1 on 1d6`** — and the
+pack had nowhere to put it. `operand` was `integer | computedOperand | tableValue`, and
+[finding 42](#finding-42--a-decision-was-settled-and-the-artifact-was-silent)'s `dice` pattern was a
+value type **no kind referenced** — a fact that finding recorded without being able to explain.
+
+This is why. The corpus does not state these as numbers, and **writing 83% where the book writes
+`1-5 on 1d6` is inference**, which A3 forbids; the die and the target are what the source supplies. So
+`operand` gains a fourth arm, `{rollAtMost, on}`, and **`dice` finally has a consumer.**
+
+**17 occurrences across six records. Zero in 1,121 kit effects** — because a kit's bonuses are flat
+modifiers on rolls someone else defines, while a race's abilities *are* rolls. The proving slice was
+built entirely out of Attachables, and this is the first thing measured from outside that shape.
+
+### Finding 110 — the field path is where the untyped vocabulary collects
+
+The dwarf hits orcs, half-orcs, goblins and hobgoblins at +1; ogres, trolls, ogre magi, giants and
+titans attack him at −4. **`when` cannot say any of that**, and not by oversight: a clause describes
+**the character** — his abilities, his level, what he has — and never his opponent. The subject of a
+condition is a `scalar`, and a scalar is an ability or a level.
+
+So the target moves into the **field path**: `attackRoll.melee.vsOrc`, `opponent.attackRoll.titan`.
+That is not new — `reactionCheck.speciesEnemy` and `thac0.weaponOfChoice` did it already — but the
+races make the scale visible. **Fourteen creature names now live inside field-path strings**, and the
+pack has no kind that holds a creature, so nothing checks them, nothing resolves them, and a typo is
+invisible.
+
+The path is a **string on purpose** — it is how a v1 pack talks about fields the Engine knows and the
+schema does not enumerate. What this session shows is that **it is also the escape hatch**, and that
+the Engine's real vocabulary is therefore much larger than the schema's: 41 distinct paths from six
+records. It is not a defect to repair here; it is a **cost to state**, and correction 15's argument
+about a closed field vocabulary now has its strongest evidence.
+
+### Finding 111 — a cascade of chances is not a chance
+
+A halfling has a **15% chance of infravision to 60 feet; failing that, a 25% chance of it to 30 feet.**
+
+A *single* chance has a home — the dwarf's `magicalItem.malfunctionChance` is a field like any other,
+and four kits already do this. **A fall-through of two does not.** `when` cannot test a die roll, and
+two `set`s on one path would *sum* rather than *fall through*, because that is what the layer model
+guarantees. Written as fields it would assert something false.
+
+So it is a `grant` with a `defines` carrying the source's own sentence, marked UNMODELLED — and it is
+the **first effect in 1,100+ whose structure, not merely whose scope, the six operations cannot
+carry**. It does not reopen [known unknown #4](#known-unknown-4--are-six-operations-enough): no
+seventh *operation* is missing. What is missing is a way to **sequence** two effects, and §4.3's
+commutativity is exactly the property that forbids it. This is the first case where that guarantee
+costs something measurable.
+
+### Finding 112 — `effectsModelled` is one bit per record, and a record can span two books
+
+[Finding 108](#finding-108--a-records-effects-are-not-all-from-one-book) let effects carry their own
+provenance. It follows immediately that **the flag cannot mean what it says**: `phb:dwarf` was written
+`effectsModelled: true` with 32 effects, **none of them from the PHB** — the book the record is
+provenanced to. The pack asserted the dwarf was transcribed while its own entry was untouched.
+
+Corrected by transcribing it — 20 more effects, and the note on the record now says both books are
+present. But the flag is still one bit over a record that may draw on several sources, and
+[finding 2](#finding-2--the-schema-accepted-a-semantically-empty-record-fixed)'s distinction only
+holds **per book**. Recorded rather than repaired: no record outside `races` has this shape yet.
+
+### What the races cost, against the kits
+
+| | kits | races |
+|---|---|---|
+| records | 163 | 6 |
+| distinct field paths | 80 | 41 |
+| operations used | 6 | 3 |
+| schema changed | — | **3 times in 2 sessions** |
+
+Six records asked for **half as many field paths as 163 kits**, and moved the schema three times in
+two sessions — races carry effects, an effect carries provenance, an operand carries a die. Kits are
+variations on one shape and the format was designed around them; races are a different shape, and the
+proving slice never proved anything about it. **The v1 format's coverage claim should be read as
+'Attachables' and not as 'the rules'.**
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against

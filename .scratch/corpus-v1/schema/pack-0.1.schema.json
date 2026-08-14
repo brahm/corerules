@@ -107,7 +107,7 @@
       "pattern": "^(?:[0-9]*d[0-9]+(?:[x*][0-9]+)?(?:[+-][0-9]+)?|\\([0-9]*d[0-9]+(?:[+-][0-9]+)?\\)[x*][0-9]+)$"
     },
     "operand": {
-      "description": "Ticket 15: known unknown #4 fired — 31 corpus occurrences of halving, division and rounding inside kit effects. NOT a seventh operation: 'adjust' still sums, only its operand widens. Used by effects AND by predicate values, since the arithmetic appears on both sides.",
+      "description": "Ticket 15: known unknown #4 fired — 31 corpus occurrences of halving, division and rounding inside kit effects. NOT a seventh operation: 'adjust' still sums, only its operand widens. Used by effects AND by predicate values, since the arithmetic appears on both sides. WIDENED by ticket 13 finding 110: a fourth arm for `N on 1dM`, which is a value the corpus states directly and no arithmetic over integers can recover.",
       "oneOf": [
         {
           "type": "integer"
@@ -117,6 +117,9 @@
         },
         {
           "$ref": "#/$defs/tableValue"
+        },
+        {
+          "$ref": "#/$defs/rollUnder"
         }
       ]
     },
@@ -568,6 +571,25 @@
       },
       "required": [
         "name"
+      ],
+      "additionalProperties": false
+    },
+    "rollUnder": {
+      "description": "Ticket 13 finding 110. The demihuman detection abilities are all ONE shape — `1-5 on 1d6`, `1-7 on 1d10`, `1 on 1d6` — and the pack had nowhere to put it: `operand` was integer, computedOperand or tableValue, and `dice` was a value type NOTHING referenced (finding 42 said so and could not say why). A chance is not a number the corpus prints; writing 83% where the book writes `1-5 on 1d6` is inference, which A3 forbids. So the operand widens to hold the roll the book actually specifies, and `dice` finally has a consumer. 17 occurrences across the six player races; none in 1,121 kit effects, because kit bonuses are flat modifiers.",
+      "type": "object",
+      "properties": {
+        "rollAtMost": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Success on this result or lower. `1-5 on 1d6` is 5."
+        },
+        "on": {
+          "$ref": "#/$defs/dice"
+        }
+      },
+      "required": [
+        "rollAtMost",
+        "on"
       ],
       "additionalProperties": false
     }
