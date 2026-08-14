@@ -2699,6 +2699,61 @@ precedence problem meeting inside a single sentence.
 - The **Pacifist** addresses the player directly: *"**You, the player**, must role-play this druid as
   a strict pacifist."* The only record in 171 that does.
 
+### Session 48 — CPAH complete. **Every kit in the v1 tier is transcribed.**
+
+**182 records.** All fifteen Complete Paladin's kits are modelled, and with them **every kit in every
+Complete handbook of the v1 tier**:
+
+| book | kits | | book | kits |
+|---|---:|---|---|---:|
+| CBGH | 28 | | CBD | 23 |
+| CTH | 18 | | CBH | 17 |
+| CPAH | 15 | | CRH | 14 |
+| CFH | 14 | | CDH | 14 |
+| CBE | 11 | | CWH | 9 |
+
+**163 kits**, plus 8 Deity records, 5 Subraces and 5 PHB tables. Ticket 13's first deliverable named
+*"about 40 records"*; the pack holds four and a half times that, and the judgement pass is complete
+on every one.
+
+### A mistake worth recording, because the checker did not catch it
+
+The first attempt at this book **attached the wrong notes to the wrong kits** — the file numbers were
+guessed from reading order and CPAH's stems run `DD05397`–`DD05411` with four already-modelled records
+interleaved. Nine records were built with mismatched interpretations before an unrelated crash aborted
+the write.
+
+**Nothing would have caught it.** Every record was schema-valid, its provenance pointed at the file it
+came from, and only the prose in `interpretation` was wrong. That is
+[finding 73](#finding-73--a-record-that-was-wrong-for-thirty-five-sessions-and-validated-throughout)'s
+class again — a well-formed record that says something false — and this time it was caught by luck
+rather than by a check. The redone version asserts the expected name for every file before writing.
+
+### Finding 95 — three gaps in one clause
+
+> An Inquisitor has an **80% plus 1%/level** immunity to illusion spells of all levels. This immunity
+> **has a limit of**…
+
+**Partial** ([finding 85](#finding-85--three-more-subjects-in-five-records)), **scaling**
+([finding 26](#finding-26--level-scaling-has-three-parameters-not-one)), and **capped**
+([finding 63](#finding-63--the-clamp-now-has-five-records-behind-it)) — three separately-recorded gaps
+in a single sentence, in the last book. It is a useful closing datum: the gaps are not independent
+features the corpus uses one at a time; **they compose**, and a repair that adds a clamp without a
+scaling operand would still fail this record.
+
+### What the paladin book added
+
+- The **True Paladin** is the **second genuinely empty record** in 182, after the CTH Adventurer:
+  `Requirements: Standard`, `Special Benefits: None`, `Special Hindrances: None`.
+- `Forbidden` **and** `Restricted` both appear as **named fields** — the barred list and the
+  permit-list, first-class. This is the fourth book to give `forbid` a natural home, and the only one
+  to give the permit-list one too.
+- The **Divinate** requires *"membership in an organized religion"*, which is a prerequisite on an
+  **institution**, joining the CBE Spellfilcher's guild.
+- The **Votary** must **designate a hated faith** — the ninth distinct kind of per-character parameter
+  the corpus has asked for, after hated foes, familial species, sacred animals, chosen terrains,
+  guarded sites, chosen undead, totem animals and bonded mounts.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against
