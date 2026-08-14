@@ -430,24 +430,31 @@ this map without saying so.
 
 ## The verdict, measured
 
-[Ticket 13](issues/13-transcribe-the-proving-slice.md) delivered it over **182 hand-modelled records
-from fifteen books** — every kit in the v1 tier — carrying **1,121 effects**.
+[Ticket 13](issues/13-transcribe-the-proving-slice.md) delivered it over **183 hand-modelled records
+from fifteen books** carrying **1,222 effects**, inside a pack of **461 records**. Every figure here is
+produced by [`tools/verdict.py`](tools/verdict.py) and re-runs in a second — see finding 116, which is
+why it is a program and not a paragraph.
 
-| | |
-|---|---:|
-| effects the format expressed cleanly | **77 %** |
-| **records expressed completely** | **29 %** (52 of 177) |
+| | attachables | whole pack |
+|---|---:|---:|
+| effects the format expressed cleanly | **77 %** | **79 %** |
+| **records expressed completely** | **30 %** (53 of 177) | 30 % (55 of 183) |
+| references resolving | — | **86 %** of 853 occurrences |
 
 Both numbers matter and they disagree on purpose: the operations work nearly always, and records
 rarely close, because one unsayable clause leaves a fourteen-effect kit incomplete. For an Engine
-whose promise is to name the rule that refused, the second number is the binding one.
+whose promise is to name the rule that refused, the second number is the binding one. **Adding a whole
+non-Attachable kind moved it by nothing** — six races produced 101 effects and six markers, a better
+rate than any Complete handbook, and a 163-record majority absorbed it without a ripple.
 
 - **Known unknown #4 — six operations may not suffice — is answered: they suffice.** All six used,
-  none ever missing, no clause in 1,121 effects wanted a seventh. `except` is the least needed at 13
-  uses and is not redundant.
-- **The shortfall is conditions and subjects**, 109 of the 258 unmodelled clauses — the predicate can
+  none ever missing, no clause in 1,222 effects wanted a seventh. `except` is the least needed at 13
+  uses and is not redundant. **The mix is a property of the kind, not the format**: six races moved
+  `set` from 7.7% to 11.9% of all effects, because a Kit hands you things and a Race states what a
+  number is.
+- **The shortfall is conditions and subjects**, 115 of the 262 unmodelled clauses — the predicate can
   name the character and nothing else, and the corpus conditions on the other party, the terrain, the
-  round, the campaign and the past. Operands are the next 46.
+  round, the campaign and the past. Operands are the next 61.
 - **Known unknown #2 fired negatively and is now RESOLVED** (correction 16b): a table declares the
   **field path it supplies**, and a `tableValue` operand lets an effect read one. The repair cost a
   discovery — the tables' axes are heterogeneous, keyed by id, integer or level band — and leaves four
@@ -456,9 +463,13 @@ whose promise is to name the rule that refused, the second number is the binding
   can contradict each other (correction 18), which commutation does not address.
 
 **What it does not prove**, stated as [ticket 08](issues/08-which-slice-proves-the-format.md) required:
-none of the pack's 496 references resolve, nothing was tested about psionics, spells-as-records,
-equipment or the DMG, the cost per record was never measured, and local-model drafting was never
-tried. **A pack that has never been loaded is a demonstration, not a validation.**
+nothing was tested about psionics, spells-as-records, equipment or the DMG, the cost per record was
+never measured, and local-model drafting was never tried. **A pack that has never been loaded is a
+demonstration, not a validation.**
+
+One line of the original verdict has been **overturned by measurement rather than argument**: it said
+*none of the pack's 496 references resolve*, and 86% now do — closed by transcribing the things the
+kits point at, over nine sessions and no design change.
 
 ## Corrections owed to the v1 spec
 

@@ -2756,79 +2756,101 @@ scaling operand would still fail this record.
 
 ## THE VERDICT
 
-Deliverables 3 and 4. Measured over **182 records, 177 of them carrying effects, 1,121 effects in
-total**, transcribed by hand from **fifteen books** — every kit in the v1 tier's Complete handbooks,
-plus eight Deity records, five Subraces and five PHB tables.
+Deliverables 3 and 4. **Every figure below is produced by [`verdict.py`](../tools/verdict.py)** and
+can be reproduced with `verdict.py ~/corerules/slice`. It was hand-measured at session 48 and was
+wrong within two sessions; see [finding 116](#finding-116--the-verdict-was-a-number-that-goes-stale-by-itself).
+
+Two populations, reported separately and never mixed: the **Attachables** ticket 08 defined — kits,
+Deities and Subraces — and every record in the pack that carries effects at all, which now includes
+races.
 
 ### The headline number
 
-| | |
-|---|---:|
-| effects expressed **without a marker** | **863 (77%)** |
-| effects carrying an `UNMODELLED` marker | 258 (23%) |
-| **records expressed completely, with no marker anywhere** | **52 of 177 (29%)** |
+| | attachables | whole pack |
+|---|---:|---:|
+| records carrying effects | 177 | 183 |
+| effects | 1,121 | 1,222 |
+| effects expressed **without a marker** | **865 (77%)** | **960 (79%)** |
+| effects carrying an `UNMODELLED` marker | 256 (23%) | 262 (21%) |
+| **records complete, no marker anywhere** | **53 of 177 (30%)** | 55 of 183 (30%) |
 
-**The format says three quarters of what the corpus says, and finishes fewer than a third of its
+The pack is 461 records; the 278 in kinds with no `effects` array — proficiencies, weapons,
+alignments, tables — are records, never incomplete ones, because they have nothing to express.
+
+**The format says roughly four fifths of what the corpus says, and finishes fewer than a third of its
 records.** Those two numbers point in opposite directions and both are true: the *operations* work
 almost always, and the *records* rarely close, because one unsayable clause in a fourteen-effect kit
 leaves the record incomplete.
 
 For a tool whose promise is *"it tells you which rule refused and which book that rule came from"*,
-the second number is the one that binds. A pack of 177 records can answer that question fully for 52
-of them.
+the second number is the one that binds. A pack of 183 modelled records can answer that question fully
+for 55 of them.
+
+**Adding a whole non-Attachable kind moved the completion rate by nothing at all** — 30% either way.
+Six races produced 101 effects and six markers, which is a better rate than any Complete handbook, and
+the aggregate did not notice. That is what a 163-record majority does to an average, and it is the
+reason the two populations are reported apart.
 
 The spread by book is wide and diagnostic:
 
 | book | records | complete | | book | records | complete |
 |---|---:|---:|---|---|---:|---:|
 | CBH | 17 | **76%** | | CBE | 16 | 50% |
-| CDH | 14 | 50% | | CTH | 18 | 44% |
-| CFH | 14 | 29% | | CPAH | 15 | 27% |
-| CBGH | 29 | 24% | | CRH | 14 | 7% |
-| **CBD, CWH, CPRH** | 40 | **0%** | | | | |
+| CDH | 14 | 50% | | CTH | 18 | 50% |
+| PHB | 6 | 33% | | CFH | 14 | 29% |
+| CPAH | 15 | 27% | | CBGH | 29 | 24% |
+| CRH | 14 | 7% | | **CBD, CWH, CPRH** | 40 | **0%** |
 
 A book is not a random sample of difficulty. CBH's kits are proficiencies and named abilities; CBD's
 every record carries a reaction penalty qualified by clan, and CPRH's every record carries a
-permit-list and a follower roster. **Three books produced no complete record at all.**
+permit-list and a follower roster. **Three books produced no complete record at all**, and they are
+the same three after 40 more sessions and two more kinds.
 
 ### Known unknown #4 — *six operations may not suffice*. **Answered: they suffice.**
 
-| | uses | share |
-|---|---:|---:|
-| `grant` | 570 | 50.8 % |
-| `adjust` | 235 | 21.0 % |
-| `require` | 121 | 10.8 % |
-| `forbid` | 96 | 8.6 % |
-| `set` | 86 | 7.7 % |
-| `except` | 13 | 1.2 % |
+| | uses | share | at session 48 |
+|---|---:|---:|---:|
+| `grant` | 572 | 46.8 % | 50.8 % |
+| `adjust` | 275 | 22.5 % | 21.0 % |
+| `set` | 145 | 11.9 % | **7.7 %** |
+| `require` | 121 | 9.9 % | 10.8 % |
+| `forbid` | 96 | 7.9 % | 8.6 % |
+| `except` | 13 | 1.1 % | 1.2 % |
 
-**All six are used, none was ever found missing, and in 1,121 effects not one clause needed a seventh
+**All six are used, none was ever found missing, and in 1,222 effects not one clause needed a seventh
 operation.** `except` waited 24 records for its first case and ends at 13 uses — the least needed and
 not redundant, since a format that could not say *"you may take the rogue-only proficiency"* would
 fail on real kits.
+
+**The mix is a property of the kind, not of the format.** Six race records moved `set` from 7.7% to
+11.9% and pushed `grant` below half, because a Kit hands you things and a Race states what a number
+IS. The shares measured over kits alone were never the format's shares; they were the Attachable's.
 
 This is the answer nobody predicted. The known unknown feared the operation set was too small; the
 measurement says it is **exactly right**, and that every shortfall is elsewhere.
 
 ### Where the shortfall actually is
 
-Classifying all 258 markers by what the format could not say:
+All 262 markers, by what the format could not say:
 
 | | count | |
 |---|---:|---|
-| **conditions** | **78** | the other party, terrain, round state, campaign configuration, play history |
-| **operands and values** | **46** | bare ranges, dice in effects, per-die scaling, cross-sheet arithmetic |
-| **subjects** | **31** | a spell, a follower, an opponent, a second character sheet |
-| shapes | 14 | permit-lists, item-property predicates |
-| earmarks and scopes | 13 | *this pool, spent only on these* |
-| reductions and substitutions | 12 | *replacing them with*, *to a lesser degree* |
-| choices and elections | 9 | *one or the other, but not both* |
-| caps and clamps | 6 | *to a maximum of*, *until it reaches 0* |
-| frequencies and triggers | 5 | *once per week*, *on a roll of 14 or more* |
-| unclassified | 44 | |
+| **conditions** | **94** | the other party, terrain, round state, campaign configuration, play history |
+| **operands and values** | **61** | bare ranges, dice in effects, per-die scaling, cross-sheet arithmetic |
+| **subjects** | **21** | a spell, a follower, an opponent, a second character sheet |
+| shapes | 15 | permit-lists, item-property predicates |
+| scopes and earmarks | 15 | *this pool, spent only on these* |
+| composition | 13 | nesting, precedence, one record pointing into another |
+| choices | 13 | *one or the other, but not both* |
+| reductions and substitutions | 8 | *replacing them with*, *to a lesser degree* |
+| caps and clamps | 7 | *to a maximum of*, *until it reaches 0* |
+| frequencies and triggers | 7 | *once per week*, *on a roll of 14 or more* |
+| declaring no category | 30 | |
 
-**Conditions and subjects together are 109 of 258 — 42% of everything the format could not say.** Add
-operands and the three account for 60%.
+**Conditions and subjects together are 115 of 262 — 44% of everything the format could not say.** Add
+operands and the three account for 67%. The session-48 hand pass reached the same ranking with 44
+markers it could not classify; the difference is [finding 115](#finding-115--the-markers-were-classifying-themselves-all-along),
+not a change in the corpus.
 
 So the verdict on [ticket 06](./06-expression-language.md)'s expression language is the mirror of the
 one on §4.3. The predicate's **vocabulary** is adequate — `compare`, `member` and `has` were all
@@ -2911,13 +2933,19 @@ things that looked like they needed new features — offsets as constants beside
 as cancelling adjusts ([finding 36](#finding-36--the-cancelling-adjust-technique-generalises)), CNF
 for free on the effect side ([finding 27](#finding-27--the-effect-list-gives-conjunction-of-disjunction-for-free)).
 
-**Not proved, and stated as plainly as ticket 08 asked.** **None of the pack's 496 references
-resolve** — it validates and would not load. Nothing was tested about psionics, spells as records,
-equipment breadth, or the DMG. The cost per record was never measured, so
+**Not proved, and stated as plainly as ticket 08 asked.** Nothing was tested about psionics, spells as
+records, equipment breadth, or the DMG. The cost per record was never measured, so
 [ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction is still unchecked, and
 [ticket 09](./09-extraction-pipeline.md)'s local-model draft quality was never tried at all. **A pack
-of 182 records that has never been loaded by anything is a demonstration, not a validation**, and the
-distinction is the same one A3 exists to keep.
+that has never been loaded by anything is a demonstration, not a validation**, and the distinction is
+the same one A3 exists to keep.
+
+**Referential integrity was the loudest of these and is now largely closed.** At session 48 *none of
+the pack's 496 references resolved*; today **736 of 853 occurrences resolve (86%)**, over 177 of 270
+distinct ids. What closed it was transcribing the things the kits point at — the PHB's proficiencies,
+weapons, races, thieving skills and alignments — and the remaining 117 occurrences are a long tail of
+92 ids, no single one of which is worth a session. **This is the one line of the original verdict that
+measurement has simply overturned**, and it took nine sessions rather than a design change.
 
 ### Session 50 — the PHB's proficiencies, and the first references that resolve
 
@@ -3431,6 +3459,48 @@ This does not reopen the condition vocabulary — [the verdict](#the-verdict) al
 and subjects as the format's largest shortfall, 109 of 258 unmodelled clauses, and this is one more
 instance of it. What is new is that **the pack can now measure its own lossiness on this axis**, which
 is what a shape buys over a label.
+
+### Session 59 — the verdict becomes a program
+
+The `## THE VERDICT` section above is rewritten from
+[`tools/verdict.py`](../tools/verdict.py), and every number in it now comes from one command.
+
+### Finding 115 — the markers were classifying themselves all along
+
+Session 48 classified 258 markers by hand into nine buckets and left **44 unclassified**. Rebuilding
+that classification as a tool, the first attempt was a keyword regex over the marker prose — and it
+was worse: 74 unclassified, and *conditions* over-counted because `only if` appears in explanations of
+things that are not conditions.
+
+Then: **the markers already carry a category.** They are written `UNMODELLED CONDITION:`,
+`UNMODELLED VALUE AND SUBJECT:`, `UNMODELLED SCOPE:` — **232 of 262 declare one**, in 47 distinct
+labels that collapse to ten categories. That label was written *at the moment of the refusal, with the
+source open*, which is strictly better evidence than prose read back months later.
+
+The lesson is the one this ticket keeps relearning: **read the artifact, not the prose about the
+artifact** — [finding 50](#finding-50--the-operand-was-never-as-poor-as-findings-21-26-and-40-said)'s
+mistake and [finding 42](#finding-42--a-decision-was-settled-and-the-artifact-was-silent)'s, arriving
+a third time in the measurement layer. A convention nobody designed had been carrying the answer for
+fifty sessions.
+
+### Finding 116 — the verdict was a number that goes stale by itself
+
+Session 48's verdict was correct when written and **wrong two sessions later**. It said *none of the
+pack's 496 references resolve*; by session 50 a quarter did, and by session 58, 86%. It reported
+`set` at 7.7% of effects, a share the races moved to 11.9%. It reported 863 clean effects and 52
+complete records, which session 49's own `tableValue` work — the Swashbuckler and the Explorer, both
+recorded in this ticket — moved to 865 and 53 **without anyone noticing that the verdict above them
+now disagreed**.
+
+None of those drifts was a mistake. Each was **the effort working**, and the number sitting in a
+markdown heading could not follow. **A measurement that takes an afternoon and rots by itself is a
+tool that was never written**, and the same argument [ticket 12](./12-how-much-tool.md) makes about
+checking applies to measuring: if it matters enough to state, it matters enough to re-run.
+
+Running it now also **validates the hand pass** rather than replacing it: on the same population the
+tool reproduces session 48 to within two effects and one record, and the entire difference is
+explained by work this ticket recorded at the time. The measurement was sound; only its shelf life was
+wrong.
 
 ### Still not done
 
