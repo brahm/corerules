@@ -2453,6 +2453,55 @@ environmental gate **is** expressible. The **Herbalist** adds a chosen-terrain p
 that already holds the Feralan's familial species, the Goblinsticker's hated foe, the Seeker's sacred
 animal and the Undead Slayer's chosen undead.
 
+### Session 43 — the five recovered records, and four shapes nothing else had
+
+**105 records.** The kits finding 82 rescued from four books are modelled, and for records that were
+invisible until yesterday they were unusually productive.
+
+### Finding 84 — a benefit bought with **experience**
+
+> By paying an **additional 10% experience cost** to increase in level, an Outcast may Move Silently
+> **as a ranger of the same level**.
+
+An **optional, permanent upgrade priced in advancement**. The character may decline it; if he takes
+it, he pays forever. [Finding 61](#finding-61--a-benefit-the-player-buys-with-movement-at-the-table)
+recorded a trade elected per scene and [finding 68](#finding-68--an-election-between-two-effects-made-per-use)
+one elected per use — this is elected **once, at the start, and binding**.
+
+The format can write the surcharge and it can write the benefit. What it cannot write is that **they
+are one purchase**, or that the purchase is refusable. And the benefit itself is
+[finding 71](#finding-71--an-effect-that-swaps-one-classs-table-for-anothers)'s cross-class table
+read, for the third time.
+
+### Finding 85 — three more subjects, in five records
+
+| record | the subject |
+|---|---|
+| **Equerry** | *"a **male** Equerry can't choose a unicorn"* — the character's **sex**, conditioned on for the first time in ten books |
+| **Militarist** | *"attacks **as if he were one level higher**"* — an offset applied to **the level at which a table is read**, not to a value |
+| **Ghosthunter** | *"a **95% immunity** to paralysis"* — a **probability of immunity**, where the format has `grant` and `forbid` and nothing between |
+
+The Ghosthunter's is the one worth dwelling on. `grant` and `forbid` are absolute, and a 95% immunity
+is neither — it is the same gap as
+[finding 28](#finding-28--three-kits-state-that-a-bonus-does-not-add-and-adjust-only-sums)'s missing
+combiner, one level up: **the corpus has partial versions of things the format only has whole.**
+Partial permission (finding 67), partial class features (finding 76), partial immunity. Three
+findings, one shape.
+
+### Finding 86 — a resource convertible into another, one way only
+
+> He can **substitute weapon proficiencies for nonweapon proficiencies (but not vice versa)**.
+
+The first **exchange rate between two class resources** in ten books, and it is asymmetric. §4.3 can
+grant a resource, spend it ([finding 59](#finding-59--six-kits-constrain-the-spending-of-a-resource-they-do-not-grant)'s
+earmark), and reduce it — it has no operation that **trades one pool for another**, and no way to
+record that the trade runs in one direction.
+
+The same record adds a **conditional forfeit**: an hour of practice daily, *"if he neglects to
+practice, **he loses his mounted combat bonuses**"* — the Cavalier's shape from
+[finding 55](#finding-55--a-gate-on-the-whole-record-which-the-schema-has-no-slot-for), scoped to two
+named effects rather than to the whole record.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against
