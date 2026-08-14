@@ -2856,6 +2856,52 @@ progression and cannot name it. **This is unresolved and it is the premise the w
 
 **#4** — answered above.
 
+### Known unknown #2, **resolved** — session 49
+
+A table now declares **`supplies`**: the **field path it fills**, in the same vocabulary the effects
+already use. A table supplying `thiefSkill` answers for `thiefSkill.openLocks`, so the Engine finds
+the table it needs by naming the field it is computing.
+
+Chosen over a second closed enumeration deliberately: §3.4 says rule-set names are the Engine's
+**single** exception to open enumerations, and a role vocabulary would have made two. It also gives
+A3's distinction for free — **a table that supplies no field carries no `supplies`, and the Engine
+does not consume it**, which separates *reference data the pack happens to carry* from *a table the
+Engine is waiting for*.
+
+**Converting the slice's 37 rows found something the decision did not predict.** The axes are
+**heterogeneous**:
+
+| table | keyed by | columns |
+|---|---|---|
+| 26 Thieving Skill Base | a **skill** (id) | one value |
+| 27 Racial Adjustments | a skill (id) | **races** (ids) |
+| 28 Dexterity Adjustments | a **Dexterity score** (integer) | skills (ids) — *the transpose of 27* |
+| 29 Armor Adjustments | a skill (id) | **armour types** (ids) |
+| 30 Backstab Multipliers | a **level band** (`1-4`, `5-8`) | one value |
+
+So `keyedBy` became a `tableAxis` — `kind` of `id`, `integer` or `range`, with the vocabulary named
+when it is an id — and `columnsAre` carries the second axis when the table is two-dimensional. **One
+key kind would have fitted none of the five.**
+
+A **`tableValue` operand** closes the read half — `{supplies, of, at}`. Two effects that were marked
+unmodellable are now expressed:
+
+- the **Swashbuckler** *"fights with the THAC0 of a **fighter** of his experience level"* →
+  `{supplies: "thac0", of: "phb:fighter", at: {level: "phb:thief"}}`;
+- the **Explorer** learns *"**twice** the normal number of languages allowed by his Intelligence"* →
+  adding the table's own value a second time, the layer model absorbing a multiplier exactly as it
+  absorbed the scaling offsets in [finding 50](#finding-50--the-operand-was-never-as-poor-as-findings-21-26-and-40-said).
+
+**Four table-dependent clauses remain**, and they are all one shape: *"the weapons listed in Table
+47"*, *"Table 6 lists the oppositional schools"*, the Militarist's honours from Table 20. A table that
+**bounds a choice** rather than supplying a value — which is
+[finding 43](#finding-43--two-thirds-of-kits-give-examples-not-enumerations)'s `require.from` problem
+meeting this one, and is left open rather than guessed at.
+
+**The extractor cannot infer either half.** `supplies` and the row-key ids are not in the markup, so
+[`extract_tables.py`](../tools/extract_tables.py) emits them empty for a human to fill — the same
+posture as the apparatus list, for the same reason: **the source does not say.**
+
 ### What the slice proves, and what it does not
 
 **Proved.** The shapes are expressible. The six operations suffice. The three Attachable arms are one

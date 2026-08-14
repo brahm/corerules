@@ -448,9 +448,10 @@ whose promise is to name the rule that refused, the second number is the binding
 - **The shortfall is conditions and subjects**, 109 of the 258 unmodelled clauses — the predicate can
   name the character and nothing else, and the corpus conditions on the other party, the terrain, the
   round, the campaign and the past. Operands are the next 46.
-- **Known unknown #2 has fired negatively** (correction 16 below): a `lookupTable` never declares what
-  it is a table *of*, and an effect cannot name a table it needs to read. **This is the premise the
-  design rests on and it is unresolved.**
+- **Known unknown #2 fired negatively and is now RESOLVED** (correction 16b): a table declares the
+  **field path it supplies**, and a `tableValue` operand lets an effect read one. The repair cost a
+  discovery — the tables' axes are heterogeneous, keyed by id, integer or level band — and leaves four
+  clauses open, all of them a table bounding a choice rather than supplying a value.
 - **§4.1 held for 177 records across three arms**, and breaks in exactly one place: two Attachables
   can contradict each other (correction 18), which commutation does not address.
 
@@ -559,6 +560,16 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    something about the character. The mechanic is relational by construction: *how does this NPC react
    to you* has no meaning without the NPC. Larger to add than any operand repair this map has
    proposed, and now better evidenced than all of them.
+16b. **RESOLVED — known unknown #2.** ([Ticket 13](issues/13-transcribe-the-proving-slice.md),
+   session 49) A `lookupTable` now declares **`supplies`**: the **field path it fills**, in the same
+   vocabulary the effects use, so the Engine finds a table by naming the field it is computing. Chosen
+   over a role enumeration so §3.4 keeps its single exception — and it yields A3's distinction free,
+   since a table with no `supplies` is reference data the Engine does not consume. Rows are keyed by
+   id, and converting the slice's 37 rows found the axes **heterogeneous**: skill ids, a Dexterity
+   integer, and a level BAND, with two tables two-dimensional and a third their transpose. `keyedBy`
+   became a `tableAxis` of kind `id`/`integer`/`range`. A `tableValue` operand closes the read half and
+   expresses the Swashbuckler's cross-class THAC0 and the Explorer's doubled languages. **Four clauses
+   remain**, all of one shape: a table that BOUNDS a choice rather than supplying a value.
 16. **The proving slice validates and would not load: 0 of its 80 references resolve.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 45) 66 point at a `phb:` pack never
    transcribed, 14 at ids minted while modelling. Ticket 10 rightly puts cross-pack integrity on the
