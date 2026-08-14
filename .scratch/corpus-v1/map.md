@@ -444,7 +444,7 @@ why it is a program and not a paragraph.
 |---|---:|---:|
 | effects the format expressed cleanly | **77 %** | **78 %** |
 | **records expressed completely** | **22 %** (51 of 228) | 21 % (53 of 253) |
-| references resolving | — | **94 %** of 4,052 occurrences |
+| references resolving | — | **99.5 %** of 3,854 occurrences |
 
 Both numbers matter and they disagree on purpose: the operations work nearly always, and records
 rarely close, because one unsayable clause leaves a fourteen-effect kit incomplete. For an Engine
@@ -473,7 +473,7 @@ never measured, and local-model drafting was never tried. **A pack that has neve
 demonstration, not a validation.**
 
 One line of the original verdict has been **half overturned by measurement rather than argument**: it
-said *none of the pack's 496 references resolve*, and **94% of a corpus twice as large now do** — closed by transcribing the
+said *none of the pack's 496 references resolve*, and **3,835 of 3,854 now do** — closed by transcribing the
 things the kits point at, over eleven sessions and no design change. The last two blocks were
 `classes`, which every Attachable names, and the permit-list placeholders, which turned out not to be
 records at all (correction 27). What remains is **34 ids**, a third of them the creature and terrain
@@ -654,14 +654,23 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    every string shaped like an id. This is correction to correction: finding 117 added `target` to the
    list; the real repair was to **delete the list**. *A tool that reads a structure by walking a list
    of its parts will be wrong again the next time the structure grows.*
-32. **The scalar vocabulary is too narrow by exactly the things a character most obviously is.**
-   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 135) §6.1's `scalar` admits
-   `{ability: id}` and `{level: id}` and nothing else, so a transcriber conditioning on race wrote
-   `{ability: "phb:race"}`. **`phb:race` is referenced 133 times and `phb:alignment` 65** — 198 of the
-   239 references that still do not resolve — beside `phb:subrace`, `cdh:druid-branch`,
-   `phb:spell-duration` and `phb:tracking-base`. The abuse has been in the pack since the first kit and
-   was unmeasurable until the walker could see it. Race and alignment are now RECORDS, so the repair is
-   a third scalar arm, not new content.
+32. **RESOLVED — the scalar vocabulary was too narrow by exactly the things a character most obviously
+   is.** ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 136) §6.1's `scalar` admitted
+   `{ability: id}` and `{level: id}` and nothing else, so conditioning on race was written
+   `{ability: "phb:race"}` — **206 conditions**, of which 133 named race and 65 alignment, every one
+   accepted by the schema because a `$ref` to `id` cannot say *which* ids. The third arm is a **field
+   path**, which makes the format symmetric — effects WRITE field paths and predicates now READ them,
+   in one vocabulary rather than two — and closes a second abuse of the same shape, where
+   `computedOperand.of` named `phb:spell-duration` to mean *the current value of the field being
+   adjusted*. The cost is correction 23's: a path is a string nothing checks. A closed enumeration of
+   *race, subrace, alignment, class, branch* would have been a second exception beside §3.4's single
+   one, and wrong within a book.
+34. **A parent reference is not a feature of races.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 137) §3.1 says a Subrace is a Race
+   with a parent. Finding 119 found a class inside a group. The Complete Druid's eight **branches** are
+   a druid with a terrain, and carry `variantOf: phb:druid`. **Three books that could not have
+   coordinated have asked the schema for the same thing**: it is how this corpus says *the same thing,
+   more specific*, and it belongs in the format rather than being re-derived per kind.
 33. **A weapon group you can buy is not a weapon group that is printed.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 133) Table 44's `isGroup` is a
    heading. The Complete Fighter's makes grouping a rule: a Tight Group costs **two** proficiency slots

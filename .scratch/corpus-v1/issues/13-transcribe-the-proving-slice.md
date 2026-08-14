@@ -2773,7 +2773,7 @@ races.
 | effects expressed **without a marker** | **1,386 (77%)** | **1,497 (78%)** |
 | effects carrying an `UNMODELLED` marker | 405 (23%) | 415 (22%) |
 | **records complete** | **51 of 228 (22%)** | 53 of 253 (21%) |
-| references resolving | — | **3,813 of 4,052 (94%)** |
+| references resolving | — | **3,835 of 3,854 (99.5%)** |
 
 The pack is 1,023 records; the 770 in kinds with no `effects` array — spells, proficiencies, weapons,
 alignments, tables — are records, never incomplete ones, because they have nothing to express.
@@ -3869,6 +3869,76 @@ the same: `phb:subrace`, `cdh:druid-branch`, `phb:spell-duration`, `phb:tracking
 **The scalar vocabulary is too narrow by exactly the things a character most obviously is**, and the
 type abuse has been sitting in 200 conditions since the first kit was modelled, unmeasurable until the
 walker could see it.
+
+### Session 64 — the pseudo-scalars, and the reference report comes back clean
+
+**1,106 records, 0 schema errors, and 3,835 of 3,854 reference occurrences resolve.** Nineteen
+occurrences over sixteen ids remain, none of them more than three.
+
+### Finding 136 — the predicate could not name what a character is, so it lied
+
+§6.1's `scalar` admits `{ability: id}` and `{level: id}` and nothing else. A kit that applies only to
+elves has to say so, and the only shape available was **`{ability: "phb:race"}`** — race is not an
+ability, and no record has ever answered to that id.
+
+**206 conditions did this**, and it survived because nothing could see it: `phb:race` was referenced
+133 times, `phb:alignment` 65, and both were invisible until
+[finding 135](#finding-135--the-checker-was-seeing-48-of-the-packs-references) made the walker
+complete. **The schema accepted every one of them**, because a `$ref` to `id` cannot say *which* ids.
+
+The third arm is a **field path**, and that choice does more than patch the hole:
+
+- **It makes the format symmetric.** Effects WRITE field paths; predicates now READ them, in one
+  vocabulary rather than two. `member {field: "race"} anyOfIds [phb:elf]` reads the same field an
+  effect would set.
+- **It closes a second abuse with the same shape.** `computedOperand.of` named `phb:spell-duration`
+  and `phb:tracking-base` to say *"double the duration"*, *"halve the tracking chance"*. Those are not
+  abilities either — they are **the current value of the field the effect is adjusting**, which is
+  what *doubled* and *halved* mean. All three become `{field: "spell.duration"}` and
+  `{field: "proficiencyCheck.tracking"}`, and in every case the path equals the effect's own `field`.
+
+The cost is [correction 23](../map.md)'s: a field path is a string nothing checks. That is a worse
+guarantee than a typed id and a **much** better description of the truth, and the alternative — a
+closed enumeration of *race, subrace, alignment, class, branch* — would have been a second closed
+vocabulary beside §3.4's single exception, and would have been wrong within one book.
+
+### Finding 137 — a druid branch is a class with a parent, which is §3.1 for the third time
+
+`cdh:druid-branch` was one of the pseudo-scalars, and the branches it names — Forest, Desert, Gray,
+Mountain, Plains, Swamp — did not exist either. The Complete Druid's prints **eight**, and they are a
+druid with a terrain.
+
+They are `classes` records carrying **`variantOf: phb:druid`**. §3.1 already says a Subrace is a Race
+with a parent reference; [finding 119](#finding-119--a-class-is-two-layers-and-the-corpus-uses-both-interchangeably)
+found a class inside a group; this is the same idea a **third** time, in a third kind. **A parent
+reference is not a feature of races — it is how this corpus says "the same thing, more specific"**, and
+the schema has now been asked for it three times by three books that could not have coordinated.
+
+All eight carry `effectsModelled: false`: what a Forest Druid actually gets is a page of the CDH that
+nobody has transcribed, and the flag says so rather than implying a branch is an empty label.
+
+### The reference report, five sessions on
+
+| | session 48 | session 58 | now |
+|---|---:|---:|---:|
+| occurrences | 0 of 496 | 736 of 853 | **3,835 of 3,854** |
+| what the walker looked at | five hand-listed paths | five hand-listed paths | every id-shaped string |
+
+The middle column is the honest embarrassment: it looked like 86% and it was measured over **a fifth**
+of the references the pack actually holds. The last column is over the complete set.
+
+**Sixteen ids remain**, and the shape of what is left is worth stating because it is no longer a
+transcription backlog:
+
+- **four creature names and two subraces** — a vocabulary the pack has no kind for
+  ([correction 23](../map.md));
+- **three weapons** — `phb:axe` is ambiguous on purpose, `crh:machete` and `cbgh:hoopak` are book
+  equipment outside the slice;
+- **seven things that are real and simply not transcribed** — strongholds, fortifications, the Grand
+  Druid, the holy symbol, the bard's followers, multi-class and dual-class arrangements.
+
+None of them is a format problem. That is the first time this ticket has been able to say that about
+the reference report.
 
 ### Still not done
 

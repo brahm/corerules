@@ -73,7 +73,7 @@
       "additionalProperties": false
     },
     "scalar": {
-      "description": "Ticket 06: the only scalars a predicate or operand may name. 'level' is ALWAYS qualified by class — the unqualified form does not exist, because §6.1's sum type means Fighter 5 / Mage 4 has no 'level 5'.",
+      "description": "Ticket 06: the only scalars a predicate or operand may name. 'level' is ALWAYS qualified by class — the unqualified form does not exist, because §6.1's sum type means Fighter 5 / Mage 4 has no 'level 5'. WIDENED by ticket 13 finding 136. Two arms were too narrow by exactly the things a character most obviously IS: 206 conditions named `{ability: 'phb:race'}` and `{ability: 'phb:alignment'}` — race is not an ability and no record answers to those ids, so every one of them was a lie the schema accepted. The third arm is a FIELD PATH, which makes the format symmetric: effects WRITE field paths and predicates READ them, in one vocabulary rather than two. It also closes a second abuse with the same shape — `computedOperand.of` naming `phb:spell-duration` to say 'double the duration', where what it wants is the current value of the field being adjusted.",
       "oneOf": [
         {
           "type": "object",
@@ -96,6 +96,19 @@
           },
           "required": [
             "level"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "field": {
+              "type": "string",
+              "description": "A field path, in the same vocabulary the effects write."
+            }
+          },
+          "required": [
+            "field"
           ],
           "additionalProperties": false
         }
@@ -899,6 +912,10 @@
           },
           "effectsModelled": {
             "type": "boolean"
+          },
+          "variantOf": {
+            "$ref": "#/$defs/id",
+            "description": "Ticket 13 finding 137. The Complete Druid's eight BRANCHES — Arctic, Desert, Forest, Gray, Jungle, Mountain, Plains, Swamp — are a druid with a terrain, and the pack conditions on which one. §3.1 already says a Subrace is a Race with a parent reference; this is the same idea for a class, and the THIRD time the corpus has asked for it after Subrace and after the group/member split."
           }
         },
         "required": [
