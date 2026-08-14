@@ -305,14 +305,28 @@
               "$ref": "#/$defs/id"
             },
             "when": true,
-            "text": true
+            "text": true,
+            "defines": {
+              "$ref": "#/$defs/definition"
+            }
           },
           "required": [
             "op",
-            "kind",
-            "ref"
+            "kind"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "anyOf": [
+            {
+              "required": [
+                "ref"
+              ]
+            },
+            {
+              "required": [
+                "defines"
+              ]
+            }
+          ]
         },
         {
           "properties": {
@@ -326,14 +340,28 @@
               "$ref": "#/$defs/id"
             },
             "when": true,
-            "text": true
+            "text": true,
+            "defines": {
+              "$ref": "#/$defs/definition"
+            }
           },
           "required": [
             "op",
-            "kind",
-            "ref"
+            "kind"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "anyOf": [
+            {
+              "required": [
+                "ref"
+              ]
+            },
+            {
+              "required": [
+                "defines"
+              ]
+            }
+          ]
         },
         {
           "description": "§4.3: 'except' names the SUBJECT, not the prohibition — which is what keeps Effects from needing identity (§3.3).",
@@ -498,6 +526,24 @@
       "required": [
         "supplies",
         "at"
+      ],
+      "additionalProperties": false
+    },
+    "definition": {
+      "description": "Ticket 13 finding 101: a kit's named benefits and hindrances are things the kit BRINGS INTO BEING — 227 of them across 346 records, and 216 used exactly once, by the record that invented them. Given an id they are 216 references that can never resolve, because there is nothing to point at and nothing to transcribe: the definition IS the kit's own field. So the definition lives in the effect that grants it. The eleven used by more than one record are a different thing and keep their ids.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "type": "string",
+          "description": "What the source says it does, in the source's words."
+        }
+      },
+      "required": [
+        "name"
       ],
       "additionalProperties": false
     }
@@ -877,6 +923,82 @@
           "keyedBy",
           "columns",
           "rows"
+        ]
+      }
+    },
+    "spheres": {
+      "description": "Ticket 13 finding 99: 64 reference occurrences pointed at priest SPHERES and no kind held them. A sphere is a named category a spell belongs to — the priest's side of what a school is for a wizard, and the two are the same shape used twice, exactly as §4.1's three Attachable arms are.",
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/record"
+          }
+        ]
+      }
+    },
+    "spellSchools": {
+      "description": "The wizard's side of the same shape. See `spheres`.",
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/record"
+          }
+        ]
+      }
+    },
+    "spells": {
+      "description": "Only the spells the pack REFERENCES are transcribed — twelve of the PHB's several hundred. A3 makes that legitimate rather than incomplete: the manifest declares what the pack covers, and a spell nobody grants is not a debt.",
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/record"
+          }
+        ],
+        "properties": {
+          "level": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9
+          },
+          "casterClass": {
+            "$ref": "#/$defs/id"
+          },
+          "sphere": {
+            "$ref": "#/$defs/id"
+          },
+          "school": {
+            "$ref": "#/$defs/id"
+          }
+        }
+      }
+    },
+    "armor": {
+      "description": "From Table 46's Armor Class Ratings. The table rates COMBINATIONS — 'leather or padded + shield' — so only the items the pack cites are recorded, at the rating the table gives them alone.",
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/record"
+          }
+        ],
+        "properties": {
+          "armorClass": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "grantedAbilities": {
+      "description": "The eleven abilities used by MORE THAN ONE record. Everything used once is defined inline by the effect that grants it (`defines`, finding 101); these eleven are shared, and several are not kit inventions at all but CLASS abilities that kits reference — `phb:bard-spellcasting` is cited by three bard kits that take it away.",
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/record"
+          }
         ]
       }
     }

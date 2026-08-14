@@ -570,6 +570,15 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    became a `tableAxis` of kind `id`/`integer`/`range`. A `tableValue` operand closes the read half and
    expresses the Swashbuckler's cross-class THAC0 and the Explorer's doubled languages. **Four clauses
    remain**, all of one shape: a table that BOUNDS a choice rather than supplying a value.
+16e. **RESOLVED — 74% of references now land on a record.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) findings 101 and 102) Five kinds added —
+   `spheres`, `spellSchools`, `spells`, `armor`, `grantedAbilities` — and the largest group turned out
+   not to need a kind at all. **227 references pointed at abilities the kits themselves invent, 216 of
+   them used once**, and those have nothing to transcribe: the definition IS the kit's field. A `grant`
+   may now carry **`defines`** instead of a `ref`, and **216 dangling references disappeared**, cutting
+   the pack's total reference count by a fifth. The first repair here that made the problem smaller
+   rather than moving it. Sphere and school proved to be **one shape used twice**, which is §4.1's
+   argument reappearing where nobody was looking.
 16d. **Five referenced kinds have no home in the schema.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 99) With 346 records in the pack,
    the 570 unresolved reference occurrences classify by the kind the citing effect declares: **spheres

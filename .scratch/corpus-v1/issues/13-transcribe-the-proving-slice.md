@@ -3036,6 +3036,64 @@ which is the **second time** a kind's shape turned out to be a table's columns, 
 far more often than any variant, so they are records carrying `isGroup` rather than weapons with no
 cost.
 
+### Session 52 — the five missing kinds, and three quarters of the pack resolves
+
+| | s49 | s50 | s51 | **now** |
+|---|---:|---:|---:|---:|
+| records | 182 | 247 | 346 | **397** |
+| reference occurrences | 1,069 | 1,069 | 1,069 | **853** |
+| **resolving** | **0** | 24 % | 47 % | **74 %** |
+
+The occurrence count **fell**, which is the session's main result rather than a rounding artefact.
+
+### Finding 101 — 216 of the pack's references were pointing at nothing that could ever exist
+
+[Finding 99](#finding-99--the-pack-has-ten-kinds-and-the-corpus-references-fifteen) counted five kinds
+with no home. Looking at what the homeless references actually **point at** reordered the problem
+entirely: the largest group was not spheres but **227 references to abilities and limitations the kits
+themselves invent** — `cbgh:blend-into-underbrush`, `cth:identify-poison` — and **216 of them are used
+exactly once, by the record that invented them.**
+
+Those are not a transcription debt. **There is nothing to transcribe**: the definition *is* the kit's
+own field, and giving it an id creates a reference that can never resolve no matter how much work is
+done. So a `grant` or `forbid` may now carry **`defines`** — a name and the source's words — instead
+of a `ref`, and the definition lives in the effect that grants it.
+
+**216 dangling references disappeared, and the pack's total reference count fell by a fifth.** That is
+the first repair in this ticket that made the problem smaller rather than moving it.
+
+The **eleven** used by more than one record keep their ids and become records — and several turn out
+not to be kit inventions at all: `phb:bard-spellcasting` is cited by **three demi-bard kits that take
+it away**, and `cbh:influence-reactions` by six. A shared "kit ability" is usually **a class ability
+the kits are talking about**.
+
+### Finding 102 — sphere and school are one shape used twice
+
+Five kinds added: `spheres` (16), `spellSchools` (9), `spells` (12), `armor`, `grantedAbilities` (11).
+
+The first two are **the same shape**: a named category a spell belongs to, one for priests and one for
+wizards, with nothing distinguishing them but which class reads them. That is §4.1's argument — *one
+shape used three times* — reappearing in a corner nobody was looking at, and it is the second
+independent confirmation of that design after the Attachable arms held for 177 records.
+
+Only the **twelve spells the pack actually references** are transcribed, out of the PHB's several
+hundred. A3 is what makes that legitimate rather than incomplete: the manifest declares coverage, and
+**a spell nobody grants is not a debt**.
+
+### What still does not resolve
+
+226 occurrences, and the shape of the remainder is now clear:
+
+- **47 nonweapon proficiencies introduced by Complete handbooks** — Intimidation is the Fighter's,
+  Acting and Poetry the Bard's. Each book has its own proficiency table, and none is transcribed.
+- **~80 placeholders I minted while modelling** — `cbe:melee-outside-archer-list`,
+  `phb:fortification`, `crh:weapons-outside-primitive-list`. These stand where
+  [finding 11](#finding-11--two-shapes-the-deity-arm-has-and-the-kit-arm-did-not)'s permit-list has no
+  operation, and they will resolve when that gap does, not before.
+
+So the remaining quarter splits cleanly into **work not yet done** and **a gap that no work closes** —
+which is exactly the distinction A3 exists to keep, arrived at from the reference side.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against
