@@ -2647,6 +2647,58 @@ weapon list *"should be defined by the DM"*, so the record's own restriction is 
 **Swashbuckler** is the eleventh name collision, with the book itself cross-referencing the thief
 version in the Complete Thief's Handbook.
 
+### Session 47 — CDH complete: fourteen books, 171 records
+
+**All 14 Complete Druid's kits are modelled.**
+
+### Finding 93 — the rules are told through a **named example character**
+
+> As an Adviser, **Elam** can purchase the rogue's disguise proficiency at normal rather than double
+> cost. … **Torrens**, like all Avengers… If **Lasell**, as a Beastfriend, carefully approaches an
+> animal…
+
+**12 of 14 CDH kits state their mechanics as sentences about one invented person.** No other book in
+fourteen does this even once; every other record says *"the Bounty Hunter is permitted…"* or *"a
+Falconer receives…"*.
+
+Every effect in this book is therefore a **generalisation from an anecdote** — the transcriber must
+decide that *"Elam can purchase disguise at normal cost"* is a rule about the kit and not a fact about
+Elam. That is a judgement the other thirteen books never asked for, and it is invisible in the output:
+the resulting records look exactly like every other record.
+
+It also breaks the one heuristic this ticket trusted. The apparatus detector from
+[finding 9](#finding-9--the-chapter-apparatus-recurs-in-a-second-book-and-a-second-kind) keys on a
+page **describing** its fields instead of filling them; a page filling its fields **with a story** is
+a third state it was never built to see.
+
+### Finding 94 — a prerequisite on a **branch of the class**
+
+`Branch Restrictions` is a spine field here:
+
+> **Only forest, plains, and mountain druids** can take this kit.
+> **Arctic and jungle druids cannot** take this kit.
+
+Druid branches are a sub-classification **of the class**, the way a Subrace is of a race. So the
+prerequisite tests something that is neither an ability, a level, a race, nor an Attachable the
+character has — and `member` carries it only because the branches happen to be enumerable and few.
+
+The Hivemaster goes further: *"**Gray druids** with the Hivemaster kit may assume the insectoid form
+**instead of any one of their usual shapechanging choices**."* One kit, whose effect **differs by
+branch**, and which **substitutes** rather than adds. Finding 89's Vindicator delta and finding 90's
+precedence problem meeting inside a single sentence.
+
+### What this book confirmed
+
+- **Finding 86's one-directional resource conversion** — weapon slots spendable as nonweapon slots —
+  appears in **three** of these fourteen records. It was one record in CPAH; it is now a device.
+- The **Shapeshifter** moves a class feature's **acquisition level** from 7th to 1st, which is neither
+  a grant nor an adjust: the content is unchanged and only *when* it arrives moves.
+- The **Lost Druid** casts *"only the **reversed versions**"* of heal and cure spells — a
+  transformation over a spell set — and *"may never attain Grand Druid status"*, a ceiling on the
+  class's own hierarchy.
+- The **Pacifist** addresses the player directly: *"**You, the player**, must role-play this druid as
+  a strict pacifist."* The only record in 171 that does.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against
