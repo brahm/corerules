@@ -23,7 +23,7 @@ what a spell record is *for* — is the largest open question in the effort and 
 
 | | at source | in the pack | |
 |---|---:|---:|---|
-| kits | 173 | **172** | one lost, see below |
+| kits | 174 | **174** | ✅ one had been lost to a name collision |
 | Deities (CPRH) | **59** | **59** | ✅ three were being dropped |
 | Subraces | ~6 | 6 | |
 | PHB nonweapon proficiencies | 65 | 65 | ✅ |
@@ -146,7 +146,7 @@ restriction that exists elsewhere, and those elsewheres are real PHB rules that 
 
 Each of these is volume with a known method and no decision inside it.
 
-1. **The CBD Patrician** — one record, closes the slice. *(minutes)* — **the only item left.**
+1. ~~**The CBD Patrician**~~ — **done in session 68.** The slice is whole at 164 kits.
 2. ~~**Classes**~~ — **done in session 60**: 19 records, 171 references closed.
 3. ~~**Secondary skills**~~ — **done in session 61**: Table 36's 23, and seven more hand-minted slugs
    corrected on the way (finding 125).

@@ -2768,17 +2768,18 @@ races.
 
 | | attachables | whole pack |
 |---|---:|---:|
-| records carrying effects | 237 | 270 |
-| effects | 1,791 | 1,898 |
-| effects expressed **without a marker** | **1,386 (77%)** | **1,483 (78%)** |
-| effects carrying an `UNMODELLED` marker | 405 (23%) | 415 (22%) |
-| **records complete** | **51 of 237 (22%)** | 53 of 270 (20%) |
+| records carrying effects | 238 | 271 |
+| effects | 1,803 | 1,910 |
+| effects expressed **without a marker** | **1,427 (79%)** | **1,524 (80%)** |
+| effects carrying an `UNMODELLED` marker | 376 (21%) | 386 (20%) |
+| **records complete** | **54 of 238 (23%)** | 56 of 271 (21%) |
 | references resolving | — | **3,954 of 3,956 (99.9%)** |
 
 The pack is 1,218 records; the 948 in kinds with no `effects` array — spells, proficiencies, weapons,
 tables, creatures — are records, never incomplete ones, because they have nothing to express.
-**The 77% has not moved in fourteen sessions and three books**, which is the most stable number this
-effort has produced.
+The 77% looked immovable across fourteen sessions and three books, and
+[finding 146](#finding-146--a-marker-records-what-the-format-could-not-do-then) explains why it was
+not: 33 markers were describing a format that had stopped existing.
 *Complete* means the record has effects, none is marked, and nobody flagged it unfinished — see
 [finding 126](#finding-126--a-record-with-no-effects-was-counting-as-expressed-completely).
 
@@ -4127,6 +4128,65 @@ eight above the line become `crh:` records — closing `crh:machete`, which is w
 
 **Neither is a transcription backlog.** One is an ambiguity in the source, the other a reference out of
 the corpus, and A3 exists so a pack can say both plainly instead of pretending.
+
+### Session 68 — the Patrician, and the markers nobody re-read
+
+**1,233 records, 0 schema errors.** [Ticket 16](./16-the-plan-for-the-remaining-books.md)'s mechanical
+list is empty: `cbd:DD04648`, the Complete Book of Dwarves' **Patrician**, is transcribed, and the
+proving slice is finally whole at **164 kits**.
+
+It was dropped for forty sessions because the Complete Wizard's Handbook also has a Patrician and a
+transcriber checked **by name**. The record says so in its own interpretation, because that is the only
+place a reader would ever look for it.
+
+Modelling it needed nothing new — and that is the point. *"Dwarves of lawful alignments respect
+Patricians and react to them with a +3 bonus"* is a condition on the **reacting party**, which
+[finding 136](#finding-136--the-predicate-could-not-name-what-a-character-is-so-it-lied)'s field-path
+scalar made sayable:
+
+```
+adjust reactionCheck by 3
+  when member {field: "reactor.race"}      anyOfIds [phb:dwarf]
+   and member {field: "reactor.alignment"} anyOfIds [lawful-good, lawful-neutral, lawful-evil]
+```
+
+### Finding 146 — a marker records what the format could not do *then*
+
+Writing that clause, I went to copy the Highborn's — the same rule, same book, seven pages earlier —
+and found it carried as **`UNMODELLED CONDITION: from dwarves of LAWFUL alignment — the other party's
+alignment.`** True when written. False for three sessions.
+
+So I swept. **38 markers cite dice**, and 33 of them are a `startingWealth` that says, in the marker's
+own words, *"the dice value type now exists in the schema and admits this string, but no effect operand
+references it"* — which [finding 118](#finding-118--a-hit-die-is-the-die-itself-and-dice-still-had-no-arm-for-that)
+fixed. Every one is now `set startingWealth to "5d4x10"`.
+
+| | before | after |
+|---|---:|---:|
+| effects expressed cleanly (attachables) | 1,386 (**77%**) | 1,427 (**79%**) |
+| markers | 405 | 376 |
+| records complete | 51 | **54** |
+
+**I stated two sessions ago that the 77% "has not moved in fourteen sessions and three books, which is
+the most stable number this effort has produced."** It was stable because nobody re-read the markers.
+Thirty-three of them were describing a format that had stopped existing.
+
+This is [finding 116](#finding-116--the-verdict-was-a-number-that-goes-stale-by-itself) one level down.
+That finding said a measurement rots, and made the verdict a program. **A marker rots the same way and
+there is no program for it** — a marker is a sentence about what the format could not do *at the moment
+it was written*, and every schema change since is a reason to re-read it.
+
+The residue is honest and unswept: of the **18 markers about the other party**, the field-path scalar
+closes some outright — the Tunnelrat's *"reaction checks made for NPC halflings"* — leaves others
+half-open, since *"halflings who KNOW what he does for a living"* still needs that party's knowledge,
+and does nothing at all for *"NON-halflings"*, which is negation. Re-modelling those is a judgement
+pass, not a sweep, and it is not done.
+
+**What a checker cannot do here is worth stating.** No tool can know that a marker has gone stale: the
+marker is prose, and the only signal is a human reading it beside a schema that has moved. The 33 were
+found because they said *no effect operand references it* — the transcriber had written down **what he
+was waiting for**. That convention, invented in passing, is the only thing that made a sweep possible,
+and it is worth keeping deliberately.
 
 ### Still not done
 

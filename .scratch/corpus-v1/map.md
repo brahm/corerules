@@ -442,8 +442,8 @@ why it is a program and not a paragraph.
 
 | | attachables | whole pack |
 |---|---:|---:|
-| effects the format expressed cleanly | **77 %** | **78 %** |
-| **records expressed completely** | **22 %** (51 of 237) | 20 % (53 of 270) |
+| effects the format expressed cleanly | **79 %** | **80 %** |
+| **records expressed completely** | **23 %** (54 of 238) | 21 % (56 of 271) |
 | references resolving | — | **99.9 %** of 3,956 occurrences |
 
 Both numbers matter and they disagree on purpose: the operations work nearly always, and records
@@ -695,6 +695,16 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    but **names the rules discriminate on**, provenanced to the dwarf's and gnome's own entries. The
    verdict's claim that *the predicate can name the character and nothing else* is now false for any
    discriminator the pack can name as a field — still true for terrain, the round and the campaign.
+37. **An UNMODELLED marker records what the format could not do THEN, and nothing re-reads it.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 146) 33 markers said, in their own
+   words, *"the dice value type now exists in the schema but no effect operand references it"* — a
+   sentence that stopped being true three sessions earlier. Retiring them moved the headline from
+   **77% to 79%** and completed three more records. The 77% had looked immovable across fourteen
+   sessions and three books **because nobody re-read the markers**. This is correction 30's sibling:
+   finding 116 made the verdict a program because a measurement rots; a marker rots the same way and
+   **no program can catch it**, since the only signal is a human reading prose beside a schema that
+   moved. The 33 were findable at all because the transcriber had written down *what he was waiting
+   for* — a convention invented in passing, and worth keeping deliberately.
 23. **The Engine's field vocabulary is far larger than the schema's, and nothing checks it.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 110) A `when` clause describes the
    CHARACTER — its subject is an ability or a level — and never his opponent. So every target-scoped
