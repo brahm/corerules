@@ -570,12 +570,22 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    became a `tableAxis` of kind `id`/`integer`/`range`. A `tableValue` operand closes the read half and
    expresses the Swashbuckler's cross-class THAC0 and the Explorer's doubled languages. **Four clauses
    remain**, all of one shape: a table that BOUNDS a choice rather than supplying a value.
-16c. **First references resolve — 24% of them.** ([Ticket 13](issues/13-transcribe-the-proving-slice.md)
+16d. **Five referenced kinds have no home in the schema.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 99) With 346 records in the pack,
+   the 570 unresolved reference occurrences classify by the kind the citing effect declares: **spheres
+   64, schools of magic 16, spells 11, followers 9, armour 8** — none of which is one of
+   [ticket 05](issues/05-pack-schema.md)'s ten kinds. The ten cover the **Attachables** and not what
+   Attachables **point at**, and unlike the proficiencies more transcription cannot fix it, because
+   there is nowhere to put the result.
+16c. **References resolve — now 47% of them.** ([Ticket 13](issues/13-transcribe-the-proving-slice.md)
    session 50) The PHB's **65 nonweapon proficiencies** are transcribed, and **261 of the pack's 1,069
    reference occurrences now land on a record**. The resolution check paid on its first run, finding
-   **eleven ids minted wrong by hand** — `phb:riding-landbased` for the book's `riding-land-based`,
-   nine times — every one schema-valid and pointing at nothing. **The corpus cannot check itself until
-   the things it points at exist**, which is the argument for the PHB, stronger than completeness.
+   ids minted wrong by hand, in **three distinct ways**: a slug that differs from the book's
+   (`riding-landbased`), a `phb:` prefix on a proficiency another book introduces (`phb:intimidation`),
+   and a weapon the book names as a PAIR — `Dagger or dirk` — that every kit in fifteen books calls
+   *dagger*. Twenty-nine references, all schema-valid, all pointing at nothing. **The corpus cannot
+   check itself until the things it points at exist**, which is the argument for the PHB, stronger
+   than completeness.
 16. **The proving slice validates and would not load: 0 of its 80 references resolve.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 45) 66 point at a `phb:` pack never
    transcribed, 14 at ids minted while modelling. Ticket 10 rightly puts cross-pack integrity on the

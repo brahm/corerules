@@ -2981,6 +2981,61 @@ And the validator earned its keep a second time: the first write produced **195 
 extractor emitted a bare id where the schema wanted a `scalar`, and `"+1"` where it wanted an integer.
 Both were mine; the schema had been right since before the corpus was read.
 
+### Session 51 — the rest of the PHB, and half the pack now resolves
+
+**346 records.** Table 44's 79 weapons, the six races, the six ability scores and the eight thieving
+skills — read off Table 26's own row keys so the ids match the table that scores them.
+
+| | session 49 | session 50 | **now** |
+|---|---:|---:|---:|
+| records | 182 | 247 | **346** |
+| reference occurrences that resolve | **0** | 261 (24 %) | **499 (47 %)** |
+
+### Finding 99 — the pack has ten kinds and the corpus references fifteen
+
+Classifying the 570 occurrences that still do not resolve, by the `kind` the citing effect declares:
+
+| | occurrences | has a kind? |
+|---|---:|---|
+| `sphere` + `sphereMinor` | **64** | **no** |
+| `nonweaponProficiency` | 39 | yes — but these are proficiencies **other books** introduce |
+| `spellSchool` | 16 | **no** |
+| `ability` | 12 | partly — alignments are referenced *through* an ability |
+| `spell` | 11 | **no** |
+| `follower` | 9 | **no** |
+| `armor` | 8 | **no** |
+
+**Five of the kinds the corpus references have no home in the schema**: priest spheres, schools of
+magic, spells, armour and followers. [Ticket 05](./05-pack-schema.md) chose ten kinds for the slice
+and said so; what 346 records show is that **the ten cover the Attachables and not what Attachables
+point at.** Every `grant` of a sphere, a spell or a suit of armour is a reference into a kind that
+does not exist — and unlike the proficiencies, more transcription will not fix it, because there is
+nowhere to put the result.
+
+The 39 proficiency references are a different and smaller problem, and one I made: they carry a
+**`phb:` prefix for proficiencies the PHB does not contain** — `phb:intimidation` is the Complete
+Fighter's, `phb:acting` and `phb:poetry` are the Bard's. The id says which book defines a thing, and I
+guessed wrong for every proficiency a Complete handbook introduced.
+
+### Finding 100 — the corpus names weapons in pairs, and nothing that cites them does
+
+Table 44 prints **`Dagger or dirk`** and **`Hand or throwing axe`**. Every kit in fifteen books that
+requires one says *dagger*, or *hand axe*.
+
+Eighteen references were realigned to the book's own name — and this is the **third distinct way** the
+resolution check has caught an id minted by hand, after session 50's `riding-landbased` and this
+session's mis-prefixes. The pattern across all three is one sentence: **the id you write while
+modelling is not the slug of the heading the book prints**, and only resolution can tell you.
+
+`weaponProficiencies` had been declared by [ticket 14](./14-record-shapes-for-the-slice.md) with **no
+fields at all**, like `races`, `abilities` and `thievingSkills`. Its shape is now Table 44's columns —
+cost, weight, size, damage type, speed factor, and damage against small-medium and large targets —
+which is the **second time** a kind's shape turned out to be a table's columns, after
+[finding 98](#finding-98--a-schema-field-that-was-right-in-principle-and-wrong-in-arity). Six of the
+79 are **group headings** — `Bow`, `Sword`, `Crossbow` — which score nothing and which the kits cite
+far more often than any variant, so they are records carrying `isGroup` rather than weapons with no
+cost.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against

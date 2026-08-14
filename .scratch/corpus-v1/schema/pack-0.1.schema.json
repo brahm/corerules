@@ -759,7 +759,41 @@
           {
             "$ref": "#/$defs/record"
           }
-        ]
+        ],
+        "properties": {
+          "isGroup": {
+            "type": "boolean",
+            "description": "Table 44 prints `Bow`, `Crossbow` and `Sword` as headings over their variants, scoring nothing. The kits reference the GROUP far more often than a variant, so groups are records too — and this flag is what keeps a group from looking like a weapon with no cost and no damage."
+          },
+          "cost": {
+            "type": "string",
+            "description": "As printed: '5 gp', '3sp/12'. Money is not an integer in this book."
+          },
+          "weight": {
+            "type": "string"
+          },
+          "size": {
+            "enum": [
+              "S",
+              "M",
+              "L"
+            ]
+          },
+          "damageType": {
+            "type": "string",
+            "description": "P, S, B, or a combination."
+          },
+          "speedFactor": {
+            "type": "string"
+          },
+          "damageSmallMedium": {
+            "type": "string"
+          },
+          "damageLarge": {
+            "type": "string"
+          }
+        },
+        "description": "Ticket 14 declared this kind with NO fields, before anything was transcribed. Its shape is Table 44's columns, set in session 51 the same way the nonweapon proficiency's four fields turned out to be Table 37's four columns — the book's own table IS the record shape."
       }
     },
     "nonweaponProficiencies": {
