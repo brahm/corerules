@@ -2919,6 +2919,68 @@ equipment breadth, or the DMG. The cost per record was never measured, so
 of 182 records that has never been loaded by anything is a demonstration, not a validation**, and the
 distinction is the same one A3 exists to keep.
 
+### Session 50 — the PHB's proficiencies, and the first references that resolve
+
+The pack held 182 records pointing at 496 ids that nothing defined. **65 nonweapon proficiencies are
+now transcribed from the PHB**, and for the first time in the effort **references resolve**:
+
+| | before | after |
+|---|---:|---:|
+| records | 182 | **247** |
+| distinct ids referenced | 496 | 494 |
+| **ids that resolve** | **0** | **59 (12 %)** |
+| **occurrences that resolve** | **0** | **261 (24 %)** |
+
+A quarter of the pack's references now land on a record. This is the first work in fifty sessions
+aimed at the **PHB** rather than at a Complete handbook, and the first at a kind that is **not an
+Attachable**.
+
+### Finding 96 — the resolution check found errors nothing else could
+
+Running the resolution and looking at near-misses turned up **ids minted wrong while hand-modelling**:
+
+| written by hand | the PHB's own slug | uses |
+|---|---|---:|
+| `phb:riding-landbased` | `phb:riding-land-based` | **9** |
+| `phb:blindfighting` | `phb:blind-fighting` | 1 |
+| `phb:firebuilding` | `phb:fire-building` | 1 |
+
+Eleven references, invented across five books over dozens of sessions, each a plausible slug for a
+proficiency whose real name I had never read. **Every one was schema-valid, and every one pointed at
+nothing.**
+
+This is exactly the class [finding 45](#finding-45--every-reference-in-the-proving-slice-is-dangling)
+named and could not act on, because there was nothing to resolve against. **The check has now run once
+and immediately paid**, which is a stronger argument for building the PHB than any completeness
+argument: *the corpus cannot check itself until the things it points at exist.*
+
+### Finding 97 — the extractor's own filter dropped two records on its first run
+
+`Blind-fighting` and `Mountaineering` are scored **`NA NA`** in Table 37 — they have **no ability
+check at all**. The first version of the filter required a named ability and **silently dropped both**.
+
+That is [finding 82](#finding-82--one-bad-tag-drops-a-whole-record-and-six-were-lost-that-way)'s class
+of error reproduced in a brand-new extractor, on its first run, by the person who wrote finding 82.
+The lesson does not transfer by having been learned once; it has to be built in, and the check that
+catches it is the same one — **compare what the source lists against what the extractor emitted**.
+
+Two more things the source did to itself: it **misspells one of its own proficiencies** in the scoring
+table — `Astology` in one group and `Astrology` in another, with identical scores — and it scores
+**15 of 65 proficiencies in two groups at once**.
+
+### Finding 98 — a schema field that was right in principle and wrong in arity
+
+`nonweaponProficiency` was given `group`, `slotCost`, `abilityCheck` and `modifier` by
+[ticket 14](./14-record-shapes-for-the-slice.md) **before anything was transcribed**, and those are
+exactly Table 37's four columns. The shape was correct on the first guess.
+
+`group` was a **single id**, and 15 of 65 proficiencies are in two groups — a group is the list a class
+buys from at normal cost, so belonging to two is *what a crossover is*. Widened to an array.
+
+And the validator earned its keep a second time: the first write produced **195 errors** because the
+extractor emitted a bare id where the schema wanted a `scalar`, and `"+1"` where it wanted an integer.
+Both were mine; the schema had been right since before the corpus was read.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against

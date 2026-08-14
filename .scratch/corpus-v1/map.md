@@ -570,6 +570,12 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    became a `tableAxis` of kind `id`/`integer`/`range`. A `tableValue` operand closes the read half and
    expresses the Swashbuckler's cross-class THAC0 and the Explorer's doubled languages. **Four clauses
    remain**, all of one shape: a table that BOUNDS a choice rather than supplying a value.
+16c. **First references resolve — 24% of them.** ([Ticket 13](issues/13-transcribe-the-proving-slice.md)
+   session 50) The PHB's **65 nonweapon proficiencies** are transcribed, and **261 of the pack's 1,069
+   reference occurrences now land on a record**. The resolution check paid on its first run, finding
+   **eleven ids minted wrong by hand** — `phb:riding-landbased` for the book's `riding-land-based`,
+   nine times — every one schema-valid and pointing at nothing. **The corpus cannot check itself until
+   the things it points at exist**, which is the argument for the PHB, stronger than completeness.
 16. **The proving slice validates and would not load: 0 of its 80 references resolve.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 45) 66 point at a `phb:` pack never
    transcribed, 14 at ids minted while modelling. Ticket 10 rightly puts cross-pack integrity on the

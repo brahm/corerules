@@ -772,17 +772,24 @@
         ],
         "properties": {
           "group": {
-            "$ref": "#/$defs/id"
+            "description": "Ticket 13 session 50: ticket 14 gave this kind a SINGLE group, written before anything was transcribed. PHB Table 37 puts 15 of its 65 proficiencies in TWO groups — a group is the list a class may buy from at normal cost, so belonging to two is what a crossover IS, not an anomaly. Widened to an array.",
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/id"
+            },
+            "minItems": 1
           },
           "slotCost": {
             "type": "integer",
             "minimum": 1
           },
           "abilityCheck": {
-            "$ref": "#/$defs/scalar"
+            "$ref": "#/$defs/scalar",
+            "description": "A `scalar`, not a bare id. Absent for the two proficiencies Table 37 scores `NA` — Blind-fighting and Mountaineering have no ability check at all."
           },
           "modifier": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Absent where Table 37 scores `NA`."
           }
         }
       }
