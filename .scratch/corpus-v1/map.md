@@ -570,7 +570,14 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    became a `tableAxis` of kind `id`/`integer`/`range`. A `tableValue` operand closes the read half and
    expresses the Swashbuckler's cross-class THAC0 and the Explorer's doubled languages. **Four clauses
    remain**, all of one shape: a table that BOUNDS a choice rather than supplying a value.
-16e. **RESOLVED — 74% of references now land on a record.**
+20. **Two pack files may contribute to one kind, and nothing said so.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 103) The PHB's proficiencies and the
+   Complete handbooks' are the same kind from different books, and the loader's per-file `update`
+   made the second **silently replace** the first: 65 records vanished and the total came back
+   *exactly what it had been*. §7.1 chose declaration over discovery and ticket 05 had the manifest
+   declare its files; neither says what happens when two of them name the same array. **Arrays merge.**
+   A pack assembled from a dozen books will do this constantly.
+16e. **RESOLVED — 77% of references now land on a record.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) findings 101 and 102) Five kinds added —
    `spheres`, `spellSchools`, `spells`, `armor`, `grantedAbilities` — and the largest group turned out
    not to need a kind at all. **227 references pointed at abilities the kits themselves invent, 216 of

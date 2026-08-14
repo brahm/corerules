@@ -36,14 +36,20 @@ def main():
     manifest = json.loads((pack / "manifest.json").read_text())
 
     # §7.1 is declaration over discovery, so the manifest's file list drives this, not a glob.
-    doc, missing = {"manifest": manifest}, []
+    doc, missing = {}, []
     for name in manifest.get("files", []):
         f = pack / name
         if not f.exists():
             missing.append(name)
             continue
-        doc.update(json.loads(f.read_text()))
+        # Two files may contribute to the SAME kind — the PHB's proficiencies and the ones
+        # the Complete handbooks add both arrive as `nonweaponProficiencies`. A plain update
+        # silently replaces the first with the second, and the record count stays plausible
+        # while 65 records vanish. Ticket 13 finding 103: arrays MERGE, they do not overwrite.
+        for kind, recs in json.loads(f.read_text()).items():
+            doc.setdefault(kind, []).extend(recs)
 
+    doc["manifest"] = manifest
     errors = sorted(jsonschema.Draft202012Validator(schema).iter_errors(doc),
                     key=lambda e: list(e.path))
     total = sum(len(v) for k, v in doc.items() if k != "manifest")

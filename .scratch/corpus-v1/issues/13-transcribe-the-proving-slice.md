@@ -3094,6 +3094,49 @@ hundred. A3 is what makes that legitimate rather than incomplete: the manifest d
 So the remaining quarter splits cleanly into **work not yet done** and **a gap that no work closes** —
 which is exactly the distinction A3 exists to keep, arrived at from the reference side.
 
+### Session 53 — the handbooks' own proficiencies, and a file that ate another
+
+**424 records, 77 % of reference occurrences resolving.** Twenty-seven proficiencies the Complete
+handbooks introduce — Camouflage, Falconry, Trail Signs, Distance Sense — and **19 references
+repointed** from the `phb:` prefix I had guessed to the book that actually defines them.
+
+Three books print a **compiled table in exactly PHB Table 37's four columns**, abbreviating the
+ability: the Bard's, the Paladin's and the Ranger's. The same reader parses all three. Those tables
+**restate the PHB's 170 proficiency rows** alongside the new ones, and restating is not redefining —
+a row the PHB already owns is skipped rather than minted under a second id, which is the whole point
+of the exercise: **one thing, one id, in the book that introduced it.**
+
+### Finding 103 — two files claimed the same kind and one silently ate the other
+
+The pack now has two files contributing `nonweaponProficiencies`: the PHB's 65 and the handbooks' 27.
+The loader did `doc.update(...)` per file, so **the second replaced the first** — and the record count
+came back **397, exactly what it had been before 27 records were added**. Sixty-five records vanished
+and the number stayed plausible.
+
+[Ticket 05](./05-pack-schema.md) settled that the manifest **declares its files** and §7.1 chose
+declaration over discovery, and neither says what happens when two of them speak about the same kind.
+It is the obvious thing to want — the PHB's proficiencies and a handbook's are the same kind from
+different books — and the format had no rule for it.
+
+**Arrays merge; they do not overwrite.** Fixed in the checker, and worth stating as a format rule
+rather than a bug fix, because a pack assembled from a dozen books will do this constantly.
+
+That the count *stayed plausible* is the part worth keeping. A loss of 65 records showed up as no
+change at all, and only adding 27 and seeing zero growth exposed it. It is
+[finding 81](#finding-81--a-third-label-convention-and-an-omission-with-no-symptom)'s omission with no
+symptom, this time inside the tooling rather than the corpus.
+
+### What is left
+
+226 occurrences, and the tail is now short and legible:
+
+- **25 proficiencies** from CTH and CBD, whose books do not print a Table 37-shaped list — CTH gives
+  three columns of bare names, CBD scores only its own detection proficiencies. Their scores are in
+  the descriptions, one page at a time.
+- **~80 placeholders** standing where finding 11's permit-list has no operation, unchanged.
+- **12 `follower` references**, which finding 99 already showed are not a missing kind: they point at
+  classes and at creatures.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against
