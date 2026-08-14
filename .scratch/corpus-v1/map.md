@@ -577,6 +577,15 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    *exactly what it had been*. §7.1 chose declaration over discovery and ticket 05 had the manifest
    declare its files; neither says what happens when two of them name the same array. **Arrays merge.**
    A pack assembled from a dozen books will do this constantly.
+22. **A race book overrides the core rules' own numbers, and one id cannot hold two values.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 106) The Complete Book of Dwarves
+   re-scores **28 of the PHB's 75 proficiencies** — Armorer at 1 slot and 0 where the PHB says 2 and
+   −2, Riding at −2 where the PHB says +3 — consistently in the direction of dwarven flavour. So
+   `phb:armorer` has **one id and two values**, and which applies depends on the character's race. This
+   is correction 18's contradiction one level down: not two records disagreeing about a character, but
+   **two books disagreeing about a record**. The layer model is the obvious repair — a **Race with
+   effects**, adjusting `proficiency.armorer.slotCost` the way a Kit adjusts anything — and `races` is
+   currently a kind with **no fields at all**.
 21. **A pack's ids encode the order its books were transcribed in.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 105) `Alertness` and `Boating` are
    introduced by **both** the Thief's and the Ranger's handbooks with identical scores. The prefix says

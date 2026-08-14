@@ -3189,6 +3189,66 @@ The same session also found the corpus using **two names for one proficiency**: 
 says *Gather Intelligence* and the page is titled *Information Gathering*. Both were referenced, and
 both now point at `cth:information-gathering`.
 
+### Session 55 — the dwarves' proficiencies, and a book that rewrites the core rules
+
+**451 records, 81 % resolving.** Sixteen proficiencies the Complete Book of Dwarves adds, including
+its optional **detection** set — Grade or Slope in Passage, Sliding Walls, Stonework Traps — which is
+an alternative to the PHB's own dwarf-detection system rather than an addition to it.
+
+### Finding 106 — CBD re-scores **28** of the PHB's proficiencies
+
+Its table restates the PHB's list, and the restatement is **not** a restatement. Comparing the 75 rows
+against the PHB's:
+
+| | count |
+|---|---:|
+| identical to the PHB | 31 |
+| **scored differently** | **28** |
+| new | 16 |
+
+And the differences are not noise:
+
+| proficiency | PHB | CBD |
+|---|---|---|
+| Armorer | 2 slots, −2 | **1 slot, 0** |
+| Stonemasonry | 1 slot, −2 | **1 slot, 0** |
+| Mining | 2 slots, −3 | **1 slot, 0** |
+| Gem Cutting | 2 slots, −2 | **1 slot, 0** |
+| Riding, Land-Based | 1 slot, **+3** | 1 slot, **−2** |
+| Swimming | 1 slot, 0 | 1 slot, **−1** |
+| Musical Instrument | 1 slot, −1 | 1 slot, **−2** |
+
+Dwarves are cheaper and better at stone, metal and gems, and worse at riding, swimming and music.
+**This is a race book overriding the core rules for its race**, and the pattern is too consistent to be
+transcription noise.
+
+The consequence is structural. `phb:armorer` is **one id with one score**, and a dwarf's Armorer costs
+and modifies differently — so **the same referenced thing has two values, and which applies depends on
+the character's race.** That is
+[finding 90](#finding-90--a-kit-that-overrules-a-deity-with-the-book-stating-the-precedence)'s
+contradiction between two Attachables, arriving one level down: not two records disagreeing about a
+character, but **two books disagreeing about a record**.
+
+Nothing was merged and nothing was overwritten. The 28 are recorded here and the PHB's values stand,
+because the alternative — minting `cbd:armorer` beside `phb:armorer` — would say there are two
+proficiencies, and there is one. What the format lacks is a way to say *"the same thing, scored
+differently for these characters"*, and the layer model is the obvious place for it: a **Race with
+effects** would adjust `proficiency.armorer.slotCost` the way a Kit adjusts anything else. `races` is
+currently a kind with **no fields at all**.
+
+### The remaining tail, in full
+
+166 occurrences, and none of them is a transcription debt any more:
+
+| | |
+|---|---|
+| ~80 | placeholders standing where [finding 11](#finding-11--two-shapes-the-deity-arm-has-and-the-kit-arm-did-not)'s permit-list has no operation |
+| 12 | `follower` refs pointing at classes and creatures — not a missing kind |
+| 8 | `grantedPower` — the Deity arm's Powers field, which is prose |
+| 7 | proficiencies from books with no scoring table at all |
+
+**Every proficiency the pack references and any book scores is now transcribed.**
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against
