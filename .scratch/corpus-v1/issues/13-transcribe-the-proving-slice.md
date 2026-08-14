@@ -2756,13 +2756,13 @@ scaling operand would still fail this record.
 
 ## THE VERDICT
 
-Deliverables 3 and 4. **Every figure below is produced by [`verdict.py`](../tools/verdict.py)** and
-can be reproduced with `verdict.py ~/corerules/slice`. It was hand-measured at session 48 and was
-wrong within two sessions; see [finding 116](#finding-116--the-verdict-was-a-number-that-goes-stale-by-itself).
+Deliverables 3 and 4, rewritten whole at session 70 after 22 sessions of patching. **Every figure is
+produced by [`verdict.py`](../tools/verdict.py)** and re-runs in a second — it was hand-measured at
+session 48 and was wrong within two ([finding 116](#finding-116--the-verdict-was-a-number-that-goes-stale-by-itself)).
 
 Two populations, reported separately and never mixed: the **Attachables** ticket 08 defined — kits,
 Deities and Subraces — and every record in the pack that carries effects at all, which now includes
-races.
+races and classes.
 
 ### The headline number
 
@@ -2773,117 +2773,152 @@ races.
 | effects expressed **without a marker** | **1,433 (79%)** | **1,530 (80%)** |
 | effects carrying an `UNMODELLED` marker | 370 (21%) | 380 (20%) |
 | **records complete** | **55 of 238 (23%)** | 57 of 271 (21%) |
-| references resolving | — | **3,954 of 3,956 (99.9%)** |
+| references resolving | — | **3,990 of 3,992 (99.9%)** |
 
-The pack is 1,218 records; the 948 in kinds with no `effects` array — spells, proficiencies, weapons,
-tables, creatures — are records, never incomplete ones, because they have nothing to express.
-The 77% looked immovable across fourteen sessions and three books, and
-[finding 146](#finding-146--a-marker-records-what-the-format-could-not-do-then) explains why it was
-not: 33 markers were describing a format that had stopped existing.
-*Complete* means the record has effects, none is marked, and nobody flagged it unfinished — see
-[finding 126](#finding-126--a-record-with-no-effects-was-counting-as-expressed-completely).
+The pack is **1,233 records across 20 kinds**; the 962 in kinds with no `effects` array — spells,
+proficiencies, weapons, tables, creatures — are records, never incomplete ones, because they have
+nothing to express. *Complete* means the record **has** effects, **none** is marked, and **nobody
+flagged it unfinished** ([finding 126](#finding-126--a-record-with-no-effects-was-counting-as-expressed-completely)).
 
-**The format says roughly four fifths of what the corpus says, and finishes fewer than a third of its
+**The format says four fifths of what the corpus says, and finishes fewer than a quarter of its
 records.** Those two numbers point in opposite directions and both are true: the *operations* work
 almost always, and the *records* rarely close, because one unsayable clause in a fourteen-effect kit
 leaves the record incomplete.
 
 For a tool whose promise is *"it tells you which rule refused and which book that rule came from"*,
-the second number is the one that binds. A pack of 183 modelled records can answer that question fully
-for 55 of them.
+**the second number is the one that binds.**
 
-**Adding a whole non-Attachable kind moved the completion rate by nothing at all** — 30% either way.
-Six races produced 101 effects and six markers, which is a better rate than any Complete handbook, and
-the aggregate did not notice. That is what a 163-record majority does to an average, and it is the
-reason the two populations are reported apart.
+Two things this ticket learned about its own headline are worth keeping beside it:
 
-The spread by book is wide and diagnostic:
+- **The 79% was 77% for fourteen sessions because nobody re-read the markers.** Thirty-three of them
+  described a format that had stopped existing
+  ([finding 146](#finding-146--a-marker-records-what-the-format-could-not-do-then)). A measurement
+  rots and a marker rots, and only the first can be made into a program.
+- **Adding a kind moves the aggregate by almost nothing.** Six races produced a better clean rate than
+  any Complete handbook and the average did not notice; 51 Complete Priest's priesthoods dropped
+  completion by seven points because one book's shape repeats 59 times
+  ([finding 131](#finding-131--a-uniform-modeller-distorts-the-marker-histogram)). **The aggregate is
+  a census of the corpus as much as a measure of the format**, which is why the by-book spread matters
+  more than the total.
+
+### The spread by book, which is the diagnostic one
 
 | book | records | complete | | book | records | complete |
 |---|---:|---:|---|---|---:|---:|
-| CBH | 17 | **76%** | | CBE | 16 | 50% |
-| CDH | 14 | 50% | | CTH | 18 | 50% |
-| PHB | 6 | 33% | | CFH | 14 | 29% |
-| CPAH | 15 | 27% | | CBGH | 29 | 24% |
-| CRH | 14 | 7% | | **CBD, CWH, CPRH** | 40 | **0%** |
+| CBH | 17 | **76 %** | | CBE | 16 | 50 % |
+| CTH | 18 | 44 % | | CDH | 22 | 32 % |
+| CFH | 14 | 29 % | | CPAH | 15 | 20 % |
+| CBGH | 38 | 18 % | | CBD | 24 | 12 % |
+| CWH | 9 | 11 % | | PHB | 25 | 8 % |
+| CRH | 14 | 7 % | | **CPRH** | 59 | **0 %** |
 
-A book is not a random sample of difficulty. CBH's kits are proficiencies and named abilities; CBD's
-every record carries a reaction penalty qualified by clan, and CPRH's every record carries a
-permit-list and a follower roster. **Three books produced no complete record at all**, and they are
-the same three after 40 more sessions and two more kinds.
+A book is not a random sample of difficulty. The Complete Bard's kits are proficiencies and named
+abilities, and three quarters of them close. **The Complete Priest's closes none of 59** — every
+priesthood carries a permit-list of weapons and a follower roster, and both are shapes the format
+cannot hold, so the book that a program could model end to end
+([finding 129](#finding-129--the-first-tool-that-does-the-judgement-half)) is also the book that
+resists the format hardest.
+
+The PHB's 8% is the same story from the other side: its records are races and classes, whose entries
+are dense with rolls, permissions and hierarchy, and a race with 45 effects fails to close on one of
+them.
 
 ### Known unknown #4 — *six operations may not suffice*. **Answered: they suffice.**
 
-| | uses | share | at session 48 |
+| | uses | share | session 48 |
 |---|---:|---:|---:|
-| `grant` | 572 | 46.8 % | 50.8 % |
-| `adjust` | 275 | 22.5 % | 21.0 % |
-| `set` | 145 | 11.9 % | **7.7 %** |
-| `require` | 121 | 9.9 % | 10.8 % |
-| `forbid` | 96 | 7.9 % | 8.6 % |
-| `except` | 13 | 1.1 % | 1.2 % |
+| `grant` | 1,177 | 61.6 % | 50.8 % |
+| `adjust` | 345 | 18.1 % | 21.0 % |
+| `set` | 158 | 8.3 % | 7.7 % |
+| `require` | 121 | 6.3 % | 10.8 % |
+| `forbid` | 96 | 5.0 % | 8.6 % |
+| `except` | 13 | 0.7 % | 1.2 % |
 
-**All six are used, none was ever found missing, and in 1,222 effects not one clause needed a seventh
+**All six are used, none was ever found missing, and in 1,910 effects not one clause needed a seventh
 operation.** `except` waited 24 records for its first case and ends at 13 uses — the least needed and
-not redundant, since a format that could not say *"you may take the rogue-only proficiency"* would
-fail on real kits.
+not redundant, since a format that could not say *"you may take the rogue-only proficiency"* would fail
+on real kits. It also turned out to be the operation that **sorts the pack's dangling references**:
+`except` alone has no `defines`, because its meaning is to lift something that exists elsewhere, and
+that told us which placeholder was a definition and which needed a record
+([finding 124](#finding-124--a-complement-is-not-a-record-it-is-a-definition)).
 
-**The mix is a property of the kind, not of the format.** Six race records moved `set` from 7.7% to
-11.9% and pushed `grant` below half, because a Kit hands you things and a Race states what a number
-IS. The shares measured over kits alone were never the format's shares; they were the Attachable's.
+**The mix is a property of the corpus, not of the format.** `grant` went from half to nearly two thirds
+because one book — 59 priesthoods, each granting seven spheres — was transcribed. The shares measured
+over kits alone were never the format's shares; they were the Attachable's.
 
 This is the answer nobody predicted. The known unknown feared the operation set was too small; the
 measurement says it is **exactly right**, and that every shortfall is elsewhere.
 
 ### Where the shortfall actually is
 
-All 262 markers, by what the format could not say:
+All 380 markers, by the category each declares for itself
+([finding 115](#finding-115--the-markers-were-classifying-themselves-all-along)):
 
 | | count | |
 |---|---:|---|
-| **conditions** | **94** | the other party, terrain, round state, campaign configuration, play history |
-| **operands and values** | **61** | bare ranges, dice in effects, per-die scaling, cross-sheet arithmetic |
-| **subjects** | **21** | a spell, a follower, an opponent, a second character sheet |
-| shapes | 15 | permit-lists, item-property predicates |
+| **conditions** | **122** | the other party, terrain, round state, campaign configuration, play history |
+| shapes | 87 | permit-lists, item-property predicates |
+| **operands and values** | **81** | bare ranges, per-die scaling, cross-sheet arithmetic |
+| composition | 64 | nesting, precedence, one record pointing into another |
+| subjects | 19 | a spell, a follower, a second character sheet |
 | scopes and earmarks | 15 | *this pool, spent only on these* |
-| composition | 13 | nesting, precedence, one record pointing into another |
 | choices | 13 | *one or the other, but not both* |
+| caps and clamps | 8 | *to a maximum of*, *until it reaches 0* |
 | reductions and substitutions | 8 | *replacing them with*, *to a lesser degree* |
-| caps and clamps | 7 | *to a maximum of*, *until it reaches 0* |
 | frequencies and triggers | 7 | *once per week*, *on a roll of 14 or more* |
 | declaring no category | 30 | |
 
-**Conditions and subjects together are 115 of 262 — 44% of everything the format could not say.** Add
-operands and the three account for 67%. [Finding 147](#finding-147--the-subject-was-never-the-hard-part)
-sharpens what that means: the SUBJECT was never the hard part, and what blocks the rest is a
-vocabulary the books never enumerate, a comparison between two characters, or a second character's
-knowledge. The session-48 hand pass reached the same ranking with 44
-markers it could not classify; the difference is [finding 115](#finding-115--the-markers-were-classifying-themselves-all-along),
-not a change in the corpus.
+Read this table with [finding 131](#finding-131--a-uniform-modeller-distorts-the-marker-histogram) in
+hand: *shapes* and *composition* are inflated by the Complete Priest's permit-list and follower roster,
+true of all 59 records and counted 59 times.
 
-So the verdict on [ticket 06](./06-expression-language.md)'s expression language is the mirror of the
-one on §4.3. The predicate's **vocabulary** is adequate — `compare`, `member` and `has` were all
-exercised and none was found wanting. What is inadequate is its **reach**: a predicate can name the
-character and nothing else, and the corpus routinely conditions on the world.
+**Conditions lead, and [finding 147](#finding-147--the-subject-was-never-the-hard-part) says what that
+actually means** — which is not what this ticket said for twenty sessions. *The predicate can name the
+character and nothing else* was the wrong diagnosis. Once a scalar could name a **field path**
+([finding 136](#finding-136--the-predicate-could-not-name-what-a-character-is-so-it-lied)), naming the
+other party cost nothing. Reading all eighteen other-party markers one at a time, what blocks the
+remainder is four separate things:
+
+| | |
+|---|---|
+| **a vocabulary the books never enumerate** | clan, craft, culture, social class, profession, *"woodland creatures"* |
+| **a comparison between two characters** | *"dwarves of OTHER clans"*, *"NPCs of the PARTNER's race"* |
+| **the other party's knowledge** | four books invented it independently; it is table state, not pack data |
+| **a value rewritten by a play event** | the Trader's +1 that *"changes to a −2 if he is later discovered"* |
+
+**Only the second is a language feature.** The first wants content, the third cannot be pack data at
+all, and the fourth is a different kind of thing from a condition. That is a materially more useful
+answer than *"the predicate is too narrow"*, and it took reading eighteen sentences rather than
+counting them.
+
+So the verdict on [ticket 06](./06-expression-language.md)'s expression language: its **vocabulary** is
+adequate — `compare`, `member` and `has` were all exercised and none was found wanting — and its
+**reach** was widened twice by this ticket, in ways that cost one schema arm each and closed more than
+either was written for.
 
 ### The three known unknowns
 
 **#1 — the kit mechanism has no prior art.** §4.1's claim that Kit, Deity and Subrace are one shape
-**held for 177 records across three arms**, and held without strain: the shared `attachable` never
+**held for 238 records across three arms**, and held without strain: the shared `attachable` never
 needed a per-arm exception. One thing breaks it, and it is
 [finding 90](#finding-90--a-kit-that-overrules-a-deity-with-the-book-stating-the-precedence): three
 CBD kits take their weapons from the character's **Deity**, and the Vindicator overrides its religion
 by name. **Two Attachables can contradict each other**, and §4.3's commutation — the property that
-makes the layer model work — has nothing to say about contradiction. That is the single largest hole
-the corpus found, and it is a hole in the arms' *composition*, not in their shape.
+makes the layer model work — has nothing to say about contradiction.
 
-**#2 — "the Engine computes, the user supplies the tables" has no shipping precedent.** **Fired,
-negatively**, at [finding 20](#finding-20--a-lookuptable-has-no-declared-role-and-its-rows-are-keyed-by-prose):
-a `lookupTable` has an id derived from its source file, a name that §7.3 says is never identity, and
-**no declaration of what it is a table of**. Its rows are keyed by book prose. The Engine cannot find
-the table it needs, and [finding 71](#finding-71--an-effect-that-swaps-one-classs-table-for-anothers)
-showed the same wall from the other side — the Swashbuckler needs to *read* the fighter's THAC0
-progression and cannot name it. **This is unresolved and it is the premise the whole design rests on.**
+**That is the single largest hole the corpus found, and it is still open.** Everything else this ticket
+uncovered was repaired, worked around, or measured and declared; this one was named at session 33 and
+nothing since has touched it. It is a hole in the arms' *composition*, not in their shape, which is
+why transcribing more never brought it closer.
+
+**#2 — "the Engine computes, the user supplies the tables" has no shipping precedent. RESOLVED**, and
+the resolution is below. It fired negatively at
+[finding 20](#finding-20--a-lookuptable-has-no-declared-role-and-its-rows-are-keyed-by-prose) — a table
+with no declaration of what it was a table *of*, keyed by prose — and closing it took a `supplies`
+field, a `tableValue` operand, and, much later, the discovery that **finding 20's diagnosis was right
+about its own table and wrong as a rule**: over all 101 tables, 73 key on prose legitimately, and what
+they needed was not ids but a way to say *the Engine cannot index this*
+([finding 138](#finding-138--most-of-the-corpuss-tables-cannot-be-consumed-and-that-is-the-useful-part)).
 
 **#4** — answered above.
 
@@ -2936,27 +2971,43 @@ posture as the apparatus list, for the same reason: **the source does not say.**
 ### What the slice proves, and what it does not
 
 **Proved.** The shapes are expressible. The six operations suffice. The three Attachable arms are one
-shape. Order-independence held everywhere it was tested, and the layer model repeatedly absorbed
-things that looked like they needed new features — offsets as constants beside a multiple
-([finding 50](#finding-50--the-operand-was-never-as-poor-as-findings-21-26-and-40-said)), exceptions
-as cancelling adjusts ([finding 36](#finding-36--the-cancelling-adjust-technique-generalises)), CNF
-for free on the effect side ([finding 27](#finding-27--the-effect-list-gives-conjunction-of-disjunction-for-free)).
+shape. Order-independence held everywhere it was tested, and the layer model repeatedly absorbed things
+that looked like they needed new features — offsets as constants beside a multiple
+([finding 50](#finding-50--the-operand-was-never-as-poor-as-findings-21-26-and-40-said)), exceptions as
+cancelling adjusts ([finding 36](#finding-36--the-cancelling-adjust-technique-generalises)), CNF for
+free on the effect side ([finding 27](#finding-27--the-effect-list-gives-conjunction-of-disjunction-for-free)).
 
-**Not proved, and stated as plainly as ticket 08 asked.** Nothing was tested about psionics, spells as
-records, equipment breadth, or the DMG. The cost per record was never measured, so
-[ticket 11](./11-human-review-protocol.md)'s 5–15 minute prediction is still unchecked, and
-[ticket 09](./09-extraction-pipeline.md)'s local-model draft quality was never tried at all. **A pack
-that has never been loaded by anything is a demonstration, not a validation**, and the distinction is
-the same one A3 exists to keep.
+**Referential integrity is closed.** At session 48 *none of the pack's 496 references resolved* and the
+pack could not have been loaded. Today **3,990 of 3,992 occurrences resolve**, and the two that do not
+are an ambiguity in the source (`phb:axe` — Table 44 prints a battle axe and a hand axe and no plain
+axe) and a weapon the Complete Book of Gnomes and Halflings *names and never describes*. Neither is a
+backlog. Getting there took eleven sessions of transcription, **no design change**, and one repair to
+the checker itself, which had been walking a hand-listed set of paths and seeing 48% of the pack
+([finding 135](#finding-135--the-checker-was-seeing-48-of-the-packs-references)).
 
-**Referential integrity was the loudest of these and is now half closed.** At session 48 *none of the
-pack's 496 references resolved*; today **742 of 1,030 occurrences resolve (72%)**, over 177 of 284
-distinct ids. What closed it was transcribing the things the kits point at — the PHB's proficiencies,
-weapons, races, thieving skills and alignments.
+**Not proved, and stated as plainly as ticket 08 asked.**
 
-**171 of the 288 that remain are one missing kind**: every Attachable names the class it attaches to
-and `phb:fighter` does not exist ([finding 117](#finding-117--the-most-repeated-reference-in-the-pack-was-never-counted)).
-The rest is a long tail of 92 ids, no single one of which is worth a session.
+- **Nothing has ever loaded this pack.** No Engine exists; the schema validates and the references
+  resolve, and neither is the same as a program reading it and building a character. **A pack that has
+  never been loaded is a demonstration, not a validation.**
+- **The cost per record was never measured** (deliverable 5), so [ticket 11](./11-human-review-protocol.md)'s
+  5–15 minute prediction is unchecked. This was declared unmeasurable rather than fabricated, and the
+  reason held for the whole effort: almost every record's time went into *finding format gaps*, not
+  transcribing, and the format never stopped moving — **it moved twice more in the last five
+  sessions.**
+- **Local-model draft quality was never tried** (deliverable 6). [Ticket 09](./09-extraction-pipeline.md)'s
+  claim about it is untested, and [ticket 04](./04-llm-assisted-extraction.md)'s half-refutation stands
+  on the extractor's evidence alone.
+- **Whole subjects are untouched**: psionics, the DMG's chapters 9–15 (declared out of scope rather
+  than owed), magic items, encounters, combat resolution. What a spell *does* is not transcribed and
+  was decided against ([ticket 16](./16-the-plan-for-the-remaining-books.md) decision 1).
+
+**And one methodological result that outlived the slice.** Five of this ticket's findings are about
+measurement rather than about AD&D: a verdict rots and must be a program (116), a marker rots and
+cannot be (146), a hand-listed walker sees what it was told to see (135), a metric can count the
+absence of a complaint (126), and a global name map will resolve `Strength` to a priesthood (140).
+**Every one was found by re-running an old measurement against a changed artifact**, which is the only
+habit this ticket would carry into a v2 unchanged.
 
 ### Session 50 — the PHB's proficiencies, and the first references that resolve
 
@@ -4248,6 +4299,63 @@ established that it can. The Vanisher's was the same rule written the other way,
 
 A marker can be wrong in the direction nobody checks: **not overstating what the format does, but
 understating it.**
+
+### Session 70 — the final verdict
+
+The `## THE VERDICT` section above is rewritten whole, after 22 sessions of patching it a table at a
+time. Nothing in it is new measurement; what changed is that it now says the same thing throughout.
+
+### Where the six deliverables stand
+
+| | |
+|---|---|
+| **1. The slice, transcribed** | **Done.** 1,233 records across 20 kinds, in the private corpus repository, never here. |
+| **2. A pack that passes the checker** | **Done**, and the failures are recorded rather than quietly fixed — 149 findings, of which the checker itself is the subject of four. |
+| **3. A verdict on the schema and the expression language** | **Done.** The books forced **22 commits to the schema**, every change recorded before it was made. |
+| **4. A verdict on the three known unknowns** | **Done.** #4 answered (six suffice), #2 resolved, **#1 open and the largest thing this effort found**. |
+| **5. A measured cost per record** | **Not delivered**, and declared rather than fabricated. |
+| **6. A verdict on local-model draft quality** | **Not attempted.** |
+
+**Deliverable 5 was never measurable for a reason that held to the last session.** It asked for a cost
+per record so the remaining books could be estimated. Almost every record's time went into *finding
+format gaps*, not transcribing — and the format never stopped moving: it changed twice in the last
+five sessions, and one of those changes retroactively expressed 33 effects nobody re-timed.
+
+But **its purpose was served by another route**. What deliverable 5 was for is stated in its own text:
+*"the number that turns 'the rest is mechanical work' from a hope into a plan."*
+[Ticket 16](./16-the-plan-for-the-remaining-books.md) produced that plan by measuring the **work** rather
+than the **rate** — 469 spell pages at 100% field regularity, 59 priesthoods in one shape, 101 tables,
+four decisions — and every item on its mechanical list is now done. A plan built from volume and shape
+turned out to be the thing that was wanted; the rate would have been a worse instrument, because the
+rate was never stationary.
+
+**Deliverable 6 is simply not done**, and it is the one thing in this ticket with no substitute
+argument. [Ticket 09](./09-extraction-pipeline.md)'s decision 2 accepted a local model for the
+judgement half on the ground that a human reviews it anyway. That is still untested. What this ticket
+can offer it is [`model_deities.py`](../tools/model_deities.py) — the judgement half done by a
+**program** rather than a model, on the one book whose shape allowed it
+([finding 129](#finding-129--the-first-tool-that-does-the-judgement-half)) — which narrows the question
+rather than answering it: a local model would have to beat *a hundred lines of rules* on the regular
+books, and would face the other ten alone.
+
+### What this ticket would tell its successor
+
+Three things, in the order they cost the most time to learn.
+
+**Re-run every old measurement against the changed artifact.** Five findings here are about measurement
+rather than about AD&D, and each was a number or a sentence that had been true when written. The
+verdict, the markers, the reference walker, the completeness metric, the name resolver: all five went
+wrong silently, and all five were caught by running them again rather than by reading them.
+
+**Read the artifact, not the prose about the artifact.** Findings 42, 50 and 115 are the same mistake
+three times — a decision was settled and the schema was silent, an operand was richer than the ticket
+said, and the markers had been classifying themselves for fifty sessions. Every one was resolved by
+opening the file instead of the note about the file.
+
+**A first-pass regex is a hypothesis about a convention the book never promised to keep.** Six times a
+count was a lower bound, and the corpus's own markup is unreliable *per label*, not per page
+([finding 128](#finding-128--the-markup-loses-individual-labels-not-whole-pages)). The map earned that
+note the hard way and it should be the first line of any successor's method.
 
 ### Still not done
 

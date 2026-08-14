@@ -473,9 +473,16 @@ rate than any Complete handbook, and a 163-record majority absorbed it without a
   can contradict each other (correction 18), which commutation does not address.
 
 **What it does not prove**, stated as [ticket 08](issues/08-which-slice-proves-the-format.md) required:
-nothing was tested about psionics, spells-as-records, equipment or the DMG, the cost per record was
-never measured, and local-model drafting was never tried. **A pack that has never been loaded is a
-demonstration, not a validation.**
+**nothing has ever loaded this pack** — the schema validates and the references resolve, and neither is
+a program building a character. The **cost per record was never measured** (declared, not fabricated:
+almost every record's time went into finding format gaps, and the format moved twice in the last five
+sessions), and **local-model drafting was never tried at all**. Psionics, magic items, encounters and
+combat resolution are untouched; the DMG's chapters 9-15 are declared out of scope rather than owed.
+
+**Five of the ticket's findings are about measurement rather than about AD&D** — a verdict rots and must
+be a program, a marker rots and cannot be, a hand-listed walker sees what it was told to see, a metric
+can count the absence of a complaint, and a global name map resolves `Strength` to a priesthood. Every
+one was found by re-running an old measurement against a changed artifact.
 
 One line of the original verdict has been **half overturned by measurement rather than argument**: it
 said *none of the pack's 496 references resolve*, and **3,954 of 3,956 now do** — the two that
