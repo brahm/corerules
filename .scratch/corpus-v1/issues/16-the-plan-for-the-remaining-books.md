@@ -90,6 +90,13 @@ shape is **a Race-like record that owns lookup tables**, and the four multi-clas
 
 **Cheap, high value, and it is what makes the pack loadable.** It should be next.
 
+**Taken in session 60.** 19 records — four groups, nine classes, five multi-class arrangements — and
+the four experience tables. Reference resolution went **72% → 89%**, and every `target` in the pack now
+lands. What the decision did *not* finish is the tables: a class indexes a COLUMN of its group's
+progression, and Table 14's columns are `Fighter`, `Paladin/Ranger` and `Hit Dice (d10)` — two
+vocabularies at once, with one column naming two classes. See
+[finding 120](./13-transcribe-the-proving-slice.md#finding-120--a-printed-table-can-have-two-column-vocabularies-at-once).
+
 ### Decision 3 — how much of the DMG is in scope at all
 
 **965 pages, untouched, and the map's destination names it.** Its chapters are not one thing:
@@ -126,7 +133,7 @@ pack and a clean reference report.
 Each of these is volume with a known method and no decision inside it.
 
 1. **The CBD Patrician** — one record, closes the slice. *(minutes)*
-2. **Classes** — ~15 records, after decision 2. **Closes 171 of 288 dangling references.**
+2. ~~**Classes**~~ — **done in session 60**: 19 records, 171 references closed.
 3. **Secondary skills** — PHB Table 36. 18 ids referenced, one closed table, no kind yet.
    `groom`, `scribe`, `forester`, `fisher`, `hunter`, `navigator`, `trapper`, `farmer`, `mason`,
    `tailor`, `woodworker`, `bowyer`, `gambler`, `jeweler`, `limner`. *(one session)*

@@ -444,7 +444,7 @@ why it is a program and not a paragraph.
 |---|---:|---:|
 | effects the format expressed cleanly | **77 %** | **79 %** |
 | **records expressed completely** | **30 %** (53 of 177) | 30 % (55 of 183) |
-| references resolving | — | **72 %** of 1,030 occurrences |
+| references resolving | — | **89 %** of 1,034 occurrences |
 
 Both numbers matter and they disagree on purpose: the operations work nearly always, and records
 rarely close, because one unsayable clause leaves a fourteen-effect kit incomplete. For an Engine
@@ -473,9 +473,10 @@ never measured, and local-model drafting was never tried. **A pack that has neve
 demonstration, not a validation.**
 
 One line of the original verdict has been **half overturned by measurement rather than argument**: it
-said *none of the pack's 496 references resolve*, and 72% now do — closed by transcribing the things
-the kits point at, over nine sessions and no design change. **171 of the 288 that remain are a single
-missing kind**, `classes`: every Attachable names the class it attaches to, and no class exists.
+said *none of the pack's 496 references resolve*, and **89% now do** — closed by transcribing the
+things the kits point at, over ten sessions and no design change. The last big block was `classes`,
+which every Attachable names and none of which existed; what remains is 109 occurrences over 92 ids,
+about a quarter of them permit-list placeholders that no transcription closes.
 
 ## Corrections owed to the v1 spec
 

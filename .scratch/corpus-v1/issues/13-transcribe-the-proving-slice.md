@@ -3524,6 +3524,74 @@ structure by walking one of its parts will silently be right about that part.**
 And the number it was hiding is the plan's headline: **one missing kind accounts for 59% of everything
 that does not resolve.**
 
+### Session 60 — classes, and the reference report finally comes back green-ish
+
+[Ticket 16](./16-the-plan-for-the-remaining-books.md)'s decision 2, taken. **19 class records and four
+experience tables**, and reference resolution goes **from 72% to 89% of 1,034 occurrences**. Every
+`target` in the pack now lands on a record. 484 records, 0 schema errors.
+
+### Finding 118 — a hit die is the die itself, and `dice` still had no arm for that
+
+[Finding 109](#finding-109--dice-was-a-value-type-that-nothing-was-allowed-to-hold) gave `dice` a
+consumer as a **threshold** — `1-5 on 1d6`, success at or below. A hit die is the die as a **value**:
+*"all warriors gain one ten-sided Hit Die per level"*. Four sentences, one per group, and `operand`
+could not hold any of them.
+
+So `operand` gains a fifth arm — the bare `dice` string — and `set hitDice.perLevel to "1d10"` is
+sayable. The pattern that [finding 42](#finding-42--a-decision-was-settled-and-the-artifact-was-silent)
+found unreferenced is now referenced twice, in the two ways a die is used: **rolled against a target,
+and rolled for its result.** Neither was reachable from the kit slice, because a kit adjusts what a
+class already establishes.
+
+### Finding 119 — a class is two layers, and the corpus uses both interchangeably
+
+Kits target `phb:priest` 22 times and `phb:cleric` 3. Both are real: the PHB has **four groups**
+(warrior, wizard, priest, rogue) and **nine classes inside them**, and a kit attaches to whichever the
+book names.
+
+That is **the third appearance of the same group/member split** — Table 44 gives weapons `Bow` and
+`Long Bow`, Table 37 gives proficiencies a `group` array, and now classes. Three unrelated chapters,
+one shape. It is strong evidence that the split belongs in the *format* rather than being re-derived
+per kind, and it arrived only because a kind was transcribed from the PHB rather than from a Complete
+handbook.
+
+The layers are not decorative. **The group owns the experience table and the class indexes a column
+of it** — Table 14 is the Warrior's, and inside it Fighter and Paladin/Ranger advance on different
+numbers while sharing the `d10` hit die. So *"which table"* is a group question and *"which column"* is
+a class one, and a design that flattened the two would have to duplicate the table four times or lose
+the hit die.
+
+Like a race, a class has **no target and no prerequisite**: it is not attached to a character, it is
+one of the things a character is. `phb:multi-class` and `phb:dual-class` are **not** classes and stay
+where they were — the Witch forbids them as a `classArrangement`, which is a fact about how classes
+combine, not a class.
+
+### Finding 120 — a printed table can have two column vocabularies at once
+
+The four experience tables are transcribed and **carry no `supplies`**, so the Engine will not consume
+them. That is deliberate and it is a gap, not a shrug.
+
+`columnsAre` (correction 16b) assumes the columns are one vocabulary — Table 27's columns are races,
+Table 29's are armour types. Table 14's columns are **`Fighter`, `Paladin/Ranger`, `Hit Dice (d10)`**:
+two of them name classes, one names a derived statistic, and **one column names two classes at once**.
+There is no axis kind for that, and inventing one to fit four tables would be guessing.
+
+So the schema's own rule applies — *a table that supplies no field carries no `supplies`, and the
+Engine does not consume it* — and the tables sit in the pack as reference data with provenance, which
+is what A3 is for. **This is the first table the pack holds and cannot use**, and it is the shape
+[ticket 16](./16-the-plan-for-the-remaining-books.md)'s decision 2 will have to finish.
+
+### The classes are records, not yet mechanics
+
+**Fifteen of the nineteen carry `effectsModelled: false`.** The four groups are modelled — their pages
+state a hit die, a cap and a per-level remainder in one sentence each — and the nine classes and five
+multi-class arrangements are not, because a class's substance is a chapter: spell progressions, turning
+undead, thieving skills scored across four tables, followers and strongholds.
+
+That is the flag working exactly as [finding 2](#finding-2--the-schema-accepted-a-semantically-empty-record-fixed)
+intended. **171 references now resolve to a record that honestly says it is unfinished**, which is
+strictly better than 171 references resolving to nothing, and it is what makes the pack loadable.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against

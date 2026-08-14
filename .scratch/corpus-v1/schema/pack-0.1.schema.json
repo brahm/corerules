@@ -107,7 +107,7 @@
       "pattern": "^(?:[0-9]*d[0-9]+(?:[x*][0-9]+)?(?:[+-][0-9]+)?|\\([0-9]*d[0-9]+(?:[+-][0-9]+)?\\)[x*][0-9]+)$"
     },
     "operand": {
-      "description": "Ticket 15: known unknown #4 fired — 31 corpus occurrences of halving, division and rounding inside kit effects. NOT a seventh operation: 'adjust' still sums, only its operand widens. Used by effects AND by predicate values, since the arithmetic appears on both sides. WIDENED by ticket 13 finding 110: a fourth arm for `N on 1dM`, which is a value the corpus states directly and no arithmetic over integers can recover.",
+      "description": "Ticket 15: known unknown #4 fired — 31 corpus occurrences of halving, division and rounding inside kit effects. NOT a seventh operation: 'adjust' still sums, only its operand widens. Used by effects AND by predicate values, since the arithmetic appears on both sides. WIDENED by ticket 13 finding 110: a fourth arm for `N on 1dM`, which is a value the corpus states directly and no arithmetic over integers can recover. WIDENED AGAIN by ticket 13 finding 118: a fifth arm for a PLAIN die. Finding 110 gave `dice` a consumer only as a threshold — `1-5 on 1d6` — and a hit die is the die itself as a value, which the four groups state in one sentence each: `set hitDice.perLevel to 1d10`.",
       "oneOf": [
         {
           "type": "integer"
@@ -120,6 +120,9 @@
         },
         {
           "$ref": "#/$defs/rollUnder"
+        },
+        {
+          "$ref": "#/$defs/dice"
         }
       ]
     },
@@ -843,6 +846,7 @@
       }
     },
     "classes": {
+      "description": "Ticket 13 findings 117 and 119. The most referenced thing in the pack and the last one with no kind: every Attachable names the class it attaches to, 171 of those references resolved to nothing, and the checker was not even counting them. Like `races` (finding 107) a class has NO target and NO prerequisite — it is not attached to a character, it is one of the things a character IS. Unlike a race it comes in two layers the corpus uses interchangeably: four GROUPS (warrior, wizard, priest, rogue) and nine classes inside them, and kits target both — `phb:priest` 22 times, `phb:cleric` 3. That is the same group/member split Table 44 gave weapons and Table 37 gave proficiencies, arriving a third time.",
       "type": "array",
       "items": {
         "allOf": [
@@ -851,12 +855,55 @@
           }
         ],
         "properties": {
+          "isGroup": {
+            "type": "boolean",
+            "description": "True for the four groups. A group is targetable and owns the progression table."
+          },
           "group": {
-            "$ref": "#/$defs/id"
+            "$ref": "#/$defs/id",
+            "description": "The group this class belongs to. Absent on a group and on a multi-class."
+          },
+          "combines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/id"
+            },
+            "minItems": 2,
+            "description": "A multi-class arrangement, as §6.1's sum type: Fighter 5 / Mage 4 has no 'level 5', which is why `scalar.level` is always qualified by class."
+          },
+          "abilityMinimums": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ability": {
+                  "$ref": "#/$defs/id"
+                },
+                "minimum": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "ability",
+                "minimum"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Table 13. Absent where the table prints `Var` — the specialist wizard's minimums depend on the school, which is a fact about the school."
+          },
+          "effects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/effect"
+            }
+          },
+          "effectsModelled": {
+            "type": "boolean"
           }
         },
         "required": [
-          "group"
+          "effects",
+          "effectsModelled"
         ]
       }
     },
