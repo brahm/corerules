@@ -677,6 +677,14 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    and a Broad Group **three**, and some weapons belong to no group at all. 20 groups over 143 members
    that cross books. The group/member split for the fourth time, and the first where the group is a
    thing a character spends on.
+35. **RESOLVED — a table keyed by prose is usually the truth, not a defect.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 138) Finding 20 called prose row
+   keys a defect. Over all 101 tables the v1 tier prints for character generation, **73 key on prose
+   the pack has no record for** — a light source, a coin, a tracking condition — 16 on ids, 8 on
+   integers, 4 on ranges. Finding 20 was right about its own table and wrong as a general rule. The
+   repair is declaration: `keyedBy.kind: "text"` says the Engine cannot index it, and **nine tables
+   declare a `supplies`** while 92 are reference data. A3 applied to an axis, so that 'a table the
+   Engine is waiting for' and 'reference data a reader consults' stop looking alike.
 23. **The Engine's field vocabulary is far larger than the schema's, and nothing checks it.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 110) A `when` clause describes the
    CHARACTER — its subject is an ability or a level — and never his opponent. So every target-scoped

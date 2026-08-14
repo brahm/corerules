@@ -531,14 +531,15 @@
       ]
     },
     "tableAxis": {
-      "description": "How one axis of a table is keyed. Ticket 13's resolution of known unknown #2 found the axes HETEROGENEOUS: Table 26 keys on a thieving skill (an id), Table 28 on a Dexterity score (an integer), and Table 30 on a level BAND ('1-4', '5-8'). One kind would have fitted none of them.",
+      "description": "How one axis of a table is keyed. Ticket 13's resolution of known unknown #2 found the axes HETEROGENEOUS: Table 26 keys on a thieving skill (an id), Table 28 on a Dexterity score (an integer), and Table 30 on a level BAND ('1-4', '5-8'). One kind would have fitted none of them. WIDENED by ticket 13 finding 138. Transcribing the v1 tier's remaining 90 tables found that MOST of them key on prose the pack has no record for — a light source, a coin, a tracking condition — which is exactly what finding 20 called a defect when a consumable table did it. The difference is declaration: `text` says the key is the book's own string and the Engine cannot index it, and such a table carries no `supplies` either. A3 applied to a table's axis, so that 'reference data a reader consults' and 'a table the Engine is waiting for' stop looking alike.",
       "type": "object",
       "properties": {
         "kind": {
           "enum": [
             "id",
             "integer",
-            "range"
+            "range",
+            "text"
           ]
         },
         "vocabulary": {

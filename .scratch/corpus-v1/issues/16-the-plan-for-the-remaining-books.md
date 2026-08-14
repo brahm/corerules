@@ -30,7 +30,7 @@ what a spell record is *for* — is the largest open question in the effort and 
 | proficiencies the handbooks add | ? | 54 | six books read, five unread |
 | weapons (Table 44) | 79 | 79 | ✅ |
 | races, abilities, alignments, thieving skills | 29 | 29 | ✅ |
-| lookup tables | 186 in PHB + DMG | 6 | |
+| lookup tables | 67 PHB + 34 DMG in scope | **101** | ✅ |
 | **spells** | **469** | **12** | |
 | **classes** | **~15** | **0** | |
 

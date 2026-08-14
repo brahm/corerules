@@ -3940,6 +3940,73 @@ transcription backlog:
 None of them is a format problem. That is the first time this ticket has been able to say that about
 the reference report.
 
+### Session 65 — every table the v1 tier prints for character generation
+
+**1,196 records, 0 schema errors.** The lookup tables go from 11 to **101**: all 67 the PHB prints and
+all 34 in the DMG's chapters 1-8, the half [ticket 16](./16-the-plan-for-the-remaining-books.md)
+decision 3 kept in scope.
+
+### Finding 138 — most of the corpus's tables cannot be consumed, and that is the useful part
+
+[Finding 20](#finding-20--a-lookuptable-has-no-declared-role-and-its-rows-are-keyed-by-prose) called a
+table keyed by prose a **defect**. Transcribing ninety more shows it is usually the *truth*:
+
+| the row keys are | tables |
+|---|---:|
+| **prose the pack has no record for** — a light source, a coin, a tracking condition | **73** |
+| an id, in one closed vocabulary | 16 |
+| an integer | 8 |
+| a range or band | 4 |
+
+Finding 20 was right about the table it was looking at, and the general rule it implied was wrong. The
+difference is **declaration**: `keyedBy.kind: "text"` says the key is the book's own string and the
+Engine cannot index it, and such a table carries no `supplies` either. **Nine of 101 tables declare a
+`supplies`** — those are the ones the Engine is waiting for; the other 92 are reference data a reviewer
+consults, and the pack now says which is which instead of leaving them to look alike.
+
+That is A3 applied to a table's axis, and it is what makes transcribing all 101 honest rather than
+padding.
+
+### Finding 139 — the axis can be inferred, and the extractor stops guessing
+
+The tool used to emit `supplies: ""` and `keyedBy: {kind: "id"}` for a human to fill. **The keys
+themselves say what they are**: all integers is `integer`, `4-6` and `1-4` are `range`, keys that all
+resolve to records of **one kind** are `id` with that kind as the vocabulary, and anything else is
+`text`.
+
+`supplies` is still never guessed — which field a table fills is a modelling decision — but it is now
+**absent** rather than an empty string, which had been claiming a field path called `""`.
+
+Sixteen tables key by id, and they are the ones worth having: Table 38's proficiency-group crossovers
+by class, Table 43's starting funds by class group, Table 64's movement rate by race, the DMG's four
+sample-character tables by ability.
+
+### Finding 140 — the resolver had to be taught §7.3 the hard way
+
+The first version matched a row key against **one global name map** and Table 7's `Strength` resolved
+to `cprh:DD05581` — the Complete Priest's **priesthood of Strength**. `Wisdom` likewise.
+
+A name is not identity, which §7.3 has said from the start and a tool ignored inside a hundred lines of
+code that exist to enforce it. Resolution is now **per kind**: a table's keys are drawn from one
+enumeration, so the axis is accepted only when a single kind covers all of them — which is both correct
+and *why* the vocabulary field exists.
+
+Three smaller things the same pass found: a header rule that took every leading digit-free row made
+**Table 38 a record with zero rows**, since all its cells are words; footnote markers glued to a key
+(`Paladin*`, `Elf1`) stopped every such key resolving; and **Table 33 has no key column at all** — four
+ability names head a single row of base scores — which is the only one in 101 and is recorded as
+printed.
+
+### What a table is for, when its facts are already records
+
+Five tables hold facts the pack already carries as records: Table 37's proficiency scores, Table 44's
+weapons, Table 36's secondary skills, Table 8's racial adjustments, Table 13's class minimums.
+
+They are **kept**, with a note saying so. A record is the pack's reading of a table; the table is the
+book's own artifact, and **the reviewer checks one against the other**. Dropping it would remove the
+thing the review protocol compares to. Table 36 makes the point sharpest: the records carry each
+skill's name and gloss, and only the table carries **the d100 range it is rolled on**.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against
