@@ -577,6 +577,15 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    *exactly what it had been*. §7.1 chose declaration over discovery and ticket 05 had the manifest
    declare its files; neither says what happens when two of them name the same array. **Arrays merge.**
    A pack assembled from a dozen books will do this constantly.
+22b. **RESOLVED — a Race carries effects, and an effect carries its own provenance.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) findings 107 and 108) §3.1 already said a
+   Subrace is a Race with a parent reference, and a Subrace has effects — so the repair was to grant
+   the parent what the schema had withheld. The dwarves' 28 re-scorings are now **32 `set` effects on
+   `phb:dwarf`**, layers over the PHB's values in exactly the way §4.4 intended; no new mechanism was
+   needed, only pointing the existing one at a race. And because `phb:dwarf` is the PHB's record while
+   those effects are the dwarves' book, **an effect may now carry its own provenance** — a record turns
+   out to be a meeting place for several books, and the finest grain that needs an anchor is the
+   effect, not the record.
 22. **A race book overrides the core rules' own numbers, and one id cannot hold two values.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 106) The Complete Book of Dwarves
    re-scores **28 of the PHB's 75 proficiencies** — Armorer at 1 slot and 0 where the PHB says 2 and

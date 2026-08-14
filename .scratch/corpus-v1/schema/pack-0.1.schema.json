@@ -247,7 +247,7 @@
       }
     },
     "effect": {
-      "description": "§4.3's six operations as a discriminated union, so an operation carrying the wrong fields is UNREPRESENTABLE rather than merely invalid — §5's 'illegal states are unrepresentable', and §6.1's principle: structural for model incoherence, pack-declared for game rules.",
+      "description": "§4.3's six operations as a discriminated union, so an operation carrying the wrong fields is UNREPRESENTABLE rather than merely invalid — §5's 'illegal states are unrepresentable', and §6.1's principle: structural for model incoherence, pack-declared for game rules. Ticket 13 finding 108: an effect may carry its own `provenance`. A record's effects are not necessarily all from one book — `phb:dwarf` is the PHB's record and 28 of its effects are the Complete Book of Dwarves re-scoring the PHB's proficiencies. Without this the pack asserts that the core rules say something they do not.",
       "type": "object",
       "properties": {
         "op": {
@@ -284,7 +284,11 @@
               "$ref": "#/$defs/operand"
             },
             "when": true,
-            "text": true
+            "text": true,
+            "provenance": {
+              "$ref": "#/$defs/provenance",
+              "description": "Present only when this effect comes from a DIFFERENT book than the record does."
+            }
           },
           "required": [
             "op",
@@ -308,6 +312,10 @@
             "text": true,
             "defines": {
               "$ref": "#/$defs/definition"
+            },
+            "provenance": {
+              "$ref": "#/$defs/provenance",
+              "description": "Present only when this effect comes from a DIFFERENT book than the record does."
             }
           },
           "required": [
@@ -343,6 +351,10 @@
             "text": true,
             "defines": {
               "$ref": "#/$defs/definition"
+            },
+            "provenance": {
+              "$ref": "#/$defs/provenance",
+              "description": "Present only when this effect comes from a DIFFERENT book than the record does."
             }
           },
           "required": [
@@ -376,7 +388,11 @@
               "$ref": "#/$defs/id"
             },
             "when": true,
-            "text": true
+            "text": true,
+            "provenance": {
+              "$ref": "#/$defs/provenance",
+              "description": "Present only when this effect comes from a DIFFERENT book than the record does."
+            }
           },
           "required": [
             "op",
@@ -404,7 +420,11 @@
               }
             },
             "when": true,
-            "text": true
+            "text": true,
+            "provenance": {
+              "$ref": "#/$defs/provenance",
+              "description": "Present only when this effect comes from a DIFFERENT book than the record does."
+            }
           },
           "required": [
             "op",
@@ -425,7 +445,11 @@
               "$ref": "#/$defs/operand"
             },
             "when": true,
-            "text": true
+            "text": true,
+            "provenance": {
+              "$ref": "#/$defs/provenance",
+              "description": "Present only when this effect comes from a DIFFERENT book than the record does."
+            }
           },
           "required": [
             "op",
@@ -773,10 +797,26 @@
     "races": {
       "type": "array",
       "items": {
+        "description": "Ticket 13 finding 107. §3.1 already says a Subrace IS a Race with a parent reference, and a Subrace is one of §4.1's three Attachable arms — so a Race carrying effects is not a new idea, it is the same idea the schema never granted the parent. A Race has NO target and NO prerequisite: it is not attached to a character, it is one of the things a character is.",
         "allOf": [
           {
             "$ref": "#/$defs/record"
           }
+        ],
+        "properties": {
+          "effects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/effect"
+            }
+          },
+          "effectsModelled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "effects",
+          "effectsModelled"
         ]
       }
     },

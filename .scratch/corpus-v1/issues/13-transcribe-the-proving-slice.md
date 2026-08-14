@@ -3249,6 +3249,53 @@ currently a kind with **no fields at all**.
 
 **Every proficiency the pack references and any book scores is now transcribed.**
 
+### Session 56 — races get effects, and an effect gets its own provenance
+
+[Finding 106](#finding-106--cbd-re-scores-28-of-the-phbs-proficiencies) left the Complete Book of
+Dwarves' 28 re-scorings recorded in prose and absent from the pack. They are now **32 effects on
+`phb:dwarf`**, and putting them there took two schema changes that turn out to be one idea each.
+
+### Finding 107 — a Race carrying effects is not a new idea; it is one the schema withheld
+
+§3.1 says **a Subrace is a Race with a parent reference**, and a Subrace is one of §4.1's three
+Attachable arms — with a target, a prerequisite and effects. So a Race with effects is **the same idea
+the schema never granted the parent**, and `races` had been a kind with no fields at all.
+
+A Race gets **effects and `effectsModelled`, and neither target nor prerequisite**: it is not attached
+to a character, it is one of the things a character *is*. Half an Attachable, and the half that was
+missing.
+
+What makes it work is §4.4. The dwarves' book does not add a second Armorer proficiency — it says a
+dwarf's Armorer costs one slot rather than two — so the effect is
+`set proficiency.armorer.slotCost to 1`, **a layer over the PHB's value in exactly the way the layer
+model was designed for.** The character's view of a proficiency's cost is a stack, and the race
+contributes to it. No new mechanism was needed; the mechanism had simply never been pointed at a race.
+
+### Finding 108 — a record's effects are not all from one book
+
+`phb:dwarf` is the **PHB's** record. Thirty-two of its effects are the **Complete Book of Dwarves**
+rewriting the PHB's numbers. Written without qualification, the pack would assert that the core rules
+say something they do not.
+
+So an **effect may now carry its own `provenance`**, present only when it differs from the record's.
+[Ticket 05](./05-pack-schema.md) put provenance on the record because a record comes from a passage;
+what 451 records show is that **a record can be a meeting place for several books**, and the finest
+grain that needs an anchor is the effect, not the record.
+
+This also gives [ticket 12](./12-how-much-tool.md)'s review page the thing it would otherwise lack: a
+reviewer looking at `proficiency.riding-land-based.modifier = −2` can be sent to the dwarves' book
+rather than to the PHB, where that number is +3 and the reviewer would conclude the pack was wrong.
+
+### The five races that now say they are unfinished
+
+`effectsModelled: false` reappears for the first time since [session 37](#session-37--the-judgement-pass-is-complete-and-it-found-a-record-that-was-simply-wrong)
+— on the elf, gnome, half-elf, halfling and human, whose PHB racial abilities are not transcribed.
+
+That is the flag doing precisely its job. Giving races effects **created five honestly incomplete
+records where there had been six silently empty ones**, and the pack now distinguishes *"this race has
+no effects"* from *"nobody has transcribed them yet"* — which is [finding 2](#finding-2--the-schema-accepted-a-semantically-empty-record-fixed)'s
+whole argument, arriving in a kind that did not exist when it was made.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against
