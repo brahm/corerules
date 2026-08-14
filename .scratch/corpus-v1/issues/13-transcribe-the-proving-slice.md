@@ -2605,6 +2605,48 @@ because the layer model's central guarantee does not address it.
 - Three **OCR artefacts** — `B2` and `B10%` for minus signs, and `miner access` for *minor* in CRH.
   The corpus is not clean, and nothing in the pipeline would notice.
 
+### Session 46 — CFH complete: thirteen books, 157 records
+
+**All 14 Complete Fighter's kits are modelled.**
+
+### Finding 91 — two kits on one page, **interleaved inside every field**
+
+- **Pirate/Outlaw**: *"If the character is a **Pirate**, he must take the following proficiencies…
+  If the charact[er is an **Outlaw**]…"*
+- **Samurai**: *"The samurai and ronin **have different special hindrances**."*
+
+[Ticket 07](./07-identity-and-id-stability.md)'s ordinal exists because the elf subrace page holds
+five records — but those run **in sequence**, each with its own field set. These two hold **two kits
+whose divergences are stated inside each shared field**, sentence by sentence.
+
+Splitting a page into records is a boundary problem the ordinal solves. Splitting a **field** into two
+readings is not, and nothing in the pipeline or the schema does it. Modelled as one record carrying
+both, which is **wrong and deliberately visible**: the pack asserts that a Pirate and an Outlaw have
+the same weapon requirement, and the book says they do not.
+
+### Finding 92 — an effect triggered by the result of a die
+
+> Whenever the barbarian character achieves **a reaction roll of 14 or more**, he takes an additional
+> [penalty].
+
+Every condition in 157 records tests a **state** — an ability, a level, a race, a membership. This
+tests **an outcome**: the effect fires because a die came up a certain way. There is no subject for it,
+and there is no moment either; `when` is evaluated against a character, not against a roll in progress.
+
+The Cavalier gives the same shape in a second form: he *"cannot attack an opponent at range **if he
+can instead charge**"* — a prohibition conditioned on **what the character could otherwise be doing**,
+which is a comparison between two available actions.
+
+### What CFH confirmed
+
+Almost everything, which after thirteen books is the expected and useful result. The **Amazon** is the
+CWH Amazon Sorceress's first-encounter bonus in a different class and nearly the same words — a kit
+shared across two books and two classes. The **Berserker** conditions on *"any tribe that also has
+Berserkers"*, which is the other party's **culture** rather than the party itself. The **Savage**'s
+weapon list *"should be defined by the DM"*, so the record's own restriction is delegated. And the
+**Swashbuckler** is the eleventh name collision, with the book itself cross-referencing the thief
+version in the Complete Thief's Handbook.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against
