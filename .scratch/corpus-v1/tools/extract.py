@@ -13,7 +13,24 @@ Usage:  extract.py <webhelp-dir> <book-dir> <pack-id> [kit|deity|subrace] [--jso
 import re, sys, json, pathlib, hashlib
 
 TITLE = re.compile(r"<title>(.*?)</title>", re.I | re.S)
+# The terminator is a COLON in eleven books and a PERIOD in the Complete Book of Elves,
+# which writes `<B>Role.</B>` after a bullet. Ticket 13 finding 81: with a colon only, CBE
+# returned zero kits from 119 pages and the omission was invisible, because a book with no
+# kits looks exactly like a book whose kits are elsewhere. Names are safe from the period
+# form because CBE sets them in caps without one (`<B>BLADESINGER</B>`), and numbered list
+# items are safe because the label must start with a letter.
 LABEL = re.compile(r"<([IB])>\s*([A-Z][A-Za-z0-9 /'&,-]{2,40}):\s*</\1>", re.I)
+
+# The Complete Book of Elves terminates its field labels with a PERIOD after a bullet —
+# `<SPAN CLASS=Symbol>·</SPAN> <B>Role.</B>` — so the colon form above finds none of them
+# and the book returned ZERO kits from 119 pages (ticket 13 finding 81). It is opt-in per
+# book and kind rather than global, because the same book's SUBRACE page bolds spell names
+# mid-sentence: applied there, `darkness.` becomes a field. One book, two conventions, and
+# the bullet is what tells them apart.
+LABEL_BULLET = re.compile(r"<SPAN CLASS=Symbol>\W{0,3}</SPAN></FONT>\s*<([IB])>\s*"
+                          r"([A-Z][A-Za-z0-9 /'&,-]{2,40})\.\s*</\1>"
+                          r"|<([IB])>\s*([A-Z][A-Za-z0-9 /'&,-]{2,40}):\s*</\3>", re.I)
+LABELS = {"colon": LABEL, "bullet": LABEL_BULLET}
 TAGS = re.compile(r"<[^>]+>")
 WS = re.compile(r"\s+")
 
@@ -37,15 +54,15 @@ TEXT_LABEL = re.compile(r"^([A-Z][A-Za-z'&/-]*(?:\s+[A-Za-z'&/-]+){0,3}):\s+(.+)
 NAV = re.compile(r"\s*Table of Contents\s*$", re.I)
 
 
-def fields_markup(raw):
+def fields_markup(raw, labels="colon"):
     """Twelve of the thirteen v1 books: <I>Label:</I> or <B>Label:</B>."""
-    marks = list(LABEL.finditer(raw))
+    marks = list(LABELS[labels].finditer(raw))
     if not marks:
         return [clean(raw)], []
     out = []
     for i, m in enumerate(marks):
         end = marks[i + 1].start() if i + 1 < len(marks) else len(raw)
-        out.append((m.group(2).strip(), clean(raw[m.end():end])))
+        out.append((((m.group(2) or m.lastindex and m.group(4)) or "").strip(), clean(raw[m.end():end])))
     return [clean(raw[:marks[0].start()])], out
 
 
@@ -158,6 +175,7 @@ STRATEGIES = {"markup": fields_markup, "typographic": fields_typographic}
 # returned 0 records from 112 pages. So is packing: CBE puts five subraces on one page and
 # CBGH gives each its own, so 'multi' is a book's habit too, not a kind's nature.
 BOOKS = {
+    "CBE":  {"kinds": {"kit": {"labels": "bullet"}}},
     "CBGH": {"strategy": "typographic",
              "kinds": {"subrace": {"marker": "Infravision", "multi": False}}},
 }
@@ -283,13 +301,14 @@ def split_multi(raw, marker, book=""):
     return out
 
 
-def parse(path: pathlib.Path, marker: str, strategy="markup"):
+def parse(path: pathlib.Path, marker: str, strategy="markup", labels="colon"):
     raw = path.read_text(encoding="cp1252", errors="replace")
     t = TITLE.search(raw)
     if not t:
         return None
     title = clean(t.group(1))
-    head, pairs = STRATEGIES[strategy](raw)
+    head, pairs = (fields_markup(raw, labels) if strategy == "markup"
+                   else STRATEGIES[strategy](raw))
     if not any(label == marker for label, _ in pairs):
         return None
     fields = dict(pairs)
@@ -367,7 +386,7 @@ def main():
                 parsed_all.append(rec)
                 records.append(to_record(rec, pack_id, target, ordinal=n))
         else:
-            p = parse(f, spec["marker"], strategy)
+            p = parse(f, spec["marker"], strategy, spec.get("labels", "colon"))
             if p is None:
                 skipped += 1
                 continue

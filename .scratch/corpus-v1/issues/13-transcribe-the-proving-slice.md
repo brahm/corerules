@@ -2348,6 +2348,51 @@ So the spell domain did not produce a new class of problem. It produced **more i
 subject problem**, which after eight books is the only structural gap that has grown every time it was
 measured.
 
+### Session 41 — a whole book was missing, and nothing could have said so
+
+Looking for the next book to model, the survey showed **CBE returning 0 kits from 119 pages**. The
+Complete Book of Elves has **eleven**, and one of them is the **Bladesinger** — the kit the project's
+own public README names as its example of what a pack supplies.
+
+### Finding 81 — a third label convention, and an omission with no symptom
+
+CBE writes its field labels as **`· Role.`** — a Symbol-font bullet, bold, terminated by a **period**.
+Eleven books use a colon; [finding 12](#finding-12--one-v1-book-carries-no-field-markup-at-all) found
+CBGH using none at all; this is the third convention, and the label regex had required a colon since
+session 1.
+
+**The failure mode is what matters.** CBGH's zero was *noticed* because ticket 08's slice named a book
+and the extractor returned nothing for it. CBE's zero was never noticed for forty sessions, because
+**a book with no kits is indistinguishable from a book whose kits are somewhere else** — the elves
+book does have subraces, they extracted fine, and nothing in the pipeline knows how many kits a book
+ought to have.
+
+That is a class of error the whole verification apparatus cannot reach.
+[Ticket 10](./10-mechanical-verification.md)'s tier one validates what is present;
+[finding 45](#finding-45--every-reference-in-the-proving-slice-is-dangling)'s reference counting
+reports what is pointed at. **Neither can report what was never extracted**, and this ticket now has
+two instances — CBE's eleven kits here, and the CTH `Special Hindrances` fields that
+[finding 69](#finding-69--the-second-level-also-recovers-fields-the-markup-lost) recovered. Both were
+silent absences found by a person looking at something else.
+
+### The fix is opt-in per book **and kind**, for a reason worth recording
+
+Widening the label to accept a period globally recovered CBE's kits and **broke the same book's
+subrace page**, which bolds spell names mid-sentence: `darkness.` became a field, the record split
+gained a group, and two records lost their names.
+
+So the period form is anchored on the **bullet** and enabled per `(book, kind)`. One book, two
+conventions, and the bullet is what tells them apart — which is the same shape as
+[finding 32](#finding-32--name-collisions-are-systematic-and-looking-for-them-found-apparatus)'s
+exclusion list, keyed by `(book, name)` because a bare name was not a safe key.
+
+The global attempt also surfaced a **sixteenth apparatus page**, and the first one *inside* a
+multi-record page: the elf subrace page opens with a template group whose `Ability Score Adjustments`
+reads *"Adjustments to be added to, or subtracted from, the base ability scores when creating
+characters."* It has its own marker and would have become a sixth subrace. The scoped fix avoids it;
+it is recorded because a template group inside a shared page is a shape finding 9's detector was never
+designed for.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against

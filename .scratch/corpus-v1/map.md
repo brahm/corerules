@@ -467,8 +467,12 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    re-read rather than discarded: ticket 06 objected to *grammar, nesting and precedence*, and a
    one-level clause has none of the three, so the decision was right about what it was defending and
    wrong only about how much the corpus asked for.
-8. **[Ticket 09](issues/09-extraction-pipeline.md)'s "field labels are markup" holds for twelve of
-   thirteen v1 books.** ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 12) *The
+8. **[Ticket 09](issues/09-extraction-pipeline.md)'s "field labels are markup" holds for eleven of
+   thirteen v1 books, and the corpus has THREE label conventions.** (Finding 81: the Complete Book of
+   Elves writes `· Role.` — bullet, bold, PERIOD — and returned **0 kits from 119 pages** for forty
+   sessions. It has eleven, including the Bladesinger. Unlike CBGH's zero, this one had **no symptom**:
+   a book with no kits looks exactly like a book whose kits are elsewhere, and nothing in the pipeline
+   knows how many a book should have. Neither tier of ticket 10 can report what was never extracted.) ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 12) *The
    Complete Book of Gnomes and Halflings* carries labels on **3%** of its pages against 15–42% for
    every sibling handbook, and the thirteen it has are adventure-hook titles rather than fields. Its
    records are typographic: the Homesteader's prerequisite is a sentence inside a paragraph. **The
