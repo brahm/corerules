@@ -865,11 +865,18 @@
           },
           "abilityCheck": {
             "$ref": "#/$defs/scalar",
-            "description": "A `scalar`, not a bare id. Absent for the two proficiencies Table 37 scores `NA` — Blind-fighting and Mountaineering have no ability check at all."
+            "description": "A `scalar`, not a bare id. Absent for the two proficiencies Table 37 scores `NA` — Blind-fighting and Mountaineering have no ability check at all. Absent also where the book scores the ABILITY as special, as Intimidation does: 'ability special, special modifier'."
           },
           "modifier": {
-            "type": "integer",
-            "description": "Absent where Table 37 scores `NA`."
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "const": "special"
+              }
+            ],
+            "description": "Ticket 13 finding 104: five Complete Thief's proficiencies score 'special modifiers' rather than a number — the modifier depends on circumstances the description sets out. Absent where a table scores NA; `special` where the book says so; an integer otherwise. The three states are different and the format now keeps them apart."
           }
         }
       }

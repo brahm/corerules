@@ -3137,6 +3137,58 @@ symptom, this time inside the tooling rather than the corpus.
 - **12 `follower` references**, which finding 99 already showed are not a missing kind: they point at
   classes and at creatures.
 
+### Session 54 — the Thief's own proficiencies, and a modifier that is not a number
+
+**435 records, 79 % resolving.** The Complete Thief's Handbook gives each of its proficiencies a page
+whose **first line is the score**, in a form regular enough to parse:
+
+> **Observation** 1 slot, Intelligence, 0 modifier. **Required:** Beggar, Cutpurse, Investigator, Spy,
+> Swindler, Troubleshooter. **Recommended:** Assassin, Bounty Hunter, Burglar, Fence, Smuggler.
+
+That second sentence is a **reverse index** — the proficiency listing the kits that need it — which no
+other book prints and which nothing in the pack format has a place for. It is the same fact the kits
+already state, written from the other end, and it would make an excellent consistency check: *does
+every kit this page names actually require it?*
+
+### Finding 104 — the modifier is not always a number
+
+Five of the Thief's proficiencies score **`special modifiers`** rather than a value, and Intimidation
+scores **`ability special, special modifier`** — neither the ability nor the modifier is fixed, and
+the description sets out the circumstances instead.
+
+The schema had `modifier: integer`, written from PHB Table 37 where every cell is numeric. It now
+admits three states, and they are genuinely different:
+
+| | means |
+|---|---|
+| an integer | the modifier is this |
+| `"special"` | the book says the modifier depends on circumstances it describes |
+| **absent** | there is no check at all — the PHB's Blind-fighting and Mountaineering |
+
+Collapsing `special` into `0` would have been the natural sloppy move and would have asserted
+something the book does not say. This is
+[finding 2](#finding-2--the-schema-accepted-a-semantically-empty-record-fixed)'s distinction a third
+time: *stated as absent*, *stated as variable*, and *not stated*.
+
+### Finding 105 — two books introduce the same proficiency, and the id must pick one
+
+`Alertness` and `Boating` are defined by **both** the Complete Thief's Handbook and the Complete
+Ranger's, with **identical scores** — 1 slot, Wisdom, +1.
+
+[Ticket 07](./07-identity-and-id-stability.md) derives identity from source position, and the pack
+prefix says **which book defines a thing**. When two books define the same thing, the prefix is a
+**choice, not a fact**: these carry `crh:` because the Ranger's compiled table was parsed first, and
+the Thief's Handbook is four years older and has the better claim.
+
+Left as it is, and recorded, because the alternative — renaming after the fact — is exactly the churn
+[finding 96](#finding-96--the-resolution-check-found-errors-nothing-else-could) showed is invisible
+until something resolves. But it means **a pack's ids encode the order its books were transcribed in**,
+which nothing in ticket 07 intended.
+
+The same session also found the corpus using **two names for one proficiency**: the Assassin's list
+says *Gather Intelligence* and the page is titled *Information Gathering*. Both were referenced, and
+both now point at `cth:information-gathering`.
+
 ### Still not done
 
 ~~The judgement pass~~ — **done in session 37; all 68 records carry effects** · the measured cost per record against

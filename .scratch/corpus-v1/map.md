@@ -577,7 +577,13 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    *exactly what it had been*. §7.1 chose declaration over discovery and ticket 05 had the manifest
    declare its files; neither says what happens when two of them name the same array. **Arrays merge.**
    A pack assembled from a dozen books will do this constantly.
-16e. **RESOLVED — 77% of references now land on a record.**
+21. **A pack's ids encode the order its books were transcribed in.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 105) `Alertness` and `Boating` are
+   introduced by **both** the Thief's and the Ranger's handbooks with identical scores. The prefix says
+   which book defines a thing, so when two do, it is a **choice** — these carry `crh:` because that
+   table was parsed first, and the Thief's is four years older. Ticket 07 derives identity from source
+   position and did not anticipate two sources for one thing.
+16e. **RESOLVED — 79% of references now land on a record.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) findings 101 and 102) Five kinds added —
    `spheres`, `spellSchools`, `spells`, `armor`, `grantedAbilities` — and the largest group turned out
    not to need a kind at all. **227 references pointed at abilities the kits themselves invent, 216 of
