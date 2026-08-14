@@ -2768,15 +2768,15 @@ races.
 
 | | attachables | whole pack |
 |---|---:|---:|
-| records carrying effects | 228 | 253 |
-| effects | 1,791 | 1,912 |
-| effects expressed **without a marker** | **1,386 (77%)** | **1,497 (78%)** |
+| records carrying effects | 237 | 270 |
+| effects | 1,791 | 1,898 |
+| effects expressed **without a marker** | **1,386 (77%)** | **1,483 (78%)** |
 | effects carrying an `UNMODELLED` marker | 405 (23%) | 415 (22%) |
-| **records complete** | **51 of 228 (22%)** | 53 of 253 (21%) |
-| references resolving | — | **3,835 of 3,854 (99.5%)** |
+| **records complete** | **51 of 237 (22%)** | 53 of 270 (20%) |
+| references resolving | — | **3,939 of 3,952 (99.7%)** |
 
-The pack is 1,023 records; the 770 in kinds with no `effects` array — spells, proficiencies, weapons,
-alignments, tables — are records, never incomplete ones, because they have nothing to express.
+The pack is 1,218 records; the 948 in kinds with no `effects` array — spells, proficiencies, weapons,
+tables, creatures — are records, never incomplete ones, because they have nothing to express.
 **The 77% has not moved in fourteen sessions and three books**, which is the most stable number this
 effort has produced.
 *Complete* means the record has effects, none is marked, and nobody flagged it unfinished — see
@@ -4006,6 +4006,66 @@ They are **kept**, with a note saying so. A record is the pack's reading of a ta
 book's own artifact, and **the reviewer checks one against the other**. Dropping it would remove the
 thing the review protocol compares to. Table 36 makes the point sharpest: the records carry each
 skill's name and gloss, and only the table carries **the d100 range it is rolled on**.
+
+### Session 66 — the creature vocabulary comes out of the field paths
+
+**1,218 records, 0 schema errors, and 3,939 of 3,952 reference occurrences resolve.** Ten ids remain.
+
+### Finding 141 — the third scalar arm had already solved the biggest shortfall, in one class of case
+
+[Finding 110](#finding-110--the-field-path-is-where-the-untyped-vocabulary-collects) concluded that a
+`when` clause describes the character and never his opponent, so a target-scoped bonus had to hide in
+the field path — `attackRoll.melee.vsOrc`, `opponent.attackRoll.titan`. Fourteen creature names in
+strings nothing checked, and [correction 23](../map.md) called it a cost to state.
+
+[Finding 136](#finding-136--the-predicate-could-not-name-what-a-character-is-so-it-lied) made a scalar
+able to name **any field path**, including one that does not belong to the character. That was written
+to fix `{ability: "phb:race"}`, and it turns out to close this too:
+
+```
+adjust attackRoll.melee by 1
+  when member {field: "opponent.creature"} anyOfIds [orc, half-orc, goblin, hobgoblin]
+```
+
+**Fourteen effects became four.** The dwarf goes from 52 effects to 45, the gnome from 18 to 11, and
+twelve creature names move out of unchecked strings into references that resolve.
+
+This is worth stating plainly because [the verdict](#the-verdict) names conditions as the format's
+largest shortfall — 94 of 415 markers — on the grounds that *the predicate can name the character and
+nothing else*. **That is now false for any discriminator the pack can name as a field.** It is not
+false for terrain, the round, or the campaign, which have no field either; the shortfall is smaller and
+sharper than it was, and it was narrowed by a change made for an unrelated reason.
+
+### Finding 142 — a creature record is a name the rules discriminate on
+
+The `creatures` kind holds **thirteen** — orc, half-orc, goblin, hobgoblin, kobold, gnoll, bugbear,
+ogre, ogre magi, troll, giant, titan, duergar — and it is deliberately **not** a monster.
+
+The Monstrous Manual is outside the v1 tier. What a troll's hit dice are is not here and will not be.
+What *is* here is that **the dwarf's own entry singles out four species to hit better and five to be
+attacked worse by**, and a character sheet has to say so. So the record is provenanced to the page that
+discriminates — the dwarf's entry, the gnome's — not to a bestiary the pack does not have.
+
+The duergar is the awkward one and says so in its own note: the CBGH names it as a species a character
+may take as an enemy, and the dwarves' book treats it as kin. It is recorded at the grain the referring
+rule uses.
+
+### The Complete Gnomes and Halflings' subraces
+
+Nine more `subraces`: **Rock, Svirfneblin, Tinker and Forest gnomes; Hairfoot, Tallfellow, Kender,
+Athasian and Furchin halflings** — the two subrace chapters entire, where only Stout had been
+transcribed. `cbgh:svirfneblin` and `cbgh:kender` had been hand-minted **by name** while every
+Attachable's id is file-derived; both references now point at the records.
+
+### What is left of the reference report
+
+**Ten ids, thirteen occurrences.** Three are book equipment outside the slice (`cbgh:hoopak`,
+`crh:machete`, and `phb:axe`, which stays ambiguous on purpose). Seven are real things nobody has
+transcribed: strongholds and fortifications, the Grand Druid, the holy symbol, the bard's followers,
+and the multi-class and dual-class arrangements.
+
+**None of the ten is a creature, a terrain, a proficiency group, a class, an alignment or a scalar** —
+every category that has produced a finding in this ticket is now closed.
 
 ### Still not done
 

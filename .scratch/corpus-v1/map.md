@@ -443,8 +443,8 @@ why it is a program and not a paragraph.
 | | attachables | whole pack |
 |---|---:|---:|
 | effects the format expressed cleanly | **77 %** | **78 %** |
-| **records expressed completely** | **22 %** (51 of 228) | 21 % (53 of 253) |
-| references resolving | — | **99.5 %** of 3,854 occurrences |
+| **records expressed completely** | **22 %** (51 of 237) | 20 % (53 of 270) |
+| references resolving | — | **99.7 %** of 3,952 occurrences |
 
 Both numbers matter and they disagree on purpose: the operations work nearly always, and records
 rarely close, because one unsayable clause leaves a fourteen-effect kit incomplete. For an Engine
@@ -685,6 +685,15 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    repair is declaration: `keyedBy.kind: "text"` says the Engine cannot index it, and **nine tables
    declare a `supplies`** while 92 are reference data. A3 applied to an axis, so that 'a table the
    Engine is waiting for' and 'reference data a reader consults' stop looking alike.
+36. **RESOLVED, in one class of case — the creature vocabulary comes out of the field paths.**
+   ([Ticket 13](issues/13-transcribe-the-proving-slice.md) findings 141 and 142) Correction 23 measured
+   fourteen creature names inside unchecked path strings, because a `when` clause could describe only
+   the character. Correction 32's third scalar arm — added to fix `{ability: "phb:race"}` — turns out
+   to close this too: `member {field: "opponent.creature"} anyOfIds [...]`. **Fourteen effects became
+   four**, and thirteen creatures became records: not monsters (the Monstrous Manual is out of tier)
+   but **names the rules discriminate on**, provenanced to the dwarf's and gnome's own entries. The
+   verdict's claim that *the predicate can name the character and nothing else* is now false for any
+   discriminator the pack can name as a field — still true for terrain, the round and the campaign.
 23. **The Engine's field vocabulary is far larger than the schema's, and nothing checks it.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 110) A `when` clause describes the
    CHARACTER — its subject is an ability or a level — and never his opponent. So every target-scoped

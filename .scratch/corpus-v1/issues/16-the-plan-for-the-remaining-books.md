@@ -159,9 +159,10 @@ Each of these is volume with a known method and no decision inside it.
    a block of five and was a block of one.
 6. **The remaining lookup tables** — the PHB prints 76 and the DMG 110; 6 are transcribed. `extract_tables.py`
    emits `supplies` and the row keys empty for a human, deliberately.
-7. **Terrains and creature vocabulary** — `cdh:forest`, `phb:orc`, and the fourteen creature names now
-   living inside field-path strings ([correction 23](../map.md)). Small, and it is a *kind* question
-   before it is a volume one.
+7. ~~**Terrains and creature vocabulary**~~ — **done in sessions 64 and 66**. The terrains were druid
+   BRANCHES and became classes with `variantOf`; the creatures became a kind, and the fourteen names
+   came out of the field paths into conditions (finding 141). It was a kind question, and the answer
+   was already in the schema.
 8. ~~**Spells**~~ — **done in session 61**: 470 records, the largest single block in the corpus.
 
 ## So: is the rest mechanical?

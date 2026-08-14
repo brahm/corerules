@@ -1297,6 +1297,17 @@
           }
         }
       }
+    },
+    "creatures": {
+      "description": "Ticket 13 finding 141. Correction 23 measured fourteen creature names living inside field-path STRINGS — `attackRoll.melee.vsOrc`, `opponent.attackRoll.titan` — because a `when` clause could describe the character and nothing else, so the other party had to hide in the path. These are NOT monster stat blocks: the Monstrous Manual is outside the v1 tier, and what a troll's hit dice are is not transcribed here. A creature record is a NAME THE RULES DISCRIMINATE ON, provenanced to the page that discriminates — the dwarf's entry, the gnome's — and it exists so that `{member: {field: 'opponent.creature'}, anyOfIds: [...]}` has something to point at.",
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/record"
+          }
+        ]
+      }
     }
   },
   "required": [
