@@ -159,6 +159,41 @@ unmodellable. The Engine meets it the day someone models a religion's permit-lis
 day the pack stops being able to sidestep it. **Ticket 03 should be re-read with that in mind**: it is
 not blocking first light, and it is not gone.
 
+## Fixed, same session
+
+The eight collisions are gone and the pack is **1,229 records**.
+
+**Four were the same thing twice.** Table 37's Warrior, Wizard, Priest and Rogue proficiency groups
+**are** the four class groups — the PHB names them identically because a class buys from its own
+group — and the modelling had already half-admitted it: each proficiency-group record carried
+`openTo: [its own id]`, a self-reference nothing had ever read. They are now one record each, and
+only **General** remains in `proficiencyGroups`, because no class group is called General.
+
+**One was the book's own name, lost in transcription.** DD01473 lists the nine schools and calls that
+one **Lesser Divination**; the pack had shortened it to `Divination` and collided with the priest
+sphere. Restoring the book's name dissolves the collision instead of papering over it.
+
+**Three took a suffix** — `phb:armorer-skill`, `phb:bowyer-fletcher-skill`,
+`phb:healing-proficiency` — and the rule behind that is the interesting part:
+
+> **Always qualify when the set is open; minimally disambiguate when it is closed.**
+
+Spell ids are caster-qualified *always*
+([corpus finding 123](../../corpus-v1/issues/13-transcribe-the-proving-slice.md#finding-123--30-spell-names-are-two-different-spells)),
+because more books will add spells and a scheme that renames `phb:bless` the day a wizard Bless
+arrives is the instability ticket 07 exists to prevent. Secondary skills are **Table 36 entire, 23
+rows, closed forever** — so the two colliders can move and nothing later can undo it.
+
+**And the kind was deliberately NOT put into the id.** It is the obvious fix and it is wrong: kinds
+were still being created in the corpus effort's last ten sessions, and
+[finding 105](../../corpus-v1/issues/13-transcribe-the-proving-slice.md#finding-105--a-packs-ids-encode-the-order-its-books-were-transcribed-in)
+established that the prefix names *the book that introduces a thing*. **A kind is not stable enough to
+be part of identity.**
+
+`validate.py` now reports duplicates, **counted apart from schema errors** — the schema cannot express
+this at all, because uniqueness spans arrays and a JSON Schema sees one array at a time. Verified by
+introducing a collision on purpose.
+
 ### What this says about the other tickets
 
 - **[02](./02-what-the-engine-does-with-an-unmodelled-effect.md)** — a real character touched **four**

@@ -788,6 +788,27 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    remaining books inherits that risk untouched.** What the effort can offer instead is the bar: on the
    one book with a repeating shape, a hundred lines of rules did the judgement half and stated its own
    refusals better than a human doing it fifty-one times.
+40. **RESOLVED — an id is unique within a book only by luck, and the checker could not see it.**
+   ([Engine ticket 04](../engine-v1/issues/04-first-light.md)) The first program to index the pack by
+   id found **eight ids claimed by two records each**: `phb:warrior` is both the warrior class group
+   and the warrior proficiency group, `phb:divination` both a school and a sphere, `phb:armorer` both
+   a proficiency and a secondary skill. `validate.py` never saw it because it built `defined` as a
+   **set** — invisible to the one tool whose job is identity, and a consumer that indexes by id
+   silently loses one of each pair.
+   **The repair was not to put the kind in the id.** A kind is not stable enough for identity: kinds
+   were still being created in the last ten sessions of the corpus effort, and finding 105 established
+   that the prefix names *the book that introduces a thing*, not its type. Instead:
+   **four of the eight were the same thing twice** — Table 37's Warrior, Wizard, Priest and Rogue
+   proficiency groups ARE the four class groups, which the modelling had already half-admitted by
+   giving each an `openTo` pointing at itself. They are now one record each.
+   **One was the book's own name, lost.** DD01473 lists the nine schools and calls this one *Lesser
+   Divination*; restoring that dissolves the collision with the priest sphere rather than papering
+   over it.
+   **Three took a suffix**, and the rule behind that is worth keeping: **always qualify when the set
+   is open, minimally disambiguate when it is closed.** Spell ids are caster-qualified always, because
+   more books will add spells; the 23 secondary skills are a closed table, so only the two colliders
+   move. The checker now reports duplicates, counted apart from schema errors **because JSON Schema
+   cannot express uniqueness that spans arrays.**
 23. **The Engine's field vocabulary is far larger than the schema's, and nothing checks it.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 110) A `when` clause describes the
    CHARACTER — its subject is an ability or a level — and never his opponent. So every target-scoped

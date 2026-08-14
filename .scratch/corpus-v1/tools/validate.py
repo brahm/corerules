@@ -92,17 +92,30 @@ def main():
     # them, grouped by prefix, without failing: a pack that points outward is normal, and a
     # pack every one of whose references points outward is worth knowing about.
     defined, refs = set(), collections.Counter()
+    duplicates, dup_kind = [], {}
     for arr, recs in doc.items():
         if arr == "manifest":
             continue
         for r in recs:
+            # Ticket 04 of the Engine map. `defined` was a SET, so an id claimed by two
+            # kinds was invisible to the one tool whose job is identity — eight of them,
+            # found by the first program that indexed the pack by id. A collision is not
+            # a warning: a consumer silently loses one of the two records. Counted apart
+            # from schema errors because the schema CANNOT express it: uniqueness spans
+            # arrays, and a JSON Schema sees one array at a time.
+            if r["id"] in defined:
+                duplicates.append(f"{r['id']}  ({dup_kind[r['id']]} and {arr})")
+            dup_kind[r["id"]] = arr
             defined.add(r["id"])
             collect(r, refs)
     unresolved = collections.Counter(i.split(":")[0] for i in refs if i not in defined)
     undeclared = sorted(p.name for p in pack.glob("*.json")
                         if p.name != "manifest.json" and p.name not in manifest.get("files", []))
 
-    print(f"\n{total} records, {len(errors)} schema errors")
+    for d in duplicates:
+        print(f"  DUPLICATE  {d}")
+    print(f"\n{total} records, {len(errors)} schema errors"
+          + (f", {len(duplicates)} duplicate ids" if duplicates else ""))
     if missing:
         print(f"  declared but absent: {', '.join(missing)}")
     if undeclared:
@@ -114,7 +127,7 @@ def main():
         n = sum(unresolved.values())
         print(f"  references resolved by the Engine, not here: {n} of {len(refs)} "
               f"({', '.join(f'{k}: {v}' for k, v in unresolved.most_common())})")
-    return 1 if errors or missing else 0
+    return 1 if errors or missing or duplicates else 0
 
 
 if __name__ == "__main__":
