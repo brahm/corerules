@@ -1050,7 +1050,7 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    **Two rows were held out by hand.** Table 44 indents `Dagger or dirk` under Crossbow — the row that
    follows the crossbow block alphabetically, and not a crossbow; a slip in the table or its
    rendition, and the only one in 79 rows.
-50. **A bound stated over item properties has no vocabulary, and 72 effects want one.**
+50. **RESOLVED, on both sides — the property the books discriminate on most is transcribable, and the one they never state is measurably absent.**
    ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md)) *Metallic
    weapons*, *more than a tenth metal by weight*, *metal weapons larger than a knife*, *armour other
    than leather*, *the concealable ones*, *all non-metal armour*. A `weaponProficiency` record carries
@@ -1059,6 +1059,27 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    *metallic* is not computable at all. **Enumeration cannot reach these**, so correction 48 solves
    the restriction problem for 125 effects and leaves this 72 untouched — which is the honest
    statement of the boundary, not a gap in it.
+   **Applied**, and the 72 turned out to be **34** once correction 46 had removed the permit-lists
+   and the false positives were dropped. Sorted by the property each names:
+   **16 melee/missile · 8 material · 8 armour type · 3 concealable · 2 handedness · 1 size.**
+   **The dominant one is answerable, and the answer was in a table nobody had transcribed.** Sixteen
+   kit bounds say *"a melee weapon"* or *"a missile weapon"*, and the books state that in the RANGE
+   tables rather than the weapon tables. **PHB Table 45 and the Complete Fighter's Missile Weapon
+   Ranges are now in the pack** — 38 entries across 34 weapons, `range` as an array because Table 45
+   prints one line per launcher-and-ammunition pair, which is correction 53's lesson arriving again.
+   **The distinction is three-way, not two**, and the book says so — the Giant Killer earmarks slots
+   for *"missile or hurled weapons"*. Derived from data the pack now holds: a weapon with no range is
+   **melee** (87); one with a range and its own damage is **hurled** (21); one with a range and no
+   damage of its own is a **launcher** (11), because the damage is in the ammunition. **32 of 119
+   weapons are usable at a distance**, and no kit bound has to guess which.
+   **Material is absent, and that is now measured rather than assumed.** Every table in all twelve
+   books and the DMG was searched for a Material column: the only hits are Table 41 *Weapon
+   Construction*, which gives a smith's time and cost, and planar prose. **No book states what a
+   weapon is made of.** So the Rocktender's *"metallic weapons"*, the Treetender's *"more than a
+   tenth metal by weight"* and the Forestwalker's wooden weapon are **8 effects that no field could
+   fix**, because the fact is not in the source. That is the format's boundary, stated with the
+   evidence instead of suspected.
+   Three more — *"the concealable ones"* — are a judgement and stay marked.
 51. **One limitation is excepted under two different `kind`s, and the pack cannot say which is
    right.** ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md),
    applying correction 48) `phb:thief-weapon-restriction` is lifted as `weaponProficiency` by the
@@ -1128,6 +1149,15 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    standing constraint and JSON as the format that serves it; a format with no canonical form serves
    it only by luck. Pick one, normalise the 27, and have the checker report a file that does not
    round-trip — which is cheap, because the checker already parses every one of them.
+56. **Table 45 prints `Hammer` where Table 44 prints `Warhammer`.**
+   ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md), applying
+   correction 50) The same weapon under two names, two pages apart, in the Player's Handbook — §7.3
+   for the third time **inside one book**, after the thief's *lasso* that Table 44 does not carry and
+   its *staff* that the table calls a quarterstaff. Resolved by hand here. The pattern is worth more
+   than the instance: **the corpus's naming is consistent within a table and not between tables**,
+   and every cross-table join this effort has attempted has paid for it — corrections 46, 49, 52 and
+   53 all hit it. A name map is not an optimisation; it is the missing piece four corrections have
+   asked for separately.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

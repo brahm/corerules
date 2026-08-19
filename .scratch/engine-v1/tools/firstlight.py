@@ -330,6 +330,24 @@ class Character:
                 return None, None
         return None, "does none"
 
+    def reach(self, weapon):
+        """Correction 50. Sixteen kit bounds are stated over 'a melee weapon' or 'a missile
+        weapon', and the books answer it in the RANGE tables rather than the weapon tables.
+        Three-way, not two — the Complete Fighter's Giant Killer says 'missile or hurled'."""
+        r = self.pack.by_id.get(weapon) or {}
+        if not r.get("range"):
+            return "melee"
+        # Within the weapons usable at a distance, a LAUNCHER carries no damage of its own —
+        # correction 53's split — and a HURLED weapon carries its own. `ammunition` is not the
+        # test: correction 46 left the short bows without one because the book never names
+        # their arrow, and they are launchers all the same.
+        dmg, src = self.damage(weapon)
+        if src == "does none":
+            return "hurled"          # the lasso and the net: thrown, and they entangle
+        if r.get("damageSmallMedium"):
+            return "hurled"
+        return "launcher"
+
     def expand(self, ids):
         """A member may itself be a group — Table 44 nests Bastard sword under Sword, and the
         Complete Fighter's nests Katana under Sword under nothing. Correction 49: a bound that

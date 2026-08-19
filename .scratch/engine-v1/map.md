@@ -169,7 +169,11 @@ _Resolved:_
   ticket existed for**: 60 limitation records, 58 marked grants replaced by a `forbid` and an
   `except`, **markers 381 → 323**, and a priest of Agriculture now computes the book's six weapons
   exactly. **62 effects of cross-layer parameterisation became 3** — the CBD kits, which need only
-  the ability to name *"the limitation my Deity imposes"*.
+  the ability to name *"the limitation my Deity imposes"*. **And 50**: of its 34 remaining predicate
+  bounds, **16 are answerable** — melee-versus-missile lives in the range tables, now transcribed,
+  and the split is three-way (launcher 11, hurled 21, melee 87) — while **material is measurably
+  absent from every table in twelve books**, which makes 8 of them the edge of the corpus rather
+  than a gap in the format.
 
 ## Not yet specified
 

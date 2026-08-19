@@ -396,6 +396,52 @@ the Pariah's `forbid` has a subject that **exists**; the Vindicator's `except` h
 say exactly that. **62 effects became 3**, and what remains is a single missing capability rather
 than a family of them.
 
+## Correction 50, applied — and the boundary is now measured on both sides
+
+The ticket said 72 predicate bounds and left them explicitly unsolved. After correction 46 removed
+the permit-lists, **34 remain**, and sorting them by the property each names changes the answer:
+
+| | property | answerable? |
+|---:|---|---|
+| **16** | melee / missile | **yes, and it was in a table nobody had transcribed** |
+| 8 | material — metallic, wooden, a tenth metal by weight | **no, and now measurably so** |
+| 8 | armour type | partly — the seven armour records are already category-shaped |
+| 3 | concealable | no; a judgement |
+| 2 | handedness | partly |
+| 1 | size | yes; `size` exists |
+
+**The books state melee-versus-missile in the RANGE tables, not the weapon tables.** PHB Table 45 and
+the Complete Fighter's Missile Weapon Ranges are now in the pack — 38 entries across 34 weapons, with
+`range` an array because Table 45 prints one line per launcher-and-ammunition pair (*"Longbow, flight
+arrow"* 70/140/210 against *"Longbow, sheaf arrow"* 50/100/170). Correction 53's lesson, arriving a
+second time.
+
+**And the distinction is three-way, which the book says out loud** — the Giant Killer earmarks slots
+for *"missile or hurled weapons"*:
+
+```
+launcher    11   a range and no damage of its own; the damage is in the ammunition
+hurled      21   a range and its own damage
+melee       87   no range
+
+usable at a distance: 32 of 119
+```
+
+Classifying the lasso and the net needed correction 53's other half: they carry a range and no
+damage, and they are **hurled** rather than launchers because they do no damage **by design**. Every
+correction this ticket produced is load-bearing in that one line.
+
+### The negative half, measured
+
+Every table in all twelve books and the DMG was searched for a Material column. The only hits are
+Table 41 *Weapon Construction* — a smith's time and cost — and planar prose. **No book states what a
+weapon is made of.** The Rocktender's *"metallic weapons"*, the Treetender's *"more than a tenth
+metal by weight"*, the Forestwalker's wooden weapon: **8 effects that no field could fix, because the
+fact is not in the source.**
+
+That is the honest end of correction 50. **It is not a gap in the format; it is the edge of the
+corpus**, and the difference between those two was worth eight effects and a search to establish.
+
 ## Owed back to the corpus map
 
 - **Correction 48 — RESOLVED in this session, see above.** The
@@ -406,6 +452,6 @@ than a family of them.
   `phb:lance`, `phb:polearm`, `phb:sword`, `phb:bastard-sword` are `isGroup` with nothing in them,
   while the CFH's twenty are full. Permit-lists name these groups by preference — *bows (all)*,
   *swords (all)* — so an empty group is a bound that silently permits nothing.
-- **Correction 50 — a bound over item properties has no vocabulary, and 72 effects want one.** Weapon
+- ~~**Correction 50**~~ — **RESOLVED in this session, see above.** — a bound over item properties, and 72 effects want one.** Weapon
   records carry no material; armour is seven category-shaped records. Enumeration cannot express
   *metallic*, and this is the half of the restriction problem that a member list leaves untouched.
