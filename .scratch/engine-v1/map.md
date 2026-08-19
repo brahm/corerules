@@ -94,23 +94,34 @@ Four results are load-bearing for implementation and are easy to miss in 149 fin
   a table read returns `"+4"` where the contract says an integer; and two mutually exclusive marked
   bonuses summed into a wrong number on the first character anyone builds.
 
-_Three tickets remain open:_
+_Two tickets remain open:_
 
 - **[01 — Which spec does the Engine implement?](issues/01-which-spec-does-the-engine-implement.md)**
-  33 corrections are owed to `spec.md` and unwritten there, so the document a session reads still says
-  the superseded thing. Decides what day one reads. **Every other ticket inherits the answer.**
-- **[02 — What the Engine does with an UNMODELLED effect](issues/02-what-the-engine-does-with-an-unmodelled-effect.md)**
-  380 marked effects; the spec does not contain the word. A3 is the right idea at the wrong grain, and
-  §5.2's line splits the markers badly: 122 are validation-shaped and survivable, 81 are computation-
-  shaped and each is a wrong number.
+  Classified: of 44 corrections, ten are already in the schema and **seventeen touch `spec.md`** —
+  twelve reversals and five silences. The other seventeen are history or method, and **two are
+  retracted diagnoses that folding the list in wholesale would write into the spec.** The decision
+  itself — what day one reads — is still open. **Every other ticket inherits the answer.**
 - **[03 — Precedence when two Attachables contradict](issues/03-precedence-when-two-attachables-contradict.md)**
   The corpus map's one unclosed hole, and the Engine is the first thing that has to actually resolve
   it. Commutation says nothing about inconsistency.
-**All three are now better posed than when they were charted**, which was the point of running 04
-first. Ticket 02 has a measured exposure — four marked effects on a real character, one of them
-demonstrably wrong. Ticket 03 turns out **not to be reachable in the current pack at all**, because
-the transcription sidestepped the contradiction with a marker. Ticket 01 has its first evidence that
-the corrections list is not a frozen document: **three more corrections came out of one afternoon.**
+
+Both were better posed than when they were charted, which was the point of running 04 first — and
+running 02 to a decision has now sharpened them again. Ticket 03 turns out **not to be reachable in
+the current pack at all**, because the transcription sidestepped the contradiction with a marker.
+Ticket 01 has its evidence that the corrections list is not a frozen document: **four corrections
+came out of the Engine's first two tickets.**
+
+_Resolved:_
+
+- **[02 — What the Engine does with an UNMODELLED effect](issues/02-what-the-engine-does-with-an-unmodelled-effect.md)**
+  **The operation decides, not the category — and a marked effect never reaches the total.** On a
+  structural operation (222 of 381) the thing is applied and the marker rides on that entry; on a
+  numeric one (159) the value is withheld from the sum and printed as a named situational line. The
+  declared category is prose — **32 labels, twelve used once, `CONDITION` and `CONDITIONS` both
+  present** — and the Engine never reads it, because `grant`/`forbid`/`require`/`except` against
+  `adjust`/`set` is §5.2's own line expressed in a field the schema already enforces. Exposure was
+  measured over all 36,126 combinations: **median three markers a sheet, worst fourteen** — few
+  enough to print, too many to prompt about. Sent back one correction (45).
 
 ## Not yet specified
 

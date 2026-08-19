@@ -80,10 +80,15 @@ specification.
 
 Three things stand between the corrections list and a closeable spec, and none is a correction:
 
-1. **The spec has no concept of an `UNMODELLED` marker.** 380 of them, invented mid-transcription and
-   never fed back. [Ticket 02](./02-what-the-engine-does-with-an-unmodelled-effect.md) is open and its
-   answer is §5 material. **The biggest gap between spec and pack is not on the corrections list at
-   all**, because the corrections list was written by the effort that invented the markers.
+1. ~~**The spec has no concept of an `UNMODELLED` marker.**~~ **Decided.**
+   [Ticket 02](./02-what-the-engine-does-with-an-unmodelled-effect.md) resolved it: the operation
+   decides, not the category, and a marked effect never reaches the total. §5 gains a **third kind of
+   answer** beside a value and a refusal — *withheld from the total, shown in full, attributed* — and
+   §5.2's validation/computation line is restated at the grain of an effect, where `grant`/`forbid`/
+   `require`/`except` against `adjust`/`set` already draws it. **This was the biggest gap between spec
+   and pack and it was not on the corrections list at all**, because the list was written by the effort
+   that invented the markers. It also produced correction 45, so **the list is now 45 and still not
+   frozen** — which is the standing argument against updating `spec.md` before the Engine runs.
 2. **Contradiction between Attachables is unresolved** — [ticket 03](./03-precedence-when-two-attachables-contradict.md),
    which is also §13's known unknown #1, the one thing 71 sessions of transcription never closed. §4.3
    cannot be written correctly until it is decided.

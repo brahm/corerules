@@ -924,6 +924,18 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    session 35**, and it recovered more than force: **31 top-level fields** across seven books that the
    `<I>` markup silently dropped, including four whole `Special Hindrances` fields in CPAH. Neither
    the schema nor the validator could have caught those, since a record without that field is valid.
+45. **A marker is a note about the format written at a moment, and the format kept moving — 37 are
+   already stale.** ([Engine ticket 02](../engine-v1/issues/02-what-the-engine-does-with-an-unmodelled-effect.md))
+   37 of the pack's 381 `UNMODELLED` markers say, in the transcriber's words, *"the predicate is a flat
+   conjunction and cannot express disjunction, so the condition is carried as text."* Finding 10 added
+   the `anyOf` clause arm in schema commit `b12e851` and **nobody went back**; every one of the 37 is
+   expressible today. Worse, 36 of them stand beside an **unmarked sibling writing the same field**, so
+   an Engine that applies marked effects pays 36 priesthoods **+10% experience where the book says
+   +5%** — a wrong number manufactured by the marker convention rather than by the books. **Nothing
+   ties a marker to the schema version that provoked it**, so a marker cannot expire and no check can
+   tell a live one from a dead one. Re-express the 37 with `anyOf` and delete the doubled siblings.
+   **The first correction the Engine sent back**, and evidence that closing this map did not make its
+   pack immutable.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

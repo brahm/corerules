@@ -66,7 +66,13 @@ class Character:
         self.fields = collections.defaultdict(lambda: {"base": None, "adjust": 0, "set": [],
                                                        "from": []})
         self.granted, self.forbidden, self.excepted, self.required = [], [], [], []
-        self.approximate = []          # fields touched by a marked effect
+        # Ticket 02's decision, applied. A marked effect does not reach the total.
+        # On a STRUCTURAL op the thing is right and its edges are under-described, so it
+        # is applied and the marker rides along on that entry. On a NUMERIC op the number
+        # is right and the circumstance is missing, so it never joins the sum — it becomes
+        # a named situational line the player applies when the circumstance holds.
+        self.riders = {}               # src -> marker text, on an applied entry
+        self.situational = []          # (field, op, value, src, text) — NOT in the total
         self.notes = []
 
     # -- predicate ------------------------------------------------------
@@ -189,8 +195,14 @@ class Character:
                 continue
             op = e["op"]
             if op in ("adjust", "set"):
-                f = self.fields[e["field"]]
                 val = self.operand(e.get("by") if op == "adjust" else e["to"], src)
+                if marked:
+                    # Withheld from the total, kept in full beside it. This is what stops
+                    # the 36 priesthoods paying +10% where the book says +5%: the unmarked
+                    # conditional sibling stays in the sum, the marked twin stands apart.
+                    self.situational.append((e["field"], op, val, src, e["text"]))
+                    continue
+                f = self.fields[e["field"]]
                 if op == "adjust":
                     if isinstance(val, int):
                         f["adjust"] += val
@@ -199,8 +211,6 @@ class Character:
                 else:
                     f["set"].append((val, src))
                 f["from"].append(src)
-                if marked:
-                    self.approximate.append((e["field"], src, e["text"][:100]))
             elif op == "grant":
                 self.granted.append((src, e.get("ref") or
                                      f"«{e['defines']['name']}»"))
@@ -211,6 +221,8 @@ class Character:
                 self.excepted.append((src, e["ref"]))
             elif op == "require":
                 self.required.append((src, e["kind"], e["count"], e.get("from")))
+            if marked and op not in ("adjust", "set"):
+                self.riders[src] = e["text"]
             if e.get("ref"):
                 self.pack.get(e["ref"], src)
 
@@ -268,31 +280,36 @@ def main():
     print(f"CHARACTER: {who}, level {a.level}")
     print("  " + ", ".join(f"{k[:3].title()} {v}" for k, v in scores.items()))
 
-    print("\nFIELDS")
+    print("\nFIELDS — the total, and nothing in it is approximate")
     for path in sorted(c.fields):
-        v = c.view(path)
-        mark = "  ~" if any(p == path for p, _, _ in c.approximate) else "   "
-        print(f"{mark} {path:<44}{v}")
+        print(f"    {path:<44}{c.view(path)}")
 
     print(f"\nGRANTED ({len(c.granted)})")
     for src, ref in c.granted:
         r = pack.by_id.get(ref)
         print(f"    {(r['name'] if r else ref):<40}{src}")
+        if src in c.riders:
+            print(f"        \u2937 {c.riders[src]}")
     if c.forbidden:
         print(f"\nFORBIDDEN ({len(c.forbidden)})")
         for src, ref in c.forbidden:
             r = pack.by_id.get(ref)
             print(f"    {(r['name'] if r else ref):<40}{src}")
+            if src in c.riders:
+                print(f"        \u2937 {c.riders[src]}")
     if c.required:
         print(f"\nCHOICES OWED ({len(c.required)})")
         for src, kind, n, frm in c.required:
             print(f"    {n} x {kind:<34}{'from ' + str(len(frm)) + ' options' if frm else 'unbounded'}"
                   f"   {src}")
 
-    if c.approximate:
-        print(f"\nAPPROXIMATE — a marked effect fed these ({len(c.approximate)})")
-        for path, src, why in c.approximate:
-            print(f"    {path:<30}{src:<18}{why}")
+    if c.situational:
+        print(f"\nSITUATIONAL — withheld from the total, applied when the circumstance "
+              f"holds ({len(c.situational)})")
+        for path, op, val, src, why in c.situational:
+            shown = f"{val:+d}" if isinstance(val, int) else str(val)
+            print(f"    {path:<30}{shown:<12}{src}")
+            print(f"        {why}")
 
     if c.notes:
         print("\nNOTES")
