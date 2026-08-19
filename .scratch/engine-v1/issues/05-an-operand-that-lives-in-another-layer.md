@@ -359,6 +359,43 @@ now read as the books write them:
 - **`Dagger or dirk` is indented under Crossbow** in Table 44 — the row that follows the crossbow
   block alphabetically, and not a crossbow. Excluded by hand; the only slip in 79 rows.
 
+## Correction 46, applied — and it is what this ticket was for
+
+60 limitation records (59 priesthoods and `phb:priest-weapon-restriction`), **58 marked grants
+replaced by a `forbid` and an `except`**, and the pack's markers fell **381 → 323** with permit-list
+mentions falling **69 → 11**. 1,298 records, 0 schema errors.
+
+```
+a standard cleric, no deity     18 of 119   bound by Standard Cleric Weapon Restriction
+a priest of Agriculture          6 of 119   bound by Agriculture: Weapons Permitted
+                                            LIFTED  Standard Cleric Weapon Restriction
+      Bill, Footman's flail, Hand or throwing axe, Horseman's flail, Scythe, Sickle
+a priest of War                 42 of 119   from 12 members, expanded through the groups
+a priest of Oracles             20 of 119   from 15 members
+```
+
+The Agriculture six are the book's *"Bill, flails (both), hand-throwing axe, scythe, sickle"* exactly.
+**Every decision this ticket took is load-bearing in that output**: correction 48's `members`,
+correction 49's group expansion, correction 53's launcher rule, and ticket 03's `except` — which had
+13 uses and now has 72.
+
+Two things had to be true first, and neither was obvious when the ticket was written:
+
+- **The CPRH prints its own New Weapons List, and its `Bill` is not Table 44's `phb:bill-guisarme`** —
+  one-handed, size S, 1d4/1d8, against a large two-handed polearm. Twelve priesthoods permit "bill".
+  Trusting the name would have resolved silently and wrongly, which is §7.3 with teeth.
+- **The standard cleric's restriction is a predicate, not a list** — *"only blunt, bludgeoning
+  weapons"* — and it is the one predicate bound of correction 50's 72 whose property the pack
+  already carries. Derived from `damageType == B`, with both judgements written on the record.
+
+### What is left of this ticket
+
+The three CBD kits, and only the naming. The Temple Guard's `require` now has a set that **exists**;
+the Pariah's `forbid` has a subject that **exists**; the Vindicator's `except` has a rule that
+**exists** — and none of them can say *"the one my Deity imposes"*. Their markers were rewritten to
+say exactly that. **62 effects became 3**, and what remains is a single missing capability rather
+than a family of them.
+
 ## Owed back to the corpus map
 
 - **Correction 48 — RESOLVED in this session, see above.** The

@@ -165,7 +165,11 @@ _Resolved:_
   Table 44's weapons carried no damage, because in 2e the launcher has the speed factor and the
   ammunition has the damage — **112 of 117 weapons now state one.** And **54**, which came out of 53
   and is applied: `isGroup` spelled **three** relations in two directions, so `groupKind` became the
-  whole statement for weapons and `isGroup` is now refused there outright.
+  whole statement for weapons and `isGroup` is now refused there outright. **And 46, the one this
+  ticket existed for**: 60 limitation records, 58 marked grants replaced by a `forbid` and an
+  `except`, **markers 381 → 323**, and a priest of Agriculture now computes the book's six weapons
+  exactly. **62 effects of cross-layer parameterisation became 3** — the CBD kits, which need only
+  the ability to name *"the limitation my Deity imposes"*.
 
 ## Not yet specified
 

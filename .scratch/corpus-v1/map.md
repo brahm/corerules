@@ -956,8 +956,8 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    tell a live one from a dead one. Re-express the 37 with `anyOf` and delete the doubled siblings.
    **The first correction the Engine sent back**, and evidence that closing this map did not make its
    pack immutable.
-46. **The priestly weapon restriction has no record, and three kits and sixty priesthoods need
-   it.** ([Engine ticket 03](../engine-v1/issues/03-precedence-when-two-attachables-contradict.md))
+46. **RESOLVED — the priesthood weapon lists are records now, and the largest marker cluster in the
+   pack became an operation.** ([Engine ticket 03](../engine-v1/issues/03-precedence-when-two-attachables-contradict.md))
    `limitations` holds **seven PHB restrictions and every one is pierced by at least one kit** through
    `except` — the Assassin names `phb:thief-weapon-restriction` rather than out-ranking it. The
    priestly weapon limit is not among the seven, and everything downstream fails for that one reason:
@@ -966,6 +966,35 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    `phb:ventriloquism`, Treetender `phb:bow`) name **the thing permitted instead of the rule pierced**.
    Not new machinery: one record per priesthood plus the PHB's own, and it converts ticket 02's
    largest marker cluster from prose into an operation.
+   **Applied.** 60 limitation records — 59 priesthoods plus `phb:priest-weapon-restriction` — and
+   **58 marked grants replaced by a `forbid` and an `except`.** The pack went 1,236 → 1,298 records,
+   0 schema errors, and **markers fell 381 → 323** while mentions of a permit-list fell **69 → 11**.
+   It computes, on real data: a standard cleric permits **18** weapons, a priest of Agriculture
+   **6** — the book's *"Bill, flails (both), hand-throwing axe, scythe, sickle"* exactly — a priest
+   of War **42** and one of Oracles **20**, both expanded through the groups correction 49 filled.
+   **The standard cleric's restriction is derived, not read.** *"Standard clerics … are allowed to
+   use only blunt, bludgeoning weapons"* is a predicate over an item property, and the property
+   exists: every weapon typed exactly `B`. Two judgements are recorded on the record — the three
+   `P/B` weapons are excluded, and the sling and staff sling are included through correction 53's
+   rule that a launcher's type is its ammunition's.
+   **Each priesthood `except`s the cleric's restriction and `forbid`s its own** — ticket 03's
+   declared precedence doing at 59 records what it had 13 uses for, and settled by the Complete
+   Priest's own sentence that the maul suits *"clerics and specific priests who aren't allowed to use
+   bladed weapons"*: some are, some are not.
+   **Two weapons had to be transcribed first.** The CPRH prints its own New Weapons List, and its
+   **Bill is not Table 44's `phb:bill-guisarme`** — one-handed, size S, 1d4/1d8, against a large
+   two-handed polearm. Twelve priesthoods permit *"bill"* and every one means the new one; trusting
+   the name would have resolved silently and wrongly. The **Maul** was named by nine priesthoods and
+   printed in no book the pack had read. The other four rows of that table — lasso, net, nunchaku,
+   scythe — are reprints with **identical stats**, and reuse the existing ids.
+   Of 414 name tokens across the 59 lists, all resolve. **`mace` means both maces** (Table 44 has no
+   Mace heading), and the sword lists are read out of a parenthetical whose first entry a naive
+   comma-split swallows.
+   **What is left is smaller and sharper.** The three CBD kits still cannot be written, and their
+   markers were rewritten to say why: the losing side now EXISTS, and what is missing is only the
+   ability to name *"whichever limitation my Deity imposes"*. That is the whole of
+   [Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md)'s remaining
+   gap.
 47. **`set` cannot tell agreement from disagreement, because the operand carries the scale.**
    ([Engine ticket 03](../engine-v1/issues/03-precedence-when-two-attachables-contradict.md)) The PHB
    gives the halfling's underground direction sense as `3- on 1d6`; the CBGH gives the Stout's as
@@ -1089,6 +1118,16 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    lasso and **made the lasso look like a bow**. A heading says *these rows are printed under this
    name*; a priced group says *these weapons may be bought together for three slots*. They are not
    the same relation and the schema should not spell them the same.
+55. **The pack has no canonical serialisation, and five of its 27 files disagree with the other 22.**
+   ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md), applying
+   correction 46) `cfh-weapons.json`, `crh-weapons.json`, `cprh-weapons.json`, `limitations.json`
+   and `weapon-proficiencies.json` are written with one space of indentation; the other 22 use two.
+   Nothing records which is right, so **any tool that rewrites a file picks one and reformats the
+   whole thing.** Applying correction 46 did exactly that, and very nearly committed a **39,000-line
+   diff for 61 edits** — caught only by reading `git diff --stat`. §7.1 names diffability as a
+   standing constraint and JSON as the format that serves it; a format with no canonical form serves
+   it only by luck. Pick one, normalise the 27, and have the checker report a file that does not
+   round-trip — which is cheap, because the checker already parses every one of them.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack
