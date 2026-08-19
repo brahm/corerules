@@ -1012,7 +1012,7 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    ability to name *"whichever limitation my Deity imposes"*. That is the whole of
    [Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md)'s remaining
    gap.
-47. **`set` cannot tell agreement from disagreement, because the operand carries the scale.**
+47. **RESOLVED — A3 governs what a record may CLAIM, not what a consumer may COMPUTE.**
    ([Engine ticket 03](../engine-v1/issues/03-precedence-when-two-attachables-contradict.md)) The PHB
    gives the halfling's underground direction sense as `3- on 1d6`; the CBGH gives the Stout's as
    `50`. **They are the same probability.** The pack records a collision between two layers, the
@@ -1225,6 +1225,18 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    carry the **variant** and nothing says it is one. **A3 is about a pack declaring which rule-sets
    it provides; this is a rule the BOOK marks optional inside a set the pack does provide**, and §5.1
    has no shape for it. Small, and it is the first optional rule the corpus has had to hold.
+58. **One ability, two field paths, and the two books never even collided.**
+   ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md), applying
+   correction 47) The dwarf, the gnome and the halfling all write `detect.gradeOrSlope`; the Stout
+   halfling wrote **`detect.slopingPassage`**, a path used by that record alone, for the same
+   ability. So the Player's Handbook's `3- on 1d4` and the Complete Book of Gnomes and Halflings'
+   `75%` — **the same probability** — sat on different fields and no check could see them.
+   Correction 47's contradiction was at least VISIBLE; this one was not, and it is the same rule.
+   **This is [correction 23](#corrections-owed-to-the-v1-spec) materialising with a wrong outcome
+   for the first time**: the Engine's field vocabulary is larger than the schema's and nothing
+   checks it, so a transcriber inventing a near-synonym costs a silent duplicate. Unified by hand.
+   Eleven `detect.*` paths exist and this was the only collision — but there is no reason it would
+   be the last, and the remaining eleven books will each arrive with their own wording.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

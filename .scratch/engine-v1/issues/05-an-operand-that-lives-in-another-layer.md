@@ -485,3 +485,33 @@ correction where something can check it, made once more.
 - ~~**Correction 50**~~ — **RESOLVED in this session, see above.** — a bound over item properties, and 72 effects want one.** Weapon
   records carry no material; armour is seven category-shaped records. Enumeration cannot express
   *metallic*, and this is the half of the restriction problem that a member list leaves untouched.
+
+---
+
+## Postscript — correction 47, and the principle underneath it
+
+The Player's Handbook gives the halfling's underground direction sense as `3- on 1d6`; the Complete
+Book of Gnomes and Halflings gives the Stout's as `50%`. **The same probability**, and the pack
+recorded a contradiction between two books that agree. They agree a second time on grade or slope —
+`3- on 1d4` against `75%`.
+
+The refusal that caused it was a good one. Writing 83% where a book writes `1-5 on 1d6` is inference
+and A3 forbids it, which is why the record holds the printed roll. **But the refusal was carried into
+the COMPARISON, and there it is wrong.** A3 governs what a record may **claim**; it says nothing about
+what a consumer may **compute**. `rollAtMost n on 1dX` is `n / X`, the Engine converts before it
+compares, and both records keep the notation their book printed:
+
+```
+detect.directionUnderground: two books write this in different notations
+                             and they AGREE — 3- on 1d6 = 50
+```
+
+**The co-occurrence of the two forms on one field is itself the evidence that the field is a
+probability**, which is why this needed no field-dimension vocabulary and did not wait on correction
+23.
+
+And looking for the second case found something worse. The dwarf, gnome and halfling write
+`detect.gradeOrSlope`; the Stout wrote **`detect.slopingPassage`** — one ability, two paths, so
+`3- on 1d4` and `75%` never even collided. **Correction 47's contradiction was at least visible; this
+one was not.** Sent back as correction 58, and it is correction 23 materialising with a wrong outcome
+for the first time.

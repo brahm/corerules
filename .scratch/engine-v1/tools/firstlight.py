@@ -273,6 +273,26 @@ class Character:
                 kind = "weaponProficiency" if "weapon" in lim["id"] else "armor"
                 self.bounds[kind].append((lim["id"], lim["id"], frozenset(lim["members"])))
 
+    @staticmethod
+    def commensurate(values):
+        """Correction 47. `3- on 1d6` and `50` are the same probability, and the pack recorded a
+        contradiction between two books that agree. A rollUnder denotes `n / X`; a bare integer
+        on a field another layer writes as a rollUnder is a percentage. The co-occurrence is
+        itself the evidence that the field is a probability, so this needs no vocabulary."""
+        rolls = [v for v in values if isinstance(v, str) and "- on 1d" in v]
+        if not rolls or len(rolls) == len(values):
+            return None
+        out = set()
+        for v in values:
+            if isinstance(v, str) and "- on 1d" in v:
+                n, _, die = v.partition("- on 1d")
+                out.add(round(int(n) / int(die) * 100, 4))
+            elif isinstance(v, int):
+                out.add(float(v))
+            else:
+                return None
+        return out
+
     def refines(self, a, b):
         """Does record `a` declare itself a refinement of record `b`? The only such
         declaration in the pack is `target`: a subrace names its race, a kit names its
@@ -287,6 +307,11 @@ class Character:
         if f["set"]:
             layers = [(v, src.rsplit("[", 1)[0], src) for v, src in f["set"]]
             distinct = {str(v) for v, _, _ in layers}
+            same = self.commensurate([v for v, _, _ in layers])
+            if same is not None and len(same) == 1:
+                self.notes.append(f"{path}: two books write this in different notations and they "
+                                  f"AGREE — " + " = ".join(sorted(distinct)))
+                distinct = {"agreed"}
             if len(distinct) > 1:
                 winners = [x for x in layers
                            if all(x[1] == y[1] or self.refines(x[1], y[1]) for y in layers)]

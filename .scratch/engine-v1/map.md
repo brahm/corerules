@@ -184,10 +184,17 @@ _Resolved:_
   which it did on the first run, catching `Polearms` claimed by both Table 44's heading and the
   Complete Fighter's purchasable group.
 
-**Of the corrections list's 57 entries, 22 are now applied and one remains as work** — 47, the roll-under
-against the percentage. Correction 45 closed the last big one: the 36 doubled experience effects are
-rebuilt, and **`unmodelled` is a field now**, because the note explaining the repair contained the
-word and the Engine read the note as a marker. The other 33 are history,
+**Of the corrections list's 58 entries, 23 are applied and none remains as work.** The rest are
+history, method, or corrections to the `spec.md` sections ticket 01 made non-normative.
+
+The last two were the two that most changed how the pack is read. **45** rebuilt the 36 doubled
+experience effects — the rule never wanted a disjunction, it wanted two effects — and made
+`unmodelled` a **field**, because the note explaining the repair contained the word and the Engine
+read the note as a marker. **47** established the principle the pack had blurred: **A3 governs what a
+record may CLAIM, not what a consumer may COMPUTE.** A `rollAtMost n on 1dX` is the probability
+`n / X`, so `3- on 1d6` and `50%` are the same number and two books that agree no longer read as a
+contradiction — and finding that turned up 58, the same ability written on two field paths, where
+they had not even managed to contradict each other. The other 33 are history,
 method, or corrections to the `spec.md` sections ticket 01 made non-normative.
 
 ## Not yet specified
