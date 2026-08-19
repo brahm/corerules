@@ -3,17 +3,69 @@
     {
       "id": "test:warrior",
       "name": "Warrior",
-      "provenance": { "section": ["Fixtures", "Classes"] },
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Classes"
+        ]
+      },
       "isGroup": true
     },
     {
       "id": "test:fighter",
       "name": "Fighter",
-      "provenance": { "section": ["Fixtures", "Classes"] },
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Classes"
+        ]
+      },
       "group": "test:warrior",
       "effects": [
-        { "op": "set", "field": "hitDice.perLevel", "to": "1d10" },
-        { "op": "adjust", "field": "attackRoll", "by": 1 }
+        {
+          "op": "set",
+          "field": "hitDice.perLevel",
+          "to": "1d10"
+        },
+        {
+          "op": "adjust",
+          "field": "attackRoll",
+          "by": 1
+        }
+      ]
+    },
+    {
+      "id": "test:thief",
+      "name": "Thief",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Classes"
+        ]
+      },
+      "effects": [
+        {
+          "op": "set",
+          "field": "hitDice.perLevel",
+          "to": "1d6"
+        }
+      ]
+    },
+    {
+      "id": "test:mage",
+      "name": "Mage",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Classes"
+        ]
+      },
+      "effects": [
+        {
+          "op": "set",
+          "field": "hitDice.perLevel",
+          "to": "1d4"
+        }
       ]
     }
   ]

@@ -1,0 +1,22 @@
+{
+  "nonweaponProficiencies": [
+    {
+      "id": "test:riding",
+      "name": "Riding",
+      "provenance": {
+        "section": [
+          "Fixtures"
+        ]
+      }
+    },
+    {
+      "id": "test:heraldry",
+      "name": "Heraldry",
+      "provenance": {
+        "section": [
+          "Fixtures"
+        ]
+      }
+    }
+  ]
+}

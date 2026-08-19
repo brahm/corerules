@@ -11,7 +11,10 @@ import type { Clause, Condition, Id, Operand, Predicate, Scalar } from "./types.
 /** null is UNDECIDABLE. */
 export type Truth = boolean | null;
 
-export interface Sheet {
+/** What a predicate may ask about. Named for §6.1's own word: a condition has a `subject`.
+ *  Deliberately an interface of readers rather than a data object, so the Sheet can answer
+ *  `field` by computing a view — a predicate that reads a field is reading the layer stack. */
+export interface Subject {
   /** Ability scores by id — `phb:strength`. */
   ability(id: Id): number | undefined;
   /** Levels in a class by id, 0 where the character has none of it. */
@@ -22,10 +25,10 @@ export interface Sheet {
   has(kind: string, ref: Id): boolean;
 }
 
-export function scalar(s: Scalar, sheet: Sheet): number | string | undefined {
-  if ("ability" in s) return sheet.ability(s.ability);
-  if ("level" in s) return sheet.level(s.level);
-  return sheet.field(s.field);
+export function scalar(s: Scalar, on: Subject): number | string | undefined {
+  if ("ability" in s) return on.ability(s.ability);
+  if ("level" in s) return on.level(s.level);
+  return on.field(s.field);
 }
 
 function compare(op: "gte" | "lte" | "eq" | "neq", left: number | string, right: Operand): Truth {
@@ -42,39 +45,39 @@ function compare(op: "gte" | "lte" | "eq" | "neq", left: number | string, right:
   }
 }
 
-export function holds(c: Condition, sheet: Sheet): Truth {
+export function holds(c: Condition, on: Subject): Truth {
   if ("anyOfIds" in c) {
-    const v = scalar(c.member, sheet);
+    const v = scalar(c.member, on);
     if (v === undefined) return null;
     return c.anyOfIds.includes(String(v));
   }
-  if ("has" in c) return sheet.has(c.has, c.ref);
-  const v = scalar(c.subject, sheet);
+  if ("has" in c) return on.has(c.has, c.ref);
+  const v = scalar(c.subject, on);
   if (v === undefined) return null;
   return compare(c.op, v, c.value);
 }
 
 /** Ticket 13 finding 10: one level of disjunction, no recursion, which is what keeps the
  *  evaluator a loop rather than a recursive descent. */
-export function clause(cl: Clause, sheet: Sheet): Truth {
+export function clause(cl: Clause, on: Subject): Truth {
   if ("anyOf" in cl) {
     let undecided = false;
     for (const c of cl.anyOf) {
-      const t = holds(c, sheet);
+      const t = holds(c, on);
       if (t === true) return true;      // a disjunction that has found a witness is settled
       if (t === null) undecided = true;
     }
     return undecided ? null : false;
   }
-  return holds(cl, sheet);
+  return holds(cl, on);
 }
 
 /** Every clause must hold. Absent means yes. */
-export function predicate(p: Predicate | undefined, sheet: Sheet): Truth {
+export function predicate(p: Predicate | undefined, on: Subject): Truth {
   if (p === undefined || p.length === 0) return true;
   let undecided = false;
   for (const cl of p) {
-    const t = clause(cl, sheet);
+    const t = clause(cl, on);
     if (t === false) return false;      // a conjunction that has found a falsifier is settled
     if (t === null) undecided = true;
   }

@@ -6,6 +6,7 @@
  *   node src/smoke.ts <pack-dir> [race] [class] [kit] [deity]
  */
 import { Pack } from "./pack.ts";
+import { Sheet } from "./sheet.ts";
 import { Character } from "./character.ts";
 
 const root = process.argv[2];
@@ -35,16 +36,18 @@ if (race === undefined) process.exit(0);
 
 const scores = { "phb:strength": 16, "phb:dexterity": 12, "phb:constitution": 15,
                  "phb:intelligence": 10, "phb:wisdom": 16, "phb:charisma": 9 };
-const c = new Character(pack, { scores, options: process.env["OPTIONS"]?.split(",") ?? [] });
-const cls = pack.byId.get(klass ?? "");
-c.apply(pack.byId.get(race), "race");
-if (cls?.group !== undefined) c.apply(pack.byId.get(cls.group), "class group");
-c.apply(cls, "class");
-if (deity !== undefined && deity !== "") c.apply(pack.byId.get(deity), "deity");
-if (kit !== undefined && kit !== "") c.apply(pack.byId.get(kit), "kit");
+const character = Character.create(pack, {
+  name: "Smoke", race, scores,
+  ...(kit !== undefined && kit !== "" ? { kit } : {}),
+  ...(deity !== undefined && deity !== "" ? { deity } : {}),
+  options: process.env["OPTIONS"]?.split(",").filter((x) => x !== "") ?? [],
+});
+character.advance([{ class: klass ?? "", die: 8 }]);
+const c = character.sheet();
 
 const who = c.layers.map((l) => l.record.name).join(" / ");
-console.log(`\nCHARACTER: ${who}`);
+console.log(`\nCHARACTER: ${who} — ${character.hitPoints()} hp, level ${Object.values(character.levels())[0]}`);
+console.log(`  ${character.file.id}`);
 
 console.log("\nFIELDS — the total, and nothing in it is approximate");
 for (const path of [...c.fields.keys()].sort()) {

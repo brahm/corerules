@@ -12,7 +12,9 @@
   "files": [
     "classes.json",
     "fields.json",
+    "kits.json",
     "layers.json",
+    "proficiencies.json",
     "tables.json",
     "weapons.json"
   ]

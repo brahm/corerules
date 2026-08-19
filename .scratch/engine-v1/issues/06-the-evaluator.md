@@ -72,8 +72,15 @@ both are the typechecker: `typescript` and `@types/node`. Node runs `.ts` by str
 | `src/types.ts` | the pack's shapes, as the schema defines them |
 | `src/pack.ts` | manifest-driven loading, the two indexes, transitive group expansion |
 | `src/predicate.ts` | §6.1, **three-valued** |
-| `src/character.ts` | the layer stack, the five reasons a value is set aside, bounds, table reads |
+| `src/sheet.ts` | the layer stack, the five reasons a value is set aside, bounds, table reads |
+| `src/character.ts` | §6.3's sequence of Level Events, and everything derived from it |
+| `src/uuid.ts` | UUIDv7, monotonic within a millisecond |
 | `src/smoke.ts` | not a test — it takes whatever pack path you give it |
+
+**`Character` and `Sheet` are different things and the names now say so.** A Character is *"not
+a snapshot but a sequence of Level Events, from which everything derived is recomputed"*; a
+Sheet is the everything-derived. The first version called the layer stack a Character, which
+would have been the wrong noun in every conversation after it.
 
 ### The fog is answered, and by the first file
 
@@ -105,9 +112,31 @@ does not produce a number is a defect somewhere, and **0 is the wrong number §5
 the Engine itself.** Ticket 04 recorded `"+4"` as a finding; this is the first time it has been
 *reported* rather than written down.
 
+### §6.3, and the example that forced the shape
+
+**Hit points are recorded randomness** — a third category beside a choice and a derivation — and
+they are the reason the history is the file: under multi-class a total cannot be reconstructed from
+*"fighter 5 / mage 4"*, so storing levels plus a total is not merely worse but **not implementable**.
+
+A Level Event holds a **list** of rolls, and the PHB's own worked example is why. A
+fighter/thief/mage rolls 6, 5 and 2 and begins with **4** — the sum divided by three — where
+dividing each roll on its own gives 3. One rule covers creation and every later advance, *floor of
+the event's total over the class count*, and it only covers both because the rolls travel together.
+The test is the book's paragraph, including the later thief advance that rolls 4 and adds 1.
+
+### The second id ever minted was out of order
+
+§6.5 chose UUIDv7 so that *"file order is chronological order with no extra field"*. **A plain v7
+does not do that**: two ids minted in the same millisecond are ordered by their random tails, and
+creating a Character and advancing it happen in the same tick as a matter of course. `rand_a` is now
+a counter, RFC 9562's monotonic method — without it the reason for choosing v7 was simply untrue,
+and a test caught it on the second event this Engine ever created.
+
 ## What is left
 
-- **The Character is not yet a sequence of Level Events** (§6.3). It is a stack of layers with
-  scores handed in, which is what a view of a value needs and not what a Character is.
-- **Nothing persists** (§8).
+- **Nothing persists** (§8) — a Character is a JSON document and round-trips through one, but
+  nothing writes it to disk or checks a pack's content hash on open.
+- **Constitution is not in the hit points.** The bonus is a table read with a per-class cap, and
+  a plausible-looking total that quietly omits it is the kind of wrong number the rest of this
+  refuses.
 - **No interface** (§9, §10). Electron and React arrive there, not here.

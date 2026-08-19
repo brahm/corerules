@@ -1,0 +1,33 @@
+{
+  "kits": [
+    {
+      "id": "test:hedge-knight",
+      "name": "Hedge Knight",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Kits"
+        ]
+      },
+      "target": "test:fighter",
+      "cardinality": "one-per-target",
+      "effects": [
+        {
+          "op": "adjust",
+          "field": "attackRoll",
+          "by": 1
+        },
+        {
+          "op": "grant",
+          "kind": "nonweaponProficiency",
+          "ref": "test:riding"
+        },
+        {
+          "op": "grant",
+          "kind": "nonweaponProficiency",
+          "ref": "test:heraldry"
+        }
+      ]
+    }
+  ]
+}

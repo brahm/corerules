@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { predicate, type Sheet } from "../src/predicate.ts";
+import { predicate, type Subject } from "../src/predicate.ts";
 import type { Predicate } from "../src/types.ts";
 
-const sheet = (scores: Record<string, number>, fields: Record<string, number | string> = {}): Sheet => ({
+const sheet = (scores: Record<string, number>, fields: Record<string, number | string> = {}): Subject => ({
   ability: (id) => scores[id],
   level: (id) => scores[id] ?? 0,
   field: (path) => fields[path],

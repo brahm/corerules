@@ -10,10 +10,13 @@ const fixture = (name: string) => join(here, "fixtures", name);
 test("a pack loads from its manifest", () => {
   const pack = new Pack(fixture("minimal"));
   assert.equal(pack.manifest.id, "minimal");
-  assert.equal(pack.byId.size, 14);
+  assert.equal(pack.byId.size, 19);
+  assert.deepEqual([...pack.byKind.keys()].sort(), [
+    "abilities", "classes", "kits", "limitations", "lookupTables",
+    "nonweaponProficiencies", "races", "subraces", "weaponProficiencies",
+  ]);
   assert.equal(pack.records("weaponProficiencies").length, 6);
-  assert.equal(pack.records("classes").length, 2);
-  assert.equal(pack.records("races").length, 1);
+  assert.equal(pack.records("classes").length, 4);
   assert.deepEqual(pack.complaints, []);
 });
 
