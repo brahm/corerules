@@ -158,7 +158,10 @@ _Resolved:_
   correction 50's boundary met on the second record tried. **49 is applied too** — and it was
   **sixteen** empty groups rather than six, with the membership sitting in the source as **three
   spaces of indentation**. A permit-list reading *"swords (all)"* went from **0 of 117 to 8**. Sent
-  back corrections 52 and 53.
+  back corrections 52 and 53, and **52 is applied** — in the extractor as well as the data.
+  `extract_phb.py` was throwing the indentation away in its first line of parsing while
+  `extract_cfh_weapons.py` had been reading it all along; it now reproduces the pack exactly, so
+  49 and 52 survive a re-extraction instead of being undone by one.
 
 ## Not yet specified
 
