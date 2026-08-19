@@ -75,6 +75,8 @@ both are the typechecker: `typescript` and `@types/node`. Node runs `.ts` by str
 | `src/sheet.ts` | the layer stack, the five reasons a value is set aside, bounds, table reads |
 | `src/character.ts` | §6.3's sequence of Level Events, and everything derived from it |
 | `src/uuid.ts` | UUIDv7, monotonic within a millisecond |
+| `src/hash.ts` | a pack's content hash, over the canonical form |
+| `src/library.ts` | §8's content root: packs, Characters, and drift |
 | `src/smoke.ts` | not a test — it takes whatever pack path you give it |
 
 **`Character` and `Sheet` are different things and the names now say so.** A Character is *"not
@@ -132,10 +134,31 @@ creating a Character and advancing it happen in the same tick as a matter of cou
 a counter, RFC 9562's monotonic method — without it the reason for choosing v7 was simply untrue,
 and a test caught it on the second event this Engine ever created.
 
-## What is left
+### §8, and correction 55 paying for itself
 
-- **Nothing persists** (§8) — a Character is a JSON document and round-trips through one, but
-  nothing writes it to disk or checks a pack's content hash on open.
+**Plain files are the source of truth**, and a directory is a pack when it holds a manifest —
+discovery by that test, because a content root is *a place a user puts things*, which is the
+opposite of §7.1's rule INSIDE a pack, where scanning would let a leftover file join in silence.
+`characters/` holds no manifest and so is never mistaken for one.
+
+The hash is **over parsed content in its canonical form, not over bytes**, and that is correction 55
+paying a dividend nobody expected. Byte-hashing would make every reformat look like a change to
+every Character built against the pack — and this project reformatted five files twice in two days.
+A reformat is now invisible and a one-character typo fix is not, which is exactly what §6.5 asked
+for when it chose a hash over a declared version.
+
+Drift reports what it can actually check. A recorded hash says *whether* a pack moved and can never
+say how, because the old pack is gone; what the Engine can check is **which of the ids this
+Character names no longer resolve**, and that is the half a player can act on. A pack that vanished
+entirely is reported and **the Character still opens** — §5.3 locks what extends a Character, never
+the reading of one.
+
+A real Character against the real slice is **781 bytes**, and the keys are ordered at write time
+rather than at construction, because a file read back and written again would otherwise keep
+whatever order it arrived in. §6.5 traded auditability for a file that stays legible; legibility is
+a thing you have to do, not a thing you get.
+
+## What is left
 - **Constitution is not in the hit points.** The bonus is a table read with a per-class cap, and
   a plausible-looking total that quietly omits it is the kind of wrong number the rest of this
   refuses.
