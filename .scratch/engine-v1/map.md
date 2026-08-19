@@ -94,22 +94,28 @@ Four results are load-bearing for implementation and are easy to miss in 149 fin
   a table read returns `"+4"` where the contract says an integer; and two mutually exclusive marked
   bonuses summed into a wrong number on the first character anyone builds.
 
-_One ticket remains open:_
-
-- **[01 — Which spec does the Engine implement?](issues/01-which-spec-does-the-engine-implement.md)**
-  Classified: of 44 corrections, ten are already in the schema and **seventeen touch `spec.md`** —
-  twelve reversals and five silences. The other seventeen are history or method, and **two are
-  retracted diagnoses that folding the list in wholesale would write into the spec.** The decision
-  itself — what day one reads — is still open. **Every other ticket inherits the answer.**
+**Every ticket in this map is resolved** — the four charted at the start and the one they
+produced. The next work is building, not deciding.
 
 Running the grillings to decisions has been worth more than the charting predicted, and mostly by
 **subtraction**: 02 and 03 were both smaller than they looked and both sitting on top of something
-larger, and 05 — the something larger — turned out to need **no new operation at all**. Ticket 01 now
-has its evidence that the corrections list is not a frozen document: **nine corrections came out of
-the Engine's first four tickets**, and 47 was found by a program looking for something else.
+larger; 05 — the something larger — needed **no new operation at all**; and 01 closed eighteen of its
+nineteen corrections by deciding they were owed to **the wrong document**. Six corrections came out of
+these four tickets, every one found by *running a program* rather than by reading, which is the
+evidence 01 used.
 
 _Resolved:_
 
+- **[01 — Which spec does the Engine implement?](issues/01-which-spec-does-the-engine-implement.md)**
+  **`spec.md` §§3, 4 and 7 are non-normative; `pack-0.1.schema.json` is the format.** The list reached
+  **50**, of which nineteen touch the spec — and **eighteen of the nineteen are about the format**,
+  which already has a second description: **22 commits to the schema against 1 to the spec.** The
+  document that is checked was corrected twenty-two times against the books; the one that is not was
+  written once. So the sections stay as the reading guide and stop being the definition, and eighteen
+  corrections stop being owed. Day one reads **the spec for the product, the schema for the format,
+  and this map's decisions for what the Engine does with what it loads.** §13 was rewritten — nine
+  entries to four, each with a test — and §5.4 added, because ticket 02's decision about 381 marked
+  effects has no other home. Left owed: correction 6 (§5.1 against §7.1) and correction 48.
 - **[02 — What the Engine does with an UNMODELLED effect](issues/02-what-the-engine-does-with-an-unmodelled-effect.md)**
   **The operation decides, not the category — and a marked effect never reaches the total.** On a
   structural operation (222 of 381) the thing is applied and the marker rides on that entry; on a
@@ -128,7 +134,8 @@ _Resolved:_
   resolved.** A fixed arm order is **refuted**: of three precedence statements in 4,500 pages, the CBD
   puts the kit over the mythos and the PHB puts the mythos over the class. The two declarations needed
   already exist — `target` and `except`, the latter with seven `limitation` records, every one pierced.
-  **This answers §13's known unknown #1**, the one thing 71 sessions of transcription never closed.
+  **This closes §13's known unknown #1** — the residue corpus ticket 13 left standing when §4.1's
+  one-shape claim held across 238 records and three arms.
   Sent back corrections 46 and 47, and opened ticket 05.
 - **[05 — An operand that lives in another layer](issues/05-an-operand-that-lives-in-another-layer.md)**
   **A bound is a record with `members`, and no seventh operation is needed.** The sweep found **142**

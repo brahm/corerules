@@ -265,10 +265,14 @@ roll-under operands in the pack against a great many percentages.
 
 ## What this closes and what it leaves
 
-**§13's known unknown #1 is answered** — the one thing 71 sessions of transcription never closed.
-Not by finding the precedence rule, but by measuring that there is not one to find: the books state
-exceptions, the schema already expresses them, and precedence between *arms* is a category the corpus
-does not contain.
+**§13's known unknown #1 is now closed on both halves** — and neither half is what §13 says. The entry
+reads *"the kit mechanism has no prior art anywhere"*, an anxiety about precedent. Corpus ticket 13
+answered the part that mattered by building it: **§4.1's one-shape claim held across 238 records and
+three arms** with no per-arm exception. What it left standing was the residue recorded here, and that
+is what this ticket closes — not by finding the precedence rule, but by measuring that there is not
+one to find: the books state exceptions, the schema already expresses them, and precedence between
+*arms* is a category the corpus does not contain. **The prior-art question itself was never re-asked,
+and did not need to be.**
 
 Left open: **cross-layer parameterisation** — an effect whose operand is another layer's contents
 (the Temple Guard's list, the Pariah's complement, the 60 permit-lists). It is a real gap in §4.3, it

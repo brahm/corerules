@@ -550,6 +550,15 @@ This map keeps finding that the v1 spec decided correctly on premises that measu
 changed. None of these is an oversight in `spec.md`; each is a conclusion that did not survive
 contact with the corpus. Collected here so the eventual spec update has one place to read.
 
+> **Where these go was decided after this map closed.**
+> [Engine ticket 01](../engine-v1/issues/01-which-spec-does-the-engine-implement.md) measured that
+> **eighteen of the nineteen spec-touching corrections are about the format**, and made `spec.md`
+> §§3, 4 and 7 non-normative in favour of `pack-0.1.schema.json` — **22 commits against the spec's
+> 1**. Those eighteen are no longer owed to a document; they are owed to the schema, where ten of
+> them already went. What survives for `spec.md` is **correction 6** alone. The list itself stays as
+> written: it is the record of what measurement changed, and reclassifying entries after the fact
+> would destroy the thing it is good for.
+
 1. **§7.1 requires book *and page* citation on every record — the corpus has no page numbers.**
    Verified in both renditions ([ticket 01](issues/01-what-the-source-yields.md)). Replaced by a
    `section` heading chain plus a machine `anchor`

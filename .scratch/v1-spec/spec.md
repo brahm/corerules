@@ -80,6 +80,14 @@ indexed by level — but *which categories exist* is data. Ravenloft adds `fear`
 
 ## 3. Object kinds
 
+> **Non-normative since the corpus map closed.** Sections 3, 4 and 7 describe the pack format, and
+> the format now has a second description — `pack-0.1.schema.json` — that is **22 commits ahead of
+> this one and is machine-checked against 1,236 records on every run.** Where the two disagree, **the
+> schema is right**, and it has been the deciding authority for every correction the corpus effort
+> found. These sections are kept as the reading guide that explains *why* the schema is shaped as it
+> is; they are no longer the definition of what a pack may contain.
+> ([Engine ticket 01](../engine-v1/issues/01-which-spec-does-the-engine-implement.md))
+
 A **kind** is anything that must be referenced by stable identity across a pack boundary. The test
 is operational: *can I point at this from another pack, or from a Character?*
 ([ticket 11](issues/11-engine-object-kinds.md))
@@ -140,6 +148,14 @@ it provides, and the Engine cannot act on a name it does not understand — a pa
 ---
 
 ## 4. The Layer model
+
+> **Non-normative since the corpus map closed.** Sections 3, 4 and 7 describe the pack format, and
+> the format now has a second description — `pack-0.1.schema.json` — that is **22 commits ahead of
+> this one and is machine-checked against 1,236 records on every run.** Where the two disagree, **the
+> schema is right**, and it has been the deciding authority for every correction the corpus effort
+> found. These sections are kept as the reading guide that explains *why* the schema is shaped as it
+> is; they are no longer the definition of what a pack may contain.
+> ([Engine ticket 01](../engine-v1/issues/01-which-spec-does-the-engine-implement.md))
 
 **Nothing is ever overwritten.** A Character's view of any value is computed by walking a stack:
 the base record, then each Attachable, with **the Character's own choices as the topmost layer**.
@@ -260,7 +276,33 @@ distinguishes "invalid" from "not repairable here".
 occupies states that look illegal in isolation — old class suppressed, XP frozen. A naive per-field
 validator would reject a perfectly legal dual-class on load.
 
-### 5.4 The one exception
+### 5.4 A third kind of answer
+
+([Engine ticket 02](../engine-v1/issues/02-what-the-engine-does-with-an-unmodelled-effect.md))
+A transcriber who models an effect as far as the format allows and writes down what is left over
+produces an effect that is **neither a value nor a refusal**. 381 of the pack's 1,919 effects are
+of this kind. §5.1's A3 is a *pack-level* declaration about a rule-set and §5.3 quarantines a whole
+*character*; neither reaches one clause of one record.
+
+**A marked effect never reaches the total**, and what happens to it is decided by its **operation**,
+never by any category its prose declares:
+
+- **structural** — `grant`, `forbid`, `require`, `except`: the thing is right and its edges are
+  under-described. **Applied**, with the transcriber's note carried on that entry.
+- **numeric** — `adjust`, `set`: the number is right and the circumstance is missing. **Withheld from
+  the sum** and shown beside it as a named situational line the player applies when the circumstance
+  holds.
+
+This is §5.2's line drawn at the grain of an effect rather than a rule-set: those four operations are
+validation-shaped by construction and those two are computation-shaped by construction.
+
+**A value may therefore be withheld for three distinct reasons** — a marked effect supplies it, its
+predicate asks something the sheet cannot answer, or two layers set it and nothing declares a winner
+([Engine ticket 03](../engine-v1/issues/03-precedence-when-two-attachables-contradict.md)). In every
+case the sheet says which record and which book, which is §1's promise reached at the level of a
+single number.
+
+### 5.5 The one exception
 
 **Magic items are recorded, not validated.** ([ticket 11](issues/11-engine-object-kinds.md))
 Acquiring one is DM fiat and no rule governs it. **Use** stays validated: a wizard may not use a
@@ -349,6 +391,14 @@ the user's own machines. **The README must state this**, because it is easy to a
 ---
 
 ## 7. Content Packs
+
+> **Non-normative since the corpus map closed.** Sections 3, 4 and 7 describe the pack format, and
+> the format now has a second description — `pack-0.1.schema.json` — that is **22 commits ahead of
+> this one and is machine-checked against 1,236 records on every run.** Where the two disagree, **the
+> schema is right**, and it has been the deciding authority for every correction the corpus effort
+> found. These sections are kept as the reading guide that explains *why* the schema is shaped as it
+> is; they are no longer the definition of what a pack may contain.
+> ([Engine ticket 01](../engine-v1/issues/01-which-spec-does-the-engine-implement.md))
 
 ### 7.1 Shape
 
@@ -605,24 +655,52 @@ user's own work; a Content Pack is derived WotC content.
 
 ## 13. Known unknowns
 
-Carried forward deliberately. None blocks implementation; all should be closed before v1 ships.
+**Rewritten after the corpus map (71 sessions) and the Engine map's first four tickets.** The nine
+entries this section carried have been judged one by one; what follows is what is actually still
+unknown, plus a note on why three of the nine could never have closed in the form they were written.
 
-1. **The kit mechanism has no prior art anywhere.** §4.1 is invention, not a borrowed pattern.
-   Ticket 01 searched PCGen, the Roll20 2e sheet, the Foundry 2e attempts and the standalone
-   generators and found nothing that models 2e kits as loadable data.
-2. **"Engine computes, user supplies the tables" has no shipping precedent.** Every successful
-   engine-without-content project in this genre chose to be a *recorder*.
-3. **Psionics is the format's hardest load test and v1 does not exercise it.** Deferring it entirely
-   — rather than carrying a worked example as proof of load — risks discovering in v2 that the
-   format cannot express it, which is how PCGen failed. Raised and overruled.
-4. **The six-operation vocabulary may prove insufficient** for some PHBR kit, discovered during
-   transcription. Checkable before code is written, since the books are in hand.
-5. **The exact SmartScreen and Mark-of-the-Web wording** exists only in Microsoft community threads.
-   The README needs screenshots from a real Windows 11 machine.
-6. **The Workflow permissions radio-button labels** are described functionally by GitHub and never
-   reproduced; verify against the live page.
-7. **Intel Macs are untested.** Apple's restriction is arm64-specific and behaviour may differ.
-8. **`node:sqlite` in a packaged app** was verified through Electron's issue tracker, not a spike.
-   Moot unless §8's no-index decision is revisited.
-9. **Whether the spike's "unsigned" build was genuinely unsigned** — `-c.mac.identity=null` may have
-   passed a string. Does not affect v1, which ships ad-hoc.
+**Three closed.** #1 *the kit mechanism has no prior art* and #4 *the six-operation vocabulary may
+prove insufficient* and #2 *"the Engine computes, the user supplies the tables" has no shipping
+precedent*. §4.1's one-shape claim held across **238 records and three arms** without a single
+per-arm exception; six operations expressed **1,910 effects**, and the largest gap found since was
+closed with a record field rather than a seventh operation; a table now declares `supplies`.
+
+**Five were never visited**, because nothing has been packaged or shipped: the SmartScreen wording,
+the Workflow permissions labels, Intel Macs, `node:sqlite` in a packaged app, and whether the spike's
+unsigned build was unsigned. They stand exactly as written and belong with §10, where the
+work that would answer them lives — none is a question about the format or the Engine.
+
+**And the lesson worth carrying**: #1 and #2 were both phrased as anxieties about *precedent* — "no
+prior art anywhere", "no shipping precedent" — and **neither was answered by finding a precedent.**
+Both were answered by building the thing and measuring it. An entry here should therefore name a
+**question with a test**, not a worry. The four below do.
+
+---
+
+1. **Can the format express psionics?** Unchanged, and now the only substantive entry inherited from
+   the original nine. Deferring it entirely — rather than carrying a worked example as proof of load
+   — risks discovering in v2 that the format cannot express it, which is how PCGen failed. Raised and
+   overruled; the overruling has not been revisited.
+   **The test**: transcribe one psionic discipline against the current schema and count the
+   `UNMODELLED` markers it needs.
+
+2. **Can a bound be stated over item properties?** Seventy-two effects restrict by a property no
+   record carries — *metallic*, *more than a tenth metal by weight*, *larger than a knife*,
+   *concealable*. A weapon record holds cost, weight, size, damage type and speed factor and **no
+   material**; armour is seven category-shaped records. Enumeration reaches the other 125 bounds and
+   cannot reach these.
+   **The test**: whether the item properties the twelve books actually discriminate on are a closed
+   set. If they are, it is a field; if they are not, this is where the format stops.
+
+3. **What does the Engine do with the corpus the pack cannot contain?** Seventeen effects ask a
+   character to choose a totem animal, a hated foe, a guarded site, a terrain, an undead type. The v1
+   tier holds no animals, no terrains and no monsters, so the choice is unbounded by construction —
+   and the same boundary produced fourteen creature names living inside field-path strings.
+   **The test**: whether the Monstrous Manual tier, when it exists, dissolves this or merely moves it.
+
+4. **Does a marker expire, and can anything tell?** A marker records what the format could not do
+   **at the moment it was written**, and the format kept moving: 37 of the 381 markers name an
+   obstacle a later schema commit removed, and nothing in the pack ties a marker to the schema version
+   that provoked it.
+   **The test**: whether a marker can carry the schema version it was written against, cheaply enough
+   that transcribers actually do it.
