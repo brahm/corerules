@@ -1252,7 +1252,7 @@
       }
     },
     "limitations": {
-      "description": "Ticket 16 decision 4, taken. Most of the pack's dangling ids were COMPLEMENTS — `weapons outside the Explorer's list`, `armor other than leather` — and a complement is not a record: it is the record's own sentence, so it becomes a `defines` (finding 101) and the id disappears. But eleven of them are reached by `except`, which alone among the six operations has NO `defines`, because its whole meaning is to lift a restriction that exists SOMEWHERE ELSE. Those somewhere-elses are real PHB rules — the thief's weapon list, the wizard's, the two-weapon penalty — and they get records here, owned by the class or the combat rule that imposes them. A limitation has no effects: it is a thing to be pointed AT.",
+      "description": "Ticket 16 decision 4, taken. Most of the pack's dangling ids were COMPLEMENTS — `weapons outside the Explorer's list`, `armor other than leather` — and a complement is not a record: it is the record's own sentence, so it becomes a `defines` (finding 101) and the id disappears. But eleven of them are reached by `except`, which alone among the six operations has NO `defines`, because its whole meaning is to lift a restriction that exists SOMEWHERE ELSE. Those somewhere-elses are real PHB rules — the thief's weapon list, the wizard's, the two-weapon penalty — and they get records here, owned by the class or the combat rule that imposes them. A limitation has no effects: it is a thing to be pointed AT. **Correction 48, from [Engine ticket 05]:** and, where the rule it names bounds a set, the SET ITSELF. Being a handle with no contents is what stopped 125 effects from being computable — a permit-list means ONLY these, and until the limitation held the members there was nothing for `forbid` to bound with or for `except` to lift. The field is optional on purpose: `phb:two-weapon-penalty` bounds nothing, and a restriction the pack's own vocabulary cannot express exactly is better left empty than populated with a set that permits more than the book does.",
       "type": "array",
       "items": {
         "allOf": [
@@ -1264,6 +1264,14 @@
           "imposedBy": {
             "$ref": "#/$defs/id",
             "description": "The class whose rule this is, where one owns it."
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/id"
+            },
+            "minItems": 1,
+            "description": "The things the rule PERMITS — not the things it forbids. Same shape as a `weaponProficiency` group's `members`, which twenty CFH records already carry, and deliberately the same field name: a bounded set is one concept whether a book prints it to price a proficiency slot or to restrict a class. An effect bounds a character by `forbid`-ing the limitation and lifts it by `except`-ing it, so `permitted = (∩ bounds) \\ (∪ forbids)` — both operators commute, and §4.3's guarantee is inherited rather than re-argued. Absent means the limitation is a name only, which is what all seven were before this."
           }
         }
       }

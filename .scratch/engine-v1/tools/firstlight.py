@@ -244,6 +244,32 @@ class Character:
             if e.get("ref"):
                 self.pack.get(e["ref"], src)
 
+    def impose(self):
+        """Correction 48, live. A limitation names the class that imposes it (`imposedBy`) and,
+        where the rule bounds a set, carries the members. Nothing has to `forbid` it: being that
+        class IS the imposition, which is why the pack has thirteen `except`s and no matching
+        `forbid`. An `except` still lifts it by name."""
+        mine = {self.klass["id"]} if self.klass else set()
+        if self.klass and self.klass.get("group"):
+            mine.add(self.klass["group"])
+        # NOT `combines`. The PHB states the multi-class rule per class and it is not a uniform
+        # intersection: a multi-classed warrior uses everything without restriction, a multi-classed
+        # PRIEST keeps his mythos weapons ("a fighter/cleric can use only bludgeoning weapons"), and
+        # the thief's restriction is about armour and thieving skills rather than weapons. Composing
+        # bounds across the arms of a multi-class would bind a fighter/thief to the thief's twelve
+        # weapons, which the book plainly does not. §6.2 says the Engine owns the combination rules;
+        # it does not own them yet, so this declines rather than guesses.
+        if self.klass and self.klass.get("combines"):
+            self.notes.append(f"{self.klass['id']} combines "
+                              f"{', '.join(self.klass['combines'])}; the PHB's multi-class rule is "
+                              f"stated PER CLASS and is Engine knowledge (§6.2) that does not exist "
+                              f"yet, so no class bound is imposed here.")
+            return
+        for lim in self.pack.by_kind["limitations"]:
+            if lim.get("imposedBy") in mine and lim.get("members"):
+                kind = "weaponProficiency" if "weapon" in lim["id"] else "armor"
+                self.bounds[kind].append((lim["id"], lim["id"], frozenset(lim["members"])))
+
     def refines(self, a, b):
         """Does record `a` declare itself a refinement of record `b`? The only such
         declaration in the pack is `target`: a subrace names its race, a kit names its
@@ -322,6 +348,7 @@ def main():
     if a.deity:
         c.apply(pack.get(a.deity, "character deity"), "deity")
     c.apply(c.kit, "kit")
+    c.impose()
 
     who = " / ".join(x["name"] for x in (c.race, c.subrace, c.klass, c.kit) if x)
     print(f"CHARACTER: {who}, level {a.level}")

@@ -962,7 +962,7 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    Engine resolves it by declared refinement and prints one of them, and **nothing anywhere notices
    that the two books agree.** Roll-under and percentage are not comparable operands and the schema
    offers no way to say they mean the same thing.
-48. **`limitation` must carry `members`, and twenty records already show the shape.**
+48. **RESOLVED — `limitation` carries `members`, and `imposedBy` turned out to be the imposition.**
    ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md)) The schema
    says out loud that *"a limitation has no effects: it is a thing to be pointed AT"* — ticket 16
    decision 4, right about dangling ids and wrong about this. **125 effects need a limitation to be a
@@ -971,6 +971,22 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    13 existing `except`s computable, gives correction 46 somewhere to put its contents, and **needs no
    seventh operation**: `permitted = (∩ bounds) \ (∪ forbids)`, and both operators commute, so §4.3's
    guarantee is inherited rather than re-argued.
+   **Applied**: the schema gained the field, and two of the seven limitations took members — the
+   thief's twelve weapons and the wizard's five. **No pack effect was needed.** The pack has 13
+   `except`s and **zero matching `forbid`s**, and the reason is that a limitation already names the
+   class that imposes it: *being that class is the imposition.* A plain thief now computes **12
+   permitted weapons of 117**; the Assassin, whose kit says *"unlike thieves of other kits, permitted
+   the use of any weapon"*, computes **117 of 117 with the lifted rule named on the sheet.** Same for
+   the wizard's five and the Militant Wizard. 1,236 records, 0 schema errors, all 17 member ids
+   resolve.
+   **The five abstentions are the more useful half.** `phb:thief-armor-restriction` and
+   `phb:bard-armor-restriction` were left empty on purpose: Table 46's rows are coarser than the
+   sentences that restrict them — `phb:padded-hide-studded` carries HIDE, which the thief's list does
+   not name — so members there would permit armour the book forbids. **Correction 50's boundary, met
+   on the second record tried.** The other three bound nothing at all.
+   And **§7.3 turned up inside a single book**: of the thief's twelve, the PHB names a *lasso* that
+   Table 44 does not carry (the only record is the Complete Fighter's) and says *staff* where the
+   table says *quarterstaff*.
 49. **The six PHB weapon groups carry no members.**
    ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md)) `phb:bow`,
    `phb:crossbow`, `phb:lance`, `phb:polearm`, `phb:sword` and `phb:bastard-sword` are flagged
@@ -987,6 +1003,16 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    *metallic* is not computable at all. **Enumeration cannot reach these**, so correction 48 solves
    the restriction problem for 125 effects and leaves this 72 untouched — which is the honest
    statement of the boundary, not a gap in it.
+51. **One limitation is excepted under two different `kind`s, and the pack cannot say which is
+   right.** ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md),
+   applying correction 48) `phb:thief-weapon-restriction` is lifted as `weaponProficiency` by the
+   Assassin, Bounty Hunter and Thug, and as `weapon` by the **Spy** — whose own marker says why:
+   *"the Spy may USE non-thief weapons but may never take proficiency in them. `except` lifts the
+   prohibition entirely; nothing expresses lifting only half of it."* So the two kinds encode a real
+   distinction the transcriber was reaching for. A `bounds` field on the limitation would catch the
+   disagreement mechanically — **and adding one forces a decision about whether *may use* and *may be
+   proficient in* are one restriction or two**, which is a rules question and not a schema question.
+   Deliberately not taken while applying 48; recorded so the next attempt does not rediscover it.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

@@ -115,7 +115,7 @@ _Resolved:_
   corrections stop being owed. Day one reads **the spec for the product, the schema for the format,
   and this map's decisions for what the Engine does with what it loads.** §13 was rewritten — nine
   entries to four, each with a test — and §5.4 added, because ticket 02's decision about 381 marked
-  effects has no other home. Left owed: correction 6 (§5.1 against §7.1) and correction 48.
+  effects has no other home. Left owed: correction 6 (§5.1 against §7.1). Correction 48 is applied.
 - **[02 — What the Engine does with an UNMODELLED effect](issues/02-what-the-engine-does-with-an-unmodelled-effect.md)**
   **The operation decides, not the category — and a marked effect never reaches the total.** On a
   structural operation (222 of 381) the thing is applied and the marker rides on that entry; on a
@@ -147,7 +147,11 @@ _Resolved:_
   `permitted = (∩ bounds) \ (∪ forbids)` **commutes**, so §4.3's guarantee is inherited. Prototyped:
   an Agriculture priest goes from 117 weapons to 5, a second bound to 1, and an `except` back to 117.
   **72 predicate-shaped bounds are explicitly NOT solved** — the pack records no material. Sent back
-  corrections 48, 49 and 50.
+  corrections 48, 49 and 50, and **48 is applied**: the schema has the field, the thief's twelve
+  weapons and the wizard's five are in the pack, and a thief now computes **12 permitted of 117**
+  while the Assassin computes 117 with the lifted rule named. No pack effect was needed —
+  **`imposedBy` was the imposition all along.** Two limitations declined members on purpose, which is
+  correction 50's boundary met on the second record tried.
 
 ## Not yet specified
 

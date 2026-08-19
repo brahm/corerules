@@ -226,9 +226,67 @@ is seven records of which two have an armour class. *Larger than a knife* is nea
 rather than folded in here, because a decision that quietly covered a third of its cases by leaving
 them marked would be the same mistake ticket 02 found in the markers themselves.
 
+## Correction 48, applied
+
+Made and proved in the same session the ticket was decided, which is the argument for landing a
+correction in the schema rather than in prose: **it is testable the moment it exists.**
+
+- **Schema** — `limitations.items` gained `members`, optional, an array of ids, with the field name
+  taken deliberately from the `weaponProficiency` groups so a bounded set is one concept.
+- **Pack** — two of the seven limitations took members: the thief's **twelve** weapons and the
+  wizard's **five**. `1,236 records, 0 schema errors`, and all 17 member ids resolve.
+- **No pack effect was needed, and that was a surprise.** This ticket predicted *"a record applies a
+  bound by `forbid`-ing the limitation"*. The pack has 13 `except`s and **zero matching `forbid`s** —
+  because a limitation already names the class that imposes it. **`imposedBy` was the imposition all
+  along**; the missing half was only ever the contents.
+
+On real pack data, no synthetic records:
+
+```
+thief, no kit                 weaponProficiency: 12 of 117
+                                  bound by Thief Weapon Restriction (12)
+                                  Broad sword, Club, Dagger or dirk, Dart, Hand crossbow, Knife,
+                                  Lasso, Long sword, Quarterstaff, Short bow, Short sword, Sling
+
+thief / Assassin (CTH)        weaponProficiency: 117 of 117
+                                  LIFTED  Thief Weapon Restriction   cth:DD05808[0]
+
+mage, no kit                  weaponProficiency: 5 of 117
+mage / Militant Wizard (CWH)  weaponProficiency: 117 of 117   LIFTED
+```
+
+### The five abstentions are the more useful half
+
+`phb:thief-armor-restriction` and `phb:bard-armor-restriction` were left **empty on purpose**. Table
+46's rows are coarser than the sentences that restrict them: `phb:padded-hide-studded` carries **hide**,
+which the thief's list does not name, and `phb:leather` conflates leather with padded. Members there
+would permit armour the book forbids — **the exact failure the field exists to stop**. Correction 50's
+boundary, met on the second record tried. The other three bound nothing at all.
+
+An optional field that two records decline is a better test of the design than seven that accept it.
+
+### Three findings from the application
+
+1. **§7.3 inside a single book.** Of the thief's twelve, the PHB names a *lasso* that Table 44 does
+   not carry — the only record is the Complete Fighter's — and says *staff* where the table says
+   *quarterstaff*. Two of twelve, in the core book, between two pages of the same book.
+2. **The wizard's list is split across two sentences** — *"a dagger or a staff … Other weapons allowed
+   are darts, knives, and slings."* An enumeration a reader assembles without noticing is one a
+   transcriber has to be told to look for.
+3. **Multi-class composition is not an intersection, and nothing implements it.** The PHB states the
+   rule **per class**: a multi-classed warrior is unrestricted, a multi-classed *priest* keeps his
+   mythos weapons (*"a fighter/cleric can use only bludgeoning weapons"*), and the thief's restriction
+   is about armour and thieving skills. **Intersecting bounds across `combines` would bind a
+   fighter/thief to twelve weapons the book allows him.** §6.2 already assigns the combination rules
+   to the Engine, so this is not a spec correction — but the Engine does not own them yet, and the
+   prototype declines and says so rather than guessing.
+
+And one question deliberately not answered: `phb:thief-weapon-restriction` is excepted as
+`weaponProficiency` three times and as `weapon` once. Sent back as **correction 51**.
+
 ## Owed back to the corpus map
 
-- **Correction 48 — `limitation` must carry `members`, and 20 records already show the shape.** The
+- **Correction 48 — RESOLVED in this session, see above.** The
   schema says a limitation is a thing to be pointed at; 125 effects need it to be a set. The field
   exists on `weaponProficiency` groups with 2 to 26 ids each. Adding it to `limitation` makes 13
   `except`s computable and gives correction 46 somewhere to put its contents.
