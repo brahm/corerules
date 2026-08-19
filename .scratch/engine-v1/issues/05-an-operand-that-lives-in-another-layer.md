@@ -284,13 +284,57 @@ An optional field that two records decline is a better test of the design than s
 And one question deliberately not answered: `phb:thief-weapon-restriction` is excepted as
 `weaponProficiency` three times and as `weapon` once. Sent back as **correction 51**.
 
+## Correction 49, applied
+
+The entry said six groups. **It was sixteen** — six in Table 44 and ten more in the Complete
+Fighter's own table, which the entry missed by reading one file.
+
+**The membership had been in the source the whole time, as three spaces of indentation.** A heading
+scores `--` in every column (empty cells, in the CFH) and its variants sit beneath it; nothing else
+in Table 44 says a long bow is a Bow. **Typography as data, again.** Derived mechanically and
+written: 4 bows, 3 crossbows, 4 lances, 18 polearms, 7 swords, 2 bastard swords, and ten CFH groups
+whose member names are **relative to the heading** — the row reads *Bone* under *Dagger*. Groups
+nest, so `expand` is transitive: Bastard sword is a member of Sword and a group in its own right.
+
+Before and after, on the pack:
+
+```
+before:  a permit-list reading "swords (all)" permits 0 of 117
+             -> phb:sword is a group with no members: a bound naming it permits nothing
+after :  a permit-list reading "swords (all)" permits 8 of 117
+```
+
+`1,236 records, 0 schema errors`; distinct references 332 → 349, still 2 unresolved. And the bounds
+now read as the books write them:
+
+```
+"bows (all)"     4    Composite long bow, Composite short bow, Long bow, Short bow
+"polearms"      18    Awl pike … Voulge
+```
+
+### Two findings, and one row corrected by hand
+
+- **`phb:one-handed` and `phb:two-handed`.** Table 44 nests them under *Bastard sword* and their
+  names mean nothing anywhere else. Expanding the sword group made it visible: a character's
+  permitted weapons now print **One-handed, Two-handed**. §7.3 says a name is never identity; this is
+  the harder case, where **the name is not even a thing.** The CFH has the same shape four more times
+  and escaped it because the transcriber composed the parent into the id. Sent back as
+  **correction 52**.
+- **Ammunition shares the indentation and means something else** — arrows under Bow, quarrels under
+  Crossbow, bullet and stone under Sling, dart and needle under Blowgun. Nine rows, held out of
+  `members` on a mechanical test (**a launcher carries a speed factor and no damage; ammunition
+  carries damage and no speed factor**) because a character is not proficient in an arrow. Nothing
+  records the relation they actually have. Sent back as **correction 53**.
+- **`Dagger or dirk` is indented under Crossbow** in Table 44 — the row that follows the crossbow
+  block alphabetically, and not a crossbow. Excluded by hand; the only slip in 79 rows.
+
 ## Owed back to the corpus map
 
 - **Correction 48 — RESOLVED in this session, see above.** The
   schema says a limitation is a thing to be pointed at; 125 effects need it to be a set. The field
   exists on `weaponProficiency` groups with 2 to 26 ids each. Adding it to `limitation` makes 13
   `except`s computable and gives correction 46 somewhere to put its contents.
-- **Correction 49 — the six PHB weapon groups carry no members.** `phb:bow`, `phb:crossbow`,
+- **Correction 49 — RESOLVED in this session, see above; and it was sixteen groups, not six.** `phb:bow`, `phb:crossbow`,
   `phb:lance`, `phb:polearm`, `phb:sword`, `phb:bastard-sword` are `isGroup` with nothing in them,
   while the CFH's twenty are full. Permit-lists name these groups by preference — *bows (all)*,
   *swords (all)* — so an empty group is a bound that silently permits nothing.

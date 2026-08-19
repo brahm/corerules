@@ -155,7 +155,10 @@ _Resolved:_
   weapons and the wizard's five are in the pack, and a thief now computes **12 permitted of 117**
   while the Assassin computes 117 with the lifted rule named. No pack effect was needed —
   **`imposedBy` was the imposition all along.** Two limitations declined members on purpose, which is
-  correction 50's boundary met on the second record tried.
+  correction 50's boundary met on the second record tried. **49 is applied too** — and it was
+  **sixteen** empty groups rather than six, with the membership sitting in the source as **three
+  spaces of indentation**. A permit-list reading *"swords (all)"* went from **0 of 117 to 8**. Sent
+  back corrections 52 and 53.
 
 ## Not yet specified
 

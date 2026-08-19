@@ -299,6 +299,29 @@ class Character:
             return v if not isinstance(v, int) else v + f["adjust"]
         return f["adjust"]
 
+    def expand(self, ids):
+        """A member may itself be a group — Table 44 nests Bastard sword under Sword, and the
+        Complete Fighter's nests Katana under Sword under nothing. Correction 49: a bound that
+        names `phb:sword` means the seven swords, and before the groups had members it meant
+        nothing at all."""
+        out, seen = set(), set()
+        stack = list(ids)
+        while stack:
+            i = stack.pop()
+            if i in seen:
+                continue
+            seen.add(i)
+            r = self.pack.by_id.get(i) or {}
+            if r.get("isGroup"):
+                if not r.get("members"):
+                    self.pack.complain("bound",
+                                       f"{i} is a group with no members: a bound naming it "
+                                       f"permits nothing")
+                stack.extend(r.get("members") or [])
+            else:
+                out.add(i)
+        return out
+
     def permitted(self, kind, universe):
         """(intersection of every bound still standing) minus (everything forbidden).
         Set intersection and union commute, so the layers may be applied in any order —
@@ -307,7 +330,7 @@ class Character:
         live = [b for b in self.bounds.get(kind, []) if b[1] not in self.lifted]
         allowed = set(universe)
         for _, _, members in live:
-            allowed &= members
+            allowed &= self.expand(members)
         allowed -= {ref for _, ref in self.forbidden}
         return allowed, live
 

@@ -998,13 +998,29 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    And **§7.3 turned up inside a single book**: of the thief's twelve, the PHB names a *lasso* that
    Table 44 does not carry (the only record is the Complete Fighter's) and says *staff* where the
    table says *quarterstaff*.
-49. **The six PHB weapon groups carry no members.**
+49. **RESOLVED — sixteen weapon groups carried no members, not six, and the membership was in the indentation.**
    ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md)) `phb:bow`,
    `phb:crossbow`, `phb:lance`, `phb:polearm`, `phb:sword` and `phb:bastard-sword` are flagged
    `isGroup` with nothing in them, while the Complete Fighter's Handbook's twenty are full. **The
    CPRH's permit-lists name these groups by preference** — *bows (all)*, *flails (both)*, *swords
    (all)* — so an empty group is a bound that silently permits **nothing**. Prerequisite to correction
    46 rather than a consequence of it.
+   **Applied**, and the count was wrong: **sixteen** groups were empty, six in Table 44 and **ten more
+   in the Complete Fighter's own table**, which the entry missed by reading one file. The membership
+   had been in the source all along, as **three spaces of indentation** — a heading scores `--` in
+   every column (empty cells, in the CFH) and its variants are indented beneath it. Nothing else in
+   the table says a long bow is a Bow. **Typography as data, for the fourth time in this effort.**
+   Derived mechanically and written: 4 bows, 3 crossbows, 4 lances, 18 polearms, 7 swords, 2 bastard
+   swords, and ten CFH groups whose member names are **relative to the heading** — the row reads
+   *Bone* under *Dagger*. Groups nest: Bastard sword is a member of Sword and a group in its own
+   right, so a bound expands transitively.
+   Proved against the pack before and after: a permit-list reading *"swords (all)"* permitted **0 of
+   117 before and 8 after**, with the checker complaining *"phb:sword is a group with no members: a
+   bound naming it permits nothing"* on the before. `1,236 records, 0 schema errors`, distinct
+   references 332 → 349, still 2 unresolved.
+   **Two rows were held out by hand.** Table 44 indents `Dagger or dirk` under Crossbow — the row that
+   follows the crossbow block alphabetically, and not a crossbow; a slip in the table or its
+   rendition, and the only one in 79 rows.
 50. **A bound stated over item properties has no vocabulary, and 72 effects want one.**
    ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md)) *Metallic
    weapons*, *more than a tenth metal by weight*, *metal weapons larger than a knife*, *armour other
@@ -1024,6 +1040,25 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    disagreement mechanically — **and adding one forces a decision about whether *may use* and *may be
    proficient in* are one restriction or two**, which is a rules question and not a schema question.
    Deliberately not taken while applying 48; recorded so the next attempt does not rediscover it.
+52. **Two records are named for a position they no longer occupy: `phb:one-handed` and
+   `phb:two-handed`.** ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md),
+   applying correction 49) Table 44 nests them under **Bastard sword** — one-handed 1d8, two-handed
+   2d4 — and their names mean nothing anywhere else. The transcription flattened them into top-level
+   records with top-level ids, and correction 49 made the damage visible: a bound reading *"swords
+   (all)"* now prints **One-handed, Two-handed** among a character's permitted weapons. §7.3 says a
+   name is never identity; this is the harder case, where **the name is not even a thing** — it is a
+   column heading's remainder. The Complete Fighter's has the same shape four more times (Katana,
+   Spear Long, Spear Stone, Javelin Stone) and escaped it because the transcriber composed the
+   parent into the id: `cfh:sword-katana-one-handed`. The PHB's two did not get that treatment.
+53. **Ammunition is indented under its launcher and the pack has no relation for it — nine rows.**
+   ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md), applying
+   correction 49) Table 44 prints flight and sheaf arrows under **Bow**, three quarrels under
+   **Crossbow**, bullet and stone under **Sling**, barbed dart and needle under **Blowgun** — the same
+   indentation that means *group member*, meaning something else entirely. They are distinguishable
+   mechanically (**a launcher carries a speed factor and no damage; ammunition carries damage and no
+   speed factor**), and correction 49 held them out of `members` on that test, because a character is
+   not proficient in an arrow. But nothing records that an arrow belongs to a bow, and two of the
+   four launchers involved are not groups at all, so the relation cannot even be hidden in `members`.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack
