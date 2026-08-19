@@ -184,10 +184,14 @@ _Resolved:_
   which it did on the first run, catching `Polearms` claimed by both Table 44's heading and the
   Complete Fighter's purchasable group.
 
-**Of the corrections list's 59 entries, 25 are applied.** One is owed to `spec.md` §5 — **59**, a
-campaign option is a third category neither §5.1 nor §6.2 reaches, and §3.4's rule-set catalogue is
-promised and nowhere written down. The rest are history, method, or corrections to the sections
-ticket 01 made non-normative. The rest are
+**Of the corrections list's 59 entries, 26 are applied and nothing is owed anywhere.** The rest are
+history, method, or corrections to the sections ticket 01 made non-normative.
+
+The last one was a spec edit. **59** gave `spec.md` a **§5.5, Campaign options** — the third category
+neither §5.1 nor §6.2 reaches, a rule inside a set the pack provides that changes a number and that a
+*table* decides to play — and with it **the rule-set catalogue §3.4 has promised since it was
+written and that existed nowhere.** Transcribed rather than invented: the Player's Handbook and the
+DMG head 28 sections *"(Optional Rule)"* in their own words, and eight are inside v1's scope. The rest are
 history, method, or corrections to the `spec.md` sections ticket 01 made non-normative.
 
 The last two were the two that most changed how the pack is read. **45** rebuilt the 36 doubled

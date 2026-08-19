@@ -143,7 +143,8 @@ proficiency slot type and ability all grow from packs.
 
 **Rule-set names are the exception and must be closed.** A3 (§5) has a pack declare which rule-sets
 it provides, and the Engine cannot act on a name it does not understand — a pack declaring
-`lunar-phase-restriction` would have no effect. That catalogue is the Engine's.
+`lunar-phase-restriction` would have no effect. That catalogue is the Engine's, **and it is written
+down in §5.5** (correction 59, which found it promised here and existing nowhere).
 
 ---
 
@@ -314,7 +315,55 @@ predicate asks something the sheet cannot answer, or two layers set it and nothi
 case the sheet says which record and which book, which is §1's promise reached at the level of a
 single number.
 
-### 5.5 The one exception
+### 5.5 Campaign options — the third category
+
+([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md), correction 57)
+**§5.1 says A3 subsumes the optional DMG rule. For a validation rule it does; for a computation it
+cannot**, because §5.2 puts computation rules in the Engine and a pack that simply omits the Complete
+Priest's split experience bonus has not expressed the choice — it has made it.
+
+So there is a third category, and neither §5.1 nor §6.2 reaches it: **a rule inside a set the pack
+provides, that changes a number, and that a TABLE decides to play.** The books mark these
+themselves — 28 headings in the Player's Handbook and the DMG read *"(Optional Rule)"* outright, and
+Chapter 5 says *"weapon proficiencies are tournament-level rules, optional in regular play, and
+nonweapon proficiencies are completely optional."*
+
+**The posture is §5.4's.** An optional effect is **fully modelled** — this is not an `UNMODELLED`
+marker, the predicate is decidable and no layer disagrees. What is absent is a decision belonging to
+neither the pack nor the Engine. So the value is **withheld from the total and shown with its rule
+named**, until the character's campaign declares that rule in play.
+
+**A character records the options its campaign uses**, and the record travels with it: a sheet built
+under weapon specialization is not the same sheet without it, and §7.3's reason for a Character
+naming its packs is the same reason it must name its options.
+
+#### The catalogue
+
+§3.4 makes rule-set names **the Engine's closed enumeration** — *"the Engine cannot act on a name it
+does not understand"* — and until now no catalogue existed anywhere. This is it. Every entry is a
+rule a book marks optional in its own words, and v1 understands these:
+
+| name | source |
+|---|---|
+| `phb:weapon-proficiencies` | Chapter 5, *"tournament-level rules, optional in regular play"* |
+| `phb:nonweapon-proficiencies` | Chapter 5, *"completely optional"* |
+| `phb:weapon-specialization` | *"an optional rule that enables a fighter (only) to choose a single weapon"* |
+| `dmg:exceeding-level-limits` | DMG, *Exceeding Level Limits (Optional Rule)* |
+| `dmg:slow-advancement` | DMG, *Slow Advancement (Optional Rule)* |
+| `dmg:individual-experience-awards` | DMG, *Individual Experience Awards (Optional Rule)* |
+| `dmg:training` | DMG, *Training (Optional Rule)* |
+| `cprh:split-prime-requisite-bonus` | Complete Priest's, *"the DM may decide that the character … gets a +5% bonus"* |
+
+**Bounded by v1's scope, not by the books.** The DMG's other twenty — critical hits, parrying,
+weapon frontage, hovering on death's door — are combat and play, which §12 puts outside v1. They
+belong to the catalogue when the Engine reaches them and not before, because a name the Engine
+carries but cannot act on is the thing §3.4 exists to prevent.
+
+**It grows by specification, never by a pack.** A pack naming an option the catalogue does not carry
+is reported and ignored, exactly as §3.4 says a pack declaring `lunar-phase-restriction` would have
+no effect.
+
+### 5.6 The one exception
 
 **Magic items are recorded, not validated.** ([ticket 11](issues/11-engine-object-kinds.md))
 Acquiring one is DM fiat and no rule governs it. **Use** stays validated: a wizard may not use a

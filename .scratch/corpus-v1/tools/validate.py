@@ -31,10 +31,13 @@ import re, json, sys, pathlib, collections
 # 4,110 references. It now walks EVERY string shaped like an id, which is mechanical and
 # cannot fall behind a new kind.
 #
-# `vocabulary` is excluded because it names a KIND, not a record — the one place an
-# id-shaped string is deliberately not a reference.
+# `vocabulary` is excluded because it names a KIND, not a record. `optional` (correction 59)
+# is excluded because it names a RULE-SET, from §3.4's closed catalogue — the Engine's, not the
+# pack's, so there is nothing in the pack for it to point at. Two places now where an id-shaped
+# string is deliberately not a reference, which is worth watching: the shape says "reference"
+# and the key says otherwise, and only the key is right.
 ID_SHAPED = re.compile(r"^[a-z][a-z0-9]*:[a-z0-9][a-z0-9-]*$")
-NOT_A_REFERENCE = {"vocabulary"}
+NOT_A_REFERENCE = {"vocabulary", "optional"}
 
 
 def collect(node, refs, key=None):

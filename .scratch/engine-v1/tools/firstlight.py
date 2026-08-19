@@ -68,7 +68,9 @@ class Pack:
 class Character:
     def __init__(self, pack, race, klass, kit, level, scores, subrace=None, options=False):
         self.pack, self.level, self.scores = pack, level, scores
-        self.options = options         # does this table play the books' optional rules?
+        # §5.5's catalogue: the rules this campaign plays. A Character records them, because a
+        # sheet built under weapon specialization is not the same sheet without it.
+        self.options = set(options or ())
         self.race = pack.get(race, "character race")
         self.subrace = pack.get(subrace, "character subrace") if subrace else None
         self.klass = pack.get(klass, "character class")
@@ -214,10 +216,10 @@ class Character:
             # misread any note that DISCUSSED a marker as being one — a false positive this
             # project introduced twice, both times while repairing markers.
             marked = bool(e.get("unmodelled"))
-            if e.get("optional") and not self.options:
+            if e.get("optional") and e["optional"] not in self.options:
                 self.byOption.append((e.get("field"), e["op"],
                                       e.get("by", e.get("to", e.get("ref"))), src,
-                                      e.get("text") or ""))
+                                      e.get("text") or "", e["optional"]))
                 continue
             fires = self.when(e.get("when"))
             if fires is None:
@@ -444,8 +446,9 @@ def main():
     ap.add_argument("--kit", default="cbd:DD04638")
     ap.add_argument("--deity", default=None)
     ap.add_argument("--level", type=int, default=1)
-    ap.add_argument("--optional-rules", action="store_true",
-                    help="play the rules the books mark optional (correction 57)")
+    ap.add_argument("--optional-rules", default="",
+                    help="comma-separated names from §5.5's catalogue, e.g. "
+                         "phb:weapon-specialization")
     a = ap.parse_args()
 
     pack = Pack(a.pack)
@@ -453,7 +456,8 @@ def main():
 
     scores = {"strength": 16, "dexterity": 12, "constitution": 15,
               "intelligence": 10, "wisdom": 11, "charisma": 9}
-    c = Character(pack, a.race, a.klass, a.kit, a.level, scores, a.subrace, a.optional_rules)
+    c = Character(pack, a.race, a.klass, a.kit, a.level, scores, a.subrace,
+                  [x for x in a.optional_rules.split(",") if x])
 
     # A character IS a race and a class, and MAY carry an attachable. The group a
     # class belongs to is a layer too — the corpus put the hit die there.
@@ -528,10 +532,10 @@ def main():
                                                 for i in allowed)[:12]))
 
     if c.byOption:
-        print(f"\nBY CAMPAIGN OPTION — the book marks these optional and no table has said "
-              f"({len(c.byOption)})")
-        for path, op, val, src, why in c.byOption:
-            print(f"    {op} {str(path or val):<28}{src}")
+        print(f"\nBY CAMPAIGN OPTION — §5.5, and this campaign plays "
+              f"{', '.join(sorted(c.options)) or 'none of them'} ({len(c.byOption)} withheld)")
+        for path, op, val, src, why, opt in c.byOption:
+            print(f"    {op} {str(path or val):<28}{opt:<34}{src}")
             print(f"        {why[:150]}")
 
     if c.situational:

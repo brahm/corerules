@@ -1276,7 +1276,7 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    would be worth less than the list, and a note written to fill a field is worse than none.
    **`fields` is the first array in a pack that is not a list of records** — no ids — and both the
    checker and the Engine had to be told, the checker by crashing on `r["id"]`.
-59. **§5 has no section for a campaign option, and §3.4's rule-set catalogue is not written down.**
+59. **RESOLVED — §5.5 is the campaign-option section and it carries the catalogue §3.4 promised.**
    ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md), applying
    correction 57) §5.1: *"A3 subsumes the house-rule escape hatch. No override mechanism is needed:
    an optional DMG rule or a table's house rule is expressed by what the pack declares and

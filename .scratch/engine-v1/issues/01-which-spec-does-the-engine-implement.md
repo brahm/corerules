@@ -225,6 +225,11 @@ landed in prose is checked by nobody."*
     The checker now enforces the mode in both directions, and `fixtures/house-rules/` is the pack
     §5.1 promised, validating. **A declaration nothing acts on is not A3; it is a field** — which is
     a caution about the other declarations this spec makes.
+- **§5.5 added later**, by correction 59: campaign options, and the rule-set catalogue §3.4 had
+  promised and never written. It landed in the spec for the same reason §5.4 did — §5 is the
+  behaviour half, which stays normative — and it is worth noting that **both of the spec's edits
+  since this decision have been in §5.** The format half has been corrected six times in the same
+  span and none of it touched the spec, which is the decision working.
 - **§§9–12** were never in question and were not touched.
 
 ## Why this ticket says do not rewrite the spec now
