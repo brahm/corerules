@@ -1069,7 +1069,7 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    No check was added, and that is worth stating: *"this name means nothing outside its row"* is a
    judgement, not a predicate. Corrections 40 and 6 became checks; this one could only become a
    better extractor.
-53. **Ammunition is indented under its launcher and the pack has no relation for it — nine rows.**
+53. **RESOLVED — the pack could not say what a long bow does, because the damage lives in a different record.**
    ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md), applying
    correction 49) Table 44 prints flight and sheaf arrows under **Bow**, three quarrels under
    **Crossbow**, bullet and stone under **Sling**, barbed dart and needle under **Blowgun** — the same
@@ -1078,6 +1078,17 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    speed factor**), and correction 49 held them out of `members` on that test, because a character is
    not proficient in an arrow. But nothing records that an arrow belongs to a bow, and two of the
    four launchers involved are not groups at all, so the relation cannot even be hidden in `members`.
+54. **`isGroup` means two different things and only the absence of `groupKind` tells them apart.**
+   ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md), applying
+   correction 53) Sixteen records are **table headings** — Table 44's `Bow`, the Complete Fighter's
+   `Dagger` — and twenty are the Complete Fighter's **priced proficiency groups**, a Tight Group
+   costing two slots and a Broad Group three. Both carry `isGroup: true` and both carry `members`,
+   and the only discriminator is that a priced group also carries `groupKind`. It caught a real
+   error: asking *"do this weapon's group-mates carry ammunition?"* to tell a launcher from a weapon
+   that does no damage, the group **"Weapons Not Belonging To Any Group"** put the blowgun beside the
+   lasso and **made the lasso look like a bow**. A heading says *these rows are printed under this
+   name*; a priced group says *these weapons may be bought together for three slots*. They are not
+   the same relation and the schema should not spell them the same.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

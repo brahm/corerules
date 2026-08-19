@@ -299,6 +299,36 @@ class Character:
             return v if not isinstance(v, int) else v + f["adjust"]
         return f["adjust"]
 
+    def damage(self, weapon):
+        """Correction 53. Eleven of Table 44's weapons carry no damage, because in 2e the
+        LAUNCHER has the speed factor and the AMMUNITION has the damage. Returns
+        (damage, the record that supplied it) — or (None, None) where the book never said,
+        which is the short bows."""
+        r = self.pack.by_id.get(weapon) or {}
+        if r.get("damageSmallMedium"):
+            return r["damageSmallMedium"], weapon
+        for a in r.get("ammunition") or []:
+            am = self.pack.by_id.get(a) or {}
+            if am.get("damageSmallMedium"):
+                return am["damageSmallMedium"], a
+        # No damage and no ammunition is TWO different facts and the columns do not tell them
+        # apart — Table 44 prints a dash for both. A weapon whose GROUP-MATES carry ammunition
+        # is a launcher the book never gave one (the short bows); a standalone weapon with no
+        # damage does none by design (mancatcher, lasso, net).
+        for g in self.pack.by_kind["weaponProficiencies"]:
+            # A TABLE HEADING only — `isGroup` with no `groupKind`. The Complete Fighter's
+            # priced groups are also `isGroup`, and one of them is literally "Weapons Not
+            # Belonging To Any Group", whose members share nothing: it put the blowgun beside
+            # the lasso and made the lasso look like a launcher.
+            if not g.get("isGroup") or g.get("groupKind") or weapon not in (g.get("members") or []):
+                continue
+            if any((self.pack.by_id.get(m) or {}).get("ammunition") for m in g["members"]):
+                self.pack.complain("ammunition",
+                                   f"{weapon} is a launcher and the book never names what it "
+                                   f"fires; nothing can compute its damage")
+                return None, None
+        return None, "does none"
+
     def expand(self, ids):
         """A member may itself be a group — Table 44 nests Bastard sword under Sword, and the
         Complete Fighter's nests Katana under Sword under nothing. Correction 49: a bound that

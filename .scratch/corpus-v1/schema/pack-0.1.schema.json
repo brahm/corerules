@@ -984,6 +984,14 @@
             "type": "integer",
             "minimum": 1,
             "description": "Weapon proficiency slots to buy the whole group. Absent on a `none` group, which cannot be bought."
+          },
+          "ammunition": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/id"
+            },
+            "minItems": 1,
+            "description": "Correction 53. **Eleven of Table 44's weapons carry no damage** — every bow, every crossbow, the sling, the staff sling, the blowgun — because in 2e the LAUNCHER has a speed factor and the AMMUNITION has the damage, and they are separate rows. Table 44 states the relation only by indenting the arrows under `Bow`; Table 45 states it properly, pairing 'Longbow, flight arrow' against 'Longbow, sheaf arrow' with different ranges. Without this field the pack cannot say what a long bow does, and `members` cannot carry it: ammunition is not a weapon you take proficiency in, and two of the launchers involved are not groups. Absent where the book never says — Table 45 gives the short bows one range line and names no arrow."
           }
         },
         "description": "Ticket 14 declared this kind with NO fields, before anything was transcribed. Its shape is Table 44's columns, set in session 51 the same way the nonweapon proficiency's four fields turned out to be Table 37's four columns — the book's own table IS the record shape."

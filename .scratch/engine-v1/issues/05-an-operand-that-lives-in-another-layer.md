@@ -332,7 +332,26 @@ now read as the books write them:
   Crossbow, bullet and stone under Sling, dart and needle under Blowgun. Nine rows, held out of
   `members` on a mechanical test (**a launcher carries a speed factor and no damage; ammunition
   carries damage and no speed factor**) because a character is not proficient in an arrow. Nothing
-  records the relation they actually have. Sent back as **correction 53**.
+  records the relation they actually have. Sent back as **correction 53**, **and applied**:
+  `weaponProficiency` gained `ammunition`, nine launchers carry it, and **112 of 117 weapons now
+  state a damage where eleven could not before.**
+
+  ```
+  A thief's permitted weapons, with the damage each actually does
+      Hand crossbow         1d3      from Hand quarrel
+      Sling                 1d4+1    from Sling bullet
+      Lasso                 —        does no damage by design
+      Short bow             ?        the book never names what it fires
+  ```
+
+  The five that still cannot state a damage are **two facts the table spells identically**: three
+  weapons do no damage by design, and two short bows are launchers the book never gave an arrow —
+  Table 45 gives them one range line naming none, and DD01630 says flight and sheaf arrows are *"for
+  long bows of all types"*. Not guessed. Two more findings came out of it: the CFH prints **`Daikyu`
+  and `Daikyu arrow` as two unindented rows**, so correction 49's convention does not reach them and
+  the daikyu read as a weapon that does no damage; and **`isGroup` means two different things**,
+  which sent back **correction 54** after the group *"Weapons Not Belonging To Any Group"* put the
+  blowgun beside the lasso and made the lasso look like a bow.
 - **`Dagger or dirk` is indented under Crossbow** in Table 44 — the row that follows the crossbow
   block alphabetically, and not a crossbow. Excluded by hand; the only slip in 79 rows.
 
