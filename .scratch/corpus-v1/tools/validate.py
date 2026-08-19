@@ -115,6 +115,25 @@ def main():
     if mode == "hand-authored" and manifest.get("sources"):
         provenance.append("manifest  declares `hand-authored` and names sources anyway")
 
+    # Correction 51. A limitation declares the `kind` it bounds; an effect that names it with a
+    # different one is a disagreement nothing could previously see. `phb:thief-weapon-restriction`
+    # was lifted as `weaponProficiency` three times and as `weapon` once, and the odd one out was
+    # the Spy, whose book is restating the general non-proficiency rule rather than making an
+    # exception. Checked here because the limitation and the effects naming it are in different
+    # files, which a JSON Schema validates one at a time.
+    bounds = {r["id"]: r.get("bounds") for arr, recs in doc.items() if arr == "limitations"
+              for r in recs}
+    kinds = []
+    for arr, recs in doc.items():
+        if arr == "manifest":
+            continue
+        for r in recs:
+            for i, e in enumerate(r.get("effects") or []):
+                ref = e.get("ref")
+                if ref in bounds and bounds[ref] and e.get("kind") != bounds[ref]:
+                    kinds.append(f"{r['id']}[{i}] {e['op']}s {ref} as `{e.get('kind')}`, "
+                                 f"which bounds `{bounds[ref]}`")
+
     # Ticket 13 finding 45. Ticket 10 puts cross-pack referential integrity on the Engine,
     # correctly — a pack cannot see the packs it points at. But nothing was COUNTING the
     # references, so nobody noticed that not one of the proving slice's 75 resolved. Report
@@ -145,9 +164,12 @@ def main():
         print(f"  DUPLICATE  {d}")
     for d in provenance[:20]:
         print(f"  PROVENANCE  {d}")
+    for d in kinds[:20]:
+        print(f"  KIND  {d}")
     print(f"\n{total} records, {len(errors)} schema errors"
           + (f", {len(duplicates)} duplicate ids" if duplicates else "")
           + (f", {len(provenance)} provenance violations" if provenance else "")
+          + (f", {len(kinds)} kind disagreements" if kinds else "")
           + f"  [provenanceMode: {mode}]")
     if missing:
         print(f"  declared but absent: {', '.join(missing)}")
@@ -160,7 +182,7 @@ def main():
         n = sum(unresolved.values())
         print(f"  references resolved by the Engine, not here: {n} of {len(refs)} "
               f"({', '.join(f'{k}: {v}' for k, v in unresolved.most_common())})")
-    return 1 if errors or missing or duplicates or provenance else 0
+    return 1 if errors or missing or duplicates or provenance or kinds else 0
 
 
 if __name__ == "__main__":

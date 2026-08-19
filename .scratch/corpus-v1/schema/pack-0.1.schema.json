@@ -1316,6 +1316,10 @@
             },
             "minItems": 1,
             "description": "The things the rule PERMITS — not the things it forbids. Same shape as a `weaponProficiency` group's `members`, which twenty CFH records already carry, and deliberately the same field name: a bounded set is one concept whether a book prints it to price a proficiency slot or to restrict a class. An effect bounds a character by `forbid`-ing the limitation and lifts it by `except`-ing it, so `permitted = (∩ bounds) \\ (∪ forbids)` — both operators commute, and §4.3's guarantee is inherited rather than re-argued. Absent means the limitation is a name only, which is what all seven were before this."
+          },
+          "bounds": {
+            "type": "string",
+            "description": "**Correction 51.** The `kind` this limitation restricts, so that an effect naming it with a different one is a reportable disagreement rather than an invisible one — `phb:thief-weapon-restriction` was lifted as `weaponProficiency` three times and as `weapon` once, and nothing could see it.\\n\\n**`weapon` and `weaponProficiency` are different restrictions and the books mark the difference with a VERB.** *May be proficient with*, *may choose*, *may only take*, *remaining slots must be spent on* — that is `weaponProficiency`. *Will never use*, *forbidden to*, *may use any weapon that is not* — that is `weapon`, and it is stronger, because PHB DD01528 lets anyone use any weapon at a to-hit penalty. A kit that says *use* is stating a vow the general rule does not impose.\\n\\nChecked by the tool rather than the schema: a limitation and the effects that name it live in different files."
           }
         }
       }

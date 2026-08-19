@@ -1080,8 +1080,8 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    fix**, because the fact is not in the source. That is the format's boundary, stated with the
    evidence instead of suspected.
    Three more — *"the concealable ones"* — are a judgement and stay marked.
-51. **One limitation is excepted under two different `kind`s, and the pack cannot say which is
-   right.** ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md),
+51. **RESOLVED — the two kinds are a real distinction the books mark with a VERB, and the odd one
+   out was not an exception at all.** ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md),
    applying correction 48) `phb:thief-weapon-restriction` is lifted as `weaponProficiency` by the
    Assassin, Bounty Hunter and Thug, and as `weapon` by the **Spy** — whose own marker says why:
    *"the Spy may USE non-thief weapons but may never take proficiency in them. `except` lifts the
@@ -1090,6 +1090,26 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    disagreement mechanically — **and adding one forces a decision about whether *may use* and *may be
    proficient in* are one restriction or two**, which is a rules question and not a schema question.
    Deliberately not taken while applying 48; recorded so the next attempt does not rediscover it.
+   **Applied, and the rules question answered from the books.** The distinction is real and it is
+   marked by a verb: *"may be **proficient** with"*, *"may **choose** only"*, *"may only **take**"*,
+   *"remaining **slots** must be spent on"* is `weaponProficiency`; *"will never **use**"*,
+   *"**forbidden** to"*, *"may **use** any weapon that is not"* is `weapon`. **It matters because
+   PHB DD01528 lets ANYONE use a weapon they are not proficient with, at a to-hit penalty** — so a
+   proficiency rule bounds what a slot may buy, and a *use* rule is a **vow the general rule does not
+   impose.**
+   Read against their sources, **the pack had five of twelve wrong**: the Clansdwarf, Archer, War
+   Wizard, Wyrmslayer and Feralan are all proficiency-worded and were written as `weapon`. Re-kinded,
+   each with its sentence quoted on the effect.
+   **And the Spy's `except` lifted nothing.** *"A Spy can use nonthief weapons (for the purpose of
+   disguises), but cannot take proficiency in them"* — with the book's own example of carrying a
+   halberd and taking the nonproficiency penalty. **That is DD01528's general rule**, available to
+   every character. The Complete Thief's is clarifying a rule and the pack had encoded the
+   clarification as a mechanical exception. Removed: a Spy now permits **12 of 119** weapons, exactly
+   as a kitless thief does, against the Assassin's 119.
+   `limitation` gained **`bounds`**, the kind it restricts, and 67 limitations declare it. The
+   checker reports an effect that names a limitation with a different kind — **and found the Spy on
+   its first run**, which is the whole argument for landing a correction where something can check
+   it.
 52. **RESOLVED — two records were named for a position they no longer occupied, and the extractor
    had thrown the position away in its first line.** ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md),
    applying correction 49) Table 44 nests them under **Bastard sword** — one-handed 1d8, two-handed

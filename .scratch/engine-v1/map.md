@@ -173,7 +173,10 @@ _Resolved:_
   bounds, **16 are answerable** — melee-versus-missile lives in the range tables, now transcribed,
   and the split is three-way (launcher 11, hurled 21, melee 87) — while **material is measurably
   absent from every table in twelve books**, which makes 8 of them the edge of the corpus rather
-  than a gap in the format.
+  than a gap in the format. **And 51**: `weapon` against `weaponProficiency` is a real distinction
+  the books mark with a verb, the pack had **five of twelve wrong**, and the Spy's `except` turned
+  out to lift nothing — it was restating the general non-proficiency rule. `limitation.bounds` makes
+  it checkable, and the checker found the Spy on its first run.
 
 ## Not yet specified
 

@@ -442,6 +442,36 @@ fact is not in the source.**
 That is the honest end of correction 50. **It is not a gap in the format; it is the edge of the
 corpus**, and the difference between those two was worth eight effects and a search to establish.
 
+## Correction 51, applied — and the answer was a verb
+
+The correction said a `bounds` field would catch the disagreement mechanically, and that adding one
+forces a rules question: are *may use* and *may be proficient in* one restriction or two?
+
+**Two, and the books mark it with a verb.** *"May be **proficient** with"*, *"may **choose** only"*,
+*"may only **take**"*, *"remaining **slots** must be spent on"* against *"will never **use**"*,
+*"**forbidden** to"*, *"may **use** any weapon that is not"*. And it is not decoration, because
+**PHB DD01528 lets any character use a weapon they are not proficient with, at a to-hit penalty**: a
+proficiency rule bounds what a slot may buy, and a *use* rule is a vow the general rule does not
+impose.
+
+Read against their sources, **five of the twelve were wrong** — the Clansdwarf, Archer, War Wizard,
+Wyrmslayer and Feralan are all proficiency-worded and were written as `weapon`.
+
+**And the odd one out was not an exception at all.** *"A Spy can use nonthief weapons (for the purpose
+of disguises), but cannot take proficiency in them"*, with the book's own example of carrying a
+halberd and taking the penalty. That is DD01528, available to everyone. **The Complete Thief's is
+clarifying a general rule and the pack had encoded the clarification as a mechanical lift.** Removed:
+
+```
+thief, no kit            12 of 119 permitted
+thief / Spy              12 of 119 permitted     ← was lifting a restriction it never lifted
+thief / Assassin        119 of 119 permitted
+```
+
+`limitation` gained `bounds`, 67 limitations declare it, and the checker reports an effect naming one
+with a different kind. **It found the Spy on its first run** — which is the argument for landing a
+correction where something can check it, made once more.
+
 ## Owed back to the corpus map
 
 - **Correction 48 — RESOLVED in this session, see above.** The
