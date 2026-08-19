@@ -1078,7 +1078,7 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    speed factor**), and correction 49 held them out of `members` on that test, because a character is
    not proficient in an arrow. But nothing records that an arrow belongs to a bow, and two of the
    four launchers involved are not groups at all, so the relation cannot even be hidden in `members`.
-54. **`isGroup` means two different things and only the absence of `groupKind` tells them apart.**
+54. **RESOLVED — `isGroup` meant three things, and `groupKind` is now the whole statement.**
    ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md), applying
    correction 53) Sixteen records are **table headings** — Table 44's `Bow`, the Complete Fighter's
    `Dagger` — and twenty are the Complete Fighter's **priced proficiency groups**, a Tight Group

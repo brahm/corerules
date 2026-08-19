@@ -163,7 +163,9 @@ _Resolved:_
   `extract_cfh_weapons.py` had been reading it all along; it now reproduces the pack exactly, so
   49 and 52 survive a re-extraction instead of being undone by one. **53 is applied**: eleven of
   Table 44's weapons carried no damage, because in 2e the launcher has the speed factor and the
-  ammunition has the damage — **112 of 117 weapons now state one.** Sent back correction 54.
+  ammunition has the damage — **112 of 117 weapons now state one.** And **54**, which came out of 53
+  and is applied: `isGroup` spelled **three** relations in two directions, so `groupKind` became the
+  whole statement for weapons and `isGroup` is now refused there outright.
 
 ## Not yet specified
 

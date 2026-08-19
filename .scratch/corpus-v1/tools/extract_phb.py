@@ -101,9 +101,12 @@ def weapons(wh):
             seen.add(s)
             rec = {"id": f"phb:{s}", "name": name, "provenance": prov(name, "DD01624.HTM")}
             # A heading row scores nothing; it is a group, and the schema records that
-            # rather than pretending the group has a cost and a damage die.
+            # rather than pretending the group has a cost and a damage die. Correction 54:
+            # `groupKind` alone says a record is a group and which kind — `heading` here is
+            # a PRINTING convention, against the Complete Fighter's `tight`/`broad`, which
+            # are a purchase. `isGroup` no longer exists on this kind.
             if all(x in DASH for x in c[1:]):
-                rec["isGroup"] = True
+                rec["groupKind"] = "heading"
             else:
                 for key, i in (("cost", 1), ("weight", 2), ("size", 3), ("damageType", 4),
                                ("speedFactor", 5), ("damageSmallMedium", 6)):
@@ -119,7 +122,7 @@ def weapons(wh):
             if anc:
                 parent = by_name.get(anc[-1])
                 ammunition = ("speedFactor" not in rec and "damageSmallMedium" in rec)
-                if parent is not None and parent.get("isGroup") and not ammunition:
+                if parent is not None and parent.get("groupKind") and not ammunition:
                     parent.setdefault("members", []).append(rec["id"])
             by_name[stack[d]] = rec        # keyed by the row's OWN name, which is what
                                            # `anc` holds — the composed name is for display
@@ -161,7 +164,7 @@ def main():
     for k, v in doc.items():
         extra = ""
         if k == "weaponProficiencies":
-            extra = f"  ({sum(1 for x in v if x.get('isGroup'))} of them group headings)"
+            extra = f"  ({sum(1 for x in v if x.get('groupKind'))} of them group headings)"
         print(f"  {k:<22}{len(v):>4}{extra}")
     return 0
 

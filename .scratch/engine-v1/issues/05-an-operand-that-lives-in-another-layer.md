@@ -351,7 +351,11 @@ now read as the books write them:
   and `Daikyu arrow` as two unindented rows**, so correction 49's convention does not reach them and
   the daikyu read as a weapon that does no damage; and **`isGroup` means two different things**,
   which sent back **correction 54** after the group *"Weapons Not Belonging To Any Group"* put the
-  blowgun beside the lasso and made the lasso look like a bow.
+  blowgun beside the lasso and made the lasso look like a bow. **54 is applied too**, and it was
+  three things rather than two — the four class groups carry `isGroup` as well, and that relation
+  points the other way, each class naming its `group` rather than the group listing members.
+  `groupKind` is now the whole statement for weapons, `heading` joined the enum, and `isGroup` is
+  **refused outright** so the ambiguous record is unrepresentable rather than merely wrong.
 - **`Dagger or dirk` is indented under Crossbow** in Table 44 — the row that follows the crossbow
   block alphabetically, and not a crossbow. Excluded by hand; the only slip in 79 rows.
 

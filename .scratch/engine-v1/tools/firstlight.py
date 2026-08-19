@@ -316,11 +316,12 @@ class Character:
         # is a launcher the book never gave one (the short bows); a standalone weapon with no
         # damage does none by design (mancatcher, lasso, net).
         for g in self.pack.by_kind["weaponProficiencies"]:
-            # A TABLE HEADING only — `isGroup` with no `groupKind`. The Complete Fighter's
-            # priced groups are also `isGroup`, and one of them is literally "Weapons Not
-            # Belonging To Any Group", whose members share nothing: it put the blowgun beside
-            # the lasso and made the lasso look like a launcher.
-            if not g.get("isGroup") or g.get("groupKind") or weapon not in (g.get("members") or []):
+            # A table HEADING only. Correction 54 made that sayable: before it, a heading and
+            # one of the Complete Fighter's priced groups were both `isGroup` with `members`,
+            # and this test had to infer the difference from `groupKind` being ABSENT. The
+            # group "Weapons Not Belonging To Any Group" put the blowgun beside the lasso and
+            # made the lasso look like a launcher.
+            if g.get("groupKind") != "heading" or weapon not in (g.get("members") or []):
                 continue
             if any((self.pack.by_id.get(m) or {}).get("ammunition") for m in g["members"]):
                 self.pack.complain("ammunition",
@@ -342,7 +343,7 @@ class Character:
                 continue
             seen.add(i)
             r = self.pack.by_id.get(i) or {}
-            if r.get("isGroup"):
+            if r.get("groupKind"):
                 if not r.get("members"):
                     self.pack.complain("bound",
                                        f"{i} is a group with no members: a bound naming it "
@@ -445,7 +446,7 @@ def main():
     if c.bounds:
         print("\nPERMITTED — bounds intersect, forbids subtract, `except` lifts")
         universe = {"weaponProficiency": [r["id"] for r in pack.by_kind["weaponProficiencies"]
-                                          if not r.get("isGroup")],
+                                          if not r.get("groupKind")],
                     "armor": [r["id"] for r in pack.by_kind["armor"]],
                     "sphere": [r["id"] for r in pack.by_kind["spheres"]]}
         for kind in sorted(c.bounds):

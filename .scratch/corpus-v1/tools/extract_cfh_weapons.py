@@ -134,7 +134,8 @@ def main():
         rec = collections.OrderedDict([("id", f"cfh:{w['slug']}"), ("name", w["name"]),
                                        ("provenance", prov(w["name"], "DD05367.HTM"))])
         if w["isGroup"]:
-            rec["isGroup"] = True
+            rec["groupKind"] = "heading"   # correction 54: a printing convention,
+                                           # not the priced groups built below
         else:
             for key, i in (("cost", 1), ("weight", 2), ("size", 3), ("damageType", 4),
                            ("speedFactor", 5), ("damageSmallMedium", 6), ("damageLarge", 7)):
@@ -180,7 +181,7 @@ def main():
             rec = collections.OrderedDict([
                 ("id", f"cfh:group-{slug(name)}"), ("name", name),
                 ("provenance", prov(name, f"{page}.HTM")),
-                ("isGroup", True), ("groupKind", kind), ("members", ids)])
+                ("groupKind", kind), ("members", ids)])
             if cost:
                 rec["slotCost"] = cost
             if lost:
@@ -194,7 +195,7 @@ def main():
         return 0
     w = [r for r in records if not r["id"].startswith("cfh:group-")]
     g = [r for r in records if r["id"].startswith("cfh:group-")]
-    print(f"{len(w)} new weapons ({sum(1 for x in w if x.get('isGroup'))} of them headings)")
+    print(f"{len(w)} new weapons ({sum(1 for x in w if x.get('groupKind'))} of them headings)")
     print(f"{len(g)} weapon groups: "
           + ", ".join(f"{k} {sum(1 for x in g if x['groupKind'] == k)}"
                       for k in ("tight", "broad", "none")))
