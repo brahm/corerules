@@ -179,7 +179,14 @@ _Resolved:_
   it checkable, and the checker found the Spy on its first run. **And 55**, which the Engine's own
   work produced by tripping over it twice: the pack now has a canonical serialisation, a
   `normalise.py` that applies it and a checker that reports drift — and **every extractor was
-  already writing it.** The drift was in the hand edits, not the tools.
+  already writing it.** The drift was in the hand edits, not the tools. **And 56**, the last one owed: a record carries
+  the other names its books print, and the checker refuses an alias that resolves to two things —
+  which it did on the first run, catching `Polearms` claimed by both Table 44's heading and the
+  Complete Fighter's purchasable group.
+
+**Of the corrections list's 56 entries, 21 are now applied and two remain as work** — 45, the 37
+stale disjunction markers, and 47, the roll-under against the percentage. The other 33 are history,
+method, or corrections to the `spec.md` sections ticket 01 made non-normative.
 
 ## Not yet specified
 

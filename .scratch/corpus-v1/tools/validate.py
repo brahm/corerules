@@ -135,6 +135,28 @@ def main():
                     kinds.append(f"{r['id']}[{i}] {e['op']}s {ref} as `{e.get('kind')}`, "
                                  f"which bounds `{bounds[ref]}`")
 
+    # Correction 56. `alsoPrinted` exists to resolve prose into ids, so an alias that resolves
+    # to two records is worse than no alias at all: it turns a visible ambiguity into a silent
+    # wrong answer. Checked within a KIND — a record's own name may legitimately repeat across
+    # books (nine kits are called the same thing in two handbooks, and every priest/wizard spell
+    # pair shares a name), so only ALIASES are held to uniqueness, and only against other names
+    # and aliases of the same kind.
+    aliases = []
+    for arr, recs in doc.items():
+        if arr == "manifest":
+            continue
+        claim = collections.defaultdict(list)
+        for r in recs:
+            for nm in [r["name"]] + list(r.get("alsoPrinted") or []):
+                claim[re.sub(r"[^a-z0-9]", "", nm.lower())].append(r["id"])
+        for r in recs:
+            for nm in r.get("alsoPrinted") or []:
+                k = re.sub(r"[^a-z0-9]", "", nm.lower())
+                other = [i for i in claim[k] if i != r["id"]]
+                if other:
+                    aliases.append(f"{r['id']} is also printed {nm!r}, which {arr} already "
+                                   f"claims for {', '.join(other)}")
+
     # Correction 55. §7.1 chose a directory of JSON because diffability is a standing
     # constraint, and a format with no canonical form serves that only by luck: twice in two
     # sessions a script that changed five effects reserialised 24,708 lines, because five of
@@ -181,10 +203,13 @@ def main():
         print(f"  PROVENANCE  {d}")
     for d in kinds[:20]:
         print(f"  KIND  {d}")
+    for d in aliases[:20]:
+        print(f"  ALIAS  {d}")
     print(f"\n{total} records, {len(errors)} schema errors"
           + (f", {len(duplicates)} duplicate ids" if duplicates else "")
           + (f", {len(provenance)} provenance violations" if provenance else "")
           + (f", {len(kinds)} kind disagreements" if kinds else "")
+          + (f", {len(aliases)} ambiguous aliases" if aliases else "")
           + f"  [provenanceMode: {mode}]")
     if missing:
         print(f"  declared but absent: {', '.join(missing)}")
@@ -201,7 +226,7 @@ def main():
         n = sum(unresolved.values())
         print(f"  references resolved by the Engine, not here: {n} of {len(refs)} "
               f"({', '.join(f'{k}: {v}' for k, v in unresolved.most_common())})")
-    return 1 if errors or missing or duplicates or provenance or kinds else 0
+    return 1 if errors or missing or duplicates or provenance or kinds or aliases else 0
 
 
 if __name__ == "__main__":

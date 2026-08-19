@@ -496,6 +496,15 @@
         },
         "interpretation": {
           "$ref": "#/$defs/interpretation"
+        },
+        "alsoPrinted": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "**Correction 56.** The other names the books print for this thing. §7.3 says a name is never identity; this is the bill for that being true — **the corpus's naming is consistent WITHIN a table and not BETWEEN tables**, and four corrections each built a private map and threw it away. The Player's Handbook alone prints the two-handed sword as `Two-hand. sword` in Table 44 and `2-hd Sword` in Table 41, and the warhammer as `Warhammer` in Table 44 and `Hammer` in Table 45; the Complete Priest's permit-lists write `sword/long` where Table 44 writes `Long sword`.\\n\\nFor RESOLVING prose into ids, and nothing else. It is not a display name and the Engine never shows it: `name` is what a reader sees. An alias must resolve uniquely within its kind, which the checker enforces — `mace` is deliberately absent, because the Player's Handbook prints a footman's and a horseman's mace and the Complete Priest's says only 'mace'. **An ambiguity the books really have must not be hidden in a lookup table.**"
         }
       },
       "required": [

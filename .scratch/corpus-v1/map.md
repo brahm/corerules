@@ -1169,7 +1169,7 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    standing constraint and JSON as the format that serves it; a format with no canonical form serves
    it only by luck. Pick one, normalise the 27, and have the checker report a file that does not
    round-trip — which is cheap, because the checker already parses every one of them.
-56. **Table 45 prints `Hammer` where Table 44 prints `Warhammer`.**
+56. **RESOLVED — a record carries the other names its books print, and the checker refuses an alias that resolves to two things.**
    ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md), applying
    correction 50) The same weapon under two names, two pages apart, in the Player's Handbook — §7.3
    for the third time **inside one book**, after the thief's *lasso* that Table 44 does not carry and
@@ -1178,6 +1178,28 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    and every cross-table join this effort has attempted has paid for it — corrections 46, 49, 52 and
    53 all hit it. A name map is not an optimisation; it is the missing piece four corrections have
    asked for separately.
+   **Applied**, and looking for the extent found a **third** naming scheme inside the Player's
+   Handbook that nobody had opened: **Table 41, Weapon Construction**, which writes `2-hd Sword`,
+   `H. Crossbow`, `L. Crossbow` and `Hand Axe` where Table 44 writes `Two-hand. sword`, `Heavy
+   crossbow`, `Light crossbow` and `Hand or throwing axe`. **One weapon, three printed names, one
+   book.**
+   `$defs/record` gained **`alsoPrinted`** — the other names the books print for this thing, for
+   resolving prose into ids and nothing else. **Never a display name**: `name` is what a reader sees.
+   Nineteen weapons carry one, drawn from all four corrections that had built a private map and
+   thrown it away. **171 printed names now index to a weapon and 168 resolve to exactly one.**
+   The checker enforces that an alias resolves uniquely within its kind — **and the rule had to be
+   narrowed to aliases before it was true.** A record's own NAME legitimately repeats: nine kits are
+   called the same thing in two handbooks and thirty priest/wizard spell pairs share a name by
+   design. Only aliases are held to uniqueness, and only against the names and aliases of their own
+   kind.
+   **It fired on the first run.** `Polearms` and `Crossbows` were claimed both by Table 44's heading
+   and by the Complete Fighter's *purchasable* group of the same name — different things with
+   different members, one a printing convention and the other a three-slot purchase. Both aliases
+   were removed and correction 46's reading — that a priesthood's permit-list means the core
+   category — was written onto the two records instead. **An ambiguity the books really have must not
+   be hidden in a lookup table**, and `mace` is the other side of the same boundary: the Complete
+   Priest's says *"mace"* and the Player's Handbook prints a footman's and a horseman's, so no alias
+   is written and the ambiguity stays visible.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack
