@@ -25,6 +25,7 @@ class Pack:
         self.by_kind = collections.defaultdict(list)
         self.by_id = {}
         self.complaints = []
+        self.vocabulary = set()
         for name in self.manifest["files"]:
             f = self.root / name
             if not f.exists():
@@ -32,6 +33,13 @@ class Pack:
                 continue
             for kind, recs in json.loads(f.read_text()).items():
                 if not isinstance(recs, list):
+                    continue
+                # Correction 58's `fields` array declares the vocabulary the effects write.
+                # It is not a kind and its entries have no id — the first thing in the pack
+                # that is an array and not a list of records, which is worth knowing before
+                # the Engine assumes otherwise anywhere else.
+                if kind == "fields":
+                    self.vocabulary = {x["path"] for x in recs}
                     continue
                 for r in recs:
                     if r["id"] in self.by_id:

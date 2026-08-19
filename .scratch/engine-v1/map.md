@@ -184,7 +184,7 @@ _Resolved:_
   which it did on the first run, catching `Polearms` claimed by both Table 44's heading and the
   Complete Fighter's purchasable group.
 
-**Of the corrections list's 58 entries, 23 are applied and none remains as work.** The rest are
+**Of the corrections list's 58 entries, 24 are applied and none remains as work.** The rest are
 history, method, or corrections to the `spec.md` sections ticket 01 made non-normative.
 
 The last two were the two that most changed how the pack is read. **45** rebuilt the 36 doubled
@@ -193,8 +193,11 @@ experience effects — the rule never wanted a disjunction, it wanted two effect
 read the note as a marker. **47** established the principle the pack had blurred: **A3 governs what a
 record may CLAIM, not what a consumer may COMPUTE.** A `rollAtMost n on 1dX` is the probability
 `n / X`, so `3- on 1d6` and `50%` are the same number and two books that agree no longer read as a
-contradiction — and finding that turned up 58, the same ability written on two field paths, where
-they had not even managed to contradict each other. The other 33 are history,
+contradiction — and finding that turned up **58**, the same ability written on two field paths, where they had not
+even managed to contradict each other — now closed by a pack declaring its field vocabulary, which is
+§7.1's *declaration over discovery* one level down. The cheaper checks were tried and discarded:
+**106 of 159 paths are written by exactly one record**, so a lonely path proves nothing. Nothing
+mechanical separates a near-synonym from a rare fact; only a human declaring it does. The other 33 are history,
 method, or corrections to the `spec.md` sections ticket 01 made non-normative.
 
 ## Not yet specified

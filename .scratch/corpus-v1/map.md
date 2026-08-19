@@ -1225,7 +1225,7 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    carry the **variant** and nothing says it is one. **A3 is about a pack declaring which rule-sets
    it provides; this is a rule the BOOK marks optional inside a set the pack does provide**, and §5.1
    has no shape for it. Small, and it is the first optional rule the corpus has had to hold.
-58. **One ability, two field paths, and the two books never even collided.**
+58. **RESOLVED — the pack declares its field vocabulary, which is §7.1's manifest argument one level down.**
    ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md), applying
    correction 47) The dwarf, the gnome and the halfling all write `detect.gradeOrSlope`; the Stout
    halfling wrote **`detect.slopingPassage`**, a path used by that record alone, for the same
@@ -1237,6 +1237,24 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    checks it, so a transcriber inventing a near-synonym costs a silent duplicate. Unified by hand.
    Eleven `detect.*` paths exist and this was the only collision — but there is no reason it would
    be the last, and the remaining eleven books will each arrive with their own wording.
+   **Applied.** A pack now carries a **`fields`** declaration: every path its effects write, 159 of
+   them, sorted so that siblings sit together. The checker reports a path written but not declared
+   and a path declared but never written — **reported rather than failed, the same posture §7.1
+   takes for a file present but undeclared.**
+   The argument is §7.1's own, one level down: *declaration over discovery*. Scanning the effects
+   for paths would let a near-synonym join the vocabulary in silence, exactly as scanning the
+   directory would let a leftover file join the pack. **A transcriber who has to DECLARE
+   `detect.slopingPassage` reads `detect.gradeOrSlope` on the line above it.** Tested by putting the
+   defect back: `field paths written but not declared (1): detect.slopingPassage`.
+   The cheaper checks were tried first and thrown away. **106 of the 159 paths are written by exactly
+   one record**, and 37 of those sit in a namespace with a better-attested sibling — so "a lonely
+   path is suspicious" reports `detect.stoneworkTraps` and `attackRoll.longSword`, which are lonely
+   because only the dwarf detects stonework traps and only the elf gets that bonus. **Nothing
+   mechanical separates a near-synonym from a genuinely rare fact; only a human declaring it does.**
+   `note` is optional and four paths carry one. The declaring is the point: 159 invented sentences
+   would be worth less than the list, and a note written to fill a field is worse than none.
+   **`fields` is the first array in a pack that is not a list of records** — no ids — and both the
+   checker and the Engine had to be told, the checker by crashing on `r["id"]`.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

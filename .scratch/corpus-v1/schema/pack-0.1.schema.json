@@ -770,6 +770,28 @@
         }
       ]
     },
+    "fields": {
+      "description": "**Corrections 58 and 23.** Every field path this pack writes, declared. A path is an open string on purpose — §3.4 keeps enumerations open and the path is the escape hatch — and the cost of that was invisible until the Stout halfling wrote `detect.slopingPassage` where the dwarf, the gnome and the halfling all write `detect.gradeOrSlope`. **One ability, two paths, so the Player's Handbook's `3- on 1d4` and the Complete Book of Gnomes and Halflings' 75% never even collided.**\\n\\nThis is §7.1's manifest argument one level down: *declaration over discovery*. Scanning the effects for paths would let a near-synonym join the vocabulary in silence, exactly as scanning the directory would let a leftover file join the pack. A transcriber who must DECLARE `detect.slopingPassage` reads `detect.gradeOrSlope` on the line above it.\\n\\nThe checker reports a path written but not declared, and a path declared but never written — reported rather than failed, the same posture §7.1 takes for an undeclared file. `note` is optional: the declaring is the point, and 159 invented sentences would be worth less than the list.\\n\\nNOT a closed enumeration and never becomes one. The Engine unions the declarations of every pack it loads, as it does for §5.1's rule-sets.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "As an effect writes it: `detect.gradeOrSlope`, `opponent.attackRoll.titan`."
+          },
+          "note": {
+            "type": "string",
+            "description": "What it means, where the name does not say."
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
     "kits": {
       "type": "array",
       "items": {

@@ -58,6 +58,10 @@ except ImportError:
 
 SCHEMA = pathlib.Path(__file__).resolve().parent.parent / "schema" / "pack-0.1.schema.json"
 
+# Not kinds. `manifest` describes the pack and `fields` (correction 58) declares the vocabulary
+# its effects write; neither holds records, so every loop below that expects an `id` skips them.
+NOT_A_KIND = {"manifest", "fields"}
+
 
 def main():
     if len(sys.argv) < 2:
@@ -84,12 +88,12 @@ def main():
     doc["manifest"] = manifest
     errors = sorted(jsonschema.Draft202012Validator(schema).iter_errors(doc),
                     key=lambda e: list(e.path))
-    total = sum(len(v) for k, v in doc.items() if k != "manifest")
+    total = sum(len(v) for k, v in doc.items() if k not in NOT_A_KIND)
     for e in errors:
         where = "/".join(str(p) for p in e.path) or "(root)"
         print(f"  INVALID  {where}: {e.message[:150]}")
 
-    unmodelled = [r["id"] for arr, recs in doc.items() if arr != "manifest"
+    unmodelled = [r["id"] for arr, recs in doc.items() if arr not in NOT_A_KIND
                   for r in recs if r.get("effectsModelled") is False]
 
     # Correction 6. §7.1 made book-and-page mandatory on every record; §5.1 says the
@@ -99,7 +103,7 @@ def main():
     mode = manifest.get("provenanceMode")
     provenance = []
     for arr, recs in doc.items():
-        if arr == "manifest":
+        if arr in NOT_A_KIND:
             continue
         for r in recs:
             pv = r.get("provenance")
@@ -126,7 +130,7 @@ def main():
               for r in recs}
     kinds = []
     for arr, recs in doc.items():
-        if arr == "manifest":
+        if arr in NOT_A_KIND:
             continue
         for r in recs:
             for i, e in enumerate(r.get("effects") or []):
@@ -135,6 +139,24 @@ def main():
                     kinds.append(f"{r['id']}[{i}] {e['op']}s {ref} as `{e.get('kind')}`, "
                                  f"which bounds `{bounds[ref]}`")
 
+    # Correction 58. A field path is an open string on purpose, and the cost of that was
+    # invisible until one ability turned up on two paths and the two books never collided.
+    # §7.1's manifest argument, one level down: declaration over discovery. Reported rather
+    # than failed, the same posture §7.1 takes for a file present but undeclared.
+    declared = {f["path"] for f in doc.get("fields", [])}
+    written = collections.Counter()
+    for arr, recs in doc.items():
+        if arr in NOT_A_KIND:
+            continue
+        for r in recs:
+            for e in r.get("effects") or []:
+                if e.get("field"):
+                    written[e["field"]] += 1
+    # NOT `undeclared`: §7.1's undeclared-FILES list already owns that name further down, and
+    # shadowing it silently swallowed this check the first time it was written.
+    pathless = sorted(set(written) - declared)
+    pathunused = sorted(declared - set(written))
+
     # Correction 45. The marker convention was typographic and had already drifted — 286
     # markers, six of them punctuated differently, and prose that merely MENTIONS the word
     # reads as a marker to any regex. `unmodelled` is now the statement; this keeps the text
@@ -142,7 +164,7 @@ def main():
     # place. Reported, not failed: a text that discusses markers is legitimate.
     markers = []
     for arr, recs in doc.items():
-        if arr == "manifest":
+        if arr in NOT_A_KIND:
             continue
         for r in recs:
             for i, e in enumerate(r.get("effects") or []):
@@ -161,7 +183,7 @@ def main():
     # and aliases of the same kind.
     aliases = []
     for arr, recs in doc.items():
-        if arr == "manifest":
+        if arr in NOT_A_KIND:
             continue
         claim = collections.defaultdict(list)
         for r in recs:
@@ -197,7 +219,7 @@ def main():
     defined, refs = set(), collections.Counter()
     duplicates, dup_kind = [], {}
     for arr, recs in doc.items():
-        if arr == "manifest":
+        if arr in NOT_A_KIND:
             continue
         for r in recs:
             # Ticket 04 of the Engine map. `defined` was a SET, so an id claimed by two
@@ -237,6 +259,12 @@ def main():
         print(f"  text and `unmodelled` disagree ({len(markers)}):")
         for m in markers[:8]:
             print(f"    {m}")
+    if pathless:
+        print(f"  field paths written but not declared ({len(pathless)}): "
+              f"{', '.join(pathless[:10])}" + (" …" if len(pathless) > 10 else ""))
+    if pathunused:
+        print(f"  field paths declared but never written ({len(pathunused)}): "
+              f"{', '.join(pathunused[:10])}" + (" …" if len(pathunused) > 10 else ""))
     if canon:
         print(f"  not in the canonical serialisation ({len(canon)} of "
               f"{len(list(pack.glob('*.json')))}): {', '.join(canon)}"
