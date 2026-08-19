@@ -197,6 +197,39 @@ NOT ON THE SHEET — APPLIES IN A CIRCUMSTANCE THE PACK COULD NOT EXPRESS
 NOT ON THE SHEET — ASKS ABOUT SOMETHING THIS SHEET HAS NO ANSWER FOR
 ```
 
+### §9.2, and the third answer
+
+`engine/src/choice.ts` is the whole of guided creation that is worth testing. The wizard's screens
+are an arrangement of **offers**; the offers are where the rules live, because §5 puts validation
+**at the point of choice, not flagged afterwards** — so an option a character cannot take is not
+presented and then rejected, it arrives already carrying the reason.
+
+**An offer has three states, and the third is what makes it honest.** *Yes*, the rule holds. *No*,
+and here is the rule and the book. *Unknown* — either the predicate asks something a half-built
+character cannot answer yet, or **A3 means no pack ever claimed to cover this**. Collapsing unknown
+into no would forbid what the books allow; collapsing it into yes would be the *flagged afterwards*
+§5 exists to prevent.
+
+Against the real slice, a dwarf with Charisma 9:
+
+```
+CLASS
+  no        Paladin    requires Wisdom 13, Charisma 17 — Player's Handbook
+  no        Ranger     requires Dexterity 13, Wisdom 14 — Player's Handbook
+  no        Bard       requires Intelligence 13, Charisma 15 — Player's Handbook
+  unknown   Fighter    no loaded pack declares which races may take which classes,
+                       so corerules is not checking it
+KIT for a dwarf fighter: 24 offered, 140 refused by name
+```
+
+**Nineteen classes come back unknown and every one says why.** The proving slice declares nothing,
+so §5.1's A3 holds: the Engine does not validate race-and-class permission and **says so visibly**.
+That is not a gap to tidy away later — it is the difference between *"the books allow this"* and
+*"nobody has told me whether the books allow this"*, which is the whole of what A3 is for.
+
+The abilities come from the pack, not from a prefix the interface knows: `phb:strength` is the
+Player's Handbook's and another book's would be its own.
+
 ## What is left
 - **Constitution is not in the hit points.** The bonus is a table read with a per-class cap, and
   a plausible-looking total that quietly omits it is the kind of wrong number the rest of this

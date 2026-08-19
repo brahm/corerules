@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import type { Api, CharacterSummary, PackSummary } from "../main/api.ts";
 import type { SheetView } from "../../../engine/src/present.ts";
 import { Sheet } from "./Sheet.tsx";
+import { Wizard } from "./Wizard.tsx";
 
 declare global {
   interface Window { corerules: Api }
@@ -72,6 +73,7 @@ function App(): React.JSX.Element {
   const [packs, setPacks] = useState<PackSummary[]>([]);
   const [characters, setCharacters] = useState<CharacterSummary[]>([]);
   const [sheet, setSheet] = useState<SheetView | undefined>(undefined);
+  const [creating, setCreating] = useState(false);
 
   const refresh = async (): Promise<void> => {
     setRoot(await api.root());
@@ -83,6 +85,18 @@ function App(): React.JSX.Element {
   const pick = async (): Promise<void> => {
     if ((await api.chooseRoot()) !== undefined) await refresh();
   };
+
+  if (creating && packs[0] !== undefined) {
+    return (
+      <main>
+        <Wizard
+          packId={packs[0].id}
+          onCancel={() => { setCreating(false); }}
+          onDone={() => { setCreating(false); void refresh(); }}
+        />
+      </main>
+    );
+  }
 
   if (sheet !== undefined) {
     return (
@@ -105,6 +119,9 @@ function App(): React.JSX.Element {
           <>
             <Packs packs={packs} />
             <Characters characters={characters} onOpen={(id) => { void api.open(id).then(setSheet); }} />
+            <div className="finish">
+              <button type="button" onClick={() => { setCreating(true); }}>Create a character</button>
+            </div>
           </>
         )}
     </main>

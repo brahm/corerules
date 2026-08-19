@@ -32,6 +32,12 @@
           "field": "attackRoll",
           "by": 1
         }
+      ],
+      "abilityMinimums": [
+        {
+          "ability": "test:strength",
+          "minimum": 9
+        }
       ]
     },
     {
@@ -65,6 +71,12 @@
           "op": "set",
           "field": "hitDice.perLevel",
           "to": "1d4"
+        }
+      ],
+      "abilityMinimums": [
+        {
+          "ability": "test:intelligence",
+          "minimum": 13
         }
       ]
     }

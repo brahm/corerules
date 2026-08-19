@@ -128,6 +128,36 @@
           "Fixtures"
         ]
       }
+    },
+    {
+      "id": "test:strength",
+      "name": "Strength",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Abilities"
+        ]
+      }
+    },
+    {
+      "id": "test:dexterity",
+      "name": "Dexterity",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Abilities"
+        ]
+      }
+    },
+    {
+      "id": "test:intelligence",
+      "name": "Intelligence",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Abilities"
+        ]
+      }
     }
   ]
 }

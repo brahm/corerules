@@ -27,6 +27,44 @@
           "kind": "nonweaponProficiency",
           "ref": "test:heraldry"
         }
+      ],
+      "prerequisite": [
+        {
+          "member": {
+            "field": "race"
+          },
+          "anyOfIds": [
+            "test:hillfolk"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "test:sea-rover",
+      "name": "Sea Rover",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Kits"
+        ]
+      },
+      "target": "test:thief",
+      "cardinality": "one-per-target",
+      "prerequisite": [
+        {
+          "subject": {
+            "ability": "test:dexterity"
+          },
+          "op": "gte",
+          "value": 13
+        }
+      ],
+      "effects": [
+        {
+          "op": "adjust",
+          "field": "attackRoll",
+          "by": 1
+        }
       ]
     }
   ]

@@ -68,6 +68,9 @@ function handlers(): void {
   ipcMain.handle(CHANNEL.packs, () => service.packs(library()));
   ipcMain.handle(CHANNEL.characters, () => service.characters(library()));
   ipcMain.handle(CHANNEL.open, (_event, id: string) => service.open(library(), id));
+  ipcMain.handle(CHANNEL.steps, (_e, packId: string, draft) => service.steps(library(), packId, draft));
+  ipcMain.handle(CHANNEL.create, (_e, packId: string, draft, hitDie: number) =>
+    service.create(library(), packId, draft, hitDie));
 }
 
 function window(): void {
@@ -97,9 +100,20 @@ function window(): void {
       setTimeout(() => {
         // Click the first character, so the smoke path reaches the sheet — which is the
         // screen this whole project is for.
-        const click = process.env["CORERULES_SMOKE"] === "sheet"
-          ? "document.querySelector('.link')?.click(); await new Promise(r => setTimeout(r, 300));"
-          : "";
+        const steps: Record<string, string> = {
+          sheet: "document.querySelector('.link')?.click(); await new Promise(r => setTimeout(r, 300));",
+          create: `
+            [...document.querySelectorAll('button')].find(b => b.textContent === 'Create a character').click();
+            await new Promise(r => setTimeout(r, 400));
+            document.querySelector('.name').value = 'Balin';
+            document.querySelector('.name').dispatchEvent(new Event('input', { bubbles: true }));
+            [...document.querySelectorAll('button')].find(b => /Roll them/.test(b.textContent)).click();
+            await new Promise(r => setTimeout(r, 400));
+            [...document.querySelectorAll('.offer')].find(b => b.textContent.startsWith('Dwarf')).click();
+            await new Promise(r => setTimeout(r, 400));
+          `,
+        };
+        const click = steps[process.env["CORERULES_SMOKE"] ?? ""] ?? "";
         void win.webContents.executeJavaScript(`(async () => { ${click} return document.body.innerText; })()`)
           .then((text: string) => { console.log(text); })
           .finally(() => { app.quit(); });

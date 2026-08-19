@@ -6,6 +6,8 @@
  * with nothing to decide. What remains in `main.ts` is Electron wiring — a window, five
  * `ipcMain.handle` lines, and where the settings file lives.
  */
+import { Character } from "../../../engine/src/character.ts";
+import { steps as offerSteps, type Draft, type Step } from "../../../engine/src/choice.ts";
 import type { Library } from "../../../engine/src/library.ts";
 import { present, type SheetView } from "../../../engine/src/present.ts";
 import type { CharacterSummary, PackSummary } from "./api.ts";
@@ -46,4 +48,30 @@ export function characters(library: Library): CharacterSummary[] {
 export function open(library: Library, id: string): SheetView | undefined {
   const opened = library.open(id);
   return opened.character === undefined ? undefined : present(opened.character);
+}
+
+export function steps(library: Library, packId: string, draft: Draft): Step[] {
+  return offerSteps(library.load(packId), draft);
+}
+
+/**
+ * Write a new Character, at first level, with the die already rolled.
+ *
+ * The roll arrives from outside because **hit points are recorded randomness** (§6.3): an
+ * Engine that rolled them itself could not record a roll made at the table, and §9.1 keeps
+ * entry a first-class path beside the dice.
+ */
+export function create(library: Library, packId: string, draft: Draft & { name: string }, hitDie: number): string {
+  const pack = library.load(packId);
+  const character = Character.create(pack, {
+    name: draft.name,
+    race: draft.race!,
+    scores: draft.scores ?? {},
+    ...(draft.subrace !== undefined ? { subrace: draft.subrace } : {}),
+    ...(draft.kit !== undefined ? { kit: draft.kit } : {}),
+    packs: [{ id: packId }],
+  });
+  character.advance([{ class: draft.class!, die: hitDie }]);
+  library.writeCharacter(library.stamp(character.file));
+  return character.file.id;
 }

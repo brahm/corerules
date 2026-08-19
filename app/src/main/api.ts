@@ -7,7 +7,10 @@
  * is not the process that holds the pack. The renderer is given a display model — names,
  * numbers and the books they came from — and never the records.
  */
+import type { Draft, Step } from "../../../engine/src/choice.ts";
 import type { SheetView } from "../../../engine/src/present.ts";
+
+export type { Draft, Offer, Step } from "../../../engine/src/choice.ts";
 
 export interface PackSummary {
   id: string;
@@ -35,6 +38,12 @@ export interface Api {
   packs(): Promise<PackSummary[]>;
   characters(): Promise<CharacterSummary[]>;
   open(id: string): Promise<SheetView | undefined>;
+  /** §9.2's guided creation. The draft goes over the wire each time rather than living in the
+   *  main process: the rules are a pure function of it, so there is no session to lose. */
+  steps(packId: string, draft: Draft): Promise<Step[]>;
+  /** The tool rolls dice (§9.1), and entry stays a first-class path — so both arrive here as
+   *  scores already decided, and the Engine never learns which it was. */
+  create(packId: string, draft: Draft & { name: string }, hitDie: number): Promise<string>;
 }
 
 /** One place for the channel names, so a typo is a build error rather than a silent no-op. */
@@ -44,4 +53,6 @@ export const CHANNEL = {
   packs: "corerules:packs",
   characters: "corerules:characters",
   open: "corerules:open",
+  steps: "corerules:steps",
+  create: "corerules:create",
 } as const;
