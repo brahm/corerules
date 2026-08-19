@@ -53,15 +53,48 @@ def prov(name, file):
             "anchor": {"rendition": "webhelp", "file": file}}
 
 
+# Corrections 49 and 52. `clean()` strips leading whitespace, and Table 44's ONLY statement
+# that a long bow is a Bow is three spaces of indentation in the source. Reading depth before
+# cleaning recovers two things at once: a group's `members`, and the fact that a row nested
+# TWO deep carries a name that is meaningless on its own — `One-handed`, under `Bastard sword`.
+#
+# Table 44's convention is NOT the Complete Fighter's. That book writes every sub-row relative
+# to its heading (`Bone` under `Dagger`), so `extract_cfh_weapons.py` composes at every level.
+# Table 44 writes depth-1 rows absolutely (`Long bow` under `Bow`) and only depth-2 rows
+# relatively. Composing everything here would turn `phb:long-bow` into `phb:bow-long-bow`.
+# So: compose from the second nesting level down, which is this table's rule and not a
+# general one.
+INDENT = re.compile(r"^\s*")
+
+
+def depth_of(cell):
+    inner = TAGS.sub("", cell).replace("&nbsp;", " ")
+    return len(INDENT.match(inner).group(0).replace("\n", "").replace("\r", ""))
+
+
 def weapons(wh):
     raw = (wh / "PHB" / "DD01624.HTM").read_text(encoding="cp1252", errors="replace")
-    out, seen = [], set()
+    out, seen, by_name = [], set(), {}
+    stack = {}                       # depth -> the row name at that depth
+    levels = []                      # the distinct depths seen, in order of first appearance
     for tbl in TABLE.findall(raw):
         for r in ROW.findall(tbl):
-            c = [clean(x) for x in CELL.findall(r)]
+            cells = CELL.findall(r)
+            c = [clean(x) for x in cells]
             if len(c) < 7 or not c[0] or c[0] == "Item":
                 continue
+            d = depth_of(cells[0])
+            if d not in levels:
+                levels.append(d)
+                levels.sort()
             name = re.sub(r"\s*\d+$", "", c[0]).strip()
+            stack[d] = name
+            for deeper in [k for k in stack if k > d]:
+                del stack[deeper]
+            # ancestors above this row, nearest last
+            anc = [stack[k] for k in sorted(stack) if k < d]
+            if len(anc) >= 2 or (anc and levels.index(d) >= 2):
+                name = ", ".join(anc[-1:] + [name])
             s = slug(name)
             if not s or s in seen:
                 continue
@@ -79,6 +112,23 @@ def weapons(wh):
                 if len(c) > 7 and c[7] not in DASH:
                     rec["damageLarge"] = c[7]
             out.append(rec)
+            # Correction 49: a group's members are the rows indented directly beneath it.
+            # Two rows share that indentation and are NOT members: AMMUNITION carries a
+            # damage and no speed factor, where a launcher carries a speed factor and no
+            # damage. A character is not proficient in an arrow.
+            if anc:
+                parent = by_name.get(anc[-1])
+                ammunition = ("speedFactor" not in rec and "damageSmallMedium" in rec)
+                if parent is not None and parent.get("isGroup") and not ammunition:
+                    parent.setdefault("members", []).append(rec["id"])
+            by_name[stack[d]] = rec        # keyed by the row's OWN name, which is what
+                                           # `anc` holds — the composed name is for display
+    # Table 44 indents `Dagger or dirk` under Crossbow. It is the row that follows the
+    # crossbow block alphabetically and it is not a crossbow — a slip in the table or its
+    # rendition, and the only one in 79 rows.
+    for r in out:
+        if r["id"] == "phb:crossbow":
+            r["members"] = [m for m in r.get("members", []) if m != "phb:dagger-or-dirk"]
     return out
 
 

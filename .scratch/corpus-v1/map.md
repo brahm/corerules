@@ -1040,8 +1040,8 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    disagreement mechanically — **and adding one forces a decision about whether *may use* and *may be
    proficient in* are one restriction or two**, which is a rules question and not a schema question.
    Deliberately not taken while applying 48; recorded so the next attempt does not rediscover it.
-52. **Two records are named for a position they no longer occupy: `phb:one-handed` and
-   `phb:two-handed`.** ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md),
+52. **RESOLVED — two records were named for a position they no longer occupied, and the extractor
+   had thrown the position away in its first line.** ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md),
    applying correction 49) Table 44 nests them under **Bastard sword** — one-handed 1d8, two-handed
    2d4 — and their names mean nothing anywhere else. The transcription flattened them into top-level
    records with top-level ids, and correction 49 made the damage visible: a bound reading *"swords
@@ -1050,6 +1050,25 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    column heading's remainder. The Complete Fighter's has the same shape four more times (Katana,
    Spear Long, Spear Stone, Javelin Stone) and escaped it because the transcriber composed the
    parent into the id: `cfh:sword-katana-one-handed`. The PHB's two did not get that treatment.
+   **Applied**, and the interesting part is *why* only the PHB's two: `extract_cfh_weapons.py`
+   already tracks a depth stack and composes ancestors into id and name — its docstring says
+   *"sub-rows qualified by the headings above them"* and *"a single `parent` variable got it wrong"*.
+   `extract_phb.py` is older, and its `clean()` **strips leading whitespace in the first line of
+   parsing**, destroying the only signal the table carries. Two extractors read the same table shape
+   and the lesson never travelled back.
+   Renamed to `phb:bastard-sword-one-handed` / `-two-handed`, *"Bastard sword, One-handed"*, on the
+   CFH's own convention; one reference updated; **1,236 records, 0 schema errors**.
+   And the fix landed in the tool, not only the data: `extract_phb.py` now reads depth before
+   cleaning and **reproduces the pack exactly — 79 records, 0 differences in id, name or members**,
+   so corrections 49 and 52 both survive a re-extraction instead of being undone by one.
+   **The rule it uses is Table 44's, not a general one.** The Complete Fighter's writes every sub-row
+   relative to its heading (*Bone* under *Dagger*), so that extractor composes at every level; Table
+   44 writes depth-1 rows absolutely (*Long bow* under *Bow*) and only depth-2 rows relatively.
+   Composing everything here would have turned `phb:long-bow` into `phb:bow-long-bow`. **Two books,
+   two conventions for one table shape** — correction 16's per-level field strategies, again.
+   No check was added, and that is worth stating: *"this name means nothing outside its row"* is a
+   judgement, not a predicate. Corrections 40 and 6 became checks; this one could only become a
+   better extractor.
 53. **Ammunition is indented under its launcher and the pack has no relation for it — nine rows.**
    ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md), applying
    correction 49) Table 44 prints flight and sheaf arrows under **Bow**, three quarrels under

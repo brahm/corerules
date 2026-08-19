@@ -319,7 +319,15 @@ now read as the books write them:
   permitted weapons now print **One-handed, Two-handed**. §7.3 says a name is never identity; this is
   the harder case, where **the name is not even a thing.** The CFH has the same shape four more times
   and escaped it because the transcriber composed the parent into the id. Sent back as
-  **correction 52**.
+  **correction 52**, **and applied**: renamed to `phb:bastard-sword-one-handed` / `-two-handed` on
+  the CFH's convention, and — the part that matters — **fixed in the extractor**. `extract_phb.py`'s
+  `clean()` strips leading whitespace in the first line of parsing, which threw away the only signal
+  the table carries; `extract_cfh_weapons.py` had tracked a depth stack all along. It now reads depth
+  before cleaning and **reproduces the pack exactly, 79 records and 0 differences**, so corrections 49
+  and 52 survive a re-extraction rather than being undone by one. Its rule is **Table 44's, not a
+  general one**: that table writes depth-1 rows absolutely and only depth-2 rows relatively, where the
+  CFH writes every sub-row relative to its heading. Composing everything would have made
+  `phb:long-bow` into `phb:bow-long-bow`.
 - **Ammunition shares the indentation and means something else** — arrows under Bow, quarrels under
   Crossbow, bullet and stone under Sling, dart and needle under Blowgun. Nine rows, held out of
   `members` on a mechanical test (**a launcher carries a speed factor and no damage; ammunition
