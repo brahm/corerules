@@ -1,0 +1,38 @@
+:root {
+  --ink: #e8e3da; --dim: #8d8578; --warn: #d99a4e; --rule: #2a2622; --paper: #12100e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 15px/1.55 ui-serif, Georgia, "Times New Roman", serif;
+}
+main, .sheet { max-width: 62rem; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.02em; }
+h3 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.14em;
+     color: var(--dim); margin: 2.2rem 0 0.6rem; font-weight: 600; }
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
+         border-bottom: 1px solid var(--rule); padding-bottom: 0.8rem; }
+p { margin: 0.4rem 0; }
+.dim { color: var(--dim); font-size: 0.86rem; }
+.warn { color: var(--warn); font-size: 0.86rem; margin-top: 0.2rem; }
+button { font: inherit; color: var(--ink); background: transparent;
+         border: 1px solid var(--rule); border-radius: 3px; padding: 0.35rem 0.7rem; cursor: pointer; }
+button:hover { border-color: var(--dim); }
+.back { margin-bottom: 1rem; }
+.row { display: flex; gap: 1rem; width: 100%; text-align: left;
+       padding: 0.7rem 0; border-bottom: 1px solid var(--rule); }
+.link { background: none; border: none; border-bottom: 1px solid var(--rule); border-radius: 0; }
+.link:hover { background: #191613; }
+.empty { max-width: 34rem; margin: 5rem auto; text-align: center; }
+.empty p { color: var(--dim); }
+/* A value and, underneath it in small type, every layer that made it. The provenance is not
+   a tooltip: §1's promise is that it is there without being asked for. */
+.value { display: grid; grid-template-columns: 1fr auto; gap: 0 1rem;
+         padding: 0.5rem 0; border-bottom: 1px solid var(--rule); }
+.path { font-variant-numeric: tabular-nums; }
+.amount { font-variant-numeric: tabular-nums; text-align: right; }
+.why { grid-column: 1 / -1; color: var(--dim); font-size: 0.8rem; margin-top: 0.15rem; }
+.refused { color: var(--warn); text-align: right; font-size: 0.86rem; }
+.contested .path { color: var(--warn); }
+.aside .path { color: var(--dim); }

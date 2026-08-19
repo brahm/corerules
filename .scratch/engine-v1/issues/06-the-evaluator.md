@@ -158,8 +158,47 @@ rather than at construction, because a file read back and written again would ot
 whatever order it arrived in. §6.5 traded auditability for a file that stays legible; legibility is
 a thing you have to do, not a thing you get.
 
+### The interface, and where the promise finally shows
+
+`app/` — Electron, one window, and the sheet. The main process owns the file system, the Library and
+every pack; the renderer holds **no Node**, shares no context, runs sandboxed, and is handed a
+**display model** rather than records. That is not only Electron hygiene: a pack is content the user
+transcribed from books they own, and §1's posture holds only while it stays on their machine, so the
+process that draws pixels is not the process that holds the pack. The window's CSP allows nothing
+but its own two files, because there is no network in this application.
+
+The main process's answers live in `service.ts`, testable without a window, and `main.ts` is left
+with a window, five `ipcMain.handle` lines and where the settings file goes. Same discipline as the
+engine: put the logic where it can be tested and leave the shell with nothing to decide.
+
+It boots on a machine with no display, which is how it was checked here — `CORERULES_SMOKE` loads
+the window, reads the text back and quits:
+
+```
+corerules
+/tmp/…
+CONTENT PACKS
+Proving slice (ticket 08)          1,298 records · 8bb8178c2fe8
+CHARACTERS
+Thorin                             Dwarf / Warrior / Fighter / Clansdwarf · 8 hp
+```
+
+and clicking through to the sheet shows every value **with the layers that made it underneath, in
+small type** — provenance is not a tooltip, because §1's promise is that it is there without being
+asked for — and then the three sections that are the reason any of this exists:
+
+```
+NOT ON THE SHEET — CORERULES CANNOT COMPUTE THIS YET
+  Dwarf — Player's Handbook
+      adjust savingThrow.vsPoison: the operand resolved to "+4", which cannot be summed
+NOT ON THE SHEET — APPLIES IN A CIRCUMSTANCE THE PACK COULD NOT EXPRESS
+  Clansdwarf — Comp. Book of Dwarves
+      UNMODELLED CONDITION: with others of his own clan.
+NOT ON THE SHEET — ASKS ABOUT SOMETHING THIS SHEET HAS NO ANSWER FOR
+```
+
 ## What is left
 - **Constitution is not in the hit points.** The bonus is a table read with a per-class cap, and
   a plausible-looking total that quietly omits it is the kind of wrong number the rest of this
   refuses.
-- **No interface** (§9, §10). Electron and React arrive there, not here.
+

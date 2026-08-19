@@ -1,0 +1,122 @@
+/**
+ * The main process. It owns the file system, the Library and every pack; the renderer owns
+ * the window and nothing else.
+ *
+ * §8 splits storage by who owns the data, and this is that split made concrete: the **content
+ * root** is a folder the user picks — visible, because backup is their job by design — while
+ * the one thing this process remembers about itself, which folder that was, goes to the OS
+ * convention path, precisely because it must not travel with the content.
+ */
+import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { Library } from "../../../engine/src/library.ts";
+import { CHANNEL } from "./api.ts";
+import * as service from "./service.ts";
+
+const here = dirname(fileURLToPath(import.meta.url));
+
+/** §8: the first-run default must be VISIBLE on all three systems. */
+function defaultRoot(): string {
+  return process.platform === "linux"
+    ? join(homedir(), "corerules")
+    : join(app.getPath("documents"), "corerules");
+}
+
+/** Application state, at the OS convention path, because it must not travel. */
+function settingsPath(): string {
+  return join(app.getPath("userData"), "settings.json");
+}
+
+function readRoot(): string {
+  // An override, because a support conversation that begins "open the app and click through
+  // to the folder" is worse than one that begins "run it with CORERULES_ROOT set".
+  const override = process.env["CORERULES_ROOT"];
+  if (override !== undefined && override !== "") return override;
+  try {
+    return (JSON.parse(readFileSync(settingsPath(), "utf8")) as { root?: string }).root ?? defaultRoot();
+  } catch {
+    return defaultRoot();
+  }
+}
+
+function writeRoot(root: string): void {
+  mkdirSync(dirname(settingsPath()), { recursive: true });
+  writeFileSync(settingsPath(), `${JSON.stringify({ root }, null, 2)}\n`);
+}
+
+let root = "";
+const library = (): Library => new Library(root);
+
+function handlers(): void {
+  ipcMain.handle(CHANNEL.root, () => root);
+
+  ipcMain.handle(CHANNEL.chooseRoot, async () => {
+    const picked = await dialog.showOpenDialog({
+      title: "Where your packs and characters live",
+      defaultPath: existsSync(root) ? root : homedir(),
+      properties: ["openDirectory", "createDirectory"],
+    });
+    if (picked.canceled || picked.filePaths[0] === undefined) return undefined;
+    root = picked.filePaths[0];
+    writeRoot(root);
+    return root;
+  });
+
+  ipcMain.handle(CHANNEL.packs, () => service.packs(library()));
+  ipcMain.handle(CHANNEL.characters, () => service.characters(library()));
+  ipcMain.handle(CHANNEL.open, (_event, id: string) => service.open(library(), id));
+}
+
+function window(): void {
+  const win = new BrowserWindow({
+    width: 1100,
+    height: 800,
+    title: "corerules",
+    backgroundColor: "#12100e",
+    webPreferences: {
+      preload: join(here, "preload.cjs"),
+      // The three that matter, and they are not defaults to be lazy about: the renderer
+      // holds no Node, shares no context with the preload, and runs sandboxed. What it can
+      // do is exactly what `api.ts` lists.
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  void win.loadFile(join(here, "index.html"));
+
+  // A way to see what the window renders on a machine with no display: load it, read the
+  // text back out, print it and quit. Guarded by an environment variable because it is a
+  // smoke path and not a feature — but it is the only thing that proves the two processes
+  // actually talk, which no unit test can.
+  if (process.env["CORERULES_SMOKE"] !== undefined) {
+    win.webContents.once("did-finish-load", () => {
+      setTimeout(() => {
+        // Click the first character, so the smoke path reaches the sheet — which is the
+        // screen this whole project is for.
+        const click = process.env["CORERULES_SMOKE"] === "sheet"
+          ? "document.querySelector('.link')?.click(); await new Promise(r => setTimeout(r, 300));"
+          : "";
+        void win.webContents.executeJavaScript(`(async () => { ${click} return document.body.innerText; })()`)
+          .then((text: string) => { console.log(text); })
+          .finally(() => { app.quit(); });
+      }, 400);
+    });
+  }
+}
+
+void app.whenReady().then(() => {
+  root = readRoot();
+  handlers();
+  window();
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) window();
+  });
+});
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
+});

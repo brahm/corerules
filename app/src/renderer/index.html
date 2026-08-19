@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- The renderer talks to nothing. There is no network in this application and the
+         Content-Security-Policy says so out loud, because a pack is the user's own
+         transcription of books they own and it does not leave their machine. -->
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:" />
+    <title>corerules</title>
+    <link rel="stylesheet" href="./renderer.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./renderer.js"></script>
+  </body>
+</html>

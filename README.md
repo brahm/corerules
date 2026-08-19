@@ -3,10 +3,11 @@
 A desktop tool for creating and managing **AD&D 2nd Edition** characters — by the book, with the
 rules actually enforced.
 
-> **Status: not built yet.** There is no application to download. What exists is a finished
-> [v1 specification](.scratch/v1-spec/spec.md), a [pack schema](.scratch/corpus-v1/schema/pack-0.1.schema.json),
-> and the design work behind both. If you came looking for a character generator, come back later —
-> or read on, because the interesting part is *why* it does not exist yet.
+> **Status: it runs, and there is still nothing to download.** The engine loads a pack, computes a
+> character and says which rule refused and which book that rule came from; the desktop application
+> opens, finds your packs and shows a sheet. What it does **not** do yet is let you create one — the
+> guided generation of §9.2 is the next work. No release is built, and building one from source
+> needs a pack you have transcribed yourself, so come back later unless you are here for the design.
 
 ---
 
@@ -41,6 +42,8 @@ it is what the corpus effort below is about.
 
 | | |
 |---|---|
+| [`engine/`](engine/) | **The rules logic.** TypeScript on Node, no runtime dependencies, 55 tests. The layer model, the predicate, the Character as a sequence of Level Events, persistence. |
+| [`app/`](app/) | **The desktop application.** Electron; the renderer holds no Node and sees a display model, never a pack record. |
 | [`.scratch/v1-spec/spec.md`](.scratch/v1-spec/spec.md) | **The v1 specification.** Thirteen sections, concrete enough to build from. Start here. |
 | [`.scratch/v1-spec/`](.scratch/v1-spec/) | The fourteen decision tickets behind it — *why*, and what was rejected |
 | [`.scratch/corpus-v1/`](.scratch/corpus-v1/) | The corpus effort: how books become packs |
