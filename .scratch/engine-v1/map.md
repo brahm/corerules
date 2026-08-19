@@ -94,8 +94,15 @@ Four results are load-bearing for implementation and are easy to miss in 149 fin
   a table read returns `"+4"` where the contract says an integer; and two mutually exclusive marked
   bonuses summed into a wrong number on the first character anyone builds.
 
-**Every ticket in this map is resolved** — the four charted at the start and the one they
-produced. The next work is building, not deciding.
+_One ticket is open, and it is the first that builds something:_
+
+- **[06 — The evaluator](issues/06-the-evaluator.md)** — load a pack, apply the layers, answer what a
+  Character's view of a value is and which rule and which book said so. TypeScript on Node with **no
+  dependencies**; Electron and React arrive with the interface, not here. It carries the five
+  grillings' decisions out of prose and one throwaway script into code that runs, and it answers this
+  map's first fog: **is the schema the Engine's internal model or only its wire format?**
+
+**The five grillings are all resolved** — the four charted at the start and the one they produced.
 
 Running the grillings to decisions has been worth more than the charting predicted, and mostly by
 **subtraction**: 02 and 03 were both smaller than they looked and both sitting on top of something
