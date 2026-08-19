@@ -83,10 +83,20 @@ export function Wizard(
   useEffect(() => { void api.steps(packId, draft).then(setSteps); }, [packId, draft]);
 
   const pick = (key: Step["key"], id: string): void => {
-    setDraft((d) => ({ ...d, [key]: id }));
+    setDraft((d) => key === "proficiencies"
+      ? { ...d, chose: [...(d.chose ?? []), { kind: "nonweaponProficiency", ref: id }] }
+      : { ...d, [key]: id });
   };
 
-  const ready = draft.race !== undefined && draft.class !== undefined && name.trim() !== "";
+  const unpick = (ref: string): void => {
+    setDraft((d) => {
+      const at = (d.chose ?? []).findIndex((c) => c.ref === ref);
+      return at < 0 ? d : { ...d, chose: (d.chose ?? []).filter((_, i) => i !== at) };
+    });
+  };
+
+  const ready = draft.race !== undefined && draft.class !== undefined && name.trim() !== ""
+    && steps.every((s) => s.budget === undefined || s.budget.free === 0);
 
   return (
     <section className="wizard">
@@ -105,6 +115,24 @@ export function Wizard(
             {step.state === "waiting" && <span className="dim"> — after the steps above</span>}
             {step.state === "done" && <span className="dim"> — chosen</span>}
           </h3>
+          {step.budget !== undefined && (
+            <p className="dim">
+              {step.budget.free} of {step.budget.total} slots left
+              {/* DD01537: initial slots must be assigned immediately; they cannot be saved
+                  or held in reserve. So this is a gate, not a nag. */}
+              {step.budget.free > 0 && " — they cannot be held in reserve"}
+            </p>
+          )}
+          {step.key === "proficiencies" && (draft.chose ?? []).length > 0 && (
+            <div className="offers">
+              {(draft.chose ?? []).map((c) => (
+                <button type="button" className="offer yes" key={c.ref} onClick={() => { unpick(c.ref); }}>
+                  <span className="offer-name">{c.ref}</span>
+                  <span className="dim">chosen — click to undo</span>
+                </button>
+              ))}
+            </div>
+          )}
           {step.key === "scores"
             ? <Scores abilities={step.offers} scores={draft.scores ?? {}} onChange={(s) => { setDraft((d) => ({ ...d, scores: s })); }} />
             : step.state === "waiting"

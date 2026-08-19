@@ -71,7 +71,11 @@ export function create(library: Library, packId: string, draft: Draft & { name: 
     ...(draft.kit !== undefined ? { kit: draft.kit } : {}),
     packs: [{ id: packId }],
   });
-  character.advance([{ class: draft.class!, die: hitDie }]);
+  // §6.3: what was chosen travels in the event that chose it, so a correction to the level
+  // corrects the choices with it. And §9.1's initial slots were assigned before this was
+  // called, because DD01537 says they cannot be held in reserve.
+  character.advance([{ class: draft.class!, die: hitDie }],
+    draft.chose !== undefined && draft.chose.length > 0 ? { chose: draft.chose } : {});
   library.writeCharacter(library.stamp(character.file));
   return character.file.id;
 }

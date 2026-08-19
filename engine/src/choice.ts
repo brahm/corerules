@@ -20,6 +20,7 @@
  * a third state, and the interface has to show it.
  */
 import type { Pack } from "./pack.ts";
+import { cost as costOf, slots as slotsFor } from "./proficiency.ts";
 import { predicate, type Subject } from "./predicate.ts";
 import { groupsOf, type Id, type Record_ } from "./types.ts";
 
@@ -43,6 +44,9 @@ export interface Draft {
   subrace?: Id;
   class?: Id;
   kit?: Id;
+  /** What has been spent so far. A list rather than a set because the same kind may be
+   *  chosen several times, and order is the order the player picked. */
+  chose?: { kind: string; ref: Id }[];
 }
 
 const bookOf = (r: Record_): string => r.provenance?.section[0] ?? "?";
@@ -152,11 +156,47 @@ export function kits(pack: Pack, draft: Draft): Offer[] {
 /** The steps, and whether each is answerable yet. §9.2's wizard is guided, which means it
  *  knows what it is waiting for. */
 export interface Step {
-  key: "scores" | "race" | "subrace" | "class" | "kit";
+  key: "scores" | "race" | "subrace" | "class" | "kit" | "proficiencies";
   title: string;
   /** Answered, ready to answer, or waiting on an earlier step. */
   state: "done" | "ready" | "waiting";
   offers: Offer[];
+  /** Only the proficiency step. What may still be spent, and on what — §9.1's slot budgets,
+   *  and PHB DD01537's rule that **initial slots must be assigned immediately; they cannot be
+   *  saved or held in reserve**, which is why this step is not `done` until `free` is nought. */
+  budget?: { total: number; spent: number; free: number };
+}
+
+/**
+ * The proficiency step, which is a budget rather than a list of yes-and-no.
+ *
+ * A candidate that would cost more than remains is refused **by the budget**, not by a rule in
+ * a book — so it says so in those terms. And a cost the books cannot decide (correction 60)
+ * arrives as `unknown`, because spending a slot you may not owe is exactly as wrong as being
+ * refused one you could afford.
+ */
+function proficiencyStep(pack: Pack, draft: Draft): Omit<Step, "key" | "title"> {
+  if (draft.class === undefined) return { state: "waiting", offers: [] };
+  const total = slotsFor(pack, draft.class);
+  const chosen = (draft.chose ?? []).filter((c) => c.kind === "nonweaponProficiency");
+  const spent = chosen.reduce((n, c) => n + costOf(pack, c.ref, draft.class!).cost, 0);
+  const free = total - spent;
+  const taken = new Set(chosen.map((c) => c.ref));
+
+  const offers = pack.records("nonweaponProficiencies")
+    .filter((p) => !taken.has(p.id))
+    .map((p): Offer => {
+      const { cost, because, certain } = costOf(pack, p.id, draft.class!);
+      const label = `${cost} slot${cost === 1 ? "" : "s"}${certain ? "" : ", perhaps one more"} — ${because}`;
+      if (cost > free) {
+        return { id: p.id, name: p.name, book: bookOf(p), available: "no",
+                 because: `${cost} slots, and ${free} left` };
+      }
+      return { id: p.id, name: p.name, book: bookOf(p),
+               available: certain ? "yes" : "unknown", because: label };
+    });
+
+  return { state: free === 0 ? "done" : "ready", offers, budget: { total, spent, free } };
 }
 
 export function steps(pack: Pack, draft: Draft): Step[] {
@@ -184,6 +224,10 @@ export function steps(pack: Pack, draft: Draft): Step[] {
       key: "class", title: "Class",
       state: has(draft.class) ? "done" : has(draft.scores) && has(draft.race) ? "ready" : "waiting",
       offers: has(draft.scores) || has(draft.race) ? classes(pack, draft) : [],
+    },
+    {
+      key: "proficiencies", title: "Nonweapon proficiencies",
+      ...proficiencyStep(pack, draft),
     },
     {
       key: "kit", title: "Kit",

@@ -259,6 +259,21 @@ One type wrinkle worth keeping: `group` is **an id on a class and a list on a pr
 a class belongs to one class group and Table 37 puts fifteen proficiencies in two. Both readings now
 go through `groupsOf`, which is the only place that knows.
 
+The budget is now a step in the wizard, and **it is a gate rather than a nag**: PHB DD01537 says
+initial slots *"must be assigned immediately; they cannot be saved or held in reserve"*, so Create
+stays disabled until they are spent. A candidate that costs more than remains is refused **in the
+budget's own terms** — *"2 slots, and 1 left"* — because that is not a rule in a book and saying it
+was would be a lie about which book.
+
+```
+NONWEAPON PROFICIENCIES
+  3 of 3 slots left — they cannot be held in reserve
+  Slow Respiration   Comp. Book of Dwarves
+      2 slots — in Special Background (dwarven), which is not open to this class — one slot more
+  Agriculture        Player's Handbook
+      1 slot — in General Proficiency Group, which is open to this class
+```
+
 ## What is left
 - **Constitution is not in the hit points.** The bonus is a table read with a per-class cap, and
   a plausible-looking total that quietly omits it is the kind of wrong number the rest of this

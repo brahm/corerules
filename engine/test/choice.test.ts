@@ -54,16 +54,52 @@ test("a prerequisite the draft cannot answer yet is unknown, not a refusal", () 
 test("the wizard knows what it is waiting for", () => {
   const empty = steps(pack, {});
   assert.deepEqual(empty.map((s) => [s.key, s.state]), [
-    ["scores", "ready"], ["race", "ready"], ["class", "waiting"], ["kit", "waiting"],
+    ["scores", "ready"], ["race", "ready"], ["class", "waiting"],
+    ["proficiencies", "waiting"], ["kit", "waiting"],
   ], "with no race chosen there is no subrace step, because no subrace targets nothing");
 
   const chosen = steps(pack, { scores: { "test:strength": 16 }, race: "test:hillfolk", class: "test:fighter" });
   assert.deepEqual(chosen.map((s) => [s.key, s.state]), [
-    ["scores", "done"], ["race", "done"], ["subrace", "ready"], ["class", "done"], ["kit", "ready"],
+    ["scores", "done"], ["race", "done"], ["subrace", "ready"], ["class", "done"],
+    ["proficiencies", "ready"], ["kit", "ready"],
   ], "and once the race has one, the subrace step appears where it belongs");
 });
 
 test("a race with no subraces gets no step to skip past", () => {
   assert.equal(steps(pack, { race: "test:hillfolk" }).some((s) => s.key === "subrace"), true);
   assert.equal(steps(pack, { race: "test:nowhere" }).some((s) => s.key === "subrace"), false);
+});
+
+test("the proficiency step is a budget, and it is not done until the slots are spent", () => {
+  const bare = steps(pack, { class: "test:fighter" }).find((s) => s.key === "proficiencies")!;
+  assert.deepEqual(bare.budget, { total: 3, spent: 0, free: 3 });
+  assert.equal(bare.state, "ready");
+
+  // PHB DD01537: initial slots must be assigned immediately; they cannot be saved.
+  const spent = steps(pack, {
+    class: "test:fighter",
+    chose: [
+      { kind: "nonweaponProficiency", ref: "test:riding" },     // 1, in Warrior
+      { kind: "nonweaponProficiency", ref: "test:tumbling" },   // 2, outside every open group
+    ],
+  }).find((s) => s.key === "proficiencies")!;
+  assert.deepEqual(spent.budget, { total: 3, spent: 3, free: 0 });
+  assert.equal(spent.state, "done");
+});
+
+test("a candidate the budget cannot afford is refused in the budget's own terms", () => {
+  const step = steps(pack, {
+    class: "test:fighter",
+    chose: [{ kind: "nonweaponProficiency", ref: "test:heraldry" }, { kind: "nonweaponProficiency", ref: "test:riding" }],
+  }).find((s) => s.key === "proficiencies")!;
+  const tumbling = step.offers.find((o) => o.id === "test:tumbling")!;
+  assert.equal(tumbling.available, "no");
+  assert.match(tumbling.because!, /2 slots, and 1 left/);
+});
+
+test("a cost the books cannot decide arrives as unknown, not as a yes", () => {
+  const step = steps(pack, { class: "test:fighter" }).find((s) => s.key === "proficiencies")!;
+  const begging = step.offers.find((o) => o.id === "cth:begging")!;
+  assert.equal(begging.available, "unknown");
+  assert.match(begging.because!, /perhaps one more/);
 });

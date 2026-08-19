@@ -111,6 +111,8 @@ function window(): void {
             await new Promise(r => setTimeout(r, 400));
             [...document.querySelectorAll('.offer')].find(b => b.textContent.startsWith('Dwarf')).click();
             await new Promise(r => setTimeout(r, 400));
+            [...document.querySelectorAll('.offer')].find(b => b.textContent.startsWith('Fighter')).click();
+            await new Promise(r => setTimeout(r, 500));
           `,
         };
         const click = steps[process.env["CORERULES_SMOKE"] ?? ""] ?? "";

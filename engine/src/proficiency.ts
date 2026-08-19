@@ -105,6 +105,16 @@ const number = (s: string | undefined): number => {
   return Number.isNaN(n) ? 0 : n;
 };
 
+/** Table 34's total for a class at a level, without needing a Character — the wizard asks
+ *  before there is one. */
+export function slots(pack: Pack, classId: Id, level = 1, which: "weapon" | "nonweapon" = "nonweapon"): number {
+  const row = slotRow(pack, classId);
+  if (row === undefined) return 0;
+  const initial = number(which === "weapon" ? row[1] : row[4]);
+  const everyLevels = Math.max(1, number(which === "weapon" ? row[2] : row[5]));
+  return initial + Math.floor((level - 1) / everyLevels);
+}
+
 export function budget(pack: Pack, character: Character, which: "weapon" | "nonweapon"): Budget | undefined {
   const classId = character.classes()[0];
   if (classId === undefined) return undefined;
