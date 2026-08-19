@@ -55,7 +55,8 @@
           "field": "hitDice.perLevel",
           "to": "1d6"
         }
-      ]
+      ],
+      "group": "test:rogue"
     },
     {
       "id": "test:mage",
@@ -79,6 +80,17 @@
           "minimum": 13
         }
       ]
+    },
+    {
+      "id": "test:rogue",
+      "name": "Rogue",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Classes"
+        ]
+      },
+      "isGroup": true
     }
   ]
 }

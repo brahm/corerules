@@ -3,30 +3,138 @@
     {
       "id": "test:sure-footing",
       "name": "Sure-footing by Dexterity",
-      "provenance": { "section": ["Fixtures", "Tables"] },
-      "keyedBy": { "kind": "integer" },
-      "columns": ["Bonus"],
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Tables"
+        ]
+      },
+      "keyedBy": {
+        "kind": "integer"
+      },
+      "columns": [
+        "Bonus"
+      ],
       "supplies": "surefooting.bonus",
-      "rows": [["3-9", 0], ["10-14", 1], ["15-18", 2]]
+      "rows": [
+        [
+          "3-9",
+          0
+        ],
+        [
+          "10-14",
+          1
+        ],
+        [
+          "15-18",
+          2
+        ]
+      ]
     },
     {
       "id": "test:as-printed",
       "name": "A table that prints its values as the book does",
-      "provenance": { "section": ["Fixtures", "Tables"] },
-      "keyedBy": { "kind": "integer" },
-      "columns": ["Bonus"],
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Tables"
+        ]
+      },
+      "keyedBy": {
+        "kind": "integer"
+      },
+      "columns": [
+        "Bonus"
+      ],
       "supplies": "asPrinted.bonus",
-      "rows": [["3-18", "+4"]]
+      "rows": [
+        [
+          "3-18",
+          "+4"
+        ]
+      ]
+    },
+    {
+      "id": "phb:DD01524",
+      "name": "Table 34: Proficiency Slots",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Tables"
+        ]
+      },
+      "keyedBy": {
+        "kind": "text"
+      },
+      "columns": [
+        "Weapon Proficiencies",
+        "Nonweapon Proficiencies"
+      ],
+      "rows": [
+        [
+          "Group",
+          "Initial",
+          "#Levels",
+          "Penalty",
+          "Initial",
+          "#Levels"
+        ],
+        [
+          "Warrior",
+          "4",
+          "3",
+          "-2",
+          "3",
+          "3"
+        ],
+        [
+          "Rogue",
+          "2",
+          "4",
+          "-3",
+          "3",
+          "2"
+        ]
+      ]
+    },
+    {
+      "id": "phb:DD01539",
+      "name": "Table 38: Crossovers",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Tables"
+        ]
+      },
+      "keyedBy": {
+        "kind": "text"
+      },
+      "columns": [
+        "Groups"
+      ],
+      "rows": [
+        [
+          "test:thief",
+          "Rogue, General"
+        ]
+      ]
     }
   ],
   "limitations": [
     {
       "id": "test:fighter-weapon-restriction",
       "name": "Fighter Weapon Restriction",
-      "provenance": { "section": ["Fixtures", "Limitations"] },
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Limitations"
+        ]
+      },
       "imposedBy": "test:fighter",
       "bounds": "weaponProficiency",
-      "members": ["test:blade"]
+      "members": [
+        "test:blade"
+      ]
     }
   ]
 }

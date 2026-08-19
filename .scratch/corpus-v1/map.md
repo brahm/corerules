@@ -1290,6 +1290,17 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    an effect can say only *that* it is optional and never *which* option it belongs to, so a table
    can turn them all on or all off and nothing finer. **Owed to `spec.md` §5, which ticket 01 kept
    normative**, and it is the first thing owed there since correction 6 was applied.
+60. **Fifty-four of 120 nonweapon proficiencies belong to no stated group, so the crossover rule
+   cannot be applied to them.** ([Engine ticket 06](../engine-v1/issues/06-the-evaluator.md),
+   building the slot budgets) The Player's Handbook prints a group for **every one of its 65**;
+   of the 55 from the five Complete handbooks, **one** does. And the books do not state one either
+   — the Complete Thief's prints *"Begging: 1 slot, Charisma, special modifiers"* and stops. So
+   PHB DD01537's rule, *"when a player selects a proficiency from any other category, it requires
+   one additional proficiency slot beyond the number listed"*, **has nothing to test** for 54 of
+   them. The Engine charges the listed cost and says the surcharge is undecided, because charging
+   it anyway would invent a rule **against the character**, in the one place a player would never
+   think to check. Not a transcription gap: the books are silent, and this is where the corpus
+   ends rather than where the transcription stopped.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

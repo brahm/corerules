@@ -21,7 +21,7 @@
  */
 import type { Pack } from "./pack.ts";
 import { predicate, type Subject } from "./predicate.ts";
-import type { Id, Record_ } from "./types.ts";
+import { groupsOf, type Id, type Record_ } from "./types.ts";
 
 export type Availability = "yes" | "no" | "unknown";
 
@@ -63,11 +63,10 @@ function targets(pack: Pack, target: Id): Set<Id> {
   for (const c of pack.records("classes")) {
     if (c.isGroup === true) continue;
     const chain = new Set<Id>([c.id]);
-    if (c.group !== undefined) chain.add(c.group);
+    for (const g of groupsOf(c)) chain.add(g);
     for (const m of c.combines ?? []) {
       chain.add(m);
-      const g = pack.byId.get(m)?.group;
-      if (g !== undefined) chain.add(g);
+      for (const g of groupsOf(pack.byId.get(m))) chain.add(g);
     }
     if (c.variantOf !== undefined) chain.add(c.variantOf);
     if (chain.has(target)) out.add(c.id);

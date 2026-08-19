@@ -230,6 +230,35 @@ That is not a gap to tidy away later — it is the difference between *"the book
 The abilities come from the pack, not from a prefix the interface knows: `phb:strength` is the
 Player's Handbook's and another book's would be its own.
 
+### Proficiencies, and a third state arriving in a budget
+
+The Player's Handbook states the whole rule in four sentences, and the interesting part is not the
+arithmetic but **which groups are open to this character**, because that is what decides whether a
+proficiency costs one slot or two.
+
+Against the real slice, a dwarf fighter: **4 weapon slots and 3 nonweapon, one more of each every 3
+levels, −2 to hit with anything he is not proficient in** — Table 34, read by the class's group name.
+Table 38's crossovers resolve through correction 56's `alsoPrinted`, so a Paladin's *"Warrior,
+Priest, General"* becomes three ids and a Thief's becomes two.
+
+And then the third state turns up somewhere new. Of 120 candidates, 36 cost one slot and 30 cost more
+— and **54 carry a cost the books cannot decide**:
+
+```
+1?  Acting          no book says which group this belongs to,
+                    so whether it costs one slot more is undecided
+```
+
+Every one of the PHB's 65 proficiencies names its group. **One** of the 55 from the Complete
+handbooks does, and the books do not say either. So the crossover rule has nothing to test, and the
+Engine charges the listed cost while saying the surcharge is undecided — because charging it anyway
+would invent a rule **against the character**, in the one place a player would never think to check.
+Sent back as correction 60.
+
+One type wrinkle worth keeping: `group` is **an id on a class and a list on a proficiency**, because
+a class belongs to one class group and Table 37 puts fifteen proficiencies in two. Both readings now
+go through `groupsOf`, which is the only place that knows.
+
 ## What is left
 - **Constitution is not in the hit points.** The bonus is a table read with a per-class cap, and
   a plausible-looking total that quietly omits it is the kind of wrong number the rest of this

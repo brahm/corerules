@@ -96,8 +96,12 @@ export interface Record_ {
   /** Attachables: what this binds to, and how many may hold at once. */
   target?: Id;
   cardinality?: string;
-  /** Classes: the group a class belongs to, and the arms a multi-class combines. */
-  group?: Id;
+  /** The group a record belongs to — **and it is two shapes, because it is two facts.** A
+   *  class belongs to exactly one class group (`phb:fighter` to `phb:warrior`); a nonweapon
+   *  proficiency belongs to one OR MORE proficiency groups, because Table 37 puts fifteen of
+   *  its sixty-five in two, and belonging to two is what a crossover IS. Read it through
+   *  `groupsOf`. */
+  group?: Id | Id[];
   isGroup?: boolean;
   combines?: Id[];
   variantOf?: Id;
@@ -134,4 +138,10 @@ export interface Manifest {
 export interface FieldDeclaration {
   path: string;
   note?: string;
+}
+
+/** The one place that knows `group` is sometimes an id and sometimes a list of them. */
+export function groupsOf(record: Record_ | undefined): Id[] {
+  const g = record?.group;
+  return g === undefined ? [] : Array.isArray(g) ? g : [g];
 }

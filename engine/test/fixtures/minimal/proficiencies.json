@@ -7,11 +7,60 @@
         "section": [
           "Fixtures"
         ]
-      }
+      },
+      "group": [
+        "test:warrior"
+      ],
+      "slotCost": 1,
+      "abilityCheck": {
+        "ability": "test:dexterity"
+      },
+      "modifier": 0
     },
     {
       "id": "test:heraldry",
       "name": "Heraldry",
+      "provenance": {
+        "section": [
+          "Fixtures"
+        ]
+      },
+      "group": [
+        "phb:general"
+      ],
+      "slotCost": 1
+    },
+    {
+      "id": "test:tumbling",
+      "name": "Tumbling",
+      "provenance": {
+        "section": [
+          "Fixtures"
+        ]
+      },
+      "group": [
+        "test:rogue"
+      ],
+      "slotCost": 1
+    },
+    {
+      "id": "cth:begging",
+      "name": "Begging",
+      "provenance": {
+        "section": [
+          "Comp. Thief's Handbook"
+        ]
+      },
+      "slotCost": 1
+    }
+  ],
+  "proficiencyGroups": [
+    {
+      "id": "phb:general",
+      "name": "General Proficiency Group",
+      "alsoPrinted": [
+        "General"
+      ],
       "provenance": {
         "section": [
           "Fixtures"

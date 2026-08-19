@@ -14,7 +14,7 @@
  */
 import type { Pack } from "./pack.ts";
 import { Sheet } from "./sheet.ts";
-import type { Id, Record_ } from "./types.ts";
+import { groupsOf, type Id, type Record_ } from "./types.ts";
 import { uuidv7 } from "./uuid.ts";
 
 /** One advance. `rolls` is a list because **first level is one event that rolls every class's
@@ -135,7 +135,7 @@ export class Character {
     }
     for (const id of this.classes()) {
       const c: Record_ | undefined = this.pack.get(id, "a class the character advances in");
-      if (c?.group !== undefined) s.apply(this.pack.get(c.group, "a class group"), "class group");
+      for (const g of groupsOf(c)) s.apply(this.pack.get(g, "a class group"), "class group");
       s.apply(c, "class");
     }
     if (this.file.deity !== undefined) {
