@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/brahm/corerules/schema/pack-0.1.schema.json",
   "title": "corerules Content Pack, format version 0.1",
-  "description": "Canonical schema, authored by the corpus-v1 map (ticket 05 spine, ticket 14 shapes). Covers the ten kinds the proving slice needs, not all 27. Enforcement is two-tiered: what is declared here, and what the validator checks. Recursive structures, numeric ranges and cross-field rules are the validator's.",
+  "description": "Canonical schema, authored by the corpus-v1 map (ticket 05 spine, ticket 14 shapes). Covers the ten kinds the proving slice needs, not all 27. Enforcement is two-tiered: what is declared here, and what the validator checks. Recursive structures, numeric ranges and cross-field rules are the validator's. **Correction 55 — the canonical serialisation.** A pack file is `json.dumps(obj, indent=2, ensure_ascii=False)` followed by one newline, with keys in the order they were written. This cannot be a schema rule — a JSON Schema sees a parsed document and never its bytes — so `tools/validate.py` reports it and `tools/normalise.py` fixes it. It is here because §7.1 chose a directory of JSON FOR diffability, and a format with no canonical form serves that only by luck: twice in two sessions a script that changed five effects reserialised 24,708 lines, because five of the pack's 27 files were written with one space of indentation and the other 22 with two.",
   "$defs": {
     "id": {
       "description": "Pack-scoped, opaque, derived from the source anchor (ticket 07). '#n' discriminates records sharing one source file.",

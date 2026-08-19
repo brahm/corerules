@@ -1159,7 +1159,7 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    lasso and **made the lasso look like a bow**. A heading says *these rows are printed under this
    name*; a priced group says *these weapons may be bought together for three slots*. They are not
    the same relation and the schema should not spell them the same.
-55. **The pack has no canonical serialisation, and five of its 27 files disagree with the other 22.**
+55. **RESOLVED — the pack has a canonical serialisation, and it turns out every extractor already wrote it.**
    ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md), applying
    correction 46) `cfh-weapons.json`, `crh-weapons.json`, `cprh-weapons.json`, `limitations.json`
    and `weapon-proficiencies.json` are written with one space of indentation; the other 22 use two.

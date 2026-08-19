@@ -176,7 +176,10 @@ _Resolved:_
   than a gap in the format. **And 51**: `weapon` against `weaponProficiency` is a real distinction
   the books mark with a verb, the pack had **five of twelve wrong**, and the Spy's `except` turned
   out to lift nothing — it was restating the general non-proficiency rule. `limitation.bounds` makes
-  it checkable, and the checker found the Spy on its first run.
+  it checkable, and the checker found the Spy on its first run. **And 55**, which the Engine's own
+  work produced by tripping over it twice: the pack now has a canonical serialisation, a
+  `normalise.py` that applies it and a checker that reports drift — and **every extractor was
+  already writing it.** The drift was in the hand edits, not the tools.
 
 ## Not yet specified
 

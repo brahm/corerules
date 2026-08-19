@@ -11,8 +11,9 @@ A pack is ONE document — manifest plus the record arrays — so it is validate
 against the schema's top level. Validating records individually is how you end up
 demanding a manifest of every record.
 
-Also reports, without failing, the two states A3 exists to keep apart:
-records still awaiting the judgement pass, and files the manifest never declared.
+Also reports, without failing: the two states A3 exists to keep apart — records
+still awaiting the judgement pass, and files the manifest never declared — and,
+since correction 55, any file that is not in the canonical serialisation.
 
 Correction 6: the manifest's `provenanceMode` is checked here rather than in the schema,
 because the condition spans two files — the mode is in the manifest and the anchors are in
@@ -134,6 +135,20 @@ def main():
                     kinds.append(f"{r['id']}[{i}] {e['op']}s {ref} as `{e.get('kind')}`, "
                                  f"which bounds `{bounds[ref]}`")
 
+    # Correction 55. §7.1 chose a directory of JSON because diffability is a standing
+    # constraint, and a format with no canonical form serves that only by luck: twice in two
+    # sessions a script that changed five effects reserialised 24,708 lines, because five of
+    # the pack's 27 files were written with one space of indentation and the other 22 with
+    # two. REPORTED, not failed — a file's formatting is a fact about the pack's hygiene and
+    # not an error in its contents, and a hand-authored pack should not be rejected for having
+    # been written in somebody's editor. `tools/normalise.py` repairs it.
+    canon = []
+    for f in sorted(pack.glob("*.json")):
+        raw = f.read_text(encoding="utf-8")
+        if raw != json.dumps(json.loads(raw, object_pairs_hook=collections.OrderedDict),
+                             indent=2, ensure_ascii=False) + "\n":
+            canon.append(f.name)
+
     # Ticket 13 finding 45. Ticket 10 puts cross-pack referential integrity on the Engine,
     # correctly — a pack cannot see the packs it points at. But nothing was COUNTING the
     # references, so nobody noticed that not one of the proving slice's 75 resolved. Report
@@ -175,6 +190,10 @@ def main():
         print(f"  declared but absent: {', '.join(missing)}")
     if undeclared:
         print(f"  present but undeclared (§7.1): {', '.join(undeclared)}")
+    if canon:
+        print(f"  not in the canonical serialisation ({len(canon)} of "
+              f"{len(list(pack.glob('*.json')))}): {', '.join(canon)}"
+              f"\n    — `tools/normalise.py <pack>` rewrites them; correction 55")
     if unmodelled:
         print(f"  awaiting the judgement pass: {len(unmodelled)} of {total} "
               f"(effectsModelled: false — not 'no effects')")
