@@ -79,6 +79,13 @@ class Character:
         # `target`, an `except` names the limitation it pierces) or it does not exist, and
         # a value nothing declares over is withheld with both books named.
         self.contested = []            # (field, [(rid, value)]) — refused, not guessed
+        # Ticket 05's prototype. A BOUND is a `forbid` pointing at a limitation that
+        # carries `members`: the permitted set of that kind is narrowed to those. Bounds
+        # INTERSECT, explicit forbids SUBTRACT, and `except` drops a bound by name — all
+        # three commute, which is why this needs no seventh operation and does not
+        # threaten §4.3's guarantee.
+        self.bounds = collections.defaultdict(list)   # kind -> [(src, limitation-id, frozenset)]
+        self.lifted = set()                           # limitation ids an `except` removed
         self.notes = []
 
     # -- predicate ------------------------------------------------------
@@ -221,10 +228,15 @@ class Character:
                 self.granted.append((src, e.get("ref") or
                                      f"«{e['defines']['name']}»"))
             elif op == "forbid":
-                self.forbidden.append((src, e.get("ref") or
-                                       f"«{e['defines']['name']}»"))
+                lim = self.pack.by_id.get(e.get("ref") or "")
+                if lim and lim.get("members"):
+                    self.bounds[e["kind"]].append((src, lim["id"], frozenset(lim["members"])))
+                else:
+                    self.forbidden.append((src, e.get("ref") or
+                                           f"«{e['defines']['name']}»"))
             elif op == "except":
                 self.excepted.append((src, e["ref"]))
+                self.lifted.add(e["ref"])
             elif op == "require":
                 self.required.append((src, e["kind"], e["count"], e.get("from")))
             if marked and op not in ("adjust", "set"):
@@ -260,6 +272,18 @@ class Character:
                 v = f["set"][-1][0]
             return v if not isinstance(v, int) else v + f["adjust"]
         return f["adjust"]
+
+    def permitted(self, kind, universe):
+        """(intersection of every bound still standing) minus (everything forbidden).
+        Set intersection and union commute, so the layers may be applied in any order —
+        the same guarantee §4.3 makes for the six operations, inherited rather than
+        re-argued."""
+        live = [b for b in self.bounds.get(kind, []) if b[1] not in self.lifted]
+        allowed = set(universe)
+        for _, _, members in live:
+            allowed &= members
+        allowed -= {ref for _, ref in self.forbidden}
+        return allowed, live
 
     @property
     def alignment(self):
@@ -337,6 +361,24 @@ def main():
         for src, kind, n, frm in c.required:
             print(f"    {n} x {kind:<34}{'from ' + str(len(frm)) + ' options' if frm else 'unbounded'}"
                   f"   {src}")
+
+    if c.bounds:
+        print("\nPERMITTED — bounds intersect, forbids subtract, `except` lifts")
+        universe = {"weaponProficiency": [r["id"] for r in pack.by_kind["weaponProficiencies"]
+                                          if not r.get("isGroup")],
+                    "armor": [r["id"] for r in pack.by_kind["armor"]],
+                    "sphere": [r["id"] for r in pack.by_kind["spheres"]]}
+        for kind in sorted(c.bounds):
+            allowed, live = c.permitted(kind, universe.get(kind, []))
+            print(f"    {kind}: {len(allowed)} of {len(universe.get(kind, []))}")
+            for src, lim, members in live:
+                r = pack.by_id.get(lim, {})
+                print(f"        bound by {r.get('name', lim)} ({len(members)})   {src}")
+            for src, lim in c.excepted:
+                if lim in {b[1] for b in c.bounds.get(kind, [])}:
+                    print(f"        LIFTED   {pack.by_id.get(lim, {}).get('name', lim)}   {src}")
+            print("        " + ", ".join(sorted(pack.by_id.get(i, {}).get("name", i)
+                                                for i in allowed)[:12]))
 
     if c.situational:
         print(f"\nSITUATIONAL — withheld from the total, applied when the circumstance "

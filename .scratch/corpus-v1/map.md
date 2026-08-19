@@ -953,6 +953,31 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    Engine resolves it by declared refinement and prints one of them, and **nothing anywhere notices
    that the two books agree.** Roll-under and percentage are not comparable operands and the schema
    offers no way to say they mean the same thing.
+48. **`limitation` must carry `members`, and twenty records already show the shape.**
+   ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md)) The schema
+   says out loud that *"a limitation has no effects: it is a thing to be pointed AT"* — ticket 16
+   decision 4, right about dangling ids and wrong about this. **125 effects need a limitation to be a
+   SET**, and the field already exists elsewhere: 20 CFH `weaponProficiency` group records carry
+   `members`, from 2 to 26 ids, with `groupKind` tight/broad/none. Adding it to `limitation` makes the
+   13 existing `except`s computable, gives correction 46 somewhere to put its contents, and **needs no
+   seventh operation**: `permitted = (∩ bounds) \ (∪ forbids)`, and both operators commute, so §4.3's
+   guarantee is inherited rather than re-argued.
+49. **The six PHB weapon groups carry no members.**
+   ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md)) `phb:bow`,
+   `phb:crossbow`, `phb:lance`, `phb:polearm`, `phb:sword` and `phb:bastard-sword` are flagged
+   `isGroup` with nothing in them, while the Complete Fighter's Handbook's twenty are full. **The
+   CPRH's permit-lists name these groups by preference** — *bows (all)*, *flails (both)*, *swords
+   (all)* — so an empty group is a bound that silently permits **nothing**. Prerequisite to correction
+   46 rather than a consequence of it.
+50. **A bound stated over item properties has no vocabulary, and 72 effects want one.**
+   ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md)) *Metallic
+   weapons*, *more than a tenth metal by weight*, *metal weapons larger than a knife*, *armour other
+   than leather*, *the concealable ones*, *all non-metal armour*. A `weaponProficiency` record carries
+   `cost`, `weight`, `size`, `damageType` and `speedFactor` and **no material**; `armor` is seven
+   records of which two have an armour class. *Larger than a knife* is nearly computable from `size`;
+   *metallic* is not computable at all. **Enumeration cannot reach these**, so correction 48 solves
+   the restriction problem for 125 effects and leaves this 72 untouched — which is the honest
+   statement of the boundary, not a gap in it.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

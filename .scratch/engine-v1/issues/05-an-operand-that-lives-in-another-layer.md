@@ -1,7 +1,7 @@
 # An operand that lives in another layer
 
 Type: grilling
-Status: open
+Status: resolved — a bound is a record with members, and no seventh operation
 
 ## Question
 
@@ -66,3 +66,176 @@ tells the user, because the prohibition was never written.
 This is the gap the corpus map's known unknown #1 was pointing at without naming — ticket 03 answered
 the question as asked (there is no precedence to find) and this is what was underneath. It is
 **62 effects wide against that ticket's one**, and it is the largest remaining hole in §4.3.
+
+---
+
+## The measurement
+
+The ticket estimated 62 effects. **It is 142**, in four encodings rather than three, and the count was
+low because the ticket was written from ticket 03's three examples rather than from a sweep.
+
+| | encoding | in records |
+|---:|---|---:|
+| 61 | **grant a representative** — one member listed, the prohibition on everything unnamed lost | 61 |
+| 44 | **`require` with no `from`** — choose one, from a set the effect cannot name | 37 |
+| 24 | **`forbid` a placeholder complement** — *"weapons outside the Explorer's list"* | 20 |
+| 13 | **`except` a contentless limitation** — lifts a restriction whose contents the pack does not hold | 13 |
+| **142** | | |
+
+**Four encodings of one fact, and which one a record uses depends on which side the book's sentence
+happened to be shorter on.** The CPRH says *"Weapons Permitted: …"* and became grants; the CRH says
+*"confined to the following"* and became a placeholder forbid. Same rule, opposite encodings, and only
+one of them even mentions a prohibition.
+
+### It is not a CPRH quirk
+
+69 effects name a permit-list, across **six books at the effect level and eight of the twelve counting
+interpretation notes** — CPRH 58, CRH 4, CBGH 3, PHB 2, CBE 1, CPAH 1, plus notes in CBD and CTH.
+**Option 3 of the table above — expand them at transcription — dies here.** It was affordable against
+one book.
+
+### It is two concepts, and only one of them is this ticket
+
+Sorting the 142 by whether the pack contains records of the kind being bounded:
+
+| | | |
+|---:|---|---|
+| **125** | **a restriction set** over things the pack holds | weaponProficiency 86, weaponSpecialization 12, weapon 11, armor 5, nonweaponProficiency 4, sphere 2, ability, combatStyle, requirement |
+| **17** | **an open choice** from a category the pack does not contain at all | chosenAnimal, chosenTerrain, chosenUndeadType, hatedFoe, guardedSite, totemAnimal, bondedMount, familialSpecies, sacredAnimal, hatedFaith, language, follower, mount, mysticAbility, savageAbility |
+
+The second group is not a §4.3 gap. *"Choose a totem animal"* cannot be bounded because **the v1 tier has
+no animals**; that is correction 23's boundary — the creature vocabulary — arriving from a new
+direction. Ticket 02's rule already prints these as choices owed, with the category named, and that is
+the right answer for v1.
+
+**So the ticket is 125 effects, not 142 and not 62.**
+
+### The intersection is exercised, not hypothetical
+
+Of the 5,414 (class, kit, deity) combinations the pack can form, **1,765 — 32.6% — carry two or more
+weapon restriction sets that would have to intersect.** The worst carries four. Whatever the mechanism
+is, it must compose across layers on a third of the space.
+
+### The machinery already exists and is populated
+
+This is the result that decided the ticket. Twenty records in the pack already carry an explicit
+member list:
+
+```
+cfh:group-polearms       tight   21 members
+cfh:group-blades         broad   16 members
+cfh:group-pole-weapons   broad   26 members
+cfh:group-flails         tight    2 members     … 20 in all, with groupKind tight | broad | none
+```
+
+The Complete Fighter's Handbook needed *a named set of weapon ids* for its group-proficiency rules, and
+it got one — `members`, on a `weaponProficiency` record flagged `isGroup`. **A set-valued record is not
+a thing this ticket has to invent. It is a thing the pack has been carrying since the CFH was
+transcribed**, and nothing has ever pointed at one in order to *bound* rather than to *price*.
+
+### What blocks it is a decision, and the schema says so out loud
+
+```
+"A limitation has no effects: it is a thing to be pointed AT."
+        — pack-0.1.schema.json, on `limitations`
+```
+
+Ticket 16 decision 4 made `limitation` deliberately contentless, and it was right about the problem it
+was solving: most complements were dangling ids, and *"a complement is not a record: it is the
+record's own sentence."* Seven survived because `except` must name what it lifts. **Those seven are
+names with a provenance and nothing else** — `phb:thief-weapon-restriction` says the thief has a
+limited selection of weapons and does not say which. The prose is in an `interpretation` note.
+
+**The pack already has the handle for a bounded set and has never had the set.**
+
+## The decision
+
+**A bound is a record with `members`. No seventh operation.**
+
+**1 — `limitation` gains `members`**, the same field, the same shape the CFH weapon groups already use.
+It stops being a name and becomes the set it is named after.
+
+**2 — A record applies a bound by `forbid`-ing the limitation**, meaning *this bound applies to you*;
+`except` lifts it, which it already does. Both operations exist, both already take a `ref` to a record,
+and **13 `except`s become computable the moment the records have contents.**
+
+**3 — The evaluator computes `permitted(kind) = (∩ bounds still standing) \ (∪ explicit forbids)`.**
+This is the ticket's third settling question, and it comes back clean: **intersection and union
+commute and associate, so §4.3's central guarantee is inherited rather than re-argued.** That is the
+decisive argument over a seventh operation, whose interaction with `grant` would have to be defined
+from nothing and defended against the same question.
+
+**4 — Ticket 03's decision composes with this one rather than competing with it.** The Vindicator does
+not out-rank the deity: it `except`s the deity's limitation **by name**, and the term drops out of the
+intersection. Two tickets, one mechanism, and neither needed an ordering.
+
+**5 — The 17 open choices stay as they are**, marked and printed as choices owed. They bound categories
+the v1 tier does not contain, and forcing them into this shape would put empty records in the pack to
+make a mechanism look complete.
+
+## The prototype
+
+`tools/firstlight.py` implements it: a `forbid` pointing at a limitation that carries `members` becomes
+a bound, bounds intersect, `except` drops one by name. Run against two limitation records injected in
+memory — what correction 46 would add, not a change to the pack:
+
+```
+priest of Agriculture         : 5 of 117 weapons
+      Bill-guisarme, Footman's flail, Hand or throwing axe, Horseman's flail, Sickle
++ a second bound intersecting : 1        Hand or throwing axe
+Vindicator, `except` the bound: 117 of 117  — the bound is gone, not out-ranked
+
+commutation: 1 distinct result over both layer orders
+```
+
+The 5-of-6 is the mechanism being honest: the book's list names a **scythe**, and `phb:scythe` is not
+in the pack. A missing member shrinks the permitted set visibly instead of passing silently.
+
+## What correction 46 actually costs, measured
+
+The CPRH has **59 pages carrying a "Weapons Permitted" field, naming 61 distinct member phrases.**
+Resolved against the pack's weapon names by a naive normalisation, about half match. The rest are not
+missing data — they are three known shapes:
+
+- **notation** — the CPRH writes `sword/long`, `dagger/dirk`, `hand/throwing axe` where the PHB table
+  writes *Long sword*, *Dagger or dirk*, *Hand or throwing axe*. §7.3's rule that a name is never
+  identity, arriving as a bill.
+- **group references** — `bows (all)`, `flails (both)`, `picks (all)`, `swords (all)`. These point at
+  group records that exist, and **the six PHB group records carry no members**, so a permit-list member
+  can be a set that is itself empty.
+- **another book's ids** — *belaying pin*, *stiletto*, *main-gauche*, *cutlass*, *net*, *lasso* exist
+  under `cfh:` ids, inside the very group records that prove the machinery works.
+
+**So the correction is a resolution pass with a checker, not 59 re-readings** — the shape of work this
+corpus effort did well 149 times. And it has a prerequisite nobody had noticed: **the six PHB weapon
+groups need their members before any permit-list that names one can be written.**
+
+## The half this does not solve, and must not pretend to
+
+**72 of the bounds are stated as a predicate over item properties, not as an enumeration**: *metallic
+weapons*, *weapons more than a tenth metal by weight*, *metal weapons larger than a knife*, *armour
+other than leather*, *weapons other than the concealable ones*, *all non-metal armour*. The CPRH's own
+marker said it first — *"Armour is worse: a predicate over items, not an enumeration."*
+
+A member list cannot express these, and the pack cannot compute them either: a `weaponProficiency`
+record carries `cost`, `weight`, `size`, `damageType` and `speedFactor` and **no material**, and `armor`
+is seven records of which two have an armour class. *Larger than a knife* is nearly computable from
+`size`; *metallic* is not computable at all.
+
+**This is a separate gap and it belongs to the item vocabulary, not to §4.3.** Recorded as a correction
+rather than folded in here, because a decision that quietly covered a third of its cases by leaving
+them marked would be the same mistake ticket 02 found in the markers themselves.
+
+## Owed back to the corpus map
+
+- **Correction 48 — `limitation` must carry `members`, and 20 records already show the shape.** The
+  schema says a limitation is a thing to be pointed at; 125 effects need it to be a set. The field
+  exists on `weaponProficiency` groups with 2 to 26 ids each. Adding it to `limitation` makes 13
+  `except`s computable and gives correction 46 somewhere to put its contents.
+- **Correction 49 — the six PHB weapon groups carry no members.** `phb:bow`, `phb:crossbow`,
+  `phb:lance`, `phb:polearm`, `phb:sword`, `phb:bastard-sword` are `isGroup` with nothing in them,
+  while the CFH's twenty are full. Permit-lists name these groups by preference — *bows (all)*,
+  *swords (all)* — so an empty group is a bound that silently permits nothing.
+- **Correction 50 — a bound over item properties has no vocabulary, and 72 effects want one.** Weapon
+  records carry no material; armour is seven category-shaped records. Enumeration cannot express
+  *metallic*, and this is the half of the restriction problem that a member list leaves untouched.

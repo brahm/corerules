@@ -94,24 +94,19 @@ Four results are load-bearing for implementation and are easy to miss in 149 fin
   a table read returns `"+4"` where the contract says an integer; and two mutually exclusive marked
   bonuses summed into a wrong number on the first character anyone builds.
 
-_Two tickets remain open:_ (one inherited, one opened by 03)
+_One ticket remains open:_
 
 - **[01 — Which spec does the Engine implement?](issues/01-which-spec-does-the-engine-implement.md)**
   Classified: of 44 corrections, ten are already in the schema and **seventeen touch `spec.md`** —
   twelve reversals and five silences. The other seventeen are history or method, and **two are
   retracted diagnoses that folding the list in wholesale would write into the spec.** The decision
   itself — what day one reads — is still open. **Every other ticket inherits the answer.**
-- **[05 — An operand that lives in another layer](issues/05-an-operand-that-lives-in-another-layer.md)**
-  What was underneath ticket 03. An effect can name a field and a ref; it cannot name another
-  **layer's contents** — the Temple Guard's required weapon is *the deity's list*, the Pariah's
-  prohibition is its *complement*, and 60 priesthoods carry a permit-list that means **only these**.
-  **62 effects, one missing capability**, and the largest remaining hole in §4.3.
 
 Running the grillings to decisions has been worth more than the charting predicted, and mostly by
-**subtraction**: 02 and 03 both turned out to be smaller than they looked and to be sitting on top of
-something larger. Ticket 01 now has its evidence that the corrections list is not a frozen document —
-**six corrections came out of the Engine's first three tickets**, and 47 was found by a program that
-was looking for something else.
+**subtraction**: 02 and 03 were both smaller than they looked and both sitting on top of something
+larger, and 05 — the something larger — turned out to need **no new operation at all**. Ticket 01 now
+has its evidence that the corrections list is not a frozen document: **nine corrections came out of
+the Engine's first four tickets**, and 47 was found by a program looking for something else.
 
 _Resolved:_
 
@@ -135,6 +130,17 @@ _Resolved:_
   already exist — `target` and `except`, the latter with seven `limitation` records, every one pierced.
   **This answers §13's known unknown #1**, the one thing 71 sessions of transcription never closed.
   Sent back corrections 46 and 47, and opened ticket 05.
+- **[05 — An operand that lives in another layer](issues/05-an-operand-that-lives-in-another-layer.md)**
+  **A bound is a record with `members`, and no seventh operation is needed.** The sweep found **142**
+  bounded-set assertions in four encodings, not the 62 the ticket was opened with — and they are two
+  concepts: **125** bound things the pack holds, **17** bound categories it does not contain at all
+  (totem animals, terrains, undead types), which is correction 23's boundary arriving from a new
+  direction. The mechanism was already in the pack: **20 CFH weapon groups carry `members`**, 2 to 26
+  ids each. `limitation` gains the same field, `forbid` applies a bound, `except` lifts one, and
+  `permitted = (∩ bounds) \ (∪ forbids)` **commutes**, so §4.3's guarantee is inherited. Prototyped:
+  an Agriculture priest goes from 117 weapons to 5, a second bound to 1, and an `except` back to 117.
+  **72 predicate-shaped bounds are explicitly NOT solved** — the pack records no material. Sent back
+  corrections 48, 49 and 50.
 
 ## Not yet specified
 

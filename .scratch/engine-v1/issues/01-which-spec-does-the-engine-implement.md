@@ -87,9 +87,9 @@ Three things stand between the corrections list and a closeable spec, and none i
    §5.2's validation/computation line is restated at the grain of an effect, where `grant`/`forbid`/
    `require`/`except` against `adjust`/`set` already draws it. **This was the biggest gap between spec
    and pack and it was not on the corrections list at all**, because the list was written by the effort
-   that invented the markers. It also produced correction 45, and ticket 03 produced 46 and 47, so
-   **the list is now 47 and still not frozen** — which is the standing argument against updating
-   `spec.md` before the Engine runs.
+   that invented the markers. It produced correction 45, ticket 03 produced 46 and 47, and ticket 05
+   produced 48, 49 and 50 — so **the list has gone from 44 to 50 in four tickets and is still not
+   frozen**, which is the standing argument against updating `spec.md` before the Engine runs.
 2. ~~**Contradiction between Attachables is unresolved.**~~ **Decided, and it was the wrong question.**
    [Ticket 03](./03-precedence-when-two-attachables-contradict.md) measured that **there is no
    precedence to find**: only kits restrict anything, 14,910 sheets produce zero contested values, and
@@ -97,7 +97,9 @@ Three things stand between the corrections list and a closeable spec, and none i
    contradicts one of them. §4.3 gains **no ordering** — precedence is declared by one record about
    another (`target`, `except`) or the value is refused with both books named. **§13's known unknown
    #1 is therefore answered**, which changes what §13 has to say. What was underneath it is now
-   [ticket 05](./05-an-operand-that-lives-in-another-layer.md), and *that* is a real §4.3 gap.
+   [ticket 05](./05-an-operand-that-lives-in-another-layer.md) — which is **also decided**, and
+   needed no change to §4.3's six operations: a bound is a record with `members`, `forbid` applies it,
+   `except` lifts it, and the set operations commute. **Correction 13 holds: six operations suffice.**
 3. **§13 itself is stale.** Nine known unknowns: **#1, #2 and #4 are now answered**, #3 (psionics) is
    untouched, and #5–#9 are packaging details the v1 spec map partly settled
    by experiment. It is the section a reader consults to find out what is still risky, and it is
