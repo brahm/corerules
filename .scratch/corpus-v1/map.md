@@ -944,8 +944,7 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    session 35**, and it recovered more than force: **31 top-level fields** across seven books that the
    `<I>` markup silently dropped, including four whole `Special Hindrances` fields in CPAH. Neither
    the schema nor the validator could have caught those, since a record without that field is valid.
-45. **A marker is a note about the format written at a moment, and the format kept moving — 37 are
-   already stale.** ([Engine ticket 02](../engine-v1/issues/02-what-the-engine-does-with-an-unmodelled-effect.md))
+45. **RESOLVED — the rule never needed a disjunction, and repairing it proved the marker convention could not survive being prose.** ([Engine ticket 02](../engine-v1/issues/02-what-the-engine-does-with-an-unmodelled-effect.md))
    37 of the pack's 381 `UNMODELLED` markers say, in the transcriber's words, *"the predicate is a flat
    conjunction and cannot express disjunction, so the condition is carried as text."* Finding 10 added
    the `anyOf` clause arm in schema commit `b12e851` and **nobody went back**; every one of the 37 is
@@ -956,6 +955,24 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    tell a live one from a dead one. Re-express the 37 with `anyOf` and delete the doubled siblings.
    **The first correction the Engine sent back**, and evidence that closing this map did not make its
    pack immutable.
+   **Applied**, and the 37 were **36 plus one that is not stale at all.** The odd one is the Stout
+   halfling's *"+1 to either Dexterity or Constitution"* — **disjunction in an EFFECT, which is a
+   CHOICE the player makes, not a test the predicate runs.** `anyOf` never reached it and the marker
+   there is correct; it stays.
+   **And the other 36 never needed a disjunction either.** Complete Priest's Handbook, Prime
+   Requisites: *"if he has EITHER the Wisdom score OR the other Prime Requisite at a score of 16,
+   gets a +5% bonus to earned experience, but if he has BOTH, he gets a +10% bonus."* **That is two
+   independent +5% effects, one per ability**, summing to +10% when both hold. The marker's
+   diagnosis was wrong twice over — the format could not express a disjunction *then*, and the rule
+   did not want one *ever*. Rebuilt as 72 conditioned effects and checked against the book on all
+   four score combinations: 0, +5, +5, +10.
+   **Repairing it introduced the same false positive a third time.** The note explaining the repair
+   contained the word `UNMODELLED`, and the Engine read the note as a marker and withheld the number.
+   So the convention stopped being typographic: **`unmodelled` is now a FIELD on the effect**, 286
+   migrated, and the checker reports a text and a field that have parted company. It was needed:
+   the convention had already drifted to six punctuations (`UNMODELLED CAP only:`, `UNMODELLED as a
+   cap:`, `UNMODELLED CONDITIONS, as for the elf:`), and **prose that merely mentions the word reads
+   as a marker to any regex.** Markers: 381 at ticket 02, 323 after correction 46, **286 now.**
 46. **RESOLVED — the priesthood weapon lists are records now, and the largest marker cluster in the
    pack became an operation.** ([Engine ticket 03](../engine-v1/issues/03-precedence-when-two-attachables-contradict.md))
    `limitations` holds **seven PHB restrictions and every one is pierced by at least one kit** through
@@ -1200,6 +1217,14 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    be hidden in a lookup table**, and `mace` is the other side of the same boundary: the Complete
    Priest's says *"mace"* and the Player's Handbook prints a footman's and a horseman's, so no alias
    is written and the ambiguity stays visible.
+57. **The Complete Priest's split experience bonus is a rule the DM MAY use, and the pack states it
+   flatly.** ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md),
+   applying correction 45) *"In such cases, the DM MAY DECIDE that the character … gets a +5% bonus
+   … but if he has both, he gets a +10% bonus."* The PHB's own rule (DD01457) is different — *"a
+   score of 16 or more in ALL his prime requisites gains a 10% bonus"* — so the 36 priesthoods now
+   carry the **variant** and nothing says it is one. **A3 is about a pack declaring which rule-sets
+   it provides; this is a rule the BOOK marks optional inside a set the pack does provide**, and §5.1
+   has no shape for it. Small, and it is the first optional rule the corpus has had to hold.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

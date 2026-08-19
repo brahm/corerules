@@ -285,6 +285,10 @@
         "text": {
           "type": "string",
           "description": "§4.3: anything outside the vocabulary is carried as text and not computed."
+        },
+        "unmodelled": {
+          "const": true,
+          "description": "**Correction 45.** True where `text` is a TRANSCRIBER'S MARKER — the effect was modelled as far as the format allowed and what was left over is written down. Present only when true; its absence means the text, if any, is ordinary commentary.\\n\\n**A field because a string search is not a classifier.** The convention was typographic — `UNMODELLED <CATEGORY>:` — and it had already drifted: 286 markers, of which six are punctuated differently (`UNMODELLED CAP only:`, `UNMODELLED as a cap:`, `UNMODELLED CONDITIONS, as for the elf:`), and prose that merely MENTIONS the word reads as a marker to any regex. That false positive has now been introduced twice by people repairing the markers themselves, which is the argument in one sentence.\\n\\nEngine ticket 02 decided the marker's declared CATEGORY stays prose and the Engine branches on the operation instead. This is not that: it says only WHETHER an effect is marked, which the Engine has to know to keep it out of a total."
         }
       },
       "required": [
@@ -304,6 +308,7 @@
             },
             "when": true,
             "text": true,
+            "unmodelled": true,
             "provenance": {
               "$ref": "#/$defs/provenance",
               "description": "Present only when this effect comes from a DIFFERENT book than the record does."
@@ -329,6 +334,7 @@
             },
             "when": true,
             "text": true,
+            "unmodelled": true,
             "defines": {
               "$ref": "#/$defs/definition"
             },
@@ -368,6 +374,7 @@
             },
             "when": true,
             "text": true,
+            "unmodelled": true,
             "defines": {
               "$ref": "#/$defs/definition"
             },
@@ -408,6 +415,7 @@
             },
             "when": true,
             "text": true,
+            "unmodelled": true,
             "provenance": {
               "$ref": "#/$defs/provenance",
               "description": "Present only when this effect comes from a DIFFERENT book than the record does."
@@ -440,6 +448,7 @@
             },
             "when": true,
             "text": true,
+            "unmodelled": true,
             "provenance": {
               "$ref": "#/$defs/provenance",
               "description": "Present only when this effect comes from a DIFFERENT book than the record does."
@@ -465,6 +474,7 @@
             },
             "when": true,
             "text": true,
+            "unmodelled": true,
             "provenance": {
               "$ref": "#/$defs/provenance",
               "description": "Present only when this effect comes from a DIFFERENT book than the record does."

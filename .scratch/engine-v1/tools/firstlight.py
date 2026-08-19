@@ -197,7 +197,10 @@ class Character:
                               f"transcribed — nothing to apply.")
         for i, e in enumerate(record.get("effects", [])):
             src = f"{record['id']}[{i}]"
-            marked = "UNMODELLED" in (e.get("text") or "")
+            # Correction 45: a field, not a string search. Searching the text for the word
+            # misread any note that DISCUSSED a marker as being one — a false positive this
+            # project introduced twice, both times while repairing markers.
+            marked = bool(e.get("unmodelled"))
             fires = self.when(e.get("when"))
             if fires is None:
                 self.pack.complain("predicate",

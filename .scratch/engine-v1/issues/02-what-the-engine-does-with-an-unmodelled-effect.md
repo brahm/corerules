@@ -292,3 +292,26 @@ immutable, and this is the first correction the Engine has sent back.
 - **Ticket 03 is untouched.** Contradiction between two Attachables is a different problem: two
   effects that are each fully modelled and disagree. No marker is involved and the rule above does not
   reach it.
+
+---
+
+## Postscript — correction 45 applied, and the convention became a field
+
+This ticket branched on `"UNMODELLED" in text`. **That was never a classifier**, and applying
+correction 45 proved it by breaking on the note that explained the repair: prose *about* a marker
+read as a marker, and the Engine withheld a number it had just been taught to compute. The same
+false positive had been introduced once before, by the corpus effort, also while repairing markers.
+
+**`unmodelled` is now a field on the effect** — 286 of them — and the checker reports a text and a
+field that have parted company. Nothing else in this ticket changes: the declared **category** stays
+prose and the Engine still branches on the **operation**, exactly as decided. The field says only
+*whether* an effect is marked, which is the one thing the Engine has to know to keep it out of a
+total.
+
+The convention had already drifted without anyone noticing. Six markers are punctuated differently
+from the other 280 — `UNMODELLED CAP only:`, `UNMODELLED as a cap:`, `UNMODELLED CONDITIONS, as for
+the elf:` — so even the tightened regex that made the migration possible was a one-time instrument,
+not a rule.
+
+**Markers: 381 when this ticket measured them, 323 after correction 46 turned the permit-lists into
+bounds, 286 after correction 45 repaired the doubled experience effects.**

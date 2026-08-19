@@ -135,6 +135,24 @@ def main():
                     kinds.append(f"{r['id']}[{i}] {e['op']}s {ref} as `{e.get('kind')}`, "
                                  f"which bounds `{bounds[ref]}`")
 
+    # Correction 45. The marker convention was typographic and had already drifted — 286
+    # markers, six of them punctuated differently, and prose that merely MENTIONS the word
+    # reads as a marker to any regex. `unmodelled` is now the statement; this keeps the text
+    # and the field from parting company, which is how the convention drifted in the first
+    # place. Reported, not failed: a text that discusses markers is legitimate.
+    markers = []
+    for arr, recs in doc.items():
+        if arr == "manifest":
+            continue
+        for r in recs:
+            for i, e in enumerate(r.get("effects") or []):
+                says = "UNMODELLED" in (e.get("text") or "")
+                flag = bool(e.get("unmodelled"))
+                if says != flag:
+                    markers.append(f"{r['id']}[{i}] "
+                                   + ("text says UNMODELLED and `unmodelled` is absent"
+                                      if says else "`unmodelled` is set and the text does not say so"))
+
     # Correction 56. `alsoPrinted` exists to resolve prose into ids, so an alias that resolves
     # to two records is worse than no alias at all: it turns a visible ambiguity into a silent
     # wrong answer. Checked within a KIND — a record's own name may legitimately repeat across
@@ -215,6 +233,10 @@ def main():
         print(f"  declared but absent: {', '.join(missing)}")
     if undeclared:
         print(f"  present but undeclared (§7.1): {', '.join(undeclared)}")
+    if markers:
+        print(f"  text and `unmodelled` disagree ({len(markers)}):")
+        for m in markers[:8]:
+            print(f"    {m}")
     if canon:
         print(f"  not in the canonical serialisation ({len(canon)} of "
               f"{len(list(pack.glob('*.json')))}): {', '.join(canon)}"
