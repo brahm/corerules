@@ -1,0 +1,6 @@
+{
+  "fields": [
+    { "path": "attackRoll" },
+    { "path": "hitDice.perLevel", "note": "The die rolled for hit points at each level." }
+  ]
+}

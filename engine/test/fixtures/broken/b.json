@@ -1,0 +1,5 @@
+{
+  "armor": [
+    { "id": "test:collide", "name": "Claimed again, in another kind", "provenance": { "section": ["Fixtures"] } }
+  ]
+}

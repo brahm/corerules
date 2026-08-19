@@ -1,0 +1,48 @@
+{
+  "weaponProficiencies": [
+    {
+      "id": "test:blade",
+      "name": "Blade",
+      "provenance": { "section": ["Fixtures", "Weapons"] },
+      "groupKind": "heading",
+      "members": ["test:short-blade", "test:long-blade"]
+    },
+    {
+      "id": "test:short-blade",
+      "name": "Short blade",
+      "provenance": { "section": ["Fixtures", "Weapons"] },
+      "damageType": "P",
+      "speedFactor": "2",
+      "damageSmallMedium": "1d4"
+    },
+    {
+      "id": "test:long-blade",
+      "name": "Long blade",
+      "provenance": { "section": ["Fixtures", "Weapons"] },
+      "groupKind": "heading",
+      "members": ["test:sabre", "test:greatsword"]
+    },
+    {
+      "id": "test:sabre",
+      "name": "Sabre",
+      "provenance": { "section": ["Fixtures", "Weapons"] },
+      "damageType": "S",
+      "speedFactor": "4",
+      "damageSmallMedium": "1d6"
+    },
+    {
+      "id": "test:greatsword",
+      "name": "Greatsword",
+      "provenance": { "section": ["Fixtures", "Weapons"] },
+      "damageType": "S",
+      "speedFactor": "10",
+      "damageSmallMedium": "1d10"
+    },
+    {
+      "id": "test:empty-group",
+      "name": "A group nobody filled in",
+      "provenance": { "section": ["Fixtures", "Weapons"] },
+      "groupKind": "heading"
+    }
+  ]
+}

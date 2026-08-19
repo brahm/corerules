@@ -1,0 +1,9 @@
+{
+  "id": "broken",
+  "name": "A pack with the defects the Engine must report rather than repair",
+  "version": "0.1.0",
+  "formatVersion": "0.1",
+  "compatibility": { "minimum": "0.1", "verified": "0.1" },
+  "provenanceMode": "hand-authored",
+  "files": ["a.json", "b.json", "missing.json"]
+}

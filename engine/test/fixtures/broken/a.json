@@ -1,0 +1,5 @@
+{
+  "weaponProficiencies": [
+    { "id": "test:collide", "name": "Claimed first", "provenance": { "section": ["Fixtures"] } }
+  ]
+}
