@@ -66,8 +66,9 @@ class Pack:
 
 # ---------------------------------------------------------------- character
 class Character:
-    def __init__(self, pack, race, klass, kit, level, scores, subrace=None):
+    def __init__(self, pack, race, klass, kit, level, scores, subrace=None, options=False):
         self.pack, self.level, self.scores = pack, level, scores
+        self.options = options         # does this table play the books' optional rules?
         self.race = pack.get(race, "character race")
         self.subrace = pack.get(subrace, "character subrace") if subrace else None
         self.klass = pack.get(klass, "character class")
@@ -87,6 +88,10 @@ class Character:
         # `target`, an `except` names the limitation it pierces) or it does not exist, and
         # a value nothing declares over is withheld with both books named.
         self.contested = []            # (field, [(rid, value)]) — refused, not guessed
+        # Correction 57. An effect the BOOK marks optional is fully modelled; what is unknown is
+        # whether this table plays it. Withheld until a campaign says so, and reported — the same
+        # channel ticket 02 built, for a fourth reason.
+        self.byOption = []             # (field, op, value, src, text)
         # Ticket 05's prototype. A BOUND is a `forbid` pointing at a limitation that
         # carries `members`: the permitted set of that kind is narrowed to those. Bounds
         # INTERSECT, explicit forbids SUBTRACT, and `except` drops a bound by name — all
@@ -209,6 +214,11 @@ class Character:
             # misread any note that DISCUSSED a marker as being one — a false positive this
             # project introduced twice, both times while repairing markers.
             marked = bool(e.get("unmodelled"))
+            if e.get("optional") and not self.options:
+                self.byOption.append((e.get("field"), e["op"],
+                                      e.get("by", e.get("to", e.get("ref"))), src,
+                                      e.get("text") or ""))
+                continue
             fires = self.when(e.get("when"))
             if fires is None:
                 self.pack.complain("predicate",
@@ -434,6 +444,8 @@ def main():
     ap.add_argument("--kit", default="cbd:DD04638")
     ap.add_argument("--deity", default=None)
     ap.add_argument("--level", type=int, default=1)
+    ap.add_argument("--optional-rules", action="store_true",
+                    help="play the rules the books mark optional (correction 57)")
     a = ap.parse_args()
 
     pack = Pack(a.pack)
@@ -441,7 +453,7 @@ def main():
 
     scores = {"strength": 16, "dexterity": 12, "constitution": 15,
               "intelligence": 10, "wisdom": 11, "charisma": 9}
-    c = Character(pack, a.race, a.klass, a.kit, a.level, scores, a.subrace)
+    c = Character(pack, a.race, a.klass, a.kit, a.level, scores, a.subrace, a.optional_rules)
 
     # A character IS a race and a class, and MAY carry an attachable. The group a
     # class belongs to is a layer too — the corpus put the hit die there.
@@ -514,6 +526,13 @@ def main():
                     print(f"        LIFTED   {pack.by_id.get(lim, {}).get('name', lim)}   {src}")
             print("        " + ", ".join(sorted(pack.by_id.get(i, {}).get("name", i)
                                                 for i in allowed)[:12]))
+
+    if c.byOption:
+        print(f"\nBY CAMPAIGN OPTION — the book marks these optional and no table has said "
+              f"({len(c.byOption)})")
+        for path, op, val, src, why in c.byOption:
+            print(f"    {op} {str(path or val):<28}{src}")
+            print(f"        {why[:150]}")
 
     if c.situational:
         print(f"\nSITUATIONAL — withheld from the total, applied when the circumstance "

@@ -184,7 +184,10 @@ _Resolved:_
   which it did on the first run, catching `Polearms` claimed by both Table 44's heading and the
   Complete Fighter's purchasable group.
 
-**Of the corrections list's 58 entries, 24 are applied and none remains as work.** The rest are
+**Of the corrections list's 59 entries, 25 are applied.** One is owed to `spec.md` §5 — **59**, a
+campaign option is a third category neither §5.1 nor §6.2 reaches, and §3.4's rule-set catalogue is
+promised and nowhere written down. The rest are history, method, or corrections to the sections
+ticket 01 made non-normative. The rest are
 history, method, or corrections to the `spec.md` sections ticket 01 made non-normative.
 
 The last two were the two that most changed how the pack is read. **45** rebuilt the 36 doubled
@@ -197,7 +200,13 @@ contradiction — and finding that turned up **58**, the same ability written on
 even managed to contradict each other — now closed by a pack declaring its field vocabulary, which is
 §7.1's *declaration over discovery* one level down. The cheaper checks were tried and discarded:
 **106 of 159 paths are written by exactly one record**, so a lonely path proves nothing. Nothing
-mechanical separates a near-synonym from a rare fact; only a human declaring it does. The other 33 are history,
+mechanical separates a near-synonym from a rare fact; only a human declaring it does.
+
+**57** closed the list's last open finding and turned up the same shape a third time: the corpus
+calls **three different things optional** — a rule-set the campaign may not play, a variant the DM
+may adopt, and an election the player buys — and only the middle one was what the correction meant.
+75 effects now carry `optional`, and the Engine withholds them until a table says otherwise, which is
+ticket 02's channel used for a **fourth** reason. The other 33 are history,
 method, or corrections to the `spec.md` sections ticket 01 made non-normative.
 
 ## Not yet specified

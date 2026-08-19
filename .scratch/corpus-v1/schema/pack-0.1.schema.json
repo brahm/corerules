@@ -289,6 +289,10 @@
         "unmodelled": {
           "const": true,
           "description": "**Correction 45.** True where `text` is a TRANSCRIBER'S MARKER — the effect was modelled as far as the format allowed and what was left over is written down. Present only when true; its absence means the text, if any, is ordinary commentary.\\n\\n**A field because a string search is not a classifier.** The convention was typographic — `UNMODELLED <CATEGORY>:` — and it had already drifted: 286 markers, of which six are punctuated differently (`UNMODELLED CAP only:`, `UNMODELLED as a cap:`, `UNMODELLED CONDITIONS, as for the elf:`), and prose that merely MENTIONS the word reads as a marker to any regex. That false positive has now been introduced twice by people repairing the markers themselves, which is the argument in one sentence.\\n\\nEngine ticket 02 decided the marker's declared CATEGORY stays prose and the Engine branches on the operation instead. This is not that: it says only WHETHER an effect is marked, which the Engine has to know to keep it out of a total."
+        },
+        "optional": {
+          "const": true,
+          "description": "**Correction 57.** True where the BOOK marks this rule optional — *'the DM may decide that the character … gets a +5% bonus … but if he has both, he gets a +10% bonus'*, *'only where the optional weapon specialization rules are in use'*. Present only when true.\\n\\n**Not a rule-set name, deliberately.** §3.4 makes rule-set names the Engine's closed catalogue — *'the Engine cannot act on a name it does not understand'* — so a pack may not invent one, and the catalogue is not written down anywhere yet. What a pack may always do is record what its book SAYS, so this records that and no more.\\n\\n**It is a third thing and neither §5.1 nor §6.2 reaches it.** A3 has a pack declare which rule-sets it PROVIDES, which is about validation coverage; §5.2 puts computation rules in the Engine, *'never optional pack data'*. This is a rule inside a set the pack does provide, that a TABLE decides to use, and that changes a NUMBER. §5.1 claims A3 subsumes the optional DMG rule; for a computation it does not.\\n\\nAn optional effect is fully modelled — this is not `unmodelled`. What is unknown is not the rule but whether this table plays it."
         }
       },
       "required": [
@@ -309,6 +313,7 @@
             "when": true,
             "text": true,
             "unmodelled": true,
+            "optional": true,
             "provenance": {
               "$ref": "#/$defs/provenance",
               "description": "Present only when this effect comes from a DIFFERENT book than the record does."
@@ -335,6 +340,7 @@
             "when": true,
             "text": true,
             "unmodelled": true,
+            "optional": true,
             "defines": {
               "$ref": "#/$defs/definition"
             },
@@ -375,6 +381,7 @@
             "when": true,
             "text": true,
             "unmodelled": true,
+            "optional": true,
             "defines": {
               "$ref": "#/$defs/definition"
             },
@@ -416,6 +423,7 @@
             "when": true,
             "text": true,
             "unmodelled": true,
+            "optional": true,
             "provenance": {
               "$ref": "#/$defs/provenance",
               "description": "Present only when this effect comes from a DIFFERENT book than the record does."
@@ -449,6 +457,7 @@
             "when": true,
             "text": true,
             "unmodelled": true,
+            "optional": true,
             "provenance": {
               "$ref": "#/$defs/provenance",
               "description": "Present only when this effect comes from a DIFFERENT book than the record does."
@@ -475,6 +484,7 @@
             "when": true,
             "text": true,
             "unmodelled": true,
+            "optional": true,
             "provenance": {
               "$ref": "#/$defs/provenance",
               "description": "Present only when this effect comes from a DIFFERENT book than the record does."

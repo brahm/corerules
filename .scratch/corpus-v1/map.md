@@ -1217,14 +1217,35 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    be hidden in a lookup table**, and `mace` is the other side of the same boundary: the Complete
    Priest's says *"mace"* and the Player's Handbook prints a footman's and a horseman's, so no alias
    is written and the ambiguity stays visible.
-57. **The Complete Priest's split experience bonus is a rule the DM MAY use, and the pack states it
-   flatly.** ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md),
+57. **RESOLVED — the corpus calls three different things optional, and only one of them is this.** ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md),
    applying correction 45) *"In such cases, the DM MAY DECIDE that the character … gets a +5% bonus
    … but if he has both, he gets a +10% bonus."* The PHB's own rule (DD01457) is different — *"a
    score of 16 or more in ALL his prime requisites gains a 10% bonus"* — so the 36 priesthoods now
    carry the **variant** and nothing says it is one. **A3 is about a pack declaring which rule-sets
    it provides; this is a rule the BOOK marks optional inside a set the pack does provide**, and §5.1
    has no shape for it. Small, and it is the first optional rule the corpus has had to hold.
+   **Applied**, and it is not the first — sweeping the pack for optionality found **three different
+   things wearing the word**:
+   | | |
+   |---|---|
+   | **a rule-set the campaign may not play** | three CBGH kits: *"only where the OPTIONAL weapon specialization rules are in use"*. §5.1 says A3 covers this, and A3 declares at the PACK level, where the decision is the TABLE's. |
+   | **a variant the DM may adopt** | the 36 priesthoods' split bonus. This correction. |
+   | **an election the PLAYER buys** | the Pariah and the Outcast paying 10% experience for ranger-grade Move Silently. Not optionality at all — a purchase, and `require` shaped. |
+   An effect gained **`optional`**, true where the BOOK marks the rule optional. **Not a rule-set
+   name, deliberately**: §3.4 makes those the Engine's closed catalogue — *"the Engine cannot act on
+   a name it does not understand"* — so a pack may not invent one, and **the catalogue is not
+   written down anywhere yet.** What a pack may always do is record what its book says.
+   75 effects carry it. The Engine withholds them until a table says otherwise and reports them on
+   the sheet, which is ticket 02's channel used for a **fourth** reason: not a marked effect, not an
+   undecidable predicate, not a contradiction, but a rule nobody has decided to play.
+   **A mistake worth keeping.** The first pass flagged all 93 `experienceAward.percent` effects,
+   including the 21 single-requisite priesthoods that carry the Player's Handbook's own +10% and are
+   not optional at anything. Reverted and redone on the 5+5 pairs alone. **"The book calls this
+   optional" is a property of a RULE, not of a field**, and a field-wide sweep gets it wrong.
+   And switching the variant off exposed the hole underneath: a priest of Agriculture with Wisdom 16
+   and Constitution 16 now computes **0%**, because the default — the PHB's *"16 or more in all his
+   prime requisites"* — lives in a class record that is not transcribed. **Ticket 04's "the pack
+   holds deltas and nothing holds the base", made concrete on a sheet.**
 58. **RESOLVED — the pack declares its field vocabulary, which is §7.1's manifest argument one level down.**
    ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md), applying
    correction 47) The dwarf, the gnome and the halfling all write `detect.gradeOrSlope`; the Stout
@@ -1255,6 +1276,20 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    would be worth less than the list, and a note written to fill a field is worse than none.
    **`fields` is the first array in a pack that is not a list of records** — no ids — and both the
    checker and the Engine had to be told, the checker by crashing on `r["id"]`.
+59. **§5 has no section for a campaign option, and §3.4's rule-set catalogue is not written down.**
+   ([Engine ticket 05](../engine-v1/issues/05-an-operand-that-lives-in-another-layer.md), applying
+   correction 57) §5.1: *"A3 subsumes the house-rule escape hatch. No override mechanism is needed:
+   an optional DMG rule or a table's house rule is expressed by what the pack declares and
+   contains."* **For a validation rule that holds. For a computation it cannot**, because §5.2 puts
+   computation rules in the Engine — *"never optional pack data"* — and a pack that simply omits the
+   Complete Priest's split bonus has not expressed the choice, it has made it. The 75 effects now
+   flagged `optional` are a **third category**: inside a rule-set the pack provides, changing a
+   number, decided by a table. **Neither §5.1 nor §6.2 reaches them.**
+   And the mechanism §3.4 promises is missing: rule-set names are *"the Engine's"* closed catalogue
+   and **no catalogue exists** — not in the spec, not in the schema, not in the pack. Until one does,
+   an effect can say only *that* it is optional and never *which* option it belongs to, so a table
+   can turn them all on or all off and nothing finer. **Owed to `spec.md` §5, which ticket 01 kept
+   normative**, and it is the first thing owed there since correction 6 was applied.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

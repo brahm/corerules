@@ -315,3 +315,19 @@ not a rule.
 
 **Markers: 381 when this ticket measured them, 323 after correction 46 turned the permit-lists into
 bounds, 286 after correction 45 repaired the doubled experience effects.**
+
+### And a fourth reason a value is withheld
+
+Correction 57 added one. A value now stays off the sheet when
+
+| | |
+|---|---|
+| a marked effect supplies it | this ticket |
+| its predicate asks something the sheet cannot answer | first light's `when() → None` |
+| two layers set it and nothing declares a winner | [ticket 03](./03-precedence-when-two-attachables-contradict.md) |
+| **the book marks the rule optional and no table has decided** | correction 57 |
+
+The fourth is different from the other three in a way worth noticing: **nothing is missing.** The
+effect is fully modelled, the predicate is decidable, no layer disagrees. What is absent is a
+decision that belongs to neither the pack nor the Engine — *"the DM may decide"* — and the sheet says
+so rather than choosing on the table's behalf.
