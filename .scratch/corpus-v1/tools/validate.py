@@ -14,6 +14,11 @@ demanding a manifest of every record.
 Also reports, without failing, the two states A3 exists to keep apart:
 records still awaiting the judgement pass, and files the manifest never declared.
 
+Correction 6: the manifest's `provenanceMode` is checked here rather than in the schema,
+because the condition spans two files — the mode is in the manifest and the anchors are in
+the records — and a JSON Schema validates one document at a time. Same reason duplicate ids
+are checked here (correction 40).
+
 Usage:  validate.py <pack-dir>
 """
 import re, json, sys, pathlib, collections
@@ -86,6 +91,30 @@ def main():
     unmodelled = [r["id"] for arr, recs in doc.items() if arr != "manifest"
                   for r in recs if r.get("effectsModelled") is False]
 
+    # Correction 6. §7.1 made book-and-page mandatory on every record; §5.1 says the
+    # house-rule escape hatch IS the pack. A hand-authored record has no rendition and no
+    # source file, so the two rules could not both hold and nobody noticed. A3 applied to
+    # provenance: the pack DECLARES which kind it is, and the requirement follows.
+    mode = manifest.get("provenanceMode")
+    provenance = []
+    for arr, recs in doc.items():
+        if arr == "manifest":
+            continue
+        for r in recs:
+            pv = r.get("provenance")
+            if mode == "extracted":
+                if not pv:
+                    provenance.append(f"{r['id']}  no provenance, in an `extracted` pack")
+                elif not pv.get("anchor"):
+                    provenance.append(f"{r['id']}  no anchor, in an `extracted` pack")
+            elif mode == "hand-authored" and pv and pv.get("anchor"):
+                provenance.append(f"{r['id']}  carries an anchor, in a `hand-authored` pack — "
+                                  f"it names a rendition of a source the manifest does not claim")
+    if mode == "extracted" and not manifest.get("sources"):
+        provenance.append("manifest  declares `extracted` and names no sources")
+    if mode == "hand-authored" and manifest.get("sources"):
+        provenance.append("manifest  declares `hand-authored` and names sources anyway")
+
     # Ticket 13 finding 45. Ticket 10 puts cross-pack referential integrity on the Engine,
     # correctly — a pack cannot see the packs it points at. But nothing was COUNTING the
     # references, so nobody noticed that not one of the proving slice's 75 resolved. Report
@@ -114,8 +143,12 @@ def main():
 
     for d in duplicates:
         print(f"  DUPLICATE  {d}")
+    for d in provenance[:20]:
+        print(f"  PROVENANCE  {d}")
     print(f"\n{total} records, {len(errors)} schema errors"
-          + (f", {len(duplicates)} duplicate ids" if duplicates else ""))
+          + (f", {len(duplicates)} duplicate ids" if duplicates else "")
+          + (f", {len(provenance)} provenance violations" if provenance else "")
+          + f"  [provenanceMode: {mode}]")
     if missing:
         print(f"  declared but absent: {', '.join(missing)}")
     if undeclared:
@@ -127,7 +160,7 @@ def main():
         n = sum(unresolved.values())
         print(f"  references resolved by the Engine, not here: {n} of {len(refs)} "
               f"({', '.join(f'{k}: {v}' for k, v in unresolved.most_common())})")
-    return 1 if errors or missing or duplicates else 0
+    return 1 if errors or missing or duplicates or provenance else 0
 
 
 if __name__ == "__main__":

@@ -251,6 +251,18 @@ transcribed yet", which is the entire purpose of A3.
 or a table's house rule is expressed by what the pack declares and contains. The escape hatch is
 the pack.
 
+**And A3 governs provenance, for the same reason.** (correction 6) §7.1 made book-and-page citation
+mandatory on every record, which **forbade the pack this paragraph promises** — a hand-authored rule
+has no rendition and no source file to point into, and the two rules could not both hold. Resolved
+the way A3 resolves everything else: **the pack declares which kind it is and the requirement
+follows.** A manifest declaring `extracted` means every record carries an anchor and the manifest
+names its sources by hash; `hand-authored` means no record carries an anchor and the pack names no
+sources. Deriving the mode from the contents was rejected for A3's own reason — it would lose the
+distinction between *a house rule that cites nothing* and *an extraction that has not been finished*.
+
+The condition spans the manifest and the records, which is **two files**, so it is enforced by the
+checker rather than the schema — the same place, and for the same reason, that duplicate ids are.
+
 ### 5.2 A3 governs validation, not computation
 
 ([ticket 14](issues/14-multi-class-and-dual-class-model.md)) A missing *validation* rule is an
@@ -410,8 +422,11 @@ A **directory** of **JSON** files whose contents a **manifest declares**.
   is not one thing you can hand someone — does not apply, since packs do not circulate.
 - **JSON**, because **YAML is silently wrong by specification** (`NO` → false, `1.20` → float) and
   never being silently wrong is this project's posture. JSON's lack of comments is already answered:
-  book and page citation is **required on every record**, so provenance is a validatable field
-  rather than a comment.
+  provenance is a **validatable field rather than a comment**. *(Corrections 6 and, earlier, ticket
+  05: this said "book and page citation is required on every record". Neither half survived. The
+  corpus has no page numbers, so provenance is a heading chain plus a machine anchor; and the
+  requirement is **conditional on the manifest's declared `provenanceMode`**, because an
+  unconditional one forbids the house-rule pack §5.1 promises.)*
 - **Manifest**, because it is A3 at the file level — declaration over discovery. Scanning would let
   a leftover file from an earlier extraction join the pack in silence. A file present in the
   directory but absent from the manifest is **reported**.

@@ -10,7 +10,7 @@
       "pattern": "^[a-z0-9-]+:[A-Za-z0-9_-]+(#[0-9]+)?$"
     },
     "provenance": {
-      "description": "Ticket 05: replaces §7.1's book-and-page, which this corpus cannot supply. 'section' is for a human holding the printed book; 'anchor' is for the machine, and is what the id derives from.",
+      "description": "Ticket 05: replaces §7.1's book-and-page, which this corpus cannot supply. 'section' is for a human holding the printed book; 'anchor' is for the machine, and is what the id derives from. **Correction 6:** `anchor` is no longer unconditionally required. §5.1 says the house-rule escape hatch IS the pack, and a hand-authored record has no rendition and no source file to point into — so requiring one forbade the very pack §5.1 promised. What the record must carry follows from the manifest's `provenanceMode`, and that condition spans two FILES, which a JSON Schema cannot see: the checker enforces it, counted apart from schema errors for the same reason duplicate ids are (correction 40). `section` stays required, because a record with no place at all is not provenance in either mode.",
       "type": "object",
       "properties": {
         "section": {
@@ -42,12 +42,12 @@
             "rendition",
             "file"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "Where in the source bytes. REQUIRED when the manifest declares `provenanceMode: extracted` and FORBIDDEN when it declares `hand-authored` — an anchor claims a rendition of a source the pack has just said it does not have."
         }
       },
       "required": [
-        "section",
-        "anchor"
+        "section"
       ],
       "additionalProperties": false
     },
@@ -671,14 +671,14 @@
           }
         },
         "provenanceMode": {
-          "description": "Ticket 12: §5.1 says the house-rule escape hatch IS the pack, so provenance cannot be unconditionally mandatory. Declared rather than inferred — A3 applied to provenance.",
+          "description": "Ticket 12: §5.1 says the house-rule escape hatch IS the pack, so provenance cannot be unconditionally mandatory. Declared rather than inferred — A3 applied to provenance. **Correction 6 gave the declaration its consequence**: `extracted` means every record carries an `anchor` and the manifest names its `sources` by hash; `hand-authored` means no record carries an anchor and the pack names no sources. Enforced by the checker, since the condition spans the manifest and the records — two files, which a JSON Schema validates one at a time.",
           "enum": [
             "extracted",
             "hand-authored"
           ]
         },
         "sources": {
-          "description": "Ticket 05: which source bytes this pack came from. Ticket 02 established that 'the DMG' is ambiguous with two byte-different variants in circulation.",
+          "description": "Ticket 05: which source bytes this pack came from. Ticket 02 established that 'the DMG' is ambiguous with two byte-different variants in circulation. Correction 6: required when `provenanceMode` is `extracted`, and absent or empty when it is `hand-authored`.",
           "type": "array",
           "items": {
             "type": "object",

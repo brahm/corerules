@@ -571,13 +571,24 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    enters fat.** ([Ticket 05](issues/05-pack-schema.md)) Sixty records of ten fields. Right that
    Deity exists, wrong about its size, and it will exercise §4.3's six operations harder than any
    kit.
-6. **Mandatory provenance forbids a house-rule pack, which §5.1 explicitly supports.**
+6. **RESOLVED — mandatory provenance forbade a house-rule pack, and the declaration finally got its consequence.**
    ([Ticket 12](issues/12-how-much-tool.md)) This map closed a door the spec left open and did not
    notice: [ticket 05](issues/05-pack-schema.md) made `section` and `anchor` required on every record
    and had the manifest name its sources by hash, and a hand-authored record has none of the three —
    while §5.1 says *"A3 subsumes the house-rule escape hatch. The escape hatch is the pack."*
    Resolved by having **the pack declare its provenance mode**, extracted or hand-authored, with the
    per-record requirement following from the declaration. A3 applied to provenance.
+   **Applied**, and applying it found the correction had been **half done for a long time**:
+   `provenanceMode` was already in the schema and already **required**, and the proving slice already
+   declared `extracted` — but **nothing anywhere enforced a consequence**, so the declaration was
+   decoration and the contradiction with §5.1 was still live. The missing half: `provenance.required`
+   drops `anchor`, and the checker enforces the mode — `extracted` needs an anchor on every record and
+   `sources` on the manifest, `hand-authored` forbids both. **It spans two files, so it cannot be a
+   schema rule**, the same reason duplicate ids are checked in the tool (correction 40).
+   The proving slice is unchanged: `1,236 records, 0 schema errors, 0 provenance violations`. And
+   `fixtures/house-rules/` is now **the pack §5.1 promised, validating** — two hand-authored records
+   citing a heading and no book. Both negative directions were tested and both are caught.
+   **A declaration nothing acts on is not A3; it is a field.**
 5. **§4.3's six operations cannot express the corpus — known unknown #4 has fired.**
    ([Ticket 15](issues/15-dice-and-generation-methods.md)) Measured inside kit effect fields:
    **31 occurrences** of halving, division or explicit rounding — *"at twice the normal cost"*,

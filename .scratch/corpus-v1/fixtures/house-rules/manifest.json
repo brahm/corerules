@@ -1,0 +1,10 @@
+{
+  "id": "house-rules",
+  "name": "A table's house rules",
+  "version": "0.1.0",
+  "formatVersion": "0.1",
+  "compatibility": { "minimum": "0.1", "verified": "0.1" },
+  "provenanceMode": "hand-authored",
+  "declares": [],
+  "files": ["rules.json"]
+}

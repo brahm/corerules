@@ -1,0 +1,38 @@
+{
+  "nonweaponProficiencies": [
+    {
+      "id": "house:brewing-strong",
+      "name": "Brewing, Strong",
+      "provenance": {
+        "section": [
+          "House rules",
+          "Proficiencies"
+        ]
+      },
+      "group": [
+        "phb:general"
+      ],
+      "modifier": -1,
+      "slotCost": 1,
+      "abilityCheck": {
+        "ability": "phb:intelligence"
+      }
+    }
+  ],
+  "limitations": [
+    {
+      "id": "house:no-two-weapon-for-dwarves",
+      "name": "No two-weapon fighting for dwarves",
+      "provenance": {
+        "section": [
+          "House rules",
+          "Combat"
+        ]
+      },
+      "interpretation": {
+        "confidence": "reading",
+        "note": "Invented at this table. It cites no book because there is none, which is the whole point of the fixture."
+      }
+    }
+  ]
+}

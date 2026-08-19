@@ -215,11 +215,16 @@ landed in prose is checked by nobody."*
 
 ### What is left, and its size
 
-- **Correction 6**, the one spec correction that survives the decision. A contradiction between §5.1
-  and §7.1, one paragraph, and it needs a judgement about whether a house-rule pack cites nothing or
-  cites itself.
-- **Correction 48** — `limitation` gains `members`. A schema change, testable the moment it is made,
-  and the prerequisite for corrections 46 and 49.
+- ~~**Correction 6**~~ **and** ~~**correction 48**~~ — **both applied.** Nothing is owed to
+  `spec.md`.
+  - **48** gave `limitation` its `members`; `imposedBy` turned out to be the imposition, so no pack
+    effect was needed, and a thief now computes 12 permitted weapons of 117.
+  - **6** turned out to be **half done for a long time**: `provenanceMode` was already required in
+    the manifest and the proving slice already declared `extracted`, and **nothing enforced a
+    consequence.** The declaration was decoration and the contradiction with §5.1 was still live.
+    The checker now enforces the mode in both directions, and `fixtures/house-rules/` is the pack
+    §5.1 promised, validating. **A declaration nothing acts on is not A3; it is a field** — which is
+    a caution about the other declarations this spec makes.
 - **§§9–12** were never in question and were not touched.
 
 ## Why this ticket says do not rewrite the spec now

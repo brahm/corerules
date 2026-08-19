@@ -115,7 +115,11 @@ _Resolved:_
   corrections stop being owed. Day one reads **the spec for the product, the schema for the format,
   and this map's decisions for what the Engine does with what it loads.** §13 was rewritten — nine
   entries to four, each with a test — and §5.4 added, because ticket 02's decision about 381 marked
-  effects has no other home. Left owed: correction 6 (§5.1 against §7.1). Correction 48 is applied.
+  effects has no other home. **Corrections 6 and 48 are both applied, so nothing is owed to `spec.md`.**
+  Correction 6 turned out to be **half done for years**: `provenanceMode` was already required in the
+  manifest and the slice already declared `extracted`, and **nothing enforced a consequence** — a
+  declaration nothing acts on is not A3, it is a field. The checker now enforces the mode, and
+  `fixtures/house-rules/` is **the pack §5.1 promised, validating**.
 - **[02 — What the Engine does with an UNMODELLED effect](issues/02-what-the-engine-does-with-an-unmodelled-effect.md)**
   **The operation decides, not the category — and a marked effect never reaches the total.** On a
   structural operation (222 of 381) the thing is applied and the marker rides on that entry; on a
