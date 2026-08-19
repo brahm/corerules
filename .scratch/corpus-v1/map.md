@@ -936,6 +936,23 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    tell a live one from a dead one. Re-express the 37 with `anyOf` and delete the doubled siblings.
    **The first correction the Engine sent back**, and evidence that closing this map did not make its
    pack immutable.
+46. **The priestly weapon restriction has no record, and three kits and sixty priesthoods need
+   it.** ([Engine ticket 03](../engine-v1/issues/03-precedence-when-two-attachables-contradict.md))
+   `limitations` holds **seven PHB restrictions and every one is pierced by at least one kit** through
+   `except` — the Assassin names `phb:thief-weapon-restriction` rather than out-ranking it. The
+   priestly weapon limit is not among the seven, and everything downstream fails for that one reason:
+   the **Vindicator's** declared precedence has no rule to name, the **Temple Guard's** requirement has
+   no list, the **Pariah's** prohibition has no subject, and two `except`s (Imagemaker
+   `phb:ventriloquism`, Treetender `phb:bow`) name **the thing permitted instead of the rule pierced**.
+   Not new machinery: one record per priesthood plus the PHB's own, and it converts ticket 02's
+   largest marker cluster from prose into an operation.
+47. **`set` cannot tell agreement from disagreement, because the operand carries the scale.**
+   ([Engine ticket 03](../engine-v1/issues/03-precedence-when-two-attachables-contradict.md)) The PHB
+   gives the halfling's underground direction sense as `3- on 1d6`; the CBGH gives the Stout's as
+   `50`. **They are the same probability.** The pack records a collision between two layers, the
+   Engine resolves it by declared refinement and prints one of them, and **nothing anywhere notices
+   that the two books agree.** Roll-under and percentage are not comparable operands and the schema
+   offers no way to say they mean the same thing.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

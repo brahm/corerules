@@ -58,9 +58,10 @@ class Pack:
 
 # ---------------------------------------------------------------- character
 class Character:
-    def __init__(self, pack, race, klass, kit, level, scores):
+    def __init__(self, pack, race, klass, kit, level, scores, subrace=None):
         self.pack, self.level, self.scores = pack, level, scores
         self.race = pack.get(race, "character race")
+        self.subrace = pack.get(subrace, "character subrace") if subrace else None
         self.klass = pack.get(klass, "character class")
         self.kit = pack.get(kit, "character kit") if kit else None
         self.fields = collections.defaultdict(lambda: {"base": None, "adjust": 0, "set": [],
@@ -73,6 +74,11 @@ class Character:
         # a named situational line the player applies when the circumstance holds.
         self.riders = {}               # src -> marker text, on an applied entry
         self.situational = []          # (field, op, value, src, text) — NOT in the total
+        # Ticket 03's decision. Precedence is never inferred from which ARM a layer is;
+        # it is either DECLARED by one record about another (a subrace names its race as
+        # `target`, an `except` names the limitation it pierces) or it does not exist, and
+        # a value nothing declares over is withheld with both books named.
+        self.contested = []            # (field, [(rid, value)]) — refused, not guessed
         self.notes = []
 
     # -- predicate ------------------------------------------------------
@@ -226,17 +232,32 @@ class Character:
             if e.get("ref"):
                 self.pack.get(e["ref"], src)
 
+    def refines(self, a, b):
+        """Does record `a` declare itself a refinement of record `b`? The only such
+        declaration in the pack is `target`: a subrace names its race, a kit names its
+        class. It is a fact IN the record, never an ordering the Engine supplies."""
+        ra, rb = self.pack.by_id.get(a), self.pack.by_id.get(b)
+        return bool(ra and rb and ra.get("target") == rb["id"])
+
     def view(self, path):
         f = self.fields.get(path)
         if not f:
             return None
         if f["set"]:
-            vals = {v for v, _ in f["set"]}
-            if len(vals) > 1:
-                self.pack.complain("layers",
-                                   f"{path}: two `set` layers disagree — "
-                                   + "; ".join(f"{v} from {s}" for v, s in f["set"]))
-            v = f["set"][-1][0]
+            layers = [(v, src.rsplit("[", 1)[0], src) for v, src in f["set"]]
+            distinct = {str(v) for v, _, _ in layers}
+            if len(distinct) > 1:
+                winners = [x for x in layers
+                           if all(x[1] == y[1] or self.refines(x[1], y[1]) for y in layers)]
+                if len(winners) != 1:
+                    # Nothing in the pack says which of these outranks the other, so the
+                    # Engine does not pick. §5.3 quarantines a character; this quarantines
+                    # one VALUE, which is the same posture at a finer grain.
+                    self.contested.append((path, [(x[2], x[0]) for x in layers]))
+                    return None
+                v = winners[0][0]
+            else:
+                v = f["set"][-1][0]
             return v if not isinstance(v, int) else v + f["adjust"]
         return f["adjust"]
 
@@ -250,6 +271,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("pack")
     ap.add_argument("--race", default="phb:dwarf")
+    ap.add_argument("--subrace", default=None)
     ap.add_argument("--klass", "--class", dest="klass", default="phb:fighter")
     ap.add_argument("--kit", default="cbd:DD04638")
     ap.add_argument("--deity", default=None)
@@ -261,11 +283,12 @@ def main():
 
     scores = {"strength": 16, "dexterity": 12, "constitution": 15,
               "intelligence": 10, "wisdom": 11, "charisma": 9}
-    c = Character(pack, a.race, a.klass, a.kit, a.level, scores)
+    c = Character(pack, a.race, a.klass, a.kit, a.level, scores, a.subrace)
 
     # A character IS a race and a class, and MAY carry an attachable. The group a
     # class belongs to is a layer too — the corpus put the hit die there.
     c.apply(c.race, "race")
+    c.apply(c.subrace, "subrace")
     if c.klass and c.klass.get("group"):
         c.apply(pack.get(c.klass["group"], "class group"), "class group")
     c.apply(c.klass, "class")
@@ -276,13 +299,25 @@ def main():
         c.apply(pack.get(a.deity, "character deity"), "deity")
     c.apply(c.kit, "kit")
 
-    who = " / ".join(x["name"] for x in (c.race, c.klass, c.kit) if x)
+    who = " / ".join(x["name"] for x in (c.race, c.subrace, c.klass, c.kit) if x)
     print(f"CHARACTER: {who}, level {a.level}")
     print("  " + ", ".join(f"{k[:3].title()} {v}" for k, v in scores.items()))
 
     print("\nFIELDS — the total, and nothing in it is approximate")
     for path in sorted(c.fields):
-        print(f"    {path:<44}{c.view(path)}")
+        v = c.view(path)
+        if v is not None:
+            print(f"    {path:<44}{v}")
+
+    if c.contested:
+        print(f"\nCONTESTED — two layers set this and nothing declares a winner "
+              f"({len(c.contested)})")
+        for path, entries in c.contested:
+            print(f"    {path}")
+            for src, val in entries:
+                r = pack.by_id.get(src.rsplit("[", 1)[0], {})
+                bk = (r.get("provenance", {}).get("section") or ["?"])[0]
+                print(f"        {str(val):<24}{r.get('name', '?'):<20}{bk}   {src}")
 
     print(f"\nGRANTED ({len(c.granted)})")
     for src, ref in c.granted:

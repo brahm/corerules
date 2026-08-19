@@ -94,22 +94,24 @@ Four results are load-bearing for implementation and are easy to miss in 149 fin
   a table read returns `"+4"` where the contract says an integer; and two mutually exclusive marked
   bonuses summed into a wrong number on the first character anyone builds.
 
-_Two tickets remain open:_
+_Two tickets remain open:_ (one inherited, one opened by 03)
 
 - **[01 — Which spec does the Engine implement?](issues/01-which-spec-does-the-engine-implement.md)**
   Classified: of 44 corrections, ten are already in the schema and **seventeen touch `spec.md`** —
   twelve reversals and five silences. The other seventeen are history or method, and **two are
   retracted diagnoses that folding the list in wholesale would write into the spec.** The decision
   itself — what day one reads — is still open. **Every other ticket inherits the answer.**
-- **[03 — Precedence when two Attachables contradict](issues/03-precedence-when-two-attachables-contradict.md)**
-  The corpus map's one unclosed hole, and the Engine is the first thing that has to actually resolve
-  it. Commutation says nothing about inconsistency.
+- **[05 — An operand that lives in another layer](issues/05-an-operand-that-lives-in-another-layer.md)**
+  What was underneath ticket 03. An effect can name a field and a ref; it cannot name another
+  **layer's contents** — the Temple Guard's required weapon is *the deity's list*, the Pariah's
+  prohibition is its *complement*, and 60 priesthoods carry a permit-list that means **only these**.
+  **62 effects, one missing capability**, and the largest remaining hole in §4.3.
 
-Both were better posed than when they were charted, which was the point of running 04 first — and
-running 02 to a decision has now sharpened them again. Ticket 03 turns out **not to be reachable in
-the current pack at all**, because the transcription sidestepped the contradiction with a marker.
-Ticket 01 has its evidence that the corrections list is not a frozen document: **four corrections
-came out of the Engine's first two tickets.**
+Running the grillings to decisions has been worth more than the charting predicted, and mostly by
+**subtraction**: 02 and 03 both turned out to be smaller than they looked and to be sitting on top of
+something larger. Ticket 01 now has its evidence that the corrections list is not a frozen document —
+**six corrections came out of the Engine's first three tickets**, and 47 was found by a program that
+was looking for something else.
 
 _Resolved:_
 
@@ -122,6 +124,17 @@ _Resolved:_
   `adjust`/`set` is §5.2's own line expressed in a field the schema already enforces. Exposure was
   measured over all 36,126 combinations: **median three markers a sheet, worst fourteen** — few
   enough to print, too many to prompt about. Sent back one correction (45).
+- **[03 — Precedence when two Attachables contradict](issues/03-precedence-when-two-attachables-contradict.md)**
+  **Precedence is never inferred; it is declared by one record about another, or the value is
+  refused.** There was nothing to rank: **every restricting operation in the pack lives in a kit** —
+  all 96 `forbid`s, all 13 `except`s, 120 of 121 `require`s — and a Deity, with 690 grants, cannot say
+  no about anything. 2,969 kit pairs can meet on a multi-class character and none contradicts;
+  **14,910 sheets produced 0 contested values and 2,130 collisions that a declared refinement
+  resolved.** A fixed arm order is **refuted**: of three precedence statements in 4,500 pages, the CBD
+  puts the kit over the mythos and the PHB puts the mythos over the class. The two declarations needed
+  already exist — `target` and `except`, the latter with seven `limitation` records, every one pierced.
+  **This answers §13's known unknown #1**, the one thing 71 sessions of transcription never closed.
+  Sent back corrections 46 and 47, and opened ticket 05.
 
 ## Not yet specified
 
