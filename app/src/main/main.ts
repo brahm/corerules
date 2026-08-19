@@ -68,6 +68,9 @@ function handlers(): void {
   ipcMain.handle(CHANNEL.packs, () => service.packs(library()));
   ipcMain.handle(CHANNEL.characters, () => service.characters(library()));
   ipcMain.handle(CHANNEL.open, (_event, id: string) => service.open(library(), id));
+  ipcMain.handle(CHANNEL.timeline, (_e, id: string) => service.timeline(library(), id));
+  ipcMain.handle(CHANNEL.levelUp, (_e, id: string, classId: string, die: number, chose) =>
+    service.levelUp(library(), id, classId, die, chose));
   ipcMain.handle(CHANNEL.steps, (_e, packId: string, draft) => service.steps(library(), packId, draft));
   ipcMain.handle(CHANNEL.create, (_e, packId: string, draft, hitDie: number) =>
     service.create(library(), packId, draft, hitDie));
@@ -101,7 +104,13 @@ function window(): void {
         // Click the first character, so the smoke path reaches the sheet — which is the
         // screen this whole project is for.
         const steps: Record<string, string> = {
-          sheet: "document.querySelector('.link')?.click(); await new Promise(r => setTimeout(r, 300));",
+          sheet: "document.querySelector('.link')?.click(); await new Promise(r => setTimeout(r, 500));",
+          advance: `
+            document.querySelector('.link')?.click();
+            await new Promise(r => setTimeout(r, 500));
+            [...document.querySelectorAll('button')].find(b => /^Advance /.test(b.textContent)).click();
+            await new Promise(r => setTimeout(r, 700));
+          `,
           create: `
             [...document.querySelectorAll('button')].find(b => b.textContent === 'Create a character').click();
             await new Promise(r => setTimeout(r, 400));

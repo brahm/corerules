@@ -11,6 +11,8 @@ import type { Draft, Step } from "../../../engine/src/choice.ts";
 import type { SheetView } from "../../../engine/src/present.ts";
 
 export type { Draft, Offer, Step } from "../../../engine/src/choice.ts";
+export type { Advance, Objection } from "../../../engine/src/advance.ts";
+export type { Timeline } from "./service.ts";
 
 export interface PackSummary {
   id: string;
@@ -44,6 +46,10 @@ export interface Api {
   /** The tool rolls dice (§9.1), and entry stays a first-class path — so both arrive here as
    *  scores already decided, and the Engine never learns which it was. */
   create(packId: string, draft: Draft & { name: string; startingWealth?: number }, hitDie: number): Promise<string>;
+  /** §9.2's other two modes. The timeline is what "correct / edit later" edits, and it carries
+   *  the objections so the sheet cannot become the back door §5 is guarded against. */
+  timeline(id: string): Promise<import("./service.ts").Timeline | undefined>;
+  levelUp(id: string, classId: string, die: number, chose: { kind: string; ref: string }[]): Promise<unknown>;
 }
 
 /** One place for the channel names, so a typo is a build error rather than a silent no-op. */
@@ -55,4 +61,6 @@ export const CHANNEL = {
   open: "corerules:open",
   steps: "corerules:steps",
   create: "corerules:create",
+  timeline: "corerules:timeline",
+  levelUp: "corerules:levelUp",
 } as const;

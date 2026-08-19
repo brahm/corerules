@@ -303,7 +303,40 @@ or padded armour* — and nobody can buy a category. Table 47 keys on prose. Bui
 that would produce a plausible screen over data that cannot support it, which is the one thing this
 Engine has refused at every other turn.
 
+### §9.2's other two modes, and the sentence they turn on
+
+*"The same validation rules must hold on both paths, or sheet editing becomes the back door that
+undoes §5."* So neither advancing nor correcting has rules of its own: an advance asks `choice.ts`
+what may be chosen, and **a correction asks it the same question about a rewritten past.**
+
+A correction is **applied and then answered for**, never refused — §6.5 traded auditability for a
+legible file, and refusing the edit would hide a state instead of naming it:
+
+```
+after dropping Strength to 6 on the sheet:
+   class: Fighter — requires Strength 9 — Player's Handbook
+```
+
+**Two lists, because the third state means something different here.** An *objection* is a choice
+the books refuse; a *caveat* is one nobody can rule on — and with A3 undeclared that is **every
+class in this corpus, permanently**. Putting them in one list would make a correctly built
+character look broken on every load, which is the fastest way to teach someone to ignore the
+warnings that matter.
+
+Advancing shows what the level actually buys, which most levels is nothing:
+
+```
+at level 1: next rolls 1d10, gains []
+at level 3: next rolls 1d10, gains [1 weaponProficiency, 1 nonweaponProficiency]
+```
+
+Driven in the running application, a dwarf fighter advanced to level 2 and the sheet followed:
+**THAC0 19** from Table 53, **next level at 4,000 xp** from Table 14, saving throws *"not computed —
+Table 60 is present in the pack with no numbers in it"*, and the timeline with both events by id.
+
 ## What is left
+- **Editing the timeline in the interface.** The engine corrects an event and answers for it;
+  the sheet shows the timeline and advances, and does not yet let you rewrite a past level.
 - **Equipment, encumbrance and spell selection**, which want a corpus the slice does not have.
 - **Constitution is not in the hit points.** The bonus is a table read with a per-class cap, and
   a plausible-looking total that quietly omits it is the kind of wrong number the rest of this

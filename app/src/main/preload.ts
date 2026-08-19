@@ -14,6 +14,9 @@ contextBridge.exposeInMainWorld("corerules", {
   packs: () => ipcRenderer.invoke(CHANNEL.packs),
   characters: () => ipcRenderer.invoke(CHANNEL.characters),
   open: (id: string) => ipcRenderer.invoke(CHANNEL.open, id),
+  timeline: (id: string) => ipcRenderer.invoke(CHANNEL.timeline, id),
+  levelUp: (id: string, classId: string, die: number, chose: unknown) =>
+    ipcRenderer.invoke(CHANNEL.levelUp, id, classId, die, chose),
   steps: (packId: string, draft: unknown) => ipcRenderer.invoke(CHANNEL.steps, packId, draft),
   create: (packId: string, draft: unknown, hitDie: number) =>
     ipcRenderer.invoke(CHANNEL.create, packId, draft, hitDie),

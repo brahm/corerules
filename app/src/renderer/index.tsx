@@ -73,6 +73,7 @@ function App(): React.JSX.Element {
   const [packs, setPacks] = useState<PackSummary[]>([]);
   const [characters, setCharacters] = useState<CharacterSummary[]>([]);
   const [sheet, setSheet] = useState<SheetView | undefined>(undefined);
+  const [openId, setOpenId] = useState<string | undefined>(undefined);
   const [creating, setCreating] = useState(false);
 
   const refresh = async (): Promise<void> => {
@@ -101,8 +102,8 @@ function App(): React.JSX.Element {
   if (sheet !== undefined) {
     return (
       <main>
-        <button type="button" className="back" onClick={() => { setSheet(undefined); }}>← back</button>
-        <Sheet view={sheet} />
+        <button type="button" className="back" onClick={() => { setSheet(undefined); void refresh(); }}>← back</button>
+        <Sheet view={sheet} id={openId} />
       </main>
     );
   }
@@ -118,7 +119,7 @@ function App(): React.JSX.Element {
         : (
           <>
             <Packs packs={packs} />
-            <Characters characters={characters} onOpen={(id) => { void api.open(id).then(setSheet); }} />
+            <Characters characters={characters} onOpen={(id) => { setOpenId(id); void api.open(id).then(setSheet); }} />
             <div className="finish">
               <button type="button" onClick={() => { setCreating(true); }}>Create a character</button>
             </div>

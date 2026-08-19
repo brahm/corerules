@@ -7,7 +7,9 @@
  * `ipcMain.handle` lines, and where the settings file lives.
  */
 import { Character } from "../../../engine/src/character.ts";
+import { advance as whatNext, check, draftOf, type Advance, type Objection } from "../../../engine/src/advance.ts";
 import { steps as offerSteps, type Draft, type Step } from "../../../engine/src/choice.ts";
+import { derived, type Derived } from "../../../engine/src/derived.ts";
 import type { Library } from "../../../engine/src/library.ts";
 import { present, type SheetView } from "../../../engine/src/present.ts";
 import type { CharacterSummary, PackSummary } from "./api.ts";
@@ -82,4 +84,43 @@ export function create(
     draft.chose !== undefined && draft.chose.length > 0 ? { chose: draft.chose } : {});
   library.writeCharacter(library.stamp(character.file));
   return character.file.id;
+}
+
+export interface Timeline {
+  events: { id: string; rolls: { class: string; die: number }[]; chose: { kind: string; ref: string }[] }[];
+  next: Advance;
+  derived: Derived;
+  /** §9.2: the same validation rules on both paths, so the sheet carries what the wizard would
+   *  have refused — and separately what nobody can rule on. */
+  objections: Objection[];
+  caveats: Objection[];
+}
+
+export function timeline(library: Library, id: string): Timeline | undefined {
+  const opened = library.open(id);
+  const c = opened.character;
+  if (c === undefined) return undefined;
+  const said = check(c.pack, draftOf(c));
+  return {
+    events: c.file.events.map((e) => ({ id: e.id, rolls: e.rolls, chose: e.chose ?? [] })),
+    next: whatNext(c.pack, c, c.classes()[0] ?? ""),
+    derived: derived(c.pack, c),
+    objections: said.objections,
+    caveats: said.caveats,
+  };
+}
+
+/** One level, with the die rolled outside — §6.3's recorded randomness, again. */
+export function levelUp(
+  library: Library, id: string, classId: string, die: number, chose: { kind: string; ref: string }[],
+): Objection[] {
+  const opened = library.open(id);
+  const c = opened.character;
+  if (c === undefined) return [];
+  c.advance([{ class: classId, die }], chose.length > 0 ? { chose } : {});
+  const said = check(c.pack, draftOf(c));
+  // §5.3: a Character that breaks a rule is still written. What is locked is what EXTENDS it,
+  // and the sheet shows why — refusing the save would hide the state instead of naming it.
+  library.writeCharacter(library.stamp(c.file));
+  return said.objections;
 }
