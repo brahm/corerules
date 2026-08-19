@@ -3,8 +3,17 @@
   "name": "A hand-authored pack for the Engine's tests",
   "version": "0.1.0",
   "formatVersion": "0.1",
-  "compatibility": { "minimum": "0.1", "verified": "0.1" },
+  "compatibility": {
+    "minimum": "0.1",
+    "verified": "0.1"
+  },
   "provenanceMode": "hand-authored",
   "declares": [],
-  "files": ["weapons.json", "classes.json", "fields.json"]
+  "files": [
+    "classes.json",
+    "fields.json",
+    "layers.json",
+    "tables.json",
+    "weapons.json"
+  ]
 }

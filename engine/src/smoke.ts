@@ -3,9 +3,10 @@
  * fixtures, because the corpus does not circulate and a test that needs it is a test
  * nobody else can run. This takes whatever path you give it.
  *
- *   node src/smoke.ts <pack-dir>
+ *   node src/smoke.ts <pack-dir> [race] [class] [kit] [deity]
  */
 import { Pack } from "./pack.ts";
+import { Character } from "./character.ts";
 
 const root = process.argv[2];
 if (root === undefined) {
@@ -26,4 +27,50 @@ if (pack.complaints.length > 0) {
   for (const c of pack.complaints.slice(0, 10)) console.log(`    [${c.area}] ${c.message}`);
 } else {
   console.log("\n  nothing to complain about");
+}
+
+// ---------------------------------------------------------------- a character
+const [, , , race, klass, kit, deity] = process.argv;
+if (race === undefined) process.exit(0);
+
+const scores = { "phb:strength": 16, "phb:dexterity": 12, "phb:constitution": 15,
+                 "phb:intelligence": 10, "phb:wisdom": 16, "phb:charisma": 9 };
+const c = new Character(pack, { scores, options: process.env["OPTIONS"]?.split(",") ?? [] });
+const cls = pack.byId.get(klass ?? "");
+c.apply(pack.byId.get(race), "race");
+if (cls?.group !== undefined) c.apply(pack.byId.get(cls.group), "class group");
+c.apply(cls, "class");
+if (deity !== undefined && deity !== "") c.apply(pack.byId.get(deity), "deity");
+if (kit !== undefined && kit !== "") c.apply(pack.byId.get(kit), "kit");
+
+const who = c.layers.map((l) => l.record.name).join(" / ");
+console.log(`\nCHARACTER: ${who}`);
+
+console.log("\nFIELDS — the total, and nothing in it is approximate");
+for (const path of [...c.fields.keys()].sort()) {
+  const v = c.view(path);
+  if (v.contested !== undefined) {
+    console.log(`    ${path.padEnd(40)}CONTESTED`);
+    for (const x of v.contested) console.log(`        ${String(x.value).padEnd(14)}${x.source.name} — ${x.source.book}`);
+  } else if (v.value !== undefined) {
+    console.log(`    ${path.padEnd(40)}${v.value}`);
+  }
+}
+
+for (const because of ["marked", "undecidable", "option", "unresolved"] as const) {
+  const rows = c.aside.filter((a) => a.because === because);
+  if (rows.length === 0) continue;
+  console.log(`\nSET ASIDE — ${because} (${rows.length})`);
+  for (const a of rows.slice(0, 4)) {
+    console.log(`    ${(a.source.record + "[" + a.source.index + "]").padEnd(20)}${a.text.slice(0, 96)}`);
+  }
+}
+
+const weapons = pack.records("weaponProficiencies").filter((r) => r.groupKind === undefined).map((r) => r.id);
+const { allowed, bounds, lifted } = c.permitted("weaponProficiency", weapons);
+console.log(`\nPERMITTED weaponProficiency: ${allowed.size} of ${weapons.length}`);
+for (const b of bounds) console.log(`    bound by ${pack.byId.get(b.ref!)?.name}`);
+for (const l of lifted) console.log(`    LIFTED   ${pack.byId.get(l)?.name ?? l}`);
+if (allowed.size <= 20) {
+  console.log("        " + [...allowed].map((i) => pack.byId.get(i)?.name).sort().join(", "));
 }

@@ -1,0 +1,32 @@
+{
+  "lookupTables": [
+    {
+      "id": "test:sure-footing",
+      "name": "Sure-footing by Dexterity",
+      "provenance": { "section": ["Fixtures", "Tables"] },
+      "keyedBy": { "kind": "integer" },
+      "columns": ["Bonus"],
+      "supplies": "surefooting.bonus",
+      "rows": [["3-9", 0], ["10-14", 1], ["15-18", 2]]
+    },
+    {
+      "id": "test:as-printed",
+      "name": "A table that prints its values as the book does",
+      "provenance": { "section": ["Fixtures", "Tables"] },
+      "keyedBy": { "kind": "integer" },
+      "columns": ["Bonus"],
+      "supplies": "asPrinted.bonus",
+      "rows": [["3-18", "+4"]]
+    }
+  ],
+  "limitations": [
+    {
+      "id": "test:fighter-weapon-restriction",
+      "name": "Fighter Weapon Restriction",
+      "provenance": { "section": ["Fixtures", "Limitations"] },
+      "imposedBy": "test:fighter",
+      "bounds": "weaponProficiency",
+      "members": ["test:blade"]
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 # The evaluator
 
 Type: build
-Status: open
+Status: in progress — the evaluator runs; the interface has not started
 
 ## What this builds
 
@@ -58,3 +58,56 @@ answer should fall out of the first file rather than be argued about.
   decisions, not the scaffolding.
 - **Not read the private pack in anything committed.** A local smoke test against `~/corerules/slice`
   is fine and is not a test.
+
+---
+
+## Where it stands
+
+`engine/`, TypeScript on Node 24, **27 tests, no runtime dependencies.** Two dev dependencies and
+both are the typechecker: `typescript` and `@types/node`. Node runs `.ts` by stripping types and
+`node --test` is in the standard library, so nothing bundles, transpiles or frameworks.
+
+| | |
+|---|---|
+| `src/types.ts` | the pack's shapes, as the schema defines them |
+| `src/pack.ts` | manifest-driven loading, the two indexes, transitive group expansion |
+| `src/predicate.ts` | §6.1, **three-valued** |
+| `src/character.ts` | the layer stack, the five reasons a value is set aside, bounds, table reads |
+| `src/smoke.ts` | not a test — it takes whatever pack path you give it |
+
+### The fog is answered, and by the first file
+
+**The schema is the internal model, not only the wire format.** Nothing is reshaped on load. §4
+requires the provenance of every layer to survive to the top, so a normalised model would have to
+keep the original record beside it and pay for two representations to answer one question; and the
+six operations read `op`, `field`, `by` and `when` exactly as the pack writes them. What the Engine
+adds is an index by id, an index by kind, and one traversal — all derived views of the same objects.
+
+### It reproduces the pack, and then found something
+
+Against the private slice, the TypeScript evaluator gives the same answers the Python throwaway did:
+a thief permits **12 of 119** weapons, an Assassin **119** with the lifted rule named, a priest of
+Agriculture **6** — the book's own six.
+
+And then it produced a report `firstlight.py` never could:
+
+```
+SET ASIDE — unresolved (2)
+    phb:dwarf[2]   adjust savingThrow.vsWandsStavesRodsSpells: the operand resolved to "+4", which cannot be summed
+    phb:dwarf[3]   adjust savingThrow.vsPoison: the operand resolved to "+4", which cannot be summed
+```
+
+**A fifth reason a value is set aside, and the only one that is the Engine's fault rather than the
+pack's.** It exists because the first version did what every evaluator does by default: filtered the
+uncomputable contribution out of the sum and reported the field as **0**. Every `adjust` operand in
+the corpus is an integer, a computed value or a table read — never a bare string — so an adjust that
+does not produce a number is a defect somewhere, and **0 is the wrong number §5.2 names, produced by
+the Engine itself.** Ticket 04 recorded `"+4"` as a finding; this is the first time it has been
+*reported* rather than written down.
+
+## What is left
+
+- **The Character is not yet a sequence of Level Events** (§6.3). It is a stack of layers with
+  scores handed in, which is what a view of a value needs and not what a Character is.
+- **Nothing persists** (§8).
+- **No interface** (§9, §10). Electron and React arrive there, not here.

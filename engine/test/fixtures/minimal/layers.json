@@ -1,0 +1,133 @@
+{
+  "races": [
+    {
+      "id": "test:hillfolk",
+      "name": "Hillfolk",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Races"
+        ]
+      },
+      "effects": [
+        {
+          "op": "set",
+          "field": "infravision.range",
+          "to": 60
+        },
+        {
+          "op": "set",
+          "field": "detect.slope",
+          "to": {
+            "rollAtMost": 3,
+            "on": "1d6"
+          }
+        },
+        {
+          "op": "adjust",
+          "field": "reactionCheck",
+          "by": 2,
+          "unmodelled": true,
+          "text": "UNMODELLED CONDITION: only with other hillfolk."
+        },
+        {
+          "op": "adjust",
+          "field": "attackRoll",
+          "by": 1,
+          "when": [
+            {
+              "subject": {
+                "field": "mood"
+              },
+              "op": "gte",
+              "value": 3
+            }
+          ],
+          "text": "The sheet has no mood, so this is undecidable rather than false."
+        },
+        {
+          "op": "adjust",
+          "field": "experienceAward.percent",
+          "by": 5,
+          "optional": "cprh:split-prime-requisite-bonus",
+          "text": "The book offers this as a variant the DM may decide to use."
+        },
+        {
+          "op": "grant",
+          "kind": "ability",
+          "ref": "test:sure-footed"
+        },
+        {
+          "op": "grant",
+          "kind": "ability",
+          "defines": {
+            "name": "A thing that exists nowhere else"
+          },
+          "unmodelled": true,
+          "text": "UNMODELLED SHAPE: the book describes it in prose."
+        },
+        {
+          "op": "require",
+          "kind": "language",
+          "count": 2
+        },
+        {
+          "op": "adjust",
+          "field": "surefooting",
+          "by": {
+            "supplies": "surefooting.bonus",
+            "at": {
+              "ability": "test:dexterity"
+            }
+          }
+        },
+        {
+          "op": "adjust",
+          "field": "asPrinted",
+          "by": {
+            "supplies": "asPrinted.bonus",
+            "at": {
+              "ability": "test:dexterity"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "subraces": [
+    {
+      "id": "test:highlander",
+      "name": "Highlander",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Subraces"
+        ]
+      },
+      "target": "test:hillfolk",
+      "effects": [
+        {
+          "op": "set",
+          "field": "infravision.range",
+          "to": 90
+        },
+        {
+          "op": "set",
+          "field": "detect.slope",
+          "to": 50
+        }
+      ]
+    }
+  ],
+  "abilities": [
+    {
+      "id": "test:sure-footed",
+      "name": "Sure-footed",
+      "provenance": {
+        "section": [
+          "Fixtures"
+        ]
+      }
+    }
+  ]
+}
