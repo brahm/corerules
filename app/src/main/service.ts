@@ -61,7 +61,9 @@ export function steps(library: Library, packId: string, draft: Draft): Step[] {
  * Engine that rolled them itself could not record a roll made at the table, and §9.1 keeps
  * entry a first-class path beside the dice.
  */
-export function create(library: Library, packId: string, draft: Draft & { name: string }, hitDie: number): string {
+export function create(
+  library: Library, packId: string, draft: Draft & { name: string; startingWealth?: number }, hitDie: number,
+): string {
   const pack = library.load(packId);
   const character = Character.create(pack, {
     name: draft.name,
@@ -69,6 +71,8 @@ export function create(library: Library, packId: string, draft: Draft & { name: 
     scores: draft.scores ?? {},
     ...(draft.subrace !== undefined ? { subrace: draft.subrace } : {}),
     ...(draft.kit !== undefined ? { kit: draft.kit } : {}),
+    ...(draft.alignment !== undefined ? { alignment: draft.alignment } : {}),
+    ...(draft.startingWealth !== undefined ? { startingWealth: draft.startingWealth } : {}),
     packs: [{ id: packId }],
   });
   // §6.3: what was chosen travels in the event that chose it, so a correction to the level

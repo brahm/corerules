@@ -50,6 +50,11 @@ export interface CharacterFile {
   kit?: Id;
   kitAbandoned?: boolean;
   deity?: Id;
+  alignment?: Id;
+  /** §9.1's starting money, and it is **recorded randomness** for the same reason hit points
+   *  are: the pack says `5d4x10` and the roll happened once. Storing the number is the only
+   *  way to have it survive a correction to anything else. */
+  startingWealth?: number;
   /** Chronological, because a v7 sorts that way — no separate ordering field to disagree. */
   events: LevelEvent[];
 }
@@ -137,6 +142,12 @@ export class Character {
       const c: Record_ | undefined = this.pack.get(id, "a class the character advances in");
       for (const g of groupsOf(c)) s.apply(this.pack.get(g, "a class group"), "class group");
       s.apply(c, "class");
+    }
+    if (this.file.alignment !== undefined) {
+      // Alignment is a layer with no effects in this corpus, and it is applied all the same:
+      // a kit's prerequisite reads `{field: "alignment"}`, and the predicate reads it off the
+      // sheet rather than off the file.
+      s.apply(this.pack.byId.get(this.file.alignment), "choice");
     }
     if (this.file.deity !== undefined) {
       s.apply(this.pack.get(this.file.deity, "the character's deity"), "deity");

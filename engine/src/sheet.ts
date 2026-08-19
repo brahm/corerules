@@ -123,7 +123,10 @@ export class Sheet {
     return {
       ability: (id) => this.scores[id],
       level: (id) => this.levels[id] ?? 0,
-      field: (path) => this.view(path).value,
+      field: (path) => path === "alignment"
+        // The alignment layer's own id, because that is what a prerequisite tests against.
+        ? this.layers.find((l) => l.role === "choice")?.record.id
+        : this.view(path).value,
       has: (_kind, ref) => this.granted.some((g) => g.ref === ref),
     };
   }

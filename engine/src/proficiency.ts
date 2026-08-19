@@ -183,3 +183,23 @@ export function candidates(pack: Pack, character: Character): Candidate[] {
       };
     });
 }
+
+/**
+ * The weapons a class may take proficiency in, before there is a Character to ask.
+ *
+ * `Sheet.permitted` answers the same question for a built character, where a kit's `forbid`
+ * and `except` are also in play; this answers it for a draft, where the only bound is the one
+ * the class imposes on itself. Correction 48 found that `imposedBy` IS the imposition, which
+ * is why neither needs an effect to look for.
+ */
+export function permittedWeapons(pack: Pack, classId: Id): { allowed: Set<Id>; bound?: string } {
+  const universe = new Set(pack.records("weaponProficiencies").filter((w) => w.groupKind === undefined).map((w) => w.id));
+  const mine = new Set<Id>([classId, ...groupsOf(pack.byId.get(classId))]);
+  for (const lim of pack.records("limitations")) {
+    if (lim.imposedBy === undefined || !mine.has(lim.imposedBy)) continue;
+    if (lim.members === undefined || lim.bounds !== "weaponProficiency") continue;
+    const members = pack.expand(lim.members);
+    return { allowed: new Set([...universe].filter((i) => members.has(i))), bound: lim.name };
+  }
+  return { allowed: universe };
+}

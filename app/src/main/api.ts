@@ -43,7 +43,7 @@ export interface Api {
   steps(packId: string, draft: Draft): Promise<Step[]>;
   /** The tool rolls dice (§9.1), and entry stays a first-class path — so both arrive here as
    *  scores already decided, and the Engine never learns which it was. */
-  create(packId: string, draft: Draft & { name: string }, hitDie: number): Promise<string>;
+  create(packId: string, draft: Draft & { name: string; startingWealth?: number }, hitDie: number): Promise<string>;
 }
 
 /** One place for the channel names, so a typo is a build error rather than a silent no-op. */

@@ -83,8 +83,10 @@ export function Wizard(
   useEffect(() => { void api.steps(packId, draft).then(setSteps); }, [packId, draft]);
 
   const pick = (key: Step["key"], id: string): void => {
-    setDraft((d) => key === "proficiencies"
-      ? { ...d, chose: [...(d.chose ?? []), { kind: "nonweaponProficiency", ref: id }] }
+    const kind = key === "proficiencies" ? "nonweaponProficiency"
+      : key === "weapons" ? "weaponProficiency" : undefined;
+    setDraft((d) => kind !== undefined
+      ? { ...d, chose: [...(d.chose ?? []), { kind, ref: id }] }
       : { ...d, [key]: id });
   };
 
@@ -123,9 +125,11 @@ export function Wizard(
               {step.budget.free > 0 && " — they cannot be held in reserve"}
             </p>
           )}
-          {step.key === "proficiencies" && (draft.chose ?? []).length > 0 && (
+          {(step.key === "proficiencies" || step.key === "weapons") && (draft.chose ?? []).length > 0 && (
             <div className="offers">
-              {(draft.chose ?? []).map((c) => (
+              {(draft.chose ?? [])
+                .filter((c) => c.kind === (step.key === "weapons" ? "weaponProficiency" : "nonweaponProficiency"))
+                .map((c) => (
                 <button type="button" className="offer yes" key={c.ref} onClick={() => { unpick(c.ref); }}>
                   <span className="offer-name">{c.ref}</span>
                   <span className="dim">chosen — click to undo</span>

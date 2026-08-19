@@ -274,7 +274,37 @@ NONWEAPON PROFICIENCIES
       1 slot — in General Proficiency Group, which is open to this class
 ```
 
+### The rest of §9.1, and two things the corpus cannot answer
+
+The pipeline now runs **scores → race → subrace → class → alignment → weapon proficiencies →
+nonweapon proficiencies → kit**, and the order is not cosmetic: **six kits and fifty-nine
+priesthoods carry an alignment prerequisite**, so asking for alignment after the kit would turn a
+decidable rule into an undecidable one — honestly reported and useless.
+
+Weapon slots come from Table 34's other half and are bounded by what the class may take at all,
+through the same `imposedBy` correction 48 found. A dwarf fighter gets **4 weapon slots and 3
+nonweapon**, and the sheet says so.
+
+Derived values are read from the books' own tables and **two of the four are not there**:
+
+```
+Fighter 1:  THAC0 20   next level at 2,000    missing: saving throws
+Fighter 5:  THAC0 16   next level at 32,000   missing: saving throws
+Thief 3:    THAC0 19   next level at 5,000    missing: saving throws
+```
+
+Table 53 and the four experience tables index cleanly. **Table 60 is in the pack with every cell
+empty** — the rows are there and the numbers are not — so the Engine names the table and says it
+cannot answer, which is precisely the state A3 exists to keep apart from *"no rule"*.
+
+**Equipment and encumbrance are not built, and the reason is the corpus rather than the effort.**
+Weapons carry a cost and a weight, but `armor` is seven CATEGORY records — *Metal armour*, *Leather
+or padded armour* — and nobody can buy a category. Table 47 keys on prose. Building a shop against
+that would produce a plausible screen over data that cannot support it, which is the one thing this
+Engine has refused at every other turn.
+
 ## What is left
+- **Equipment, encumbrance and spell selection**, which want a corpus the slice does not have.
 - **Constitution is not in the hit points.** The bonus is a table read with a per-class cap, and
   a plausible-looking total that quietly omits it is the kind of wrong number the rest of this
   refuses.

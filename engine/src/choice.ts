@@ -20,7 +20,7 @@
  * a third state, and the interface has to show it.
  */
 import type { Pack } from "./pack.ts";
-import { cost as costOf, slots as slotsFor } from "./proficiency.ts";
+import { cost as costOf, permittedWeapons, slots as slotsFor } from "./proficiency.ts";
 import { predicate, type Subject } from "./predicate.ts";
 import { groupsOf, type Id, type Record_ } from "./types.ts";
 
@@ -44,6 +44,10 @@ export interface Draft {
   subrace?: Id;
   class?: Id;
   kit?: Id;
+  /** Chosen before the kit and the deity, because 6 kits and 59 priesthoods ask about it —
+   *  a prerequisite the draft cannot answer is `unknown`, and asking in the wrong order turns
+   *  a decidable rule into an undecidable one. */
+  alignment?: Id;
   /** What has been spent so far. A list rather than a set because the same kind may be
    *  chosen several times, and order is the order the player picked. */
   chose?: { kind: string; ref: Id }[];
@@ -55,7 +59,10 @@ function subject(pack: Pack, draft: Draft): Subject {
   return {
     ability: (id) => draft.scores?.[id],
     level: () => 1,
-    field: (path) => (path === "race" ? draft.race : path === "subrace" ? draft.subrace : undefined),
+    field: (path) => path === "race" ? draft.race
+      : path === "subrace" ? draft.subrace
+      : path === "alignment" ? draft.alignment
+      : undefined,
     has: () => false,
   };
 }
@@ -156,7 +163,7 @@ export function kits(pack: Pack, draft: Draft): Offer[] {
 /** The steps, and whether each is answerable yet. §9.2's wizard is guided, which means it
  *  knows what it is waiting for. */
 export interface Step {
-  key: "scores" | "race" | "subrace" | "class" | "kit" | "proficiencies";
+  key: "scores" | "race" | "subrace" | "class" | "alignment" | "weapons" | "proficiencies" | "kit";
   title: string;
   /** Answered, ready to answer, or waiting on an earlier step. */
   state: "done" | "ready" | "waiting";
@@ -175,6 +182,30 @@ export interface Step {
  * arrives as `unknown`, because spending a slot you may not owe is exactly as wrong as being
  * refused one you could afford.
  */
+/** The weapon half of Table 34, bounded by what the class may take at all. */
+function weaponStep(pack: Pack, draft: Draft): Omit<Step, "key" | "title"> {
+  if (draft.class === undefined) return { state: "waiting", offers: [] };
+  const total = slotsFor(pack, draft.class, 1, "weapon");
+  const chosen = (draft.chose ?? []).filter((c) => c.kind === "weaponProficiency");
+  const free = total - chosen.length;
+  const taken = new Set(chosen.map((c) => c.ref));
+  const { allowed, bound } = permittedWeapons(pack, draft.class);
+
+  const offers = pack.records("weaponProficiencies")
+    .filter((w) => w.groupKind === undefined && !taken.has(w.id))
+    .map((w): Offer => {
+      if (!allowed.has(w.id)) {
+        return { id: w.id, name: w.name, book: bookOf(w), available: "no",
+                 because: `${bound ?? "this class"} does not permit it` };
+      }
+      if (free <= 0) {
+        return { id: w.id, name: w.name, book: bookOf(w), available: "no", because: "no slots left" };
+      }
+      return { id: w.id, name: w.name, book: bookOf(w), available: "yes" };
+    });
+  return { state: free === 0 ? "done" : "ready", offers, budget: { total, spent: chosen.length, free } };
+}
+
 function proficiencyStep(pack: Pack, draft: Draft): Omit<Step, "key" | "title"> {
   if (draft.class === undefined) return { state: "waiting", offers: [] };
   const total = slotsFor(pack, draft.class);
@@ -225,6 +256,14 @@ export function steps(pack: Pack, draft: Draft): Step[] {
       state: has(draft.class) ? "done" : has(draft.scores) && has(draft.race) ? "ready" : "waiting",
       offers: has(draft.scores) || has(draft.race) ? classes(pack, draft) : [],
     },
+    {
+      key: "alignment", title: "Alignment",
+      state: has(draft.alignment) ? "done" : "ready",
+      offers: pack.records("alignments").map((a) => ({
+        id: a.id, name: a.name, book: bookOf(a), available: "yes" as const,
+      })),
+    },
+    { key: "weapons", title: "Weapon proficiencies", ...weaponStep(pack, draft) },
     {
       key: "proficiencies", title: "Nonweapon proficiencies",
       ...proficiencyStep(pack, draft),

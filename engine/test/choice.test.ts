@@ -54,14 +54,14 @@ test("a prerequisite the draft cannot answer yet is unknown, not a refusal", () 
 test("the wizard knows what it is waiting for", () => {
   const empty = steps(pack, {});
   assert.deepEqual(empty.map((s) => [s.key, s.state]), [
-    ["scores", "ready"], ["race", "ready"], ["class", "waiting"],
-    ["proficiencies", "waiting"], ["kit", "waiting"],
+    ["scores", "ready"], ["race", "ready"], ["class", "waiting"], ["alignment", "ready"],
+    ["weapons", "waiting"], ["proficiencies", "waiting"], ["kit", "waiting"],
   ], "with no race chosen there is no subrace step, because no subrace targets nothing");
 
   const chosen = steps(pack, { scores: { "test:strength": 16 }, race: "test:hillfolk", class: "test:fighter" });
   assert.deepEqual(chosen.map((s) => [s.key, s.state]), [
     ["scores", "done"], ["race", "done"], ["subrace", "ready"], ["class", "done"],
-    ["proficiencies", "ready"], ["kit", "ready"],
+    ["alignment", "ready"], ["weapons", "ready"], ["proficiencies", "ready"], ["kit", "ready"],
   ], "and once the race has one, the subrace step appears where it belongs");
 });
 
@@ -102,4 +102,20 @@ test("a cost the books cannot decide arrives as unknown, not as a yes", () => {
   const begging = step.offers.find((o) => o.id === "cth:begging")!;
   assert.equal(begging.available, "unknown");
   assert.match(begging.because!, /perhaps one more/);
+});
+
+test("alignment comes before the kit, because kits ask about it", () => {
+  // Six kits and fifty-nine priesthoods carry an alignment prerequisite. Asking in the wrong
+  // order turns a decidable rule into an undecidable one, which the three-valued predicate
+  // would report honestly and uselessly.
+  const order = steps(pack, {}).map((s) => s.key);
+  assert.ok(order.indexOf("alignment") < order.indexOf("kit"));
+});
+
+test("the weapon budget is bounded by what the class may take at all", () => {
+  const step = steps(pack, { class: "test:thief" }).find((s) => s.key === "weapons")!;
+  assert.deepEqual(step.budget, { total: 2, spent: 0, free: 2 });
+  const refused = step.offers.filter((o) => o.available === "no");
+  assert.ok(refused.some((o) => /Fighter Weapon Restriction does not permit it/.test(o.because ?? "")) === false,
+    "the thief is not bound by the fighter's rule");
 });
