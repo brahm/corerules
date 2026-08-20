@@ -44,6 +44,34 @@
           "ref": "test:sun"
         }
       ]
+    },
+    {
+      "id": "test:storm",
+      "name": "Storm",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Deities"
+        ]
+      },
+      "target": "test:priest",
+      "cardinality": "one-per-target",
+      "prerequisite": [
+        {
+          "subject": {
+            "ability": "test:dexterity"
+          },
+          "op": "gte",
+          "value": 15
+        }
+      ],
+      "effects": [
+        {
+          "op": "grant",
+          "kind": "sphere",
+          "ref": "test:sun"
+        }
+      ]
     }
   ],
   "spells": [

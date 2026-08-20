@@ -75,6 +75,7 @@ export function create(
     ...(draft.subrace !== undefined ? { subrace: draft.subrace } : {}),
     ...(draft.kit !== undefined ? { kit: draft.kit } : {}),
     ...(draft.alignment !== undefined ? { alignment: draft.alignment } : {}),
+    ...(draft.deity !== undefined ? { deity: draft.deity } : {}),
     ...(draft.startingWealth !== undefined ? { startingWealth: draft.startingWealth } : {}),
     packs: [{ id: packId }],
   });

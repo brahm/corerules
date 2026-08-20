@@ -571,6 +571,27 @@ write; a path also enters through a table's `supplies`, and that half was never 
 of the slice's ten table paths sat outside the vocabulary** and nothing checked. `Pack` complains
 now, and caught two more in the Engine's own fixture within a minute of being written.
 
+### The priesthood step, and a feature that had been finished and unreachable
+
+**Nothing had ever offered a deity.** 59 priesthoods in the slice, every one targeting
+`phb:priest`, each with alignment and ability prerequisites — and no step, no field on the draft,
+no argument to `create`. So correction 46's sphere work and everything `spells.ts` reads off it
+were **finished and unreachable**: a cleric of Agriculture is offered 80 spells, a cleric of
+nothing is offered none, and every cleric this application could make was a cleric of nothing.
+The only way to attach one was to edit the character file by hand, which is what the last two
+sessions did without noticing what that meant.
+
+It is not a kit and does not go where kits go — §3.1 makes it an Attachable of its own,
+`one-per-target`. The step is offered only where some priesthood in a loaded pack could take this
+class at all, **decided by asking the records rather than by knowing that priests have gods**: a
+fighter gets no step to decline.
+
+Against the real slice the three answers all appear and each is right. A lawful-good cleric with
+Wisdom 16: **10 available, 34 refused, 15 unknown** — and the fifteen are the priesthoods that ask
+for a second ability nobody has rolled yet, which is precisely the case §5.4's third answer exists
+for. Drop the alignment and it is 58 unknown, because the question cannot be asked at all. Wisdom 9
+and chaotic evil leaves two.
+
 ## What is left
 - **Encumbrance**, which wants the rest of §9.1's equipment: the armour list carries weights and
   Table 47 rates them, but a character carries more than armour.

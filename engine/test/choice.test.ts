@@ -145,3 +145,27 @@ test("a group the class may only partly use is unknown, because no book rules on
   assert.equal(partly.available, "unknown");
   assert.match(partly.because!, /permits 1 of its 2 weapons/);
 });
+
+test("a priesthood is offered to a priest and to nobody else", () => {
+  // 59 priesthoods sat in the pack and nothing ever asked a player to pick one, so the sphere
+  // access correction 46 transcribed was unreachable through the interface: a cleric of
+  // Agriculture is offered 80 spells and a cleric of nothing is offered none — and until now
+  // every cleric was a cleric of nothing.
+  const priest = steps(pack, { class: "test:cleric", scores: { "test:dexterity": 16 } });
+  const step = priest.find((s) => s.key === "deity")!;
+  assert.equal(step.title, "Priesthood");
+  assert.equal(step.offers.find((o) => o.id === "test:harvest")?.available, "yes");
+
+  // A fighter gets no step at all — decided by asking the records, never by knowing that
+  // priests have gods.
+  assert.equal(steps(pack, { class: "test:fighter" }).some((s) => s.key === "deity"), false);
+});
+
+test("a priesthood whose prerequisite cannot be answered yet is unknown, never no", () => {
+  const undecided = steps(pack, { class: "test:cleric" }).find((s) => s.key === "deity")!;
+  assert.equal(undecided.offers.find((o) => o.id === "test:storm")?.available, "unknown");
+
+  const low = steps(pack, { class: "test:cleric", scores: { "test:dexterity": 9 } })
+    .find((s) => s.key === "deity")!;
+  assert.equal(low.offers.find((o) => o.id === "test:storm")?.available, "no");
+});

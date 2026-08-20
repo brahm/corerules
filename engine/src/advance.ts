@@ -94,6 +94,7 @@ export function objections(pack: Pack, draft: Draft): Objection[] {
       : step.key === "subrace" ? draft.subrace
       : step.key === "class" ? draft.class
       : step.key === "kit" ? draft.kit
+      : step.key === "deity" ? draft.deity
       : step.key === "alignment" ? draft.alignment
       : undefined;
     if (chosen === undefined) continue;
@@ -135,6 +136,7 @@ export function draftOf(character: Character): Draft {
     ...(f.subrace !== undefined ? { subrace: f.subrace } : {}),
     ...(f.kit !== undefined && f.kitAbandoned !== true ? { kit: f.kit } : {}),
     ...(f.alignment !== undefined ? { alignment: f.alignment } : {}),
+    ...(f.deity !== undefined ? { deity: f.deity } : {}),
     ...(character.classes()[0] !== undefined ? { class: character.classes()[0]! } : {}),
     chose: f.events.flatMap((e) => e.chose ?? []),
   };

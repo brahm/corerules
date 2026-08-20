@@ -44,6 +44,8 @@ export interface Draft {
   subrace?: Id;
   class?: Id;
   kit?: Id;
+  /** The priesthood, where the class has one. Its spheres are where a priest's spells come from. */
+  deity?: Id;
   /** Chosen before the kit and the deity, because 6 kits and 59 priesthoods ask about it —
    *  a prerequisite the draft cannot answer is `unknown`, and asking in the wrong order turns
    *  a decidable rule into an undecidable one. */
@@ -160,10 +162,42 @@ export function kits(pack: Pack, draft: Draft): Offer[] {
   });
 }
 
+/**
+ * The priesthood, which is the one Attachable this wizard has never offered.
+ *
+ * **59 records, every one targeting `phb:priest`, and nothing has ever asked a player to pick
+ * one** — so the sphere access correction 46 transcribed and `spells.ts` reads has been
+ * unreachable through the interface since the day it was written. A cleric of Agriculture is
+ * offered 80 spells; a cleric of nothing is offered none, and that was every cleric.
+ *
+ * It is not a kit and does not go where kits go. §3.1 makes it an Attachable in its own right,
+ * `one-per-target` rather than one-per-character, and its prerequisites read alignment and
+ * Wisdom — which is why the draft asks for alignment before this and not after. A priesthood
+ * refused for an alignment the player has not chosen yet is `unknown`, never `no`.
+ */
+export function deities(pack: Pack, draft: Draft): Offer[] {
+  const on = subject(pack, draft);
+  return pack.records("deities").map((d): Offer => {
+    const book = bookOf(d);
+    if (draft.class !== undefined && d.target !== undefined && !targets(pack, d.target).has(draft.class)) {
+      const target = pack.byId.get(d.target)?.name ?? d.target;
+      return { id: d.id, name: d.name, book, available: "no", because: `belongs to the ${target} — ${book}` };
+    }
+    const holds = predicate(d.prerequisite as Parameters<typeof predicate>[0], on);
+    if (holds === false) {
+      return { id: d.id, name: d.name, book, available: "no", because: `its prerequisite does not hold — ${book}` };
+    }
+    if (holds === null) {
+      return { id: d.id, name: d.name, book, available: "unknown", because: "its prerequisite asks something this character has not decided yet" };
+    }
+    return { id: d.id, name: d.name, book, available: "yes" };
+  });
+}
+
 /** The steps, and whether each is answerable yet. §9.2's wizard is guided, which means it
  *  knows what it is waiting for. */
 export interface Step {
-  key: "scores" | "race" | "subrace" | "class" | "alignment" | "weapons" | "proficiencies" | "kit";
+  key: "scores" | "race" | "subrace" | "class" | "alignment" | "weapons" | "proficiencies" | "deity" | "kit";
   title: string;
   /** Answered, ready to answer, or waiting on an earlier step. */
   state: "done" | "ready" | "waiting";
@@ -283,6 +317,14 @@ export function steps(pack: Pack, draft: Draft): Step[] {
       key: "proficiencies", title: "Nonweapon proficiencies",
       ...proficiencyStep(pack, draft),
     },
+    // Only where a priesthood in some loaded pack could take this class at all — a fighter does
+    // not get a step to decline. The step decides that by asking the records, never by knowing
+    // that priests have gods.
+    ...(has(draft.class) && deities(pack, draft).some((o) => o.available !== "no")
+      ? [{ key: "deity" as const, title: "Priesthood",
+           state: has(draft.deity) ? "done" as const : "ready" as const,
+           offers: deities(pack, draft) }]
+      : []),
     {
       key: "kit", title: "Kit",
       // §6.4: one kit, chosen at creation, never rebound. A step you can decline, not skip.
