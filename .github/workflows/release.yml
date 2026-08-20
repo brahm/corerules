@@ -1,0 +1,117 @@
+# A pushed tag builds three artifacts and leaves a draft release. The only click in the whole
+# process is publishing it (§10.3).
+#
+# Manual dispatch was rejected: its branch dropdown defaults wrong and fails late, which v1-spec
+# ticket 12 demonstrated the hard way. And this is deliberately NOT a two-stage pipeline — a
+# release created by GITHUB_TOKEN does not fire an `on: release` workflow, so a second stage
+# would silently never run.
+#
+# **This file must live on the default branch.** GitHub builds its Actions list from `main`, so
+# a workflow on a side branch is invisible: the repository shows the onboarding page and the API
+# reports zero workflows, with the file demonstrably present. Ticket 12 learned that the hard way
+# too.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+# On a repository in a personal account GITHUB_TOKEN is read-only by default and creating a
+# Release with it fails. Granting it here needs no settings change.
+#
+# THE TRAP: naming any permission sets every unnamed one to `none`. Anything else this workflow
+# ever needs must be named here too.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Pinned rather than `-latest`, because actions/runner-images migrates that label over
+          # one to two months and a pipeline touched twice a year should not move underneath you.
+          - os: ubuntu-24.04
+            artifact: app/release/*.AppImage
+          - os: windows-2022
+            artifact: app/release/*.exe
+          - os: macos-15
+            artifact: app/release/*.dmg
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: "24"
+
+      # No lockfile install for the engine: it has no runtime dependencies, and its two dev
+      # dependencies are the typechecker, which CI runs to find out whether the build should
+      # happen at all.
+      - name: Check the engine
+        run: |
+          cd engine
+          npm ci
+          npx tsc --noEmit
+          node --test
+
+      - name: Check and bundle the application
+        run: |
+          cd app
+          npm ci
+          npx tsc --noEmit
+          node --test "test/**/*.test.ts"
+          node build.js
+
+      # Pinned to 26.15.7 explicitly. npm's `latest` tag is genuinely stale at 26.15.3 — verified
+      # three times now, by the original research, by the spike, and again when this workflow was
+      # written. `npm install electron-builder` would silently give you the older one. v27 is
+      # alpha, ESM-only, and renames `mac.identity` to `mac.sign.identity`.
+      - name: Package
+        run: cd app && npx --yes electron-builder@26.15.7 --publish never
+        env:
+          # electron-builder looks for a certificate and, finding none, would skip signing
+          # entirely. `identity: "-"` in electron-builder.yml is what makes it sign ad-hoc, and
+          # this stops it from trying to notarise something that has no Developer ID.
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: ${{ matrix.os }}
+          path: ${{ matrix.artifact }}
+          if-no-files-found: error
+
+  draft:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      # v8, not v7: upload and download are versioned separately and their numbers have never
+      # matched. Assuming they do is how you pin a tag that does not exist.
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      # Born a draft, so a wrong tag is deleted before anyone has seen it: remove the draft in the
+      # web UI, then `git push --delete origin vX.Y.Z` and `git tag -d vX.Y.Z`.
+      - uses: softprops/action-gh-release@v3.0.2
+        with:
+          draft: true
+          files: artifacts/*
+          # §11 and v1-spec ticket 09: three separate stories, not three phrasings of one warning.
+          # A player meeting a SmartScreen panel, a Gatekeeper refusal and an AppImage that will
+          # not run are having three different problems.
+          body: |
+            **This build is unsigned.** corerules has no code-signing certificate, so each system
+            objects in its own way and each objection wants a different answer.
+
+            - **Windows** — SmartScreen shows a blue panel with the app name hidden behind
+              *More info*. Click it, then *Run anyway*.
+            - **macOS** — the app is *ad-hoc* signed, which is what lets Apple Silicon run it at
+              all, but Gatekeeper still refuses on first open. Right-click the app and choose
+              *Open*, then *Open* again in the dialog.
+            - **Linux** — the AppImage needs the executable bit: `chmod +x corerules-*.AppImage`.
+
+            **corerules ships no game content.** It opens empty, and the first thing to do is
+            supply a Content Pack transcribed from books you own.

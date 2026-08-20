@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  §10.2's proven configuration, verified by v1-spec ticket 12 by building on CI and running the
+  result on a different Mac.
+
+  disable-library-validation is not optional and not caution: Electron's prebuilt frameworks
+  carry Apple's Team ID, an ad-hoc signature carries none, and without this entitlement the app
+  dies at launch on the mismatch.
+
+  allow-jit is V8's.
+-->
+<plist version="1.0">
+  <dict>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+  </dict>
+</plist>

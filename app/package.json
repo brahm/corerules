@@ -1,6 +1,6 @@
 {
   "name": "@corerules/app",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "The desktop application. Ships no game content.",
@@ -12,7 +12,8 @@
     "build": "node build.js",
     "start": "npm run build && electron .",
     "typecheck": "tsc --noEmit",
-    "test": "node --test \"test/**/*.test.ts\""
+    "test": "node --test \"test/**/*.test.ts\"",
+    "package": "node build.js && npx --yes electron-builder@26.15.7 --publish never"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
@@ -23,5 +24,13 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "typescript": "^7.0.2"
-  }
+  },
+  "author": {
+    "name": "Wagner Brahm"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/brahm/corerules.git"
+  },
+  "desktopName": "corerules.desktop"
 }

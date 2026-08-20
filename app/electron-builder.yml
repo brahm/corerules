@@ -1,0 +1,67 @@
+# §10's packaging, and every line of it is a decision somebody made rather than a default.
+#
+# The artifact matrix is §10.1's: one format per system, and the ones left out were left out for
+# reasons. **rpm is out because of the maintainer's own machine** — Fedora 45 flips
+# `%_pkgverify_level` to `all` and rpm will refuse unsigned packages, so shipping one would mean
+# shipping something that stops installing a few months after v1.
+
+appId: com.brahm.corerules
+productName: corerules
+copyright: © Wagner Brahm
+
+# Not derived from the package name. `@corerules/app` becomes `@corerulesapp`, which
+# electron-builder refuses outright — and it refuses at the very last step, after downloading
+# Electron and packaging everything, which is how the first real build of this project spent
+# four minutes to fail on a scoped name.
+executableName: corerules
+
+directories:
+  output: release
+  buildResources: build
+
+# The app is bundled before this runs, so what ships is `dist` and the package manifest, and
+# nothing else. No `node_modules` travels: the engine has no runtime dependencies and the
+# renderer's React is inside the bundle already.
+files:
+  - dist/**/*
+  - package.json
+
+# A Content Pack never ships. It is the user's own transcription of books they own, and §1's
+# posture is that it stays on their machine — so there is nothing here to accidentally include,
+# and this comment exists so that nobody adds one.
+extraResources: []
+
+linux:
+  target: AppImage
+  category: Game
+  # Without this a desktop environment cannot link the running window to the .desktop entry, so
+  # the app appears in the dock as a second nameless thing beside its own launcher.
+  syncDesktopName: true
+  # deb and rpm are deliberately absent — see the note at the top.
+
+win:
+  target: nsis
+  # No portable exe: two ways to install is two ways to have an old one lying about.
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  artifactName: ${productName}-Setup-${version}.${ext}
+
+mac:
+  target: dmg
+  category: public.app-category.games
+  # §10.2, copied verbatim from what v1-spec ticket 12 proved by building on CI and running the
+  # result on a DIFFERENT Mac. Ad-hoc signing is not optional: Apple Silicon does not execute
+  # unsigned arm64 code at all, and electron-builder does not ad-hoc sign by itself when it finds
+  # no certificate. The signature survives leaving the build machine — contrary to
+  # electron-builder's own documentation, which is why somebody had to go and check.
+  identity: "-"
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+
+# The release is born a draft and the only click in the process is publishing it (§10.3).
+publish:
+  provider: github
+  releaseType: draft

@@ -367,7 +367,41 @@ worse than one that refused the edit.
 Removing a level takes its choices with it, because they travelled in the event that made them.
 §6.3 put them there for exactly this.
 
+### §10, and what building it for real turned up
+
+`app/electron-builder.yml`, `app/build/entitlements.mac.plist` and
+`.github/workflows/release.yml` — the artifact matrix, the proven macOS block copied verbatim,
+and a tag that builds three artifacts and leaves a draft.
+
+**Every version the spec named checked out, including the odd one.** `actions/checkout@v7.0.1` and
+`actions/setup-node@v7.0.0` are current; and npm's `latest` tag for electron-builder is **still
+26.15.3 while 26.15.7 exists** — verified a third time, so `npm install electron-builder` silently
+gives you the older one and the workflow pins the version explicitly. `actions/download-artifact` is
+at **v8**, not v7: upload and download are versioned separately and their numbers have never
+matched, which is how you pin a tag that does not exist.
+
+**A Linux AppImage was built and run.** 127 MB, and it finds the real pack:
+
+```
+/tmp/tmp.wm9rNj6mTj
+CONTENT PACKS
+Proving slice (ticket 08)     1,298 records · b3d48ad1ab71
+```
+
+The build failed the first time, at the very last step after four minutes of downloading and
+packaging: `executableName contains characters that cannot be safely used in file paths:
+@corerulesapp`. electron-builder derives the executable from the package **name**, and this one is
+scoped. Fixed with an explicit `executableName`, and the comment says why so the next person does
+not spend the four minutes.
+
+Two smaller things the build said out loud and are now handled or named: `syncDesktopName`, without
+which a desktop environment shows the running window as a second nameless thing beside its own
+launcher — and **there is no icon**, so a release today would ship under the Electron logo. That is
+a real gap and it is named rather than papered over.
+
 ## What is left
+- **An application icon.** A packaged build currently ships Electron's own, which is the first
+  thing anybody would see.
 - **Equipment, encumbrance and spell selection**, which want a corpus the slice does not have.
 - **Constitution is not in the hit points.** The bonus is a table read with a per-class cap, and
   a plausible-looking total that quietly omits it is the kind of wrong number the rest of this
