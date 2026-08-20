@@ -54,3 +54,13 @@ button:hover { border-color: var(--dim); }
 .name { width: 20rem; }
 .finish { margin: 2rem 0; }
 .wizard h3 { margin-top: 1.8rem; }
+
+/* The timeline is edited in place — §9.2's third mode is "direct editing on the sheet,
+   exposing the timeline", so the controls are the row rather than a dialog over it. */
+.value select, .value input[type="number"] {
+  font: inherit; font-size: 0.9rem; color: var(--ink); background: #191613;
+  border: 1px solid var(--rule); border-radius: 3px; padding: 0.1rem 0.3rem;
+}
+.value input[type="number"] { width: 4rem; }
+.remove { font-size: 0.78rem; padding: 0.15rem 0.5rem; opacity: 0.6; }
+.remove:hover { opacity: 1; border-color: var(--warn); color: var(--warn); }

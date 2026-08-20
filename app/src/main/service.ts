@@ -7,7 +7,7 @@
  * `ipcMain.handle` lines, and where the settings file lives.
  */
 import { Character } from "../../../engine/src/character.ts";
-import { advance as whatNext, check, draftOf, type Advance, type Objection } from "../../../engine/src/advance.ts";
+import { advance as whatNext, check, correct, draftOf, type Advance, type Objection } from "../../../engine/src/advance.ts";
 import { steps as offerSteps, type Draft, type Step } from "../../../engine/src/choice.ts";
 import { derived, type Derived } from "../../../engine/src/derived.ts";
 import type { Library } from "../../../engine/src/library.ts";
@@ -88,6 +88,9 @@ export function create(
 
 export interface Timeline {
   events: { id: string; rolls: { class: string; die: number }[]; chose: { kind: string; ref: string }[] }[];
+  /** Every class the loaded packs offer, so a correction picks from a list rather than typing
+   *  an id. The rules still decide whether the pick stands — this is only the vocabulary. */
+  classes: { id: string; name: string }[];
   next: Advance;
   derived: Derived;
   /** §9.2: the same validation rules on both paths, so the sheet carries what the wizard would
@@ -103,11 +106,60 @@ export function timeline(library: Library, id: string): Timeline | undefined {
   const said = check(c.pack, draftOf(c));
   return {
     events: c.file.events.map((e) => ({ id: e.id, rolls: e.rolls, chose: e.chose ?? [] })),
+    classes: c.pack.records("classes").filter((k) => k.isGroup !== true)
+      .map((k) => ({ id: k.id, name: k.name })),
     next: whatNext(c.pack, c, c.classes()[0] ?? ""),
     derived: derived(c.pack, c),
     objections: said.objections,
     caveats: said.caveats,
   };
+}
+
+/**
+ * §9.2's third mode, doing something at last: **rewrite one level in place.**
+ *
+ * §6.5 is explicit that this is what a correction is — *"corrections rewrite history in place;
+ * the old value stops existing"* — and §9.2 is explicit that it may not be a way around the
+ * rules. So the edit is applied, the whole Character is re-checked by the same `choice.ts` the
+ * wizard uses, and the objections come back with it. Nothing is refused: refusing would leave
+ * the user with a sheet they can see is wrong and no way to say so.
+ */
+export function correctEvent(
+  library: Library, id: string, eventId: string, replacement: { class?: string; die?: number },
+): Objection[] {
+  const opened = library.open(id);
+  const c = opened.character;
+  if (c === undefined) return [];
+  const event = c.file.events.find((e) => e.id === eventId);
+  if (event === undefined) return [];
+  const first = event.rolls[0];
+  if (first !== undefined) {
+    // Only the first roll: a multi-class creation event rolls several dice at once, and
+    // editing one of them is a finer operation than this screen offers yet.
+    const said = correct(c.pack, c, eventId, {
+      rolls: [{ class: replacement.class ?? first.class, die: replacement.die ?? first.die },
+              ...event.rolls.slice(1)],
+    });
+    library.writeCharacter(library.stamp(c.file));
+    return said.filter((o) => o.available === "no");
+  }
+  return [];
+}
+
+/**
+ * Remove a level. Also a correction — §6.5 does not distinguish, and an advance made by
+ * mistake is the commonest kind there is.
+ *
+ * The choices made at that level go with it, because they travelled in the event that chose
+ * them. That is the whole reason §6.3 put them there.
+ */
+export function removeEvent(library: Library, id: string, eventId: string): Objection[] {
+  const opened = library.open(id);
+  const c = opened.character;
+  if (c === undefined) return [];
+  c.file.events = c.file.events.filter((e) => e.id !== eventId);
+  library.writeCharacter(library.stamp(c.file));
+  return check(c.pack, draftOf(c)).objections;
 }
 
 /** One level, with the die rolled outside — §6.3's recorded randomness, again. */

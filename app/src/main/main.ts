@@ -71,6 +71,10 @@ function handlers(): void {
   ipcMain.handle(CHANNEL.timeline, (_e, id: string) => service.timeline(library(), id));
   ipcMain.handle(CHANNEL.levelUp, (_e, id: string, classId: string, die: number, chose) =>
     service.levelUp(library(), id, classId, die, chose));
+  ipcMain.handle(CHANNEL.correctEvent, (_e, id: string, eventId: string, replacement) =>
+    service.correctEvent(library(), id, eventId, replacement));
+  ipcMain.handle(CHANNEL.removeEvent, (_e, id: string, eventId: string) =>
+    service.removeEvent(library(), id, eventId));
   ipcMain.handle(CHANNEL.steps, (_e, packId: string, draft) => service.steps(library(), packId, draft));
   ipcMain.handle(CHANNEL.create, (_e, packId: string, draft, hitDie: number) =>
     service.create(library(), packId, draft, hitDie));
@@ -105,6 +109,20 @@ function window(): void {
         // screen this whole project is for.
         const steps: Record<string, string> = {
           sheet: "document.querySelector('.link')?.click(); await new Promise(r => setTimeout(r, 500));",
+          correct: `
+            document.querySelector('.link')?.click();
+            await new Promise(r => setTimeout(r, 500));
+            const die = [...document.querySelectorAll('.value input[type=number]')][0];
+            die.value = '3';
+            // React maps onBlur to focusout, because blur does not bubble. Dispatching a
+            // raw 'blur' here fired nothing and made the die edit look broken when it was not.
+            die.dispatchEvent(new Event('focusout', { bubbles: true }));
+            await new Promise(r => setTimeout(r, 600));
+            const sel = document.querySelector('.value select');
+            sel.value = 'phb:mage';
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+            await new Promise(r => setTimeout(r, 700));
+          `,
           advance: `
             document.querySelector('.link')?.click();
             await new Promise(r => setTimeout(r, 500));

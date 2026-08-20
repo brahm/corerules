@@ -7,6 +7,7 @@
  * is not the process that holds the pack. The renderer is given a display model — names,
  * numbers and the books they came from — and never the records.
  */
+import type { Objection } from "../../../engine/src/advance.ts";
 import type { Draft, Step } from "../../../engine/src/choice.ts";
 import type { SheetView } from "../../../engine/src/present.ts";
 
@@ -50,6 +51,11 @@ export interface Api {
    *  the objections so the sheet cannot become the back door §5 is guarded against. */
   timeline(id: string): Promise<import("./service.ts").Timeline | undefined>;
   levelUp(id: string, classId: string, die: number, chose: { kind: string; ref: string }[]): Promise<unknown>;
+  /** Rewrite one level, or remove it. §6.5: the old value stops existing. Both answer with
+   *  what the result breaks rather than refusing — a correction that cannot be made is a
+   *  sheet the user can see is wrong with no way to say so. */
+  correctEvent(id: string, eventId: string, replacement: { class?: string; die?: number }): Promise<Objection[]>;
+  removeEvent(id: string, eventId: string): Promise<Objection[]>;
 }
 
 /** One place for the channel names, so a typo is a build error rather than a silent no-op. */
@@ -63,4 +69,6 @@ export const CHANNEL = {
   create: "corerules:create",
   timeline: "corerules:timeline",
   levelUp: "corerules:levelUp",
+  correctEvent: "corerules:correctEvent",
+  removeEvent: "corerules:removeEvent",
 } as const;

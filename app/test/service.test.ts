@@ -7,7 +7,8 @@ import { dirname, join } from "node:path";
 import { Character } from "../../engine/src/character.ts";
 import { canonical } from "../../engine/src/hash.ts";
 import { Library } from "../../engine/src/library.ts";
-import { characters, open, packs } from "../src/main/service.ts";
+import { check, draftOf } from "../../engine/src/advance.ts";
+import { characters, correctEvent, open, packs, removeEvent } from "../src/main/service.ts";
 
 const fixture = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "engine", "test", "fixtures", "minimal");
 
@@ -64,5 +65,42 @@ test("opening gives the renderer a display model and never a record", () => {
   assert.equal(view.values.find((v) => v.path === "attackRoll")?.value, 2);
   // Nothing in the view is a pack record: the renderer gets names, numbers and books.
   assert.equal(JSON.stringify(view).includes('"effects"'), false);
+  rmSync(dir, { recursive: true });
+});
+
+test("a level can be corrected in place, and the sheet answers for the result", () => {
+  const { dir, library, id } = root();
+  const before = library.open(id).character!;
+  const eventId = before.file.events[0]!.id;
+  assert.equal(before.hitPoints(), 8);
+
+  // §6.5: the old value stops existing. There is no draft and nothing to confirm.
+  const said = correctEvent(library, id, eventId, { die: 3 });
+  assert.deepEqual(said, [], "a smaller roll breaks no rule");
+  assert.equal(library.open(id).character!.hitPoints(), 3, "and the sheet follows");
+
+  // §9.2: the same validation rules on both paths. The Mage wants Intelligence 13 and this
+  // character has none, so the edit is APPLIED and answered for.
+  const objected = correctEvent(library, id, eventId, { class: "test:mage" });
+  assert.equal(library.open(id).file.events[0]!.rolls[0]!.class, "test:mage");
+  assert.equal(objected.length + check(library.load("minimal"), draftOf(library.open(id).character!)).caveats.length > 0, true);
+  rmSync(dir, { recursive: true });
+});
+
+test("removing a level takes its choices with it, because they travelled in it", () => {
+  const { dir, library, id } = root();
+  const c = library.open(id).character!;
+  c.advance([{ class: "test:fighter", die: 6 }], {
+    chose: [{ kind: "nonweaponProficiency", ref: "test:riding" }],
+  });
+  library.writeCharacter(c.file);
+  assert.equal(library.open(id).character!.file.events.length, 2);
+
+  const second = library.open(id).file.events[1]!.id;
+  removeEvent(library, id, second);
+  const after = library.open(id).character!;
+  assert.equal(after.file.events.length, 1);
+  assert.deepEqual(after.file.events.flatMap((e) => e.chose ?? []), [],
+    "the choice went with the level that made it");
   rmSync(dir, { recursive: true });
 });

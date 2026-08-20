@@ -48,10 +48,13 @@ function Value({ line }: { line: ValueLine }): React.JSX.Element {
  * nobody can rule on, because with A3 undeclared that is every class in the corpus and putting
  * the two in one list would teach a reader to ignore both.
  */
-function History({ id }: { id: string }): React.JSX.Element {
+function History({ id, onChanged }: { id: string; onChanged: () => void }): React.JSX.Element {
   const [t, setT] = useState<Timeline | undefined>(undefined);
-  const load = (): void => { void api.timeline(id).then(setT); };
-  useEffect(load, [id]);
+  // Every edit reloads BOTH halves. A corrected level changes the values above it — hit
+  // points, THAC0, what the kit granted — and a sheet showing yesterday's numbers beside
+  // today's timeline would be worse than one that refused the edit.
+  const load = (): void => { void api.timeline(id).then(setT); onChanged(); };
+  useEffect(() => { void api.timeline(id).then(setT); }, [id]);
   if (t === undefined) return <></>;
 
   return (
@@ -97,15 +100,55 @@ function History({ id }: { id: string }): React.JSX.Element {
 
       <section>
         <h3>Timeline</h3>
-        {t.events.map((e, i) => (
-          <div className="value" key={e.id}>
-            <span className="path">
-              level {i + 1} — {e.rolls.map((r) => `${r.class} (${r.die})`).join(", ")}
-            </span>
-            <span className="amount dim">{e.id.slice(0, 8)}</span>
-            {e.chose.length > 0 && <div className="why">chose {e.chose.map((c) => c.ref).join(", ")}</div>}
-          </div>
-        ))}
+        {/* §9.2's "correct / edit later": direct editing on the sheet, exposing the timeline.
+            Editable in place, because §6.5 says a correction rewrites history and the old
+            value stops existing — there is no draft to confirm, only the file and what the
+            rules then say about it. */}
+        {t.events.map((e, i) => {
+          const first = e.rolls[0];
+          return (
+            <div className="value" key={e.id}>
+              <span className="path">
+                level {i + 1}
+                {first !== undefined && (
+                  <>
+                    {" — "}
+                    <select
+                      value={first.class}
+                      onChange={(ev) => { void api.correctEvent(id, e.id, { class: ev.target.value }).then(load); }}
+                    >
+                      {t.classes.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+                    </select>
+                    {" rolled "}
+                    <input
+                      type="number" min={1} max={20} defaultValue={first.die}
+                      onBlur={(ev) => {
+                        const die = Number.parseInt(ev.target.value, 10);
+                        if (!Number.isNaN(die) && die !== first.die) {
+                          void api.correctEvent(id, e.id, { die }).then(load);
+                        }
+                      }}
+                    />
+                  </>
+                )}
+                {e.rolls.length > 1 && <span className="dim"> and {e.rolls.length - 1} more roll(s)</span>}
+              </span>
+              <button
+                type="button"
+                className="remove"
+                title="remove this level"
+                onClick={() => { void api.removeEvent(id, e.id).then(load); }}
+              >
+                remove
+              </button>
+              {e.chose.length > 0 && (
+                // The choices travelled in the event that made them, so removing the level
+                // removes them with it. §6.3 put them there for this.
+                <div className="why">chose {e.chose.map((c) => c.ref).join(", ")}</div>
+              )}
+            </div>
+          );
+        })}
         <div className="finish">
           <button
             type="button"
@@ -126,7 +169,9 @@ function History({ id }: { id: string }): React.JSX.Element {
   );
 }
 
-export function Sheet({ view, id }: { view: SheetView; id: string | undefined }): React.JSX.Element {
+export function Sheet(
+  { view, id, onChanged }: { view: SheetView; id: string | undefined; onChanged: () => void },
+): React.JSX.Element {
   const byReason = new Map<string, SheetView["aside"]>();
   for (const a of view.aside) byReason.set(a.because, [...(byReason.get(a.because) ?? []), a]);
 
@@ -183,7 +228,7 @@ export function Sheet({ view, id }: { view: SheetView; id: string | undefined })
         </section>
       )}
 
-      {id !== undefined && <History id={id} />}
+      {id !== undefined && <History id={id} onChanged={onChanged} />}
 
       {[...byReason].map(([because, rows]) => (
         <section className="aside" key={because}>

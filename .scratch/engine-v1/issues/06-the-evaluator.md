@@ -334,9 +334,40 @@ Driven in the running application, a dwarf fighter advanced to level 2 and the s
 **THAC0 19** from Table 53, **next level at 4,000 xp** from Table 14, saving throws *"not computed —
 Table 60 is present in the pack with no numbers in it"*, and the timeline with both events by id.
 
+### The timeline, edited in place
+
+§9.2's third mode is *"direct editing on the sheet, exposing the timeline"*, and it is now that
+rather than a read-only list. A level's class is a select and its die roll is a number, edited on the
+row — **no draft and nothing to confirm**, because §6.5 already decided what a correction is: the
+old value stops existing.
+
+Driven in the running application on a dwarf fighter, changing the die to 3 and the class to Mage:
+
+```
+Dwarf / Wizard / Mage / Clansdwarf · 3 hp · Mage 1
+
+THIS CHARACTER BREAKS A RULE
+  Clansdwarf   kit   belongs to the Fighter — Comp. Book of Dwarves
+
+NOT CHECKED
+  Mage: its ability requirements have not been rolled yet
+```
+
+and the file on disk holds `{"class": "phb:mage", "die": 3}` — history rewritten, not appended to.
+
+**That is §9.2's back door standing open and being walked through, and the sheet naming the book on
+the way past.** The edit was not refused: refusing would leave a user looking at a sheet they can
+see is wrong with no way to say so, and §5.3 already settled that what gets locked is what *extends*
+a Character rather than the reading or the fixing of one.
+
+Every edit reloads both halves. A corrected level changes the values above it — hit points, THAC0,
+what the kit granted — and a sheet showing yesterday's numbers beside today's timeline would be
+worse than one that refused the edit.
+
+Removing a level takes its choices with it, because they travelled in the event that made them.
+§6.3 put them there for exactly this.
+
 ## What is left
-- **Editing the timeline in the interface.** The engine corrects an event and answers for it;
-  the sheet shows the timeline and advances, and does not yet let you rewrite a past level.
 - **Equipment, encumbrance and spell selection**, which want a corpus the slice does not have.
 - **Constitution is not in the hit points.** The bonus is a table read with a per-class cap, and
   a plausible-looking total that quietly omits it is the kind of wrong number the rest of this

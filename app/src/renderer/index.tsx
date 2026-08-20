@@ -103,7 +103,11 @@ function App(): React.JSX.Element {
     return (
       <main>
         <button type="button" className="back" onClick={() => { setSheet(undefined); void refresh(); }}>← back</button>
-        <Sheet view={sheet} id={openId} />
+        <Sheet
+          view={sheet}
+          id={openId}
+          onChanged={() => { if (openId !== undefined) void api.open(openId).then(setSheet); }}
+        />
       </main>
     );
   }
