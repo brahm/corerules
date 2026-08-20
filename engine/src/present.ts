@@ -35,6 +35,14 @@ export interface AsideLine {
   option?: string;
 }
 
+/** Correction 17: what changes when there is somebody on the other side of the question. */
+export interface Versus {
+  creature: Id;
+  name: string;
+  book: string;
+  changes: { path: string; value: number | string | undefined }[];
+}
+
 export interface SheetView {
   name: string;
   /** Race / class / kit, in the order the layers were applied. */
@@ -46,6 +54,8 @@ export interface SheetView {
   /** Correction 14: `bounded` is what a `from` list means once the pack has declared it —
    *  `closed` licenses a refusal, `example` and `undeclared` do not. */
   owed: { kind: string; count: number; from?: string[]; bounded: "closed" | "example" | "undeclared" | "none" }[];
+  /** Empty for a character no rule qualifies by an opponent, which is most of them. */
+  versus: Versus[];
   /** §6.4: those specific proficiencies, not a count, and shown or it becomes a phantom bug. */
   debt: string[];
   aside: AsideLine[];
@@ -68,6 +78,48 @@ const named = (sheet: Sheet, id: Id): string => sheet.pack.byId.get(id)?.name ??
 const line = (c: Contribution): ValueLine["from"][number] => ({
   record: c.source.name, book: c.source.book, op: c.op, value: c.value,
 });
+
+/**
+ * **Correction 17, arriving as something you can see.**
+ *
+ * *"How does this NPC react to you"* has no meaning without the NPC, and until now every rule
+ * that named one was permanently undecidable — the dwarf's +1 against orcs sat in the pack and
+ * reached no sheet. A second subject makes it answerable, and this makes it VISIBLE without the
+ * player having to know the question: the sheet says which foes change its numbers.
+ *
+ * The candidates come from the character's own layers, never from the creature list. A pack with
+ * three hundred monsters would otherwise produce three hundred rows, of which four differ — and
+ * the four are the rules the character actually has.
+ */
+function versus(character: Character, base: Sheet): Versus[] {
+  const foes = new Set<Id>();
+  for (const layer of base.layers) {
+    for (const e of layer.record.effects ?? []) {
+      for (const clause of e.when ?? []) {
+        const conds = "anyOf" in clause ? clause.anyOf : [clause];
+        for (const c of conds) {
+          if ("member" in c && "field" in c.member && c.member.field === "opponent.creature") {
+            for (const id of c.anyOfIds) foes.add(id);
+          }
+        }
+      }
+    }
+  }
+
+  const out: Versus[] = [];
+  for (const creature of [...foes].sort()) {
+    const s = character.sheet(creature);
+    const paths = new Set([...s.fields.keys(), ...base.fields.keys()]);
+    const changes = [...paths].sort()
+      .map((path) => ({ path, value: s.view(path).value, was: base.view(path).value }))
+      .filter((c) => c.value !== c.was)
+      .map(({ path, value }) => ({ path, value }));
+    if (changes.length === 0) continue;
+    const record = base.pack.byId.get(creature);
+    out.push({ creature, name: record?.name ?? creature, book: record?.provenance?.section[0] ?? "?", changes });
+  }
+  return out;
+}
 
 export function present(character: Character): SheetView {
   const sheet = character.sheet();
@@ -114,6 +166,7 @@ export function present(character: Character): SheetView {
       ...(o.from !== undefined ? { from: o.from.map((id) => named(sheet, id)) } : {}),
       bounded: o.from === undefined ? "none" as const : o.listing ?? "undeclared" as const,
     })),
+    versus: versus(character, sheet),
     debt: character.debt().map((id) => named(sheet, id)),
     aside,
     complaints: sheet.pack.complaints.map((c) => `[${c.area}] ${c.message}`),
@@ -152,6 +205,12 @@ export function render(view: SheetView): string {
     out.push("", "CHOICES OWED");
     for (const o of view.owed) {
       out.push(`  ${o.count} x ${o.kind}${o.from !== undefined ? ` from ${o.from.length}` : ""} — ${BOUND[o.bounded]}`);
+    }
+  }
+  if (view.versus.length > 0) {
+    out.push("", "AGAINST A NAMED FOE");
+    for (const v of view.versus) {
+      out.push(`  ${v.name.padEnd(14)}${v.changes.map((c) => `${c.path} ${String(c.value)}`).join(", ")}  — ${v.book}`);
     }
   }
   if (view.debt.length > 0) {

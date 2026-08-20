@@ -42,7 +42,10 @@ test("a marked STRUCTURAL effect is applied, with the marker riding on the entry
 
 test("an undecidable predicate sets the effect aside — it is not treated as false", () => {
   const c = hillfolk();
-  assert.equal(c.aside.filter((a) => a.because === "undecidable").length, 1);
+  // Two, and they are undecidable for different reasons that both matter. One asks about a mood
+  // the sheet has no field for; the other asks who the character is fighting, and correction 17
+  // makes that answerable only when the question supplies an opponent.
+  assert.equal(c.aside.filter((a) => a.because === "undecidable").length, 2);
 });
 
 test("an optional rule is withheld until the campaign plays it, and named when it is", () => {

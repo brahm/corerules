@@ -656,12 +656,30 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    level. The closed set has halving and division and nothing that multiplies by a level. Known
    unknown #4 firing a second time, in a second form. **A third of them declare a starting level**
    (finding 23), so a bare `perLevel(N)` would be wrong on those — the repair needs an offset.
-17. **The best-evidenced missing piece is a SECOND SUBJECT, not an operand.**
+17. **RESOLVED — the second subject is a property of the QUESTION, and that is why it was hard to place.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 49) **48 of 134 kits (36%)** adjust a
    reaction roll and **27 qualify it by the other party** — its race, its trade, whether it knows
    something about the character. The mechanic is relational by construction: *how does this NPC react
    to you* has no meaning without the NPC. Larger to add than any operand repair this map has
    proposed, and now better evidenced than all of them.
+   **Applied, and it was small — because the correction had it filed as a missing subject when it
+   is a missing ARGUMENT.** Everything this map tried to add was a thing the character *has*: an
+   operand, a scalar, a layer. The other party is none of those. It is not something the character
+   carries into the next encounter, and modelling it as a layer would have made *"what is your
+   attack roll"* answerable only by inventing a foe. So `Sheet` takes an `against`, the predicate
+   resolves `opponent.creature` from it, and **with nobody named every such rule stays undecidable**
+   — which is the honest answer to that question asked with no one on the other side of it.
+   The dwarf and the gnome are the whole demonstration. Nine creatures change a dwarf's numbers,
+   **and until now not one of them reached a sheet**: `+1 to hit` against orcs, goblins, hobgoblins
+   and half-orcs, `−4` to the attack rolls of giants, ogres, ogre magi, titans and trolls. They had
+   been in the pack since the races were transcribed, correctly modelled, permanently unreachable.
+   And the display is where the correction earns its keep: **the sheet says which foes change its
+   numbers**, computed from the character's own layers and never from the creature list. A pack with
+   three hundred monsters would otherwise print three hundred rows of which four differ — and the
+   four are the rules the character actually has.
+   What is NOT closed is correction 38's residue: the comparison between two characters, the other
+   party's knowledge, a value rewritten by a play event. Those are four different problems and only
+   one of them is a language feature. This closes the one the corpus states most often.
 16b. **RESOLVED — known unknown #2.** ([Ticket 13](issues/13-transcribe-the-proving-slice.md),
    session 49) A `lookupTable` now declares **`supplies`**: the **field path it fills**, in the same
    vocabulary the effects use, so the Engine finds a table by naming the field it is computing. Chosen
@@ -1368,8 +1386,7 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    unarmoured character — Table 46 has a row that happens to name a single state — and refuses
    everything else by name. What is owed is an equipment list from Tables 43–46, keyed by item,
    with Table 46 rewritten as a rule over items rather than a lookup over prose.
-62. **The extraction dropped the words that say whether a list is a list, and 0 of 77 can be
-   classified without reopening the books.** ([Engine ticket 06](../engine-v1/issues/06-the-evaluator.md),
+62. **RESOLVED — the books were reopened, and the answer was not the one correction 14 predicted.** ([Engine ticket 06](../engine-v1/issues/06-the-evaluator.md),
    applying correction 14) `such as`, `e.g.` and `etc.` are **field prose**, and the pipeline's whole
    posture is that field prose does not enter a record — §1's constraint and correction 29's
    `<I>`-markup lesson both push the same way. So the discriminator that decides whether a `from`
@@ -1385,9 +1402,15 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    **18 of the 77 are already suspect from inside the pack**, needing no book: a one-member `from`
    under a closed reading is a choice with one option, which is a `grant` misfiled. Those are the
    cheapest to review and the likeliest to be wrong.
-   What is owed: the extractor keeps the exemplary markers as a `listing` when it builds the list —
-   a per-field boolean, not prose, so §1's constraint is untouched — and the existing 77 are a
-   re-extraction, not a hand pass.
+   ~~What is owed: the extractor keeps the exemplary markers as a `listing` when it builds the list~~
+   **Done, by going back to the webhelp rendition the anchors point into.** Every one of the 61
+   records carrying a `from` was re-read against its own source page, matching each list's members
+   to the sentence that states them and asking whether an exemplary marker attaches **to that
+   list** — not to the page.
+   **46 of 77 are declared `closed` on evidence**; 31 are left undeclared because the members are
+   not all named on the page or sit too far apart for one sentence to hold them, and undeclared is
+   the state designed for exactly that. **Not one is exemplary.** See correction 64 for why, and
+   for what the one case correction 14 quoted turned out to be.
 63. **RESOLVED on sight — every weapon in the pack was carrying a nonweapon rule's doubt, and
    uncertainty in the wrong place is not caution.** ([Engine ticket 06](../engine-v1/issues/06-the-evaluator.md),
    applying correction 33) The slot-cost function was one function for both kinds, so it asked
@@ -1404,6 +1427,29 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    where the damage is local.
    Found only because correction 33 made someone read the function while thinking about weapons.
    Nothing was failing; 119 records were quietly hedged, and every test passed.
+64. **Correction 14's 68% was counted at the wrong grain, and the transcription had already solved
+   the problem it was worried about.** ([Engine ticket 06](../engine-v1/issues/06-the-evaluator.md),
+   resolving correction 62) *"91 of 134 kits carry `such as`, `e.g.` or `etc.`"* is true and it is a
+   **page-level** count. Re-read against the source at clause level — the sentence that states each
+   list, not the page that contains it — **at most 2 of 77 lists have an exemplary marker attached
+   to them**, and on inspection neither is what it looked like. The words are all over kit prose:
+   flavour, DM advice, nonweapon recommendations, a sentence about people rather than weapons.
+   **This is correction 7's shape exactly** — a real alarm resting on a measurement taken where the
+   thing being measured is not. There the regex asked for the wrong word order and undercounted
+   disjunction by 34; here the unit of counting was a page and the answer was off by a factor of
+   forty. Both were caught only by going back to the source with the specific claim in hand.
+   **And the one case correction 14 quoted is the finding.** *"a concealable hand weapon such as a
+   dagger, knife, or hand axe"* is the Trader, `cbd:DD04661` — which carries **two** weapon
+   requirements: `phb:light-crossbow` with a list, and the concealable hand weapon **with no `from`
+   at all**, its prose kept as text. The transcriber had already refused to enumerate an exemplary
+   list, four years before anyone worried about it. So the pack's practice was right, undocumented,
+   and unenforced — which is the same three words as correction 6's `provenanceMode`, and the same
+   lesson: **a convention nothing states is a convention nobody can rely on**, even when everybody
+   has been following it.
+   The repair still stands and is now better justified. `listing` does not exist to catch exemplary
+   lists — there are barely any. It exists so that **a genuinely closed list can license a refusal**,
+   which 46 of them now do, and so that the 31 the source cannot settle stay `unknown` instead of
+   being guessed either way.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack
@@ -1427,7 +1473,7 @@ Read properly, the thirty-one sort into five kinds:
 | **Superseded by a later entry** | 9 → 16b · 16, 16c, 16d → 16e · 22 → 22b · 23 → 58 | Nothing. The later entry is the answer, and it carries the measurement that made the earlier one obsolete. |
 | **Owed to a document that stopped being normative** | 1, 2, 3 | Nothing. [Engine ticket 01](../engine-v1/issues/01-which-spec-does-the-engine-implement.md) made `spec.md` §§3, 4 and 7 non-normative; of the nineteen spec-touching entries only correction 6 ever survived, and it is applied. |
 | **Findings that ask for nothing** | 4, 13, 21, 30, 38, 39, 60 | Nothing to build. A caveat about reading a histogram, an accepted consequence of id minting, a risk inherited by whoever transcribes more books, a silence in the source. Deleting them would lose the reason a later decision looks the way it does. |
-| **Genuinely open** | **17, 20, 34, 61, 62** | Work. And two of those five are already done in code — see below. |
+| **Genuinely open** | ~~17, 20, 34, 61, 62~~ → **61** | Work. Four of the five closed in the session that wrote this table; see below. |
 
 Of the five: **20** (*two pack files contribute to one kind*) and **34** (*a parent reference is not
 a feature of races*) are **implemented and unrecorded** — `pack.ts` merges arrays across files with
@@ -1435,17 +1481,21 @@ the correction's own sentence in a comment, and `variantOf` is in the schema, in
 by `choice.ts` when it walks a class chain. They were verified rather than trusted, which is the
 only reason to say so.
 
-So what is actually outstanding is **three**, and they are not the same kind of thing:
+**Written as three outstanding; two of them closed the same day.**
 
-- **17 — the second subject.** 48 of 134 kits adjust a reaction roll and 27 qualify it by the other
-  party. Partly closed already: correction 32's field-path scalar took it further than anyone
-  expected (correction 36's fourteen effects became four), and correction 38's read of the eighteen
-  markers put the residue at **nine, which are four different problems**. Only one of the four is a
-  language feature. It is the largest thing on the list and the least ready to be built.
-- **61 — armour class.** Blocked on the corpus, not the format: Table 46 rates combinations rather
-  than pieces, and there is no equipment list to match one against.
-- **62 — the exemplary-list markers.** A re-extraction, and correction 14 has already made the
-  Engine safe in the meantime by refusing to read silence as closedness.
+- **17 — the second subject.** Closed. It had been filed as the largest thing on the list because
+  everyone read it as a missing *subject*; it is a missing *argument*, and once asked of the
+  question rather than of the character it took an optional field and a line in the predicate.
+  Correction 38's residue — a comparison between two characters, the other party's knowledge, a
+  value a play event rewrites — is genuinely still open and is **not** correction 17.
+- **62 — the exemplary-list markers.** Closed by re-reading the source, which turned out to be
+  reachable: the anchors point into a webhelp rendition that is still on disk. 46 of 77 lists
+  declared, and correction 64 for what the re-read actually found.
+- **61 — armour class.** The one left, and the only one on the whole list blocked on something
+  neither the format nor the Engine can supply: **there is no equipment list**, because Table 46
+  rates combinations rather than pieces and nothing else in tier one enumerates what a character
+  wears. It is corpus work — [the corpus map](map.md)'s, resumed — and the Engine already refuses
+  it by name in the meantime, which is the correct behaviour and not a placeholder.
 
 **The lesson is about the artifact rather than the corpus.** A list that records findings and a list
 that tracks work are different documents, and this one has been doing both — which is why it can say

@@ -74,3 +74,21 @@ test("the text rendering says the same things, and is what a bug report pastes",
   assert.match(text, /NOT ON THE SHEET — your table has not said/);
   assert.match(text, /2 x language — unbounded/);
 });
+
+test("the sheet says which foes change its numbers, and stays silent when none do", () => {
+  // Correction 17. *"How does this NPC react to you"* has no meaning without the NPC, so every
+  // rule naming one was permanently undecidable and the dwarf's +1 against orcs reached no
+  // sheet. The candidates come from the character's own layers rather than from the creature
+  // list — a pack with three hundred monsters would otherwise print three hundred rows, of
+  // which four differ, and the four are the rules the character actually has.
+  const c = Character.create(pack, { name: "Someone", race: "test:hillfolk", scores: {} });
+  c.advance([{ class: "test:fighter", die: 8 }]);
+  const v = present(c).versus;
+  assert.equal(v.length, 1, "the bear is in the pack and no rule of this character names it");
+  assert.equal(v[0]!.name, "Wolf");
+  assert.deepEqual(v[0]!.changes, [{ path: "attackRoll.melee", value: 1 }]);
+
+  // The bear is a record in the same pack and no row mentions it, which is the half that keeps
+  // this readable: the section is the character's rules, not the pack's bestiary.
+  assert.equal(v.some((x) => x.creature === "test:bear"), false);
+});

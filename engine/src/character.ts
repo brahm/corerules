@@ -128,11 +128,13 @@ export class Character {
 
   /** The layer stack §4 walks, in order. Order never changes the answer — the six operations
    *  commute — so this is for reading, not for semantics. */
-  sheet(): Sheet {
+  /** `against` is correction 17's second subject: who the question is about, never a layer. */
+  sheet(against?: Id): Sheet {
     const s = new Sheet(this.pack, {
       scores: this.file.scores,
       levels: this.levels(),
       options: this.file.options,
+      ...(against !== undefined ? { against } : {}),
     });
     s.apply(this.pack.get(this.file.race, "the character's race"), "race");
     if (this.file.subrace !== undefined) {

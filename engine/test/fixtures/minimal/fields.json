@@ -24,6 +24,22 @@
     },
     {
       "path": "surefooting"
+    },
+    {
+      "path": "stealth.bonus",
+      "note": "Correction 11: a total with a ceiling over it."
+    },
+    {
+      "path": "morale",
+      "note": "Correction 11: a total with a floor under it."
+    },
+    {
+      "path": "farsight.range",
+      "note": "Correction 25: two chances that fall through."
+    },
+    {
+      "path": "attackRoll.melee",
+      "note": "Correction 17: qualified by who is on the other side."
     }
   ]
 }

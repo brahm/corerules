@@ -503,6 +503,37 @@ longsword. Nothing failed and every test passed. **§5.4's third answer costs it
 each time it fires where there is no question**, which makes it unlike a wrong number: the damage is
 not local.
 
+### The second subject, and a measurement that was off by forty
+
+**Correction 17 was the largest thing on the corrections list and it took an optional field**, which
+is worth recording as a mistake in classification rather than as a small win. *"How does this NPC
+react to you"* was filed as a missing SUBJECT, so every proposal was a thing the character has — an
+operand, a scalar, a layer. The other party is none of those: **it is an argument to the question**,
+not a property of the answer. `Sheet` takes an `against`, the predicate resolves `opponent.creature`
+from it, and with nobody named every such rule stays undecidable, which is the honest answer to
+*"what is your attack roll"* asked with no one on the other side of it.
+
+The dwarf is the demonstration. **Nine creatures change his numbers and not one had ever reached a
+sheet** — `+1` to hit orcs, goblins, hobgoblins and half-orcs; `−4` to the attack rolls of giants,
+ogres, ogre magi, titans and trolls. Modelled correctly since the races were transcribed, and
+unreachable because the question could not be asked. The sheet now lists them, computed from the
+character's own layers rather than from the creature list: a pack with three hundred monsters would
+otherwise print three hundred rows of which four differ.
+
+**Correction 62 was not blocked either.** The anchors point into a webhelp rendition still on disk,
+so all 61 records carrying a `from` were re-read against their own source pages — matching each
+list's members to the sentence that states them and asking whether an exemplary marker attaches to
+**that list** rather than to the page. **46 of 77 are now declared `closed`**; 31 stay undeclared
+because no single sentence holds their members, which is the state that exists for exactly that.
+
+And the re-read produced **correction 64**, which is the part worth carrying: *"91 of 134 kits carry
+`such as`"* is a page-level count, and at clause level **at most 2 of 77 lists are exemplary**. Off
+by a factor of forty, in the same shape as correction 7. Better still, the case correction 14
+quoted — *"a concealable hand weapon such as a dagger, knife, or hand axe"* — turns out to be a
+requirement the transcriber deliberately recorded **with no list at all**, four years before anyone
+worried about it. The practice was already right. It was simply never written down, and a convention
+nothing states is one nobody can rely on.
+
 ## What is left
 - **Equipment and encumbrance**, which want a corpus the slice does not have — and, per correction
   61, want Table 46 re-read as a rule over items before they can have one.

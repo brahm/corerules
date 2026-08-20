@@ -100,6 +100,22 @@
           "op": "adjust",
           "field": "morale",
           "by": 1
+        },
+        {
+          "op": "adjust",
+          "field": "attackRoll.melee",
+          "by": 1,
+          "when": [
+            {
+              "member": {
+                "field": "opponent.creature"
+              },
+              "anyOfIds": [
+                "test:wolf"
+              ]
+            }
+          ],
+          "text": "The hillfolk know wolves."
         }
       ]
     }
@@ -230,6 +246,28 @@
         "section": [
           "Fixtures",
           "Abilities"
+        ]
+      }
+    }
+  ],
+  "creatures": [
+    {
+      "id": "test:wolf",
+      "name": "Wolf",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Creatures"
+        ]
+      }
+    },
+    {
+      "id": "test:bear",
+      "name": "Bear",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Creatures"
         ]
       }
     }

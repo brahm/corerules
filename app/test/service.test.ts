@@ -28,7 +28,7 @@ test("the packs list says what a user needs to decide whether it is the right pa
   const { dir, library } = root();
   const [pack] = packs(library);
   assert.equal(pack!.id, "minimal");
-  assert.equal(pack!.records, 47);
+  assert.equal(pack!.records, 49);
   assert.match(pack!.hash, /^[0-9a-f]{12}$/);
   assert.deepEqual(pack!.complaints, []);
   rmSync(dir, { recursive: true });

@@ -287,6 +287,24 @@ export function Sheet(
         </section>
       )}
 
+      {view.versus.length > 0 && (
+        <section>
+          <h3>Against a named foe</h3>
+          {/* Correction 17: a rule that names the other party had nowhere to be shown, so the
+              dwarf's +1 against orcs sat in the pack and reached no sheet. The rows are the
+              character's own rules, never the pack's bestiary. */}
+          {view.versus.map((v) => (
+            <div className="value" key={v.creature}>
+              <span className="path">{v.name}</span>
+              <span className="amount">
+                {v.changes.map((c) => `${c.path} ${String(c.value)}`).join(", ")}
+              </span>
+              <div className="why">{v.book}</div>
+            </div>
+          ))}
+        </section>
+      )}
+
       {view.debt.length > 0 && (
         <section>
           <h3>Owed from an abandoned kit</h3>

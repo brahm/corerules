@@ -132,25 +132,44 @@ export class Sheet {
   readonly owed: Owed[] = [];
   readonly notes: string[] = [];
 
+  /**
+   * **Correction 17: the second subject.** Who this sheet is being computed AGAINST, where a rule
+   * asks — the dwarf's +1 to hit orcs, the gnome's −4 to a giant's attack roll.
+   *
+   * It is not a layer and must not become one. A layer is something the character IS; this is
+   * something the question is about, and it changes no value the character carries into the next
+   * encounter. Absent, every rule that names an opponent stays UNDECIDABLE, which is the honest
+   * answer to *"what is your attack roll"* asked with nobody on the other side of it.
+   */
+  readonly against?: Id;
+
   constructor(pack: Pack, opts: {
     scores?: Record<string, number>;
     levels?: Record<string, number>;
     options?: Iterable<string>;
+    against?: Id;
   } = {}) {
     this.pack = pack;
     this.scores = opts.scores ?? {};
     this.levels = opts.levels ?? {};
     this.options = new Set(opts.options ?? []);
+    if (opts.against !== undefined) this.against = opts.against;
   }
 
   private subject(): Subject {
     return {
       ability: (id) => this.scores[id],
       level: (id) => this.levels[id] ?? 0,
-      field: (path) => path === "alignment"
+      field: (path) => {
         // The alignment layer's own id, because that is what a prerequisite tests against.
-        ? this.layers.find((l) => l.role === "choice")?.record.id
-        : this.view(path).value,
+        if (path === "alignment") return this.layers.find((l) => l.role === "choice")?.record.id;
+        // Correction 17. The other party is asked of the question, not of the sheet — and with
+        // no opponent named this returns undefined, so the predicate is undecidable rather than
+        // false. *"You do not get your bonus against orcs"* and *"nobody said what you are
+        // fighting"* are different answers and §5.4 exists to keep them apart.
+        if (path === "opponent.creature") return this.against;
+        return this.view(path).value;
+      },
       has: (_kind, ref) => this.granted.some((g) => g.ref === ref),
     };
   }

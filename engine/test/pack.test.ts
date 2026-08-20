@@ -10,9 +10,9 @@ const fixture = (name: string) => join(here, "fixtures", name);
 test("a pack loads from its manifest", () => {
   const pack = new Pack(fixture("minimal"));
   assert.equal(pack.manifest.id, "minimal");
-  assert.equal(pack.byId.size, 47);
+  assert.equal(pack.byId.size, 49);
   assert.deepEqual([...pack.byKind.keys()].sort(), [
-    "abilities", "classes", "deities", "kits", "limitations", "lookupTables",
+    "abilities", "classes", "creatures", "deities", "kits", "limitations", "lookupTables",
     "nonweaponProficiencies", "proficiencyGroups", "races", "spells", "spheres",
     "subraces", "weaponProficiencies",
   ]);
@@ -30,8 +30,8 @@ test("ids are indexed flat, because they are globally scoped and not scoped by k
 test("`fields` is a declaration, not a kind", () => {
   const pack = new Pack(fixture("minimal"));
   assert.deepEqual([...pack.vocabulary].sort(), [
-    "asPrinted", "attackRoll", "detect.slope", "experienceAward.percent",
-    "hitDice.perLevel", "infravision.range", "reactionCheck", "surefooting",
+    "asPrinted", "attackRoll", "attackRoll.melee", "detect.slope", "experienceAward.percent", "farsight.range",
+    "hitDice.perLevel", "infravision.range", "morale", "reactionCheck", "stealth.bonus", "surefooting",
   ]);
   assert.equal(pack.byKind.has("fields"), false);
 });
