@@ -187,23 +187,38 @@ function weaponStep(pack: Pack, draft: Draft): Omit<Step, "key" | "title"> {
   if (draft.class === undefined) return { state: "waiting", offers: [] };
   const total = slotsFor(pack, draft.class, 1, "weapon");
   const chosen = (draft.chose ?? []).filter((c) => c.kind === "weaponProficiency");
-  const free = total - chosen.length;
+  // Correction 33: a group costs two slots or three, so the budget sums costs and does not
+  // count picks. Counting picks made a Broad Group the cheapest thing on the list.
+  const spent = chosen.reduce((n, c) => n + costOf(pack, c.ref, draft.class!).cost, 0);
+  const free = total - spent;
   const taken = new Set(chosen.map((c) => c.ref));
   const { allowed, bound } = permittedWeapons(pack, draft.class);
 
   const offers = pack.records("weaponProficiencies")
-    .filter((w) => w.groupKind === undefined && !taken.has(w.id))
+    .filter((w) => (w.groupKind === undefined || w.groupKind === "tight" || w.groupKind === "broad") && !taken.has(w.id))
     .map((w): Offer => {
-      if (!allowed.has(w.id)) {
-        return { id: w.id, name: w.name, book: bookOf(w), available: "no",
-                 because: `${bound ?? "this class"} does not permit it` };
+      const price = costOf(pack, w.id, draft.class!);
+      const line = { id: w.id, name: w.name, book: bookOf(w) };
+      // A group is bought whole, so what the class permits has to be asked of its members.
+      // Some-but-not-all is the interesting case and no book rules on it: buying a group you
+      // can only partly use is neither allowed nor forbidden anywhere, so it is `unknown` —
+      // §5.4's third answer, which is the whole reason the offers are three-valued.
+      const members = w.groupKind === undefined ? [w.id] : [...pack.expand(w.members ?? [])];
+      const usable = members.filter((m) => allowed.has(m));
+      if (usable.length === 0) {
+        return { ...line, available: "no", because: `${bound ?? "this class"} does not permit it` };
       }
-      if (free <= 0) {
-        return { id: w.id, name: w.name, book: bookOf(w), available: "no", because: "no slots left" };
+      if (price.cost > free) {
+        return { ...line, available: "no",
+                 because: free <= 0 ? "no slots left" : `${price.because}, and ${free} slot(s) left` };
       }
-      return { id: w.id, name: w.name, book: bookOf(w), available: "yes" };
+      if (usable.length < members.length) {
+        return { ...line, available: "unknown",
+                 because: `${bound ?? "this class"} permits ${usable.length} of its ${members.length} weapons, and no book says whether the group may still be bought` };
+      }
+      return { ...line, available: "yes", because: price.because };
     });
-  return { state: free === 0 ? "done" : "ready", offers, budget: { total, spent: chosen.length, free } };
+  return { state: free === 0 ? "done" : "ready", offers, budget: { total, spent, free } };
 }
 
 function proficiencyStep(pack: Pack, draft: Draft): Omit<Step, "key" | "title"> {

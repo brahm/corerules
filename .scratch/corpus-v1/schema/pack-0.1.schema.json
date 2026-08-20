@@ -120,7 +120,7 @@
       "pattern": "^(?:[0-9]*d[0-9]+(?:[x*][0-9]+)?(?:[+-][0-9]+)?|\\([0-9]*d[0-9]+(?:[+-][0-9]+)?\\)[x*][0-9]+)$"
     },
     "operand": {
-      "description": "Ticket 15: known unknown #4 fired — 31 corpus occurrences of halving, division and rounding inside kit effects. NOT a seventh operation: 'adjust' still sums, only its operand widens. Used by effects AND by predicate values, since the arithmetic appears on both sides. WIDENED by ticket 13 finding 110: a fourth arm for `N on 1dM`, which is a value the corpus states directly and no arithmetic over integers can recover. WIDENED AGAIN by ticket 13 finding 118: a fifth arm for a PLAIN die. Finding 110 gave `dice` a consumer only as a threshold — `1-5 on 1d6` — and a hit die is the die itself as a value, which the four groups state in one sentence each: `set hitDice.perLevel to 1d10`.",
+      "description": "Ticket 15: known unknown #4 fired — 31 corpus occurrences of halving, division and rounding inside kit effects. NOT a seventh operation: 'adjust' still sums, only its operand widens. Used by effects AND by predicate values, since the arithmetic appears on both sides. WIDENED by ticket 13 finding 110: a fourth arm for `N on 1dM`, which is a value the corpus states directly and no arithmetic over integers can recover. WIDENED AGAIN by ticket 13 finding 118: a fifth arm for a PLAIN die. Finding 110 gave `dice` a consumer only as a threshold — `1-5 on 1d6` — and a hit die is the die itself as a value, which the four groups state in one sentence each: `set hitDice.perLevel to 1d10`. WIDENED AGAIN by correction 25: a sixth arm for an ordered chain of chances on one field, which is sequence INSIDE an effect rather than between layers.",
       "oneOf": [
         {
           "type": "integer"
@@ -136,6 +136,9 @@
         },
         {
           "$ref": "#/$defs/dice"
+        },
+        {
+          "$ref": "#/$defs/inOrder"
         }
       ]
     },
@@ -458,10 +461,18 @@
               "minimum": 1
             },
             "from": {
+              "description": "The choices this requirement may be satisfied from. **Say what the list IS with `listing` — a bare list is undeclared, not closed.**",
               "type": "array",
               "items": {
                 "$ref": "#/$defs/id"
               }
+            },
+            "listing": {
+              "description": "**Correction 14.** Whether `from` is the whole set or an illustration of it. Meaningful only beside a `from`.\\n\\n*'a concealable hand weapon such as a dagger, knife, or hand axe'* — **91 of 134 kits (68%)** write `such as`, `e.g.` or `etc.`, so most `from` lists in the books are EXAMPLES. An Engine that reads a list as exhaustive refuses a legal choice, confidently, which is the one failure this project exists to avoid — and it is worse than a missing rule, because a confident refusal is indistinguishable from a rule.\\n\\nA3, applied to a list: the Engine may not infer closedness from silence. Absence of this field means UNDECLARED, and an unlisted candidate is then `unknown` — offered with the doubt named, never refused. `closed` is what licenses a refusal; `example` says the listed ids are suggestions and the rule bounds nothing the pack can check.\\n\\n**Optional on purpose, and the number is the reason.** The words that mark a list as exemplary live in the field prose, which the transcription does not carry — so **0 of the slice's 77 `from` lists can be classified without going back to the books**. Requiring it would fail the pack for a fact the pack was never given. The checker counts undeclared lists instead, the way it counts provenance violations.",
+              "enum": [
+                "closed",
+                "example"
+              ]
             },
             "when": true,
             "text": true,
@@ -483,6 +494,13 @@
           "properties": {
             "op": {
               "const": "set"
+            },
+            "bound": {
+              "description": "**Correction 11.** Present where `to` is a LIMIT on the field's total rather than its value. `atMost` is a ceiling, `atLeast` a floor; absent, `set` overwrites as it always has.\n\nFive records want this and there is nothing between the two operations that exist: caps in the Tunnelrat and Pathfinder, floors in the Bilker, Highborn and Patrician, against ten kits that state a bonus IS cumulative. `adjust` sums and `set` overwrites; *'the bonus may not exceed'* is neither.\n\n**It is not a seventh operation, and the reason is the one that matters.** §4.3's closure defends ORDER-INDEPENDENCE, and min and max are commutative and associative — two ceilings compose to the tighter one from either direction, exactly as two `adjust`s compose to their sum. What correction 11 measured failing was ADDITIVITY, which the design had been treating as the same property. So this rides on `set`, the operation that already decides a field's value instead of contributing to it, and the six stand.\n\nA bounded `set` does not compete with a plain one and never contests: bounds compose with each other and then clamp whatever the sums and sets produced. A floor above a ceiling is the one combination with no answer, and the Engine reports it rather than picking a side.",
+              "enum": [
+                "atMost",
+                "atLeast"
+              ]
             },
             "field": {
               "type": "string"
@@ -645,6 +663,36 @@
       "required": [
         "rollAtMost",
         "on"
+      ],
+      "additionalProperties": false
+    },
+    "inOrder": {
+      "description": "**Correction 25.** An ordered chain of chances for ONE field, tried until one succeeds. The halfling has a 15% chance of infravision to 60 feet and, FAILING THAT, a 25% chance of it to 30 feet.\n\nA single chance is a field; two that fall through are not, because §4.3's layers SUM. The map called this the first place where order-independence cost something measurable, and the resolution is to see WHERE the sequence lives. §4.3 defends order-independence BETWEEN layers — so that the answer does not depend on which book was read first, and so that a pack may be added without reordering anything. This sequence is inside a single effect of a single record, stating one rule the book states in one sentence. Nothing about it depends on layer order, and two of them on one field still contest exactly as two `set`s do.\n\n**Flattening was the alternative and A3 forbids it.** The second chance is 25% OF THOSE WHO FAILED THE FIRST, so the unconditional pair is 15% and 21.25% — a number the book does not print, arrived at by arithmetic the Engine would be doing on the reader's behalf. Correction 24 settled this shape already: converting `1-5 on 1d6` to 83% is inference, and the pack holds the roll the book specifies.\n\nSo the Engine does not resolve the chain. It shows it, in the book's order, the way it shows a bare `rollAtMost`.",
+      "type": "object",
+      "properties": {
+        "inOrder": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "properties": {
+              "chance": {
+                "$ref": "#/$defs/rollUnder"
+              },
+              "value": {
+                "$ref": "#/$defs/operand"
+              }
+            },
+            "required": [
+              "chance",
+              "value"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "inOrder"
       ],
       "additionalProperties": false
     }

@@ -119,3 +119,29 @@ test("the weapon budget is bounded by what the class may take at all", () => {
   assert.ok(refused.some((o) => /Fighter Weapon Restriction does not permit it/.test(o.because ?? "")) === false,
     "the thief is not bound by the fighter's rule");
 });
+
+test("a weapon group is a thing you buy, and it costs what the book charges for it", () => {
+  // Correction 33. Table 44's headings are typography; the Complete Fighter's makes grouping a
+  // purchase — a Tight Group two slots, a Broad Group three — and until now the wizard offered
+  // neither, so the one weapon rule that costs a player something was missing entirely.
+  const step = steps(pack, { class: "test:fighter" }).find((s) => s.key === "weapons")!;
+  const tight = step.offers.find((o) => o.id === "test:group-blades")!;
+  assert.equal(tight.available, "yes");
+  assert.match(tight.because!, /tight group of 2 weapons, 2 slots/);
+
+  // And the budget spends by cost, not by pick. Counting picks made a Broad Group the cheapest
+  // thing on the list, which is exactly backwards.
+  const after = steps(pack, { class: "test:fighter", chose: [{ kind: "weaponProficiency", ref: "test:group-blades" }] })
+    .find((s) => s.key === "weapons")!;
+  assert.equal(after.budget!.spent, 2);
+});
+
+test("a group the class may only partly use is unknown, because no book rules on it", () => {
+  // §5.4's third answer, arriving in a place nobody designed for it: the thief may take one of
+  // the Blades group's two weapons. Refusing the group would invent a rule; allowing it would
+  // invent a different one. Against the real slice a cleric's Polearms is 1 of 21.
+  const step = steps(pack, { class: "test:thief" }).find((s) => s.key === "weapons")!;
+  const partly = step.offers.find((o) => o.id === "test:group-blades")!;
+  assert.equal(partly.available, "unknown");
+  assert.match(partly.because!, /permits 1 of its 2 weapons/);
+});

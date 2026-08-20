@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { Pack } from "../src/pack.ts";
-import { Sheet } from "../src/sheet.ts";
+import { satisfies, Sheet } from "../src/sheet.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pack = new Pack(join(here, "fixtures", "minimal"));
@@ -119,4 +119,55 @@ test("a limitation imposes itself on the class it names, and an except lifts it"
                provenance: { section: ["Fixtures"] },
                effects: [{ op: "except", kind: "weaponProficiency", ref: "test:fighter-weapon-restriction" }] }, "kit");
   assert.equal(free.permitted("weaponProficiency", weapons).allowed.size, weapons.length);
+});
+
+test("a from-list is not a refusal until the pack says it is all of them", () => {
+  // Correction 14. 68% of the books' `from` lists are illustrations — *"a concealable hand
+  // weapon such as a dagger, knife, or hand axe"* — and the words that mark them as such are
+  // field prose the transcription does not carry. So the Engine gets three answers and only
+  // a declared `closed` may produce the middle column's `no`.
+  const owed = hillfolk({ subrace: true }).owed.filter((o) => o.from !== undefined);
+  const [closed, example, undeclared] = owed;
+
+  assert.equal(satisfies(closed!, "test:sabre"), "yes");
+  assert.equal(satisfies(closed!, "test:short-blade"), "no");
+
+  assert.equal(satisfies(example!, "test:sabre"), "yes");
+  assert.equal(satisfies(example!, "test:short-blade"), "unknown");
+
+  assert.equal(satisfies(undeclared!, "test:sabre"), "yes");
+  assert.equal(satisfies(undeclared!, "test:short-blade"), "unknown");
+
+  // And a requirement with no list at all cannot answer either way about anything.
+  const open = hillfolk().owed.find((o) => o.from === undefined);
+  assert.equal(satisfies(open!, "test:sabre"), "unknown");
+});
+
+test("a bound clamps the total instead of joining it, and two bounds do not contest", () => {
+  // Correction 11. Five records want something between summing and overwriting — caps in the
+  // Tunnelrat and Pathfinder, floors in the Bilker, Highborn and Patrician — and `adjust` sums
+  // while `set` overwrites. A ceiling is neither.
+  assert.equal(hillfolk().view("stealth.bonus").value, 7);
+  assert.equal(hillfolk({ subrace: true }).view("stealth.bonus").value, 5);
+
+  // A floor raises a total the layers left below it. The sum is 1; the class says never under 4.
+  assert.equal(hillfolk().view("morale").value, 4);
+});
+
+test("a floor above a ceiling has no answer, and the Engine says so rather than picking", () => {
+  const c = hillfolk({ subrace: true });
+  // The subrace caps morale at 2 and the class floors it at 4. Applying either one and calling
+  // it the answer would hide the contradiction at the moment it matters, so neither is applied
+  // and the raw total stands with a note naming both records.
+  assert.equal(c.view("morale").value, 1);
+  assert.match(c.notes.join("\n"), /floor of 4 sits above a ceiling of 2/);
+});
+
+test("chances that fall through are shown in the book's order, never flattened to a percentage", () => {
+  // Correction 25. A halfling has a 15% chance of infravision to 60 feet and, failing that, a
+  // 25% chance of it to 30 feet. The second chance is 25% OF THOSE WHO FAILED THE FIRST, so the
+  // unconditional pair is 15% and 21.25% — a number no book prints, which is why the Engine
+  // shows the chain instead of resolving it. Correction 24's refusal to infer, one shape over.
+  const v = hillfolk({ subrace: true }).view("farsight.range");
+  assert.equal(v.value, "15- on 1d100 for 60; failing that, 25- on 1d100 for 30");
 });

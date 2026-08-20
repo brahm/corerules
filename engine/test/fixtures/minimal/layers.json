@@ -90,6 +90,16 @@
               "ability": "test:dexterity"
             }
           }
+        },
+        {
+          "op": "adjust",
+          "field": "stealth.bonus",
+          "by": 3
+        },
+        {
+          "op": "adjust",
+          "field": "morale",
+          "by": 1
         }
       ]
     }
@@ -115,6 +125,70 @@
           "op": "set",
           "field": "detect.slope",
           "to": 50
+        },
+        {
+          "op": "require",
+          "kind": "weaponProficiency",
+          "count": 1,
+          "from": [
+            "test:sabre",
+            "test:greatsword"
+          ],
+          "listing": "closed"
+        },
+        {
+          "op": "require",
+          "kind": "weaponProficiency",
+          "count": 1,
+          "from": [
+            "test:sabre"
+          ],
+          "listing": "example"
+        },
+        {
+          "op": "require",
+          "kind": "language",
+          "count": 1,
+          "from": [
+            "test:sabre"
+          ]
+        },
+        {
+          "op": "set",
+          "field": "stealth.bonus",
+          "to": 5,
+          "bound": "atMost",
+          "text": "A ceiling on the total, not a value in it."
+        },
+        {
+          "op": "set",
+          "field": "morale",
+          "to": 2,
+          "bound": "atMost",
+          "text": "Sits below the class's floor, which is the one arrangement with no answer."
+        },
+        {
+          "op": "set",
+          "field": "farsight.range",
+          "to": {
+            "inOrder": [
+              {
+                "chance": {
+                  "rollAtMost": 15,
+                  "on": "1d100"
+                },
+                "value": 60
+              },
+              {
+                "chance": {
+                  "rollAtMost": 25,
+                  "on": "1d100"
+                },
+                "value": 30
+              }
+            ]
+          },
+          "text": "Two chances that fall through, which is sequence inside one effect."
         }
       ]
     }

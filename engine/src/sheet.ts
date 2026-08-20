@@ -24,7 +24,7 @@
  */
 import type { Pack } from "./pack.ts";
 import { predicate, scalar, type Subject, type Truth } from "./predicate.ts";
-import type { Effect, Id, Operand, Record_, Scalar } from "./types.ts";
+import type { Effect, Id, Operand, Record_, RollUnder, Scalar } from "./types.ts";
 
 export type Role = "race" | "subrace" | "class group" | "class" | "kit" | "deity" | "choice";
 
@@ -61,6 +61,8 @@ export interface Contribution {
   source: Source;
   op: "adjust" | "set";
   value: Value;
+  /** Correction 11: a ceiling or a floor on the total, rather than a value in it. */
+  bound?: "atMost" | "atLeast";
 }
 
 export interface View {
@@ -87,7 +89,29 @@ export interface Owed {
   kind: string;
   count: number;
   from?: Id[];
+  /** Correction 14: what the `from` list IS. Absent means the pack never said. */
+  listing?: "closed" | "example";
 }
+
+/**
+ * Whether a candidate satisfies an owed choice — and **a `from` list alone never says no.**
+ *
+ * *"a concealable hand weapon such as a dagger, knife, or hand axe"*: 68% of the books' `from`
+ * lists are illustrations, and the words that mark them as such are field prose the transcription
+ * does not carry. So the Engine cannot tell an exhaustive list from an exemplary one by looking,
+ * and A3 forbids it from guessing: **closedness is declared or it does not exist.**
+ *
+ * Three answers, and the middle one is the whole point. A confident `no` against a list that was
+ * only ever an example is the failure this project exists to avoid, and it is worse than a missing
+ * rule — a player cannot tell it from a real refusal, so they will believe it.
+ */
+export function satisfies(owed: Owed, candidate: Id): "yes" | "no" | "unknown" {
+  if (owed.from === undefined) return "unknown";
+  if (owed.from.includes(candidate)) return "yes";
+  return owed.listing === "closed" ? "no" : "unknown";
+}
+
+const roll = (v: RollUnder): string => `${v.rollAtMost}- on ${v.on}`;
 
 const book = (r: Record_, e: Effect): string =>
   (e.provenance ?? r.provenance)?.section[0] ?? "?";
@@ -191,7 +215,7 @@ export class Sheet {
           return;
         }
         const into = this.fields.get(e.field!) ?? [];
-        into.push({ source, op: e.op, value });
+        into.push({ source, op: e.op, value, ...(e.bound !== undefined ? { bound: e.bound } : {}) });
         this.fields.set(e.field!, into);
         return;
       }
@@ -206,16 +230,29 @@ export class Sheet {
         this.excepted.push({ source, kind: e.kind ?? "?", ref: e.ref! });
         return;
       case "require":
-        this.owed.push({ source, kind: e.kind ?? "?", count: e.count ?? 1, ...(e.from !== undefined ? { from: e.from } : {}) });
+        this.owed.push({ source, kind: e.kind ?? "?", count: e.count ?? 1,
+                         ...(e.from !== undefined ? { from: e.from } : {}),
+                         ...(e.listing !== undefined ? { listing: e.listing } : {}) });
         return;
     }
   }
 
   private operand(e: Effect): Value {
     const v: Operand | undefined = e.op === "set" ? e.to : e.by;
-    if (v === undefined) return undefined;
+    return v === undefined ? undefined : this.resolve(v);
+  }
+
+  private resolve(v: Operand): Value {
     if (typeof v === "number" || typeof v === "string") return v;
-    if ("rollAtMost" in v) return `${v.rollAtMost}- on ${v.on}`;
+    if ("rollAtMost" in v) return roll(v);
+    // Correction 25: the chain is SHOWN, not resolved. The halfling's second chance is 25% of
+    // those who failed the first, so flattening the pair to unconditional percentages would put
+    // a number on the sheet that the book does not print — correction 24's inference, again.
+    if ("inOrder" in v) {
+      return v.inOrder
+        .map((step, i) => `${i > 0 ? "failing that, " : ""}${roll(step.chance)} for ${String(this.resolve(step.value))}`)
+        .join("; ");
+    }
     // Discriminated on `supplies`, not on `of`: BOTH the computed operand and the table read
     // carry an `of`, and they mean different things — the computed one reads a scalar, the
     // table one names the record whose table to read. Checking `of` first types the table
@@ -299,12 +336,16 @@ export class Sheet {
     const from = this.fields.get(path) ?? [];
     if (from.length === 0) return { path, value: undefined, from };
 
-    const sets = from.filter((c) => c.op === "set");
+    // Correction 11: a bounded `set` is not a competing `set`. Two ceilings do not contest —
+    // they compose to the tighter one, from either direction — so they are taken out of the
+    // contest before it is judged and applied to whatever the rest produced.
+    const bounds = from.filter((c) => c.bound !== undefined);
+    const sets = from.filter((c) => c.op === "set" && c.bound === undefined);
     const adjust = from
       .filter((c) => c.op === "adjust" && typeof c.value === "number")
       .reduce((n, c) => n + (c.value as number), 0);
 
-    if (sets.length === 0) return { path, value: adjust, from };
+    if (sets.length === 0) return { path, value: this.clamp(path, adjust, bounds), from };
 
     let winner = sets[sets.length - 1]!;
     const distinct = new Set(sets.map((c) => String(c.value)));
@@ -320,7 +361,38 @@ export class Sheet {
       }
     }
     const v = winner.value;
-    return { path, value: typeof v === "number" ? v + adjust : v, from };
+    return { path, value: typeof v === "number" ? this.clamp(path, v + adjust, bounds) : v, from };
+  }
+
+  /**
+   * Correction 11's clamp. **The one thing between summing and overwriting**, which five records
+   * want and §4.3 had no room for: *"the bonus may not exceed"* is neither an `adjust` nor a `set`.
+   *
+   * Order-independent, which is why it needs no seventh operation: ceilings compose to the lowest
+   * and floors to the highest, and both are commutative, so the answer does not depend on which
+   * book was read first. What correction 11 measured failing was **additivity**, not commutation —
+   * the design had been treating those as one property.
+   *
+   * A floor above a ceiling is the one arrangement with no answer. The Engine reports it and
+   * leaves the value alone rather than picking whichever it applied second, because picking would
+   * make the contradiction invisible at exactly the moment it matters.
+   */
+  private clamp(path: string, value: number, bounds: Contribution[]): number {
+    if (bounds.length === 0) return value;
+    const of = (which: "atMost" | "atLeast"): number[] =>
+      bounds.filter((b) => b.bound === which && typeof b.value === "number").map((b) => b.value as number);
+    const ceiling = of("atMost");
+    const floor = of("atLeast");
+    const cap = ceiling.length > 0 ? Math.min(...ceiling) : undefined;
+    const bed = floor.length > 0 ? Math.max(...floor) : undefined;
+    if (cap !== undefined && bed !== undefined && bed > cap) {
+      this.notes.push(`${path}: a floor of ${bed} sits above a ceiling of ${cap}, so neither was applied — ${bounds.map((b) => b.source.record).join(", ")}`);
+      return value;
+    }
+    let out = value;
+    if (cap !== undefined) out = Math.min(out, cap);
+    if (bed !== undefined) out = Math.max(out, bed);
+    return out;
   }
 
   /** Ticket 05. `permitted = (∩ bounds still standing) \ (∪ explicit forbids)`. Intersection

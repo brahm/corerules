@@ -43,7 +43,9 @@ export interface SheetView {
   levels: { class: string; level: number }[];
   values: ValueLine[];
   granted: { name: string; book: string; rider?: string }[];
-  owed: { kind: string; count: number; from?: string[] }[];
+  /** Correction 14: `bounded` is what a `from` list means once the pack has declared it —
+   *  `closed` licenses a refusal, `example` and `undeclared` do not. */
+  owed: { kind: string; count: number; from?: string[]; bounded: "closed" | "example" | "undeclared" | "none" }[];
   /** §6.4: those specific proficiencies, not a count, and shown or it becomes a phantom bug. */
   debt: string[];
   aside: AsideLine[];
@@ -110,6 +112,7 @@ export function present(character: Character): SheetView {
     owed: sheet.owed.map((o) => ({
       kind: o.kind, count: o.count,
       ...(o.from !== undefined ? { from: o.from.map((id) => named(sheet, id)) } : {}),
+      bounded: o.from === undefined ? "none" as const : o.listing ?? "undeclared" as const,
     })),
     debt: character.debt().map((id) => named(sheet, id)),
     aside,
@@ -121,6 +124,14 @@ export function present(character: Character): SheetView {
  * The same view, as text. Not a fallback for the desktop application — a way to look at what
  * the interface will be given, without a window, and the thing a bug report can paste.
  */
+/** Correction 14: three of these four say the Engine may not refuse an unlisted choice. */
+const BOUND: Record<SheetView["owed"][number]["bounded"], string> = {
+  closed: "and the pack says that list is all of them",
+  example: "which the pack says are examples",
+  undeclared: "and the pack does not say whether that list is all of them",
+  none: "unbounded",
+};
+
 export function render(view: SheetView): string {
   const out: string[] = [];
   out.push(`${view.name} — ${view.hitPoints} hp`);
@@ -140,7 +151,7 @@ export function render(view: SheetView): string {
   if (view.owed.length > 0) {
     out.push("", "CHOICES OWED");
     for (const o of view.owed) {
-      out.push(`  ${o.count} x ${o.kind}${o.from !== undefined ? ` from ${o.from.length}` : " — unbounded"}`);
+      out.push(`  ${o.count} x ${o.kind}${o.from !== undefined ? ` from ${o.from.length}` : ""} — ${BOUND[o.bounded]}`);
     }
   }
   if (view.debt.length > 0) {

@@ -273,6 +273,15 @@ export function Sheet(
               <span className="amount dim">
                 {o.from === undefined ? "from a set the book does not enumerate" : `from ${o.from.length}`}
               </span>
+              {/* Correction 14: a list is not a refusal until the pack says it is all of them.
+                  68% of the books' lists are examples, and the words that say so are field
+                  prose the transcription does not carry — so silence stays silence here. */}
+              {o.bounded === "undeclared" && (
+                <div className="why">the pack does not say whether those are all of them</div>
+              )}
+              {o.bounded === "example" && (
+                <div className="why">the book gives those as examples, so others may qualify</div>
+              )}
             </div>
           ))}
         </section>

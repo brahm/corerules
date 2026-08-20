@@ -1,7 +1,7 @@
 # The evaluator
 
 Type: build
-Status: in progress — the evaluator runs; the interface has not started
+Status: in progress — the evaluator runs, the interface ships, and the corrections list is worked down to three
 
 ## What this builds
 
@@ -460,6 +460,48 @@ computes: 10 unarmoured, because Table 46 has a row that happens to name a singl
 anything worn a sentence naming what would have to exist first. The alternative was an AC that
 looked right for leather and was silently wrong for leather and shield, which is §5.2's failure
 mode with the shield doing the damage.
+
+### Five corrections applied, and what applying them cost
+
+Corrections 14, 11, 25 and 33 were the ones on the list that were both open and buildable; 63 is
+what 33 exposed on the way past. They are unrelated rules and they came out with one shape in
+common — **each had located its own problem one level away from where the problem was.**
+
+**14 — a list is not a refusal.** The repair is a `listing` declaration, and the direction is the
+whole thing: absent means UNDECLARED, so `satisfies()` answers `yes` / `no` / `unknown` and only a
+declared `closed` may say no. Three of four states forbid a refusal. Then the measurement:
+**77 of 121 `require` effects carry a list, 0 declare what it is**, and they cannot — see
+correction 62, the words that would classify them are field prose the transcription drops.
+The histogram is the part worth keeping: `{1: 18, 2: 30, …}`, so **18 lists have ONE member**, and
+a one-item list read as closed is not a choice at all.
+
+**11 — the clamp.** `set` gains `bound: atMost | atLeast`, and it is not a seventh operation
+because §4.3's closure defends *order-independence* while what five records broke was *additivity*.
+Min and max commute. Building it produced the piece the correction had not seen: a bounded `set`
+must be lifted out of ticket 03's contest before it is judged, since two ceilings on one field are
+not two books disagreeing — they compose to the tighter one. And a floor above a ceiling is applied
+neither way, with both records named.
+
+**25 — the fall-through.** *"A halfling has a 15% chance of infravision to 60 feet and, failing
+that, a 25% chance of it to 30 feet."* The correction called this the first place order-independence
+cost something measurable. It cost nothing: **§4.3 guarantees independence BETWEEN LAYERS**, and
+this sequence is inside one effect of one record stating one sentence of one book. A guarantee is
+about a scope, and nobody had asked this one what its scope was. The Engine shows the chain and
+never resolves it — flattening to 15% and 21.25% would put a number on the sheet no book prints.
+
+**33 — a weapon group is a thing you buy.** 15 tight groups and 4 broad in the slice, each carrying
+its own `slotCost`, so the price is the pack's and the arithmetic is the Engine's. Two things had to
+move: the wizard **offered no group at all**, and the weapon budget **counted picks instead of
+summing costs**, which made a Broad Group of 26 weapons the cheapest thing on the list. The case
+worth having is the one no book rules on — the cleric's permit-list reaches 1 of Polearms' 21
+weapons — and that offer comes back `unknown`.
+
+**63 — and underneath it, 119 weapons hedged for no reason.** One cost function served both kinds,
+so every weapon was asked Table 37's crossover question and answered *"no book says which group this
+belongs to"* — correction 60's sentence, true of a nonweapon proficiency and meaningless of a
+longsword. Nothing failed and every test passed. **§5.4's third answer costs its own credibility
+each time it fires where there is no question**, which makes it unlike a wrong number: the damage is
+not local.
 
 ## What is left
 - **Equipment and encumbrance**, which want a corpus the slice does not have — and, per correction

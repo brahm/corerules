@@ -250,6 +250,21 @@
       "members": [
         "test:blade"
       ]
+    },
+    {
+      "id": "test:thief-weapon-restriction",
+      "name": "Thief Weapon Restriction",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Limitations"
+        ]
+      },
+      "imposedBy": "test:thief",
+      "bounds": "weaponProficiency",
+      "members": [
+        "test:sabre"
+      ]
     }
   ]
 }

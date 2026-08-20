@@ -754,12 +754,25 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    a druid with a terrain, and carry `variantOf: phb:druid`. **Three books that could not have
    coordinated have asked the schema for the same thing**: it is how this corpus says *the same thing,
    more specific*, and it belongs in the format rather than being re-derived per kind.
-33. **A weapon group you can buy is not a weapon group that is printed.**
+33. **RESOLVED — the group is on the offer list now, priced, and the third answer turned up in it.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 133) Table 44's `isGroup` is a
    heading. The Complete Fighter's makes grouping a rule: a Tight Group costs **two** proficiency slots
    and a Broad Group **three**, and some weapons belong to no group at all. 20 groups over 143 members
    that cross books. The group/member split for the fourth time, and the first where the group is a
    thing a character spends on.
+   **Applied.** The slice has **15 tight groups and 4 broad** beside Table 44's 16 headings, each
+   carrying its own `slotCost`, so the price came from the pack and not from the Engine — §5.2's
+   line. Two things had to move with it. The wizard **offered no group at all** (it filtered on
+   `groupKind === undefined`), so the one weapon rule that costs a player something was missing
+   outright; and the weapon budget **counted picks rather than summing costs**, which made a Broad
+   Group of 26 weapons the cheapest thing on the list. A fighter now spends 3 of his 4 slots on
+   Pole Weapons and is told so in the refusal for the next one.
+   **The interesting case is the one no book rules on**: a group the class may only PARTLY use. The
+   cleric's permit-list reaches **1 of Polearms' 21 weapons**, the thief's **1 of Bows' 5**. Refusing
+   the group invents a rule; allowing it invents a different one — so the offer is `unknown`, which
+   is §5.4's third answer arriving somewhere nobody designed it for. It was not reached by looking
+   for it: it fell out of asking what a permit-list means when the thing being permitted is a set.
+   And see correction 63, which is what the same change exposed underneath.
 35. **RESOLVED — a table keyed by prose is usually the truth, not a defect.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 138) Finding 20 called prose row
    keys a defect. Over all 101 tables the v1 tier prints for character generation, **73 key on prose
@@ -854,12 +867,25 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    detection ability is `N on 1dM`, `operand` admitted only integers, computed operands and table
    values, and **converting `1-5 on 1d6` to 83% is inference A3 forbids**. `operand` gains a fourth
    arm, `{rollAtMost, on}` — **17 occurrences across six records, zero in 1,121 kit effects.**
-25. **Commutativity forbids a fall-through, and one record needs one.**
+25. **RESOLVED — the sequence is inside the effect, and §4.3 never forbade that one.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 111) A halfling has a 15% chance of
    infravision to 60 feet and, **failing that**, a 25% chance of it to 30 feet. A single chance is a
    field; two that fall through are not, because §4.3's layers SUM. No seventh operation is missing —
    what is missing is **sequence**, and order-independence is exactly the guarantee that forbids it.
    The first place where that guarantee costs something measurable.
+   **Applied, and the guarantee cost nothing — the correction had located the sequence in the wrong
+   place.** §4.3 defends order-independence BETWEEN LAYERS: so that the answer does not depend on
+   which book was read first, and so that a pack can be added without reordering anything. This
+   sequence is inside a single effect of a single record, stating one rule the book states in one
+   sentence. Nothing about it depends on layer order, and two of them on one field still contest
+   exactly as two `set`s do. The operand gains a sixth arm, `inOrder`, a chain of `{chance, value}`
+   tried until one succeeds.
+   **The Engine shows the chain and does not resolve it**, which is the half that matters. The
+   second chance is 25% *of those who failed the first*, so the unconditional pair is 15% and
+   21.25% — a number no book prints, arrived at by arithmetic the Engine would be doing on the
+   reader's behalf. Correction 24 settled that shape already: converting `1-5 on 1d6` to 83% is
+   inference and A3 forbids it. **A guarantee is about a scope, and this one had never been asked
+   what its scope was.**
 22. **A race book overrides the core rules' own numbers, and one id cannot hold two values.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 106) The Complete Book of Dwarves
    re-scores **28 of the PHB's 75 proficiencies** — Armorer at 1 slot and 0 where the PHB says 2 and
@@ -906,12 +932,24 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    Engine, but **nothing was counting**, so the gap sat unseen for nineteen sessions behind a green
    validator. The checker now reports them without failing. The slice proves the SHAPES are
    expressible and says nothing yet about whether the pieces fit together.
-14. **`require.from` is a closed list, and two thirds of kits write open ones.**
+14. **RESOLVED — a list is not a refusal until the pack says it is all of them.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 43) *"a concealable hand weapon
    **such as** a dagger, knife, or hand axe"* — **91 of 134 kits (68%)** carry `such as`, `e.g.` or
    `etc.` Every `from` written against an exemplary list is a false precision that will refuse a legal
-   choice, confidently, which is the one failure this Engine exists to avoid. Unresolved; the fix is
-   probably a flag on the list rather than an operation.
+   choice, confidently, which is the one failure this Engine exists to avoid. ~~Unresolved; the fix is
+   probably a flag on the list rather than an operation.~~
+   **Applied**, and the flag was right, but the interesting part is which way round it points.
+   `require.listing` is `closed` or `example`, and **absence means undeclared** — A3 applied to a
+   list, because the Engine may not infer closedness from silence any more than it may infer a
+   restriction from one. So `satisfies()` answers `yes` / `no` / `unknown`, and **only a declared
+   `closed` can produce the `no`.** Three of the four states forbid a refusal; that is the whole
+   shape of the repair.
+   Applying it against the slice made the correction sharper in one direction and much worse in
+   another. Sharper: **77 of 121 `require` effects carry a `from`**, and their size histogram is
+   `{1: 18, 2: 30, 3: 14, 4: 6, 5: 3, 6: 5, 7: 1}` — **48 of 77 list one or two items**, and a list
+   of ONE read as closed is not a choice at all but a grant wearing a choice's clothes. Worse: see
+   correction 62. A declaration nothing can fill is still better than an inference, because the
+   Engine stops being wrong even while the pack stays ignorant — but it is not the same as knowing.
 15. **Ticket 15's dice grammar rejects 121 real corpus values, and had never reached the schema.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 42) The word `dice` did not appear
    in `pack-0.1.schema.json`; a settled decision produced no artifact, and silence fails no
@@ -925,7 +963,7 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    that one real case: it is the least-needed operation, not a redundant one. What the corpus actually
    wants is richer **operands**, richer **conditions**, and above all more **subjects** — see
    correction 17.
-11. **§4.3 can sum and overwrite, and five records want a CLAMP between them.**
+11. **RESOLVED — the clamp rides on `set`, because what failed was additivity and not commutation.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 28) Three kits state a bonus is
    **not** cumulative — take the greater (Assassin), a ceiling (Pathfinder), apply once regardless of
    sources (Giant Killer) — against ten that state one **is**. `adjust` sums, `set` overwrites, and
@@ -934,6 +972,19 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    the same property. Now five records (finding 63): caps in the Tunnelrat and Pathfinder, floors in
    the Bilker, Highborn and Patrician. **The cheapest repair this map has identified with the most
    evidence behind it** — a bound on a value, not a new subject.
+   **Applied**, and it was as cheap as advertised: `set` gains `bound: atMost | atLeast`, where `to`
+   becomes a LIMIT on the field's total rather than its value. **Not a seventh operation**, and the
+   distinction this correction drew is exactly what licenses that — §4.3's closure defends
+   order-independence, min and max are commutative and associative, so two ceilings compose to the
+   tighter one from either direction just as two `adjust`s compose to their sum.
+   Two things fell out of building it that the correction had not said. **A bounded `set` must not
+   enter the contest**: ticket 03 makes two layers setting one field contested unless one declares
+   over the other, and two ceilings on one field are not a disagreement — they compose. So bounds
+   are lifted out of `sets` before the contest is judged, and then applied to whatever the sums and
+   sets produced. And **a floor above a ceiling is the one arrangement with no answer**: the Engine
+   names both records and applies neither, because picking whichever was read second would make the
+   contradiction invisible at the moment it matters. That is ticket 03's posture reaching a place
+   ticket 03 never looked.
 12. **The extractor flattens away the level at which the corpus marks force.**
    ([Ticket 13](issues/13-transcribe-the-proving-slice.md) finding 35) `Required:` and `Recommended:`
    are sub-labels **inside** a field, present in eight of nine books — 100% of CTH and CWH kits, 0% of
@@ -1317,10 +1368,89 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    unarmoured character — Table 46 has a row that happens to name a single state — and refuses
    everything else by name. What is owed is an equipment list from Tables 43–46, keyed by item,
    with Table 46 rewritten as a rule over items rather than a lookup over prose.
+62. **The extraction dropped the words that say whether a list is a list, and 0 of 77 can be
+   classified without reopening the books.** ([Engine ticket 06](../engine-v1/issues/06-the-evaluator.md),
+   applying correction 14) `such as`, `e.g.` and `etc.` are **field prose**, and the pipeline's whole
+   posture is that field prose does not enter a record — §1's constraint and correction 29's
+   `<I>`-markup lesson both push the same way. So the discriminator that decides whether a `from`
+   list binds was thrown away at the same moment the list was created, and **the pack cannot answer
+   a question about its own contents that the source could.** Measured: 121 `require` effects, 77
+   with a list, **0 with a `listing`** — not because nobody has filled them in yet, but because
+   nothing in the pack knows.
+   **It is a different class of loss from every gap this map has recorded.** A missing table is a
+   thing not yet transcribed; a missing sphere is a thing not yet modelled. This is a thing that was
+   *read, used, and discarded* — the extractor saw the words, used them to decide what to put in the
+   list, and did not record the decision. Correction 37's lesson one level down: there the marker
+   rotted because nothing re-read it; here there is no marker to rot.
+   **18 of the 77 are already suspect from inside the pack**, needing no book: a one-member `from`
+   under a closed reading is a choice with one option, which is a `grant` misfiled. Those are the
+   cheapest to review and the likeliest to be wrong.
+   What is owed: the extractor keeps the exemplary markers as a `listing` when it builds the list —
+   a per-field boolean, not prose, so §1's constraint is untouched — and the existing 77 are a
+   re-extraction, not a hand pass.
+63. **RESOLVED on sight — every weapon in the pack was carrying a nonweapon rule's doubt, and
+   uncertainty in the wrong place is not caution.** ([Engine ticket 06](../engine-v1/issues/06-the-evaluator.md),
+   applying correction 33) The slot-cost function was one function for both kinds, so it asked
+   Table 37's crossover question — *which of the five proficiency groups holds this, and is that
+   group open to the class* — of **all 119 weapon proficiencies**, none of which has a category to
+   answer with. Every one came back `certain: false` with correction 60's sentence attached:
+   *"no book says which group this belongs to, so whether it costs one slot more is undecided."*
+   True of a nonweapon proficiency the Complete handbooks left ungrouped. **Meaningless of a
+   longsword**, because the books never pose the question of a weapon at all.
+   **This is the failure mode of a good idea.** Correction 60 was right and the three-valued answer
+   is right; applied where no question exists it produces doubt about nothing, and doubt about
+   nothing is the fastest way to teach a player that the marks mean nothing. §5.4's third answer
+   costs its own credibility every time it fires wrongly — which makes it unlike a wrong number,
+   where the damage is local.
+   Found only because correction 33 made someone read the function while thinking about weapons.
+   Nothing was failing; 119 records were quietly hedged, and every test passed.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack
    editor's value drops proportionally does not follow.
+
+### What is actually left of this list
+
+<!-- added while working the list down; a reading of it, not an edit to it -->
+
+Sixty-three entries and thirty-two titled RESOLVED reads like thirty-one outstanding, and **it is
+four.** The count is misleading in a specific way worth naming, because whoever picks this up next
+will otherwise start by re-doing what is done: **an entry is a record of what measurement changed,
+not a task**, and most of them were discharged by the work that immediately followed them, in a
+sibling entry or in a commit that never came back to retitle the first.
+
+Read properly, the thirty-one sort into five kinds:
+
+| | Entries | What they need |
+|---|---|---|
+| **Discharged in their own body** | 5, 7, 8, 12, 15, 28, 29, 31, 41 | Nothing. Each says *"Resolved by…"* or *"Now implemented"* in its own text; only the title never caught up. |
+| **Superseded by a later entry** | 9 → 16b · 16, 16c, 16d → 16e · 22 → 22b · 23 → 58 | Nothing. The later entry is the answer, and it carries the measurement that made the earlier one obsolete. |
+| **Owed to a document that stopped being normative** | 1, 2, 3 | Nothing. [Engine ticket 01](../engine-v1/issues/01-which-spec-does-the-engine-implement.md) made `spec.md` §§3, 4 and 7 non-normative; of the nineteen spec-touching entries only correction 6 ever survived, and it is applied. |
+| **Findings that ask for nothing** | 4, 13, 21, 30, 38, 39, 60 | Nothing to build. A caveat about reading a histogram, an accepted consequence of id minting, a risk inherited by whoever transcribes more books, a silence in the source. Deleting them would lose the reason a later decision looks the way it does. |
+| **Genuinely open** | **17, 20, 34, 61, 62** | Work. And two of those five are already done in code — see below. |
+
+Of the five: **20** (*two pack files contribute to one kind*) and **34** (*a parent reference is not
+a feature of races*) are **implemented and unrecorded** — `pack.ts` merges arrays across files with
+the correction's own sentence in a comment, and `variantOf` is in the schema, in `types.ts` and read
+by `choice.ts` when it walks a class chain. They were verified rather than trusted, which is the
+only reason to say so.
+
+So what is actually outstanding is **three**, and they are not the same kind of thing:
+
+- **17 — the second subject.** 48 of 134 kits adjust a reaction roll and 27 qualify it by the other
+  party. Partly closed already: correction 32's field-path scalar took it further than anyone
+  expected (correction 36's fourteen effects became four), and correction 38's read of the eighteen
+  markers put the residue at **nine, which are four different problems**. Only one of the four is a
+  language feature. It is the largest thing on the list and the least ready to be built.
+- **61 — armour class.** Blocked on the corpus, not the format: Table 46 rates combinations rather
+  than pieces, and there is no equipment list to match one against.
+- **62 — the exemplary-list markers.** A re-extraction, and correction 14 has already made the
+  Engine safe in the meantime by refusing to read silence as closedness.
+
+**The lesson is about the artifact rather than the corpus.** A list that records findings and a list
+that tracks work are different documents, and this one has been doing both — which is why it can say
+*thirty-one open* while three things are open. Keeping the record is right; the fix is a reading like
+this one, written when the list is worked rather than when it is grown.
 
 ## Not yet specified
 

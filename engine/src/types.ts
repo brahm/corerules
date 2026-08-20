@@ -45,7 +45,10 @@ export type Operand =
   | string
   | RollUnder
   | { of: Scalar; multiplyBy?: number; divideBy?: number; round: "up" | "down" }
-  | { supplies: string; at: Scalar; of?: Id };
+  | { supplies: string; at: Scalar; of?: Id }
+  /** Correction 25: chances tried in order until one succeeds — sequence inside one effect,
+   *  which §4.3's order-independence between layers never forbade. */
+  | { inOrder: { chance: RollUnder; value: Operand }[] };
 
 export type Condition =
   | { subject: Scalar; op: "gte" | "lte" | "eq" | "neq"; value: Operand }
@@ -74,11 +77,17 @@ export interface Effect {
   field?: string;
   by?: Operand;
   to?: Operand;
+  /** Correction 11: present where `to` is a LIMIT on the field's total rather than its value.
+   *  Not a seventh operation — min and max are commutative, so §4.3's order-independence holds. */
+  bound?: "atMost" | "atLeast";
   kind?: string;
   ref?: Id;
   defines?: { name: string; text?: string };
   count?: number;
   from?: Id[];
+  /** Correction 14: whether `from` is the whole set or an illustration of it. Absent means
+   *  undeclared, which is not the same as closed and must never be read as one. */
+  listing?: "closed" | "example";
 }
 
 export interface Record_ {

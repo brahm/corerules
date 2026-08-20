@@ -31,6 +31,17 @@
           "op": "adjust",
           "field": "attackRoll",
           "by": 1
+        },
+        {
+          "op": "adjust",
+          "field": "stealth.bonus",
+          "by": 4
+        },
+        {
+          "op": "set",
+          "field": "morale",
+          "to": 4,
+          "bound": "atLeast"
         }
       ],
       "abilityMinimums": [

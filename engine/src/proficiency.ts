@@ -139,10 +139,38 @@ export function budget(pack: Pack, character: Character, which: "weapon" | "nonw
   };
 }
 
+/** Weapon and nonweapon proficiencies are different kinds with different rules, and the only
+ *  thing that says which is which is the file the record came in. */
+const isWeapon = (pack: Pack, id: Id): boolean =>
+  pack.records("weaponProficiencies").some((w) => w.id === id);
+
 /** Table 37's slot count, plus one where no open group holds it. */
 export function cost(pack: Pack, proficiencyId: Id, classId: Id): { cost: number; because: string; certain: boolean } {
   const p = pack.byId.get(proficiencyId);
   const listed = (p?.["slotCost"] as number | undefined) ?? 1;
+
+  // **Correction 33**, and the first thing it exposed is that the rule below is not universal.
+  // Table 37's crossover surcharge is a NONWEAPON rule: it asks which of the five proficiency
+  // groups holds a skill and charges a slot more when none of them is open to the class. A
+  // weapon proficiency has no such category, so asking is meaningless — and until now every
+  // one of the pack's 119 weapons came back `certain: false` carrying correction 60's doubt
+  // about a question the books never pose of it. Doubt in the wrong place is not caution; it
+  // teaches a player to ignore the marks that mean something.
+  if (isWeapon(pack, proficiencyId)) {
+    const kind = p?.groupKind;
+    if (kind === "tight" || kind === "broad") {
+      // *A weapon group you can buy is not a weapon group that is printed.* Table 44's
+      // headings are typography; the Complete Fighter's makes grouping a purchase, and the
+      // price is the pack's own — §5.2 keeps the number in the book and the arithmetic here.
+      return {
+        cost: listed,
+        because: `a ${kind} group of ${(p?.members ?? []).length} weapons, ${listed} slots`,
+        certain: true,
+      };
+    }
+    return { cost: listed, because: "one weapon, one slot", certain: true };
+  }
+
   const { groups } = openGroups(pack, classId);
   const belongs = groupsOf(p);
   const mine = belongs.filter((g) => groups.has(g));
