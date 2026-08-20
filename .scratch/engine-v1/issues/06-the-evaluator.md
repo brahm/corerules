@@ -399,9 +399,34 @@ which a desktop environment shows the running window as a second nameless thing 
 launcher — and **there is no icon**, so a release today would ship under the Electron logo. That is
 a real gap and it is named rather than papered over.
 
+### The icon, which is geometry rather than a drawing
+
+`build/icon.py` draws it and is committed beside the PNG, because an asset nobody can regenerate
+is a mystery binary in a repository that otherwise explains itself.
+
+**A twenty-sided die seen face on, from the icosahedron's own vertices** — cyclic permutations of
+(0, ±1, ±φ), with the faces derived by asking which vertex triples are mutually one edge apart, so
+a typo in a face table cannot happen. Rotated by an orthonormal frame built from the face normal
+rather than by two Euler angles, because two rotations in the wrong order gives a die that is
+*nearly* face-on, and nearly is exactly what looks wrong without anyone being able to say why.
+
+A d20 is the one shape that says *tabletop role-playing* without saying anyone's name, which
+matters for a project that ships no licensed content: no wordmark, no trademark, no borrowed art.
+A Platonic solid described by Plato is safe ground. The palette is the application's own, so the
+icon looks like the window it opens.
+
+Two things it got wrong first and the geometry said so. The winding of the face tuples is whatever
+`combinations` happened to produce, so orienting the normal by the face's own depth **culled the
+head-on face** and left the die hollow; it is oriented against the centroid now. And a physically
+plausible falloff put the near face and its three neighbours within a few percent of each other,
+which at 32 pixels is a grey blob — the three tones are spread hard instead, because an icon is
+read at a glance or not at all.
+
+Verified by extracting the built AppImage: the shipped `corerules.png` is byte-identical to the
+source, the desktop entry carries `StartupWMClass` so a launcher can find the running window, and
+its Comment is written for a player rather than left to default into the package description.
+
 ## What is left
-- **An application icon.** A packaged build currently ships Electron's own, which is the first
-  thing anybody would see.
 - **Equipment, encumbrance and spell selection**, which want a corpus the slice does not have.
 - **Constitution is not in the hit points.** The bonus is a table read with a per-class cap, and
   a plausible-looking total that quietly omits it is the kind of wrong number the rest of this

@@ -34,6 +34,10 @@ extraResources: []
 linux:
   target: AppImage
   category: Game
+  # The desktop entry's Comment, which a launcher shows under the name. Left to default it
+  # became the package.json description — "The desktop application. Ships no game content." —
+  # which is true, is aimed at whoever reads the repository, and tells a player nothing.
+  description: Create AD&D 2nd Edition characters by the book, from packs you transcribe yourself
   # Without this a desktop environment cannot link the running window to the .desktop entry, so
   # the app appears in the dock as a second nameless thing beside its own launcher.
   syncDesktopName: true
