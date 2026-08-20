@@ -102,6 +102,12 @@ jobs:
           # §11 and v1-spec ticket 09: three separate stories, not three phrasings of one warning.
           # A player meeting a SmartScreen panel, a Gatekeeper refusal and an AppImage that will
           # not run are having three different problems.
+          #
+          # The macOS line said "right-click and choose Open" until v0.1.0-rc1 was about to be
+          # published with it. That is the advice for an UNSIGNED app; this one is ad-hoc signed
+          # and quarantined, which reports as *damaged*, and ticket 12 established by experiment
+          # that neither right-click nor System Settings makes it run. Shipping it would have sent
+          # every macOS user down a route the project had already proved does not work.
           body: |
             **This build is unsigned.** corerules has no code-signing certificate, so each system
             objects in its own way and each objection wants a different answer.
@@ -109,8 +115,10 @@ jobs:
             - **Windows** — SmartScreen shows a blue panel with the app name hidden behind
               *More info*. Click it, then *Run anyway*.
             - **macOS** — the app is *ad-hoc* signed, which is what lets Apple Silicon run it at
-              all, but Gatekeeper still refuses on first open. Right-click the app and choose
-              *Open*, then *Open* again in the dialog.
+              all, and Gatekeeper still refuses: it reports the app as **damaged**, which it is
+              not. Neither right-click *Open* nor System Settings → Privacy & Security helps —
+              v1-spec ticket 12 confirmed both by experiment. Terminal is the only route:
+              `xattr -dr com.apple.quarantine /Applications/corerules.app`
             - **Linux** — the AppImage needs the executable bit: `chmod +x corerules-*.AppImage`.
 
             **corerules ships no game content.** It opens empty, and the first thing to do is
