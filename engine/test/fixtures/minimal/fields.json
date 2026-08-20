@@ -1,11 +1,23 @@
 {
   "fields": [
     {
+      "path": "armourClass",
+      "note": "Correction 65: a path that enters through a table's `supplies`, not an effect."
+    },
+    {
       "path": "asPrinted"
+    },
+    {
+      "path": "asPrinted.bonus",
+      "note": "Correction 65: supplied by a table, not written by an effect."
     },
     {
       "path": "attackRoll",
       "note": "The to-hit modifier."
+    },
+    {
+      "path": "attackRoll.melee",
+      "note": "Correction 17: qualified by who is on the other side."
     },
     {
       "path": "detect.slope"
@@ -14,32 +26,33 @@
       "path": "experienceAward.percent"
     },
     {
+      "path": "farsight.range",
+      "note": "Correction 25: two chances that fall through."
+    },
+    {
       "path": "hitDice.perLevel"
     },
     {
       "path": "infravision.range"
     },
     {
-      "path": "reactionCheck"
+      "path": "morale",
+      "note": "Correction 11: a total with a floor under it."
     },
     {
-      "path": "surefooting"
+      "path": "reactionCheck"
     },
     {
       "path": "stealth.bonus",
       "note": "Correction 11: a total with a ceiling over it."
     },
     {
-      "path": "morale",
-      "note": "Correction 11: a total with a floor under it."
+      "path": "surefooting",
+      "note": "Written by an effect that reads the table."
     },
     {
-      "path": "farsight.range",
-      "note": "Correction 25: two chances that fall through."
-    },
-    {
-      "path": "attackRoll.melee",
-      "note": "Correction 17: qualified by who is on the other side."
+      "path": "surefooting.bonus",
+      "note": "Correction 65: supplied by a table, not written by an effect."
     }
   ]
 }

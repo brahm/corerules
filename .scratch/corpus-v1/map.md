@@ -1370,8 +1370,7 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    it anyway would invent a rule **against the character**, in the one place a player would never
    think to check. Not a transcription gap: the books are silent, and this is where the corpus
    ends rather than where the transcription stopped.
-61. **Armour class is not computable from this corpus, and the reason is not the one it looks
-   like.** ([Engine ticket 06](../engine-v1/issues/06-the-evaluator.md), building equipment and
+61. **RESOLVED — the table is complete, and the grammar was the whole obstacle.** ([Engine ticket 06](../engine-v1/issues/06-the-evaluator.md), building equipment and
    spells) It looks like a missing equipment list. It is worse than that: **Table 46 does not rate
    armour, it rates combinations.** One row reads *"Leather or padded armor + shield, studded
    leather, or ring mail armor"* — AC 7 — and names three different ways to arrive there, one of
@@ -1384,8 +1383,36 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    This is correction 53's lesson a third time (**a table's rows are not the vocabulary its
    headings imply**), and the shape it takes here is that the Engine reports AC 10 for an
    unarmoured character — Table 46 has a row that happens to name a single state — and refuses
-   everything else by name. What is owed is an equipment list from Tables 43–46, keyed by item,
-   with Table 46 rewritten as a rule over items rather than a lookup over prose.
+   everything else by name. ~~What is owed is an equipment list from Tables 43–46, keyed by item,
+   with Table 46 rewritten as a rule over items rather than a lookup over prose.~~
+   **Both were owed and both were there.** The equipment list is `DD01623.HTM`, *Armor Costs*,
+   which the book **also numbers Table 44** — the corpus had transcribed a different Table 44, the
+   clothing list, and stopped. Twenty pieces: fourteen suits, four shields under a `Shield`
+   heading, two helmets under a `Helmet` heading, each with cost and weight. And the armour table
+   prints no AC at all; it says *"See table 46 for the Armor Class ratings"*, so the book itself
+   directs from the item to the combination table. **The two tables were always one vocabulary.**
+   **The grammar is the finding, and it is nastier than "the rows are combinations".** In
+   *"Splint mail, banded mail, or bronze plate mail + shield, plate mail"* the `+ shield` attaches
+   **BACKWARDS** over the run of alternatives before it. Parsed left to right, comma by comma —
+   which is what any reasonable reader of a comma-separated row does — splint mail comes out at
+   AC 3 from that row and at AC 4 from the row above, **and nothing anywhere raises an error**. It
+   is not that the table cannot be indexed; it is that indexing it the obvious way yields a silent
+   contradiction. Read correctly it is **complete and collision-free**: fourteen armours with a
+   rating alone, thirteen of them with a shield, checked against each other before anything was
+   written down.
+   **The fifteenth cell is missing and that is the book's own gap.** Brigandine has no row pairing
+   it with a shield. Its neighbours at AC 6 — scale mail and hide — both drop to 5, so the answer
+   is obvious and unprinted, which makes it exactly the number the Engine must not supply. It
+   reports the gap and names it.
+   Shipped as: twenty item records with `armorKind` and `worn` (declared, never recognised by id);
+   the five surviving categories marked `category` so the two senses of the word stop sharing one;
+   `phb:DD01632#2`, Table 46 re-expressed keyed by item, carrying the `interpretation` note that
+   admits it is a reading; a `worn` list on the Character; and an armour picker on the sheet rather
+   than in the wizard, because armour is bought and swapped and §6.3's history is what the RULES
+   derive from — a change of clothes belongs nowhere near becoming a 5th-level fighter.
+   `phb:leather` was the row label *"Leather or padded armor"* and was referenced by nothing; the
+   item list gives the id something real to name. See correction 65 for what the new table
+   exposed on its way in.
 62. **RESOLVED — the books were reopened, and the answer was not the one correction 14 predicted.** ([Engine ticket 06](../engine-v1/issues/06-the-evaluator.md),
    applying correction 14) `such as`, `e.g.` and `etc.` are **field prose**, and the pipeline's whole
    posture is that field prose does not enter a record — §1's constraint and correction 29's
@@ -1450,6 +1477,21 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    lists — there are barely any. It exists so that **a genuinely closed list can license a refusal**,
    which 46 of them now do, and so that the 31 the source cannot settle stay `unknown` instead of
    being guessed either way.
+65. **RESOLVED — the field vocabulary was declared for one of the two ways a field path exists.**
+   ([Engine ticket 06](../engine-v1/issues/06-the-evaluator.md), applying correction 61) Correction
+   58 had the pack declare the field paths **its effects write**. A path enters a pack two ways: an
+   effect writes one, and a `lookupTable` **supplies** one. The second was never covered, and
+   adding the armour table made it visible only because it was the ninth path to arrive that way.
+   Measured: **eight of the slice's ten `supplies` paths were outside the declared vocabulary** —
+   `thiefSkill` and its three adjustments, `backstab.multiplier`, `movementRate`,
+   `savingThrow.constitutionBonus`, and the new `armourClass`. Nothing anywhere noticed, because
+   nothing checked. Correction 6's sentence again, in a different room: **a declaration nothing
+   acts on is not A3; it is a field.** Here it was worse than that — it was a declaration that
+   *did* get acted on, over the half of its subject it happened to cover, which reads as complete.
+   Both halves fixed: the eight are declared, and `Pack` now complains when a table supplies a path
+   the pack does not declare. The check earned its keep in the first minute — it found **two more
+   in the Engine's own test fixture**, where a table had been supplying `surefooting.bonus` and
+   `asPrinted.bonus` against declarations for `surefooting` and `asPrinted`.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack
@@ -1473,7 +1515,7 @@ Read properly, the thirty-one sort into five kinds:
 | **Superseded by a later entry** | 9 → 16b · 16, 16c, 16d → 16e · 22 → 22b · 23 → 58 | Nothing. The later entry is the answer, and it carries the measurement that made the earlier one obsolete. |
 | **Owed to a document that stopped being normative** | 1, 2, 3 | Nothing. [Engine ticket 01](../engine-v1/issues/01-which-spec-does-the-engine-implement.md) made `spec.md` §§3, 4 and 7 non-normative; of the nineteen spec-touching entries only correction 6 ever survived, and it is applied. |
 | **Findings that ask for nothing** | 4, 13, 21, 30, 38, 39, 60 | Nothing to build. A caveat about reading a histogram, an accepted consequence of id minting, a risk inherited by whoever transcribes more books, a silence in the source. Deleting them would lose the reason a later decision looks the way it does. |
-| **Genuinely open** | ~~17, 20, 34, 61, 62~~ → **61** | Work. Four of the five closed in the session that wrote this table; see below. |
+| **Genuinely open** | ~~17, 20, 34, 61, 62~~ → **none** | All five closed within two sessions of this table being written; see below. |
 
 Of the five: **20** (*two pack files contribute to one kind*) and **34** (*a parent reference is not
 a feature of races*) are **implemented and unrecorded** — `pack.ts` merges arrays across files with
@@ -1491,11 +1533,19 @@ only reason to say so.
 - **62 — the exemplary-list markers.** Closed by re-reading the source, which turned out to be
   reachable: the anchors point into a webhelp rendition that is still on disk. 46 of 77 lists
   declared, and correction 64 for what the re-read actually found.
-- **61 — armour class.** The one left, and the only one on the whole list blocked on something
-  neither the format nor the Engine can supply: **there is no equipment list**, because Table 46
-  rates combinations rather than pieces and nothing else in tier one enumerates what a character
-  wears. It is corpus work — [the corpus map](map.md)'s, resumed — and the Engine already refuses
-  it by name in the meantime, which is the correct behaviour and not a placeholder.
+- **61 — armour class.** Closed, and it was the one entry on this list confidently written off as
+  *"blocked on something neither the format nor the Engine can supply"*. The equipment list was in
+  the source the whole time under a table number the corpus had already used for something else,
+  and the obstacle was never the missing list — it was a **backwards-attaching `+ shield`** that
+  makes the obvious parse of Table 46 contradict itself without erroring.
+
+**Three of the last five were declared blocked or enormous and were neither**, which is the thing
+this table should be read for. 17 was *"larger to add than any operand repair this map has
+proposed"* and took an optional field. 62 was *"cannot be classified without reopening the books"*
+and the books were forty seconds away. 61 was *"corpus work, resumed"* and was a parsing bug. The
+common cause is that **each was last examined before some later correction changed what was
+possible**, and nothing re-examines an entry once it has a verdict — which is correction 37's
+lesson about markers, holding equally over the list that records the corrections themselves.
 
 **The lesson is about the artifact rather than the corpus.** A list that records findings and a list
 that tracks work are different documents, and this one has been doing both — which is why it can say

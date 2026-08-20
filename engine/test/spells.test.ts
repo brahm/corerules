@@ -58,9 +58,29 @@ test("starting funds are the die Table 43 prints, not a number", () => {
   assert.equal(startingFunds(pack, "test:thief"), "2d6 x 10 gp");
 });
 
-test("armour class is refused for anything worn, and the reason is the table's shape", () => {
-  assert.deepEqual(armourClass(pack, []), { ac: 10, because: "Table 46: unarmoured" });
-  const worn = armourClass(pack, ["phb:leather"]);
-  assert.equal(worn.ac, undefined);
-  assert.match(worn.because, /rates COMBINATIONS of armour and shield rather than pieces/);
+test("armour class is a rule over what you wear, once the combination table is read as one", () => {
+  // Correction 61. Table 46 rates COMBINATIONS — "Splint mail, banded mail, or bronze plate mail
+  // + shield, plate mail" is one row — and the `+ shield` attaches BACKWARDS over the run before
+  // it. Read left to right that row and the one above it contradict each other about splint mail
+  // and nothing notices. Read correctly the table is complete, and this is what it computes.
+  assert.equal(armourClass(pack, []).ac, 10);
+  assert.equal(armourClass(pack, ["test:shield"]).ac, 9);
+  assert.equal(armourClass(pack, ["test:jerkin"]).ac, 8);
+  assert.equal(armourClass(pack, ["test:jerkin", "test:buckler"]).ac, 7, "a shield by its own name");
+  assert.equal(armourClass(pack, ["test:mail", "test:shield"]).ac, 4);
+});
+
+test("armour class refuses the four ways it can be asked a question the table cannot answer", () => {
+  // A cell the book never prints. Its neighbours make the arithmetic obvious, which is exactly
+  // why guessing would be a rule invented by the Engine.
+  const gap = armourClass(pack, ["test:oddments", "test:shield"]);
+  assert.equal(gap.ac, undefined);
+  assert.match(gap.because, /never with a shield/);
+
+  // A category, which is the whole of correction 61: it IS in the armour kind, and nobody owns one.
+  assert.match(armourClass(pack, ["test:heavy-armor"]).because, /category a rule discriminates on/);
+
+  // Two suits at once, and something that is not armour at all.
+  assert.match(armourClass(pack, ["test:jerkin", "test:mail"]).because, /nobody wears/);
+  assert.match(armourClass(pack, ["test:sabre"]).because, /not armour/);
 });

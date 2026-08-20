@@ -1338,7 +1338,7 @@
       }
     },
     "armor": {
-      "description": "From Table 46's Armor Class Ratings. The table rates COMBINATIONS — 'leather or padded + shield' — so only the items the pack cites are recorded, at the rating the table gives them alone.",
+      "description": "**Correction 61.** Two different things once shared this word and the pack could not tell them apart, which is why armour class was unanswerable: three records were Table 46's ROW LABELS and four were the COLUMN HEADINGS of Table 29, the thieving-skill adjustment table. `Metal armour` and `Padded, Hide or Studded Leather` are categories a rule discriminates on. Nobody owns one.\n\nThe vocabulary is now the Armor Costs table's twenty pieces — fourteen suits, four shields, two helmets — and `armorKind` says which kind of thing a record is. `worn` says where a piece goes, and it is DECLARED rather than recognised: an Engine matching `phb:shield` by id would be a closed enumeration in the consumer, which is the shape §3.4 refuses.\n\nThe ratings themselves are not here. They live in `phb:DD01632#2`, Table 46 re-expressed as a rule over items, so that one record carries the reading and the interpretation note that admits it is one.",
       "type": "array",
       "items": {
         "allOf": [
@@ -1347,6 +1347,34 @@
           }
         ],
         "properties": {
+          "armorKind": {
+            "description": "`item` is a thing somebody wears; `heading` is a printed grouping with `members` (Shield, Helmet); `category` is what a rule discriminates on and never an object.",
+            "enum": [
+              "item",
+              "heading",
+              "category"
+            ]
+          },
+          "worn": {
+            "description": "Where the piece goes. `body` and `shield` are the two columns Table 46 rates; anything else is worn and rated by nothing, which the Engine says out loud rather than dropping from the sum.",
+            "type": "string"
+          },
+          "cost": {
+            "type": "string",
+            "description": "As the book prints it, `4,000-10,000 gp` included."
+          },
+          "weight": {
+            "type": "string"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/id"
+            }
+          },
+          "group": {
+            "$ref": "#/$defs/id"
+          },
           "armorClass": {
             "type": "integer"
           }

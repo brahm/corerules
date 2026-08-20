@@ -129,33 +129,82 @@ export function startingFunds(pack: Pack, classId: Id): string | undefined {
 }
 
 /**
- * Armour class, which this corpus cannot compute, and the reason is worth stating precisely
- * because it is not the one it looks like.
+ * Armour class, which this corpus **can** compute — correction 61, resolved by reading the table
+ * the way the book writes it rather than the way a lookup wants it.
  *
- * **Table 46 is not a list of armours. It is a list of COMBINATIONS**: *"Leather or padded armor
- * + shield, studded leather, or ring mail armor"* is one row, worth AC 7, and it names three
- * different ways to arrive there. Nothing in it can be looked up by "what am I wearing".
+ * **Table 46 rates COMBINATIONS**, and the sentence that makes it look impossible is real:
+ * *"Splint mail, banded mail, or bronze plate mail + shield, plate mail"* is one row worth AC 3.
+ * The grammar is the whole problem — **`+ shield` attaches BACKWARDS** over the run of
+ * alternatives before it, so that row means *(splint or banded or bronze plate) with a shield, or
+ * plate mail on its own*. Read left to right, comma by comma, it means something else entirely and
+ * produces no error while doing it: splint mail lands on AC 3 from this row and on AC 4 from the
+ * one above, and nothing anywhere notices the contradiction.
  *
- * And the pack's seven `armor` records are not an armour vocabulary either. Three were lifted
- * from Table 46's row labels and four from the COLUMN headings of Table 29, which is the
- * thieving-skill adjustment table — two different tables, for two different purposes, neither
- * of them "the armour a character owns". `Metal armour` and `Padded, Hide or Studded Leather`
- * are categories a rule discriminates on, not things anybody wears.
+ * Applied properly the table is **complete**: fourteen armours each with exactly one rating alone
+ * and thirteen of them with a shield, no collisions. The pack now carries that as a second record
+ * beside the first — the same eleven rows, keyed by what a character wears — and this reads it.
  *
- * So this reports rather than computes. An unarmoured character is 10 because Table 46 says so
- * in a row that happens to name a single state; everything else waits for an equipment list
- * that has not been transcribed.
+ * **The fifteenth cell is the interesting one.** Brigandine has no row that pairs it with a shield.
+ * Scale mail and hide, its neighbours at AC 6, both drop to 5; the arithmetic is obvious and the
+ * book does not say it, so this returns no number and names the gap. Guessing 5 would be a rule
+ * invented by the Engine, which is the one thing it exists not to do.
  */
 export function armourClass(pack: Pack, worn: Id[]): { ac?: number; because: string } {
-  if (worn.length === 0) {
-    const rows = (pack.byId.get("phb:DD01632")?.["rows"] as string[][] | undefined) ?? [];
-    const none = rows.find((r) => norm(r[0] ?? "") === "none");
-    return none === undefined
-      ? { because: "no loaded pack has Table 46" }
-      : { ac: Number.parseInt(none[1] ?? "10", 10), because: "Table 46: unarmoured" };
+  const table = pack.records("lookupTables").find((t) => t["supplies"] === "armourClass");
+  if (table === undefined) {
+    return { because: "no loaded pack has Table 46 as a rule over items" };
   }
-  return {
-    because: "Table 46 rates COMBINATIONS of armour and shield rather than pieces, and no loaded "
-      + "pack has an equipment list to match one against",
-  };
+  const rows = (table["rows"] as string[][] | undefined) ?? [];
+
+  // Everything worn has to be a thing somebody wears. Silently ignoring what is not turns "you
+  // are carrying a sword" into "you are wearing nothing", which is a wrong number with a straight
+  // face — and `Metal armour` is the sharper case, because it IS in the armour kind. It is a
+  // category the books discriminate on and nobody owns one, which is the whole of correction 61.
+  // Wearable is declared, never recognised: a piece says WHERE it is worn, and a heading is
+  // wearable because "a shield" is a thing a character can be said to carry without naming a
+  // size. Matching `phb:shield` by id here would be a closed enumeration in the Engine, which
+  // is the shape §3.4 exists to refuse.
+  const wearable = new Map(pack.records("armor")
+    .filter((a) => a["worn"] !== undefined)
+    .map((a) => [a.id, a] as const));
+  const cannot = worn.filter((id) => !wearable.has(id));
+  if (cannot.length > 0) {
+    return {
+      because: cannot.map((id) => {
+        const r = pack.byId.get(id);
+        if (r === undefined) return `no loaded pack has ${id}`;
+        return r["armorKind"] === "category"
+          ? `${r.name} is a category a rule discriminates on, not a thing anybody wears`
+          : `${r.name} is not armour`;
+      }).join("; "),
+    };
+  }
+  const items = worn.map((id) => wearable.get(id));
+  const shield = items.some((r) => r?.["worn"] === "shield");
+  const body = items.filter((r) => r?.["worn"] === "body");
+  if (body.length > 1) {
+    return { because: `nobody wears ${body.map((r) => r!.name).join(" and ")} at once` };
+  }
+
+  const key = body[0]?.id ?? "(nothing)";
+  const row = rows.find((r) => r[0] === key);
+  if (row === undefined) {
+    return { because: `Table 46 has no rating for ${body[0]?.name ?? "an unarmoured character"}` };
+  }
+  const cell = row[shield ? 2 : 1] ?? "--";
+  const ac = Number.parseInt(cell, 10);
+  if (Number.isNaN(ac)) {
+    return {
+      because: `Table 46 rates ${body[0]?.name ?? "this"} on its own and never with a shield, and `
+        + "the neighbouring armours' step is arithmetic the book does not print",
+    };
+  }
+  const what = body[0] === undefined
+    ? (shield ? "a shield and nothing else" : "no armour")
+    : `${body[0].name}${shield ? " and a shield" : " alone"}`;
+  // The equipment list prices a great helm and a basinet; Table 46 has no row for either. Saying
+  // so beats dropping them from the sum in silence, which is how a number stops being checkable.
+  const ignored = items.filter((r) => r?.["worn"] !== "body" && r?.["worn"] !== "shield").map((r) => r!.name);
+  const note = ignored.length > 0 ? ` — Table 46 rates nothing worn there, so ${ignored.join(" and ")} changes nothing` : "";
+  return { ac, because: `Table 46: ${what}${note}` };
 }

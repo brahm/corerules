@@ -87,6 +87,16 @@ export function create(
   return character.file.id;
 }
 
+export interface WearOffer {
+  id: string;
+  name: string;
+  /** Where it goes, which is what decides the column Table 46 is read in. */
+  worn: string;
+  cost?: string;
+  weight?: string;
+  chosen: boolean;
+}
+
 export interface Timeline {
   events: { id: string; rolls: { class: string; die: number }[]; chose: { kind: string; ref: string }[] }[];
   /** Every class the loaded packs offer, so a correction picks from a list rather than typing
@@ -100,6 +110,8 @@ export interface Timeline {
   caveats: Objection[];
   /** What this priest's god lets them learn, and on what terms. Empty for anyone without one. */
   spells: SpellOffer[];
+  /** Correction 61: the armour the loaded packs offer, and what this character has on. */
+  wear: WearOffer[];
 }
 
 export function timeline(library: Library, id: string): Timeline | undefined {
@@ -116,6 +128,14 @@ export function timeline(library: Library, id: string): Timeline | undefined {
     objections: said.objections,
     caveats: said.caveats,
     spells: available(c.pack, c),
+    wear: c.pack.records("armor")
+      .filter((a) => a["worn"] !== undefined && a["armorKind"] === "item")
+      .map((a) => ({
+        id: a.id, name: a.name, worn: a["worn"] as string,
+        ...(a["cost"] !== undefined ? { cost: a["cost"] as string } : {}),
+        ...(a["weight"] !== undefined ? { weight: a["weight"] as string } : {}),
+        chosen: (c.file.worn ?? []).includes(a.id),
+      })),
   };
 }
 
@@ -179,4 +199,20 @@ export function levelUp(
   // and the sheet shows why — refusing the save would hide the state instead of naming it.
   library.writeCharacter(library.stamp(c.file));
   return said.objections;
+}
+
+/**
+ * Correction 61: put armour on, or take it off.
+ *
+ * Not a Level Event and not a correction to one. §6.3's history is what the RULES derive from,
+ * and what a character is wearing this afternoon derives nothing about their level — recording it
+ * as an event would put a change of clothes in the same list as becoming a 5th-level fighter.
+ */
+export function wear(library: Library, id: string, worn: string[]): void {
+  const opened = library.open(id);
+  const c = opened.character;
+  if (c === undefined) return;
+  if (worn.length === 0) delete c.file.worn;
+  else c.file.worn = worn;
+  library.writeCharacter(library.stamp(c.file));
 }

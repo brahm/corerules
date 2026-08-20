@@ -1,7 +1,7 @@
 # The evaluator
 
 Type: build
-Status: in progress — the evaluator runs, the interface ships, and the corrections list is worked down to three
+Status: in progress — the evaluator runs, the interface ships, and the corrections list is empty
 
 ## What this builds
 
@@ -534,9 +534,46 @@ requirement the transcriber deliberately recorded **with no list at all**, four 
 worried about it. The practice was already right. It was simply never written down, and a convention
 nothing states is one nobody can rely on.
 
+### Armour class, which was never blocked on what everyone said it was blocked on
+
+`armourClass` computes. Correction 61 had it filed as the one entry on the corrections list that
+neither the format nor the Engine could reach — *"there is no equipment list"* — and both halves of
+that were wrong.
+
+**The equipment list was in the source under a table number already spent.** `DD01623.HTM` is
+*Armor Costs*, which the book **also numbers Table 44**; the corpus had transcribed a different
+Table 44 — the clothing list — and never looked for a second. Twenty pieces with cost and weight,
+four shields under a `Shield` heading and two helmets under `Helmet`. And that table carries no AC
+at all: it says *"See table 46"*, so the book itself points from the item to the combination table.
+**They were always one vocabulary.**
+
+**The real obstacle is a grammar, and it fails silently.** In *"Splint mail, banded mail, or bronze
+plate mail + shield, plate mail"* the `+ shield` attaches **BACKWARDS** over the run before it.
+Parse the row left to right, comma by comma — the obvious reading of a comma-separated row — and
+splint mail lands on AC 3 here and AC 4 one row up, **with no error raised anywhere**. That is the
+danger correction 61 half-saw: not a table that cannot be indexed, but one that indexes wrong and
+says nothing. Read properly it is complete and collision-free — fourteen armours alone, thirteen
+with a shield, checked for contradictions before a line was written.
+
+**Brigandine with a shield is the gap, and it is the book's.** Scale mail and hide sit beside it at
+AC 6 and both drop to 5; the answer is obvious and unprinted, which is exactly the number the
+Engine must not supply. It reports the gap by name.
+
+Shipped as twenty item records carrying `armorKind` and `worn` — **declared, never recognised**,
+because an Engine matching `phb:shield` by id is a closed enumeration in the consumer — the five
+surviving categories marked as categories, `phb:DD01632#2` holding Table 46 keyed by item with the
+interpretation note that admits it is a reading, a `worn` list on the Character, and an armour
+picker on the sheet rather than in the wizard. Armour is bought and swapped; §6.3's history is what
+the rules derive from, and a change of clothes belongs nowhere near becoming a 5th-level fighter.
+
+**And correction 65 fell out of it.** Correction 58 declared the field paths the pack's EFFECTS
+write; a path also enters through a table's `supplies`, and that half was never covered — **eight
+of the slice's ten table paths sat outside the vocabulary** and nothing checked. `Pack` complains
+now, and caught two more in the Engine's own fixture within a minute of being written.
+
 ## What is left
-- **Equipment and encumbrance**, which want a corpus the slice does not have — and, per correction
-  61, want Table 46 re-read as a rule over items before they can have one.
+- **Encumbrance**, which wants the rest of §9.1's equipment: the armour list carries weights and
+  Table 47 rates them, but a character carries more than armour.
 - **Spell selection**, as opposed to spell access: which of the 80 a priest prepares today. That is
   a per-day record on the Character, not a rules question, and it wants a screen more than an engine.
 - **Constitution is not in the hit points.** The bonus is a table read with a per-class cap, and

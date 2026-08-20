@@ -50,6 +50,9 @@ export interface CharacterFile {
   kit?: Id;
   kitAbandoned?: boolean;
   deity?: Id;
+  /** Correction 61: what the character wears, which Table 46 can now be asked about. Armour
+   *  only — the rest of §9.1's equipment is still a corpus away. */
+  worn?: Id[];
   alignment?: Id;
   /** §9.1's starting money, and it is **recorded randomness** for the same reason hit points
    *  are: the pack says `5d4x10` and the roll happened once. Storing the number is the only

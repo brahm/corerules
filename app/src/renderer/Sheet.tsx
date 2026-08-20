@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Api, Timeline } from "../main/api.ts";
+import type { WearOffer } from "../main/service.ts";
 import type { SheetView, ValueLine } from "../../../engine/src/present.ts";
 import type { SpellOffer } from "../../../engine/src/spells.ts";
 
@@ -80,6 +81,50 @@ function Spells(
 }
 
 /**
+ * **Correction 61**: what the character has on, and the reason it is here rather than in the
+ * wizard. Armour is bought and swapped; §6.3's history is what the rules derive from, and a
+ * change of clothes derives nothing about a level. It belongs on the sheet, next to the number
+ * it moves.
+ *
+ * One body armour and one shield, because that is the shape Table 46 rates. Nothing offers two
+ * suits at once, which is a refusal the Engine also makes and this one saves it from having to.
+ */
+function Wear(
+  { id, wear, onChanged }: { id: string; wear: WearOffer[]; onChanged: () => void },
+): React.JSX.Element {
+  const body = wear.filter((w) => w.worn === "body");
+  const shields = wear.filter((w) => w.worn === "shield");
+  const chosenBody = body.find((w) => w.chosen)?.id ?? "";
+  const chosenShield = shields.find((w) => w.chosen)?.id ?? "";
+  const save = (b: string, sh: string): void => {
+    void api.wear(id, [b, sh].filter((x) => x !== "")).then(onChanged);
+  };
+  return (
+    <section>
+      <h3>Worn</h3>
+      <div className="value">
+        <span className="path">Armour</span>
+        <select value={chosenBody} onChange={(e) => { save(e.target.value, chosenShield); }}>
+          <option value="">— none —</option>
+          {body.map((w) => (
+            <option key={w.id} value={w.id}>{w.name}{w.cost !== undefined ? ` (${w.cost})` : ""}</option>
+          ))}
+        </select>
+      </div>
+      <div className="value">
+        <span className="path">Shield</span>
+        <select value={chosenShield} onChange={(e) => { save(chosenBody, e.target.value); }}>
+          <option value="">— none —</option>
+          {shields.map((w) => (
+            <option key={w.id} value={w.id}>{w.name}{w.cost !== undefined ? ` (${w.cost})` : ""}</option>
+          ))}
+        </select>
+      </div>
+    </section>
+  );
+}
+
+/**
  * §9.2's third mode: the timeline, and the objections beside it.
  *
  * *"The same validation rules must hold on both paths, or sheet editing becomes the back door
@@ -135,6 +180,8 @@ function History({ id, onChanged }: { id: string; onChanged: () => void }): Reac
           </div>
         ))}
       </section>
+
+      {t.wear.length > 0 && <Wear id={id} wear={t.wear} onChanged={load} />}
 
       {t.spells.length > 0 && <Spells offers={t.spells} slots={t.derived.spells} />}
 

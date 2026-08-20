@@ -56,6 +56,8 @@ export interface Api {
    *  sheet the user can see is wrong with no way to say so. */
   correctEvent(id: string, eventId: string, replacement: { class?: string; die?: number }): Promise<Objection[]>;
   removeEvent(id: string, eventId: string): Promise<Objection[]>;
+  /** Correction 61: what the character has on. Not a Level Event — see the service. */
+  wear(id: string, worn: string[]): Promise<void>;
 }
 
 /** One place for the channel names, so a typo is a build error rather than a silent no-op. */
@@ -71,4 +73,5 @@ export const CHANNEL = {
   levelUp: "corerules:levelUp",
   correctEvent: "corerules:correctEvent",
   removeEvent: "corerules:removeEvent",
+  wear: "corerules:wear",
 } as const;

@@ -47,13 +47,14 @@ export interface Drift {
  * again would otherwise keep whatever order it arrived in.
  */
 function ordered(file: CharacterFile): CharacterFile {
-  const { id, name, race, subrace, kit, kitAbandoned, deity, scores, options, packs, events, ...rest } = file;
+  const { id, name, race, subrace, kit, kitAbandoned, deity, worn, scores, options, packs, events, ...rest } = file;
   return {
     id, name, race,
     ...(subrace !== undefined ? { subrace } : {}),
     ...(kit !== undefined ? { kit } : {}),
     ...(kitAbandoned !== undefined ? { kitAbandoned } : {}),
     ...(deity !== undefined ? { deity } : {}),
+    ...(worn !== undefined ? { worn } : {}),
     scores, options, packs, events, ...rest,
   };
 }

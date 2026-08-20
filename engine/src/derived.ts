@@ -92,7 +92,7 @@ export function derived(pack: Pack, character: Character): Derived {
   if (classId !== undefined && funds === undefined) {
     missing.push({ value: "starting funds", because: "no loaded pack has Table 43 for this class" });
   }
-  const ac = armourClass(pack, []);
+  const ac = armourClass(pack, character.file.worn ?? []);
   const casting = classId !== undefined ? spellSlots(pack, classId, level) : undefined;
   if (casting?.missing !== undefined && PROGRESSION_CLASSES.has(norm(groupName))) {
     missing.push({ value: "spells per day", because: casting.missing });

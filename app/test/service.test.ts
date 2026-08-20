@@ -8,7 +8,7 @@ import { Character } from "../../engine/src/character.ts";
 import { canonical } from "../../engine/src/hash.ts";
 import { Library } from "../../engine/src/library.ts";
 import { check, draftOf } from "../../engine/src/advance.ts";
-import { characters, correctEvent, open, packs, removeEvent } from "../src/main/service.ts";
+import { characters, correctEvent, open, packs, removeEvent, timeline, wear } from "../src/main/service.ts";
 
 const fixture = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "engine", "test", "fixtures", "minimal");
 
@@ -28,7 +28,7 @@ test("the packs list says what a user needs to decide whether it is the right pa
   const { dir, library } = root();
   const [pack] = packs(library);
   assert.equal(pack!.id, "minimal");
-  assert.equal(pack!.records, 49);
+  assert.equal(pack!.records, 56);
   assert.match(pack!.hash, /^[0-9a-f]{12}$/);
   assert.deepEqual(pack!.complaints, []);
   rmSync(dir, { recursive: true });
@@ -102,5 +102,24 @@ test("removing a level takes its choices with it, because they travelled in it",
   assert.equal(after.file.events.length, 1);
   assert.deepEqual(after.file.events.flatMap((e) => e.chose ?? []), [],
     "the choice went with the level that made it");
+  rmSync(dir, { recursive: true });
+});
+
+test("armour goes on and comes off without touching the history", () => {
+  // Correction 61. §6.3's Level Events are what the rules derive from, and what a character is
+  // wearing this afternoon derives nothing about their level — putting it in that list would file
+  // a change of clothes beside becoming a 5th-level fighter.
+  const { dir, library, id } = root();
+  const before = library.open(id).file.events.length;
+
+  wear(library, id, ["test:mail", "test:buckler"]);
+  const t = timeline(library, id)!;
+  assert.equal(t.derived.armourClass, 4, "mail is 5 alone and 4 with a shield");
+  assert.equal(library.open(id).file.events.length, before, "and the timeline is untouched");
+  assert.equal(t.wear.find((w) => w.id === "test:mail")?.chosen, true);
+
+  wear(library, id, []);
+  assert.equal(timeline(library, id)!.derived.armourClass, 10);
+  assert.equal(library.open(id).file.worn, undefined, "and the field goes away rather than emptying");
   rmSync(dir, { recursive: true });
 });

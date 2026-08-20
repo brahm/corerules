@@ -233,6 +233,51 @@
           "7"
         ]
       ]
+    },
+    {
+      "id": "test:armour-class",
+      "name": "Armour class by what you wear",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Tables"
+        ]
+      },
+      "interpretation": {
+        "confidence": "reading",
+        "note": "Correction 61: the combination table, keyed by the item instead of the prose."
+      },
+      "supplies": "armourClass",
+      "keyedBy": {
+        "kind": "id",
+        "vocabulary": "test:armor"
+      },
+      "columns": [
+        "alone",
+        "with shield"
+      ],
+      "rows": [
+        [
+          "test:jerkin",
+          "8",
+          "7"
+        ],
+        [
+          "test:mail",
+          "5",
+          "4"
+        ],
+        [
+          "test:oddments",
+          "6",
+          "--"
+        ],
+        [
+          "(nothing)",
+          "10",
+          "9"
+        ]
+      ]
     }
   ],
   "limitations": [
@@ -265,6 +310,97 @@
       "members": [
         "test:sabre"
       ]
+    }
+  ],
+  "armor": [
+    {
+      "id": "test:jerkin",
+      "name": "Jerkin",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Armour",
+          "Jerkin"
+        ]
+      },
+      "armorKind": "item",
+      "worn": "body",
+      "cost": "5 gp",
+      "weight": "15 lbs."
+    },
+    {
+      "id": "test:mail",
+      "name": "Mail",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Armour",
+          "Mail"
+        ]
+      },
+      "armorKind": "item",
+      "worn": "body",
+      "cost": "75 gp",
+      "weight": "40 lbs."
+    },
+    {
+      "id": "test:oddments",
+      "name": "Oddments",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Armour",
+          "Oddments"
+        ]
+      },
+      "armorKind": "item",
+      "worn": "body",
+      "cost": "1 gp",
+      "weight": "5 lbs."
+    },
+    {
+      "id": "test:shield",
+      "name": "Shield",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Armour",
+          "Shield"
+        ]
+      },
+      "armorKind": "heading",
+      "members": [
+        "test:buckler"
+      ],
+      "worn": "shield"
+    },
+    {
+      "id": "test:buckler",
+      "name": "Buckler",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Armour",
+          "Buckler"
+        ]
+      },
+      "armorKind": "item",
+      "group": "test:shield",
+      "cost": "1 gp",
+      "weight": "3 lbs.",
+      "worn": "shield"
+    },
+    {
+      "id": "test:heavy-armor",
+      "name": "Heavy armour",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Armour",
+          "Heavy armour"
+        ]
+      },
+      "armorKind": "category"
     }
   ]
 }

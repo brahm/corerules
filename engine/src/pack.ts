@@ -81,6 +81,18 @@ export class Pack {
         this.complain("manifest", `${f} is present in the directory and not in the manifest`);
       }
     }
+
+    // **Correction 65.** Correction 58 had the pack declare the field paths its EFFECTS write,
+    // and a field path enters a pack two ways: an effect writes one, and a lookup table
+    // `supplies` one. The second was never covered, so eight of the slice's ten table paths sat
+    // outside the vocabulary and nothing anywhere noticed — a declaration with a hole in it,
+    // which is worse than none, because it reads as complete.
+    for (const t of this.records("lookupTables")) {
+      const supplies = t["supplies"] as string | undefined;
+      if (supplies !== undefined && !this.vocabulary.has(supplies)) {
+        this.complain("vocabulary", `${t.id} supplies ${supplies}, which the pack does not declare`);
+      }
+    }
   }
 
   complain(area: Complaint["area"], message: string): void {
