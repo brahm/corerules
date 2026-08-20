@@ -248,6 +248,16 @@
           "Abilities"
         ]
       }
+    },
+    {
+      "id": "test:constitution",
+      "name": "Constitution",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Abilities"
+        ]
+      }
     }
   ],
   "creatures": [

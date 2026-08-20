@@ -289,6 +289,11 @@ export function Sheet(
           {view.who.map((w) => w.name).join(" / ")} · {view.hitPoints} hp ·{" "}
           {view.levels.map((l) => `${l.class} ${l.level}`).join(", ")}
         </p>
+        {/* Correction 66: a total with no Constitution in it looks exactly like one that had
+            none to add, so where the rule was withheld the sheet says which rule and why. */}
+        {view.hitPointsBecause !== undefined && (
+          <p className="why">no Constitution bonus — {view.hitPointsBecause}</p>
+        )}
       </header>
 
       <section>

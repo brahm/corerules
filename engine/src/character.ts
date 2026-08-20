@@ -110,23 +110,72 @@ export class Character {
   }
 
   /**
-   * Derived. Each event contributes `floor(sum of its rolls / number of classes)`.
+   * Derived. Each event contributes `floor(sum of its rolls / number of classes)`, plus what
+   * Constitution says, and **the roll may be raised before it is counted**.
    *
    * The PHB's worked example is the test: a fighter/thief/mage rolls 6, 5 and 2 at first
    * level and begins with **4** — the sum divided by three — and a later thief advance
    * rolling 4 adds **1**. Dividing each roll separately would have given 3 at creation, so the
    * event must hold its rolls together.
    *
-   * Constitution is not in here yet: the bonus is a table read with a per-class cap, and
-   * pretending otherwise would be the kind of quiet wrong number the rest of this refuses.
+   * **Constitution enters twice**, which is correction 66 and is why this took so long to be
+   * safe to add. Table 3's Hit Point Adjustment column holds two numbers in one cell —
+   * `+2 (+4)*`, where the parenthetical is warriors only — and the star COUNT is a different
+   * rule again: at Constitution 20 every 1 rolled for a Hit Die counts as a 2, at 21 every 1
+   * and 2 counts as a 3, at 23 every 1, 2 and 3 counts as a 4.
+   *
+   * The die floor is applied **here and not at the roll**, and that is §6.3 doing exactly what
+   * it was built for: the file records the 1 the player actually rolled, and the rule turns it
+   * into a 2 every time the total is computed. Storing the 2 would have destroyed the roll and
+   * made the number unexplainable the day the character's Constitution changed.
    */
   hitPoints(): number {
     const n = Math.max(1, this.classes().length);
+    const { bonus, floor } = this.constitution();
     let total = 0;
     for (const e of this.file.events) {
-      total += Math.floor(e.rolls.reduce((s, r) => s + r.die, 0) / n);
+      const rolled = e.rolls.reduce((s, r) => s + Math.max(r.die, floor), 0);
+      // The bonus is per Hit Die and a multi-class character rolls one die per class for a
+      // level — so it is added once per level, like the dice it accompanies.
+      total += Math.floor(rolled / n) + bonus;
     }
     return total;
+  }
+
+  /**
+   * What Table 3 says about this character, or nothing where it cannot say.
+   *
+   * Warriors read a different column, so this needs the class GROUP — and a multi-class
+   * fighter/mage is a warrior for one of its halves and not the other. The book does not rule
+   * on that combination's hit point bonus, and the Engine will not invent one: where the
+   * classes disagree about which column to read, **neither is used** and the sheet says so.
+   */
+  private constitution(): { bonus: number; floor: number; because?: string } {
+    const score = Object.entries(this.file.scores)
+      .find(([id]) => id.endsWith(":constitution"))?.[1];
+    const table = this.pack.records("lookupTables").find((t) => t["supplies"] === "hitPoints.perLevel");
+    if (score === undefined || table === undefined) return { bonus: 0, floor: 0 };
+    const row = ((table["rows"] as string[][] | undefined) ?? [])
+      .find((r) => Number.parseInt(r[0] ?? "", 10) === score);
+    if (row === undefined) return { bonus: 0, floor: 0, because: `${table.name} has no row for Constitution ${score}` };
+
+    const groups = new Set(this.classes().flatMap((id) => {
+      const c = this.pack.byId.get(id);
+      const g = groupsOf(c)[0] ?? (c?.isGroup === true ? c.id : undefined);
+      return g === undefined ? [] : [(this.pack.byId.get(g)?.name ?? "").toLowerCase()];
+    }));
+    const warrior = groups.has("warrior");
+    if (warrior && groups.size > 1) {
+      return { bonus: 0, floor: 0, because: "this character is a warrior in one class and not in another, and Table 3 does not say which column a multi-class character reads" };
+    }
+    const n = Number.parseInt(row[warrior ? 1 : 2] ?? "0", 10);
+    const min = Number.parseInt(row[3] ?? "", 10);
+    return { bonus: Number.isNaN(n) ? 0 : n, floor: Number.isNaN(min) ? 0 : min };
+  }
+
+  /** Why the hit points are what they are, for a sheet that has to explain itself. */
+  hitPointsBecause(): string | undefined {
+    return this.constitution().because;
   }
 
   /** The layer stack §4 walks, in order. Order never changes the answer — the six operations

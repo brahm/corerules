@@ -33,6 +33,10 @@
       "path": "hitDice.perLevel"
     },
     {
+      "path": "hitPoints.perLevel",
+      "note": "Correction 66: supplied by a table."
+    },
+    {
       "path": "infravision.range"
     },
     {

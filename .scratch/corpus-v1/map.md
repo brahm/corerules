@@ -1492,6 +1492,32 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    the pack does not declare. The check earned its keep in the first minute — it found **two more
    in the Engine's own test fixture**, where a table had been supplying `surefooting.bonus` and
    `asPrinted.bonus` against declarations for `surefooting` and `asPrinted`.
+66. **RESOLVED — one column of Table 3 holds two rules and a third one in punctuation.**
+   ([Engine ticket 06](../engine-v1/issues/06-the-evaluator.md), putting Constitution into the hit
+   points) The Hit Point Adjustment column reads `+2 (+4)*` at Constitution 18. That is **two
+   numbers in one cell** — the footnote says *"Parenthetical bonus applies to warriors only. All
+   other classes receive maximum bonus of +2 per die"* — and the **number of asterisks is a
+   different rule again**: two stars means every 1 rolled for a Hit Die counts as a 2, three means
+   1s and 2s count as 3s, four means 1s, 2s and 3s count as 4s.
+   So a single column carries a per-class-group bonus, a cap, and a **floor on the die itself**,
+   discriminated by parentheses and by counting punctuation. **Correction 61's shape for the third
+   time** — Table 46's backwards `+ shield`, Table 44's two meanings, and now this — and the
+   family resemblance is worth naming: *the tables in these books compress a second dimension into
+   typography*, and every one of them reads as a flat lookup until somebody needs the second
+   dimension. None of the three announces itself. Two of the three produce a plausible wrong
+   number rather than an error.
+   Resolved as `phb:DD01430#2`: the same twenty-five rows with the punctuation resolved into
+   `warrior`, `other` and `dieMinimum` columns, carrying the `interpretation` note that says it is
+   a reading. `phb:DD01430` is unchanged.
+   **The die floor is where §6.3 pays off in a way nobody planned.** The rule turns a rolled 1
+   into a 2, and the Engine applies it *when the total is computed* rather than at the roll — so
+   the file keeps the 1 the player actually rolled. Storing the 2 would have destroyed the roll and
+   made the number unexplainable the first time the character's Constitution changed. *"Hit points
+   are recorded randomness"* was argued for multi-class arithmetic; it turns out to be what lets a
+   rule modify a roll without eating it.
+   One case is left open on purpose: a **fighter/mage is a warrior in one class and not in the
+   other**, and Table 3 does not say which column a multi-class character reads. Neither is used
+   and the sheet says why.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

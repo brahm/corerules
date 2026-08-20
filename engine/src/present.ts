@@ -48,6 +48,8 @@ export interface SheetView {
   /** Race / class / kit, in the order the layers were applied. */
   who: { role: string; name: string; book: string }[];
   hitPoints: number;
+  /** Correction 66: present only where Table 3 could not be applied, with the reason. */
+  hitPointsBecause?: string;
   levels: { class: string; level: number }[];
   values: ValueLine[];
   granted: { name: string; book: string; rider?: string }[];
@@ -154,6 +156,7 @@ export function present(character: Character): SheetView {
       role: l.role, name: l.record.name, book: l.record.provenance?.section[0] ?? "?",
     })),
     hitPoints: character.hitPoints(),
+    ...(character.hitPointsBecause() !== undefined ? { hitPointsBecause: character.hitPointsBecause()! } : {}),
     levels: Object.entries(levels).map(([id, level]) => ({ class: named(sheet, id), level })),
     values,
     granted: sheet.granted.map((g) => ({
@@ -188,6 +191,7 @@ const BOUND: Record<SheetView["owed"][number]["bounded"], string> = {
 export function render(view: SheetView): string {
   const out: string[] = [];
   out.push(`${view.name} — ${view.hitPoints} hp`);
+  if (view.hitPointsBecause !== undefined) out.push(`  no Constitution bonus: ${view.hitPointsBecause}`);
   out.push(view.who.map((w) => `${w.name} (${w.role})`).join(" / "));
   out.push(view.levels.map((l) => `${l.class} ${l.level}`).join(", "));
 

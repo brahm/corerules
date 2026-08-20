@@ -592,6 +592,35 @@ for a second ability nobody has rolled yet, which is precisely the case §5.4's 
 for. Drop the alignment and it is 58 unknown, because the question cannot be asked at all. Wisdom 9
 and chaotic evil leaves two.
 
+### Constitution, and the third table that hides a dimension in punctuation
+
+`hitPoints()` is complete. Constitution enters **twice** and the second way is the interesting one.
+
+Table 3's Hit Point Adjustment column reads `+2 (+4)*` — two numbers in one cell, the parenthetical
+for warriors only — and the **count of asterisks is a separate rule**: at Constitution 20 every 1
+rolled for a Hit Die counts as a 2, at 21 every 1 and 2 counts as a 3, at 23 every 1, 2 and 3 counts
+as a 4. One column, a per-group bonus, a cap, and a floor on the die, told apart by parentheses and
+by counting punctuation.
+
+That is **the third table in a row with this shape** — Table 46's backwards `+ shield`, Table 44
+meaning two different tables, and now this. Worth stating as a rule of thumb for whoever transcribes
+the remaining books: *these tables compress a second dimension into typography*, they read as flat
+lookups until someone needs the second dimension, and two of the three produce a plausible wrong
+number rather than an error.
+
+**The die floor is where §6.3 pays off in a way nobody planned.** The rule turns a rolled 1 into a
+2, and the Engine applies it when the total is computed rather than at the roll — so the file keeps
+the 1 the player actually rolled. Storing the 2 would have destroyed the roll and made the number
+unexplainable the first time the character's Constitution changed. *"Hit points are recorded
+randomness"* was argued for multi-class arithmetic and turns out to be what lets a rule modify a
+roll without eating it.
+
+Checked against the book: a Constitution 18 warrior gains +4 a level and a Constitution 18 mage
+gains +2, which is the cap doing its whole job. The PHB's worked example — 6, 5 and 2 across three
+classes for 4 hit points — is unmoved, because that character has no Constitution recorded and the
+Engine adds nothing rather than assuming an average. A fighter/mage with Constitution 18 gets **no
+bonus at all** and is told why: Table 3 has two columns and no rule for a character in both.
+
 ## What is left
 - **Encumbrance**, which wants the rest of §9.1's equipment: the armour list carries weights and
   Table 47 rates them, but a character carries more than armour.

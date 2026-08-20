@@ -278,6 +278,49 @@
           "9"
         ]
       ]
+    },
+    {
+      "id": "test:constitution-hp",
+      "name": "Constitution, hit points as a rule",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Tables"
+        ]
+      },
+      "interpretation": {
+        "confidence": "reading",
+        "note": "Correction 66: one cell held two numbers and a footnote marker; this is them apart."
+      },
+      "supplies": "hitPoints.perLevel",
+      "keyedBy": {
+        "kind": "integer"
+      },
+      "columns": [
+        "warrior",
+        "other",
+        "dieMinimum"
+      ],
+      "rows": [
+        [
+          "10",
+          "0",
+          "0",
+          "--"
+        ],
+        [
+          "18",
+          "4",
+          "2",
+          "--"
+        ],
+        [
+          "20",
+          "5",
+          "2",
+          "2"
+        ]
+      ]
     }
   ],
   "limitations": [
