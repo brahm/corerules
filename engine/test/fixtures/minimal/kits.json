@@ -26,6 +26,12 @@
           "op": "grant",
           "kind": "nonweaponProficiency",
           "ref": "test:heraldry"
+        },
+        {
+          "op": "set",
+          "field": "startingWealth",
+          "to": "4d4x10",
+          "text": "The kit sets its own, over Table 43."
         }
       ],
       "prerequisite": [

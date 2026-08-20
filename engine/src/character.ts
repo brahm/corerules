@@ -53,6 +53,10 @@ export interface CharacterFile {
   /** Correction 61: what the character wears, which Table 46 can now be asked about. Armour
    *  only — the rest of §9.1's equipment is still a corpus away. */
   worn?: Id[];
+  /** §9.1's starting money, **as rolled**. Not to be confused with the `startingWealth` FIELD,
+   *  which 38 kits write and which holds a die — `4d4x10`. One is the question and the other is
+   *  the answer, and they had the same name until something finally rolled one. */
+  funds?: number;
   alignment?: Id;
   /** §9.1's starting money, and it is **recorded randomness** for the same reason hit points
    *  are: the pack says `5d4x10` and the roll happened once. Storing the number is the only

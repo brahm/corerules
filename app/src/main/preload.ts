@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld("corerules", {
     ipcRenderer.invoke(CHANNEL.correctEvent, id, eventId, replacement),
   removeEvent: (id: string, eventId: string) => ipcRenderer.invoke(CHANNEL.removeEvent, id, eventId),
   arms: (packId: string, classId: string) => ipcRenderer.invoke(CHANNEL.arms, packId, classId),
+  rollFunds: (id: string, amount?: number) => ipcRenderer.invoke(CHANNEL.rollFunds, id, amount),
   wear: (id: string, worn: string[]) => ipcRenderer.invoke(CHANNEL.wear, id, worn),
   steps: (packId: string, draft: unknown) => ipcRenderer.invoke(CHANNEL.steps, packId, draft),
   create: (packId: string, draft: unknown, hitDie: number) =>

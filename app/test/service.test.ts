@@ -8,7 +8,7 @@ import { Character } from "../../engine/src/character.ts";
 import { canonical } from "../../engine/src/hash.ts";
 import { Library } from "../../engine/src/library.ts";
 import { check, draftOf } from "../../engine/src/advance.ts";
-import { characters, correctEvent, open, packs, removeEvent, timeline, wear } from "../src/main/service.ts";
+import { characters, correctEvent, open, packs, removeEvent, rollFunds, timeline, wear } from "../src/main/service.ts";
 
 const fixture = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "engine", "test", "fixtures", "minimal");
 
@@ -121,5 +121,26 @@ test("armour goes on and comes off without touching the history", () => {
   wear(library, id, []);
   assert.equal(timeline(library, id)!.derived.armourClass, 10);
   assert.equal(library.open(id).file.worn, undefined, "and the field goes away rather than emptying");
+  rmSync(dir, { recursive: true });
+});
+
+test("starting money is a die until somebody rolls it, and the kit decides which die", () => {
+  // §9.1's last unrolled die. The notation is `5d4 x 10 gp`, which the inline
+  // `1 + floor(random * sides)` the interface used for hit points cannot express — the grammar
+  // had been in the schema since correction 15 and nothing had ever executed it.
+  const { dir, library, id } = root();
+  const before = timeline(library, id)!.derived.funds!;
+  assert.equal(before.rolled, undefined, "a die with nothing rolled on it is not a number");
+  assert.equal(before.die, "4d4x10");
+  assert.equal(before.from, "this character's kit", "the Hedge Knight sets its own, over Table 43");
+  assert.deepEqual([before.least, before.most], [40, 160]);
+
+  const got = rollFunds(library, id)!;
+  assert.ok(got >= 40 && got <= 160);
+  assert.equal(library.open(id).file.funds, got, "recorded, never recomputed");
+
+  // §9.1 keeps entry beside the dice: a number thrown at a real table is typed in.
+  assert.equal(rollFunds(library, id, 95), 95);
+  assert.equal(timeline(library, id)!.derived.funds!.rolled, 95);
   rmSync(dir, { recursive: true });
 });

@@ -150,7 +150,19 @@ function History({ id, onChanged }: { id: string; onChanged: () => void }): Reac
         )}
         {t.derived.funds !== undefined && (
           <div className="value">
-            <span className="path">Starting funds</span><span className="amount">{t.derived.funds}</span>
+            <span className="path">Starting funds</span>
+            {/* §9.1: the tool rolls dice. A die with nothing rolled on it is not a number, so
+                this shows the die and a button — never a plausible-looking amount nobody threw. */}
+            {t.derived.funds.rolled === undefined
+              ? (
+                <button type="button" onClick={() => { void api.rollFunds(id).then(load); }}>
+                  Roll {t.derived.funds.die}
+                </button>
+              )
+              : <span className="amount">{t.derived.funds.rolled} gp</span>}
+            <div className="why">
+              {t.derived.funds.die} from {t.derived.funds.from} — {t.derived.funds.least} to {t.derived.funds.most}
+            </div>
           </div>
         )}
         {t.derived.spells !== undefined && (

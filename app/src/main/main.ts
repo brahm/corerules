@@ -77,6 +77,8 @@ function handlers(): void {
     service.removeEvent(library(), id, eventId));
   ipcMain.handle(CHANNEL.arms, (_e, packId: string, classId: string) =>
     service.arms(library(), packId, classId));
+  ipcMain.handle(CHANNEL.rollFunds, (_e, id: string, amount?: number) =>
+    service.rollFunds(library(), id, amount));
   ipcMain.handle(CHANNEL.wear, (_e, id: string, worn: string[]) =>
     service.wear(library(), id, worn));
   ipcMain.handle(CHANNEL.steps, (_e, packId: string, draft) => service.steps(library(), packId, draft));

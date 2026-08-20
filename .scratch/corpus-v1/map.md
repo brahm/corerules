@@ -1518,6 +1518,23 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    One case is left open on purpose: a **fighter/mage is a warrior in one class and not in the
    other**, and Table 3 does not say which column a multi-class character reads. Neither is used
    and the sheet says why.
+67. **A dice-shaped string is not a dice value, and 19 of them in the slice are sentences.**
+   ([Engine ticket 06](../engine-v1/issues/06-the-evaluator.md), rolling the starting money) The
+   first thing that ever executed the `dice` grammar was pointed at every dice-shaped string in
+   the pack — 61 distinct, 328 occurrences — and rejected 19 of them. **All 19 are in `duration`
+   or `areaOfEffect`** on spell records: *"2d6 rds. + 2 rds./level"*, *"1d4 persons in 20-ft.
+   cube"*, *"4d4 sq. mi."*. Everything the format treats as a VALUE parses — weapon damage,
+   `effects.to`, `rollUnder.on`, casting time, table rows, all 328 minus those 19.
+   So the grammar is right and the *scan* was the mistake, which is worth writing down because it
+   is the mistake a consumer will make: **a string that begins with a die is not a die.** The
+   schema types these fields as plain strings and nothing marks which ones hold a rollable value,
+   so anything walking the pack looking for dice will find nineteen sentences and try to roll
+   *"1d4 plants in 40-ft. sq."*
+   Not a defect in the records — the books print those durations exactly so, and a spell's
+   duration genuinely is *a die plus a term per level*, which no notation in this format expresses.
+   What is owed is a declaration: either the spell fields say they are prose, or the format grows
+   the per-level term and they stop being prose. Correction 14's shape once more — **the pack
+   knows and does not say.**
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

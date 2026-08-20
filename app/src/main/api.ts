@@ -58,6 +58,8 @@ export interface Api {
   removeEvent(id: string, eventId: string): Promise<Objection[]>;
   /** §6.1: what a multi-class pick expands to, each arm with its own die to roll. */
   arms(packId: string, classId: string): Promise<{ id: string; name: string; die?: string }[]>;
+  /** §9.1's starting money. Omit `amount` to roll it, pass one to record a roll made at a table. */
+  rollFunds(id: string, amount?: number): Promise<number | undefined>;
   /** Correction 61: what the character has on. Not a Level Event — see the service. */
   wear(id: string, worn: string[]): Promise<void>;
 }
@@ -76,5 +78,6 @@ export const CHANNEL = {
   correctEvent: "corerules:correctEvent",
   removeEvent: "corerules:removeEvent",
   arms: "corerules:arms",
+  rollFunds: "corerules:rollFunds",
   wear: "corerules:wear",
 } as const;

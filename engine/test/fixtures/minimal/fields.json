@@ -47,6 +47,10 @@
       "path": "reactionCheck"
     },
     {
+      "path": "startingWealth",
+      "note": "A DIE, not an amount — the amount is on the Character."
+    },
+    {
       "path": "stealth.bonus",
       "note": "Correction 11: a total with a ceiling over it."
     },

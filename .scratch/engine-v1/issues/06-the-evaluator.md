@@ -658,6 +658,37 @@ once, where a player is about to roll, so the renderer never learns what `combin
 arm with a suppression threshold, and no record in this corpus describes one — so there is nothing
 to test a shape against, which is the wrong condition under which to invent one.
 
+### The dice grammar had been validated for months and executed never
+
+`dice.ts`. §9.1 says *"the tool rolls dice"*, and correction 15 put a `dice` pattern in the schema
+and widened it twice — once for `NdM x k`, 4.7% of 2,574 corpus notations that the stated grammar
+rejected, and once for `(NdM ± J) x k`, because **grouping changes the arithmetic**. Every roll in
+this project until now was `1 + Math.floor(Math.random() * sides)` written inline in a React
+component, which cannot express `5d4 x 10` and would not have tried.
+
+The grouping case is not pedantry: `(1d4+1) x 10` and `1d4+1 x 10` top out at **50 and 14**, and
+the first is the money every mage in the game starts with.
+
+**A roll returns its dice, not a total.** §6.3 records randomness rather than reproducing it, and a
+player who threw five 4s wants to see five 4s — 200 gp with nothing behind it is indistinguishable
+from a number the tool made up. `random` is an argument, because a test that cannot fix the dice is
+a test of luck.
+
+Starting money is the last unrolled die in §9.1, and it turned out not to be Table 43's alone:
+**38 kits `set startingWealth` outright**, so the Animal Master starts on `4d4x10` where his class
+group says `5d4 x 10 gp`. The kit layer speaks where it speaks and Table 43 answers where it does
+not — §4 doing its job, needing a function only because the base is a table read rather than an
+effect, so the two never meet on the sheet by themselves.
+
+Two names had to come apart on the way: the **field** `startingWealth`, which 38 kits write and
+which holds a DIE, and the Character's recorded **amount**, which is a number. One is the question
+and the other is the answer, and they had the same name until something finally rolled one. The
+amount is `funds` now.
+
+And pointing the parser at the whole pack produced **correction 67**: 19 of 61 distinct dice-shaped
+strings are prose — *"1d4 persons in 20-ft. cube"* — all of them in `duration` or `areaOfEffect`.
+The grammar is right; a string that begins with a die is not a die.
+
 ## What is left
 - **Dual-class**, per §6.1 and §6.2's suppression threshold, once something in a pack describes one.
 - **Encumbrance**, which wants the rest of §9.1's equipment: the armour list carries weights and

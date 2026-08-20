@@ -129,6 +129,23 @@ export function startingFunds(pack: Pack, classId: Id): string | undefined {
 }
 
 /**
+ * The die this character rolls for money, which is **not always their class's**.
+ *
+ * 38 kits in the slice `set startingWealth` outright — the Animal Master starts on `4d4x10`
+ * rather than the warrior's `5d4 x 10 gp` — so the kit layer decides where it speaks and Table 43
+ * answers where it does not. That is §4's layer model doing exactly what it is for, and the only
+ * reason it needs a function is that the base is a TABLE READ rather than an effect, so the two
+ * do not meet on the sheet by themselves.
+ */
+export function fundsDie(pack: Pack, character: Character): { die: string; from: string } | undefined {
+  const set = character.sheet().view("startingWealth").value;
+  if (typeof set === "string") return { die: set, from: "this character's kit" };
+  const classId = character.classes()[0];
+  const die = classId === undefined ? undefined : startingFunds(pack, classId);
+  return die === undefined ? undefined : { die, from: "Table 43" };
+}
+
+/**
  * Armour class, which this corpus **can** compute — correction 61, resolved by reading the table
  * the way the book writes it rather than the way a lookup wants it.
  *

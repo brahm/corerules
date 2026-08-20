@@ -43,6 +43,7 @@ test("`fields` is a declaration, not a kind", () => {
     "infravision.range",
     "morale",
     "reactionCheck",
+    "startingWealth",
     "stealth.bonus",
     "surefooting",
     "surefooting.bonus",

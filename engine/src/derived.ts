@@ -8,12 +8,15 @@
  */
 import type { Character } from "./character.ts";
 import type { Pack } from "./pack.ts";
-import { armourClass, slots as spellSlots, startingFunds } from "./spells.ts";
+import { range } from "./dice.ts";
+import { armourClass, fundsDie, slots as spellSlots } from "./spells.ts";
 import { groupsOf, type Id } from "./types.ts";
 
 export interface Derived {
-  /** Table 43's die, as the book prints it. §9.1's starting money is a roll, not a number. */
-  funds?: string;
+  /** §9.1's starting money: the die as the book prints it, where it came from, what a roll can
+   *  produce, and the amount **if somebody has rolled**. A die with no roll behind it is not a
+   *  number and must not be shown as one. */
+  funds?: { die: string; from: string; least: number; most: number; rolled?: number };
   /** Armour class, where the corpus can answer — which for now is only the unarmoured case. */
   armourClass?: number;
   armourClassBecause?: string;
@@ -134,11 +137,17 @@ export function derived(pack: Pack, character: Character): Derived {
   const nexts = perClass.map((c) => c.nextLevelAt).filter((n): n is number => n !== undefined);
   const next = nexts.length > 0 ? Math.min(...nexts) : undefined;
 
-  const classId = arms[0]!.id;
-  const funds = startingFunds(pack, classId);
-  if (funds === undefined) {
+  const die = fundsDie(pack, character);
+  const span = die === undefined ? undefined : range(die.die);
+  if (die === undefined) {
     missing.push({ value: "starting funds", because: "no loaded pack has Table 43 for this class" });
+  } else if (span === undefined) {
+    missing.push({ value: "starting funds", because: `${die.from} gives ${die.die}, which is not a notation this Engine can roll` });
   }
+  const funds = die !== undefined && span !== undefined
+    ? { die: die.die, from: die.from, least: span.least, most: span.most,
+        ...(character.file.funds !== undefined ? { rolled: character.file.funds } : {}) }
+    : undefined;
   const ac = armourClass(pack, character.file.worn ?? []);
 
   // Best slot progression: a caster among the arms casts, and the best table wins.

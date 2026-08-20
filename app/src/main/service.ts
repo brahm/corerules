@@ -10,7 +10,8 @@ import { Character } from "../../../engine/src/character.ts";
 import { advance as whatNext, check, correct, dieFor, draftOf, type Advance, type Objection } from "../../../engine/src/advance.ts";
 import { steps as offerSteps, type Draft, type Step } from "../../../engine/src/choice.ts";
 import { derived, type Derived } from "../../../engine/src/derived.ts";
-import { available, type SpellOffer } from "../../../engine/src/spells.ts";
+import { roll } from "../../../engine/src/dice.ts";
+import { available, fundsDie, type SpellOffer } from "../../../engine/src/spells.ts";
 import type { Library } from "../../../engine/src/library.ts";
 import { present, type SheetView } from "../../../engine/src/present.ts";
 import type { CharacterSummary, PackSummary } from "./api.ts";
@@ -223,6 +224,31 @@ export function levelUp(
   // and the sheet shows why — refusing the save would hide the state instead of naming it.
   library.writeCharacter(library.stamp(c.file));
   return said.objections;
+}
+
+/**
+ * **Roll the starting money.** §9.1's last unrolled die.
+ *
+ * The roll happens here rather than in the renderer for the reason `dice.ts` exists at all: the
+ * notation is `5d4 x 10 gp` or `(1d4+1) x 10 gp`, and the inline `1 + floor(random * sides)` the
+ * interface has been using for hit points cannot express either. §6.3's posture is unchanged —
+ * the result is recorded and never recomputed — and `amount` is here so that a number thrown at
+ * a real table can be typed in instead, which §9.1 keeps as a first-class path.
+ */
+export function rollFunds(library: Library, id: string, amount?: number): number | undefined {
+  const opened = library.open(id);
+  const c = opened.character;
+  if (c === undefined) return undefined;
+  if (amount === undefined) {
+    const die = fundsDie(c.pack, c);
+    const thrown = die === undefined ? undefined : roll(die.die);
+    if (thrown === undefined) return undefined;
+    c.file.funds = thrown.total;
+  } else {
+    c.file.funds = amount;
+  }
+  library.writeCharacter(library.stamp(c.file));
+  return c.file.funds;
 }
 
 /**
