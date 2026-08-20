@@ -81,12 +81,43 @@ Two things are permanently out of scope: **automatic character construction** (r
 rule and comes from the book; choosing a kit for you is taste, and no source book contains it), and
 **bundled content**, for the licence reason above.
 
-## Platforms
+## Platforms, and what "unsigned" costs you
 
-Linux, Windows and macOS via Electron. Builds will be **unsigned** — this is not a commercial
-product — and that means something different on each platform, from `chmod +x` on Linux to a
-mandatory Terminal command on macOS. Some Windows 11 machines with Smart App Control will not be able
-to run it at all. The details are specified and will be repeated at release.
+Linux, Windows and macOS via Electron. **The builds are unsigned**, because this is not a
+commercial product and a certificate is a recurring bill for a project that takes no money. That
+word means something different on each of the three systems, and on one of them it is not a warning
+you can click past.
+
+| | To run it |
+|---|---|
+| **Linux** | `chmod +x corerules-*.AppImage`, then run it. No gatekeeper. |
+| **Windows** | SmartScreen says *"Windows protected your PC"* → **More info** → **Run anyway**. |
+| **macOS** | The app reports itself **damaged**. Open Terminal and run `xattr -dr com.apple.quarantine /Applications/corerules.app`. |
+
+Three things worth saying plainly rather than leaving you to discover:
+
+1. **Some Windows 11 machines cannot run corerules at all.** Smart App Control blocks unsigned
+   software with **no per-app override**, and once it is off it cannot be switched back on without
+   reinstalling Windows. If you have it enabled, this application is not available to you, and no
+   click gets past it.
+2. **On macOS, System Settings → Privacy & Security does not help.** The app says it is damaged; it
+   is not. Allowing it there was tried and does not make it run — Terminal is the only route. The
+   reason is one line: no Apple Developer certificate, which costs US$99 a year.
+3. **Your files are yours to back up.** corerules writes to a folder it shows you on first run and
+   never to a cloud:
+
+   | | Characters and packs | Settings |
+   |---|---|---|
+   | **Linux** | `~/corerules` | `~/.config/corerules/settings.json` |
+   | **macOS** | `~/Documents/corerules` | `~/Library/Application Support/corerules/settings.json` |
+   | **Windows** | `Documents\corerules` | `%APPDATA%\corerules\settings.json` |
+
+   Characters are one JSON file each, meant to be read, diffed and copied. Nothing syncs, nothing
+   phones home, and there is no account.
+
+**Content Packs do not circulate.** A Character is your own work and yours to share. A Content Pack
+is a transcription of books you own, and it stays on your machine — corerules ships none, this
+repository contains none, and please do not attach one to an issue.
 
 ## If you want to help
 
