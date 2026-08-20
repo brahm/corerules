@@ -1,0 +1,127 @@
+{
+  "spheres": [
+    {
+      "id": "test:sun",
+      "name": "Sun",
+      "provenance": {
+        "section": [
+          "Fixtures"
+        ]
+      }
+    },
+    {
+      "id": "test:soil",
+      "name": "Soil",
+      "provenance": {
+        "section": [
+          "Fixtures"
+        ]
+      }
+    }
+  ],
+  "deities": [
+    {
+      "id": "test:harvest",
+      "name": "Harvest",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Deities"
+        ]
+      },
+      "target": "test:priest",
+      "cardinality": "one-per-target",
+      "prerequisite": [],
+      "effects": [
+        {
+          "op": "grant",
+          "kind": "sphere",
+          "ref": "test:soil"
+        },
+        {
+          "op": "grant",
+          "kind": "sphereMinor",
+          "ref": "test:sun"
+        }
+      ]
+    }
+  ],
+  "spells": [
+    {
+      "id": "test:sprout",
+      "name": "Sprout",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Spells"
+        ]
+      },
+      "level": 1,
+      "casterClass": "test:priest",
+      "spheres": [
+        "test:soil"
+      ]
+    },
+    {
+      "id": "test:furrow",
+      "name": "Furrow",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Spells"
+        ]
+      },
+      "level": 5,
+      "casterClass": "test:priest",
+      "spheres": [
+        "test:soil"
+      ]
+    },
+    {
+      "id": "test:glimmer",
+      "name": "Glimmer",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Spells"
+        ]
+      },
+      "level": 2,
+      "casterClass": "test:priest",
+      "spheres": [
+        "test:sun"
+      ]
+    },
+    {
+      "id": "test:noon",
+      "name": "Noon",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Spells"
+        ]
+      },
+      "level": 4,
+      "casterClass": "test:priest",
+      "spheres": [
+        "test:sun"
+      ]
+    },
+    {
+      "id": "test:solstice",
+      "name": "Solstice",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Spells"
+        ]
+      },
+      "level": 6,
+      "casterClass": "test:priest",
+      "spheres": [
+        "test:sun",
+        "test:soil"
+      ]
+    }
+  ]
+}

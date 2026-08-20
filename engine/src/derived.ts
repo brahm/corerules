@@ -8,9 +8,18 @@
  */
 import type { Character } from "./character.ts";
 import type { Pack } from "./pack.ts";
+import { armourClass, slots as spellSlots, startingFunds } from "./spells.ts";
 import { groupsOf, type Id } from "./types.ts";
 
 export interface Derived {
+  /** Table 43's die, as the book prints it. §9.1's starting money is a roll, not a number. */
+  funds?: string;
+  /** Armour class, where the corpus can answer — which for now is only the unarmoured case. */
+  armourClass?: number;
+  armourClassBecause?: string;
+  /** Spells per spell level, index 0 being 1st. Empty for a class that casts none, and the
+   *  `missing` line says which of the two that is. */
+  spells?: number[];
   /** The number to hit Armour Class 0, from Table 53. */
   thac0?: number;
   /** Experience needed for the next level, from the class group's own table. */
@@ -19,6 +28,9 @@ export interface Derived {
    *  table that would have answered it named. */
   missing: { value: string; because: string }[];
 }
+
+/** Only these groups cast at all, so a fighter is not told his spell table is missing. */
+const PROGRESSION_CLASSES = new Set(["priest", "wizard", "bard"]);
 
 const norm = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
@@ -76,6 +88,16 @@ export function derived(pack: Pack, character: Character): Derived {
     missing.push({ value: "experience for the next level", because: `no loaded pack has the ${groupName} experience table` });
   }
 
+  const funds = classId !== undefined ? startingFunds(pack, classId) : undefined;
+  if (classId !== undefined && funds === undefined) {
+    missing.push({ value: "starting funds", because: "no loaded pack has Table 43 for this class" });
+  }
+  const ac = armourClass(pack, []);
+  const casting = classId !== undefined ? spellSlots(pack, classId, level) : undefined;
+  if (casting?.missing !== undefined && PROGRESSION_CLASSES.has(norm(groupName))) {
+    missing.push({ value: "spells per day", because: casting.missing });
+  }
+
   // Table 60 is in the slice with every cell empty — the rows are there and the numbers are
   // not. That is exactly the state A3 exists to keep apart from "no rule": the pack HAS the
   // table and cannot answer with it, so the sheet says so rather than showing a blank.
@@ -85,6 +107,10 @@ export function derived(pack: Pack, character: Character): Derived {
   }
 
   return {
+    ...(funds !== undefined ? { funds } : {}),
+    ...(ac.ac !== undefined ? { armourClass: ac.ac } : {}),
+    armourClassBecause: ac.because,
+    ...(casting !== undefined && casting.perLevel.length > 0 ? { spells: casting.perLevel } : {}),
     ...(hit !== undefined ? { thac0: hit } : {}),
     ...(next !== undefined ? { nextLevelAt: next } : {}),
     missing,

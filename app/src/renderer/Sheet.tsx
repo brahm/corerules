@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Api, Timeline } from "../main/api.ts";
 import type { SheetView, ValueLine } from "../../../engine/src/present.ts";
+import type { SpellOffer } from "../../../engine/src/spells.ts";
 
 const api = window.corerules as Api;
 
@@ -41,6 +42,44 @@ function Value({ line }: { line: ValueLine }): React.JSX.Element {
 }
 
 /**
+ * What this character's god allows, which for an Agriculture priest is eighty spells.
+ *
+ * Eighty rows is not a spell list, it is a wall — so what is shown is what the character can
+ * cast **today**, and the rest is one line saying how many there are and where they start. The
+ * ones out of reach are still worth counting: a priest choosing a god is choosing a career, and
+ * *"minor access"* means the sphere stops at 3rd level forever, not that it is unfinished.
+ */
+function Spells(
+  { offers, slots }: { offers: SpellOffer[]; slots: number[] | undefined },
+): React.JSX.Element {
+  const castable = slots === undefined ? 0 : slots.filter((n) => n > 0).length;
+  const now = offers.filter((s) => s.level <= castable);
+  const later = offers.length - now.length;
+  return (
+    <section>
+      <h3>Spells your god allows</h3>
+      {now.map((s) => (
+        <div className="value" key={s.id}>
+          <span className="path">{s.name}</span>
+          <span className="amount dim">level {s.level}</span>
+          {/* Every offer names the sphere and whether the access is major or minor, because
+              that is the difference between "you may have this" and "you may have this until
+              3rd level and then never again" — Complete Priest's, DD05501. */}
+          <div className="why">
+            through {s.through.sphere} — {s.through.access} access, {s.book}
+          </div>
+        </div>
+      ))}
+      {later > 0 && (
+        <div className="why">
+          and {later} more your god allows at spell levels you have not reached
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
  * §9.2's third mode: the timeline, and the objections beside it.
  *
  * *"The same validation rules must hold on both paths, or sheet editing becomes the back door
@@ -64,6 +103,24 @@ function History({ id, onChanged }: { id: string; onChanged: () => void }): Reac
         {t.derived.thac0 !== undefined && (
           <div className="value"><span className="path">THAC0</span><span className="amount">{t.derived.thac0}</span></div>
         )}
+        {t.derived.funds !== undefined && (
+          <div className="value">
+            <span className="path">Starting funds</span><span className="amount">{t.derived.funds}</span>
+          </div>
+        )}
+        {t.derived.spells !== undefined && (
+          <div className="value">
+            <span className="path">Spells per day</span>
+            <span className="amount">{t.derived.spells.filter((n) => n > 0).join(" / ") || "none yet"}</span>
+          </div>
+        )}
+        {t.derived.armourClass !== undefined && (
+          <div className="value">
+            <span className="path">Armour class</span>
+            <span className="amount">{t.derived.armourClass}</span>
+            <div className="why">{t.derived.armourClassBecause}</div>
+          </div>
+        )}
         {t.derived.nextLevelAt !== undefined && (
           <div className="value">
             <span className="path">Next level at</span>
@@ -78,6 +135,8 @@ function History({ id, onChanged }: { id: string; onChanged: () => void }): Reac
           </div>
         ))}
       </section>
+
+      {t.spells.length > 0 && <Spells offers={t.spells} slots={t.derived.spells} />}
 
       {t.objections.length > 0 && (
         <section>

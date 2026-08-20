@@ -426,8 +426,46 @@ Verified by extracting the built AppImage: the shipped `corerules.png` is byte-i
 source, the desktop entry carries `StartupWMClass` so a launcher can find the running window, and
 its Comment is written for a player rather than left to default into the package description.
 
+### Spells and money the corpus has; armour it does not
+
+`spells.ts`. Three questions were expected to fail together for the same reason — *"equipment, and
+what a priest may cast, want a corpus the slice does not have"* — and **two of them turned out to
+be answerable and the third to be unanswerable for a different reason than the one assumed.**
+
+**A priest's spells come from the spheres their god grants**, which is [correction
+46](../../corpus-v1/map.md)'s deity work paying off in the place it was always for. The Complete
+Priest's states the rule at DD05501: major access reaches spells *"of any level from that sphere"*,
+minor access *"only 1st through 3rd level"*. The packs have carried `sphere` and `sphereMinor` as
+separate grants since the priesthoods were transcribed; this is the first thing that reads them.
+A first-level cleric of Agriculture is offered **80 spells** — `{1st: 18, 2nd: 16, 3rd: 18, 4th: 9,
+5th: 7, 6th: 10, 7th: 2}` — and the minor spheres stop dead after 3rd, which is the rule holding
+rather than the transcription running out. The distinction rides on every offer, because *"you may
+have this"* and *"you may have this and never anything above 3rd level in it"* are a career
+decision apart, and a list that flattened them would mislead precisely the player who was planning.
+
+**Starting funds are Table 43** and print as the book prints them — `5d4 x 10 gp`, `(1d4+1) x 10
+gp`, `2d6 x 10 gp` — a die and not a number, for the same reason hit points are: it is recorded
+randomness, and an Engine that rolled it could not record a roll made at the table.
+
+**Spells per day are Table 24 for priests, Table 32 for bards, and for wizards Table 21, which is
+in the slice with `rows: []`.** Present and empty, exactly as Table 60 is — so a mage is told *"Table
+21 is present in the pack with no rows in it"* and a fighter is told nothing at all, because the
+Engine knows which groups cast. A3 keeps those three states apart and this is the first place all
+three appear at once.
+
+**Armour class is the refusal, and it is [correction 61](../../corpus-v1/map.md).** Not a missing
+equipment list — **Table 46 rates combinations rather than pieces**, and the seven `armor` records
+come from two different tables for two different purposes. So `armourClass` reports rather than
+computes: 10 unarmoured, because Table 46 has a row that happens to name a single state, and for
+anything worn a sentence naming what would have to exist first. The alternative was an AC that
+looked right for leather and was silently wrong for leather and shield, which is §5.2's failure
+mode with the shield doing the damage.
+
 ## What is left
-- **Equipment, encumbrance and spell selection**, which want a corpus the slice does not have.
+- **Equipment and encumbrance**, which want a corpus the slice does not have — and, per correction
+  61, want Table 46 re-read as a rule over items before they can have one.
+- **Spell selection**, as opposed to spell access: which of the 80 a priest prepares today. That is
+  a per-day record on the Character, not a rules question, and it wants a screen more than an engine.
 - **Constitution is not in the hit points.** The bonus is a table read with a per-class cap, and
   a plausible-looking total that quietly omits it is the kind of wrong number the rest of this
   refuses.

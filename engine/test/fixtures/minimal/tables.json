@@ -118,6 +118,121 @@
           "Rogue, General"
         ]
       ]
+    },
+    {
+      "id": "phb:DD01479",
+      "name": "Table 24: Priest Spell Progression",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Tables"
+        ]
+      },
+      "keyedBy": {
+        "kind": "text"
+      },
+      "columns": [
+        "Spell Level"
+      ],
+      "rows": [
+        [
+          "Level",
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        [
+          "1",
+          "1",
+          "--",
+          "--",
+          "--"
+        ],
+        [
+          "2",
+          "2",
+          "--",
+          "--",
+          "--"
+        ],
+        [
+          "5",
+          "3",
+          "3",
+          "2",
+          "--"
+        ]
+      ]
+    },
+    {
+      "id": "phb:DD01471",
+      "name": "Table 21: Wizard Spell Progression",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Tables"
+        ]
+      },
+      "keyedBy": {
+        "kind": "text"
+      },
+      "columns": [
+        "Spell Level"
+      ],
+      "rows": []
+    },
+    {
+      "id": "phb:DD01613",
+      "name": "Table 43: Initial Character Funds",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Tables"
+        ]
+      },
+      "keyedBy": {
+        "kind": "id"
+      },
+      "columns": [
+        "Die Range"
+      ],
+      "rows": [
+        [
+          "test:warrior",
+          "5d4 x 10 gp"
+        ],
+        [
+          "test:rogue",
+          "2d6 x 10 gp"
+        ]
+      ]
+    },
+    {
+      "id": "phb:DD01632",
+      "name": "Table 46: Armor Class Ratings",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Tables"
+        ]
+      },
+      "keyedBy": {
+        "kind": "text"
+      },
+      "columns": [
+        "AC Rating"
+      ],
+      "rows": [
+        [
+          "None",
+          "10"
+        ],
+        [
+          "Leather or padded armor + shield, studded leather",
+          "7"
+        ]
+      ]
     }
   ],
   "limitations": [

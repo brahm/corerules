@@ -1301,6 +1301,22 @@ contact with the corpus. Collected here so the eventual spec update has one plac
    it anyway would invent a rule **against the character**, in the one place a player would never
    think to check. Not a transcription gap: the books are silent, and this is where the corpus
    ends rather than where the transcription stopped.
+61. **Armour class is not computable from this corpus, and the reason is not the one it looks
+   like.** ([Engine ticket 06](../engine-v1/issues/06-the-evaluator.md), building equipment and
+   spells) It looks like a missing equipment list. It is worse than that: **Table 46 does not rate
+   armour, it rates combinations.** One row reads *"Leather or padded armor + shield, studded
+   leather, or ring mail armor"* — AC 7 — and names three different ways to arrive there, one of
+   which involves a shield. Nothing in that table can be looked up by *"what is this character
+   wearing"*, because its key is not a garment.
+   And the seven `armor` records are not an armour vocabulary either. **Three were lifted from
+   Table 46's row labels and four from the COLUMN headings of Table 29**, the thieving-skill
+   adjustment table — two tables, two purposes, and neither of them an inventory. `Metal armour`
+   and `Padded, Hide or Studded Leather` are categories a rule discriminates on; nobody wears one.
+   This is correction 53's lesson a third time (**a table's rows are not the vocabulary its
+   headings imply**), and the shape it takes here is that the Engine reports AC 10 for an
+   unarmoured character — Table 46 has a row that happens to name a single state — and refuses
+   everything else by name. What is owed is an equipment list from Tables 43–46, keyed by item,
+   with Table 46 rewritten as a rule over items rather than a lookup over prose.
 4. **[v1 ticket 13](../v1-spec/issues/13-how-packs-get-authored.md)'s LLM-extraction claim is half
    refuted.** ([Ticket 04](issues/04-llm-assisted-extraction.md)) The bulk is less manual because the
    tables were already delimited, not because a model reads them — so the inference that a pack

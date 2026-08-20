@@ -79,11 +79,45 @@
           "ability": "test:intelligence",
           "minimum": 13
         }
-      ]
+      ],
+      "group": "test:wizard"
     },
     {
       "id": "test:rogue",
       "name": "Rogue",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Classes"
+        ]
+      },
+      "isGroup": true
+    },
+    {
+      "id": "test:priest",
+      "name": "Priest",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Classes"
+        ]
+      },
+      "isGroup": true
+    },
+    {
+      "id": "test:cleric",
+      "name": "Cleric",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Classes"
+        ]
+      },
+      "group": "test:priest"
+    },
+    {
+      "id": "test:wizard",
+      "name": "Wizard",
       "provenance": {
         "section": [
           "Fixtures",

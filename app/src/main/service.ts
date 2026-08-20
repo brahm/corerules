@@ -10,6 +10,7 @@ import { Character } from "../../../engine/src/character.ts";
 import { advance as whatNext, check, correct, draftOf, type Advance, type Objection } from "../../../engine/src/advance.ts";
 import { steps as offerSteps, type Draft, type Step } from "../../../engine/src/choice.ts";
 import { derived, type Derived } from "../../../engine/src/derived.ts";
+import { available, type SpellOffer } from "../../../engine/src/spells.ts";
 import type { Library } from "../../../engine/src/library.ts";
 import { present, type SheetView } from "../../../engine/src/present.ts";
 import type { CharacterSummary, PackSummary } from "./api.ts";
@@ -97,6 +98,8 @@ export interface Timeline {
    *  have refused — and separately what nobody can rule on. */
   objections: Objection[];
   caveats: Objection[];
+  /** What this priest's god lets them learn, and on what terms. Empty for anyone without one. */
+  spells: SpellOffer[];
 }
 
 export function timeline(library: Library, id: string): Timeline | undefined {
@@ -112,6 +115,7 @@ export function timeline(library: Library, id: string): Timeline | undefined {
     derived: derived(c.pack, c),
     objections: said.objections,
     caveats: said.caveats,
+    spells: available(c.pack, c),
   };
 }
 
