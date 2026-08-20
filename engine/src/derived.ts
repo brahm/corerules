@@ -24,6 +24,9 @@ export interface Derived {
   thac0?: number;
   /** Experience needed for the next level, from the class group's own table. */
   nextLevelAt?: number;
+  /** §6.2: one line per class where there is more than one, because a Fighter/Mage is two
+   *  careers on two tables and a single number hides which half is which. */
+  perClass?: { class: string; level: number; thac0?: number; nextLevelAt?: number }[];
   /** Present only where the Engine could not compute something it was asked for, with the
    *  table that would have answered it named. */
   missing: { value: string; because: string }[];
@@ -67,35 +70,88 @@ function nextLevelAt(pack: Pack, groupName: string, level: number): number | und
   return Number.isNaN(v) ? undefined : v;
 }
 
+/** The class group a class belongs to, or itself where it IS one. */
+function groupOf(pack: Pack, classId: Id): { id: Id; name: string } | undefined {
+  const klass = pack.byId.get(classId);
+  const id = groupsOf(klass)[0] ?? (klass?.isGroup === true ? klass.id : undefined);
+  const name = id === undefined ? undefined : pack.byId.get(id)?.name;
+  return id === undefined || name === undefined ? undefined : { id, name };
+}
+
+/**
+ * **§6.2, and the reason it is a module concern rather than a lookup.**
+ *
+ * *"XP split evenly · hit points averaged across hit dice · best saving throw across classes ·
+ * best THAC0 · best slot progression."* Those are **shape, not content**: the PHB prints the
+ * saving-throw matrix, and *"with two classes, take the best"* is in no table anywhere. So the
+ * numbers come from the pack and the combination comes from here, which is §5.2's line drawn
+ * through the middle of one sheet.
+ *
+ * Until now every derived value read `classes()[0]`, so a Fighter/Mage got **the fighter's
+ * answers with no sign that half of them were missing** — or, once the class record named no
+ * group, nothing at all. The second failure was honest and useless; the first is §5.2's wrong
+ * number, and it is the one this exists to stop.
+ */
 export function derived(pack: Pack, character: Character): Derived {
-  const classId = character.classes()[0];
-  const klass = classId !== undefined ? pack.byId.get(classId) : undefined;
-  const groupId = groupsOf(klass)[0] ?? (klass?.isGroup === true ? klass.id : undefined);
-  const groupName = groupId !== undefined ? pack.byId.get(groupId)?.name : undefined;
-  const level = classId !== undefined ? (character.levels()[classId] ?? 1) : 1;
+  const levels = character.levels();
+  const arms = character.classes().map((id) => ({
+    id, level: levels[id] ?? 1, group: groupOf(pack, id), name: pack.byId.get(id)?.name ?? id,
+  }));
   const missing: Derived["missing"] = [];
 
-  if (groupName === undefined) {
-    return { missing: [{ value: "everything derived from the class", because: "this character's class names no group" }] };
+  if (arms.length === 0) {
+    return { missing: [{ value: "everything derived from the class", because: "this character has no class" }] };
+  }
+  const homeless = arms.filter((a) => a.group === undefined);
+  if (homeless.length > 0) {
+    return {
+      missing: [{
+        value: "everything derived from the class",
+        because: `${homeless.map((a) => a.name).join(", ")} names no class group in any loaded pack`,
+      }],
+    };
   }
 
-  const hit = thac0(pack, groupName, level);
-  if (hit === undefined) {
-    missing.push({ value: "THAC0", because: `no loaded pack has Table 53 for ${groupName} at level ${level}` });
+  // Best THAC0 across the classes — the LOWEST, because THAC0 counts down.
+  const hits = arms.map((a) => ({ arm: a, thac0: thac0(pack, a.group!.name, a.level) }));
+  const missed = hits.filter((h) => h.thac0 === undefined);
+  for (const h of missed) {
+    missing.push({ value: `THAC0 as a ${h.arm.name}`, because: `no loaded pack has Table 53 for ${h.arm.group!.name} at level ${h.arm.level}` });
   }
-  const next = nextLevelAt(pack, groupName, level);
-  if (next === undefined) {
-    missing.push({ value: "experience for the next level", because: `no loaded pack has the ${groupName} experience table` });
-  }
+  const known = hits.filter((h) => h.thac0 !== undefined).map((h) => h.thac0!);
+  const hit = known.length > 0 ? Math.min(...known) : undefined;
 
-  const funds = classId !== undefined ? startingFunds(pack, classId) : undefined;
-  if (classId !== undefined && funds === undefined) {
+  // Each arm needs its own next threshold, because §6.2 splits experience evenly rather than
+  // pooling it: a Fighter/Mage is two careers advancing on two tables at half speed each.
+  const perClass = arms.map((a) => {
+    const next = nextLevelAt(pack, a.group!.name, a.level);
+    if (next === undefined) {
+      missing.push({ value: `experience for the next ${a.name} level`, because: `no loaded pack has the ${a.group!.name} experience table` });
+    }
+    const t = hits.find((h) => h.arm === a)?.thac0;
+    return { class: a.name, level: a.level, ...(t !== undefined ? { thac0: t } : {}), ...(next !== undefined ? { nextLevelAt: next } : {}) };
+  });
+  const nexts = perClass.map((c) => c.nextLevelAt).filter((n): n is number => n !== undefined);
+  const next = nexts.length > 0 ? Math.min(...nexts) : undefined;
+
+  const classId = arms[0]!.id;
+  const funds = startingFunds(pack, classId);
+  if (funds === undefined) {
     missing.push({ value: "starting funds", because: "no loaded pack has Table 43 for this class" });
   }
   const ac = armourClass(pack, character.file.worn ?? []);
-  const casting = classId !== undefined ? spellSlots(pack, classId, level) : undefined;
-  if (casting?.missing !== undefined && PROGRESSION_CLASSES.has(norm(groupName))) {
-    missing.push({ value: "spells per day", because: casting.missing });
+
+  // Best slot progression: a caster among the arms casts, and the best table wins.
+  const casting = arms
+    .map((a) => ({ arm: a, slots: spellSlots(pack, a.id, a.level) }))
+    .filter((c) => c.slots.perLevel.length > 0 || PROGRESSION_CLASSES.has(norm(c.arm.group!.name)));
+  const best = casting
+    .filter((c) => c.slots.perLevel.length > 0)
+    .sort((a, b) => b.slots.perLevel.length - a.slots.perLevel.length)[0];
+  for (const c of casting) {
+    if (c.slots.missing !== undefined) {
+      missing.push({ value: `spells per day as a ${c.arm.name}`, because: c.slots.missing });
+    }
   }
 
   // Table 60 is in the slice with every cell empty — the rows are there and the numbers are
@@ -110,9 +166,10 @@ export function derived(pack: Pack, character: Character): Derived {
     ...(funds !== undefined ? { funds } : {}),
     ...(ac.ac !== undefined ? { armourClass: ac.ac } : {}),
     armourClassBecause: ac.because,
-    ...(casting !== undefined && casting.perLevel.length > 0 ? { spells: casting.perLevel } : {}),
+    ...(best !== undefined ? { spells: best.slots.perLevel } : {}),
     ...(hit !== undefined ? { thac0: hit } : {}),
     ...(next !== undefined ? { nextLevelAt: next } : {}),
+    ...(arms.length > 1 ? { perClass } : {}),
     missing,
   };
 }

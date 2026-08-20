@@ -27,7 +27,7 @@ test("most levels buy nothing, and the ones that do are why the mini-wizard exis
 
 test("an advance knows which classes may take it, and which die each rolls", () => {
   const a = advance(pack, someone(), "test:fighter");
-  assert.deepEqual(a.classes, [{ id: "test:fighter", name: "Fighter", level: 1 }]);
+  assert.deepEqual(a.classes, [{ id: "test:fighter", name: "Fighter", level: 1, die: "1d10" }]);
   assert.equal(a.die, "1d10");
 });
 

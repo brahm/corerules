@@ -46,7 +46,7 @@ export interface Api {
   steps(packId: string, draft: Draft): Promise<Step[]>;
   /** The tool rolls dice (§9.1), and entry stays a first-class path — so both arrive here as
    *  scores already decided, and the Engine never learns which it was. */
-  create(packId: string, draft: Draft & { name: string; startingWealth?: number }, hitDie: number): Promise<string>;
+  create(packId: string, draft: Draft & { name: string; startingWealth?: number }, hitDie: number | { class: string; die: number }[]): Promise<string>;
   /** §9.2's other two modes. The timeline is what "correct / edit later" edits, and it carries
    *  the objections so the sheet cannot become the back door §5 is guarded against. */
   timeline(id: string): Promise<import("./service.ts").Timeline | undefined>;
@@ -56,6 +56,8 @@ export interface Api {
    *  sheet the user can see is wrong with no way to say so. */
   correctEvent(id: string, eventId: string, replacement: { class?: string; die?: number }): Promise<Objection[]>;
   removeEvent(id: string, eventId: string): Promise<Objection[]>;
+  /** §6.1: what a multi-class pick expands to, each arm with its own die to roll. */
+  arms(packId: string, classId: string): Promise<{ id: string; name: string; die?: string }[]>;
   /** Correction 61: what the character has on. Not a Level Event — see the service. */
   wear(id: string, worn: string[]): Promise<void>;
 }
@@ -73,5 +75,6 @@ export const CHANNEL = {
   levelUp: "corerules:levelUp",
   correctEvent: "corerules:correctEvent",
   removeEvent: "corerules:removeEvent",
+  arms: "corerules:arms",
   wear: "corerules:wear",
 } as const;

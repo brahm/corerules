@@ -172,6 +172,17 @@ function History({ id, onChanged }: { id: string; onChanged: () => void }): Reac
             <span className="amount">{t.derived.nextLevelAt.toLocaleString()} xp</span>
           </div>
         )}
+        {/* §6.2: the numbers above are the BEST across the classes, and a single figure hides
+            which half earned it. A Fighter/Mage advances on two tables at half speed each. */}
+        {t.derived.perClass?.map((c) => (
+          <div className="value" key={c.class}>
+            <span className="path">{c.class} {c.level}</span>
+            <span className="amount dim">
+              {c.thac0 !== undefined ? `THAC0 ${c.thac0}` : ""}
+              {c.nextLevelAt !== undefined ? ` · next at ${c.nextLevelAt.toLocaleString()} xp` : ""}
+            </span>
+          </div>
+        ))}
         {t.derived.missing.map((m) => (
           <div className="value" key={m.value}>
             <span className="path">{m.value}</span>
@@ -261,8 +272,10 @@ function History({ id, onChanged }: { id: string; onChanged: () => void }): Reac
             onClick={() => {
               const cls = t.next.classes[0];
               if (cls === undefined) return;
-              // The die is rolled here and recorded, never recomputed (§6.3).
-              const die = 1 + Math.floor(Math.random() * Number.parseInt((t.next.die ?? "1d8").split("d")[1] ?? "8", 10));
+              // The die is rolled here and recorded, never recomputed (§6.3) — and it is THIS
+              // class's die, because §6.2 averages across hit dice and a Fighter/Mage's two
+              // are a d10 and a d4.
+              const die = 1 + Math.floor(Math.random() * Number.parseInt((cls.die ?? t.next.die ?? "1d8").split("d")[1] ?? "8", 10));
               void api.levelUp(id, cls.id, die, []).then(load);
             }}
           >

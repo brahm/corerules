@@ -621,7 +621,45 @@ classes for 4 hit points — is unmoved, because that character has no Constitut
 Engine adds nothing rather than assuming an average. A fighter/mage with Constitution 18 gets **no
 bonus at all** and is told why: Table 3 has two columns and no rule for a character in both.
 
+### §6.2, and the shape of a rule that is in no book
+
+*"XP split evenly · hit points averaged across hit dice · best saving throw across classes · best
+THAC0 · best slot progression."* The spec calls these **shape, not content**, and building them
+shows why the distinction had to be drawn: the PHB prints Table 34 and Table 53 and the experience
+tables, and *"with two classes, take the best"* is **in no table anywhere**. So the numbers come
+from the pack and the combination comes from the Engine — §5.2's line, drawn through the middle of
+one sheet.
+
+Every derived value read `classes()[0]`. For a Fighter/Mage that meant one of two failures
+depending on how the character was built: the fighter's answers with **no sign that half of them
+were missing**, or — once the compound class record named no group — nothing at all. The second is
+honest and useless. The first is the wrong number §5.2 exists to name.
+
+Now: THAC0 is the lowest across the arms, the slot budgets are the best of each (a Fighter/Mage
+gets the warrior's **four** weapon slots and the wizard's **four** nonweapon ones, which is not the
+same class winning twice), spell progression is the best caster's, and experience is **per arm**,
+because §6.2 splits it rather than pooling it — a Fighter/Mage is two careers on two tables at half
+speed each. The sheet prints one line per class beside the combined figures, since a single number
+hides which half earned it.
+
+**And the die stopped being a property of the character.** `advance()` had read `hitDice.perLevel`
+off the sheet; a Fighter/Mage applies both class-group layers, both `set` that field, and ticket 03
+quite correctly calls that **contested** — so the die came back `undefined` and the interface rolled
+a d8 by default. It was never a contradiction. It was two right answers to a question asked of the
+wrong subject: a die belongs to a class, not to a character. `advance()` now reports one per class
+and the wizard rolls a d10 and a d4.
+
+§6.1's sum type resolves at the one point it has to: `phb:fighter-wizard` is a single record that
+`combines` two classes, and a Level Event holds **one roll per arm** — the only shape from which
+`floor(sum / count)` reproduces the PHB's own worked example. `service.arms()` does that expansion
+once, where a player is about to roll, so the renderer never learns what `combines` means.
+
+**Dual-class is still open and is not the same job.** §6.1 makes `Dual(original, new)` a distinct
+arm with a suppression threshold, and no record in this corpus describes one — so there is nothing
+to test a shape against, which is the wrong condition under which to invent one.
+
 ## What is left
+- **Dual-class**, per §6.1 and §6.2's suppression threshold, once something in a pack describes one.
 - **Encumbrance**, which wants the rest of §9.1's equipment: the armour list carries weights and
   Table 47 rates them, but a character carries more than armour.
 - **Spell selection**, as opposed to spell access: which of the 80 a priest prepares today. That is

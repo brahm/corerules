@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { Pack } from "../src/pack.ts";
+import { advance } from "../src/advance.ts";
+import { budget } from "../src/proficiency.ts";
 import { Character } from "../src/character.ts";
 
 const pack = new Pack(join(dirname(fileURLToPath(import.meta.url)), "fixtures", "minimal"));
@@ -117,4 +119,24 @@ test("a character who is a warrior in one class and not another gets no bonus, a
   // would be the Engine inventing one, so it picks neither and says so.
   assert.equal(c.hitPoints(), 6);
   assert.match(c.hitPointsBecause()!, /warrior in one class and not in another/);
+});
+
+test("§6.2 takes the best across the classes, and shows which half earned it", () => {
+  // "XP split evenly · hit points averaged across hit dice · best THAC0 · best slot
+  // progression." Those are SHAPE, not content: the PHB prints the tables and "with two
+  // classes, take the best" is in no table anywhere. Until now every derived value read
+  // classes()[0], so a Fighter/Mage got the fighter's answers with no sign half were missing.
+  const c = Character.create(pack, { name: "x", race: "test:hillfolk", scores: {} });
+  c.advance([{ class: "test:fighter", die: 8 }, { class: "test:mage", die: 4 }]);
+
+  assert.equal(c.hitPoints(), 6, "averaged across the hit dice: floor((8 + 4) / 2)");
+  assert.equal(budget(pack, c, "weapon")!.total, 4, "the warrior's four, not the wizard's one");
+  assert.equal(budget(pack, c, "nonweapon")!.total, 4, "and the wizard's four, not the warrior's three");
+
+  // Each arm brings its own die, because the sheet cannot answer: two class-group layers set
+  // `hitDice.perLevel` and ticket 03 rightly calls that contested. The question was being
+  // asked of the wrong subject — a die belongs to a class, not to a character.
+  const next = advance(pack, c, "test:fighter");
+  assert.deepEqual(next.classes.map((x) => x.die), ["1d10", "1d4"]);
+  assert.equal(next.die, undefined, "and there is no single die to report");
 });

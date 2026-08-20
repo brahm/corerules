@@ -7,7 +7,7 @@
  * `ipcMain.handle` lines, and where the settings file lives.
  */
 import { Character } from "../../../engine/src/character.ts";
-import { advance as whatNext, check, correct, draftOf, type Advance, type Objection } from "../../../engine/src/advance.ts";
+import { advance as whatNext, check, correct, dieFor, draftOf, type Advance, type Objection } from "../../../engine/src/advance.ts";
 import { steps as offerSteps, type Draft, type Step } from "../../../engine/src/choice.ts";
 import { derived, type Derived } from "../../../engine/src/derived.ts";
 import { available, type SpellOffer } from "../../../engine/src/spells.ts";
@@ -58,6 +58,25 @@ export function steps(library: Library, packId: string, draft: Draft): Step[] {
 }
 
 /**
+ * **§6.1's sum type, resolved into what a player has to roll.**
+ *
+ * A multi-class character is offered as ONE record — `phb:fighter-wizard`, *Fighter/Mage* — and
+ * it `combines` two classes. §6.3 stores the arms, not the compound: a Level Event holds one
+ * roll per class, which is the only shape from which `floor(sum / count)` reproduces the PHB's
+ * own worked example. So the compound is expanded here, once, at the point where a player is
+ * about to roll — and each arm brings its own die, because a Fighter/Mage rolls a d10 and a d4.
+ */
+export function arms(library: Library, packId: string, classId: string): { id: string; name: string; die?: string }[] {
+  const pack = library.load(packId);
+  const chosen = pack.byId.get(classId);
+  const ids = (chosen?.combines ?? []).length > 0 ? chosen!.combines! : [classId];
+  return ids.map((id) => {
+    const die = dieFor(pack, id);
+    return { id, name: pack.byId.get(id)?.name ?? id, ...(die !== undefined ? { die } : {}) };
+  });
+}
+
+/**
  * Write a new Character, at first level, with the die already rolled.
  *
  * The roll arrives from outside because **hit points are recorded randomness** (§6.3): an
@@ -65,7 +84,8 @@ export function steps(library: Library, packId: string, draft: Draft): Step[] {
  * entry a first-class path beside the dice.
  */
 export function create(
-  library: Library, packId: string, draft: Draft & { name: string; startingWealth?: number }, hitDie: number,
+  library: Library, packId: string, draft: Draft & { name: string; startingWealth?: number },
+  hitDie: number | { class: string; die: number }[],
 ): string {
   const pack = library.load(packId);
   const character = Character.create(pack, {
@@ -82,7 +102,10 @@ export function create(
   // §6.3: what was chosen travels in the event that chose it, so a correction to the level
   // corrects the choices with it. And §9.1's initial slots were assigned before this was
   // called, because DD01537 says they cannot be held in reserve.
-  character.advance([{ class: draft.class!, die: hitDie }],
+  // One roll per arm, so `floor(sum / count)` is the PHB's own arithmetic rather than a
+  // special case bolted on for two classes.
+  const rolls = typeof hitDie === "number" ? [{ class: draft.class!, die: hitDie }] : hitDie;
+  character.advance(rolls,
     draft.chose !== undefined && draft.chose.length > 0 ? { chose: draft.chose } : {});
   library.writeCharacter(library.stamp(character.file));
   return character.file.id;

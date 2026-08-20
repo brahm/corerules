@@ -9,7 +9,14 @@
           "Classes"
         ]
       },
-      "isGroup": true
+      "isGroup": true,
+      "effects": [
+        {
+          "op": "set",
+          "field": "hitDice.perLevel",
+          "to": "1d10"
+        }
+      ]
     },
     {
       "id": "test:fighter",
@@ -135,7 +142,28 @@
           "Classes"
         ]
       },
-      "isGroup": true
+      "isGroup": true,
+      "effects": [
+        {
+          "op": "set",
+          "field": "hitDice.perLevel",
+          "to": "1d4"
+        }
+      ]
+    },
+    {
+      "id": "test:fighter-mage",
+      "name": "Fighter/Mage",
+      "provenance": {
+        "section": [
+          "Fixtures",
+          "Classes"
+        ]
+      },
+      "combines": [
+        "test:fighter",
+        "test:mage"
+      ]
     }
   ]
 }

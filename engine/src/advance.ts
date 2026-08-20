@@ -14,13 +14,15 @@ import type { Character, LevelEvent } from "./character.ts";
 import { steps, type Draft, type Step } from "./choice.ts";
 import type { Pack } from "./pack.ts";
 import { slots } from "./proficiency.ts";
-import type { Id } from "./types.ts";
+import { groupsOf, type Id } from "./types.ts";
 
 export interface Advance {
-  /** Which classes this Character may put the level into. One for a single-class character;
-   *  §6.3's multi-class accrues in whichever one advanced. */
-  classes: { id: Id; name: string; level: number }[];
-  /** The die this class rolls, as the pack prints it — `1d10`. */
+  /** Which classes this Character may put the level into, each with **its own die** — §6.2
+   *  averages hit points across hit dice, and a Fighter/Mage rolls a d10 and a d4, not one of
+   *  something. A single die on this object read the sheet's `hitDice.perLevel`, which for a
+   *  multi-class character is two layers setting one field: contested, and silently absent. */
+  classes: { id: Id; name: string; level: number; die?: string }[];
+  /** The single-class die, kept for the callers that ask one character one question. */
   die?: string;
   /** What crossing this level buys, which is nought most levels and is the whole reason the
    *  mini-wizard exists on the ones where it is not. */
@@ -42,14 +44,38 @@ export function advance(pack: Pack, character: Character, classId: Id): Advance 
       });
     }
   }
-  const die = character.sheet().view("hitDice.perLevel").value;
-  return {
-    classes: character.classes().map((id) => ({
+  const classes = character.classes().map((id) => {
+    const die = dieFor(pack, id);
+    return {
       id, name: pack.byId.get(id)?.name ?? id, level: levels[id] ?? 0,
-    })),
-    ...(typeof die === "string" ? { die } : {}),
+      ...(die !== undefined ? { die } : {}),
+    };
+  });
+  return {
+    classes,
+    ...(classes.length === 1 && classes[0]!.die !== undefined ? { die: classes[0]!.die } : {}),
     gains,
   };
+}
+
+/**
+ * The die one class rolls, read off the class group rather than off the sheet.
+ *
+ * The sheet is the wrong place to ask: a Fighter/Mage applies both class-group layers, both of
+ * which `set hitDice.perLevel`, and ticket 03 quite correctly calls that **contested** — two
+ * layers writing one field with nothing declaring over them. It is not a contradiction, though.
+ * It is two answers to a question that was asked of the wrong subject. The die belongs to a
+ * class, not to a character, and asking per class is the whole repair.
+ */
+export function dieFor(pack: Pack, classId: Id): string | undefined {
+  const klass = pack.byId.get(classId);
+  const group = groupsOf(klass)[0] ?? (klass?.isGroup === true ? klass.id : undefined);
+  for (const source of [klass, group === undefined ? undefined : pack.byId.get(group)]) {
+    for (const e of source?.effects ?? []) {
+      if (e.op === "set" && e.field === "hitDice.perLevel" && typeof e.to === "string") return e.to;
+    }
+  }
+  return undefined;
 }
 
 /**

@@ -116,16 +116,26 @@ export function slots(pack: Pack, classId: Id, level = 1, which: "weapon" | "non
 }
 
 export function budget(pack: Pack, character: Character, which: "weapon" | "nonweapon"): Budget | undefined {
-  const classId = character.classes()[0];
-  if (classId === undefined) return undefined;
-  const row = slotRow(pack, classId);
-  if (row === undefined) return undefined;
-  // Table 34 prints weapon and nonweapon side by side: Group, Initial, #Levels, Penalty,
-  // Initial, #Levels.
-  const initial = number(which === "weapon" ? row[1] : row[4]);
-  const everyLevels = Math.max(1, number(which === "weapon" ? row[2] : row[5]));
-  const level = character.levels()[classId] ?? 1;
-  const total = initial + Math.floor((level - 1) / everyLevels);
+  // **§6.2: best slot progression across the classes.** A Fighter/Mage gets the warrior's four
+  // weapon slots and not the wizard's one — *"with two classes, take the best"* is in no table
+  // anywhere, which is exactly why it lives here and the numbers live in Table 34.
+  const levels = character.levels();
+  const arms = character.classes()
+    .map((id) => ({ id, level: levels[id] ?? 1, row: slotRow(pack, id) }))
+    .filter((a): a is { id: Id; level: number; row: string[] } => a.row !== undefined);
+  const best = arms
+    .map((a) => {
+      // Table 34 prints weapon and nonweapon side by side: Group, Initial, #Levels, Penalty,
+      // Initial, #Levels.
+      const initial = number(which === "weapon" ? a.row[1] : a.row[4]);
+      const everyLevels = Math.max(1, number(which === "weapon" ? a.row[2] : a.row[5]));
+      return { arm: a, initial, everyLevels, total: initial + Math.floor((a.level - 1) / everyLevels) };
+    })
+    .sort((x, y) => y.total - x.total)[0];
+  if (best === undefined) return undefined;
+  const classId = best.arm.id;
+  const row = best.arm.row;
+  const { initial, everyLevels, total } = best;
 
   const kind = which === "weapon" ? "weaponProficiency" : "nonweaponProficiency";
   const spent = character.file.events

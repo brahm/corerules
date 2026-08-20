@@ -13,6 +13,12 @@ import type { Api, Draft, Offer, Step } from "../main/api.ts";
 
 const api = window.corerules as Api;
 
+/** `1d10` as printed by the pack, as a number of sides. A die nobody transcribed is a d8,
+ *  and that default is a guess — but it is a guess about a die the player then sees and can
+ *  correct on the sheet, not a number quietly folded into a total. */
+const sides = (die: string | undefined): number =>
+  Number.parseInt((die ?? "1d8").split("d")[1] ?? "8", 10);
+
 /** §9.1: the tool rolls dice, and entry stays a first-class path. Both end as scores. */
 function roll4d6DropLowest(): number {
   const dice = [0, 0, 0, 0].map(() => 1 + Math.floor(Math.random() * 6)).sort((a, b) => a - b);
@@ -150,10 +156,19 @@ export function Wizard(
           type="button"
           disabled={!ready}
           onClick={() => {
-            // §6.3: hit points are recorded randomness. The roll happens here, once, and the
-            // number is what the file keeps — the Engine is never asked to reproduce it.
-            const die = 1 + Math.floor(Math.random() * 10);
-            void api.create(packId, { ...draft, name }, die).then(onDone);
+            // §6.3: hit points are recorded randomness. The rolls happen here, once, and the
+            // numbers are what the file keeps — the Engine is never asked to reproduce them.
+            //
+            // §6.1: a multi-class pick is ONE record that combines several classes, and a Level
+            // Event holds one roll per class. So the arms are asked for first, and each brings
+            // its own die: a Fighter/Mage rolls a d10 and a d4, never one of something.
+            void api.arms(packId, draft.class!).then((list) => {
+              const rolls = list.map((a) => ({
+                class: a.id,
+                die: 1 + Math.floor(Math.random() * sides(a.die)),
+              }));
+              void api.create(packId, { ...draft, name }, rolls).then(onDone);
+            });
           }}
         >
           Create
