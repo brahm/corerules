@@ -1,0 +1,16 @@
+[workspace]
+resolver = "3"
+members = ["crates/cr-formats", "crates/cr-store", "crates/cr-cli", "crates/cr-gtk"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/brahm/corerules"
+rust-version = "1.85"
+
+[workspace.dependencies]
+cr-formats = { path = "crates/cr-formats" }
+cr-store = { path = "crates/cr-store" }
+encoding_rs = "0.8"
+thiserror = "2"

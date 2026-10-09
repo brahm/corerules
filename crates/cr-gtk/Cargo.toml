@@ -1,0 +1,18 @@
+[package]
+name = "cr-gtk"
+description = "GNOME app for AD&D Core Rules 2.0 data"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "corerules"
+path = "src/main.rs"
+
+[dependencies]
+cr-formats.workspace = true
+cr-store.workspace = true
+gtk = { package = "gtk4", version = "0.9", features = ["v4_14"] }
+adw = { package = "libadwaita", version = "0.7", features = ["v1_5"] }

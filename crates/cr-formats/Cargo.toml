@@ -1,0 +1,12 @@
+[package]
+name = "cr-formats"
+description = "Byte-exact readers and writers for AD&D Core Rules 2.0 data files"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+encoding_rs.workspace = true
+thiserror.workspace = true

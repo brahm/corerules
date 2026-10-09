@@ -1,0 +1,5 @@
+/target
+/_build
+*.swp
+# Never commit original Core Rules data (copyrighted by Wizards of the Coast).
+/original/

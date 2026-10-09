@@ -1,0 +1,12 @@
+[package]
+name = "cr-store"
+description = "Locates and opens an AD&D Core Rules 2.0 installation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+cr-formats.workspace = true
+thiserror.workspace = true

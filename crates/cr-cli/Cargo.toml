@@ -1,0 +1,16 @@
+[package]
+name = "cr-cli"
+description = "Command-line tools for inspecting AD&D Core Rules 2.0 data"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "cr"
+path = "src/main.rs"
+
+[dependencies]
+cr-formats.workspace = true
+cr-store.workspace = true

@@ -1,0 +1,85 @@
+//! `cr`: inspect an AD&D Core Rules 2.0 installation from the command line.
+
+use std::process::ExitCode;
+
+use cr_formats::character::CharacterHeader;
+use cr_formats::database::survey;
+use cr_store::Installation;
+
+const USAGE: &str = "usage:
+  cr survey [INSTALL_DIR]   list database files, record counts and classes
+  cr chars [INSTALL_DIR]    list characters
+
+Without INSTALL_DIR, the installation in the Wine prefix is used.";
+
+fn main() -> ExitCode {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let (Some(command), dir) = (args.first(), args.get(1)) else {
+        eprintln!("{USAGE}");
+        return ExitCode::FAILURE;
+    };
+    let install = match dir {
+        Some(dir) => Installation::open(dir),
+        None => Installation::discover()
+            .ok_or_else(|| cr_store::Error::NotAnInstallation(cr_store::DEFAULT_WINE_PATH.into())),
+    };
+    let result = install.and_then(|install| match command.as_str() {
+        "survey" => cmd_survey(&install),
+        "chars" => cmd_chars(&install),
+        _ => {
+            eprintln!("{USAGE}");
+            Ok(())
+        }
+    });
+    match result {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("cr: {e}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn cmd_survey(install: &Installation) -> cr_store::Result<()> {
+    for folder in ["Database", "UserDbas"] {
+        println!("{folder}/");
+        for path in install.data_files(folder)? {
+            let name = path.file_name().unwrap().to_string_lossy().into_owned();
+            let data = std::fs::read(&path).map_err(|source| cr_store::Error::Io {
+                path: path.clone(),
+                source,
+            })?;
+            match survey(&data) {
+                Ok(s) => {
+                    let class = s
+                        .class
+                        .map(|c| format!("{} (schema {})", c.name, c.schema))
+                        .unwrap_or_default();
+                    println!("  {name:<14} {:>6} records  {class}", s.records);
+                }
+                Err(e) => println!("  {name:<14} not a record list: {e}"),
+            }
+        }
+    }
+    Ok(())
+}
+
+fn cmd_chars(install: &Installation) -> cr_store::Result<()> {
+    let index = install.characters()?;
+    for entry in &index.entries {
+        let header = install
+            .read(&format!("Chars/{}", entry.file))
+            .ok()
+            .and_then(|data| CharacterHeader::parse(&data).ok());
+        let version = header.as_ref().map(|h| h.version.as_str()).unwrap_or("?");
+        println!(
+            "{:<24} {:<10} {}  [{}, {}]",
+            entry.name,
+            entry.race,
+            entry.details.get(4..).unwrap_or_default().join(", "),
+            entry.file,
+            version
+        );
+    }
+    Ok(())
+}
