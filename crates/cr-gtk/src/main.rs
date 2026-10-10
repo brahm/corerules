@@ -8,7 +8,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use cr_store::Installation;
 use cr_store::catalog::{Entry, Section};
-use cr_store::edit::CharacterDetails;
+use cr_store::edit::{ABILITY_RANGE, CharacterDetails};
 use gtk::{gio, glib};
 
 const APP_ID: &str = "io.github.brahm.CoreRules";
@@ -699,26 +699,72 @@ fn character_editor(
 ) {
     let entry_row =
         |title: &str, text: &str| adw::EntryRow::builder().title(title).text(text).build();
-    let spin_row = |title: &str, subtitle: &str, value: u32, max: f64| {
+    let ranged_row = |title: &str, subtitle: &str, value: u32, min: u32, max: u32| {
         adw::SpinRow::builder()
             .title(title)
             .subtitle(subtitle)
+            .numeric(true)
             .adjustment(&gtk::Adjustment::new(
                 value.into(),
-                0.0,
-                max,
+                min.into(),
+                max.into(),
                 1.0,
-                10.0,
+                5.0,
                 0.0,
             ))
             .build()
     };
+    let spin_row = |title: &str, subtitle: &str, value: u32, max: u32| {
+        ranged_row(title, subtitle, value, 0, max)
+    };
     let name = entry_row("Name", &details.name);
     let player = entry_row("Player", &details.player);
     let social_class = entry_row("Social Class", &details.social_class);
-    let age = spin_row("Age", "Years", details.age, 9999.0);
-    let height = spin_row("Height", "Inches", details.height, 999.0);
-    let weight = spin_row("Weight", "Pounds", details.weight, 99999.0);
+    let age = spin_row("Age", "Years", details.age, 9999);
+    let height = spin_row("Height", "Inches", details.height, 999);
+    let weight = spin_row("Weight", "Pounds", details.weight, 99999);
+
+    // With the Core Rules one row sets the score and both subabilities, as
+    // the original does; Skills & Powers characters get all three.
+    let (low, high) = (*ABILITY_RANGE.start(), *ABILITY_RANGE.end());
+    let abilities = adw::PreferencesGroup::builder().title("Abilities").build();
+    let ability_rows: Vec<[adw::SpinRow; 3]> = ABILITY_NAMES
+        .iter()
+        .zip(details.abilities)
+        .map(|(names, values)| {
+            let rows = [0, 1, 2].map(|i| ranged_row(names[i], "", values[i], low, high));
+            if details.skills_and_powers {
+                let expander = adw::ExpanderRow::builder().title(names[0]).build();
+                let summarize = {
+                    let (expander, rows) = (expander.clone(), rows.clone());
+                    move || {
+                        let [score, first, second] = rows.each_ref().map(|r| r.value() as u32);
+                        expander.set_subtitle(&format!(
+                            "{score} · {} {first}, {} {second}",
+                            names[1], names[2]
+                        ));
+                    }
+                };
+                summarize();
+                for row in &rows {
+                    expander.add_row(row);
+                    let summarize = summarize.clone();
+                    row.connect_value_notify(move |_| summarize());
+                }
+                abilities.add(&expander);
+            } else {
+                abilities.add(&rows[0]);
+            }
+            rows
+        })
+        .collect();
+    let exceptional = spin_row(
+        "Exceptional Strength",
+        "18/01 to 18/00, 0 for none",
+        details.exceptional_strength,
+        100,
+    );
+    abilities.add(&exceptional);
 
     let character = adw::PreferencesGroup::new();
     character.add(&name);
@@ -736,6 +782,7 @@ fn character_editor(
     let page = adw::PreferencesPage::new();
     page.add(&character);
     page.add(&appearance);
+    page.add(&abilities);
     let errors = adw::PreferencesGroup::new();
     errors.add(&error);
     page.add(&errors);
@@ -773,6 +820,7 @@ fn character_editor(
             dialog.close();
         }
     });
+    let skills_and_powers = details.skills_and_powers;
     save_button.connect_clicked({
         let dialog = dialog.clone();
         move |_| {
@@ -783,6 +831,16 @@ fn character_editor(
                 age: age.value() as u32,
                 height: height.value() as u32,
                 weight: weight.value() as u32,
+                abilities: std::array::from_fn(|i| {
+                    let [score, first, second] = &ability_rows[i];
+                    if skills_and_powers {
+                        [score, first, second].map(|row| row.value() as u32)
+                    } else {
+                        [score.value() as u32; 3]
+                    }
+                }),
+                exceptional_strength: exceptional.value() as u32,
+                skills_and_powers,
             };
             match save(&details) {
                 Ok(()) => {
@@ -797,3 +855,13 @@ fn character_editor(
     });
     dialog.present(Some(parent));
 }
+
+/// Each ability with its two Skills & Powers subabilities.
+const ABILITY_NAMES: [[&str; 3]; 6] = [
+    ["Strength", "Stamina", "Muscle"],
+    ["Dexterity", "Aim", "Balance"],
+    ["Constitution", "Health", "Fitness"],
+    ["Intelligence", "Reason", "Knowledge"],
+    ["Wisdom", "Intuition", "Willpower"],
+    ["Charisma", "Leadership", "Appearance"],
+];

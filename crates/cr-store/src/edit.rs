@@ -1,8 +1,11 @@
 //! Changing characters in place, in files both original programs can open.
 //!
-//! Only fields the original copies nowhere else are edited here; the
-//! character list (`Chars/index.chr`) repeats the name, so it is updated
-//! with it. Before a file is replaced its previous bytes are kept next to
+//! The original trusts what a character file stores and recomputes only
+//! what derives from it (saving throws, hit point adjustments), so these
+//! fields can change on their own. The character list (`Chars/index.chr`)
+//! repeats the name and, in the Expansion, the player; the program never
+//! refreshes an entry when it saves a character in place, so both are
+//! updated here. Before a file is replaced its previous bytes are kept next to
 //! it as `<file>.bak`, and the new file is written to a temporary name
 //! first so a failed write never leaves half a character behind.
 
@@ -25,7 +28,20 @@ pub struct CharacterDetails {
     pub weight: u32,
     /// Years.
     pub age: u32,
+    /// Strength, Dexterity, Constitution, Intelligence, Wisdom and
+    /// Charisma, each as the score and its two Skills & Powers
+    /// subabilities (Stamina and Muscle for Strength). The racial
+    /// adjustment is part of the score.
+    pub abilities: [[u32; 3]; 6],
+    /// 1 to 100 for a warrior with Strength 18, else 0.
+    pub exceptional_strength: u32,
+    /// Read only: with the Core Rules, the program keeps both subabilities
+    /// equal to the score.
+    pub skills_and_powers: bool,
 }
+
+/// Ability scores the original accepts.
+pub const ABILITY_RANGE: std::ops::RangeInclusive<u32> = 1..=25;
 
 impl CharacterDetails {
     pub fn of(character: &Character) -> Self {
@@ -37,7 +53,36 @@ impl CharacterDetails {
             height: d.height,
             weight: d.weight,
             age: d.age,
+            abilities: [
+                d.strength,
+                d.abilities[0],
+                d.abilities[1],
+                d.abilities[2],
+                d.abilities[3],
+                d.abilities[4],
+            ],
+            exceptional_strength: d.exceptional_strength,
+            skills_and_powers: character.skills_and_powers(),
         }
+    }
+
+    /// Why the original would not accept these details, if it would not.
+    pub fn problem(&self) -> Option<String> {
+        if self.name.trim().is_empty() {
+            return Some("A character needs a name".into());
+        }
+        if self
+            .abilities
+            .iter()
+            .flatten()
+            .any(|v| !ABILITY_RANGE.contains(v))
+        {
+            return Some("Ability scores go from 1 to 25".into());
+        }
+        if self.exceptional_strength > 100 {
+            return Some("Exceptional strength goes up to 100".into());
+        }
+        None
     }
 
     pub fn apply(&self, character: &mut Character) {
@@ -48,6 +93,9 @@ impl CharacterDetails {
         d.height = self.height;
         d.weight = self.weight;
         d.age = self.age;
+        d.strength = self.abilities[0];
+        d.abilities.copy_from_slice(&self.abilities[1..]);
+        d.exceptional_strength = self.exceptional_strength;
     }
 }
 
@@ -65,8 +113,8 @@ impl Installation {
     /// Writes `details` into the character stored in `Chars/<file>` and its
     /// entry in the character list.
     pub fn save_character_details(&self, file: &str, details: &CharacterDetails) -> Result<()> {
-        if details.name.trim().is_empty() {
-            return Err(Error::Invalid("A character needs a name".into()));
+        if let Some(problem) = details.problem() {
+            return Err(Error::Invalid(problem));
         }
         let mut character = self.character(file)?;
         details.apply(&mut character);
@@ -86,6 +134,11 @@ impl Installation {
             .find(|e| e.file.eq_ignore_ascii_case(file))
             .ok_or_else(|| Error::Invalid(format!("{file} is not in the character list")))?;
         entry.name.clone_from(&details.name);
+        for line in &mut entry.details {
+            if line.starts_with(PLAYER_LINE) {
+                *line = format!("{PLAYER_LINE}{}", details.player);
+            }
+        }
         let index_bytes = index.to_bytes().map_err(format)?;
         // Both files are checked before either is replaced.
         Character::parse(&bytes).map_err(format)?;
@@ -98,6 +151,9 @@ impl Installation {
         replace(&index_path, &index_bytes)
     }
 }
+
+/// The detail line of an Expansion index entry that names the player.
+const PLAYER_LINE: &str = "Player's Name: ";
 
 /// `Chars/<file>`, refusing names that would leave the folder.
 fn character_path(file: &str) -> Result<String> {
@@ -160,7 +216,9 @@ mod tests {
         let before = install.character("90688519.dat").unwrap();
         let mut details = CharacterDetails::of(&before);
         details.name = "Borin Pedraforte II".into();
+        details.player = "Someone Else".into();
         details.age = 70;
+        details.abilities[2] = [15; 3];
         install
             .save_character_details("90688519.dat", &details)
             .unwrap();
@@ -173,6 +231,8 @@ mod tests {
 
         let index = install.characters().unwrap();
         assert_eq!(index.entries[0].name, "Borin Pedraforte II");
+        assert_eq!(index.entries[0].details[1], "Player's Name: Someone Else");
+        assert_eq!(after.data.abilities[1], [15; 3]);
         assert_eq!(index.entries[1].name, "Lirael Folhaverde");
         let original = fs::read(Path::new(FIXTURES).join("90688519.dat")).unwrap();
         assert_eq!(
@@ -195,6 +255,13 @@ mod tests {
                 .is_err()
         );
         details.name = "Lirael \u{263a}".into();
+        assert!(
+            install
+                .save_character_details("90988519.dat", &details)
+                .is_err()
+        );
+        details.name = "Lirael".into();
+        details.abilities[0][1] = 26;
         assert!(
             install
                 .save_character_details("90988519.dat", &details)

@@ -285,12 +285,12 @@ fn character_entry(c: &Character) -> Entry {
     let d = &c.data;
     let mut abilities = Group::new("Abilities");
     let strength = match d.exceptional_strength {
-        0 => d.strength[1].to_string(),
-        e => format!("{}/{e:02}", d.strength[1]),
+        0 => d.strength[0].to_string(),
+        e => format!("{}/{:02}", d.strength[0], e % 100),
     };
     abilities = abilities.row(ABILITIES[0], strength);
     for (name, scores) in ABILITIES[1..].iter().zip(&d.abilities) {
-        abilities = abilities.row(name, scores[1]);
+        abilities = abilities.row(name, scores[0]);
     }
     let race = match d.subrace.as_str() {
         "" => d.race.clone(),

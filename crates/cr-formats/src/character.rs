@@ -225,12 +225,17 @@ record! {
         weight: u32,
         age: u32,
         unknown_0x163c: u32,
-        /// Strength as three values (the fixtures repeat the score), then
-        /// exceptional strength.
+        /// Strength and its Skills & Powers subabilities, Stamina and
+        /// Muscle (members 0x172c, 0x1734, 0x1738). The score includes the
+        /// racial adjustment; with the Core Rules the program writes the
+        /// same value to all three.
         strength: [u32; 3],
+        /// 1 to 100 for 18/01 to 18/00 (member 0x1730).
         exceptional_strength: u32,
-        /// Dexterity, Constitution, Intelligence, Wisdom and Charisma, three
-        /// values each like strength.
+        /// Dexterity (Aim, Balance), Constitution (Health, Fitness),
+        /// Intelligence (Reason, Knowledge), Wisdom (Intuition, Willpower)
+        /// and Charisma (Leadership, Appearance): the score and its two
+        /// subabilities, like strength (members 0x173c to 0x1774).
         abilities: [[u32; 3]; 5],
         unknown_0x1980: [String; 2],
         unknown_0x162c: u32,
