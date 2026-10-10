@@ -97,7 +97,8 @@ jobs:
           path: CoreRules-${{ needs.version.outputs.version }}.flatpak
 
   # Each package goes onto a clean container of the oldest and the newest
-  # supported release, and the app has to start and keep running.
+  # supported release, and the app has to start and keep running. Minimal
+  # containers lack the Mesa drivers every desktop has, so the tests add them.
   test-deb:
     needs: ubuntu
     strategy:
@@ -130,7 +131,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: rpm
-      - run: dnf install -y ./corerules-*.rpm xorg-x11-server-Xvfb xorg-x11-xauth dbus-daemon dbus-tools which
+      - run: dnf install -y ./corerules-*.rpm xorg-x11-server-Xvfb xorg-x11-xauth dbus-daemon dbus-tools which mesa-dri-drivers mesa-libEGL mesa-libGLES
       - run: packaging/smoke-test.sh corerules
 
   # The AppImage brings GTK and libadwaita; the systems get only the
@@ -154,9 +155,9 @@ jobs:
         with:
           name: appimage
       - if: startsWith(matrix.image, 'fedora')
-        run: dnf install -y xorg-x11-server-Xvfb xorg-x11-xauth dbus-daemon dbus-tools which mesa-libEGL mesa-libGL mesa-libgbm mesa-dri-drivers libdrm libX11-xcb libwayland-client fontconfig freetype fribidi harfbuzz gmp libgpg-error libcom_err libstdc++ zlib-ng-compat dejavu-sans-fonts libxkbcommon
+        run: dnf install -y xorg-x11-server-Xvfb xorg-x11-xauth dbus-daemon dbus-tools which mesa-libEGL mesa-libGL mesa-libGLES mesa-libgbm mesa-dri-drivers libdrm libX11-xcb libwayland-client fontconfig freetype fribidi harfbuzz gmp libgpg-error libcom_err libstdc++ zlib-ng-compat dejavu-sans-fonts libxkbcommon
       - if: startsWith(matrix.image, 'ubuntu')
-        run: apt-get update && apt-get install -y xvfb xauth dbus libegl1 libgl1 libgbm1 libgl1-mesa-dri libdrm2 libx11-xcb1 libwayland-client0 libfontconfig1 libfreetype6 libfribidi0 libharfbuzz0b libgmp10 libgpg-error0 libcom-err2 libstdc++6 zlib1g fonts-dejavu-core libxkbcommon0
+        run: apt-get update && apt-get install -y xvfb xauth dbus libegl1 libgl1 libgles2 libgbm1 libgl1-mesa-dri libdrm2 libx11-xcb1 libwayland-client0 libfontconfig1 libfreetype6 libfribidi0 libharfbuzz0b libgmp10 libgpg-error0 libcom-err2 libstdc++6 zlib1g fonts-dejavu-core libxkbcommon0
       - run: chmod +x CoreRules-*.AppImage && packaging/smoke-test.sh ./CoreRules-*.AppImage
 
   test-flatpak:
