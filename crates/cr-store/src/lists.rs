@@ -457,7 +457,7 @@ pub struct PartTable {
 }
 
 impl PartTable {
-    fn nonweapon_cost(&self, name: &str, skills_and_powers: bool) -> u32 {
+    pub(crate) fn nonweapon_cost(&self, name: &str, skills_and_powers: bool) -> u32 {
         self.nonweapon_costs.get(name).map_or(
             1,
             |&(core, points)| if skills_and_powers { points } else { core },
@@ -466,7 +466,7 @@ impl PartTable {
 
     /// A new item as buying makes it: the constructor's values, and an
     /// empty page record for a part with pages.
-    fn new_item(&self, name: &str, quantity: u32) -> InventoryItem {
+    pub(crate) fn new_item(&self, name: &str, quantity: u32) -> InventoryItem {
         InventoryItem {
             name: name.into(),
             quantity,

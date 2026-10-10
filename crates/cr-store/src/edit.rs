@@ -180,11 +180,11 @@ impl Installation {
 }
 
 /// The detail line of an Expansion index entry that names the player.
-const PLAYER_LINE: &str = "Player's Name: ";
+pub(crate) const PLAYER_LINE: &str = "Player's Name: ";
 /// The detail lines of an index entry with the class title and the levels
 /// joined with "/".
-const CLASS_LINE: &str = "Class: ";
-const LEVEL_LINE: &str = "Level: ";
+pub(crate) const CLASS_LINE: &str = "Class: ";
+pub(crate) const LEVEL_LINE: &str = "Level: ";
 
 /// `Chars/<file>`, refusing names that would leave the folder.
 fn character_path(file: &str) -> Result<String> {
@@ -198,7 +198,7 @@ fn character_path(file: &str) -> Result<String> {
 
 /// Keeps the current contents of `path` as `<path>.bak`, then replaces it
 /// through a temporary file in the same folder.
-fn replace(path: &Path, bytes: &[u8]) -> Result<()> {
+pub(crate) fn replace(path: &Path, bytes: &[u8]) -> Result<()> {
     let io = |path: &Path| {
         let path = path.to_path_buf();
         move |source| Error::Io { path, source }
@@ -210,7 +210,7 @@ fn replace(path: &Path, bytes: &[u8]) -> Result<()> {
     fs::rename(&temporary, path).map_err(io(path))
 }
 
-fn with_suffix(path: &Path, suffix: &str) -> PathBuf {
+pub(crate) fn with_suffix(path: &Path, suffix: &str) -> PathBuf {
     let mut name = path.file_name().unwrap_or_default().to_os_string();
     name.push(suffix);
     path.with_file_name(name)

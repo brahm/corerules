@@ -1,6 +1,7 @@
 //! The GNOME app: browses the data of a Core Rules installation in three
 //! panes (sections, entries, details) that collapse on narrow windows.
 
+mod create;
 mod lists;
 
 use std::cell::RefCell;
@@ -93,8 +94,16 @@ impl Window {
                 move |_, _, _| this.choose_folder()
             })
             .build();
-        this.window.add_action_entries([open]);
+        let new_character = gio::ActionEntry::builder("new-character")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| this.new_character()
+            })
+            .build();
+        this.window.add_action_entries([open, new_character]);
         app.set_accels_for_action("win.open", &["<Control>o"]);
+        app.set_accels_for_action("win.new-character", &["<Control>n"]);
+        this.set_can_create(false);
         this
     }
 
@@ -143,6 +152,7 @@ impl Window {
         view.add_top_bar(&adw::HeaderBar::new());
         view.set_content(Some(&page));
         self.show_status(&view);
+        self.set_can_create(false);
     }
 
     fn show_installation(&self, install: Installation) {
@@ -157,6 +167,44 @@ impl Window {
         )));
         self.stack.set_visible_child_name("browser");
         *self.install.borrow_mut() = Some(install);
+        self.set_can_create(true);
+    }
+
+    fn set_can_create(&self, enabled: bool) {
+        if let Some(action) = self
+            .window
+            .lookup_action("new-character")
+            .and_downcast::<gio::SimpleAction>()
+        {
+            action.set_enabled(enabled);
+        }
+    }
+
+    /// Opens the New Character dialog.
+    fn new_character(&self) {
+        let rules = match &*self.install.borrow() {
+            Some(install) => install.creation_rules(),
+            None => return,
+        };
+        let rules = match rules {
+            Ok(rules) => rules,
+            Err(e) => return self.toast(&e.to_string()),
+        };
+        let this = self.clone();
+        create::new_character(&self.window, rules, move |draft| {
+            let install = this.install.borrow();
+            let Some(install) = install.as_ref() else {
+                return Err("The installation is no longer open".into());
+            };
+            let rules = install.creation_rules().map_err(|e| e.to_string())?;
+            let file = install
+                .create_character(&rules, draft)
+                .map_err(|e| e.to_string())?;
+            this.browser.show_section("characters");
+            this.browser.load(install.catalog(), Some(&file));
+            this.toast("Character created");
+            Ok(())
+        });
     }
 
     fn toast(&self, message: &str) {
@@ -218,6 +266,7 @@ impl Window {
 
 fn open_menu() -> gtk::MenuButton {
     let menu = gio::Menu::new();
+    menu.append(Some("_New Character…"), Some("win.new-character"));
     menu.append(Some("_Open Folder…"), Some("win.open"));
     gtk::MenuButton::builder()
         .icon_name("open-menu-symbolic")
@@ -382,8 +431,17 @@ impl Browser {
             .child(&search)
             .search_mode_enabled(true)
             .build();
+        // Shown in the Characters section.
+        let new_button = gtk::Button::builder()
+            .icon_name("list-add-symbolic")
+            .tooltip_text("New Character")
+            .action_name("win.new-character")
+            .visible(false)
+            .build();
+        let entries_header = adw::HeaderBar::new();
+        entries_header.pack_start(&new_button);
         let entries_view = adw::ToolbarView::new();
-        entries_view.add_top_bar(&adw::HeaderBar::new());
+        entries_view.add_top_bar(&entries_header);
         entries_view.add_top_bar(&search_bar);
         entries_view.set_content(Some(&entries_stack));
         let entries_page = adw::NavigationPage::builder()
@@ -434,6 +492,7 @@ impl Browser {
                 let sections = sections.borrow();
                 let section = &sections[index];
                 *current.borrow_mut() = index;
+                new_button.set_visible(section.id == "characters");
                 entries_page.set_title(section.title);
                 inner_page.set_title(section.title);
                 search.set_text("");
@@ -531,6 +590,14 @@ impl Browser {
             self.selection.set_selected(position as u32);
             self.detail.show(entry);
             self.inner.set_show_content(true);
+        }
+    }
+
+    /// Selects the section with this id.
+    fn show_section(&self, id: &str) {
+        let index = self.sections.borrow().iter().position(|s| s.id == id);
+        if let Some(row) = index.and_then(|i| self.sidebar_list.row_at_index(i as i32)) {
+            self.sidebar_list.select_row(Some(&row));
         }
     }
 

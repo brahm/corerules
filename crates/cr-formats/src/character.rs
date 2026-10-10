@@ -17,6 +17,12 @@ const MINI_CLASS: &str = "CCharacterMiniOb";
 /// The character layout the Expansion writes.
 pub const CURRENT_VERSION: i32 = 54;
 
+/// The version string of the files the Expansion writes.
+pub const EXPANSION_VERSION: &str = "TSRP3 V54";
+
+/// The version string of the files Core Rules 2.0 writes.
+pub const CORE20_VERSION: &str = "TSRP2 V29";
+
 /// One entry of `index.chr` (`CCharacterMiniOb`), the summary the
 /// character list shows without opening each file.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -195,6 +201,20 @@ impl Character {
         let mut w = ArchiveWriter::new();
         self.write(&mut w)?;
         Ok(w.into_bytes())
+    }
+
+    /// A character with every string and list empty and every number 0,
+    /// in the layout `version_string` announces: what a new character
+    /// starts from before the creation steps fill it in.
+    pub fn blank(version_string: &str) -> Result<Self> {
+        // Zero bytes read as empty strings, empty lists and zeros.
+        let zeros = vec![0u8; 1 << 16];
+        let mut r = ArchiveReader::new(&zeros);
+        let data = CharacterData::read_fields(&mut r, version_of(version_string))?;
+        Ok(Self {
+            version: version_string.into(),
+            data,
+        })
     }
 
     /// Whether the character was built with Skills & Powers rather than
@@ -539,6 +559,24 @@ mod tests {
         assert_eq!(lirael.data.class_title, "Fighter/Mage");
         assert_eq!(lirael.data.classes.names.len(), 2);
         assert_eq!(lirael.data.spells, ["Burning Hands", "Armor"]);
+    }
+
+    #[test]
+    fn blank_characters_have_the_layout_of_their_version() {
+        let expansion = Character::blank(EXPANSION_VERSION).unwrap();
+        assert!(expansion.data.flags_0x1e54.is_some());
+        assert!(expansion.data.name.is_empty());
+        assert_eq!(
+            Character::parse(&expansion.to_bytes().unwrap()).unwrap(),
+            expansion
+        );
+        let core20 = Character::blank(CORE20_VERSION).unwrap();
+        assert_eq!(core20.data.nonweapon_bonuses, None);
+        assert!(core20.data.sheet_options.is_some());
+        assert_eq!(
+            Character::parse(&core20.to_bytes().unwrap()).unwrap(),
+            core20
+        );
     }
 
     #[test]

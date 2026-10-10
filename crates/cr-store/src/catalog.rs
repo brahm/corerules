@@ -204,7 +204,7 @@ impl Installation {
     }
 
     /// Objects of `Database/<name>.dat` followed by `UserDbas/<name>U.dat`.
-    pub(crate) fn list_objects(&self, name: &str) -> Result<Vec<Object>> {
+    pub fn list_objects(&self, name: &str) -> Result<Vec<Object>> {
         let mut objects = Vec::new();
         for relative in [
             format!("Database/{name}.dat"),

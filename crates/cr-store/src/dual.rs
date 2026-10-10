@@ -21,8 +21,16 @@ use crate::{Error, Installation, Result};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ClassRules {
     pub name: String,
+    /// Database identifier (Fighter 1000, Mage 4000).
+    pub id: i32,
     /// 0 warrior, 1 rogue, 2 priest, 3 wizard, 4 psionicist.
     pub group: i32,
+    /// Sides of the hit die rolled at 1st level.
+    pub hit_die: i32,
+    /// Weapon and nonweapon proficiency slots at 1st level.
+    pub weapon_slots: i32,
+    pub nonweapon_slots: i32,
+    pub alignments: Vec<String>,
     /// Minimum Str, Dex, Con, Int, Wis, Cha.
     pub requirements: [i32; 6],
     /// Prime requisites, in the same order.
@@ -34,11 +42,16 @@ pub struct ClassRules {
 }
 
 impl ClassRules {
-    fn of(class: &Class) -> Self {
+    pub(crate) fn of(class: &Class) -> Self {
         match class {
             Class::Expansion { data, .. } => Self {
                 name: data.name.clone(),
+                id: data.id,
                 group: data.unknown_0x14[0],
+                hit_die: data.unknown_0x84[0],
+                weapon_slots: data.unknown_0xcc[2],
+                nonweapon_slots: data.unknown_0xbc[1],
+                alignments: data.alignments.clone(),
                 requirements: data.ability_requirements,
                 prime: data.unknown_0x34.map(|p| p != 0),
                 default_abilities: data.default_abilities.clone(),
@@ -52,7 +65,12 @@ impl ClassRules {
                 let v = &data.unknown_0x10;
                 Self {
                     name: data.name.clone(),
+                    id: v[22],
                     group: v[0],
+                    hit_die: v[17],
+                    weapon_slots: v[29],
+                    nonweapon_slots: v[25],
+                    alignments: data.unknown_0x58[2].clone(),
                     requirements: v[2..8].try_into().unwrap(),
                     prime: std::array::from_fn(|i| v[8 + i] != 0),
                     default_abilities: data.unknown_0x58[3].clone(),

@@ -6,9 +6,11 @@
 
 pub mod catalog;
 pub mod choices;
+pub mod create;
 pub mod dual;
 pub mod edit;
 pub mod lists;
+pub mod settings;
 
 use std::fs;
 use std::io;
