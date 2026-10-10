@@ -36,6 +36,16 @@ pub struct ClassRules {
     /// Prime requisites, in the same order.
     pub prime: [bool; 6],
     pub default_abilities: Vec<String>,
+    /// Class abilities Skills & Powers offers, and the character points a
+    /// new character has to buy them (none in Core Rules 2.0).
+    pub abilities: Vec<String>,
+    pub points: i32,
+    /// Skills & Powers allotments: character points for nonweapon
+    /// proficiencies and for weapon proficiencies, and what one weapon
+    /// proficiency costs (none in Core Rules 2.0).
+    pub nonweapon_points: i32,
+    pub weapon_points: i32,
+    pub weapon_cost: i32,
     pub major_spheres: Vec<String>,
     pub minor_spheres: Vec<String>,
     pub schools: Vec<String>,
@@ -55,6 +65,11 @@ impl ClassRules {
                 requirements: data.ability_requirements,
                 prime: data.unknown_0x34.map(|p| p != 0),
                 default_abilities: data.default_abilities.clone(),
+                abilities: data.abilities.clone(),
+                points: data.unknown_0x54[0],
+                nonweapon_points: data.unknown_0xbc[0],
+                weapon_points: data.unknown_0xcc[0],
+                weapon_cost: data.unknown_0xcc[1],
                 major_spheres: data.unknown_0x2738.clone(),
                 minor_spheres: data.unknown_0x274c.clone(),
                 schools: data.unknown_0x2760.clone(),
@@ -74,6 +89,11 @@ impl ClassRules {
                     requirements: v[2..8].try_into().unwrap(),
                     prime: std::array::from_fn(|i| v[8 + i] != 0),
                     default_abilities: data.unknown_0x58[3].clone(),
+                    abilities: Vec::new(),
+                    points: 0,
+                    nonweapon_points: 0,
+                    weapon_points: 0,
+                    weapon_cost: 0,
                     major_spheres: data.unknown_0x58[4].clone(),
                     schools: data.unknown_0x58[5].clone(),
                     minor_spheres: data.unknown_0x58[6].clone(),

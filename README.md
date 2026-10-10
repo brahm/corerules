@@ -70,14 +70,21 @@ Early work (phase 0 of the plan): the file formats are being mapped.
       Player's Handbook requirements, checked in both original programs;
       race and the classes chosen at creation never change
 - [x] Creating characters (New Character, Ctrl+N), following the original
-      wizard: campaign setting, ability rolls (Methods I to VI or entered
-      scores), race and subrace, class, details, proficiencies, spells and
+      wizard: campaign setting, ability rolls (Methods I to VI, entered
+      scores or Player's Choice), race and subrace, class, details,
+      proficiencies and learned languages, rogue skill points, spells and
       starting equipment; checked by opening the new files in both
       original programs. The original has no notion of campaign settings,
       so what each setting allows comes from its campaign book and only
       narrows what the installed databases offer (`crates/cr-store/src/settings.rs`).
-      Not yet: Player's Option creation, rogue skill points, weapon
-      specialization and extra languages at creation
+- [x] Player's Option (Skills & Powers) creation, as the Expansion's
+      Player's Option button: Methods VII to X, racial and class
+      abilities bought with character points, subabilities, traits,
+      disadvantages, proficiencies paid in points with ranks, weapon of
+      choice, expertise and specialization, unarmed combat, shield and
+      armor proficiencies, fighting styles and rogue skill points; checked
+      against characters the Expansion made and by opening the new files
+      in it
 
 ## Layout
 

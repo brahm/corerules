@@ -15,8 +15,15 @@
 //! follow the race's level limits and multi-class list, with the
 //! specialist wizards of the Player's Handbook table.
 //!
-//! Skills & Powers characters, rogue skill points and weapon
-//! specialization are left to the original program.
+//! The Expansion also makes Player's Option characters (Skills & Powers):
+//! subabilities, character points spent on racial and class abilities,
+//! nonweapon proficiencies, traits and weapon proficiencies, disadvantages
+//! that give points back, weapon of choice, expertise, specialization,
+//! unarmed combat, shield and armor proficiencies and fighting styles. The
+//! point pools come from the databases (race and class records, part
+//! costs); what the original has built in (the costs of the combat
+//! options, the fighting styles each class group may learn, the rogue
+//! skill tables) follows the books, as in the original.
 
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -71,6 +78,8 @@ pub const SPELLBOOK: &str = "Spellbook";
 
 /// The native language the original gives a race whose record names none.
 const HUMAN_LANGUAGE: &str = "Human, Regional dialect";
+/// The races of human blood, which speak the regional dialect too.
+const HUMAN_BLOOD: [&str; 4] = ["Human", "Half-orc", "Half-ogre", "Half-elf"];
 
 /// Dice for the rolls; a small xorshift generator, so that tests can fix
 /// the seed.
@@ -126,17 +135,69 @@ pub enum RollMethod {
     FourDice,
     /// Scores typed in.
     Enter,
+    /// Skills & Powers Method VII: 75 points divided among the abilities.
+    Points,
+    /// Skills & Powers Method VIII: 24d6 shared out, 3 to 6 dice an
+    /// ability, the best three of each kept.
+    DicePool,
+    /// Skills & Powers Method IX: 2d6 on a table sets the points to divide
+    /// and the highest score.
+    RolledPoints,
+    /// Method VI: every ability starts at 8 and 7d6 are added, each die
+    /// whole to one ability, none above 18.
+    SevenDice,
+    /// Skills & Powers Method X: Method VII's 75 points, of which warriors
+    /// may spend some on exceptional Strength, 10% a point.
+    PointsAndStrength,
+    /// Race and class first, then 3d6 in order raised or lowered into
+    /// what they allow.
+    PlayersChoice,
 }
 
+/// Method VII's points.
+pub const METHOD_VII_POINTS: u32 = 75;
+
+/// Method VIII's dice.
+pub const METHOD_VIII_DICE: u32 = 24;
+
+/// Method VI: the score every ability starts at, and the dice added.
+pub const METHOD_VI_BASE: u32 = 8;
+pub const METHOD_VI_DICE: usize = 7;
+
+/// Method X: exceptional Strength bought per point.
+pub const METHOD_X_STRENGTH_STEP: u32 = 10;
+
 impl RollMethod {
-    pub const ALL: [RollMethod; 6] = [
+    /// The Player's Handbook's methods.
+    pub const ALL: [RollMethod; 7] = [
         Self::InOrder,
         Self::BestOfTwo,
         Self::Arrange,
         Self::BestSixOfTwelve,
         Self::FourDice,
+        Self::SevenDice,
         Self::Enter,
     ];
+
+    /// What the Expansion adds, for Core Rules and Player's Option
+    /// characters alike, in its order: Methods VII to X before Enter
+    /// Scores, Player's Choice after it.
+    pub const SKILLS_AND_POWERS: [RollMethod; 4] = [
+        Self::Points,
+        Self::DicePool,
+        Self::RolledPoints,
+        Self::PointsAndStrength,
+    ];
+
+    /// The methods the installation's wizard offers.
+    pub fn offered(expansion: bool) -> Vec<RollMethod> {
+        let mut methods = Self::ALL.to_vec();
+        if expansion {
+            methods.splice(6..6, Self::SKILLS_AND_POWERS);
+            methods.push(Self::PlayersChoice);
+        }
+        methods
+    }
 
     pub fn name(self) -> &'static str {
         match self {
@@ -146,6 +207,12 @@ impl RollMethod {
             Self::BestSixOfTwelve => "Method IV",
             Self::FourDice => "Method V",
             Self::Enter => "Enter Scores",
+            Self::Points => "Method VII",
+            Self::DicePool => "Method VIII",
+            Self::RolledPoints => "Method IX",
+            Self::SevenDice => "Method VI",
+            Self::PointsAndStrength => "Method X",
+            Self::PlayersChoice => "Player's Choice",
         }
     }
 
@@ -157,7 +224,21 @@ impl RollMethod {
             Self::BestSixOfTwelve => "3d6 twelve times, the best six arranged as you like",
             Self::FourDice => "4d6 six times dropping the lowest die, arranged as you like",
             Self::Enter => "Type in scores rolled elsewhere",
+            Self::Points => "75 points divided among the abilities, 3 to 18 each",
+            Self::DicePool => "24d6 shared out, 3 to 6 dice an ability, the best three kept",
+            Self::RolledPoints => "2d6 on a table give the points to divide and the highest score",
+            Self::SevenDice => "Scores start at 8; 7d6 added, a die an ability",
+            Self::PointsAndStrength => "75 points; a warrior may buy exceptional Strength",
+            Self::PlayersChoice => "Race and class first; 3d6 then fitted to them",
         }
+    }
+
+    /// Whether the player divides points among the abilities.
+    pub fn divided(self) -> bool {
+        matches!(
+            self,
+            Self::Points | Self::RolledPoints | Self::PointsAndStrength
+        )
     }
 
     /// Whether the player arranges the rolled scores.
@@ -181,13 +262,195 @@ impl RollMethod {
                 four.sort_unstable();
                 four[1..].iter().sum()
             }),
-            Self::Enter => [10; 6],
+            Self::Enter | Self::Points | Self::RolledPoints | Self::PointsAndStrength => {
+                [13, 13, 13, 12, 12, 12]
+            }
+            Self::DicePool => roll_dice_pool([4; 6], dice),
+            Self::SevenDice => {
+                // Each die to the lowest score it fits.
+                let rolled = roll_seven_dice(dice);
+                let mut assignment = [0; METHOD_VI_DICE];
+                let mut scores = [METHOD_VI_BASE; 6];
+                for (d, &die) in rolled.iter().enumerate() {
+                    let a = (0..6)
+                        .filter(|&a| scores[a] + die <= 18)
+                        .min_by_key(|&a| scores[a])
+                        .unwrap_or(0);
+                    assignment[d] = a;
+                    scores[a] = (scores[a] + die).min(18);
+                }
+                seven_dice_scores(&rolled, &assignment).unwrap_or(scores)
+            }
+            Self::PlayersChoice => std::array::from_fn(|_| dice.roll(3, 6)),
         };
         if self.arranged() {
             scores.sort_unstable_by(|a, b| b.cmp(a));
         }
         scores
     }
+}
+
+/// Method VIII: for each ability the number of d6 given to it, the best
+/// three of them added up.
+pub fn roll_dice_pool(counts: [u32; 6], dice: &mut Dice) -> [u32; 6] {
+    std::array::from_fn(|a| {
+        let mut rolled: Vec<u32> = (0..counts[a].max(3)).map(|_| dice.roll(1, 6)).collect();
+        rolled.sort_unstable_by(|x, y| y.cmp(x));
+        rolled[..3].iter().sum()
+    })
+}
+
+/// Method VI: the seven dice.
+pub fn roll_seven_dice(dice: &mut Dice) -> [u32; METHOD_VI_DICE] {
+    std::array::from_fn(|_| dice.roll(1, 6))
+}
+
+/// Method VI: the scores when each die goes to the ability `assignment`
+/// gives it (0 for Strength); `None` when a score would pass 18.
+pub fn seven_dice_scores(
+    rolled: &[u32; METHOD_VI_DICE],
+    assignment: &[usize; METHOD_VI_DICE],
+) -> Option<[u32; 6]> {
+    let mut scores = [METHOD_VI_BASE; 6];
+    for (&die, &a) in rolled.iter().zip(assignment) {
+        *scores.get_mut(a)? += die;
+    }
+    scores.iter().all(|&s| s <= 18).then_some(scores)
+}
+
+/// Method X: points 18/01 and better cost on top of the 18; `None` when
+/// the Strength is not 18.
+pub fn exceptional_strength_points(strength: u32, exceptional: u32) -> Option<u32> {
+    (strength == 18).then(|| exceptional.div_ceil(METHOD_X_STRENGTH_STEP))
+}
+
+/// Method IX: the points to divide and the highest score for a 2d6 roll
+/// (Skills & Powers, Point Generation table).
+pub fn point_table(roll: u32) -> (u32, u32) {
+    match roll {
+        0..=2 => (68, 18),
+        3 => (70, 18),
+        4 => (72, 17),
+        5 => (72, 18),
+        6 => (74, 17),
+        7 => (74, 18),
+        8 => (76, 17),
+        9 => (76, 16),
+        10 => (78, 16),
+        11 => (78, 15),
+        _ => (80, 15),
+    }
+}
+
+/// The two Skills & Powers subabilities of each ability, in the order the
+/// character file keeps them.
+pub const SUBABILITIES: [[&str; 2]; 6] = [
+    ["Stamina", "Muscle"],
+    ["Aim", "Balance"],
+    ["Health", "Fitness"],
+    ["Reason", "Knowledge"],
+    ["Intuition", "Willpower"],
+    ["Leadership", "Appearance"],
+];
+
+/// How far a subability may be from its ability score.
+pub const SUBABILITY_SPREAD: i32 = 2;
+
+/// Character points for nonweapon proficiencies per class group, for a
+/// class record that has none (Skills & Powers, chapter 6).
+fn group_points(group: i32) -> u32 {
+    match group {
+        2 | 3 => 8,
+        _ => 6,
+    }
+}
+
+/// The most points disadvantages may give, and how many may be taken.
+pub const DISADVANTAGE_POINTS: u32 = 15;
+pub const MOST_DISADVANTAGES: usize = 2;
+
+/// Weapon specialization at 1st level: only single-classed fighters,
+/// for 2 points. A multi-classed fighter is not of high enough level, but
+/// may take an unarmed style for twice that.
+const SPECIALIZATION_COST: u32 = 2;
+
+/// The unarmed combat styles a fighter may specialize in, in the order of
+/// the character file's flags (`flags_0x1e54`).
+pub const UNARMED: [&str; 3] = ["Punching", "Wrestling", "Martial Arts"];
+
+/// Shield proficiencies, in the order of the file's flags
+/// (`unknown_0x134`).
+pub const SHIELDS: [&str; 4] = ["Buckler", "Small shield", "Medium shield", "Body shield"];
+
+/// The fighting styles and the numbers the file keeps them by
+/// (`classes.unknown_0x50`), and the class groups that may learn each
+/// (warrior, rogue, priest, wizard, psionicist; Skills & Powers, Table
+/// 52). The "(+2)" styles are the specializations in them.
+pub const FIGHTING_STYLES: [(&str, u32, [bool; 5]); 9] = [
+    ("One-handed Weapon", 1993, [true; 5]),
+    ("Weapon and Shield", 1994, [true, false, true, false, false]),
+    ("Two-handed Weapon", 1995, [true, false, true, true, false]),
+    ("Two Weapon", 1996, [true, true, false, false, false]),
+    ("Missile", 1997, [true, true, false, false, false]),
+    ("Horse Archer", 1998, [true, true, false, false, false]),
+    ("Thrown Weapon/Sling", 1999, [true; 5]),
+    ("Two Weapon (+2)", 2000, [true, true, false, false, false]),
+    ("One-handed Weapon (+2)", 2001, [true; 5]),
+];
+
+/// How many fighting styles the file has room for.
+pub const MOST_FIGHTING_STYLES: usize = 10;
+
+/// The rogue skills in the order of the races' adjustments, their base
+/// scores and what wearing no armor adds (Player's Handbook, Tables 26
+/// and 29).
+pub const ROGUE_SKILLS: [(&str, i32, i32); 8] = [
+    ("Pick pockets", 15, 5),
+    ("Open locks", 10, 0),
+    ("Find/remove traps", 5, 0),
+    ("Move silently", 10, 10),
+    ("Hide in shadows", 5, 5),
+    ("Detect noise", 15, 0),
+    ("Climb walls", 60, 10),
+    ("Read languages", 0, 0),
+];
+
+/// Discretionary rogue skill points at 1st level and the most one skill
+/// may get: thieves, and bards.
+pub const THIEF_POINTS: (u32, u32) = (60, 30);
+pub const BARD_POINTS: (u32, u32) = (20, 20);
+
+/// Dexterity's adjustments to pick pockets, open locks, find/remove traps,
+/// move silently and hide in shadows (Player's Handbook, Table 28).
+fn dexterity_skill_adjustments(dexterity: u32) -> [i32; 5] {
+    match dexterity {
+        0..=9 => [-15, -10, -10, -20, -10],
+        10 => [-10, -5, -10, -15, -5],
+        11 => [-5, 0, -5, -10, 0],
+        12 => [0, 0, 0, -5, 0],
+        13..=15 => [0; 5],
+        16 => [0, 5, 0, 0, 0],
+        17 => [5, 10, 0, 5, 5],
+        18 => [10, 15, 5, 10, 10],
+        _ => [15, 20, 10, 15, 15],
+    }
+}
+
+/// The rogue skill a class ability gives: "Thief, Pick pockets* (10)" is
+/// pick pockets. The star marks the skills that take points; a ranger's
+/// "Hide in shadows (5)" is not one.
+fn rogue_skill_of(ability: &str) -> Option<usize> {
+    let name = ability.split_once(", ").map_or(ability, |(_, n)| n);
+    let (name, _) = name.split_once('*')?;
+    let name = name.trim();
+    ROGUE_SKILLS
+        .iter()
+        .position(|(skill, ..)| skill.eq_ignore_ascii_case(name))
+}
+
+/// Whether a nonweapon proficiency teaches languages, one a slot or rank.
+pub fn teaches_languages(proficiency: &str) -> bool {
+    proficiency.ends_with("Languages")
 }
 
 /// A race as creation needs it.
@@ -203,12 +466,31 @@ pub struct RaceRules {
     physical: [i32; 11],
     pub movement: i32,
     languages: Vec<String>,
+    /// Rogue skill adjustments, in the order of [`ROGUE_SKILLS`].
+    thief_adjustments: [i32; 8],
     /// One of the races the Expansion lists with "Standard Races Only".
     pub standard: bool,
-    /// Subraces, the default one first, with their movement rates.
-    subraces: Vec<(String, i32)>,
+    /// Subraces, the default one first.
+    subraces: Vec<SubraceRules>,
     /// Multi-class combinations as class ids per group (Core Rules 2.0).
     multi_classes: Vec<[i32; 5]>,
+    /// Skills & Powers: points for racial abilities, how many may be kept,
+    /// and the abilities a character of the race starts with.
+    points: u32,
+    saved: u32,
+    abilities: Vec<String>,
+}
+
+/// A subrace record: its movement, its Skills & Powers points, ability
+/// package and languages.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SubraceRules {
+    name: String,
+    movement: i32,
+    points: u32,
+    saved: u32,
+    abilities: Vec<String>,
+    languages: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -233,10 +515,24 @@ pub struct Ware {
     pub cost: u32,
 }
 
+/// A nonweapon proficiency: its cost in slots (Core Rules) and character
+/// points (Skills & Powers), its groups (general, priest, rogue, warrior,
+/// wizard, psionicist) and the subabilities it needs ("Wisdom/Willpower").
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct NonweaponRules {
+    name: String,
+    slots: u32,
+    points: u32,
+    groups: [bool; 6],
+    relevant: Vec<String>,
+}
+
 /// Every choice made for a new character.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Draft {
     pub setting: &'static Setting,
+    /// Player's Option (Skills & Powers) rather than the Core Rules.
+    pub skills_and_powers: bool,
     /// Str, Dex, Con, Int, Wis and Cha before the racial adjustments.
     pub scores: [u32; 6],
     /// 1 to 100 for 18/01 to 18/00; only warriors with Strength 18.
@@ -267,6 +563,34 @@ pub struct Draft {
     pub pack: bool,
     /// Items bought, with their quantities.
     pub purchases: Vec<(String, u32)>,
+    /// Skills & Powers: how far each ability's first subability is above
+    /// its score; the second is as far below.
+    pub subabilities: [i32; 6],
+    pub racial_abilities: Vec<String>,
+    /// Class abilities, per class.
+    pub class_abilities: Vec<Vec<String>>,
+    pub traits: Vec<String>,
+    pub disadvantages: Vec<String>,
+    /// Weapons the character specializes in.
+    pub specializations: Vec<String>,
+    /// How the scores were rolled.
+    pub roll_method: RollMethod,
+    /// Languages learned through Modern Languages and the like, one per
+    /// slot (Core Rules) or rank (Skills & Powers), in the order of the
+    /// proficiencies.
+    pub learned_languages: Vec<String>,
+    /// Discretionary points added to each rogue skill, in the order of
+    /// [`ROGUE_SKILLS`].
+    pub rogue_points: [u32; 8],
+    /// Skills & Powers combat options.
+    pub weapon_of_choice: Option<String>,
+    pub expertise: Option<String>,
+    pub unarmed: Vec<String>,
+    /// Buckler, small, medium and body shield.
+    pub shields: [bool; 4],
+    pub armor_proficiencies: Vec<String>,
+    /// In the order learned.
+    pub fighting_styles: Vec<String>,
 }
 
 impl Draft {
@@ -295,6 +619,22 @@ impl Draft {
             gold: 0,
             pack: true,
             purchases: Vec::new(),
+            skills_and_powers: false,
+            subabilities: [0; 6],
+            racial_abilities: Vec::new(),
+            class_abilities: Vec::new(),
+            traits: Vec::new(),
+            disadvantages: Vec::new(),
+            specializations: Vec::new(),
+            roll_method: RollMethod::FourDice,
+            learned_languages: Vec::new(),
+            rogue_points: [0; 8],
+            weapon_of_choice: None,
+            expertise: None,
+            unarmed: Vec::new(),
+            shields: [false; 4],
+            armor_proficiencies: Vec::new(),
+            fighting_styles: Vec::new(),
         }
     }
 
@@ -313,13 +653,20 @@ pub struct CreationRules {
     /// Class combinations per race (`AllowedU.dat`, the Expansion only).
     combinations: HashMap<String, Vec<Vec<String>>>,
     kits: Vec<KitRules>,
-    /// Nonweapon proficiencies and their cost in slots.
-    nonweapon: Vec<(String, u32)>,
+    nonweapon: Vec<NonweaponRules>,
+    /// Skills & Powers parts with their cost in character points: racial
+    /// and class abilities, traits, and the points disadvantages give.
+    racial_abilities: Vec<(String, i32)>,
+    class_ability_costs: HashMap<String, i32>,
+    traits: Vec<(String, u32)>,
+    disadvantages: Vec<(String, u32)>,
     /// Weapons and the classes that may not use them.
     weapons: Vec<(String, Vec<String>)>,
     /// Wizard spells: name, level, schools.
     wizard_spells: Vec<(String, i32, Vec<String>)>,
     pub wares: Vec<Ware>,
+    /// Every language, for Modern Languages and the like.
+    languages: Vec<String>,
     abilities: HashSet<String>,
     parts: PartTable,
 }
@@ -361,8 +708,12 @@ impl Installation {
                 physical: r.physical,
                 movement: r.movement,
                 languages: r.languages.clone(),
+                thief_adjustments: r.thief_adjustments,
                 standard: r.unknown_0x1e0[1] != 0,
                 subraces: Vec::new(),
+                points: r.unknown_0xa8.max(0) as u32,
+                saved: r.unknown_0xac.max(0) as u32,
+                abilities: r.abilities.clone(),
                 multi_classes: r
                     .multi_classes
                     .iter()
@@ -383,7 +734,14 @@ impl Installation {
                 .iter_mut()
                 .find(|r| words.contains(&r.name.to_lowercase()))
             {
-                let entry = (sub.name.clone(), sub.movement);
+                let entry = SubraceRules {
+                    name: sub.name.clone(),
+                    movement: sub.movement,
+                    points: sub.unknown_0xa8.max(0) as u32,
+                    saved: sub.unknown_0xac.max(0) as u32,
+                    abilities: sub.abilities.clone(),
+                    languages: sub.languages.clone(),
+                };
                 if sub.unknown_0x1e0[0] != 0 {
                     race.subraces.insert(0, entry);
                 } else {
@@ -412,9 +770,14 @@ impl Installation {
             combinations,
             kits: Vec::new(),
             nonweapon: Vec::new(),
+            racial_abilities: Vec::new(),
+            class_ability_costs: HashMap::new(),
+            traits: Vec::new(),
+            disadvantages: Vec::new(),
             weapons: Vec::new(),
             wizard_spells: Vec::new(),
             wares: Vec::new(),
+            languages: Vec::new(),
             abilities: self.part_names("Class Abilities")?.into_iter().collect(),
             parts: self.part_table()?,
         };
@@ -464,9 +827,54 @@ impl Installation {
             }
             for part in parts("Non-Weapon Proficiencies") {
                 if seen.insert(("nwp", part.head.name.clone())) {
-                    rules.nonweapon.push((
+                    let name = &part.head.name;
+                    rules.nonweapon.push(NonweaponRules {
+                        name: name.clone(),
+                        slots: rules.parts.nonweapon_cost(name, false),
+                        points: rules.parts.nonweapon_cost(name, true),
+                        groups: part.data.unknown_0x48c.map(|g| g != 0),
+                        relevant: [&part.head.unknown_0x458, &part.head.unknown_0x45c]
+                            .into_iter()
+                            .filter(|r| !r.is_empty())
+                            .cloned()
+                            .collect(),
+                    });
+                }
+            }
+            let cost = |part: &Part| match part.head.unknown_0x308 {
+                0 => cost_in_name(&part.head.name),
+                cost => cost,
+            };
+            for part in parts("Languages") {
+                if seen.insert(("language", part.head.name.clone())) {
+                    rules.languages.push(part.head.name.clone());
+                }
+            }
+            for part in parts("Racial Abilities") {
+                if seen.insert(("racial", part.head.name.clone())) {
+                    rules
+                        .racial_abilities
+                        .push((part.head.name.clone(), cost(part)));
+                }
+            }
+            for part in parts("Class Abilities") {
+                rules
+                    .class_ability_costs
+                    .entry(part.head.name.clone())
+                    .or_insert_with(|| cost(part));
+            }
+            for part in parts("Traits") {
+                if seen.insert(("trait", part.head.name.clone())) {
+                    rules
+                        .traits
+                        .push((part.head.name.clone(), cost(part).max(0) as u32));
+                }
+            }
+            for part in parts("Disadvantages") {
+                if seen.insert(("disadvantage", part.head.name.clone())) {
+                    rules.disadvantages.push((
                         part.head.name.clone(),
-                        rules.parts.nonweapon_cost(&part.head.name, false),
+                        part.data.unknown_0x220.max(0) as u32,
                     ));
                 }
             }
@@ -518,9 +926,13 @@ impl Installation {
                 }
             }
         }
-        rules.nonweapon.sort_by_key(|n| n.0.to_lowercase());
+        rules.nonweapon.sort_by_key(|n| n.name.to_lowercase());
+        rules.racial_abilities.sort_by_key(|n| n.0.to_lowercase());
+        rules.traits.sort_by_key(|n| n.0.to_lowercase());
+        rules.disadvantages.sort_by_key(|n| n.0.to_lowercase());
         rules.weapons.sort_by_key(|n| n.0.to_lowercase());
         rules.wares.sort_by_key(|n| n.name.to_lowercase());
+        rules.languages.sort_by_key(|n| n.to_lowercase());
         rules.races.sort_by_key(|r| r.name.to_lowercase());
         Ok(rules)
     }
@@ -570,6 +982,29 @@ impl Installation {
         }
         Ok(file)
     }
+}
+
+/// The score a proficiency's relevant ability names: a subability
+/// ("Wisdom/Willpower") or a whole ability ("Intelligence").
+fn subability_score(scores: &[[u32; 3]; 6], relevant: &str) -> Option<u32> {
+    let (ability, sub) = relevant.split_once('/').unwrap_or((relevant, ""));
+    let a = ABILITIES
+        .iter()
+        .position(|n| n.eq_ignore_ascii_case(ability.trim()))?;
+    let s = SUBABILITIES[a]
+        .iter()
+        .position(|n| n.eq_ignore_ascii_case(sub.trim()))
+        .map_or(0, |s| s + 1);
+    Some(scores[a][s])
+}
+
+/// The cost a racial or class ability's name ends with: 5 for "Dwarf, Axe
+/// bonus (5)", -5 for "Warrior, Limited armor (-5)", 0 without one.
+fn cost_in_name(name: &str) -> i32 {
+    name.rsplit_once('(')
+        .and_then(|(_, rest)| rest.strip_suffix(')'))
+        .and_then(|n| n.parse().ok())
+        .unwrap_or(0)
 }
 
 /// The class names of a `CClassesAllowedHelperOb`, in group order.
@@ -696,18 +1131,61 @@ impl CreationRules {
 
     /// The races the setting has whose limits the base scores meet.
     pub fn races(&self, setting: &Setting, scores: &[u32; 6], standard_only: bool) -> Vec<String> {
+        self.races_where(setting, standard_only, Some(scores))
+    }
+
+    /// The races the setting has, whatever the scores: Player's Choice
+    /// picks the race before rolling.
+    pub fn all_races(&self, setting: &Setting, standard_only: bool) -> Vec<String> {
+        self.races_where(setting, standard_only, None)
+    }
+
+    fn races_where(
+        &self,
+        setting: &Setting,
+        standard_only: bool,
+        scores: Option<&[u32; 6]>,
+    ) -> Vec<String> {
         self.races
             .iter()
             .filter(|r| setting.allows_race(&r.name) && (!standard_only || r.standard))
             .filter(|r| {
-                r.limits
-                    .iter()
-                    .zip(scores)
-                    .all(|(l, &s)| (l[0]..=l[1]).contains(&(s as i32)))
+                scores.is_none_or(|scores| {
+                    r.limits
+                        .iter()
+                        .zip(scores)
+                        .all(|(l, &s)| (l[0]..=l[1]).contains(&(s as i32)))
+                })
             })
             .filter(|r| !self.combinations_of(setting, &r.name).is_empty())
             .map(|r| r.name.clone())
             .collect()
+    }
+
+    /// The highest base scores the race allows: Player's Choice offers the
+    /// classes these reach.
+    pub fn best_scores(&self, race: &str) -> [u32; 6] {
+        let limits = self.race(race).map_or([[3, 18]; 6], |r| r.limits);
+        std::array::from_fn(|a| limits[a][1].clamp(3, 18) as u32)
+    }
+
+    /// Player's Choice: 3d6 in order, each raised to what the race and the
+    /// classes need and lowered to the race's limit.
+    pub fn players_choice(&self, race: &str, classes: &[String], dice: &mut Dice) -> [u32; 6] {
+        let (limits, adjustments) = self
+            .race(race)
+            .map_or(([[3, 18]; 6], [0; 6]), |r| (r.limits, r.adjustments));
+        std::array::from_fn(|a| {
+            let needed = classes
+                .iter()
+                .filter_map(|c| self.class(c))
+                .map(|c| c.requirements[a] - adjustments[a])
+                .max()
+                .unwrap_or(3);
+            let low = limits[a][0].max(needed).max(3);
+            let high = limits[a][1].clamp(3, 18).max(low);
+            (dice.roll(3, 6) as i32).clamp(low, high) as u32
+        })
     }
 
     /// Why a race the setting has is not offered for these scores.
@@ -730,8 +1208,8 @@ impl CreationRules {
             .subraces
             .iter()
             .enumerate()
-            .filter(|(i, s)| setting.allows_subrace(&s.0, *i == 0))
-            .map(|(_, s)| s.0.clone())
+            .filter(|(i, s)| setting.allows_subrace(&s.name, *i == 0))
+            .map(|(_, s)| s.name.clone())
             .collect();
         if names.is_empty() {
             vec![race.to_owned()]
@@ -953,27 +1431,552 @@ impl CreationRules {
             .unwrap_or(0)
     }
 
-    /// Nonweapon proficiencies with their cost in slots.
-    pub fn nonweapon_proficiencies(&self) -> &[(String, u32)] {
-        &self.nonweapon
+    /// The nonweapon proficiencies, by name.
+    pub fn nonweapon_proficiencies(&self) -> Vec<String> {
+        self.nonweapon.iter().map(|n| n.name.clone()).collect()
     }
 
-    pub fn nonweapon_cost(&self, name: &str) -> u32 {
-        self.nonweapon
+    /// What a nonweapon proficiency costs the drafted character: slots with
+    /// the Core Rules; with Skills & Powers its character points, 2 more
+    /// when it belongs to none of the character's groups (nor the general
+    /// one), and 1 more for each point a relevant subability is below 9.
+    pub fn nonweapon_cost(&self, draft: &Draft, name: &str) -> u32 {
+        let Some(n) = self.nonweapon.iter().find(|n| n.name == name) else {
+            return 1;
+        };
+        if !draft.skills_and_powers {
+            return n.slots;
+        }
+        let groups = self.proficiency_groups(&draft.classes);
+        let foreign = !n.groups.iter().zip(groups).any(|(&has, own)| has && own);
+        let subabilities = self.subability_scores(draft);
+        let shortfall: u32 = n
+            .relevant
             .iter()
-            .find(|n| n.0 == name)
-            .map_or(1, |n| n.1)
+            .filter_map(|r| subability_score(&subabilities, r))
+            .map(|score| 9u32.saturating_sub(score))
+            .sum();
+        n.points + if foreign { 2 } else { 0 } + shortfall
     }
 
-    /// Slots the draft's nonweapon proficiencies take.
+    /// The nonweapon proficiency groups open to the classes at the normal
+    /// cost: general, and the classes' own.
+    fn proficiency_groups(&self, classes: &[String]) -> [bool; 6] {
+        let mut groups = [true, false, false, false, false, false];
+        for class in classes.iter().filter_map(|c| self.class(c)) {
+            let index = match class.group {
+                0 => 3,
+                1 => 2,
+                2 => 1,
+                3 => 4,
+                _ => 5,
+            };
+            groups[index] = true;
+        }
+        groups
+    }
+
+    /// Slots (Core Rules) or character points (Skills & Powers) the
+    /// draft's nonweapon proficiencies take. A proficiency taken again
+    /// takes its slots again with the Core Rules; with Skills & Powers
+    /// each further rank costs 1 point.
     pub fn nonweapon_spent(&self, draft: &Draft) -> u32 {
+        if draft.skills_and_powers {
+            self.nonweapon_ranks(draft)
+                .iter()
+                .map(|(n, ranks)| self.nonweapon_rank_cost(draft, n, *ranks))
+                .sum()
+        } else {
+            draft
+                .nonweapon_proficiencies
+                .iter()
+                .map(|n| self.nonweapon_cost(draft, n))
+                .sum()
+        }
+    }
+
+    /// Each nonweapon proficiency once, in the order first taken, with how
+    /// many times it was taken.
+    pub fn nonweapon_ranks(&self, draft: &Draft) -> Vec<(String, u32)> {
+        let mut ranks: Vec<(String, u32)> = Vec::new();
+        for name in &draft.nonweapon_proficiencies {
+            match ranks.iter_mut().find(|(n, _)| n == name) {
+                Some((_, count)) => *count += 1,
+                None => ranks.push((name.clone(), 1)),
+            }
+        }
+        ranks
+    }
+
+    /// Skills & Powers: what a proficiency costs with this many ranks.
+    pub fn nonweapon_rank_cost(&self, draft: &Draft, name: &str, ranks: u32) -> u32 {
+        self.nonweapon_cost(draft, name) + ranks.saturating_sub(1)
+    }
+
+    /// Every language, for the proficiencies that teach them.
+    pub fn languages(&self) -> &[String] {
+        &self.languages
+    }
+
+    /// How many languages the proficiencies teach: one a slot or rank of
+    /// Modern Languages and the like.
+    pub fn language_slots(&self, draft: &Draft) -> usize {
         draft
             .nonweapon_proficiencies
             .iter()
-            .map(|n| self.nonweapon_cost(n))
-            .sum()
+            .filter(|n| teaches_languages(n))
+            .count()
     }
 
+    /// Each ability's score and its two subabilities, after the racial
+    /// adjustments; with the Core Rules the subabilities equal the score.
+    pub fn subability_scores(&self, draft: &Draft) -> [[u32; 3]; 6] {
+        let adjusted = self.adjusted(&draft.race, &draft.scores);
+        std::array::from_fn(|a| {
+            let score = adjusted[a] as i32;
+            let spread = if draft.skills_and_powers {
+                draft.subabilities[a].clamp(-SUBABILITY_SPREAD, SUBABILITY_SPREAD)
+            } else {
+                0
+            };
+            let sub = |s: i32| (s.clamp(1, 25)) as u32;
+            [score as u32, sub(score + spread), sub(score - spread)]
+        })
+    }
+
+    /// The racial abilities a character of the subrace starts with: its
+    /// package, or a monster race's fixed abilities. Both programs write
+    /// them for Core Rules characters as well.
+    pub fn racial_package(&self, race: &str, subrace: &str) -> Vec<String> {
+        let Some(r) = self.race(race) else {
+            return Vec::new();
+        };
+        r.subraces
+            .iter()
+            .find(|s| s.name == subrace)
+            .map_or_else(|| r.abilities.clone(), |s| s.abilities.clone())
+    }
+
+    /// Skills & Powers points for racial abilities, and how many of those
+    /// left over the character may keep.
+    pub fn racial_points(&self, race: &str, subrace: &str) -> (u32, u32) {
+        let Some(r) = self.race(race) else {
+            return (0, 0);
+        };
+        r.subraces
+            .iter()
+            .find(|s| s.name == subrace)
+            .map_or((r.points, r.saved), |s| (s.points, s.saved))
+    }
+
+    /// The racial abilities a Skills & Powers character of the subrace
+    /// may have, with their cost: the race's own ("Dwarf, Axe bonus (5)")
+    /// and the subrace's package.
+    pub fn racial_ability_choices(&self, race: &str, subrace: &str) -> Vec<(String, i32)> {
+        let package = self.racial_package(race, subrace);
+        let (points, _) = self.racial_points(race, subrace);
+        let prefix = format!("{}, ", race.to_lowercase());
+        self.racial_abilities
+            .iter()
+            .filter(|(name, _)| {
+                package.contains(name)
+                    || (points > 0
+                        && !name.contains('[')
+                        && name.to_lowercase().starts_with(&prefix))
+            })
+            .cloned()
+            .collect()
+    }
+
+    pub fn racial_ability_cost(&self, name: &str) -> i32 {
+        self.racial_abilities
+            .iter()
+            .find(|r| r.0 == name)
+            .map_or_else(|| cost_in_name(name), |r| r.1)
+    }
+
+    /// Racial points not spent; negative when overspent.
+    pub fn racial_points_left(&self, draft: &Draft) -> i64 {
+        let (points, _) = self.racial_points(&draft.race, &draft.subrace);
+        let spent: i64 = draft
+            .racial_abilities
+            .iter()
+            .map(|a| i64::from(self.racial_ability_cost(a)))
+            .sum();
+        i64::from(points) - spent
+    }
+
+    /// The class abilities a Skills & Powers character of the class may
+    /// buy, the defaults included.
+    pub fn class_ability_choices(&self, class: &str) -> Vec<(String, i32)> {
+        let Some(c) = self.class(class) else {
+            return Vec::new();
+        };
+        let mut names: Vec<String> = c.abilities.clone();
+        for name in &c.default_abilities {
+            if !names.contains(name) {
+                names.push(name.clone());
+            }
+        }
+        names
+            .into_iter()
+            .map(|n| {
+                let cost = self.class_ability_cost(&n);
+                (n, cost)
+            })
+            .collect()
+    }
+
+    pub fn class_ability_cost(&self, name: &str) -> i32 {
+        self.class_ability_costs
+            .get(name)
+            .copied()
+            .unwrap_or_else(|| cost_in_name(name))
+    }
+
+    /// The class abilities a new character starts with.
+    pub fn default_class_abilities(&self, class: &str) -> Vec<String> {
+        self.class(class).map_or_else(Vec::new, |c| {
+            c.default_abilities
+                .iter()
+                .filter(|a| self.abilities.contains(*a))
+                .cloned()
+                .collect()
+        })
+    }
+
+    /// The points of the class at `slot` not spent on its abilities.
+    pub fn class_points_left(&self, draft: &Draft, slot: usize) -> i64 {
+        let Some(class) = draft.classes.get(slot).and_then(|c| self.class(c)) else {
+            return 0;
+        };
+        let spent: i64 = draft
+            .class_abilities
+            .get(slot)
+            .into_iter()
+            .flatten()
+            .map(|a| i64::from(self.class_ability_cost(a)))
+            .sum();
+        i64::from(class.points.max(0)) - spent
+    }
+
+    /// Points kept from the racial and class abilities.
+    fn kept_points(&self, draft: &Draft) -> i64 {
+        let (_, saved) = self.racial_points(&draft.race, &draft.subrace);
+        let racial = self.racial_points_left(draft).clamp(0, i64::from(saved));
+        let classes: i64 = (0..draft.classes.len())
+            .map(|slot| self.class_points_left(draft, slot).max(0))
+            .sum();
+        racial + classes
+    }
+
+    pub fn traits(&self) -> &[(String, u32)] {
+        &self.traits
+    }
+
+    pub fn disadvantages(&self) -> &[(String, u32)] {
+        &self.disadvantages
+    }
+
+    pub fn trait_cost(&self, name: &str) -> u32 {
+        self.traits.iter().find(|t| t.0 == name).map_or(0, |t| t.1)
+    }
+
+    pub fn disadvantage_points(&self, name: &str) -> u32 {
+        self.disadvantages
+            .iter()
+            .find(|t| t.0 == name)
+            .map_or(0, |t| t.1)
+    }
+
+    /// Points for nonweapon proficiencies and traits: those kept from the
+    /// abilities, the best of the classes' allotments, the bonus for
+    /// Knowledge, and what disadvantages give.
+    pub fn proficiency_points(&self, draft: &Draft) -> u32 {
+        let allotment = draft
+            .classes
+            .iter()
+            .filter_map(|c| self.class(c))
+            .map(|c| match c.nonweapon_points {
+                points if points > 0 => points as u32,
+                _ => group_points(c.group),
+            })
+            .max()
+            .unwrap_or(0);
+        let knowledge = self.subability_scores(draft)[3][2];
+        let disadvantages: u32 = draft
+            .disadvantages
+            .iter()
+            .map(|d| self.disadvantage_points(d))
+            .sum();
+        self.kept_points(draft) as u32
+            + allotment
+            + bonus_languages(knowledge)
+            + disadvantages.min(DISADVANTAGE_POINTS)
+    }
+
+    /// Points the nonweapon proficiencies and traits leave; negative when
+    /// they cost more than there is.
+    pub fn proficiency_points_left(&self, draft: &Draft) -> i64 {
+        let traits: u32 = draft.traits.iter().map(|t| self.trait_cost(t)).sum();
+        i64::from(self.proficiency_points(draft))
+            - i64::from(self.nonweapon_spent(draft))
+            - i64::from(traits)
+    }
+
+    /// What a weapon proficiency costs a Skills & Powers character: the
+    /// cheapest of the classes' (2 points for warriors, 3 for the others).
+    pub fn weapon_cost(&self, classes: &[String]) -> u32 {
+        let group_cost = |c: &ClassRules| match c.weapon_cost {
+            cost if cost > 0 => cost as u32,
+            _ if c.group == 0 => 2,
+            _ => 3,
+        };
+        classes
+            .iter()
+            .filter_map(|c| self.class(c))
+            .map(group_cost)
+            .min()
+            .unwrap_or(3)
+    }
+
+    /// The points a Skills & Powers character gets for weapon
+    /// proficiencies: the best of the classes' allotments.
+    pub fn weapon_points(&self, classes: &[String]) -> u32 {
+        let cost = self.weapon_cost(classes);
+        classes
+            .iter()
+            .filter_map(|c| self.class(c))
+            .map(|c| match c.weapon_points {
+                points if points > 0 => points as u32,
+                _ => c.weapon_slots.max(0) as u32 * cost,
+            })
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// The class groups among the classes: warrior, rogue, priest, wizard,
+    /// psionicist.
+    fn class_groups(&self, classes: &[String]) -> [bool; 5] {
+        let mut groups = [false; 5];
+        for class in classes.iter().filter_map(|c| self.class(c)) {
+            if let Some(g) = groups.get_mut(class.group.clamp(0, 4) as usize) {
+                *g = true;
+            }
+        }
+        groups
+    }
+
+    /// The cheapest of the classes' groups for a per-group price list.
+    fn cheapest(&self, classes: &[String], prices: [u32; 5]) -> u32 {
+        let groups = self.class_groups(classes);
+        (0..5)
+            .filter(|&g| groups[g])
+            .map(|g| prices[g])
+            .min()
+            .unwrap_or(prices[4])
+    }
+
+    /// What specializing in one weapon costs, for a single-classed fighter
+    /// who has the Weapon specialization ability; `None` when the
+    /// character cannot specialize at 1st level.
+    pub fn specialization_cost(&self, draft: &Draft) -> Option<u32> {
+        if draft.classes != ["Fighter"] {
+            return None;
+        }
+        let has_ability = draft
+            .class_abilities
+            .first()
+            .is_some_and(|a| a.iter().any(|a| a.contains("Weapon specialization")));
+        has_ability.then_some(SPECIALIZATION_COST)
+    }
+
+    /// Weapon of choice: warriors 2 points, wizards 4, the others 3.
+    pub fn weapon_of_choice_cost(&self, classes: &[String]) -> u32 {
+        self.cheapest(classes, [2, 3, 3, 4, 3])
+    }
+
+    /// Weapon expertise: warriors 2 points, wizards 5, the others 4; 1
+    /// less in the weapon of choice.
+    pub fn expertise_cost(&self, draft: &Draft) -> u32 {
+        let cost = self.cheapest(&draft.classes, [2, 4, 4, 5, 4]);
+        if draft.expertise.is_some() && draft.expertise == draft.weapon_of_choice {
+            cost - 1
+        } else {
+            cost
+        }
+    }
+
+    /// Specializing in an unarmed style: fighters only, at what weapon
+    /// specialization costs, twice that when multi-classed.
+    pub fn unarmed_cost(&self, classes: &[String]) -> Option<u32> {
+        classes
+            .iter()
+            .any(|c| c == "Fighter")
+            .then_some(if classes.len() == 1 {
+                SPECIALIZATION_COST
+            } else {
+                2 * SPECIALIZATION_COST
+            })
+    }
+
+    /// A shield or armor proficiency: a weapon proficiency's cost for
+    /// warriors, twice that for the others.
+    pub fn shield_cost(&self, classes: &[String]) -> u32 {
+        let cost = self.weapon_cost(classes);
+        if self.class_groups(classes)[0] {
+            cost
+        } else {
+            2 * cost
+        }
+    }
+
+    /// The armor a character may become proficient with.
+    pub fn armors(&self) -> Vec<String> {
+        self.wares
+            .iter()
+            .filter(|w| w.part_type == "Armor")
+            .filter(|w| {
+                let name = w.name.to_lowercase();
+                !name.contains("shield") && !name.contains("buckler")
+            })
+            .map(|w| w.name.clone())
+            .collect()
+    }
+
+    /// What a fighting style costs, or `None` when none of the classes may
+    /// learn it: a weapon proficiency's cost, 1 more for Two Weapon unless
+    /// a ranger, and the "(+2)" specializations that again.
+    pub fn style_cost(&self, classes: &[String], style: &str) -> Option<u32> {
+        let (_, _, allowed) = FIGHTING_STYLES.iter().find(|s| s.0 == style)?;
+        let groups = self.class_groups(classes);
+        if !(0..5).any(|g| groups[g] && allowed[g]) {
+            return None;
+        }
+        let cost = self.weapon_cost(classes);
+        let base = style.trim_end_matches(" (+2)");
+        let two_weapon = base == "Two Weapon" && !classes.iter().any(|c| c == "Ranger");
+        let cost = cost + u32::from(two_weapon);
+        Some(if base == style {
+            cost
+        } else {
+            cost + self.weapon_cost(classes)
+        })
+    }
+
+    /// The fighting styles the classes may learn.
+    pub fn styles(&self, classes: &[String]) -> Vec<String> {
+        FIGHTING_STYLES
+            .iter()
+            .filter(|s| self.style_cost(classes, s.0).is_some())
+            .map(|s| s.0.to_owned())
+            .collect()
+    }
+
+    /// What the combat options cost: weapon of choice, expertise,
+    /// specializations, unarmed styles, shields, armor and fighting styles.
+    pub fn combat_spent(&self, draft: &Draft) -> u32 {
+        let classes = &draft.classes;
+        let shields = draft.shields.iter().filter(|&&s| s).count() as u32
+            + draft.armor_proficiencies.len() as u32;
+        let styles: u32 = draft
+            .fighting_styles
+            .iter()
+            .filter_map(|s| self.style_cost(classes, s))
+            .sum();
+        draft
+            .weapon_of_choice
+            .as_ref()
+            .map_or(0, |_| self.weapon_of_choice_cost(classes))
+            + draft
+                .expertise
+                .as_ref()
+                .map_or(0, |_| self.expertise_cost(draft))
+            + draft.specializations.len() as u32 * self.specialization_cost(draft).unwrap_or(0)
+            + draft.unarmed.len() as u32 * self.unarmed_cost(classes).unwrap_or(0)
+            + shields * self.shield_cost(classes)
+            + styles
+    }
+
+    /// Character points left at the end, kept on the character for later
+    /// levels: what the proficiencies leave, plus the weapon allotment,
+    /// less the weapon proficiencies and the combat options.
+    pub fn points_left(&self, draft: &Draft) -> i64 {
+        let cost = i64::from(self.weapon_cost(&draft.classes));
+        let allotment = i64::from(self.weapon_points(&draft.classes));
+        self.proficiency_points_left(draft) + allotment
+            - draft.weapon_proficiencies.len() as i64 * cost
+            - i64::from(self.combat_spent(draft))
+    }
+
+    /// The class abilities the character file gets per class: those bought
+    /// with Skills & Powers, the defaults with the Core Rules.
+    fn chosen_class_abilities(&self, draft: &Draft, slot: usize) -> Vec<String> {
+        let mut chosen = if draft.skills_and_powers {
+            draft.class_abilities.get(slot).cloned().unwrap_or_default()
+        } else {
+            draft
+                .classes
+                .get(slot)
+                .map_or_else(Vec::new, |c| self.default_class_abilities(c))
+        };
+        chosen.sort_by(|x, y| x.as_bytes().cmp(y.as_bytes()));
+        chosen
+    }
+
+    /// The class abilities that are rogue skills, sorted as the file keeps
+    /// them, with the skill each gives.
+    pub fn rogue_skills(&self, draft: &Draft) -> Vec<(String, usize)> {
+        let mut skills: Vec<(String, usize)> = (0..draft.classes.len())
+            .flat_map(|slot| self.chosen_class_abilities(draft, slot))
+            .filter_map(|a| rogue_skill_of(&a).map(|s| (a, s)))
+            .collect();
+        skills.sort_by(|x, y| x.0.as_bytes().cmp(y.0.as_bytes()));
+        skills.dedup_by_key(|s| s.1);
+        skills
+    }
+
+    /// Discretionary rogue skill points at 1st level and the most for one
+    /// skill: none without rogue skills, a bard's when the bard is the
+    /// only class with them.
+    pub fn rogue_points(&self, draft: &Draft) -> (u32, u32) {
+        if self.rogue_skills(draft).is_empty() {
+            (0, 0)
+        } else if draft.classes.iter().any(|c| c == "Bard")
+            && !draft.classes.iter().any(|c| c == "Thief")
+        {
+            BARD_POINTS
+        } else {
+            THIEF_POINTS
+        }
+    }
+
+    pub fn rogue_points_left(&self, draft: &Draft) -> i64 {
+        let (points, _) = self.rogue_points(draft);
+        i64::from(points)
+            - draft
+                .rogue_points
+                .iter()
+                .map(|&p| i64::from(p))
+                .sum::<i64>()
+    }
+
+    /// A rogue skill's score with the points added, in armor and without.
+    pub fn rogue_skill_score(&self, draft: &Draft, skill: usize) -> (i32, i32) {
+        let Some(&(_, base, unarmored)) = ROGUE_SKILLS.get(skill) else {
+            return (0, 0);
+        };
+        let racial = self
+            .race(&draft.race)
+            .map_or(0, |r| r.thief_adjustments[skill]);
+        let dexterity = self.adjusted(&draft.race, &draft.scores)[1];
+        let dexterity = dexterity_skill_adjustments(dexterity)
+            .get(skill)
+            .copied()
+            .unwrap_or(0);
+        let score = base + racial + dexterity + draft.rogue_points[skill] as i32;
+        (score, score + unarmored)
+    }
     /// Weapons one of the classes may use.
     pub fn weapons(&self, classes: &[String]) -> Vec<String> {
         self.weapons
@@ -1016,17 +2019,36 @@ impl CreationRules {
             .any(|c| self.class(c).is_some_and(|c| c.group == 3))
     }
 
-    /// The native languages the wizard gives the race: the race's own, or
-    /// the regional human dialect. Core Rules 2.0 leaves them empty.
-    pub fn native_languages(&self, race: &str) -> Vec<String> {
+    /// The native languages the wizard gives: with Skills & Powers the
+    /// subrace's package; otherwise the race's own language. The races of
+    /// human blood add the regional human dialect, and a race with no
+    /// language gets Common. Core Rules 2.0 leaves them empty.
+    pub fn native_languages(&self, draft: &Draft) -> Vec<String> {
         if !self.expansion {
             return Vec::new();
         }
-        match self.race(race) {
-            Some(r) if !r.languages.is_empty() => r.languages.clone(),
-            _ if race == "Human" => vec![HUMAN_LANGUAGE.into()],
-            _ => vec!["Common".into()],
+        let race = self.race(&draft.race);
+        let package = race
+            .and_then(|r| r.subraces.iter().find(|s| s.name == draft.subrace))
+            .map(|s| &s.languages)
+            .filter(|l| draft.skills_and_powers && !l.is_empty());
+        let mut languages = match (package, race) {
+            (Some(languages), _) => languages.clone(),
+            (None, Some(r)) => r.languages.clone(),
+            _ => Vec::new(),
+        };
+        // The races of human blood speak the regional dialect as well
+        // (Tsrp3.exe lists them next to the language's name).
+        if HUMAN_BLOOD.contains(&draft.race.as_str())
+            && !languages.iter().any(|l| l == HUMAN_LANGUAGE)
+        {
+            languages.push(HUMAN_LANGUAGE.into());
+            languages.sort_by_key(|n| n.to_lowercase());
         }
+        if languages.is_empty() {
+            languages.push("Common".into());
+        }
+        languages
     }
 
     pub fn ware(&self, name: &str) -> Option<&Ware> {
@@ -1097,16 +2119,18 @@ impl CreationRules {
         {
             return Some(format!("The {} kit is not for this character", draft.kit));
         }
-        let slots = self.nonweapon_slots(&draft.classes, adjusted[3]);
-        let spent = self.nonweapon_spent(draft);
-        if spent > slots {
-            return Some(format!(
-                "The nonweapon proficiencies take {spent} slots; there are {slots}"
-            ));
+        if let Some(problem) = if draft.skills_and_powers {
+            self.points_problem(draft)
+        } else {
+            self.slots_problem(draft, adjusted[3])
+        } {
+            return Some(problem);
         }
-        let slots = self.weapon_slots(&draft.classes);
-        if draft.weapon_proficiencies.len() as u32 > slots {
-            return Some(format!("There are {slots} weapon proficiency slots"));
+        if let Some(problem) = self.languages_problem(draft) {
+            return Some(problem);
+        }
+        if let Some(problem) = self.rogue_problem(draft) {
+            return Some(problem);
         }
         let most = max_spells_per_level(adjusted[3]);
         if draft.spells.len() > most {
@@ -1122,6 +2146,235 @@ impl CreationRules {
             return Some(format!(
                 "The equipment costs more than the {} gold pieces there are",
                 draft.gold
+            ));
+        }
+        None
+    }
+
+    /// The learned languages fit the proficiencies that teach them.
+    fn languages_problem(&self, draft: &Draft) -> Option<String> {
+        let slots = self.language_slots(draft);
+        if draft.learned_languages.len() > slots {
+            return Some(format!(
+                "{} languages are learned; the proficiencies teach {slots}",
+                draft.learned_languages.len()
+            ));
+        }
+        let mut seen = HashSet::new();
+        for language in &draft.learned_languages {
+            if !self.languages.contains(language) {
+                return Some(format!("{language} is not a language"));
+            }
+            if draft.languages.contains(language) || !seen.insert(language) {
+                return Some(format!("{language} is known already"));
+            }
+        }
+        None
+    }
+
+    /// The rogue skill points are spent within the limits.
+    fn rogue_problem(&self, draft: &Draft) -> Option<String> {
+        let (_, most) = self.rogue_points(draft);
+        let skills = self.rogue_skills(draft);
+        for (skill, &added) in draft.rogue_points.iter().enumerate() {
+            if added == 0 {
+                continue;
+            }
+            if !skills.iter().any(|s| s.1 == skill) {
+                return Some(format!(
+                    "The character has no {} skill",
+                    ROGUE_SKILLS[skill].0
+                ));
+            }
+            if added > most {
+                return Some(format!(
+                    "{} may get at most {most} points",
+                    ROGUE_SKILLS[skill].0
+                ));
+            }
+        }
+        let left = self.rogue_points_left(draft);
+        (left < 0).then(|| format!("The rogue skills get {} points too many", -left))
+    }
+
+    /// Skills & Powers: the combat options are open to the character.
+    pub fn combat_problem(&self, draft: &Draft) -> Option<String> {
+        let classes = &draft.classes;
+        for weapon in [&draft.weapon_of_choice, &draft.expertise]
+            .into_iter()
+            .flatten()
+        {
+            if !draft.weapon_proficiencies.contains(weapon) {
+                return Some(format!("{weapon} needs its weapon proficiency"));
+            }
+        }
+        if !draft.unarmed.is_empty() {
+            if self.unarmed_cost(classes).is_none() {
+                return Some("Only fighters may specialize in unarmed combat".into());
+            }
+            if !draft.specializations.is_empty() {
+                return Some("Unarmed combat and weapon specialization do not go together".into());
+            }
+            if let Some(u) = draft
+                .unarmed
+                .iter()
+                .find(|u| !UNARMED.contains(&u.as_str()))
+            {
+                return Some(format!("{u} is not an unarmed style"));
+            }
+        }
+        let armors = self.armors();
+        if let Some(a) = draft
+            .armor_proficiencies
+            .iter()
+            .find(|a| !armors.contains(a))
+        {
+            return Some(format!("{a} is not armor"));
+        }
+        if draft.fighting_styles.len() > MOST_FIGHTING_STYLES {
+            return Some(format!(
+                "A character may know at most {MOST_FIGHTING_STYLES} fighting styles"
+            ));
+        }
+        let mut seen = HashSet::new();
+        for style in &draft.fighting_styles {
+            if self.style_cost(classes, style).is_none() {
+                return Some(format!("A {} cannot learn {style}", draft.class_title()));
+            }
+            if !seen.insert(style) {
+                return Some(format!("{style} is taken twice"));
+            }
+        }
+        None
+    }
+
+    /// Core Rules: the proficiencies fit the slots.
+    fn slots_problem(&self, draft: &Draft, intelligence: u32) -> Option<String> {
+        let slots = self.nonweapon_slots(&draft.classes, intelligence);
+        let spent = self.nonweapon_spent(draft);
+        if spent > slots {
+            return Some(format!(
+                "The nonweapon proficiencies take {spent} slots; there are {slots}"
+            ));
+        }
+        let slots = self.weapon_slots(&draft.classes);
+        if draft.weapon_proficiencies.len() as u32 > slots {
+            return Some(format!("There are {slots} weapon proficiency slots"));
+        }
+        None
+    }
+
+    /// Skills & Powers: every choice is on offer and the points cover it.
+    fn points_problem(&self, draft: &Draft) -> Option<String> {
+        if !self.expansion {
+            return Some("Player's Option characters need the Expansion".into());
+        }
+        if let Some(a) = draft
+            .subabilities
+            .iter()
+            .find(|a| a.abs() > SUBABILITY_SPREAD)
+        {
+            return Some(format!(
+                "A subability may be at most {SUBABILITY_SPREAD} from its score, not {}",
+                a.abs()
+            ));
+        }
+        let choices = self.racial_ability_choices(&draft.race, &draft.subrace);
+        if let Some(a) = draft
+            .racial_abilities
+            .iter()
+            .find(|a| !choices.iter().any(|c| &c.0 == *a))
+        {
+            return Some(format!(
+                "{a} is not a racial ability of the {}",
+                draft.subrace
+            ));
+        }
+        let left = self.racial_points_left(draft);
+        if left < 0 {
+            return Some(format!(
+                "The racial abilities cost {} points more than the race has",
+                -left
+            ));
+        }
+        for (slot, class) in draft.classes.iter().enumerate() {
+            let choices = self.class_ability_choices(class);
+            if let Some(a) = draft
+                .class_abilities
+                .get(slot)
+                .into_iter()
+                .flatten()
+                .find(|a| !choices.iter().any(|c| &c.0 == *a))
+            {
+                return Some(format!("{a} is not a {class} ability"));
+            }
+            let left = self.class_points_left(draft, slot);
+            if left < 0 {
+                return Some(format!(
+                    "The {class} abilities cost {} points more than the class has",
+                    -left
+                ));
+            }
+        }
+        if draft.disadvantages.len() > MOST_DISADVANTAGES {
+            return Some(format!(
+                "A character may have at most {MOST_DISADVANTAGES} disadvantages"
+            ));
+        }
+        if let Some(t) = draft
+            .traits
+            .iter()
+            .find(|t| !self.traits.iter().any(|k| &k.0 == *t))
+        {
+            return Some(format!("{t} is not a trait"));
+        }
+        if let Some(t) = draft
+            .disadvantages
+            .iter()
+            .find(|t| !self.disadvantages.iter().any(|k| &k.0 == *t))
+        {
+            return Some(format!("{t} is not a disadvantage"));
+        }
+        let left = self.proficiency_points_left(draft);
+        if left < 0 {
+            return Some(format!(
+                "The nonweapon proficiencies and traits cost {} points more than there are",
+                -left
+            ));
+        }
+        if !draft.specializations.is_empty() {
+            if self.specialization_cost(draft).is_none() {
+                return Some(
+                    "Only a single-classed fighter with Weapon specialization may specialize"
+                        .into(),
+                );
+            }
+            if let Some(w) = draft
+                .specializations
+                .iter()
+                .find(|w| !draft.weapon_proficiencies.contains(w))
+            {
+                return Some(format!("Specializing in {w} needs its proficiency"));
+            }
+            let multiple = draft
+                .class_abilities
+                .iter()
+                .flatten()
+                .any(|a| a.contains("Multiple specialization"));
+            if draft.specializations.len() > 1 && !multiple {
+                return Some(
+                    "Specializing in more than one weapon needs Multiple specialization".into(),
+                );
+            }
+        }
+        if let Some(problem) = self.combat_problem(draft) {
+            return Some(problem);
+        }
+        let left = self.points_left(draft);
+        if left < 0 {
+            return Some(format!(
+                "The weapon proficiencies and combat options cost {} points more than there are",
+                -left
             ));
         }
         None
@@ -1154,15 +2407,27 @@ impl CreationRules {
             // 0 for female characters; the original writes other values
             // (1 to 3) for males.
             d.unknown_0x163c = u32::from(draft.male);
-            d.strength = [adjusted[0]; 3];
-            d.exceptional_strength = if self.has_exceptional_strength(&draft.classes, adjusted[0]) {
-                draft.exceptional_strength.clamp(1, 100)
-            } else {
+            let scores = self.subability_scores(draft);
+            d.strength = scores[0];
+            d.exceptional_strength = if !self.has_exceptional_strength(&draft.classes, adjusted[0])
+            {
                 0
+            } else if draft.roll_method == RollMethod::PointsAndStrength {
+                // Method X: only what was bought.
+                draft.exceptional_strength.min(100)
+            } else {
+                draft.exceptional_strength.clamp(1, 100)
             };
-            for (a, scores) in d.abilities.iter_mut().enumerate() {
-                *scores = [adjusted[a + 1]; 3];
+            for (a, ability) in d.abilities.iter_mut().enumerate() {
+                *ability = scores[a + 1];
             }
+            d.racial_abilities = if draft.skills_and_powers {
+                draft.racial_abilities.clone()
+            } else {
+                self.racial_package(&draft.race, &draft.subrace)
+            };
+            d.racial_abilities
+                .sort_by(|x, y| x.as_bytes().cmp(y.as_bytes()));
             // The starting funds, in gold pieces.
             d.unknown_0x1778[4] = draft.gold;
             d.race.clone_from(&draft.race);
@@ -1171,8 +2436,8 @@ impl CreationRules {
             d.alignment.clone_from(&draft.alignment);
             if self.expansion {
                 let movement = race
-                    .and_then(|r| r.subraces.iter().find(|s| s.0 == draft.subrace))
-                    .map(|s| s.1)
+                    .and_then(|r| r.subraces.iter().find(|s| s.name == draft.subrace))
+                    .map(|s| s.movement)
                     .or(race.map(|r| r.movement))
                     .unwrap_or(12);
                 d.unknown_0x17bc[0] = movement.max(0) as u32;
@@ -1191,24 +2456,38 @@ impl CreationRules {
                     continue;
                 };
                 let s = &mut d.class_slots[slot];
-                s.abilities = class
-                    .default_abilities
-                    .iter()
-                    .filter(|a| self.abilities.contains(*a))
-                    .cloned()
-                    .collect();
+                s.abilities = self.chosen_class_abilities(draft, slot);
                 s.unknown_0x270.clone_from(&class.schools);
                 s.unknown_0x2d4.clone_from(&class.minor_spheres);
                 s.unknown_0x338.clone_from(&class.major_spheres);
                 d.unknown_0xc60[slot][0] = draft.hit_dice.get(slot).copied().unwrap_or(1);
             }
+            // Each rogue skill the classes give, with the points added at
+            // 1st level.
+            d.rogue_skills.entries = self
+                .rogue_skills(draft)
+                .into_iter()
+                .map(|(name, skill)| {
+                    let mut values = [0; 100];
+                    values[0] = draft.rogue_points[skill];
+                    (name, values)
+                })
+                .collect();
         }
 
         // Proficiencies, languages, spells and equipment go in as the
         // lists editor adds them.
+        // A Skills & Powers proficiency taken again is one entry with more
+        // ranks; a Core Rules one is another entry.
+        let ranks = self.nonweapon_ranks(draft);
+        let nonweapon: Vec<String> = if draft.skills_and_powers {
+            ranks.iter().map(|(n, _)| n.clone()).collect()
+        } else {
+            draft.nonweapon_proficiencies.clone()
+        };
         let mut lists = CharacterLists {
             weapon_proficiencies: draft.weapon_proficiencies.clone(),
-            nonweapon_proficiencies: draft.nonweapon_proficiencies.clone(),
+            nonweapon_proficiencies: nonweapon.clone(),
             languages: draft.languages.clone(),
             wizard_spells: draft.spells.clone(),
             ..CharacterLists::default()
@@ -1235,6 +2514,62 @@ impl CreationRules {
         let left = (draft.gold * 100).saturating_sub(self.spent(draft));
         lists.coins = [left % 10, left / 10 % 10, 0, left / 100, 0];
         lists.apply(&mut character, &self.parts)?;
+        {
+            // The learned languages, one per slot or rank, go with the
+            // proficiencies that teach them.
+            let mut learned = draft.learned_languages.iter();
+            character.data.nonweapon_details = nonweapon
+                .iter()
+                .map(|n| {
+                    let count = if !teaches_languages(n) {
+                        0
+                    } else if draft.skills_and_powers {
+                        ranks.iter().find(|r| &r.0 == n).map_or(1, |r| r.1)
+                    } else {
+                        1
+                    };
+                    Object::StringArray(learned.by_ref().take(count as usize).cloned().collect())
+                })
+                .collect();
+        }
+        if draft.skills_and_powers {
+            // The lists went in as Core Rules ones; now the points.
+            let d = &mut character.data;
+            d.skills_and_powers = 1;
+            d.nonweapon_costs = ranks
+                .iter()
+                .map(|(n, count)| self.nonweapon_rank_cost(draft, n, *count))
+                .collect();
+            d.unknown_0x1778[0] = self.points_left(draft).max(0) as u32;
+            let sorted = |list: &[String]| {
+                let mut list = list.to_vec();
+                list.sort_by(|x, y| x.as_bytes().cmp(y.as_bytes()));
+                list
+            };
+            d.unknown_0x1830[0] = sorted(&draft.traits);
+            d.unknown_0x1830[1] = sorted(&draft.disadvantages);
+            d.unknown_0xac[3] = sorted(&draft.specializations);
+            d.unknown_0xac[4] = sorted(&draft.armor_proficiencies);
+            d.unknown_0x124 = [
+                draft.weapon_of_choice.clone().unwrap_or_default(),
+                draft.expertise.clone().unwrap_or_default(),
+                String::new(),
+            ];
+            d.unknown_0x134 = draft.shields.map(u32::from);
+            if let Some(flags) = d.flags_0x1e54.as_mut() {
+                for (flag, style) in flags.iter_mut().zip(UNARMED) {
+                    *flag = u8::from(draft.unarmed.iter().any(|u| u == style));
+                }
+            }
+            for (slot, style) in d.classes.unknown_0x50.iter_mut().zip(
+                draft
+                    .fighting_styles
+                    .iter()
+                    .filter_map(|s| FIGHTING_STYLES.iter().find(|f| f.0 == s)),
+            ) {
+                *slot = style.1;
+            }
+        }
 
         // The pack's contents go into the backpack.
         if draft.pack {
@@ -1281,9 +2616,14 @@ impl CreationRules {
                     unknown_0x2c: String::new(),
                 }),
                 unknown_0x24: 0,
-                flag_0x28: 1,
+                flag_0x28: u8::from(!draft.skills_and_powers),
                 details: vec![
-                    "Core Rules".into(),
+                    if draft.skills_and_powers {
+                        "Skills & Powers"
+                    } else {
+                        "Core Rules"
+                    }
+                    .into(),
                     format!("{PLAYER_LINE}{}", draft.player),
                     "Party: ".into(),
                     race,
@@ -1327,7 +2667,30 @@ mod tests {
             },
             requirements,
             prime: [false; 6],
-            default_abilities: vec![format!("{name}, Followers (5)")],
+            default_abilities: if name == "Thief" {
+                vec![
+                    "Thief, Climb walls* (5)".into(),
+                    "Thief, Pick pockets* (10)".into(),
+                ]
+            } else {
+                vec![format!("{name}, Followers (5)")]
+            },
+            abilities: if name == "Fighter" {
+                vec![
+                    "Fighter, Leadership (5)".into(),
+                    "Fighter, Weapon specialization (5)".into(),
+                ]
+            } else if name == "Thief" {
+                vec!["Thief, Open locks* (10)".into()]
+            } else {
+                Vec::new()
+            },
+            points: if name == "Fighter" { 15 } else { 30 },
+            // Warriors as the Expansion's records have them; the others
+            // fall back to the book's numbers.
+            nonweapon_points: if group == 0 { 6 } else { 0 },
+            weapon_points: if group == 0 { 8 } else { 0 },
+            weapon_cost: if group == 0 { 2 } else { 0 },
             major_spheres: Vec::new(),
             minor_spheres: Vec::new(),
             schools: if group == 3 {
@@ -1351,13 +2714,49 @@ mod tests {
             } else {
                 Vec::new()
             },
+            thief_adjustments: if name == "Dwarf" {
+                [0, 10, 15, 0, 0, 0, -10, -5]
+            } else {
+                [0; 8]
+            },
             standard: true,
             subraces: if name == "Dwarf" {
-                vec![("Hill dwarf".into(), 6), ("Gray dwarf (duergar)".into(), 6)]
+                ["Hill dwarf", "Gray dwarf (duergar)"]
+                    .into_iter()
+                    .map(|sub| SubraceRules {
+                        name: sub.into(),
+                        movement: 6,
+                        points: 45,
+                        saved: 5,
+                        abilities: vec!["Dwarf, Infravision (10)".into()],
+                        languages: vec!["Dwarf".into(), "Gnome".into()],
+                    })
+                    .collect()
             } else {
                 Vec::new()
             },
             multi_classes: Vec::new(),
+            points: if name == "Dwarf" { 45 } else { 10 },
+            saved: if name == "Dwarf" { 5 } else { 10 },
+            abilities: Vec::new(),
+        }
+    }
+
+    fn nonweapon(
+        name: &str,
+        slots: u32,
+        points: u32,
+        group: usize,
+        relevant: &str,
+    ) -> NonweaponRules {
+        let mut groups = [false; 6];
+        groups[group] = true;
+        NonweaponRules {
+            name: name.into(),
+            slots,
+            points,
+            groups,
+            relevant: vec![relevant.into()],
         }
     }
 
@@ -1375,7 +2774,15 @@ mod tests {
                     vec!["Psionicist"],
                 ],
             ),
-            ("Dwarf", vec![vec!["Fighter"], vec!["Fighter", "Mage"]]),
+            (
+                "Dwarf",
+                vec![
+                    vec!["Fighter"],
+                    vec!["Thief"],
+                    vec!["Fighter", "Mage"],
+                    vec!["Fighter", "Thief"],
+                ],
+            ),
         ]
         .into_iter()
         .map(|(race, list)| {
@@ -1398,6 +2805,7 @@ mod tests {
                 class("Paladin", 1001, 0, 10, [12, 0, 9, 0, 13, 17]),
                 class("Mage", 4000, 3, 4, [0, 0, 0, 9, 0, 0]),
                 class("Psionicist", 5000, 4, 6, [0, 0, 11, 12, 15, 0]),
+                class("Thief", 2000, 1, 6, [0, 9, 0, 0, 0, 0]),
             ],
             combinations: if expansion {
                 combinations
@@ -1411,7 +2819,27 @@ mod tests {
                 excluded_races: Vec::new(),
                 social_classes: vec!["Upper class".into(); 13],
             }],
-            nonweapon: vec![("Swimming".into(), 1), ("Tracking".into(), 2)],
+            nonweapon: vec![
+                nonweapon("Swimming", 1, 1, 0, "Strength/Stamina"),
+                nonweapon("Tracking", 2, 4, 3, "Wisdom/Intuition"),
+                nonweapon("Spellcraft", 1, 3, 4, "Intelligence/Reason"),
+                nonweapon("Modern Languages", 1, 2, 0, "Intelligence/Knowledge"),
+            ],
+            racial_abilities: vec![
+                ("Dwarf, Axe bonus (5)".into(), 5),
+                ("Dwarf, Infravision (10)".into(), 10),
+                ("Dwarf, Infravision [Deep Dwarf]".into(), 0),
+            ],
+            class_ability_costs: [
+                ("Fighter, Followers (5)", 5),
+                ("Fighter, Leadership (5)", 5),
+                ("Fighter, Weapon specialization (5)", 5),
+            ]
+            .into_iter()
+            .map(|(n, c)| (n.to_owned(), c))
+            .collect(),
+            traits: vec![("Allure".into(), 4)],
+            disadvantages: vec![("Allergies".into(), 3), ("Greed".into(), 7)],
             weapons: vec![
                 ("Dagger".into(), Vec::new()),
                 ("Sword, long".into(), vec!["Mage".into()]),
@@ -1441,8 +2869,29 @@ mod tests {
                     part_type: "Equipment",
                     cost: 1,
                 },
+                Ware {
+                    name: "Full armor, banded mail".into(),
+                    part_type: "Armor",
+                    cost: 50_000,
+                },
+                Ware {
+                    name: "Shield, small".into(),
+                    part_type: "Armor",
+                    cost: 300,
+                },
             ],
-            abilities: ["Fighter, Followers (5)".to_owned()].into_iter().collect(),
+            abilities: [
+                "Fighter, Followers (5)",
+                "Thief, Climb walls* (5)",
+                "Thief, Pick pockets* (10)",
+            ]
+            .into_iter()
+            .map(String::from)
+            .collect(),
+            languages: ["Centaur", "Dwarf", "Elf", "Gnome"]
+                .into_iter()
+                .map(String::from)
+                .collect(),
             parts: PartTable::default(),
         }
     }
@@ -1462,7 +2911,7 @@ mod tests {
         d.weight = 150;
         d.hit_dice = vec![7, 3];
         d.nonweapon_proficiencies = vec!["Tracking".into()];
-        d.languages = rules.native_languages("Dwarf");
+        d.languages = rules.native_languages(&d);
         d.weapon_proficiencies = vec!["Dagger".into()];
         d.spells = vec!["Magic Missile".into()];
         d.gold = 50;
@@ -1489,7 +2938,9 @@ mod tests {
             rules.class_options(generic, "Dwarf", &adjusted),
             [
                 vec!["Fighter".to_owned()],
-                vec!["Fighter".into(), "Mage".into()]
+                vec!["Thief".into()],
+                vec!["Fighter".into(), "Mage".into()],
+                vec!["Fighter".into(), "Thief".into()]
             ]
         );
         // The paladin needs Charisma 17; the psionicist Wisdom 15.
@@ -1523,7 +2974,19 @@ mod tests {
     #[test]
     fn dice_and_methods_roll_within_range() {
         let mut dice = Dice::seeded(42);
-        for method in RollMethod::ALL {
+        assert_eq!(RollMethod::offered(false), RollMethod::ALL);
+        assert_eq!(RollMethod::offered(true).len(), 12);
+        assert_eq!(
+            RollMethod::Points.roll(&mut dice).iter().sum::<u32>(),
+            METHOD_VII_POINTS
+        );
+        assert_eq!(point_table(4), (72, 17));
+        assert_eq!(point_table(12), (80, 15));
+        for _ in 0..50 {
+            let scores = roll_dice_pool([3, 6, 3, 4, 4, 4], &mut dice);
+            assert!(scores.iter().all(|s| (3..=18).contains(s)));
+        }
+        for method in RollMethod::offered(true) {
             for _ in 0..50 {
                 let scores = method.roll(&mut dice);
                 assert!(scores.iter().all(|s| (3..=18).contains(s)), "{method:?}");
@@ -1602,6 +3065,9 @@ mod tests {
         assert_eq!(data.nonweapon_costs, [1]);
         assert_eq!(data.nonweapon_bonuses, Some(vec![0]));
         assert_eq!(data.languages, ["Dwarf"]);
+        // Core Rules characters get the subrace's package too.
+        assert_eq!(data.racial_abilities, ["Dwarf, Infravision (10)"]);
+        assert_eq!(data.skills_and_powers, 0);
         assert_eq!(data.spells, ["Magic Missile"]);
         assert_eq!(data.unknown_0x1778[4], 50);
         // The pack holds its contents; 50 gp less the pack and the dagger.
@@ -1656,6 +3122,126 @@ mod tests {
         fs::remove_dir_all(root).unwrap();
     }
 
+    fn skills_and_powers_draft(rules: &CreationRules) -> Draft {
+        let mut d = draft(rules);
+        d.skills_and_powers = true;
+        d.classes = vec!["Fighter".into()];
+        d.hit_dice = vec![7];
+        d.spells.clear();
+        d.subabilities = [2, 0, -1, 0, 0, 0];
+        d.racial_abilities = vec![
+            "Dwarf, Infravision (10)".into(),
+            "Dwarf, Axe bonus (5)".into(),
+        ];
+        d.class_abilities = vec![vec![
+            "Fighter, Weapon specialization (5)".into(),
+            "Fighter, Followers (5)".into(),
+        ]];
+        d.traits = vec!["Allure".into()];
+        d.disadvantages = vec!["Allergies".into()];
+        d.specializations = vec!["Dagger".into()];
+        d.languages = rules.native_languages(&d);
+        d
+    }
+
+    #[test]
+    fn skills_and_powers_points_add_up_as_in_the_original() {
+        let rules = rules(true);
+        let d = skills_and_powers_draft(&rules);
+        assert_eq!(rules.problem(&d), None);
+        // 45 racial points, 15 spent, 5 of the 30 left may be kept; the
+        // fighter's 15 class points less 10 leave 5.
+        assert_eq!(rules.racial_points_left(&d), 30);
+        assert_eq!(rules.class_points_left(&d, 0), 5);
+        // Kept 10, warriors' 6, Knowledge 12's 3, Allergies' 3.
+        assert_eq!(rules.proficiency_points(&d), 22);
+        // Tracking is a warrior proficiency: 4; Spellcraft is not: 3 + 2.
+        assert_eq!(rules.nonweapon_cost(&d, "Tracking"), 4);
+        assert_eq!(rules.nonweapon_cost(&d, "Spellcraft"), 5);
+        assert_eq!(rules.proficiency_points_left(&d), 22 - 4 - 4);
+        // Four weapon slots at 2 points; the dagger 2, specializing 2.
+        assert_eq!(rules.points_left(&d), 14 + 8 - 2 - 2);
+        assert_eq!(rules.subability_scores(&d)[0], [16, 18, 14]);
+        assert_eq!(rules.subability_scores(&d)[2], [16, 15, 17]);
+        assert_eq!(rules.native_languages(&d), ["Dwarf", "Gnome"]);
+        // A subability may differ from its score by 1 or 2 only.
+        let mut low = d.clone();
+        low.scores[4] = 7;
+        assert_eq!(rules.nonweapon_cost(&low, "Tracking"), 4 + 2);
+        assert_eq!(
+            rules.racial_ability_choices("Dwarf", "Hill dwarf"),
+            [
+                ("Dwarf, Axe bonus (5)".to_owned(), 5),
+                ("Dwarf, Infravision (10)".to_owned(), 10)
+            ]
+        );
+    }
+
+    #[test]
+    fn skills_and_powers_problems_name_what_is_short() {
+        let rules = rules(true);
+        let mut d = skills_and_powers_draft(&rules);
+        d.subabilities[1] = 3;
+        assert!(rules.problem(&d).unwrap().contains("subability"));
+        let mut d = skills_and_powers_draft(&rules);
+        d.class_abilities[0].push("Fighter, Leadership (5)".into());
+        d.class_abilities[0].push("Fighter, Leadership (5)".into());
+        assert!(rules.problem(&d).unwrap().contains("Fighter abilities"));
+        let mut d = skills_and_powers_draft(&rules);
+        d.disadvantages = vec!["Allergies".into(), "Greed".into(), "Greed".into()];
+        assert!(rules.problem(&d).unwrap().contains("disadvantages"));
+        let mut d = skills_and_powers_draft(&rules);
+        // Each further rank costs 1: 5 + 19.
+        d.nonweapon_proficiencies = vec!["Spellcraft".into(); 20];
+        assert!(rules.problem(&d).unwrap().contains("traits cost"));
+        let mut d = skills_and_powers_draft(&rules);
+        d.specializations = vec!["Sword, long".into()];
+        assert!(rules.problem(&d).unwrap().contains("proficiency"));
+        let mut d = skills_and_powers_draft(&rules);
+        d.class_abilities[0].retain(|a| !a.contains("specialization"));
+        assert!(rules.problem(&d).unwrap().contains("fighter"));
+        let mut d = skills_and_powers_draft(&rules);
+        // 11 points left from the proficiencies, 8 for weapons.
+        d.nonweapon_proficiencies = vec!["Spellcraft".into(); 3];
+        d.weapon_proficiencies = vec!["Dagger".into(); 10];
+        assert!(rules.problem(&d).unwrap().contains("combat options cost"));
+    }
+
+    #[test]
+    fn skills_and_powers_characters_are_written_with_their_points() {
+        let (root, install) = installation("skills");
+        let rules = rules(true);
+        let d = skills_and_powers_draft(&rules);
+        let file = install.create_character(&rules, &d).unwrap();
+        let c = install.character(&file).unwrap();
+        let data = &c.data;
+        assert_eq!(data.skills_and_powers, 1);
+        assert_eq!(data.strength, [16, 18, 14]);
+        assert_eq!(data.abilities[1], [16, 15, 17]);
+        assert_eq!(
+            data.racial_abilities,
+            ["Dwarf, Axe bonus (5)", "Dwarf, Infravision (10)"]
+        );
+        assert_eq!(
+            data.class_slots[0].abilities,
+            [
+                "Fighter, Followers (5)",
+                "Fighter, Weapon specialization (5)"
+            ]
+        );
+        assert_eq!(data.nonweapon_proficiencies, ["Tracking"]);
+        assert_eq!(data.nonweapon_costs, [4]);
+        assert_eq!(data.unknown_0x1778[0], 18);
+        assert_eq!(data.unknown_0x1830[0], ["Allure"]);
+        assert_eq!(data.unknown_0x1830[1], ["Allergies"]);
+        assert_eq!(data.unknown_0xac[3], ["Dagger"]);
+        assert_eq!(data.languages, ["Dwarf", "Gnome"]);
+        let entry = &install.characters().unwrap().entries[0];
+        assert_eq!(entry.details[0], "Skills & Powers");
+        assert_eq!(entry.flag_0x28, 0);
+        fs::remove_dir_all(root).unwrap();
+    }
+
     #[test]
     fn core20_characters_are_written_as_core_rules_2_0_writes_them() {
         let (root, install) = installation("core20");
@@ -1685,6 +3271,217 @@ mod tests {
             entry.details,
             ["Core Rules", "Race: Dwarf", "Class: Fighter", "Level: 1"]
         );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn methods_six_and_ten_and_players_choice() {
+        let rules = rules(true);
+        let mut dice = Dice::seeded(7);
+        let rolled = [6, 6, 5, 1, 2, 3, 4];
+        assert_eq!(
+            seven_dice_scores(&rolled, &[0, 1, 2, 3, 4, 5, 0]),
+            Some([18, 14, 13, 9, 10, 11])
+        );
+        // Strength 8 + 6 + 6 + 5 is over 18.
+        assert_eq!(seven_dice_scores(&rolled, &[0, 0, 0, 2, 3, 4, 5]), None);
+        assert_eq!(exceptional_strength_points(18, 30), Some(3));
+        assert_eq!(exceptional_strength_points(18, 100), Some(10));
+        assert_eq!(exceptional_strength_points(17, 30), None);
+        assert!(RollMethod::PointsAndStrength.divided());
+        assert!(!RollMethod::offered(false).contains(&RollMethod::PlayersChoice));
+        assert_eq!(
+            RollMethod::offered(true).last(),
+            Some(&RollMethod::PlayersChoice)
+        );
+        for _ in 0..50 {
+            let scores = rules.players_choice("Human", &["Paladin".into()], &mut dice);
+            assert!(scores[0] >= 12 && scores[2] >= 9 && scores[4] >= 13);
+            assert!((17..=18).contains(&scores[5]));
+            let scores = rules.players_choice("Dwarf", &["Fighter".into()], &mut dice);
+            assert!(scores[0] >= 9 && scores[1] <= 17);
+            assert!(
+                rules
+                    .races(&SETTINGS[0], &scores, false)
+                    .contains(&"Dwarf".to_owned())
+            );
+        }
+        assert_eq!(rules.best_scores("Dwarf"), [18, 17, 18, 18, 18, 18]);
+        assert_eq!(rules.all_races(&SETTINGS[0], false), ["Dwarf", "Human"]);
+    }
+
+    #[test]
+    fn languages_go_with_the_proficiencies_that_teach_them() {
+        let (root, install) = installation("languages");
+        let rules = rules(true);
+        let mut d = draft(&rules);
+        d.nonweapon_proficiencies = vec!["Modern Languages".into(); 2];
+        d.learned_languages = vec!["Centaur".into(), "Elf".into()];
+        assert_eq!(rules.language_slots(&d), 2);
+        assert_eq!(rules.nonweapon_spent(&d), 2);
+        assert_eq!(rules.problem(&d), None);
+        let core = rules.build(&d).unwrap();
+        assert_eq!(core.data.nonweapon_proficiencies.len(), 2);
+        assert_eq!(
+            core.data.nonweapon_details,
+            [
+                Object::StringArray(vec!["Centaur".into()]),
+                Object::StringArray(vec!["Elf".into()])
+            ]
+        );
+        let mut extra = d.clone();
+        extra.learned_languages.push("Gnome".into());
+        assert!(rules.problem(&extra).unwrap().contains("teach 2"));
+        let mut known = d.clone();
+        known.learned_languages = vec!["Dwarf".into()];
+        assert!(rules.problem(&known).unwrap().contains("known already"));
+
+        // Skills & Powers: one entry, 2 points and 1 for the second rank.
+        let mut sp = skills_and_powers_draft(&rules);
+        sp.nonweapon_proficiencies = vec!["Modern Languages".into(); 2];
+        sp.learned_languages = vec!["Centaur".into(), "Elf".into()];
+        assert_eq!(rules.nonweapon_spent(&sp), 3);
+        assert_eq!(rules.problem(&sp), None);
+        let file = install.create_character(&rules, &sp).unwrap();
+        let c = install.character(&file).unwrap();
+        assert_eq!(c.data.nonweapon_proficiencies, ["Modern Languages"]);
+        assert_eq!(c.data.nonweapon_costs, [3]);
+        assert_eq!(
+            c.data.nonweapon_details,
+            [Object::StringArray(vec!["Centaur".into(), "Elf".into()])]
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn rogue_skills_get_their_points() {
+        let rules = rules(true);
+        let mut d = draft(&rules);
+        d.classes = vec!["Thief".into()];
+        d.hit_dice = vec![4];
+        d.spells.clear();
+        d.weapon_proficiencies.clear();
+        d.rogue_points[0] = 30;
+        d.rogue_points[6] = 25;
+        let skills = rules.rogue_skills(&d);
+        assert_eq!(
+            skills,
+            [
+                ("Thief, Climb walls* (5)".to_owned(), 6),
+                ("Thief, Pick pockets* (10)".to_owned(), 0)
+            ]
+        );
+        assert_eq!(rules.rogue_points(&d), THIEF_POINTS);
+        assert_eq!(rules.rogue_points_left(&d), 5);
+        assert_eq!(rules.problem(&d), None);
+        // Pick pockets 15, Dexterity 14 adds nothing; 20 without armor.
+        assert_eq!(rules.rogue_skill_score(&d, 0), (45, 50));
+        // The dwarf's -10 to climbing walls.
+        assert_eq!(rules.rogue_skill_score(&d, 6), (75, 85));
+        let c = rules.build(&d).unwrap();
+        let entries: Vec<(&str, u32)> = c
+            .data
+            .rogue_skills
+            .entries
+            .iter()
+            .map(|(n, v)| (n.as_str(), v[0]))
+            .collect();
+        assert_eq!(
+            entries,
+            [
+                ("Thief, Climb walls* (5)", 25),
+                ("Thief, Pick pockets* (10)", 30)
+            ]
+        );
+        let mut d2 = d.clone();
+        d2.rogue_points[0] = 31;
+        assert!(rules.problem(&d2).unwrap().contains("at most 30"));
+        let mut d3 = d.clone();
+        d3.rogue_points[1] = 5;
+        assert!(rules.problem(&d3).unwrap().contains("Open locks"));
+        let mut d4 = d.clone();
+        d4.rogue_points[6] = 30;
+        d4.rogue_points[0] = 30;
+        d4.rogue_points[1] = 0;
+        assert_eq!(rules.rogue_points_left(&d4), 0);
+        // Skills & Powers: only the skills bought.
+        let mut sp = skills_and_powers_draft(&rules);
+        sp.classes = vec!["Thief".into()];
+        sp.class_abilities = vec![vec!["Thief, Open locks* (10)".into()]];
+        sp.specializations.clear();
+        assert_eq!(
+            rules.rogue_skills(&sp),
+            [("Thief, Open locks* (10)".to_owned(), 1)]
+        );
+    }
+
+    #[test]
+    fn combat_options_cost_and_are_written_as_in_the_original() {
+        let (root, install) = installation("combat");
+        let rules = rules(true);
+        let mut d = skills_and_powers_draft(&rules);
+        d.weapon_proficiencies = vec!["Dagger".into(), "Sword, long".into()];
+        d.weapon_of_choice = Some("Dagger".into());
+        d.expertise = Some("Dagger".into());
+        d.shields = [false, true, false, false];
+        d.armor_proficiencies = vec!["Full armor, banded mail".into()];
+        d.fighting_styles = vec!["Missile".into(), "Weapon and Shield".into()];
+        let classes = d.classes.clone();
+        assert_eq!(rules.weapon_of_choice_cost(&classes), 2);
+        // Expertise in the weapon of choice costs 1 less.
+        assert_eq!(rules.expertise_cost(&d), 1);
+        assert_eq!(rules.shield_cost(&classes), 2);
+        assert_eq!(rules.style_cost(&classes, "Two Weapon"), Some(3));
+        assert_eq!(
+            rules.style_cost(&classes, "One-handed Weapon (+2)"),
+            Some(4)
+        );
+        assert_eq!(rules.style_cost(&["Mage".into()], "Missile"), None);
+        assert_eq!(
+            rules.style_cost(&["Mage".into()], "Two-handed Weapon"),
+            Some(3)
+        );
+        // Dagger specialization 2, choice 2, expertise 1, shield and armor
+        // 2 each, styles 2 each.
+        assert_eq!(rules.combat_spent(&d), 2 + 2 + 1 + 4 + 4);
+        assert_eq!(rules.armors(), ["Full armor, banded mail"]);
+        assert_eq!(rules.problem(&d), None);
+        let file = install.create_character(&rules, &d).unwrap();
+        let data = install.character(&file).unwrap().data;
+        assert_eq!(
+            data.unknown_0x124,
+            ["Dagger".to_owned(), "Dagger".into(), String::new()]
+        );
+        assert_eq!(data.unknown_0x134, [0, 1, 0, 0]);
+        assert_eq!(data.unknown_0xac[4], ["Full armor, banded mail"]);
+        assert_eq!(data.classes.unknown_0x50[..3], [1997, 1994, 0]);
+        assert_eq!(data.flags_0x1e54, Some([0; 5]));
+
+        // A multi-classed fighter may not specialize in a weapon at 1st
+        // level, but may in punching, at 4 points.
+        let mut multi = d.clone();
+        multi.classes = vec!["Fighter".into(), "Thief".into()];
+        multi.class_abilities = vec![d.class_abilities[0].clone(), Vec::new()];
+        multi.hit_dice = vec![7, 3];
+        assert_eq!(rules.specialization_cost(&multi), None);
+        assert!(rules.problem(&multi).unwrap().contains("single-classed"));
+        multi.specializations.clear();
+        multi.unarmed = vec!["Punching".into()];
+        assert_eq!(rules.unarmed_cost(&multi.classes), Some(4));
+        assert_eq!(rules.problem(&multi), None);
+        let file = install.create_character(&rules, &multi).unwrap();
+        let data = install.character(&file).unwrap().data;
+        assert_eq!(data.flags_0x1e54, Some([1, 0, 0, 0, 0]));
+
+        let mut bad = d.clone();
+        bad.weapon_of_choice = Some("Club".into());
+        assert!(rules.problem(&bad).unwrap().contains("Club"));
+        let mut bad = d.clone();
+        bad.unarmed = vec!["Wrestling".into()];
+        assert!(rules.problem(&bad).unwrap().contains("do not go together"));
+        let mut bad = d.clone();
+        bad.fighting_styles.push("Missile".into());
+        assert!(rules.problem(&bad).unwrap().contains("twice"));
         fs::remove_dir_all(root).unwrap();
     }
 }

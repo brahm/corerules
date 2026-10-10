@@ -270,8 +270,12 @@ record! {
         unknown_0x510: [i32; 7],
         unknown_0x52c: Option<i32> = if v > 6,
         unknown_0x530: [i32; 16],
+        /// Nonweapon proficiency groups, 1 for each it belongs to: general,
+        /// priest, rogue, warrior, wizard, psionicist.
         unknown_0x48c: [i32; 6],
         unknown_0x584: [i32; 5],
+        /// Disadvantages: the Skills & Powers character points it gives
+        /// (Allergies 3, severe 8).
         unknown_0x220: i32,
         /// Armor: thief skill adjustments (-40, ...).
         unknown_0x59c: [i32; 13],
