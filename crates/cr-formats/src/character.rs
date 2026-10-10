@@ -239,9 +239,17 @@ record! {
         abilities: [[u32; 3]; 5],
         unknown_0x1980: [String; 2],
         unknown_0x162c: u32,
+        /// Unspent Skills & Powers character points, then the copper,
+        /// silver, electrum, gold and platinum totals the equipment page
+        /// caches (the coins themselves are items in `inventory[6]`).
         unknown_0x1778: [u32; 6],
+        /// Movement rates cached for the equipment page; the sheet
+        /// recomputes them.
         unknown_0x17bc: [u32; 3],
-        unknown_0x17b8: u32,
+        /// Weight carried in pounds, an `f32` bit pattern. The program
+        /// trusts it (it sets encumbrance, AC and THAC0 penalties), so it
+        /// must change with the equipment.
+        carried_weight: u32,
         unknown_0x196c: [Vec<String>; 3],
         race: String,
         /// "Hill dwarf", "High elf".
@@ -284,35 +292,51 @@ record! {
         unknown_0xac: [Vec<String>; 7],
         unknown_0x19c4: Vec<String>,
         racial_abilities: Vec<String>,
-        /// Spells, e.g. "Burning Hands".
+        /// Wizard spells known, e.g. "Burning Hands".
         spells: Vec<String>,
-        unknown_0x3b4: Vec<String>,
-        /// Five groups of eleven pairs of string lists (members 0x3c8 and
-        /// 0x814, 0x14 bytes apart, groups 0xdc apart).
+        /// Priest spells known.
+        priest_spells: Vec<String>,
+        /// Memorized spells, one entry per copy: per class (index into
+        /// `classes.names`) and spell level 0 to 10 (0 unused), the wizard
+        /// spells (member 0x3c8) and the priest spells (member 0x814).
+        /// What is written in a spellbook belongs to the spellbook item.
         unknown_0x3c8: [[(Vec<String>, Vec<String>); 11]; 5],
         unknown_0x1878: Vec<String>,
         rogue_skills: RogueSkills,
         unknown_0xc60: [[u32; 100]; 5],
         unknown_0x1430: [u32; 100],
-        /// A `CDWordArray` with one value per class level slot.
-        unknown_0x17e0: Vec<u32>,
-        unknown_0x17f4: Option<Vec<u32>> = if v > 50,
+        /// What each nonweapon proficiency cost (slots, or Skills & Powers
+        /// character points), parallel to `nonweapon_proficiencies`.
+        nonweapon_costs: Vec<u32>,
+        /// Bonus ranks per nonweapon proficiency, normally 0; parallel.
+        nonweapon_bonuses: Option<Vec<u32>> = if v > 50,
         /// Per class slot: its abilities and three more lists.
         class_slots: [ClassSlot; 5],
-        /// Armor and shield, e.g. "Full armor, brigandine".
+        /// Armor and shield, e.g. "Full armor, brigandine": the Armor
+        /// parts among the worn items, rebuilt by the program from
+        /// `inventory[5]` whenever it needs them.
         armor: Vec<String>,
+        /// The other worn magical items, rebuilt the same way.
         unknown_0x17a4: Vec<String>,
+        /// Names of Non-Weapon Proficiencies parts, in the order taken.
+        /// `nonweapon_costs`, `nonweapon_bonuses` and `nonweapon_details`
+        /// have one entry each per proficiency.
         nonweapon_proficiencies: Vec<String>,
         unknown_0x1830: [Vec<String>; 3],
         unknown_0x98: Vec<String>,
-        /// `CStringArray` objects, five in both fixtures.
-        unknown_0x1808: Vec<Object>,
+        /// One `CStringArray` object per nonweapon proficiency: the
+        /// languages learned through Modern Languages and the like, empty
+        /// for the others.
+        nonweapon_details: Vec<Object>,
+        /// Native languages, names of Languages parts.
         languages: Vec<String>,
         unknown_0x1930: Option<[Vec<String>; 2]> = if v > 29,
         unknown_0x1dc8: Option<Vec<String>> = if v > 35,
         unknown_0x1958: Option<Vec<String>> = if v > 38,
-        /// Nine equipment bundles; the third holds what the character
-        /// carries.
+        /// Nine equipment bundles: animals, daily food and lodging, items
+        /// carried, readied, stored and worn, spending money (coins named
+        /// "* Gold Pieces" and so on), services, transport. Each is sorted
+        /// by name in byte order.
         inventory: [InventoryBundle; 9],
         unknown_0x1ea4: Option<(u8, [Vec<String>; 2])> = if v > 39,
         flag_0x1610: Option<u8> = if v > 42,

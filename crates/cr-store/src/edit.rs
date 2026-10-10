@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 
 use cr_formats::character::{Character, CharacterIndex};
 
+use crate::lists::CharacterLists;
 use crate::{Error, Installation, Result};
 
 /// The editable details of a character.
@@ -113,11 +114,25 @@ impl Installation {
     /// Writes `details` into the character stored in `Chars/<file>` and its
     /// entry in the character list.
     pub fn save_character_details(&self, file: &str, details: &CharacterDetails) -> Result<()> {
+        self.save_character(file, details, None)
+    }
+
+    /// Writes `details` and, when given, `lists` into the character stored
+    /// in `Chars/<file>` and its entry in the character list.
+    pub fn save_character(
+        &self,
+        file: &str,
+        details: &CharacterDetails,
+        lists: Option<&CharacterLists>,
+    ) -> Result<()> {
         if let Some(problem) = details.problem() {
             return Err(Error::Invalid(problem));
         }
         let mut character = self.character(file)?;
         details.apply(&mut character);
+        if let Some(lists) = lists {
+            lists.apply(&mut character, &self.part_table()?);
+        }
         let format = |source| Error::Format {
             path: file.into(),
             source,

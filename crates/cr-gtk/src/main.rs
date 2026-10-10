@@ -1,6 +1,8 @@
 //! The GNOME app: browses the data of a Core Rules installation in three
 //! panes (sections, entries, details) that collapse on narrow windows.
 
+mod lists;
+
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -9,7 +11,9 @@ use adw::prelude::*;
 use cr_store::Installation;
 use cr_store::catalog::{Entry, Section};
 use cr_store::edit::{ABILITY_RANGE, CharacterDetails};
+use cr_store::lists::{CharacterLists, ITEM_TYPES};
 use gtk::{gio, glib};
+use lists::ListEditor;
 
 const APP_ID: &str = "io.github.brahm.CoreRules";
 
@@ -156,24 +160,40 @@ impl Window {
             Some(install) => install.character(file),
             None => return,
         };
-        let details = match loaded {
-            Ok(character) => CharacterDetails::of(&character),
+        let character = match loaded {
+            Ok(character) => character,
             Err(e) => return self.toast(&e.to_string()),
         };
+        let choices = match &*self.install.borrow() {
+            Some(install) => Choices::load(install),
+            None => return,
+        };
+        let choices = match choices {
+            Ok(choices) => choices,
+            Err(e) => return self.toast(&e.to_string()),
+        };
+        let details = CharacterDetails::of(&character);
+        let lists = CharacterLists::of(&character);
         let this = self.clone();
         let file = file.to_owned();
-        character_editor(&self.window, &details, move |details| {
-            let install = this.install.borrow();
-            let Some(install) = install.as_ref() else {
-                return Err("The installation is no longer open".into());
-            };
-            install
-                .save_character_details(&file, details)
-                .map_err(|e| e.to_string())?;
-            this.browser.load(install.catalog(), Some(&file));
-            this.toast("Character saved");
-            Ok(())
-        });
+        character_editor(
+            &self.window,
+            &details,
+            &lists,
+            choices,
+            move |details, lists| {
+                let install = this.install.borrow();
+                let Some(install) = install.as_ref() else {
+                    return Err("The installation is no longer open".into());
+                };
+                install
+                    .save_character(&file, details, Some(lists))
+                    .map_err(|e| e.to_string())?;
+                this.browser.load(install.catalog(), Some(&file));
+                this.toast("Character saved");
+                Ok(())
+            },
+        );
     }
 
     fn show_status(&self, widget: &impl IsA<gtk::Widget>) {
@@ -695,7 +715,9 @@ fn detail(entry: &Entry) -> gtk::Widget {
 fn character_editor(
     parent: &impl IsA<gtk::Widget>,
     details: &CharacterDetails,
-    save: impl Fn(&CharacterDetails) -> Result<(), String> + 'static,
+    lists: &CharacterLists,
+    choices: Choices,
+    save: impl Fn(&CharacterDetails, &CharacterLists) -> Result<(), String> + 'static,
 ) {
     let entry_row =
         |title: &str, text: &str| adw::EntryRow::builder().title(title).text(text).build();
@@ -774,18 +796,37 @@ fn character_editor(
     appearance.add(&age);
     appearance.add(&height);
     appearance.add(&weight);
-    let error = gtk::Label::builder()
-        .wrap(true)
-        .visible(false)
-        .css_classes(["error"])
-        .build();
     let page = adw::PreferencesPage::new();
     page.add(&character);
     page.add(&appearance);
     page.add(&abilities);
-    let errors = adw::PreferencesGroup::new();
-    errors.add(&error);
-    page.add(&errors);
+
+    let editors = ListEditors::new(lists, &choices);
+    let stack = adw::ViewStack::new();
+    stack.add_titled_with_icon(&page, Some("details"), "Details", "avatar-default-symbolic");
+    stack.add_titled_with_icon(
+        &editors.page([
+            &editors.weapon_proficiencies,
+            &editors.nonweapon_proficiencies,
+            &editors.languages,
+        ]),
+        Some("proficiencies"),
+        "Proficiencies",
+        "view-list-symbolic",
+    );
+    stack.add_titled_with_icon(
+        &editors.page([&editors.wizard_spells, &editors.priest_spells]),
+        Some("spells"),
+        "Spells",
+        "starred-symbolic",
+    );
+    stack.add_titled_with_icon(
+        &editors.page([&editors.carried]),
+        Some("equipment"),
+        "Equipment",
+        "package-x-generic-symbolic",
+    );
+    let error = adw::Banner::new("");
 
     let cancel = gtk::Button::with_mnemonic("_Cancel");
     let save_button = gtk::Button::builder()
@@ -799,13 +840,19 @@ fn character_editor(
         .build();
     header.pack_start(&cancel);
     header.pack_end(&save_button);
+    let switcher = adw::ViewSwitcherBar::builder()
+        .stack(&stack)
+        .reveal(true)
+        .build();
     let view = adw::ToolbarView::new();
     view.add_top_bar(&header);
-    view.set_content(Some(&page));
+    view.add_top_bar(&error);
+    view.set_content(Some(&stack));
+    view.add_bottom_bar(&switcher);
     let dialog = adw::Dialog::builder()
         .title("Edit Character")
-        .content_width(440)
-        .content_height(480)
+        .content_width(480)
+        .content_height(600)
         .child(&view)
         .default_widget(&save_button)
         .build();
@@ -842,13 +889,13 @@ fn character_editor(
                 exceptional_strength: exceptional.value() as u32,
                 skills_and_powers,
             };
-            match save(&details) {
+            match save(&details, &editors.lists()) {
                 Ok(()) => {
                     dialog.close();
                 }
                 Err(message) => {
-                    error.set_label(&message);
-                    error.set_visible(true);
+                    error.set_title(&glib::markup_escape_text(&message));
+                    error.set_revealed(true);
                 }
             }
         }
@@ -865,3 +912,94 @@ const ABILITY_NAMES: [[&str; 3]; 6] = [
     ["Wisdom", "Intuition", "Willpower"],
     ["Charisma", "Leadership", "Appearance"],
 ];
+
+/// Names the list editors offer, from the installation's databases.
+struct Choices {
+    weapons: Rc<Vec<String>>,
+    nonweapon: Rc<Vec<String>>,
+    languages: Rc<Vec<String>>,
+    wizard_spells: Rc<Vec<String>>,
+    priest_spells: Rc<Vec<String>>,
+    items: Rc<Vec<String>>,
+}
+
+impl Choices {
+    fn load(install: &Installation) -> cr_store::Result<Self> {
+        let mut items = Vec::new();
+        for part_type in ITEM_TYPES {
+            items.extend(install.part_names(part_type)?);
+        }
+        items.sort_by_key(|n| n.to_lowercase());
+        items.dedup();
+        Ok(Self {
+            weapons: Rc::new(install.weapon_proficiency_names()?),
+            nonweapon: Rc::new(install.part_names("Non-Weapon Proficiencies")?),
+            languages: Rc::new(install.part_names("Languages")?),
+            wizard_spells: Rc::new(install.spell_names(true)?),
+            priest_spells: Rc::new(install.spell_names(false)?),
+            items: Rc::new(items),
+        })
+    }
+}
+
+/// One list editor per character list.
+struct ListEditors {
+    weapon_proficiencies: ListEditor,
+    nonweapon_proficiencies: ListEditor,
+    languages: ListEditor,
+    wizard_spells: ListEditor,
+    priest_spells: ListEditor,
+    carried: ListEditor,
+}
+
+impl ListEditors {
+    fn new(lists: &CharacterLists, choices: &Choices) -> Self {
+        Self {
+            weapon_proficiencies: ListEditor::new(
+                "Weapon Proficiencies",
+                &lists.weapon_proficiencies,
+                choices.weapons.clone(),
+            ),
+            nonweapon_proficiencies: ListEditor::new(
+                "Nonweapon Proficiencies",
+                &lists.nonweapon_proficiencies,
+                choices.nonweapon.clone(),
+            ),
+            languages: ListEditor::new(
+                "Native Languages",
+                &lists.languages,
+                choices.languages.clone(),
+            ),
+            wizard_spells: ListEditor::new(
+                "Wizard Spells Known",
+                &lists.wizard_spells,
+                choices.wizard_spells.clone(),
+            ),
+            priest_spells: ListEditor::new(
+                "Priest Spells Known",
+                &lists.priest_spells,
+                choices.priest_spells.clone(),
+            ),
+            carried: ListEditor::new("Items Carried", &lists.carried, choices.items.clone()),
+        }
+    }
+
+    fn page<const N: usize>(&self, editors: [&ListEditor; N]) -> adw::PreferencesPage {
+        let page = adw::PreferencesPage::new();
+        for editor in editors {
+            page.add(&editor.group);
+        }
+        page
+    }
+
+    fn lists(&self) -> CharacterLists {
+        CharacterLists {
+            weapon_proficiencies: self.weapon_proficiencies.items(),
+            nonweapon_proficiencies: self.nonweapon_proficiencies.items(),
+            languages: self.languages.items(),
+            wizard_spells: self.wizard_spells.items(),
+            priest_spells: self.priest_spells.items(),
+            carried: self.carried.items(),
+        }
+    }
+}
