@@ -2,8 +2,10 @@
 //!
 //! A character file is a `CCharacterDoc` (`Serialize` at 0x41cd5b in
 //! TSRP3.EXE). It opens with a version string, `TSRP3 V54` for the
-//! Expansion and `TSRP V27` for Core Rules 2.0; the fields a version
-//! predates are absent, with the conditions copied from the load code.
+//! Expansion and `TSRP2 V29` for Core Rules 2.0 (the Expansion also
+//! recognises an older `TSRP V27`); the fields a version predates are
+//! absent, with the conditions copied from the load code. Files from both
+//! programs round-trip (tests/fixtures/characters and its `v20` folder).
 //! Unnamed fields keep the member offset they have in the original object.
 
 use crate::field::Field;
@@ -473,6 +475,7 @@ mod tests {
     fn version_strings() {
         assert_eq!(version_of("TSRP3 V54"), 54);
         assert_eq!(version_of("TSRP V27"), 27);
+        assert_eq!(version_of("TSRP2 V29"), 29);
         assert_eq!(version_of("TSRP3 V41"), 41);
     }
 
@@ -512,5 +515,40 @@ mod tests {
             let character = Character::parse(data).unwrap();
             assert_eq!(character.to_bytes().unwrap(), data);
         }
+    }
+
+    const V20_INDEX: &[u8] = include_bytes!("../../../tests/fixtures/characters/v20/index.chr");
+    const TORDEK: &[u8] = include_bytes!("../../../tests/fixtures/characters/v20/88010619.dat");
+    const MIALEE: &[u8] = include_bytes!("../../../tests/fixtures/characters/v20/99610619.dat");
+    const TORDEK_FIRST_SAVE: &[u8] =
+        include_bytes!("../../../tests/fixtures/characters/v20/first-save/88010619.dat");
+    const V20_FIRST_INDEX: &[u8] =
+        include_bytes!("../../../tests/fixtures/characters/v20/first-save/index.chr");
+
+    /// Files Core Rules 2.0 (without the Expansion) wrote.
+    #[test]
+    fn core20_characters() {
+        for data in [V20_INDEX, V20_FIRST_INDEX] {
+            let index = CharacterIndex::parse(data).unwrap();
+            assert_eq!(index.to_bytes().unwrap(), data);
+        }
+        let index = CharacterIndex::parse(V20_INDEX).unwrap();
+        let names: Vec<_> = index.entries.iter().map(|e| e.name.as_str()).collect();
+        assert_eq!(names, ["Tordek Martelo", "Mialee Luar"]);
+        assert_eq!(index.entries[1].details[2], "Class: Fighter/Mage");
+
+        for data in [TORDEK, MIALEE, TORDEK_FIRST_SAVE] {
+            let character = Character::parse(data).unwrap();
+            assert_eq!(character.version, "TSRP2 V29");
+            assert_eq!(character.to_bytes().unwrap(), data);
+        }
+        let tordek = Character::parse(TORDEK).unwrap().data;
+        assert_eq!(tordek.player, "Fixture Three");
+        assert_eq!(tordek.race, "Dwarf");
+        assert_eq!(tordek.classes.names, ["Fighter"]);
+        assert_eq!(tordek.abilities[1], [16; 3]);
+        let mialee = Character::parse(MIALEE).unwrap().data;
+        assert_eq!(mialee.class_title, "Fighter/Mage");
+        assert_eq!(mialee.alignment, "Chaotic Good");
     }
 }

@@ -26,7 +26,7 @@ Early work (phase 0 of the plan): the file formats are being mapped.
 
 - [x] MFC `CArchive` reader and writer, byte for byte
 - [x] Character list (`Chars/index.chr`), round-trip tested
-- [x] Full character files (`TSRP V27` to `TSRP3 V54`), round-trip tested
+- [x] Full character files (`TSRP V27` to `TSRP3 V54`, both programs), round-trip tested
 - [x] Races and classes, round-trip tested against a real installation
 - [x] Survey of the rules databases (`cr survey`)
 - [x] Field layouts documented in docs/formats
@@ -35,7 +35,7 @@ Early work (phase 0 of the plan): the file formats are being mapped.
 - [x] Core Rules 2.0 (without the Expansion) databases, round-trip tested
 - [x] GNOME app: browse characters, races, classes, items, spells, psionics
       and monsters of an installation or the CD
-- [ ] 2.0 character files checked against files the 2.0 program wrote
+- [x] 2.0 character files checked against files the 2.0 program wrote
 - [ ] Character editing
 
 ## Layout

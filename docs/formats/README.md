@@ -44,7 +44,7 @@ from the code even where the shipped data only uses the newest version.
 | --- | --- | --- | --- |
 | `Race.dat`, `RaceU.dat` | one `CObList` of `CRaceOb` (88) | [`race.rs`](../../crates/cr-formats/src/race.rs) | yes |
 | `Class.dat`, `ClassU.dat` | one `CObList` of `CClassOb` (88), each with a `TSRP3 V39` version string | [`classes.rs`](../../crates/cr-formats/src/classes.rs) | yes |
-| `Chars/<id>.dat` | `CCharacterDoc`, version `TSRP V27` to `TSRP3 V54` | [`character.rs`](../../crates/cr-formats/src/character.rs) | yes |
+| `Chars/<id>.dat` | `CCharacterDoc`, version `TSRP V27` to `TSRP3 V54` (2.0 writes `TSRP2 V29`) | [`character.rs`](../../crates/cr-formats/src/character.rs) | yes |
 | `Chars/index.chr` | one `CObList` of `CCharacterMiniOb` (95) | [`character.rs`](../../crates/cr-formats/src/character.rs) | yes |
 | `Parts.dat`, `PartsU.dat` | 21 `CObArray`s of `CPart` (93), one per part type | [parts.md](parts.md) | yes |
 | `Spells.dat`, `SpellsU.dat` | two `CObArray`s of `CSpellsOb` (88): wizard, then priest | [parts.md](parts.md) | yes |
