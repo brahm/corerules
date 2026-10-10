@@ -27,9 +27,9 @@ Early work (phase 0 of the plan): the file formats are being mapped.
 - [x] Full character files (`TSRP V27` to `TSRP3 V54`), round-trip tested
 - [x] Races and classes, round-trip tested against a real installation
 - [x] Survey of the rules databases (`cr survey`)
-- [x] Field layouts of parts, spells, treasure, psionics, traps (docs only)
-- [ ] Monsters and encounters
-- [ ] Remaining databases in Rust
+- [x] Field layouts documented in docs/formats
+- [x] Monsters and encounters
+- [x] Every shipped database in Rust, round-trip tested
 
 ## Layout
 

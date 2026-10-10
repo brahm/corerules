@@ -160,3 +160,58 @@ fn spells() {
 fn classes_allowed() {
     round_trip_list("UserDbas/AllowedU.dat");
 }
+
+#[test]
+fn monsters() {
+    round_trip_list("Database/Monster.dat");
+    round_trip_list("UserDbas/MonsterU.dat");
+    round_trip_list("Database/Attack.dat");
+    round_trip_list("UserDbas/AttackU.dat");
+    round_trip_list("Database/MonType.dat");
+    round_trip_list("UserDbas/MonTypeU.dat");
+
+    use cr_formats::Object;
+    let Some(data) = installation_file("Database/Monster.dat") else {
+        return;
+    };
+    let list = ObjectList::parse(&data).unwrap();
+    assert_eq!(list.objects.len(), 1524);
+    let aboleth = list
+        .objects
+        .iter()
+        .find_map(|o| match o {
+            Object::Monster(m) if m.name == "Aboleth" => Some(m),
+            _ => None,
+        })
+        .expect("no Aboleth");
+    assert_eq!(aboleth.experience, 5000);
+    assert_eq!(aboleth.armor_class, 4);
+    assert_eq!(aboleth.arsenal.attacks, "4");
+}
+
+#[test]
+fn encounter_templates() {
+    round_trip_list("Database/EncPlat.dat");
+    round_trip_list("UserDbas/EncPlatU.dat");
+}
+
+#[test]
+fn encounters() {
+    round_trip_list("Database/Encount.dat");
+    round_trip_list("UserDbas/EncountU.dat");
+}
+
+#[test]
+fn frequency_tables() {
+    use cr_formats::encounter::FrequencyTables;
+    let Some(data) = installation_file("UserDbas/EncTabU.dat") else {
+        return;
+    };
+    let doc = FrequencyTables::parse(&data).unwrap_or_else(|e| panic!("EncTabU.dat: {e}"));
+    assert_eq!(doc.version, "TSRP2/FreqDoc/0001");
+    assert_eq!(
+        doc.to_bytes().unwrap(),
+        data,
+        "EncTabU.dat changed on write"
+    );
+}

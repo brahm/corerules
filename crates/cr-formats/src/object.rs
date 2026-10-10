@@ -58,6 +58,20 @@ objects! {
     PsionicPower(Box<crate::psionic::PsionicPower>) = "CPsionicPowerOb", 96;
     Trap(Box<crate::traps::Trap>) = "CTrapOb", 95;
     PhraseSpacing(Box<crate::phrase::PhraseSpacing>) = "CPhraseSpacingOb", 88;
+    Monster(Box<crate::monster::Monster>) = "CMonsterOb", 88;
+    MonsterAttack(Box<crate::monster::MonsterAttack>) = "CMonsterAttackOb", 88;
+    MonsterType(Box<crate::monster::MonsterType>) = "CMonsterTypeOb", 95;
+    EncounterTemplate(Box<crate::encounter::EncounterTemplate>) = "CEncTemplateOb", 88;
+    TemplateMonsterProperties(Box<crate::encounter::TemplateMonsterProperties>) = "CEncTemplateMonsterPropertiesOb", 88;
+    TemplateNpcProperties(Box<crate::encounter::TemplateNpcProperties>) = "CEncTemplateNPCPropertiesOb", 88;
+    TemplateItemProperties(Box<crate::encounter::TemplateItemProperties>) = "CEncTemplateItemPropertiesOb", 88;
+    TemplateNumAppear(Box<crate::encounter::TemplateNumAppear>) = "CEncTemplateNumAppearOb", 88;
+    EncounterNpc(Box<crate::encounter::EncounterNpc>) = "CEncounterNPCOb", 95;
+    Encounter(Box<crate::encounter::Encounter>) = "CEncounterOb", 88;
+    MonsterPackage(Box<crate::encounter::MonsterPackage>) = "CEncounterMonsterPackageOb", 88;
+    MonsterHp(crate::encounter::MonsterHp) = "CEncounterMonHpOb", 88;
+    NpcPackage(Box<crate::encounter::NpcPackage>) = "CEncounterNPCPackageOb", 88;
+    FrequencyTable(Box<crate::encounter::FrequencyTable>) = "CEncounterFreqTableOb", 1;
 }
 
 impl Object {

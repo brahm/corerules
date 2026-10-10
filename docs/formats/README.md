@@ -46,13 +46,15 @@ from the code even where the shipped data only uses the newest version.
 | `Class.dat`, `ClassU.dat` | one `CObList` of `CClassOb` (88), each with a `TSRP3 V39` version string | [`classes.rs`](../../crates/cr-formats/src/classes.rs) | yes |
 | `Chars/<id>.dat` | `CCharacterDoc`, version `TSRP V27` to `TSRP3 V54` | [`character.rs`](../../crates/cr-formats/src/character.rs) | yes |
 | `Chars/index.chr` | one `CObList` of `CCharacterMiniOb` (95) | [`character.rs`](../../crates/cr-formats/src/character.rs) | yes |
-| `Parts.dat`, `PartsU.dat` | 21 `CObArray`s of `CPart` (93), one per part type | [parts.md](parts.md) | not yet |
-| `Spells.dat`, `SpellsU.dat` | two `CObArray`s of `CSpellsOb` (88): wizard, then priest | [parts.md](parts.md) | not yet |
-| `AllowedU.dat` | one `CObArray` of `CClassesAllowedOb` (95) | [parts.md](parts.md) | not yet |
-| `Treasure.dat`, `TreaBun.dat` | one `CObList` | [misc.md](misc.md) | not yet |
-| `Psionic.dat`, `Traps.dat`, `Phrase.DAT` | one `CObList` | [misc.md](misc.md) | not yet |
-| `Convert.dat` | eight `CMapStringToOb`s | [misc.md](misc.md) | not yet |
-| `Monster.dat`, `Attack.dat`, `MonType.dat`, `EncPlat.dat`, encounters | | in progress | not yet |
+| `Parts.dat`, `PartsU.dat` | 21 `CObArray`s of `CPart` (93), one per part type | [parts.md](parts.md) | yes |
+| `Spells.dat`, `SpellsU.dat` | two `CObArray`s of `CSpellsOb` (88): wizard, then priest | [parts.md](parts.md) | yes |
+| `AllowedU.dat` | one `CObArray` of `CClassesAllowedOb` (95) | [parts.md](parts.md) | yes |
+| `Treasure.dat`, `TreaBun.dat` | one `CObList` | [misc.md](misc.md) | yes |
+| `Psionic.dat`, `Traps.dat`, `Phrase.DAT` | one `CObList` | [misc.md](misc.md) | yes |
+| `Convert.dat` | eight `CMapStringToOb`s | [misc.md](misc.md) | yes |
+| `Monster.dat`, `Attack.dat`, `MonType.dat` | one `CObList` of `CMonsterOb` (88), `CMonsterAttackOb` (88), `CMonsterTypeOb` (95) | [monster.md](monster.md) | yes |
+| `EncPlat.dat`, `Encount.dat`, `EncountU.dat` | one `CObList` of `CEncTemplateOb` (88) / `CEncounterOb` (88) | [monster.md](monster.md) | yes |
+| `EncTabU.dat` | version string, then one `CObArray` of `CEncounterFreqTableOb` (1) | [monster.md](monster.md) | yes |
 
 Equipment (`CInventoryBundle`) is shared by characters, treasure and
 monsters: [`inventory.rs`](../../crates/cr-formats/src/inventory.rs).
