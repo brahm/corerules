@@ -266,8 +266,8 @@ record! {
         /// keeps; the creation wizard stores the starting funds here and
         /// the page recomputes them from the coin items in `inventory[6]`.
         unknown_0x1778: [u32; 6],
-        /// Movement rates cached for the equipment page; the sheet
-        /// recomputes them.
+        /// Movement rates cached for the equipment page (`[0]` is the
+        /// base rate after armor, 12, 9 or 6); the sheet recomputes them.
         unknown_0x17bc: [u32; 3],
         /// Weight carried in pounds, an `f32` bit pattern. The program
         /// trusts it (it sets encumbrance, AC and THAC0 penalties), so it
@@ -279,9 +279,13 @@ record! {
         subrace: String,
         /// "None" when the character has no kit.
         kit: String,
+        /// Skills & Powers weapon of choice and weapon expertise, then a
+        /// third name empty in every file seen.
         unknown_0x124: [String; 3],
         /// Compared with 1990, 1991 and 1992 after loading.
         unknown_0x130: u32,
+        /// Skills & Powers shield proficiencies, 1 when held: buckler,
+        /// small, medium and body shield.
         unknown_0x134: [u32; 4],
         unknown_0x144: String,
         unknown_0x148: [u32; 6],
@@ -302,6 +306,8 @@ record! {
         unknown_0x1dfc: Option<u32> = if v > 44,
         unknown_0x39c: Option<String> = if v > 46,
         unknown_0x1e50: u32,
+        /// Skills & Powers unarmed combat specializations, 1 when held:
+        /// punching, wrestling and martial arts, then two unused flags.
         flags_0x1e54: Option<[u8; 5]> = if v > 53,
         unknown_0x1e5c: [u32; 3],
         alignment: String,
@@ -313,7 +319,7 @@ record! {
         classes: ClassList,
         weapon_proficiencies: Vec<String>,
         /// Skills & Powers weapon lists; `[3]` holds the weapons the
-        /// character specializes in.
+        /// character specializes in, `[4]` the armor proficiencies.
         unknown_0xac: [Vec<String>; 7],
         unknown_0x19c4: Vec<String>,
         racial_abilities: Vec<String>,
@@ -327,6 +333,10 @@ record! {
         /// What is written in a spellbook belongs to the spellbook item.
         unknown_0x3c8: [[(Vec<String>, Vec<String>); 11]; 5],
         unknown_0x1878: Vec<String>,
+        /// Thief and bard skills, named as the class abilities that grant
+        /// them ("Thief, Pick pockets* (10)"), with the discretionary
+        /// points added in `values[0]`, for Core Rules and Skills & Powers
+        /// characters alike.
         rogue_skills: RogueSkills,
         unknown_0xc60: [[u32; 100]; 5],
         unknown_0x1430: [u32; 100],
@@ -393,6 +403,11 @@ record! {
 /// one class name per count (resolved to `CClassOb`s by name).
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClassList {
+    /// Skills & Powers fighting styles, in the order they were learned,
+    /// 0 for none: 1993 one-handed weapon, 1994 weapon and shield, 1995
+    /// two-handed weapon, 1996 two weapon, 1997 missile, 1998 horse
+    /// archer, 1999 thrown weapon/sling, 2000 two weapon (+2), 2001
+    /// one-handed weapon (+2).
     pub unknown_0x50: [u32; 10],
     pub names: Vec<String>,
 }
