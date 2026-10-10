@@ -44,8 +44,9 @@ Early work (phase 0 of the plan): the file formats are being mapped.
       spells known and items carried, checked in both original programs
 - [x] Spellbooks and memorized spells, all nine equipment groups with
       quantities, and Spending Money, checked in both original programs
-- [ ] Adding a class where the race allows it (race and class themselves
-      stay as created)
+- [x] Adding a class where the race may dual-class (humans), with the
+      Player's Handbook requirements, checked in both original programs;
+      race and the classes chosen at creation never change
 
 ## Layout
 

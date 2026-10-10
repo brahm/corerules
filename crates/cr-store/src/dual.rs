@@ -215,16 +215,44 @@ impl ClassTable {
         ClassChoice::Allowed(sorted(names))
     }
 
+    /// Why `name` is not among the classes `character` may add.
+    fn why_not(&self, character: &Character, name: &str) -> String {
+        let who = &character.data.name;
+        let Some(class) = self.class(name) else {
+            return format!("{name} is not a class in the databases");
+        };
+        let scores = scores(character);
+        if let Some(held) = character
+            .data
+            .classes
+            .names
+            .iter()
+            .find(|n| self.class(n).is_some_and(|c| c.group == class.group))
+        {
+            return format!("{who} already has {held}, a class of the same group as {name}");
+        }
+        if let Some(a) = (0..6).find(|&a| scores[a] < class.requirements[a]) {
+            return format!(
+                "{name} needs {} {} or more",
+                ABILITIES[a], class.requirements[a]
+            );
+        }
+        if let Some(a) = (0..6).find(|&a| class.prime[a] && scores[a] < 17) {
+            return format!(
+                "Dual-classing into {name} needs {} 17 or more",
+                ABILITIES[a]
+            );
+        }
+        format!("{} characters cannot be {name}", character.data.race)
+    }
+
     /// Adds `name` to `character` as the dual-class dialog does, after
     /// checking it against [`choices`](Self::choices).
     pub fn add(&self, character: &mut Character, name: &str) -> Result<()> {
         match self.choices(character) {
             ClassChoice::Refused(why) => return Err(Error::Invalid(why)),
             ClassChoice::Allowed(names) if !names.iter().any(|n| n == name) => {
-                return Err(Error::Invalid(format!(
-                    "{} cannot take {name} as a new class",
-                    character.data.name
-                )));
+                return Err(Error::Invalid(self.why_not(character, name)));
             }
             ClassChoice::Allowed(_) => {}
         }
