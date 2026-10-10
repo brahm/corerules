@@ -5,6 +5,7 @@
 //! `index.chr` next to `INDEX.CHR`). Every lookup here ignores case.
 
 pub mod catalog;
+pub mod edit;
 
 use std::fs;
 use std::io;
@@ -18,6 +19,8 @@ pub enum Error {
     NotAnInstallation(PathBuf),
     #[error("{path}: {source}")]
     Io { path: PathBuf, source: io::Error },
+    #[error("{0}")]
+    Invalid(String),
     #[error("{path}: {source}")]
     Format {
         path: PathBuf,

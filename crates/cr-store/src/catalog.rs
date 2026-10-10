@@ -26,6 +26,9 @@ pub struct Section {
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Entry {
+    /// What the entry was read from, when it can be edited: the file name
+    /// of a character in `Chars/`.
+    pub key: String,
     pub title: String,
     pub subtitle: String,
     pub groups: Vec<Group>,
@@ -185,7 +188,10 @@ impl Installation {
                         source,
                     })
                 }) {
-                    Ok(c) => character_entry(&c),
+                    Ok(c) => Entry {
+                        key: e.file.clone(),
+                        ..character_entry(&c)
+                    },
                     Err(err) => Entry {
                         title: e.name.clone(),
                         subtitle: e.race.clone(),
@@ -291,6 +297,7 @@ fn character_entry(c: &Character) -> Entry {
         sub => format!("{} ({sub})", d.race),
     };
     Entry {
+        key: String::new(),
         title: d.name.clone(),
         subtitle: format!("{race} {}", d.class_title),
         groups: groups([
@@ -370,6 +377,7 @@ fn race_entry(object: &Object) -> Option<Entry> {
         .map(|(name, a)| format!("{name} {a:+}"))
         .collect();
     Some(Entry {
+        key: String::new(),
         title: r.name.clone(),
         subtitle: adjustments.join(", "),
         groups: groups([
@@ -453,6 +461,7 @@ fn part_entry(object: &Object) -> Option<Entry> {
         return None;
     }
     Some(Entry {
+        key: String::new(),
         title: p.head.name.clone(),
         subtitle: String::new(),
         groups: Vec::new(),
@@ -466,6 +475,7 @@ fn spell_entry(object: &Object) -> Option<Entry> {
     };
     let kind = if s.priest != 0 { "Priest" } else { "Wizard" };
     Some(Entry {
+        key: String::new(),
         title: s.name.clone(),
         subtitle: format!("{kind} level {}", s.level),
         groups: groups([Group::new("Spell")
@@ -487,6 +497,7 @@ fn psionic_entry(object: &Object) -> Option<Entry> {
         return None;
     };
     Some(Entry {
+        key: String::new(),
         title: p.name.clone(),
         subtitle: p.cost.clone(),
         groups: groups([Group::new("Power")
@@ -520,6 +531,7 @@ fn monster_entry(object: &Object) -> Option<Entry> {
     .collect::<Vec<_>>()
     .join(", ");
     Some(Entry {
+        key: String::new(),
         title: m.name.clone(),
         subtitle: m.climate_terrain.clone(),
         groups: groups([
