@@ -4,6 +4,7 @@
 
 use std::path::PathBuf;
 
+use cr_formats::convert::ConversionMaps;
 use cr_formats::database::ObjectList;
 
 fn installation() -> Option<PathBuf> {
@@ -54,4 +55,51 @@ fn races() {
 fn classes() {
     round_trip_list("Database/Class.dat");
     round_trip_list("UserDbas/ClassU.dat");
+}
+
+#[test]
+fn treasure_tables() {
+    round_trip_list("Database/Treasure.dat");
+    round_trip_list("UserDbas/Treasure.dat");
+}
+
+#[test]
+fn saved_treasures() {
+    round_trip_list("Database/TreaBun.dat");
+    round_trip_list("UserDbas/TreaBunU.dat");
+}
+
+#[test]
+fn psionic_powers() {
+    round_trip_list("Database/Psionic.dat");
+    round_trip_list("UserDbas/PsionicU.dat");
+}
+
+#[test]
+fn traps() {
+    round_trip_list("Database/Traps.dat");
+    round_trip_list("UserDbas/TrapsU.dat");
+}
+
+#[test]
+fn phrase_spacing() {
+    round_trip_list("Database/Phrase.DAT");
+}
+
+#[test]
+fn conversion_maps() {
+    let Some(dir) = installation() else {
+        eprintln!("CORERULES_DIR not set; skipping Convert.dat");
+        return;
+    };
+    let path = find(&dir, "Database/Convert.dat").expect("Convert.dat not found");
+    let data = std::fs::read(&path).unwrap();
+    let doc = ConversionMaps::parse(&data).unwrap_or_else(|e| panic!("Convert.dat: {e}"));
+    let sizes: Vec<usize> = doc.maps.iter().map(Vec::len).collect();
+    assert_eq!(sizes, [1454, 1348, 6, 407, 312, 1329, 65, 13]);
+    assert_eq!(
+        doc.to_bytes().unwrap(),
+        data,
+        "Convert.dat changed on write"
+    );
 }

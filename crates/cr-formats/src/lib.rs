@@ -7,11 +7,16 @@
 pub mod archive;
 pub mod character;
 pub mod classes;
+pub mod convert;
 pub mod database;
 pub mod field;
 pub mod inventory;
 pub mod object;
+pub mod phrase;
+pub mod psionic;
 pub mod race;
+pub mod traps;
+pub mod treasure;
 
 pub use archive::{ArchiveReader, ArchiveWriter, ClassInfo, ObjectTag};
 pub use field::Field;

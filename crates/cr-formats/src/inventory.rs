@@ -22,8 +22,9 @@ pub struct InventoryItem {
     pub quantity: u32,
     /// What the item contains, as a `CInventoryBundle` object.
     pub contents: Option<Box<Object>>,
-    /// 999 for ordinary gear in the shipped characters.
-    pub unknown_0x14: u32,
+    /// Member +0x08; the constructor sets 999 and every shipped item keeps
+    /// it.
+    pub unknown_0x8: u32,
     pub flag_0x4: u8,
     /// Extra data some items carry; a presence byte precedes it.
     pub extra: Option<InventoryExtra>,
@@ -35,7 +36,7 @@ impl Field for InventoryItem {
             name: r.read_string()?,
             quantity: r.read_u32()?,
             contents: Field::read(r)?,
-            unknown_0x14: r.read_u32()?,
+            unknown_0x8: r.read_u32()?,
             flag_0x4: r.read_u8()?,
             extra: match r.read_u8()? {
                 0 => None,
@@ -48,7 +49,7 @@ impl Field for InventoryItem {
         w.write_string(&self.name)?;
         w.write_u32(self.quantity);
         self.contents.write(w)?;
-        w.write_u32(self.unknown_0x14);
+        w.write_u32(self.unknown_0x8);
         w.write_u8(self.flag_0x4);
         match &self.extra {
             None => w.write_u8(0),

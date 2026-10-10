@@ -44,6 +44,12 @@ objects! {
     Class(Box<crate::classes::Class>) = "CClassOb", 88;
     KitBonus(crate::classes::KitBonus) = "CPartKitBonusOb", 1;
     InventoryBundle(crate::inventory::InventoryBundle) = "CInventoryBundle", 1;
+    TreasureTable(crate::treasure::TreasureTable) = "CTreasureSingleTableOb", 1;
+    TreasureTableEntry(Box<crate::treasure::TreasureTableEntry>) = "CTreasureTableEntry", 1;
+    Treasure(crate::treasure::Treasure) = "CTreasureOb", 95;
+    PsionicPower(Box<crate::psionic::PsionicPower>) = "CPsionicPowerOb", 96;
+    Trap(Box<crate::traps::Trap>) = "CTrapOb", 95;
+    PhraseSpacing(Box<crate::phrase::PhraseSpacing>) = "CPhraseSpacingOb", 88;
 }
 
 impl Object {
