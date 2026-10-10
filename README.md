@@ -8,6 +8,8 @@ open in the other.
 > This project contains no TSR or Wizards of the Coast content. It reads the
 > rules data from a Core Rules installation you already own.
 
+![The app showing a character made in the original program](docs/screenshots/character.png)
+
 ## Testing against your own installation
 
 The rules databases are copyrighted and are not part of this repository.
@@ -30,13 +32,18 @@ Early work (phase 0 of the plan): the file formats are being mapped.
 - [x] Field layouts documented in docs/formats
 - [x] Monsters and encounters
 - [x] Every shipped database in Rust, round-trip tested
+- [x] Core Rules 2.0 (without the Expansion) databases, round-trip tested
+- [x] GNOME app: browse characters, races, classes, items, spells, psionics
+      and monsters of an installation or the CD
+- [ ] 2.0 character files checked against files the 2.0 program wrote
+- [ ] Character editing
 
 ## Layout
 
 | Crate | Purpose |
 | --- | --- |
 | `cr-formats` | Readers and writers for the original file formats, no UI |
-| `cr-store` | Finds and opens an installation (case-insensitive paths) |
+| `cr-store` | Finds and opens an installation (case-insensitive paths) and builds the catalog the app shows |
 | `cr-cli` | `cr` command for inspecting data |
 | `cr-gtk` | The GNOME app |
 
@@ -59,7 +66,8 @@ Install Core Rules 2.0 (and the Expansion) with Wine. The tools look in
 ```sh
 cargo run -p cr-cli -- chars
 cargo run -p cr-cli -- survey "/path/to/AD&D Core Rules 2.0"
-cargo run -p cr-gtk
+cargo run -p cr-gtk                                # the Wine prefix
+cargo run -p cr-gtk -- "/media/cdrom"               # or any folder with Database/
 ```
 
 Format notes live in [`docs/formats`](docs/formats).

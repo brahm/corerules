@@ -142,8 +142,10 @@ record! {
         unknown_0x54: [i32; 2],
         unknown_0x84: [i32; 3],
         unknown_0xb4: [i32; 2],
-        /// Database identifier: 1000s warriors, 2000s wizards, 3000s
-        /// priests, 4000s rogues (Fighter 1000, Paladin 1001).
+        /// Database identifier: 1000s warriors, 2000s rogues, 3000s
+        /// priests, 4000s wizards, 5000 psionicist (Fighter 1000, Paladin
+        /// 1001). `unknown_0x14[0]` holds the group, 0 to 4, in the same
+        /// order.
         id: i32,
         unknown_0x50: i32,
         unknown_0xbc: [i32; 3],

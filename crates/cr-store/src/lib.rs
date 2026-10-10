@@ -4,6 +4,8 @@
 //! inconsistent case (`Database` from the installer, `DATABASE` on the CD,
 //! `index.chr` next to `INDEX.CHR`). Every lookup here ignores case.
 
+pub mod catalog;
+
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
