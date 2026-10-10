@@ -6,6 +6,7 @@ use cr_formats::character::Character;
 use cr_formats::database::survey;
 use cr_store::Installation;
 use cr_store::edit::CharacterDetails;
+use cr_store::lists::CharacterLists;
 
 const USAGE: &str = "usage:
   cr survey [INSTALL_DIR]   list database files, record counts and classes
@@ -14,7 +15,9 @@ const USAGE: &str = "usage:
                             change a character in Chars/FILE; fields: name,
                             player, social_class, age, height, weight,
                             str, dex, con, int, wis, cha (score and both
-                            subabilities), exceptional
+                            subabilities), exceptional; LIST+=NAME and
+                            LIST-=NAME for the lists weapon, nwp, language,
+                            wizard, priest (spells known) and item (carried)
 
 Without INSTALL_DIR, the installation in the Wine prefix is used.";
 
@@ -99,8 +102,31 @@ fn cmd_edit(install: &Installation, args: &[String]) -> cr_store::Result<()> {
     let (file, changes) = args
         .split_first()
         .ok_or_else(|| invalid("edit needs a character file".into()))?;
-    let mut details = CharacterDetails::of(&install.character(file)?);
+    let character = install.character(file)?;
+    let mut details = CharacterDetails::of(&character);
+    let mut lists = CharacterLists::of(&character);
     for change in changes {
+        if let Some((list, value, add)) = list_change(change) {
+            let list = match list {
+                "weapon" => &mut lists.weapon_proficiencies,
+                "nwp" => &mut lists.nonweapon_proficiencies,
+                "language" => &mut lists.languages,
+                "wizard" => &mut lists.wizard_spells,
+                "priest" => &mut lists.priest_spells,
+                "item" => &mut lists.carried,
+                _ => return Err(invalid(format!("unknown list {list}"))),
+            };
+            if add {
+                list.push(value.into());
+            } else {
+                let i = list
+                    .iter()
+                    .position(|n| n == value)
+                    .ok_or_else(|| invalid(format!("{value} is not in the list")))?;
+                list.remove(i);
+            }
+            continue;
+        }
         let (field, value) = change
             .split_once('=')
             .ok_or_else(|| invalid(format!("{change}: expected FIELD=VALUE")))?;
@@ -124,5 +150,15 @@ fn cmd_edit(install: &Installation, args: &[String]) -> cr_store::Result<()> {
             },
         }
     }
-    install.save_character_details(file, &details)
+    install.save_character(file, &details, Some(&lists))
+}
+
+/// `LIST+=NAME` or `LIST-=NAME`: the list, the name and whether to add.
+fn list_change(change: &str) -> Option<(&str, &str, bool)> {
+    let (left, value) = change.split_once('=')?;
+    if let Some(list) = left.strip_suffix('+') {
+        Some((list, value, true))
+    } else {
+        left.strip_suffix('-').map(|list| (list, value, false))
+    }
 }
