@@ -36,7 +36,11 @@ Early work (phase 0 of the plan): the file formats are being mapped.
 - [x] GNOME app: browse characters, races, classes, items, spells, psionics
       and monsters of an installation or the CD
 - [x] 2.0 character files checked against files the 2.0 program wrote
-- [ ] Character editing
+- [x] Character editing: name, player, social class, age, height, weight
+      and ability scores, checked by opening the edited files in both
+      original programs (close the original program while editing; it
+      keeps the character list in memory)
+- [ ] Editing race, class, proficiencies, spells and equipment
 
 ## Layout
 
