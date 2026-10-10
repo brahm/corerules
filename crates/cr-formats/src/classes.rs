@@ -139,6 +139,9 @@ record! {
         ability_requirements: [i32; 6],
         unknown_0x34: [i32; 6],
         unknown_0x4c: i32,
+        /// Skills & Powers character points a 1st-level character of the
+        /// class spends on class abilities (Fighter 15, Cleric 125), then
+        /// a second value (30 for most classes).
         unknown_0x54: [i32; 2],
         unknown_0x84: [i32; 3],
         unknown_0xb4: [i32; 2],

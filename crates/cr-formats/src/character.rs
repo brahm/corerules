@@ -312,6 +312,8 @@ record! {
         sheet_options: Option<SheetOptions> = if v > 28,
         classes: ClassList,
         weapon_proficiencies: Vec<String>,
+        /// Skills & Powers weapon lists; `[3]` holds the weapons the
+        /// character specializes in.
         unknown_0xac: [Vec<String>; 7],
         unknown_0x19c4: Vec<String>,
         racial_abilities: Vec<String>,
@@ -345,6 +347,8 @@ record! {
         /// `nonweapon_costs`, `nonweapon_bonuses` and `nonweapon_details`
         /// have one entry each per proficiency.
         nonweapon_proficiencies: Vec<String>,
+        /// Skills & Powers traits (`[0]`, Traits parts) and disadvantages
+        /// (`[1]`, Disadvantages parts).
         unknown_0x1830: [Vec<String>; 3],
         unknown_0x98: Vec<String>,
         /// One `CStringArray` object per nonweapon proficiency: the

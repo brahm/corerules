@@ -24,6 +24,10 @@ record! {
         /// 10; Elf: ranger 15, no paladin). 0 is both "not allowed" and,
         /// for humans and the half-elf bard, "unlimited".
         level_limits: [i32; 9],
+        /// Skills & Powers character points for racial abilities (Dwarf
+        /// 45, Human 10, 0 for the monster races), and how many of them a
+        /// character may keep for later steps (5 for demihumans, 10 for
+        /// humans).
         unknown_0xa8: i32,
         unknown_0xac: i32,
         /// Database identifier (Dwarf 106, Elf 107, Human 119).
@@ -66,10 +70,15 @@ record! {
         unknown_0x84: [i32; 9],
         unknown_0x184: i32,
         unknown_0x190: [i32; 10],
-        /// Languages a character of this race may know.
+        /// Languages a character of this race knows: the race's own
+        /// language for a main race, the whole package of a subrace, which
+        /// a Skills & Powers character gets as native languages.
         languages: Vec<String>,
         unknown_0xf8: Vec<String>,
-        /// Racial abilities offered by Skills & Powers.
+        /// Racial abilities a new character starts with: a subrace's
+        /// package (Hill dwarf: infravision, melee combat, mining detection,
+        /// saving throw bonuses), a monster race's fixed abilities. Both
+        /// programs write them for Core Rules characters too.
         abilities: Vec<String>,
         unknown_0x1b8: Vec<String>,
         /// Allowed multi-class combinations (`CClassMultiClassOb`).

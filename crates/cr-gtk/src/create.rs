@@ -7,7 +7,9 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use cr_store::create::{
-    ABILITIES, CreationRules, Dice, Draft, RollMethod, STANDARD_PACK, max_spells_per_level,
+    ABILITIES, CreationRules, DISADVANTAGE_POINTS, Dice, Draft, METHOD_VII_POINTS,
+    METHOD_VIII_DICE, MOST_DISADVANTAGES, RollMethod, STANDARD_PACK, SUBABILITIES,
+    SUBABILITY_SPREAD, max_spells_per_level, point_table, roll_dice_pool,
 };
 use cr_store::settings::{SETTINGS, Setting};
 use gtk::glib;
@@ -213,6 +215,80 @@ fn slots(n: u32) -> String {
     }
 }
 
+/// "Axe bonus" for "Dwarf, Axe bonus (5)": the race or class and the cost
+/// are shown elsewhere.
+fn ability_title(name: &str) -> String {
+    let name = name.split_once(", ").map_or(name, |(_, rest)| rest);
+    match name.rsplit_once(" (") {
+        Some((title, cost)) if cost.trim_end_matches(')').parse::<i32>().is_ok() => title,
+        _ => name,
+    }
+    .to_owned()
+}
+
+fn points(n: i64) -> String {
+    if n.abs() == 1 {
+        format!("{n} point")
+    } else {
+        format!("{n} points")
+    }
+    .replace('-', "−")
+}
+
+/// One check row per ability with its cost; `changed` gets the names
+/// checked after every toggle.
+fn ability_rows(
+    group: &adw::PreferencesGroup,
+    choices: &[(String, i32)],
+    selected: &[String],
+    changed: impl Fn(Vec<String>) + 'static,
+) {
+    let checks: Rc<RefCell<Vec<(String, gtk::CheckButton)>>> = Rc::default();
+    let changed = Rc::new(changed);
+    for (name, cost) in choices {
+        // The databases have some abilities in two versions that differ
+        // only in cost (Followers (5) and (10)); those keep it.
+        let mut title = ability_title(name);
+        if choices
+            .iter()
+            .any(|(other, _)| other != name && ability_title(other) == title)
+        {
+            title = name
+                .split_once(", ")
+                .map_or(name.as_str(), |n| n.1)
+                .to_owned();
+        }
+        let check = gtk::CheckButton::builder()
+            .valign(gtk::Align::Center)
+            .active(selected.contains(name))
+            .build();
+        let row = adw::ActionRow::builder()
+            .title(escape(&title))
+            .subtitle(if *cost < 0 {
+                format!("Gives {}", points(i64::from(-cost)))
+            } else {
+                points(i64::from(*cost))
+            })
+            .activatable_widget(&check)
+            .build();
+        row.add_prefix(&check);
+        check.connect_toggled({
+            let (checks, changed) = (checks.clone(), changed.clone());
+            move |_| {
+                let names = checks
+                    .borrow()
+                    .iter()
+                    .filter(|(_, c)| c.is_active())
+                    .map(|(n, _)| n.clone())
+                    .collect();
+                changed(names);
+            }
+        });
+        group.add(&row);
+        checks.borrow_mut().push((name.clone(), check));
+    }
+}
+
 fn scores_summary(scores: &[u32; 6]) -> String {
     SHORT
         .iter()
@@ -231,8 +307,36 @@ impl Wizard {
         self.0.nav.push(&page);
     }
 
-    /// The campaign setting.
+    /// The rules and the campaign setting.
     fn setting_page(&self) -> adw::NavigationPage {
+        let rules_group = adw::PreferencesGroup::builder()
+            .title("Rules")
+            .description("The original's Core Rules and Player's Option buttons")
+            .build();
+        let skills_and_powers = Rc::new(RefCell::new(false));
+        radio_rows(
+            &rules_group,
+            &[
+                (
+                    "Core Rules".into(),
+                    "Player's Handbook: proficiency slots".into(),
+                ),
+                (
+                    "Player's Option".into(),
+                    "Skills & Powers: subabilities, and character points for racial and \
+                     class abilities, proficiencies and traits"
+                        .into(),
+                ),
+            ],
+            0,
+            {
+                let skills_and_powers = skills_and_powers.clone();
+                move |i| *skills_and_powers.borrow_mut() = i == 1
+            },
+        );
+        // Core Rules 2.0 has no Player's Option.
+        rules_group.set_visible(self.rules().expansion);
+
         let group = adw::PreferencesGroup::builder()
             .title("Campaign Setting")
             .description(
@@ -254,17 +358,23 @@ impl Wizard {
         next.connect_clicked({
             let this = self.clone();
             move |_| {
-                this.0.draft.borrow_mut().setting = *chosen.borrow();
+                {
+                    let mut d = this.0.draft.borrow_mut();
+                    d.setting = *chosen.borrow();
+                    d.skills_and_powers = *skills_and_powers.borrow();
+                }
                 this.push(this.abilities_page());
             }
         });
-        step("New Character", &[&group], &next, None)
+        step("New Character", &[&rules_group, &group], &next, None)
     }
 
     /// Rolling the ability scores.
     fn abilities_page(&self) -> adw::NavigationPage {
-        let methods: Vec<String> = RollMethod::ALL.iter().map(|m| m.name().into()).collect();
-        let method_row = combo_row("Method", &methods, RollMethod::FourDice.name());
+        let skills_and_powers = self.0.draft.borrow().skills_and_powers;
+        let methods = RollMethod::offered(skills_and_powers);
+        let names: Vec<String> = methods.iter().map(|m| m.name().into()).collect();
+        let method_row = combo_row("Method", &names, RollMethod::FourDice.name());
         let method_group = adw::PreferencesGroup::new();
         method_group.add(&method_row);
 
@@ -275,15 +385,29 @@ impl Wizard {
             .build();
         let scores: Rc<RefCell<[u32; 6]>> = Rc::new(RefCell::new([10; 6]));
         let method = Rc::new(RefCell::new(RollMethod::FourDice));
+        // Points to divide and the highest score (Methods VII and IX), and
+        // the 2d6 that gave them.
+        let budget = Rc::new(RefCell::new((METHOD_VII_POINTS, 18, 0)));
+        // Whether Method VIII's scores were rolled with the dice shown.
+        let pool_rolled = Rc::new(RefCell::new(false));
+        let next = next_button("_Next");
 
         // Rolled scores show as labels, moved up and down when the method
-        // lets the player arrange them; typed scores use spin rows.
+        // lets the player arrange them; typed or divided scores use spin
+        // rows, and Method VIII has a spin row of dice per ability.
         let mut labels = Vec::new();
         let mut rolled_rows = Vec::new();
         let mut arrows = Vec::new();
         let entered: Vec<adw::SpinRow> = ABILITIES
             .iter()
             .map(|a| spin_row(a, "", 10, 3, 18))
+            .collect();
+        let dice_rows: Vec<adw::SpinRow> = ABILITIES
+            .iter()
+            .map(|a| spin_row(a, "4 dice", 4, 3, 6))
+            .collect();
+        let pool_labels: Vec<gtk::Label> = (0..6)
+            .map(|_| gtk::Label::builder().css_classes(["title-4"]).build())
             .collect();
         for (a, name) in ABILITIES.iter().enumerate() {
             let label = gtk::Label::builder().css_classes(["title-4"]).build();
@@ -305,8 +429,10 @@ impl Wizard {
             row.add_suffix(&label);
             row.add_suffix(&up);
             row.add_suffix(&down);
+            dice_rows[a].add_prefix(&pool_labels[a]);
             scores_group.add(&row);
             scores_group.add(&entered[a]);
+            scores_group.add(&dice_rows[a]);
             labels.push(label);
             rolled_rows.push(row);
             arrows.push((up, down));
@@ -319,18 +445,65 @@ impl Wizard {
                 arrows.clone(),
                 roll.clone(),
             );
-            let method_row = method_row.clone();
+            let (dice_rows, pool_labels, budget, pool_rolled) = (
+                dice_rows.clone(),
+                pool_labels.clone(),
+                budget.clone(),
+                pool_rolled.clone(),
+            );
+            let (method_row, scores_group, next) =
+                (method_row.clone(), scores_group.clone(), next.clone());
             move || {
                 let m = *method.borrow();
+                let typed = m == RollMethod::Enter || m.divided();
+                let pool = m == RollMethod::DicePool;
                 method_row.set_subtitle(m.description());
-                roll.set_visible(m != RollMethod::Enter);
+                roll.set_visible(!matches!(m, RollMethod::Enter | RollMethod::Points));
+                let (points, highest, rolled) = *budget.borrow();
                 for a in 0..6 {
                     labels[a].set_label(&scores.borrow()[a].to_string());
-                    rolled_rows[a].set_visible(m != RollMethod::Enter);
-                    entered[a].set_visible(m == RollMethod::Enter);
+                    rolled_rows[a].set_visible(!typed && !pool);
+                    entered[a].set_visible(typed);
+                    dice_rows[a].set_visible(pool);
                     arrows[a].0.set_visible(m.arranged());
                     arrows[a].1.set_visible(m.arranged());
+                    if m.divided() {
+                        entered[a].adjustment().set_upper(highest.into());
+                    } else {
+                        entered[a].adjustment().set_upper(18.0);
+                    }
+                    let n = dice_rows[a].value() as u32;
+                    dice_rows[a].set_subtitle(&format!("{n} dice"));
+                    pool_labels[a].set_label(&if *pool_rolled.borrow() {
+                        scores.borrow()[a].to_string()
+                    } else {
+                        "–".to_owned()
+                    });
                 }
+                let ok = if m.divided() {
+                    let total: u32 = entered.iter().map(|e| e.value() as u32).sum();
+                    let left = points as i64 - total as i64;
+                    let roll = if m == RollMethod::RolledPoints {
+                        format!("2d6 rolled {rolled}: ")
+                    } else {
+                        String::new()
+                    };
+                    scores_group.set_description(Some(&format!(
+                        "{roll}{left} of {points} points left · highest score {highest}"
+                    )));
+                    left == 0
+                } else if pool {
+                    let total: u32 = dice_rows.iter().map(|e| e.value() as u32).sum();
+                    let left = METHOD_VIII_DICE as i64 - total as i64;
+                    scores_group.set_description(Some(&format!(
+                        "{left} of {METHOD_VIII_DICE} dice left · roll when all are given out"
+                    )));
+                    left == 0 && *pool_rolled.borrow()
+                } else {
+                    scores_group.set_description(None);
+                    true
+                };
+                next.set_sensitive(ok);
             }
         });
         let reroll = Rc::new({
@@ -340,11 +513,29 @@ impl Wizard {
                 method.clone(),
                 refresh.clone(),
             );
+            let (budget, pool_rolled, dice_rows) =
+                (budget.clone(), pool_rolled.clone(), dice_rows.clone());
             move || {
                 let m = *method.borrow();
-                if m != RollMethod::Enter {
-                    *scores.borrow_mut() = m.roll(&mut this.0.dice.borrow_mut());
+                let mut dice = this.0.dice.borrow_mut();
+                match m {
+                    RollMethod::Enter => {}
+                    RollMethod::Points => *budget.borrow_mut() = (METHOD_VII_POINTS, 18, 0),
+                    RollMethod::RolledPoints => {
+                        let roll = dice.roll(2, 6);
+                        let (points, highest) = point_table(roll);
+                        *budget.borrow_mut() = (points, highest, roll);
+                    }
+                    RollMethod::DicePool => {
+                        let counts: [u32; 6] = std::array::from_fn(|a| dice_rows[a].value() as u32);
+                        if counts.iter().sum::<u32>() == METHOD_VIII_DICE {
+                            *scores.borrow_mut() = roll_dice_pool(counts, &mut dice);
+                            *pool_rolled.borrow_mut() = true;
+                        }
+                    }
+                    _ => *scores.borrow_mut() = m.roll(&mut dice),
                 }
+                drop(dice);
                 refresh();
             }
         });
@@ -359,10 +550,21 @@ impl Wizard {
                 });
             }
         }
+        for row in &entered {
+            let refresh = refresh.clone();
+            row.connect_value_notify(move |_| refresh());
+        }
+        for row in &dice_rows {
+            let (refresh, pool_rolled) = (refresh.clone(), pool_rolled.clone());
+            row.connect_value_notify(move |_| {
+                *pool_rolled.borrow_mut() = false;
+                refresh();
+            });
+        }
         method_row.connect_selected_notify({
             let (method, reroll) = (method.clone(), reroll.clone());
             move |row| {
-                *method.borrow_mut() = RollMethod::ALL[row.selected() as usize];
+                *method.borrow_mut() = methods[row.selected() as usize];
                 reroll();
             }
         });
@@ -372,11 +574,11 @@ impl Wizard {
         });
         reroll();
 
-        let next = next_button("_Next");
         next.connect_clicked({
             let this = self.clone();
             move |_| {
-                let values = if *method.borrow() == RollMethod::Enter {
+                let m = *method.borrow();
+                let values = if m == RollMethod::Enter || m.divided() {
                     std::array::from_fn(|a| entered[a].value() as u32)
                 } else {
                     *scores.borrow()
@@ -508,12 +710,20 @@ impl Wizard {
                     .get(subrace_row.selected() as usize)
                     .cloned()
                     .unwrap_or_else(|| race.clone());
-                {
+                let skills_and_powers = {
                     let mut d = this.0.draft.borrow_mut();
+                    if d.race != race || d.subrace != subrace {
+                        d.racial_abilities = this.rules().racial_package(&race, &subrace);
+                    }
                     d.race = race;
                     d.subrace = subrace;
+                    d.skills_and_powers
+                };
+                if skills_and_powers {
+                    this.push(this.racial_page());
+                } else {
+                    this.push(this.class_page());
                 }
-                this.push(this.class_page());
             }
         });
         step(
@@ -579,10 +789,149 @@ impl Wizard {
                     return;
                 };
                 this.start_details(classes);
-                this.push(this.details_page());
+                if this.0.draft.borrow().skills_and_powers {
+                    this.push(this.class_abilities_page());
+                } else {
+                    this.push(this.details_page());
+                }
             }
         });
         step("Class", &[&group], &next, None)
+    }
+
+    /// Skills & Powers: racial abilities bought with the race's points,
+    /// starting from the subrace's package as the original does.
+    fn racial_page(&self) -> adw::NavigationPage {
+        let d = self.0.draft.borrow().clone();
+        let rules = self.rules();
+        let (total, saved) = rules.racial_points(&d.race, &d.subrace);
+        let choices = rules.racial_ability_choices(&d.race, &d.subrace);
+        let group = adw::PreferencesGroup::builder()
+            .title("Racial Abilities")
+            .build();
+        let next = next_button("_Next");
+        let chosen = Rc::new(RefCell::new(d.racial_abilities.clone()));
+        let update = Rc::new({
+            let (this, group, next, chosen) =
+                (self.clone(), group.clone(), next.clone(), chosen.clone());
+            move || {
+                let mut probe = this.0.draft.borrow().clone();
+                probe.racial_abilities = chosen.borrow().clone();
+                let left = this.rules().racial_points_left(&probe);
+                group.set_description(Some(&format!(
+                    "{} of {} left; up to {} kept for proficiencies",
+                    points(left),
+                    total,
+                    saved
+                )));
+                next.set_sensitive(left >= 0);
+            }
+        });
+        if total == 0 || choices.is_empty() {
+            // Monster races come with fixed abilities.
+            group.set_description(Some("The race's abilities are fixed"));
+            for name in &d.racial_abilities {
+                group.add(
+                    &adw::ActionRow::builder()
+                        .title(escape(&ability_title(name)))
+                        .build(),
+                );
+            }
+            if d.racial_abilities.is_empty() {
+                group.add(
+                    &adw::ActionRow::builder()
+                        .title("None")
+                        .css_classes(["dim-label"])
+                        .build(),
+                );
+            }
+        } else {
+            ability_rows(&group, &choices, &d.racial_abilities, {
+                let (chosen, update) = (chosen.clone(), update.clone());
+                move |names| {
+                    *chosen.borrow_mut() = names;
+                    update();
+                }
+            });
+            update();
+        }
+        next.connect_clicked({
+            let this = self.clone();
+            move |_| {
+                this.0.draft.borrow_mut().racial_abilities = chosen.borrow().clone();
+                this.push(this.class_page());
+            }
+        });
+        step(&format!("{} Abilities", d.subrace), &[&group], &next, None)
+    }
+
+    /// Skills & Powers: class abilities bought with each class's points,
+    /// starting from the class's defaults.
+    fn class_abilities_page(&self) -> adw::NavigationPage {
+        let d = self.0.draft.borrow().clone();
+        let next = next_button("_Next");
+        let chosen = Rc::new(RefCell::new(d.class_abilities.clone()));
+        let groups: Vec<adw::PreferencesGroup> = d
+            .classes
+            .iter()
+            .map(|class| {
+                adw::PreferencesGroup::builder()
+                    .title(escape(&format!("{class} Abilities")))
+                    .build()
+            })
+            .collect();
+        let update = Rc::new({
+            let (this, groups, next, chosen) =
+                (self.clone(), groups.clone(), next.clone(), chosen.clone());
+            move || {
+                let mut probe = this.0.draft.borrow().clone();
+                probe.class_abilities = chosen.borrow().clone();
+                let mut fine = true;
+                for (slot, group) in groups.iter().enumerate() {
+                    let total = probe
+                        .classes
+                        .get(slot)
+                        .and_then(|c| this.rules().class(c))
+                        .map_or(0, |c| c.points.max(0));
+                    let left = this.rules().class_points_left(&probe, slot);
+                    fine &= left >= 0;
+                    group.set_description(Some(&format!(
+                        "{} of {total} left; what is left goes to proficiencies",
+                        points(left)
+                    )));
+                }
+                next.set_sensitive(fine);
+            }
+        });
+        for (slot, (class, group)) in d.classes.iter().zip(&groups).enumerate() {
+            let choices = self.rules().class_ability_choices(class);
+            let selected = d.class_abilities.get(slot).cloned().unwrap_or_default();
+            ability_rows(group, &choices, &selected, {
+                let (chosen, update) = (chosen.clone(), update.clone());
+                move |names| {
+                    if let Some(abilities) = chosen.borrow_mut().get_mut(slot) {
+                        *abilities = names;
+                    }
+                    update();
+                }
+            });
+        }
+        update();
+        next.connect_clicked({
+            let this = self.clone();
+            move |_| {
+                {
+                    let mut d = this.0.draft.borrow_mut();
+                    d.class_abilities = chosen.borrow().clone();
+                    if this.rules().specialization_cost(&d).is_none() {
+                        d.specializations.clear();
+                    }
+                }
+                this.push(this.details_page());
+            }
+        });
+        let groups: Vec<&adw::PreferencesGroup> = groups.iter().collect();
+        step("Class Abilities", &groups, &next, None)
     }
 
     /// Rolls what the details page starts with for the chosen classes, as
@@ -614,7 +963,15 @@ impl Wizard {
             d.spells.clear();
             d.purchases.clear();
         }
-        d.languages = rules.native_languages(&race);
+        if changed || d.class_abilities.len() != d.classes.len() {
+            d.class_abilities = d
+                .classes
+                .iter()
+                .map(|c| rules.default_class_abilities(c))
+                .collect();
+            d.specializations.clear();
+        }
+        d.languages = rules.native_languages(&d);
     }
 
     /// Name, player, gender, alignment, kit, social class, age, height,
@@ -703,6 +1060,55 @@ impl Wizard {
         let combat = adw::PreferencesGroup::new();
         combat.add(&hit_points);
         combat.add(&exceptional);
+
+        // Skills & Powers splits each score in two subabilities, up to
+        // two points apart either way.
+        let subabilities = adw::PreferencesGroup::builder()
+            .title("Subabilities")
+            .description("Raising one subability lowers the other as much")
+            .visible(d.skills_and_powers)
+            .build();
+        let spread_rows: Vec<adw::SpinRow> = (0..6)
+            .map(|a| {
+                let row = adw::SpinRow::builder()
+                    .numeric(true)
+                    .adjustment(&gtk::Adjustment::new(
+                        d.subabilities[a].into(),
+                        (-SUBABILITY_SPREAD).into(),
+                        SUBABILITY_SPREAD.into(),
+                        1.0,
+                        1.0,
+                        0.0,
+                    ))
+                    .build();
+                subabilities.add(&row);
+                row
+            })
+            .collect();
+        let spreads = Rc::new({
+            let spread_rows = spread_rows.clone();
+            move || -> [i32; 6] { std::array::from_fn(|a| spread_rows[a].value() as i32) }
+        });
+        let show_subabilities = Rc::new({
+            let (this, spread_rows, spreads) = (self.clone(), spread_rows.clone(), spreads.clone());
+            move || {
+                let mut probe = this.0.draft.borrow().clone();
+                probe.subabilities = spreads();
+                let scores = this.rules().subability_scores(&probe);
+                for (a, row) in spread_rows.iter().enumerate() {
+                    row.set_title(&format!("{} {}", ABILITIES[a], scores[a][0]));
+                    row.set_subtitle(&format!(
+                        "{} {} · {} {}",
+                        SUBABILITIES[a][0], scores[a][1], SUBABILITIES[a][1], scores[a][2]
+                    ));
+                }
+            }
+        });
+        show_subabilities();
+        for row in &spread_rows {
+            let show_subabilities = show_subabilities.clone();
+            row.connect_value_notify(move |_| show_subabilities());
+        }
 
         let race = d.race.clone();
         let male = Rc::new({
@@ -796,35 +1202,42 @@ impl Wizard {
                     d.weight = weight.value() as u32;
                     d.hit_dice = hit_dice.borrow().clone();
                     d.exceptional_strength = exceptional.value() as u32;
+                    if d.skills_and_powers {
+                        d.subabilities = spreads();
+                    }
                 }
                 this.push(this.proficiencies_page());
             }
         });
         step(
             "Details",
-            &[&who, &background, &appearance, &combat],
+            &[&who, &background, &appearance, &combat, &subabilities],
             &next,
             None,
         )
     }
 
-    /// Nonweapon proficiencies, languages and weapon proficiencies.
+    /// Nonweapon proficiencies, languages and weapon proficiencies; with
+    /// Skills & Powers also traits, disadvantages and a weapon
+    /// specialization, all paid in character points.
     fn proficiencies_page(&self) -> adw::NavigationPage {
         let d = self.0.draft.borrow().clone();
         let rules = self.rules();
+        let sp = d.skills_and_powers;
         let adjusted = rules.adjusted(&d.race, &d.scores);
         let nonweapon_slots = rules.nonweapon_slots(&d.classes, adjusted[3]);
         let weapon_slots = rules.weapon_slots(&d.classes);
-        let native = rules.native_languages(&d.race);
+        let weapon_cost = rules.weapon_cost(&d.classes);
+        let native = rules.native_languages(&d);
 
         let nonweapon_spec = {
-            let this = self.clone();
+            let (this, draft) = (self.clone(), d.clone());
             move |name: String| {
-                let cost = this.rules().nonweapon_cost(&name);
+                let cost = this.rules().nonweapon_cost(&draft, &name);
                 RowSpec {
                     value: name.clone(),
                     title: name,
-                    subtitle: slots(cost),
+                    subtitle: if sp { points(cost.into()) } else { slots(cost) },
                     number: None,
                 }
             }
@@ -842,14 +1255,80 @@ impl Wizard {
                 move || {
                     this.rules()
                         .nonweapon_proficiencies()
-                        .iter()
-                        .filter(|(n, _)| !taken.borrow().contains(n))
-                        .map(|(n, _)| n.clone())
+                        .into_iter()
+                        .filter(|n| !taken.borrow().contains(n))
                         .collect()
                 }
             },
             move |name| Some(nonweapon_spec(name)),
         );
+
+        // Traits cost points; disadvantages give them.
+        let trait_spec = {
+            let this = self.clone();
+            move |name: String| RowSpec {
+                value: name.clone(),
+                subtitle: points(this.rules().trait_cost(&name).into()),
+                title: name,
+                number: None,
+            }
+        };
+        let taken_traits: Rc<RefCell<Vec<String>>> = Rc::default();
+        let traits = RowList::new(
+            "Traits",
+            d.traits.iter().cloned().map(&trait_spec).collect(),
+            {
+                let (this, taken) = (self.clone(), taken_traits.clone());
+                move || {
+                    this.rules()
+                        .traits()
+                        .iter()
+                        .map(|t| t.0.clone())
+                        .filter(|n| !taken.borrow().contains(n))
+                        .collect()
+                }
+            },
+            move |name| Some(trait_spec(name)),
+        );
+        traits.group.set_visible(sp);
+        let disadvantage_spec = {
+            let this = self.clone();
+            move |name: String| RowSpec {
+                value: name.clone(),
+                subtitle: format!(
+                    "Gives {}",
+                    points(this.rules().disadvantage_points(&name).into())
+                ),
+                title: name,
+                number: None,
+            }
+        };
+        let taken_disadvantages: Rc<RefCell<Vec<String>>> = Rc::default();
+        let disadvantages = RowList::new(
+            "Disadvantages",
+            d.disadvantages
+                .iter()
+                .cloned()
+                .map(&disadvantage_spec)
+                .collect(),
+            {
+                let (this, taken) = (self.clone(), taken_disadvantages.clone());
+                move || {
+                    if taken.borrow().len() >= MOST_DISADVANTAGES {
+                        return Vec::new();
+                    }
+                    this.rules()
+                        .disadvantages()
+                        .iter()
+                        .map(|t| t.0.clone())
+                        .filter(|n| !taken.borrow().contains(n))
+                        .collect()
+                }
+            },
+            move |name| Some(disadvantage_spec(name)),
+        );
+        disadvantages.group.set_visible(sp);
+
         // Native languages come with the race; others are learned through
         // proficiencies such as Modern Languages, as in the original.
         let languages = adw::PreferencesGroup::builder()
@@ -869,10 +1348,14 @@ impl Wizard {
                     .build(),
             );
         }
-        let weapon_spec = |name: String| RowSpec {
+        let weapon_spec = move |name: String| RowSpec {
             value: name.clone(),
             title: name,
-            subtitle: String::new(),
+            subtitle: if sp {
+                points(weapon_cost.into())
+            } else {
+                String::new()
+            },
             number: None,
         };
         let taken_weapons: Rc<RefCell<Vec<String>>> = Rc::default();
@@ -897,56 +1380,188 @@ impl Wizard {
             move |name| Some(weapon_spec(name)),
         );
 
+        // A fighter with Weapon specialization may specialize in one of
+        // the weapons chosen.
+        let specialization_cost = rules.specialization_cost(&d);
+        let specialization = adw::ComboRow::builder()
+            .title("Weapon Specialization")
+            .subtitle(points(specialization_cost.unwrap_or(0).into()))
+            .model(&gtk::StringList::new(&["None"]))
+            .visible(specialization_cost.is_some())
+            .build();
+        let specialized = Rc::new(RefCell::new(d.specializations.first().cloned()));
+        let filling = Rc::new(std::cell::Cell::new(false));
+        specialization.connect_selected_notify({
+            let (specialized, filling) = (specialized.clone(), filling.clone());
+            move |row| {
+                if !filling.get() {
+                    let value = combo_value(row);
+                    *specialized.borrow_mut() = (value != "None").then_some(value);
+                }
+            }
+        });
+        let points_row = adw::ActionRow::builder()
+            .title("Character Points Left")
+            .subtitle("Kept on the character for later levels")
+            .build();
+        let points_label = gtk::Label::builder()
+            .css_classes(["numeric"])
+            .valign(gtk::Align::Center)
+            .build();
+        points_row.add_suffix(&points_label);
+        let points_group = adw::PreferencesGroup::builder().visible(sp).build();
+        points_group.add(&specialization);
+        points_group.add(&points_row);
+
         let next = next_button("_Next");
         let names = |list: &RowList<String>| -> Vec<String> {
             list.values().into_iter().map(|(v, _)| v).collect()
         };
+        // The draft as the page has it.
+        let current = Rc::new({
+            let (this, nonweapon, traits, disadvantages, weapons, specialized) = (
+                self.clone(),
+                nonweapon.clone(),
+                traits.clone(),
+                disadvantages.clone(),
+                weapons.clone(),
+                specialized.clone(),
+            );
+            move || {
+                let mut probe = this.0.draft.borrow().clone();
+                probe.nonweapon_proficiencies = names(&nonweapon);
+                probe.weapon_proficiencies = names(&weapons);
+                probe.languages = native.clone();
+                if sp {
+                    probe.traits = names(&traits);
+                    probe.disadvantages = names(&disadvantages);
+                    probe.specializations = specialized
+                        .borrow()
+                        .iter()
+                        .filter(|w| probe.weapon_proficiencies.contains(w))
+                        .cloned()
+                        .collect();
+                }
+                probe
+            }
+        });
         let update = Rc::new({
-            let (this, nonweapon, weapons, next) = (
+            let (this, nonweapon, weapons, next, current) = (
                 self.clone(),
                 nonweapon.clone(),
                 weapons.clone(),
                 next.clone(),
+                current.clone(),
             );
+            let (traits, disadvantages) = (traits.clone(), disadvantages.clone());
             let (taken_nonweapon, taken_weapons) = (taken_nonweapon.clone(), taken_weapons.clone());
+            let (taken_traits, taken_disadvantages) =
+                (taken_traits.clone(), taken_disadvantages.clone());
+            let (specialization, specialized) = (specialization.clone(), specialized.clone());
+            let filling = filling.clone();
+            let shown: Rc<RefCell<Vec<String>>> = Rc::default();
             move || {
                 *taken_nonweapon.borrow_mut() = names(&nonweapon);
                 *taken_weapons.borrow_mut() = names(&weapons);
-                let mut probe = this.0.draft.borrow().clone();
-                probe.nonweapon_proficiencies = names(&nonweapon);
-                let spent = this.rules().nonweapon_spent(&probe);
-                let weapons_taken = names(&weapons).len() as u32;
+                *taken_traits.borrow_mut() = names(&traits);
+                *taken_disadvantages.borrow_mut() = names(&disadvantages);
+                let probe = current();
+                let rules = this.rules();
+                if !sp {
+                    let spent = rules.nonweapon_spent(&probe);
+                    let weapons_taken = probe.weapon_proficiencies.len() as u32;
+                    nonweapon.group.set_description(Some(&format!(
+                        "{} of {} left: the class's slots and the languages Intelligence allows",
+                        nonweapon_slots as i64 - spent as i64,
+                        slots(nonweapon_slots)
+                    )));
+                    weapons.group.set_description(Some(&format!(
+                        "{} of {} left",
+                        weapon_slots as i64 - weapons_taken as i64,
+                        slots(weapon_slots)
+                    )));
+                    next.set_sensitive(spent <= nonweapon_slots && weapons_taken <= weapon_slots);
+                    return;
+                }
+                let left = rules.proficiency_points_left(&probe);
                 nonweapon.group.set_description(Some(&format!(
-                    "{} of {} left: the class's slots and the languages Intelligence allows",
-                    nonweapon_slots as i64 - spent as i64,
-                    slots(nonweapon_slots)
+                    "{} of {} left for proficiencies and traits",
+                    points(left),
+                    rules.proficiency_points(&probe)
+                )));
+                let given: u32 = probe
+                    .disadvantages
+                    .iter()
+                    .map(|d| rules.disadvantage_points(d))
+                    .sum();
+                disadvantages.group.set_description(Some(&format!(
+                    "Up to {MOST_DISADVANTAGES}, giving at most {DISADVANTAGE_POINTS} points; \
+                     these give {}",
+                    given.min(DISADVANTAGE_POINTS)
                 )));
                 weapons.group.set_description(Some(&format!(
-                    "{} of {} left",
-                    weapon_slots as i64 - weapons_taken as i64,
-                    slots(weapon_slots)
+                    "{} each; {} come with the class, and points left from the \
+                     proficiencies pay for more",
+                    points(weapon_cost.into()),
+                    points((weapon_slots * weapon_cost).into())
                 )));
-                next.set_sensitive(spent <= nonweapon_slots && weapons_taken <= weapon_slots);
+                // The specialization is one of the weapons chosen.
+                let mut items = vec!["None".to_owned()];
+                items.extend(probe.weapon_proficiencies.iter().cloned());
+                // Only a new list of weapons rebuilds the menu: doing it
+                // while the menu reports a choice would hang GTK.
+                if *shown.borrow() != items {
+                    filling.set(true);
+                    specialization.set_model(Some(&gtk::StringList::new(
+                        &items.iter().map(String::as_str).collect::<Vec<_>>(),
+                    )));
+                    let selected = probe
+                        .specializations
+                        .first()
+                        .and_then(|w| items.iter().position(|i| i == w))
+                        .unwrap_or(0);
+                    specialization.set_selected(selected as u32);
+                    filling.set(false);
+                    if selected == 0 {
+                        *specialized.borrow_mut() = None;
+                    }
+                    *shown.borrow_mut() = items;
+                }
+                let total = rules.points_left(&probe);
+                points_label.set_label(&total.to_string().replace('-', "−"));
+                next.set_sensitive(
+                    left >= 0 && total >= 0 && probe.disadvantages.len() <= MOST_DISADVANTAGES,
+                );
             }
         });
-        for list in [&nonweapon, &weapons] {
+        for list in [&nonweapon, &traits, &disadvantages, &weapons] {
             let update = update.clone();
             list.connect_changed(move || update());
         }
+        specialization.connect_selected_notify({
+            let (update, filling) = (update.clone(), filling.clone());
+            move |_| {
+                if !filling.get() {
+                    update();
+                }
+            }
+        });
         next.connect_clicked({
             let this = self.clone();
-            let (nonweapon, weapons) = (nonweapon.clone(), weapons.clone());
             move |_| {
+                let probe = current();
                 {
                     let mut d = this.0.draft.borrow_mut();
-                    d.nonweapon_proficiencies = names(&nonweapon);
-                    d.languages = native.clone();
-                    let chosen = names(&weapons);
-                    if d.weapon_proficiencies != chosen {
+                    if d.weapon_proficiencies != probe.weapon_proficiencies {
                         // The equipment page starts with one of each.
                         d.purchases.clear();
                     }
-                    d.weapon_proficiencies = chosen;
+                    d.nonweapon_proficiencies = probe.nonweapon_proficiencies;
+                    d.languages = probe.languages;
+                    d.weapon_proficiencies = probe.weapon_proficiencies;
+                    d.traits = probe.traits;
+                    d.disadvantages = probe.disadvantages;
+                    d.specializations = probe.specializations;
                 }
                 if this.rules().is_wizard(&this.0.draft.borrow().classes) {
                     this.push(this.spells_page());
@@ -957,7 +1572,14 @@ impl Wizard {
         });
         step(
             "Proficiencies",
-            &[&nonweapon.group, &languages, &weapons.group],
+            &[
+                &nonweapon.group,
+                &traits.group,
+                &disadvantages.group,
+                &languages,
+                &weapons.group,
+                &points_group,
+            ],
             &next,
             None,
         )

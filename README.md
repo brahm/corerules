@@ -76,8 +76,14 @@ Early work (phase 0 of the plan): the file formats are being mapped.
       original programs. The original has no notion of campaign settings,
       so what each setting allows comes from its campaign book and only
       narrows what the installed databases offer (`crates/cr-store/src/settings.rs`).
-      Not yet: Player's Option creation, rogue skill points, weapon
-      specialization and extra languages at creation
+- [x] Player's Option (Skills & Powers) creation, as the Expansion's
+      Player's Option button: Methods VII to IX, racial and class
+      abilities bought with character points, subabilities, traits,
+      disadvantages, proficiencies paid in points and weapon
+      specialization; checked against a character the Expansion made and
+      by opening the new files in it. Not yet: Method X and Player's
+      Choice, rogue skill points, extra languages, fighting styles and
+      shield and armor proficiencies
 
 ## Layout
 
