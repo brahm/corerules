@@ -52,6 +52,17 @@
     <color type="primary" scheme_preference="dark">#77101b</color>
   </branding>
   <releases>
+    <release version="0.2.0" date="2026-10-10" type="development">
+      <description>
+        <p>Characters can now be created and fully edited.</p>
+        <ul>
+          <li>New Character wizard with Core Rules and Player's Option (Skills &amp; Powers) creation</li>
+          <li>Edit proficiencies, languages, spells known, spellbooks and memorized spells</li>
+          <li>Edit every equipment group with quantities, and spending money</li>
+          <li>Humans can add a class (dual-class) under the Player's Handbook rules</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.1" date="2026-10-10" type="development">
       <description>
         <p>New app icon: a burgundy tome with the dragon ampersand.</p>

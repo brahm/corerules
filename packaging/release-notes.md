@@ -1,8 +1,19 @@
-What's new in 0.1.1: a new app icon, a burgundy tome with the dragon ampersand.
+What's new in 0.2.0:
+
+- New Character (Ctrl+N): the original's creation wizard, with Core Rules
+  methods I to VI and Player's Option (Skills & Powers) methods VII to X
+- Edit weapon and nonweapon proficiencies, languages, spells known,
+  spellbooks and memorized spells
+- Edit all nine equipment groups with quantities, and spending money
+- Humans can add a class (dual-class) under the Player's Handbook rules;
+  race and the classes chosen at creation never change
+
+Every change was checked by opening the files in both original programs.
 
 Preview release: the app opens a Core Rules 2.0 (or Expansion) installation
 or its CD, browses characters, races, classes, items, spells, psionics and
-monsters, and edits characters in files the original programs still open.
+monsters, and creates and edits characters in files the original programs
+still open.
 It contains no rules content; you need your own copy of Core Rules.
 
 | System | File | Install |

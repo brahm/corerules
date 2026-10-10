@@ -4,7 +4,7 @@
 %global debug_package %{nil}
 
 Name:           corerules
-Version:        %{?version_override}%{!?version_override:0.1.1}
+Version:        %{?version_override}%{!?version_override:0.2.0}
 Release:        1%{?dist}
 Summary:        Browse and edit AD&D Core Rules 2.0 characters and rules
 License:        MIT
@@ -50,6 +50,10 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/io.github.brah
 %{_metainfodir}/io.github.brahm.CoreRules.metainfo.xml
 
 %changelog
+* Sat Oct 10 2026 Brahm - 0.2.0-1
+- Create characters (Core Rules and Player's Option) and edit their
+  proficiencies, spells, spellbooks, equipment and money; humans can add a class
+
 * Sat Oct 10 2026 Brahm - 0.1.1-1
 - New app icon
 
