@@ -44,6 +44,14 @@ objects! {
     Class(Box<crate::classes::Class>) = "CClassOb", 88;
     KitBonus(crate::classes::KitBonus) = "CPartKitBonusOb", 1;
     InventoryBundle(crate::inventory::InventoryBundle) = "CInventoryBundle", 1;
+    Part(Box<crate::parts::Part>) = "CPart", 93;
+    PartId(crate::parts::PartId) = "CPartIDOb", 94;
+    PartKit(Box<crate::parts::PartKit>) = "CPartKitOb", 1;
+    PartKitLevel(crate::parts::PartKitLevel) = "CPartKitLevelOb", 1;
+    NumList(crate::parts::NumList) = "CNumList", 1;
+    Spell(Box<crate::spells::Spell>) = "CSpellsOb", 88;
+    ClassesAllowed(crate::allowed::ClassesAllowed) = "CClassesAllowedOb", 95;
+    ClassesAllowedHelper(Box<crate::allowed::ClassesAllowedHelper>) = "CClassesAllowedHelperOb", 95;
     TreasureTable(crate::treasure::TreasureTable) = "CTreasureSingleTableOb", 1;
     TreasureTableEntry(Box<crate::treasure::TreasureTableEntry>) = "CTreasureTableEntry", 1;
     Treasure(crate::treasure::Treasure) = "CTreasureOb", 95;

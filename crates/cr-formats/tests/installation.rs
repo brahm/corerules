@@ -103,3 +103,60 @@ fn conversion_maps() {
         "Convert.dat changed on write"
     );
 }
+
+/// The bytes of `relative`, or `None` when no installation is configured.
+fn installation_file(relative: &str) -> Option<Vec<u8>> {
+    let Some(dir) = installation() else {
+        eprintln!("CORERULES_DIR not set; skipping {relative}");
+        return None;
+    };
+    let path = find(&dir, relative).unwrap_or_else(|| panic!("{relative} not found"));
+    Some(std::fs::read(&path).unwrap())
+}
+
+#[test]
+fn parts() {
+    use cr_formats::Object;
+    use cr_formats::parts::PartsFile;
+    for relative in ["Database/Parts.dat", "UserDbas/PartsU.dat"] {
+        let Some(data) = installation_file(relative) else {
+            return;
+        };
+        let file = PartsFile::parse(&data).unwrap_or_else(|e| panic!("{relative}: {e}"));
+        assert_eq!(
+            file.to_bytes().unwrap(),
+            data,
+            "{relative} changed on write"
+        );
+    }
+    let data = installation_file("Database/Parts.dat").unwrap();
+    let file = PartsFile::parse(&data).unwrap();
+    let kits = file.of_type("Character Kits").unwrap();
+    assert_eq!(kits.len(), 210);
+    let Object::Part(kit) = &kits[0] else {
+        panic!("not a part")
+    };
+    assert_eq!(kit.layout_version(), 7);
+    assert!(matches!(kit.data.kit, Some(Some(ref k)) if matches!(**k, Object::PartKit(_))));
+}
+
+#[test]
+fn spells() {
+    use cr_formats::spells::SpellsFile;
+    for relative in ["Database/Spells.dat", "UserDbas/SpellsU.dat"] {
+        let Some(data) = installation_file(relative) else {
+            return;
+        };
+        let file = SpellsFile::parse(&data).unwrap_or_else(|e| panic!("{relative}: {e}"));
+        assert_eq!(
+            file.to_bytes().unwrap(),
+            data,
+            "{relative} changed on write"
+        );
+    }
+}
+
+#[test]
+fn classes_allowed() {
+    round_trip_list("UserDbas/AllowedU.dat");
+}

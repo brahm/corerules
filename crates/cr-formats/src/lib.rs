@@ -4,6 +4,7 @@
 //! writing it back produces the same bytes, so the original program keeps
 //! working with files this crate has touched.
 
+pub mod allowed;
 pub mod archive;
 pub mod character;
 pub mod classes;
@@ -12,9 +13,11 @@ pub mod database;
 pub mod field;
 pub mod inventory;
 pub mod object;
+pub mod parts;
 pub mod phrase;
 pub mod psionic;
 pub mod race;
+pub mod spells;
 pub mod traps;
 pub mod treasure;
 
