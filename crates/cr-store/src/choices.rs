@@ -1,7 +1,11 @@
 //! The names a character's lists can hold, from the rules databases and
 //! the user's own additions (`UserDbas/PartsU.dat`, `UserDbas/SpellsU.dat`).
 
+use std::collections::HashMap;
+
 use cr_formats::Object;
+use cr_formats::classes::Class;
+use cr_formats::database::ObjectList;
 use cr_formats::parts::PartsFile;
 use cr_formats::spells::SpellsFile;
 
@@ -68,6 +72,76 @@ impl Installation {
             }));
         }
         Ok(sorted(names))
+    }
+}
+
+/// What kind of spells a class casts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Caster {
+    Wizard,
+    Priest,
+    None,
+}
+
+/// The kind of spells the class with this database identifier casts:
+/// wizards (4000s) and bards (2001) cast wizard spells; priests (3000s),
+/// paladins (1001) and rangers (1002) priest spells.
+pub fn caster(class_id: i32) -> Caster {
+    match (class_id / 1000, class_id) {
+        (4, _) | (_, 2001) => Caster::Wizard,
+        (3, _) | (_, 1001 | 1002) => Caster::Priest,
+        _ => Caster::None,
+    }
+}
+
+impl Installation {
+    /// Spell levels by name, wizard or priest.
+    pub fn spell_levels(&self, wizard: bool) -> Result<HashMap<String, u32>> {
+        let mut levels = HashMap::new();
+        for relative in ["Database/Spells.dat", "UserDbas/SpellsU.dat"] {
+            if self.path(relative).is_none() {
+                continue;
+            }
+            let file =
+                SpellsFile::parse(&self.read(relative)?).map_err(|source| Error::Format {
+                    path: relative.into(),
+                    source,
+                })?;
+            for o in if wizard { &file.wizard } else { &file.priest } {
+                if let Object::Spell(s) = o {
+                    levels
+                        .entry(s.name.clone())
+                        .or_insert(s.level.max(0) as u32);
+                }
+            }
+        }
+        Ok(levels)
+    }
+
+    /// Class database identifiers by class name (Fighter 1000).
+    pub fn class_ids(&self) -> Result<HashMap<String, i32>> {
+        let mut ids = HashMap::new();
+        for relative in ["Database/Class.dat", "UserDbas/ClassU.dat"] {
+            if self.path(relative).is_none() {
+                continue;
+            }
+            let list =
+                ObjectList::parse(&self.read(relative)?).map_err(|source| Error::Format {
+                    path: relative.into(),
+                    source,
+                })?;
+            for o in &list.objects {
+                if let Object::Class(class) = o {
+                    let id = match &**class {
+                        Class::Expansion { data, .. } => data.id,
+                        // The 2.0 layout keeps the identifier at value 22.
+                        Class::Core20(data) => data.unknown_0x10[22],
+                    };
+                    ids.entry(class.name().to_owned()).or_insert(id);
+                }
+            }
+        }
+        Ok(ids)
     }
 }
 

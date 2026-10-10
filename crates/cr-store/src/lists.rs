@@ -1,5 +1,6 @@
-//! A character's lists: proficiencies, languages, spells known and the
-//! items carried, with what the original keeps alongside them.
+//! A character's lists: proficiencies, languages, spells (known, in
+//! spellbooks, memorized), equipment and money, with what the original
+//! keeps alongside them.
 //!
 //! Neither original program checks these names when it opens a character,
 //! but only names from the rules databases behave like ones the program
@@ -13,8 +14,14 @@
 //!   by the weight of what is added or removed (contents included); Core
 //!   Rules 2.0 leaves it at 0 in every file it writes, and so does this;
 //! * items stay sorted by name in byte order, and an added item merges into
-//!   an item of the same name that holds nothing, as when buying.
-//!
+//!   an item of the same name that holds nothing, as when buying; an item
+//!   with pages (a spellbook) gets an empty page record of its part's size;
+//! * the Expansion lists the worn armor and worn magical items again after
+//!   the worn items change (2.0 leaves both lists empty);
+//! * money is the coin items among the spending money, and the coin totals
+//!   the equipment page caches follow them;
+//! * a spellbook's pages used and spell count follow its spells, and a
+//!   book cannot hold more pages than it has;
 //! * with Skills & Powers, a nonweapon proficiency is bought with
 //!   character points, so adding one spends its cost from the unspent
 //!   points and removing one refunds what it cost; a character without
@@ -30,13 +37,10 @@ use std::collections::HashMap;
 
 use cr_formats::Object;
 use cr_formats::character::Character;
-use cr_formats::inventory::{InventoryBundle, InventoryItem};
+use cr_formats::inventory::{InventoryBundle, InventoryExtra, InventoryItem};
 use cr_formats::parts::PartsFile;
 
 use crate::{Error, Installation, Result};
-
-/// `inventory` index of the items carried.
-pub const CARRIED: usize = 2;
 
 /// Bundles whose weight counts: carried, readied and worn.
 const WEIGHED: [usize; 3] = [2, 3, 5];
@@ -51,6 +55,40 @@ pub const ITEM_TYPES: [&str; 6] = [
     "Currency Types",
 ];
 
+/// Names of the nine equipment bundles, in `inventory` order.
+pub const BUNDLE_NAMES: [&str; 9] = [
+    "Animals",
+    "Daily Food and Lodging",
+    "Items Carried",
+    "Items Readied",
+    "Items Stored",
+    "Items Worn",
+    "Spending Money",
+    "Services",
+    "Transport",
+];
+
+/// `inventory` index of the items carried.
+pub const CARRIED: usize = 2;
+
+/// `inventory` index of the spending money.
+pub const MONEY: usize = 6;
+
+/// `inventory` index of the items worn.
+const WORN: usize = 5;
+
+/// Coin item names, copper to platinum, and their worth in copper.
+pub const COINS: [(&str, u32); 5] = [
+    ("* Copper Pieces", 1),
+    ("* Silver Pieces", 10),
+    ("* Electrum Pieces", 50),
+    ("* Gold Pieces", 100),
+    ("* Platinum Pieces", 500),
+];
+
+/// Memorized spells per class slot and spell level: wizard, priest.
+pub type Memorized = [[(Vec<String>, Vec<String>); 11]; 5];
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct CharacterLists {
     pub weapon_proficiencies: Vec<String>,
@@ -58,9 +96,54 @@ pub struct CharacterLists {
     pub languages: Vec<String>,
     pub wizard_spells: Vec<String>,
     pub priest_spells: Vec<String>,
-    /// Names of the items carried, one per item (an item may be several,
-    /// such as 3 torches).
-    pub carried: Vec<String>,
+    pub memorized: Memorized,
+    /// The items of each bundle; the spending money's coins are in `coins`.
+    pub equipment: [Vec<Item>; 9],
+    /// Copper, silver, electrum, gold and platinum pieces to spend.
+    pub coins: [u32; 5],
+    /// The spellbooks among the top-level items.
+    pub spellbooks: Vec<Spellbook>,
+}
+
+/// An item in a bundle.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Item {
+    pub name: String,
+    pub quantity: u32,
+    /// Its position in the bundle as read, for an item that was there; it
+    /// keeps its contents and pages.
+    pub original: Option<usize>,
+    /// Names of what it holds, for display.
+    pub contents: Vec<String>,
+}
+
+impl Item {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.into(),
+            quantity: 1,
+            original: None,
+            contents: Vec::new(),
+        }
+    }
+}
+
+/// A spellbook: an item whose part has pages.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Spellbook {
+    /// Where the item is: bundle and position as read.
+    pub bundle: usize,
+    pub position: usize,
+    pub name: String,
+    pub capacity: u32,
+    /// Spell, pages it takes, whether it is a wizard spell.
+    pub spells: Vec<(String, u32, bool)>,
+}
+
+impl Spellbook {
+    pub fn pages_used(&self) -> u32 {
+        self.spells.iter().map(|s| s.1).sum()
+    }
 }
 
 impl CharacterLists {
@@ -72,17 +155,68 @@ impl CharacterLists {
             languages: d.languages.clone(),
             wizard_spells: d.spells.clone(),
             priest_spells: d.priest_spells.clone(),
-            carried: d.inventory[CARRIED]
-                .items
+            memorized: d.unknown_0x3c8.clone(),
+            equipment: std::array::from_fn(|b| {
+                d.inventory[b]
+                    .items
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, item)| b != MONEY || coin(&item.name).is_none())
+                    .map(|(i, item)| Item {
+                        name: item.name.clone(),
+                        quantity: item.quantity,
+                        original: Some(i),
+                        contents: contents(item).iter().map(|c| c.name.clone()).collect(),
+                    })
+                    .collect()
+            }),
+            coins: std::array::from_fn(|c| {
+                d.inventory[MONEY]
+                    .items
+                    .iter()
+                    .filter(|item| coin(&item.name) == Some(c))
+                    .map(|item| item.quantity)
+                    .sum()
+            }),
+            spellbooks: d
+                .inventory
                 .iter()
-                .map(|i| i.name.clone())
+                .enumerate()
+                .flat_map(|(b, bundle)| {
+                    bundle
+                        .items
+                        .iter()
+                        .enumerate()
+                        .filter_map(move |(i, item)| {
+                            let extra = item.extra.as_ref()?;
+                            Some(Spellbook {
+                                bundle: b,
+                                position: i,
+                                name: item.name.clone(),
+                                capacity: extra.unknown_0x4[0],
+                                spells: extra
+                                    .unknown_0x10
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(s, name)| {
+                                        (
+                                            name.clone(),
+                                            extra.unknown_0x24.get(s).copied().unwrap_or(0),
+                                            extra.unknown_0x38.get(s).copied().unwrap_or(1) != 0,
+                                        )
+                                    })
+                                    .collect(),
+                            })
+                        })
+                })
                 .collect(),
         }
     }
 
     pub fn apply(&self, character: &mut Character, parts: &PartTable) -> Result<()> {
         let skills_and_powers = character.skills_and_powers();
-        let keeps_weight = character.version.starts_with("TSRP3");
+        // Core Rules 2.0 leaves the weight and the worn lists empty.
+        let expansion = character.version.starts_with("TSRP3");
         let d = &mut character.data;
         d.weapon_proficiencies
             .clone_from(&self.weapon_proficiencies);
@@ -153,36 +287,102 @@ impl CharacterLists {
         }
         d.nonweapon_details = details;
 
-        // Items carried: keep each item whose name is still listed, drop
-        // the rest and add the new names.
-        let mut wanted = self.carried.clone();
-        let mut weight_change = 0.0f64;
-        let bundle = &mut d.inventory[CARRIED];
-        bundle
-            .items
-            .retain(|item| match wanted.iter().position(|n| *n == item.name) {
-                Some(i) => {
-                    wanted.remove(i);
-                    true
-                }
-                None => {
-                    weight_change -= parts.item_weight(item, skills_and_powers);
-                    false
-                }
-            });
-        for name in wanted {
-            let item = InventoryItem {
-                name,
-                quantity: 1,
-                contents: None,
-                unknown_0x8: 999,
-                flag_0x4: 0,
-                extra: None,
-            };
-            weight_change += parts.item_weight(&item, skills_and_powers);
-            insert_item(bundle, item);
+        if d.unknown_0x3c8 != self.memorized {
+            d.unknown_0x3c8.clone_from(&self.memorized);
         }
-        if weight_change != 0.0 && keeps_weight {
+
+        // Spellbooks first, while positions are as read.
+        for book in &self.spellbooks {
+            let used = book.pages_used();
+            if used > book.capacity {
+                return Err(Error::Invalid(format!(
+                    "{} has {} pages; these spells take {used}",
+                    book.name, book.capacity
+                )));
+            }
+            let Some(extra) = d
+                .inventory
+                .get_mut(book.bundle)
+                .and_then(|b| b.items.get_mut(book.position))
+                .and_then(|item| item.extra.as_mut())
+            else {
+                continue;
+            };
+            let spells: Vec<String> = book.spells.iter().map(|s| s.0.clone()).collect();
+            if extra.unknown_0x10 == spells
+                && extra
+                    .unknown_0x24
+                    .iter()
+                    .eq(book.spells.iter().map(|s| &s.1))
+            {
+                continue;
+            }
+            extra.unknown_0x4 = [book.capacity, used, spells.len() as u32];
+            extra.unknown_0x10 = spells;
+            extra.unknown_0x24 = book.spells.iter().map(|s| s.1).collect();
+            extra.unknown_0x38 = book.spells.iter().map(|s| u8::from(s.2)).collect();
+        }
+
+        // Equipment: rebuild each changed bundle from the items as read and
+        // the new ones.
+        let weight_before = weigh(&d.inventory, parts, skills_and_powers);
+        let worn_before = d.inventory[WORN].clone();
+        for (b, wanted) in self.equipment.iter().enumerate() {
+            let old = std::mem::take(&mut d.inventory[b].items);
+            let mut bundle = InventoryBundle { items: Vec::new() };
+            if b == MONEY {
+                // Keep whatever is there that is not a coin.
+                bundle.items = old
+                    .iter()
+                    .filter(|i| coin(&i.name).is_none())
+                    .cloned()
+                    .collect();
+            }
+            let mut fresh = Vec::new();
+            for item in wanted {
+                match item.original.and_then(|i| old.get(i)) {
+                    Some(kept) if kept.name == item.name => {
+                        let mut kept = kept.clone();
+                        kept.quantity = item.quantity;
+                        bundle.items.push(kept);
+                    }
+                    _ => fresh.push(parts.new_item(&item.name, item.quantity)),
+                }
+            }
+            if b == MONEY {
+                for (c, &count) in self.coins.iter().enumerate() {
+                    if count > 0 {
+                        fresh.push(parts.new_item(COINS[c].0, count));
+                    }
+                }
+            }
+            bundle
+                .items
+                .sort_by(|x, y| x.name.as_bytes().cmp(y.name.as_bytes()));
+            for item in fresh {
+                insert_item(&mut bundle, item);
+            }
+            if b == MONEY {
+                let coins_before: Vec<_> = old.iter().filter(|i| coin(&i.name).is_some()).collect();
+                let coins_after: Vec<_> = bundle
+                    .items
+                    .iter()
+                    .filter(|i| coin(&i.name).is_some())
+                    .collect();
+                if coins_before == coins_after {
+                    // Same coins: keep them exactly as they were.
+                    bundle.items = old;
+                }
+            }
+            d.inventory[b].items = bundle.items;
+        }
+        if d.inventory[WORN] != worn_before && expansion {
+            let (armor, magic) = parts.worn_lists(&d.inventory[WORN]);
+            d.armor = armor;
+            d.unknown_0x17a4 = magic;
+        }
+        let weight_change = weigh(&d.inventory, parts, skills_and_powers) - weight_before;
+        if weight_change.abs() > 1e-6 && expansion {
             let weight = f64::from(f32::from_bits(d.carried_weight)) + weight_change;
             d.carried_weight = (weight.max(0.0) as f32).to_bits();
         }
@@ -213,12 +413,31 @@ fn insert_item(bundle: &mut InventoryBundle, item: InventoryItem) {
 
 /// Weight carried as the program counts it, for checking the stored value.
 pub fn carried_weight(character: &Character, parts: &PartTable) -> f64 {
-    let skills_and_powers = character.skills_and_powers();
+    weigh(
+        &character.data.inventory,
+        parts,
+        character.skills_and_powers(),
+    )
+}
+
+fn weigh(inventory: &[InventoryBundle; 9], parts: &PartTable, skills_and_powers: bool) -> f64 {
     WEIGHED
         .iter()
-        .flat_map(|&b| &character.data.inventory[b].items)
+        .flat_map(|&b| &inventory[b].items)
         .map(|item| parts.item_weight(item, skills_and_powers))
         .sum()
+}
+
+/// Which coin an item name is, as an index into [`COINS`].
+fn coin(name: &str) -> Option<usize> {
+    COINS.iter().position(|c| c.0 == name)
+}
+
+fn contents(item: &InventoryItem) -> &[InventoryItem] {
+    match item.contents.as_deref() {
+        Some(Object::InventoryBundle(bundle)) => &bundle.items,
+        _ => &[],
+    }
 }
 
 /// What the edits need to know about parts, by name.
@@ -228,6 +447,10 @@ pub struct PartTable {
     nonweapon_costs: HashMap<String, (u32, u32)>,
     /// Core Rules weight (0 when the part has none) and base weight.
     weights: HashMap<String, (f32, f32)>,
+    /// Pages of the parts that have them (spellbooks, scrolls).
+    pages: HashMap<String, u32>,
+    armor: std::collections::HashSet<String>,
+    magical: std::collections::HashSet<String>,
 }
 
 impl PartTable {
@@ -236,6 +459,44 @@ impl PartTable {
             1,
             |&(core, points)| if skills_and_powers { points } else { core },
         )
+    }
+
+    /// A new item as buying makes it: the constructor's values, and an
+    /// empty page record for a part with pages.
+    fn new_item(&self, name: &str, quantity: u32) -> InventoryItem {
+        InventoryItem {
+            name: name.into(),
+            quantity,
+            contents: None,
+            unknown_0x8: 999,
+            flag_0x4: 0,
+            extra: self.pages.get(name).map(|&capacity| InventoryExtra {
+                unknown_0x4: [capacity, 0, 0],
+                unknown_0x10: Vec::new(),
+                unknown_0x24: Vec::new(),
+                unknown_0x38: Vec::new(),
+            }),
+        }
+    }
+
+    /// Pages of a part with pages.
+    pub fn pages(&self, name: &str) -> Option<u32> {
+        self.pages.get(name).copied()
+    }
+
+    /// The armor and the other magical items among the worn items, in
+    /// order, as the program lists them.
+    pub fn worn_lists(&self, worn: &InventoryBundle) -> (Vec<String>, Vec<String>) {
+        let mut armor = Vec::new();
+        let mut magic = Vec::new();
+        for item in &worn.items {
+            if self.armor.contains(&item.name) {
+                armor.push(item.name.clone());
+            } else if self.magical.contains(&item.name) {
+                magic.push(item.name.clone());
+            }
+        }
+        (armor, magic)
     }
 
     /// The weight of an item, its quantity and contents included; an item
@@ -288,7 +549,20 @@ impl Installation {
                     .entry(part.head.name.clone())
                     .or_insert((cost[3].max(0) as u32, cost[2].max(0) as u32));
             }
+            for part in parts("Armor") {
+                table.armor.insert(part.head.name.clone());
+            }
             for part in ITEM_TYPES.iter().flat_map(|t| parts(t)) {
+                if part.head.unknown_0x224 != 0 {
+                    table.magical.insert(part.head.name.clone());
+                }
+                let pages = part.data.unknown_0x7cc[6];
+                if pages > 0 {
+                    table
+                        .pages
+                        .entry(part.head.name.clone())
+                        .or_insert(pages as u32);
+                }
                 let weight = |bits: i32| f32::from_bits(bits as u32);
                 table.weights.entry(part.head.name.clone()).or_insert((
                     weight(part.head.unknown_0x1f0),
@@ -333,8 +607,8 @@ mod tests {
         lists.nonweapon_proficiencies.push("Swimming".into());
         lists.weapon_proficiencies.push("Sword, long".into());
         lists.languages.push("Elf".into());
-        lists.carried.push("Torch".into());
-        lists.carried.push("Torch".into());
+        lists.equipment[CARRIED].push(Item::new("Torch"));
+        lists.equipment[CARRIED].push(Item::new("Torch"));
         let mut after = before.clone();
         lists.apply(&mut after, &table()).unwrap();
         let (b, a) = (&before.data, &after.data);
@@ -372,7 +646,7 @@ mod tests {
         // Removing the backpack takes its contents' weight too (unknown
         // contents weigh nothing).
         let mut lists = CharacterLists::of(&after);
-        lists.carried.retain(|n| n != "Backpack");
+        lists.equipment[CARRIED].retain(|i| i.name != "Backpack");
         let mut lighter = after.clone();
         lists.apply(&mut lighter, &table()).unwrap();
         let backpack = after.data.inventory[CARRIED]
@@ -406,5 +680,69 @@ mod tests {
             .insert("Swimming".into(), (1, points + removed + 1));
         let mut refused = before.clone();
         assert!(lists.apply(&mut refused, &table).is_err());
+    }
+
+    #[test]
+    fn money_quantities_and_worn_items() {
+        let before = Character::parse(BORIN).unwrap();
+        let mut lists = CharacterLists::of(&before);
+        assert!(lists.coins.iter().any(|&c| c > 0));
+        assert!(lists.equipment[MONEY].is_empty());
+
+        // Unchanged: identical file.
+        let mut same = before.clone();
+        lists.apply(&mut same, &table()).unwrap();
+        assert_eq!(same, before);
+
+        lists.coins = [0, 3, 0, 20, 1];
+        lists.equipment[CARRIED][0].quantity = 2;
+        let worn = lists.equipment[WORN].remove(0);
+        lists.equipment[CARRIED].push(Item::new(&worn.name));
+        let mut table = table();
+        table.armor.extend(before.data.armor.iter().cloned());
+        let mut after = before.clone();
+        lists.apply(&mut after, &table).unwrap();
+        let a = &after.data;
+
+        let money: Vec<_> = a.inventory[MONEY]
+            .items
+            .iter()
+            .map(|i| (i.name.as_str(), i.quantity))
+            .collect();
+        assert_eq!(
+            money,
+            [
+                ("* Gold Pieces", 20),
+                ("* Platinum Pieces", 1),
+                ("* Silver Pieces", 3)
+            ]
+        );
+        // The coin totals are left for the equipment page to recompute.
+        assert_eq!(a.unknown_0x1778, before.data.unknown_0x1778);
+        assert_eq!(a.inventory[CARRIED].items[0].quantity, 2);
+        assert!(!a.armor.contains(&worn.name));
+        assert_eq!(a.armor.len(), before.data.armor.len() - 1);
+        assert_eq!(CharacterLists::of(&after).coins, [0, 3, 0, 20, 1]);
+    }
+
+    #[test]
+    fn spellbooks_keep_their_page_count() {
+        let lirael = Character::parse(LIRAEL).unwrap();
+        let mut lists = CharacterLists::of(&lirael);
+        assert_eq!(lists.spellbooks.len(), 1);
+        let book = &mut lists.spellbooks[0];
+        assert_eq!(book.spells, [("Armor".to_string(), 2, true)]);
+        book.spells.push(("Burning Hands".into(), 1, true));
+        let mut after = lirael.clone();
+        lists.apply(&mut after, &table()).unwrap();
+        let book =
+            &after.data.inventory[lists.spellbooks[0].bundle].items[lists.spellbooks[0].position];
+        let extra = book.extra.as_ref().unwrap();
+        assert_eq!(extra.unknown_0x4, [100, 3, 2]);
+        assert_eq!(extra.unknown_0x24, [2, 1]);
+        assert_eq!(extra.unknown_0x38, [1, 1]);
+
+        lists.spellbooks[0].spells.push(("Wish".into(), 98, true));
+        assert!(lists.apply(&mut lirael.clone(), &table()).is_err());
     }
 }

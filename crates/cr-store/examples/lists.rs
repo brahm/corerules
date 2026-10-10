@@ -15,14 +15,33 @@ fn main() {
             d.priest_spells,
             f32::from_bits(d.carried_weight)
         );
-        for i in &d.inventory[2].items {
+        let lists = cr_store::lists::CharacterLists::of(&c);
+        for (bundle, items) in lists.equipment.iter().enumerate() {
+            for i in items {
+                let name = cr_store::lists::BUNDLE_NAMES[bundle];
+                println!("  {name}: {} x{} {:?}", i.name, i.quantity, i.contents);
+            }
+        }
+        println!(
+            "  coins {:?} cache {:?}",
+            lists.coins,
+            &d.unknown_0x1778[1..6]
+        );
+        for book in &lists.spellbooks {
             println!(
-                "  carried {} x{} 8={} contents={}",
-                i.name,
-                i.quantity,
-                i.unknown_0x8,
-                i.contents.is_some()
+                "  {} ({}/{}) {:?}",
+                book.name,
+                book.pages_used(),
+                book.capacity,
+                book.spells
             );
+        }
+        for (slot, levels) in lists.memorized.iter().enumerate() {
+            for (level, (wizard, priest)) in levels.iter().enumerate() {
+                if !wizard.is_empty() || !priest.is_empty() {
+                    println!("  memorized class {slot} level {level}: {wizard:?} {priest:?}");
+                }
+            }
         }
     }
 }

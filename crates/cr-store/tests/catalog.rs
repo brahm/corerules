@@ -55,6 +55,14 @@ fn carried_weight_matches_the_original() {
     for file in files {
         let data = std::fs::read(format!("{fixtures}/{file}")).unwrap();
         let character = Character::parse(&data).unwrap();
+        let (armor, magic) = if expansion {
+            parts.worn_lists(&character.data.inventory[5])
+        } else {
+            // 2.0 never stores the worn lists.
+            Default::default()
+        };
+        assert_eq!(armor, character.data.armor, "{file}");
+        assert_eq!(magic, character.data.unknown_0x17a4, "{file}");
         let stored = f32::from_bits(character.data.carried_weight);
         if !expansion {
             // 2.0 never stores the weight.

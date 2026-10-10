@@ -6,7 +6,7 @@ use cr_formats::character::Character;
 use cr_formats::database::survey;
 use cr_store::Installation;
 use cr_store::edit::CharacterDetails;
-use cr_store::lists::CharacterLists;
+use cr_store::lists::{CharacterLists, Item};
 
 const USAGE: &str = "usage:
   cr survey [INSTALL_DIR]   list database files, record counts and classes
@@ -17,7 +17,11 @@ const USAGE: &str = "usage:
                             str, dex, con, int, wis, cha (score and both
                             subabilities), exceptional; LIST+=NAME and
                             LIST-=NAME for the lists weapon, nwp, language,
-                            wizard, priest (spells known) and item (carried)
+                            wizard, priest (spells known); equipment animal,
+                            food, item (carried), readied, stored, worn,
+                            service, transport; book+=SPELL:PAGES (first
+                            spellbook); memorized+=CLASS:LEVEL:SPELL and
+                            priest-memorized+=...; coins cp= sp= ep= gp= pp=
 
 Without INSTALL_DIR, the installation in the Wine prefix is used.";
 
@@ -107,13 +111,65 @@ fn cmd_edit(install: &Installation, args: &[String]) -> cr_store::Result<()> {
     let mut lists = CharacterLists::of(&character);
     for change in changes {
         if let Some((list, value, add)) = list_change(change) {
+            const BUNDLES: [&str; 9] = [
+                "animal",
+                "food",
+                "item",
+                "readied",
+                "stored",
+                "worn",
+                "",
+                "service",
+                "transport",
+            ];
+            if let Some(b) = BUNDLES.iter().position(|n| !n.is_empty() && *n == list) {
+                let items = &mut lists.equipment[b];
+                if add {
+                    items.push(Item::new(value));
+                } else {
+                    let i = items
+                        .iter()
+                        .position(|i| i.name == value)
+                        .ok_or_else(|| invalid(format!("{value} is not in {list}")))?;
+                    items.remove(i);
+                }
+                continue;
+            }
+            if list == "book" {
+                // book+=SPELL:PAGES on the first spellbook.
+                let book = lists
+                    .spellbooks
+                    .first_mut()
+                    .ok_or_else(|| invalid("the character has no spellbook".into()))?;
+                if add {
+                    let (spell, pages) = value
+                        .split_once(':')
+                        .ok_or_else(|| invalid("book+= takes SPELL:PAGES".into()))?;
+                    let pages = pages
+                        .parse()
+                        .map_err(|_| invalid(format!("{pages} is not a number")))?;
+                    book.spells.push((spell.into(), pages, true));
+                } else {
+                    book.spells.retain(|s| s.0 != value);
+                }
+                continue;
+            }
+            if list == "memorized" {
+                // memorized+=CLASS:LEVEL:SPELL, class 0 for the first class;
+                // wizard spells (priest spells with priest-memorized).
+                continue_memorized(&mut lists, value, add, true).map_err(invalid)?;
+                continue;
+            }
+            if list == "priest-memorized" {
+                continue_memorized(&mut lists, value, add, false).map_err(invalid)?;
+                continue;
+            }
             let list = match list {
                 "weapon" => &mut lists.weapon_proficiencies,
                 "nwp" => &mut lists.nonweapon_proficiencies,
                 "language" => &mut lists.languages,
                 "wizard" => &mut lists.wizard_spells,
                 "priest" => &mut lists.priest_spells,
-                "item" => &mut lists.carried,
                 _ => return Err(invalid(format!("unknown list {list}"))),
             };
             if add {
@@ -136,6 +192,13 @@ fn cmd_edit(install: &Installation, args: &[String]) -> cr_store::Result<()> {
                 .map_err(|_| invalid(format!("{field}: {value} is not a number")))
         };
         const ABILITIES: [&str; 6] = ["str", "dex", "con", "int", "wis", "cha"];
+        if let Some(c) = ["cp", "sp", "ep", "gp", "pp"]
+            .iter()
+            .position(|c| *c == field)
+        {
+            lists.coins[c] = number()?;
+            continue;
+        }
         match field {
             "name" => details.name = value.into(),
             "player" => details.player = value.into(),
@@ -151,6 +214,37 @@ fn cmd_edit(install: &Installation, args: &[String]) -> cr_store::Result<()> {
         }
     }
     install.save_character(file, &details, Some(&lists))
+}
+
+/// Adds or removes a memorized spell given as `CLASS:LEVEL:SPELL`.
+fn continue_memorized(
+    lists: &mut CharacterLists,
+    value: &str,
+    add: bool,
+    wizard: bool,
+) -> Result<(), String> {
+    let mut parts = value.splitn(3, ':');
+    let (Some(class), Some(level), Some(spell)) = (parts.next(), parts.next(), parts.next()) else {
+        return Err("memorized takes CLASS:LEVEL:SPELL".into());
+    };
+    let class: usize = class
+        .parse()
+        .map_err(|_| format!("{class} is not a number"))?;
+    let level: usize = level
+        .parse()
+        .map_err(|_| format!("{level} is not a number"))?;
+    let slot = lists
+        .memorized
+        .get_mut(class)
+        .and_then(|c| c.get_mut(level))
+        .ok_or("class 0-4, level 0-10")?;
+    let list = if wizard { &mut slot.0 } else { &mut slot.1 };
+    if add {
+        list.push(spell.into());
+    } else if let Some(i) = list.iter().position(|s| s == spell) {
+        list.remove(i);
+    }
+    Ok(())
 }
 
 /// `LIST+=NAME` or `LIST-=NAME`: the list, the name and whether to add.

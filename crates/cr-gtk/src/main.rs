@@ -4,16 +4,20 @@
 mod lists;
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
 
 use adw::prelude::*;
 use cr_store::Installation;
 use cr_store::catalog::{Entry, Section};
+use cr_store::choices::{Caster, caster};
 use cr_store::edit::{ABILITY_RANGE, CharacterDetails};
-use cr_store::lists::{CharacterLists, ITEM_TYPES};
+use cr_store::lists::{
+    BUNDLE_NAMES, COINS, CharacterLists, ITEM_TYPES, Item, MONEY, Memorized, Spellbook,
+};
 use gtk::{gio, glib};
-use lists::ListEditor;
+use lists::{ListEditor, RowList, RowSpec};
 
 const APP_ID: &str = "io.github.brahm.CoreRules";
 
@@ -174,12 +178,14 @@ impl Window {
         };
         let details = CharacterDetails::of(&character);
         let lists = CharacterLists::of(&character);
+        let classes = character.data.classes.names.clone();
         let this = self.clone();
         let file = file.to_owned();
         character_editor(
             &self.window,
             &details,
             &lists,
+            &classes,
             choices,
             move |details, lists| {
                 let install = this.install.borrow();
@@ -716,6 +722,7 @@ fn character_editor(
     parent: &impl IsA<gtk::Widget>,
     details: &CharacterDetails,
     lists: &CharacterLists,
+    classes: &[String],
     choices: Choices,
     save: impl Fn(&CharacterDetails, &CharacterLists) -> Result<(), String> + 'static,
 ) {
@@ -801,27 +808,23 @@ fn character_editor(
     page.add(&appearance);
     page.add(&abilities);
 
-    let editors = ListEditors::new(lists, &choices);
+    let editors = ListEditors::new(lists, &choices, classes);
     let stack = adw::ViewStack::new();
     stack.add_titled_with_icon(&page, Some("details"), "Details", "avatar-default-symbolic");
     stack.add_titled_with_icon(
-        &editors.page([
-            &editors.weapon_proficiencies,
-            &editors.nonweapon_proficiencies,
-            &editors.languages,
-        ]),
+        &editors.proficiencies_page(),
         Some("proficiencies"),
         "Proficiencies",
         "view-list-symbolic",
     );
     stack.add_titled_with_icon(
-        &editors.page([&editors.wizard_spells, &editors.priest_spells]),
+        &editors.spells_page(),
         Some("spells"),
         "Spells",
         "starred-symbolic",
     );
     stack.add_titled_with_icon(
-        &editors.page([&editors.carried]),
+        &editors.equipment_page(),
         Some("equipment"),
         "Equipment",
         "package-x-generic-symbolic",
@@ -921,6 +924,9 @@ struct Choices {
     wizard_spells: Rc<Vec<String>>,
     priest_spells: Rc<Vec<String>>,
     items: Rc<Vec<String>>,
+    wizard_levels: Rc<HashMap<String, u32>>,
+    priest_levels: Rc<HashMap<String, u32>>,
+    class_ids: HashMap<String, i32>,
 }
 
 impl Choices {
@@ -929,6 +935,8 @@ impl Choices {
         for part_type in ITEM_TYPES {
             items.extend(install.part_names(part_type)?);
         }
+        // Coins are edited as money.
+        items.retain(|n| !COINS.iter().any(|c| c.0 == n));
         items.sort_by_key(|n| n.to_lowercase());
         items.dedup();
         Ok(Self {
@@ -938,22 +946,195 @@ impl Choices {
             wizard_spells: Rc::new(install.spell_names(true)?),
             priest_spells: Rc::new(install.spell_names(false)?),
             items: Rc::new(items),
+            wizard_levels: Rc::new(install.spell_levels(true)?),
+            priest_levels: Rc::new(install.spell_levels(false)?),
+            class_ids: install.class_ids()?,
         })
     }
 }
 
-/// One list editor per character list.
+/// The editors of a character's lists.
 struct ListEditors {
     weapon_proficiencies: ListEditor,
     nonweapon_proficiencies: ListEditor,
     languages: ListEditor,
     wizard_spells: ListEditor,
     priest_spells: ListEditor,
-    carried: ListEditor,
+    /// Per spellbook: what it was read as, and its spells with pages.
+    spellbooks: Vec<(Spellbook, RowList<bool>)>,
+    /// Per casting class: its slot, whether it casts wizard spells, and
+    /// the memorized spells with their levels.
+    memorized: Vec<(usize, bool, RowList<u32>)>,
+    original_memorized: Memorized,
+    /// One per bundle but the spending money.
+    equipment: Vec<(usize, RowList<Item>)>,
+    coins: [adw::SpinRow; 5],
+}
+
+/// Ordinal for a spell level ("1st").
+fn ordinal(level: u32) -> String {
+    let suffix = match (level % 10, level % 100) {
+        (1, n) if n != 11 => "st",
+        (2, n) if n != 12 => "nd",
+        (3, n) if n != 13 => "rd",
+        _ => "th",
+    };
+    format!("{level}{suffix}")
 }
 
 impl ListEditors {
-    fn new(lists: &CharacterLists, choices: &Choices) -> Self {
+    fn new(lists: &CharacterLists, choices: &Choices, classes: &[String]) -> Self {
+        let wizard_spells = ListEditor::new(
+            "Wizard Spells Known",
+            &lists.wizard_spells,
+            choices.wizard_spells.clone(),
+        );
+        let priest_spells = ListEditor::new(
+            "Priest Spells Known",
+            &lists.priest_spells,
+            choices.priest_spells.clone(),
+        );
+
+        // Spellbooks take the wizard spells the character knows.
+        let spellbooks = lists
+            .spellbooks
+            .iter()
+            .map(|book| {
+                let levels = choices.wizard_levels.clone();
+                let capacity = book.capacity.max(1);
+                let rows = book
+                    .spells
+                    .iter()
+                    .map(|(name, pages, wizard)| RowSpec {
+                        value: *wizard,
+                        title: name.clone(),
+                        subtitle: String::new(),
+                        number: Some((*pages, 1, capacity)),
+                    })
+                    .collect();
+                let known = wizard_spells.clone();
+                let list = RowList::new(
+                    &format!("{} ({})", book.name, BUNDLE_NAMES[book.bundle]),
+                    rows,
+                    move || known.items(),
+                    move |name| {
+                        // One page per spell level, as the rules have it.
+                        let pages = levels.get(&name).copied().unwrap_or(1).max(1);
+                        Some(RowSpec {
+                            value: true,
+                            title: name,
+                            subtitle: String::new(),
+                            number: Some((pages, 1, capacity)),
+                        })
+                    },
+                );
+                list.connect_changed({
+                    let (list, total) = (list.clone(), book.capacity);
+                    move || {
+                        let used: u32 = list.values().iter().filter_map(|v| v.1).sum();
+                        list.group
+                            .set_description(Some(&format!("{used} of {total} pages used")));
+                    }
+                });
+                (book.clone(), list)
+            })
+            .collect();
+
+        // Memorized spells, per class that casts.
+        let mut memorized = Vec::new();
+        for (slot, class) in classes.iter().enumerate().take(5) {
+            let kind = choices.class_ids.get(class).copied().map(caster);
+            let wizard = match kind {
+                Some(Caster::Wizard) => true,
+                Some(Caster::Priest) => false,
+                _ => continue,
+            };
+            let rows = (0..11)
+                .flat_map(|level| {
+                    let (w, p) = &lists.memorized[slot][level];
+                    (if wizard { w } else { p })
+                        .iter()
+                        .map(move |name| RowSpec {
+                            value: level as u32,
+                            title: name.clone(),
+                            subtitle: format!("{} level", ordinal(level as u32)),
+                            number: None,
+                        })
+                })
+                .collect();
+            let levels = if wizard {
+                choices.wizard_levels.clone()
+            } else {
+                choices.priest_levels.clone()
+            };
+            let offer: Box<dyn Fn() -> Vec<String>> = if wizard {
+                let known = wizard_spells.clone();
+                Box::new(move || known.items())
+            } else {
+                let all = choices.priest_spells.clone();
+                Box::new(move || all.to_vec())
+            };
+            let list = RowList::new(&format!("Memorized ({class})"), rows, offer, move |name| {
+                let level = levels.get(&name).copied()?;
+                Some(RowSpec {
+                    value: level,
+                    subtitle: format!("{} level", ordinal(level)),
+                    title: name,
+                    number: None,
+                })
+            });
+            memorized.push((slot, wizard, list));
+        }
+
+        let equipment = (0..9)
+            .filter(|&b| b != MONEY)
+            .map(|b| {
+                let rows = lists.equipment[b]
+                    .iter()
+                    .map(|item| RowSpec {
+                        title: item.name.clone(),
+                        subtitle: if item.contents.is_empty() {
+                            String::new()
+                        } else {
+                            format!("Holds {}", item.contents.join(", "))
+                        },
+                        number: Some((item.quantity, 1, 99_999)),
+                        value: item.clone(),
+                    })
+                    .collect();
+                let items = choices.items.clone();
+                let list = RowList::new(
+                    BUNDLE_NAMES[b],
+                    rows,
+                    move || items.to_vec(),
+                    |name| {
+                        Some(RowSpec {
+                            value: Item::new(&name),
+                            title: name,
+                            subtitle: String::new(),
+                            number: Some((1, 1, 99_999)),
+                        })
+                    },
+                );
+                (b, list)
+            })
+            .collect();
+
+        let coins = std::array::from_fn(|c| {
+            adw::SpinRow::builder()
+                .title(["Copper", "Silver", "Electrum", "Gold", "Platinum"][c])
+                .numeric(true)
+                .adjustment(&gtk::Adjustment::new(
+                    lists.coins[c].into(),
+                    0.0,
+                    9_999_999.0,
+                    1.0,
+                    10.0,
+                    0.0,
+                ))
+                .build()
+        });
+
         Self {
             weapon_proficiencies: ListEditor::new(
                 "Weapon Proficiencies",
@@ -970,36 +1151,107 @@ impl ListEditors {
                 &lists.languages,
                 choices.languages.clone(),
             ),
-            wizard_spells: ListEditor::new(
-                "Wizard Spells Known",
-                &lists.wizard_spells,
-                choices.wizard_spells.clone(),
-            ),
-            priest_spells: ListEditor::new(
-                "Priest Spells Known",
-                &lists.priest_spells,
-                choices.priest_spells.clone(),
-            ),
-            carried: ListEditor::new("Items Carried", &lists.carried, choices.items.clone()),
+            wizard_spells,
+            priest_spells,
+            spellbooks,
+            memorized,
+            original_memorized: lists.memorized.clone(),
+            equipment,
+            coins,
         }
     }
 
-    fn page<const N: usize>(&self, editors: [&ListEditor; N]) -> adw::PreferencesPage {
+    fn proficiencies_page(&self) -> adw::PreferencesPage {
         let page = adw::PreferencesPage::new();
-        for editor in editors {
-            page.add(&editor.group);
+        page.add(&self.weapon_proficiencies.group);
+        page.add(&self.nonweapon_proficiencies.group);
+        page.add(&self.languages.group);
+        page
+    }
+
+    fn spells_page(&self) -> adw::PreferencesPage {
+        let page = adw::PreferencesPage::new();
+        page.add(&self.wizard_spells.group);
+        page.add(&self.priest_spells.group);
+        for (_, list) in &self.spellbooks {
+            page.add(&list.group);
+        }
+        for (_, _, list) in &self.memorized {
+            page.add(&list.group);
+        }
+        page
+    }
+
+    fn equipment_page(&self) -> adw::PreferencesPage {
+        let page = adw::PreferencesPage::new();
+        let money = adw::PreferencesGroup::builder()
+            .title("Spending Money")
+            .build();
+        for row in &self.coins {
+            money.add(row);
+        }
+        page.add(&money);
+        for (_, list) in &self.equipment {
+            page.add(&list.group);
         }
         page
     }
 
     fn lists(&self) -> CharacterLists {
+        let mut memorized = self.original_memorized.clone();
+        for (slot, wizard, _) in &self.memorized {
+            for level in &mut memorized[*slot] {
+                if *wizard {
+                    level.0.clear();
+                } else {
+                    level.1.clear();
+                }
+            }
+        }
+        for (slot, wizard, list) in &self.memorized {
+            let names = list.rows_titles();
+            for ((level, _), name) in list.values().into_iter().zip(names) {
+                let entry = &mut memorized[*slot][level as usize];
+                if *wizard {
+                    entry.0.push(name);
+                } else {
+                    entry.1.push(name);
+                }
+            }
+        }
+        let mut equipment: [Vec<Item>; 9] = Default::default();
+        for (b, list) in &self.equipment {
+            equipment[*b] = list
+                .values()
+                .into_iter()
+                .map(|(mut item, quantity)| {
+                    item.quantity = quantity.unwrap_or(item.quantity);
+                    item
+                })
+                .collect();
+        }
         CharacterLists {
             weapon_proficiencies: self.weapon_proficiencies.items(),
             nonweapon_proficiencies: self.nonweapon_proficiencies.items(),
             languages: self.languages.items(),
             wizard_spells: self.wizard_spells.items(),
             priest_spells: self.priest_spells.items(),
-            carried: self.carried.items(),
+            memorized,
+            equipment,
+            coins: std::array::from_fn(|c| self.coins[c].value() as u32),
+            spellbooks: self
+                .spellbooks
+                .iter()
+                .map(|(book, list)| Spellbook {
+                    spells: list
+                        .rows_titles()
+                        .into_iter()
+                        .zip(list.values())
+                        .map(|(name, (wizard, pages))| (name, pages.unwrap_or(1), wizard))
+                        .collect(),
+                    ..book.clone()
+                })
+                .collect(),
         }
     }
 }

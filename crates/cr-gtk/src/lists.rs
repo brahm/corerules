@@ -105,7 +105,7 @@ impl ListEditor {
 
 /// A dialog listing `choices` with a search entry; `chosen` gets the name
 /// the user activates.
-fn pick(
+pub fn pick(
     parent: &impl IsA<gtk::Widget>,
     title: &str,
     choices: Vec<String>,
@@ -217,4 +217,173 @@ fn pick(
     });
     dialog.present(Some(parent));
     search.grab_focus();
+}
+
+/// A row a [`RowList`] shows for one value.
+pub struct RowSpec<T> {
+    pub value: T,
+    pub title: String,
+    pub subtitle: String,
+    /// A number the user can change (a quantity, pages), with its range.
+    pub number: Option<(u32, u32, u32)>,
+}
+
+type Rows<T> = Rc<RefCell<Vec<(T, adw::ActionRow, Option<adw::SpinRow>)>>>;
+type Callback = Rc<RefCell<Option<Box<dyn Fn()>>>>;
+
+/// A group of rows, each holding a value of type `T` and maybe a number,
+/// with remove buttons and an Add button whose picker offers names that
+/// `make` turns into rows.
+pub struct RowList<T: 'static> {
+    pub group: adw::PreferencesGroup,
+    rows: Rows<T>,
+    empty: adw::ActionRow,
+    /// Called after every change.
+    changed: Callback,
+}
+
+impl<T: Clone + 'static> Clone for RowList<T> {
+    fn clone(&self) -> Self {
+        Self {
+            group: self.group.clone(),
+            rows: self.rows.clone(),
+            empty: self.empty.clone(),
+            changed: self.changed.clone(),
+        }
+    }
+}
+
+impl<T: Clone + 'static> RowList<T> {
+    /// `choices` gives the names to offer when Add is pressed (it may
+    /// depend on other lists); `make` turns a chosen name into a row.
+    pub fn new(
+        title: &str,
+        rows: Vec<RowSpec<T>>,
+        choices: impl Fn() -> Vec<String> + 'static,
+        make: impl Fn(String) -> Option<RowSpec<T>> + 'static,
+    ) -> Self {
+        let add = gtk::Button::builder()
+            .icon_name("list-add-symbolic")
+            .tooltip_text(format!("Add to {title}"))
+            .valign(gtk::Align::Center)
+            .css_classes(["flat"])
+            .build();
+        let group = adw::PreferencesGroup::builder()
+            .title(glib::markup_escape_text(title).as_str())
+            .header_suffix(&add)
+            .build();
+        let empty = adw::ActionRow::builder()
+            .title("None")
+            .css_classes(["dim-label"])
+            .build();
+        group.add(&empty);
+        let list = Self {
+            group,
+            rows: Rc::default(),
+            empty,
+            changed: Rc::default(),
+        };
+        for row in rows {
+            list.push(row);
+        }
+        list.update();
+        let title = title.to_owned();
+        let make = Rc::new(make);
+        add.connect_clicked({
+            let list = list.clone();
+            move |button| {
+                let (list, make) = (list.clone(), make.clone());
+                pick(button, &title, choices(), move |name| {
+                    if let Some(spec) = make(name) {
+                        list.push(spec);
+                        list.update();
+                    }
+                });
+            }
+        });
+        list
+    }
+
+    pub fn push(&self, spec: RowSpec<T>) {
+        let remove = gtk::Button::builder()
+            .icon_name("list-remove-symbolic")
+            .tooltip_text("Remove")
+            .valign(gtk::Align::Center)
+            .css_classes(["flat"])
+            .build();
+        let (row, spin) = match spec.number {
+            Some((value, min, max)) => {
+                let spin = adw::SpinRow::builder()
+                    .numeric(true)
+                    .adjustment(&gtk::Adjustment::new(
+                        value.into(),
+                        min.into(),
+                        max.into(),
+                        1.0,
+                        5.0,
+                        0.0,
+                    ))
+                    .build();
+                spin.connect_value_notify({
+                    let changed = self.changed.clone();
+                    move |_| {
+                        if let Some(changed) = &*changed.borrow() {
+                            changed();
+                        }
+                    }
+                });
+                (spin.clone().upcast::<adw::ActionRow>(), Some(spin))
+            }
+            None => (adw::ActionRow::new(), None),
+        };
+        row.set_title(&glib::markup_escape_text(&spec.title));
+        if !spec.subtitle.is_empty() {
+            row.set_subtitle(&glib::markup_escape_text(&spec.subtitle));
+        }
+        row.add_suffix(&remove);
+        self.group.add(&row);
+        self.rows.borrow_mut().push((spec.value, row.clone(), spin));
+        remove.connect_clicked({
+            let list = self.clone();
+            move |_| {
+                let position = list.rows.borrow().iter().position(|r| r.1 == row);
+                if let Some(position) = position {
+                    list.rows.borrow_mut().remove(position);
+                    list.group.remove(&row);
+                    list.update();
+                }
+            }
+        });
+    }
+
+    /// The values and their numbers, in order.
+    pub fn values(&self) -> Vec<(T, Option<u32>)> {
+        self.rows
+            .borrow()
+            .iter()
+            .map(|(value, _, spin)| (value.clone(), spin.as_ref().map(|s| s.value() as u32)))
+            .collect()
+    }
+
+    /// The row titles (names), in order.
+    pub fn rows_titles(&self) -> Vec<String> {
+        self.rows
+            .borrow()
+            .iter()
+            .map(|(_, row, _)| row.title().to_string())
+            .collect()
+    }
+
+    /// Calls `f` after every change.
+    pub fn connect_changed(&self, f: impl Fn() + 'static) {
+        *self.changed.borrow_mut() = Some(Box::new(f));
+        self.update();
+    }
+
+    fn update(&self) {
+        self.empty.set_visible(self.rows.borrow().is_empty());
+        if let Some(changed) = &*self.changed.borrow() {
+            changed();
+        }
+    }
 }

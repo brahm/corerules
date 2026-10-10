@@ -243,7 +243,8 @@ record! {
         /// proficiency page also writes its "Points Left" here for Core
         /// Rules characters), then the copper,
         /// silver, electrum, gold and platinum totals the equipment page
-        /// caches (the coins themselves are items in `inventory[6]`).
+        /// keeps; the creation wizard stores the starting funds here and
+        /// the page recomputes them from the coin items in `inventory[6]`.
         unknown_0x1778: [u32; 6],
         /// Movement rates cached for the equipment page; the sheet
         /// recomputes them.
