@@ -28,6 +28,8 @@ PATH="$tools:$PATH" linuxdeploy --appdir "$appdir" \
 # libadwaita draws its own light and dark styles; a GTK_THEME set by the
 # plugin's hook only makes it warn and breaks the dark style.
 sed -i '/export GTK_THEME=/d' "$appdir"/apprun-hooks/*gtk*.sh
+# The app plays no video, and GStreamer is not bundled.
+rm -rf "$appdir"/usr/lib/gtk-4.0/4.0.0/media
 mkdir -p dist
 VERSION=$version ARCH=$arch "$tools/appimagetool" --no-appstream "$appdir" \
     "dist/CoreRules-$version-$arch.AppImage"
