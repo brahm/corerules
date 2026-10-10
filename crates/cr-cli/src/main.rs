@@ -21,7 +21,8 @@ const USAGE: &str = "usage:
                             food, item (carried), readied, stored, worn,
                             service, transport; book+=SPELL:PAGES (first
                             spellbook); memorized+=CLASS:LEVEL:SPELL and
-                            priest-memorized+=...; coins cp= sp= ep= gp= pp=
+                            priest-memorized+=...; coins cp= sp= ep= gp= pp=;
+                            class+=NAME (humans: dual-class)
 
 Without INSTALL_DIR, the installation in the Wine prefix is used.";
 
@@ -133,6 +134,11 @@ fn cmd_edit(install: &Installation, args: &[String]) -> cr_store::Result<()> {
                         .ok_or_else(|| invalid(format!("{value} is not in {list}")))?;
                     items.remove(i);
                 }
+                continue;
+            }
+            if list == "class" && add {
+                // class+=NAME adds a class where the race may dual-class.
+                lists.new_classes.push(value.into());
                 continue;
             }
             if list == "book" {

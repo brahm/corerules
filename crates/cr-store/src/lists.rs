@@ -103,6 +103,8 @@ pub struct CharacterLists {
     pub coins: [u32; 5],
     /// The spellbooks among the top-level items.
     pub spellbooks: Vec<Spellbook>,
+    /// Classes to add, in order (see [`crate::dual`]); empty as read.
+    pub new_classes: Vec<String>,
 }
 
 /// An item in a bundle.
@@ -178,6 +180,7 @@ impl CharacterLists {
                     .map(|item| item.quantity)
                     .sum()
             }),
+            new_classes: Vec::new(),
             spellbooks: d
                 .inventory
                 .iter()

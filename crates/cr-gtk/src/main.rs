@@ -9,15 +9,17 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_formats::character::Character;
 use cr_store::Installation;
 use cr_store::catalog::{Entry, Section};
 use cr_store::choices::{Caster, caster};
+use cr_store::dual::ClassChoice;
 use cr_store::edit::{ABILITY_RANGE, CharacterDetails};
 use cr_store::lists::{
     BUNDLE_NAMES, COINS, CharacterLists, ITEM_TYPES, Item, MONEY, Memorized, Spellbook,
 };
 use gtk::{gio, glib};
-use lists::{ListEditor, RowList, RowSpec};
+use lists::{ListEditor, RowList, RowSpec, pick};
 
 const APP_ID: &str = "io.github.brahm.CoreRules";
 
@@ -169,7 +171,7 @@ impl Window {
             Err(e) => return self.toast(&e.to_string()),
         };
         let choices = match &*self.install.borrow() {
-            Some(install) => Choices::load(install),
+            Some(install) => Choices::load(install, &character),
             None => return,
         };
         let choices = match choices {
@@ -803,8 +805,10 @@ fn character_editor(
     appearance.add(&age);
     appearance.add(&height);
     appearance.add(&weight);
+    let (class_group, new_classes) = classes_group(classes, &choices.new_classes);
     let page = adw::PreferencesPage::new();
     page.add(&character);
+    page.add(&class_group);
     page.add(&appearance);
     page.add(&abilities);
 
@@ -892,7 +896,9 @@ fn character_editor(
                 exceptional_strength: exceptional.value() as u32,
                 skills_and_powers,
             };
-            match save(&details, &editors.lists()) {
+            let mut lists = editors.lists();
+            lists.new_classes = new_classes.borrow().clone();
+            match save(&details, &lists) {
                 Ok(()) => {
                     dialog.close();
                 }
@@ -904,6 +910,82 @@ fn character_editor(
         }
     });
     dialog.present(Some(parent));
+}
+
+/// The character's classes, with an Add button for one more class when
+/// the race may dual-class. Race and classes themselves cannot change.
+fn classes_group(
+    classes: &[String],
+    choice: &ClassChoice,
+) -> (adw::PreferencesGroup, Rc<RefCell<Vec<String>>>) {
+    let add = gtk::Button::builder()
+        .icon_name("list-add-symbolic")
+        .tooltip_text("Add Class")
+        .valign(gtk::Align::Center)
+        .css_classes(["flat"])
+        .build();
+    let group = adw::PreferencesGroup::builder()
+        .title("Classes")
+        .header_suffix(&add)
+        .build();
+    for class in classes {
+        group.add(
+            &adw::ActionRow::builder()
+                .title(glib::markup_escape_text(class).as_str())
+                .build(),
+        );
+    }
+    let added: Rc<RefCell<Vec<String>>> = Rc::default();
+    let offered = match choice {
+        ClassChoice::Refused(why) => {
+            group.set_description(Some(&glib::markup_escape_text(why)));
+            add.set_sensitive(false);
+            return (group, added);
+        }
+        ClassChoice::Allowed(names) if names.is_empty() => {
+            group.set_description(Some(
+                "No class meets the dual-class requirements of these abilities",
+            ));
+            add.set_sensitive(false);
+            return (group, added);
+        }
+        ClassChoice::Allowed(names) => names.clone(),
+    };
+    group.set_description(Some(
+        "Dual-classing: the new class starts at level 1 and the earlier class stops advancing",
+    ));
+    add.connect_clicked({
+        let (group, added) = (group.clone(), added.clone());
+        move |button| {
+            let (group, added, button) = (group.clone(), added.clone(), button.clone());
+            pick(&button.clone(), "Classes", offered.clone(), move |name| {
+                let remove = gtk::Button::builder()
+                    .icon_name("list-remove-symbolic")
+                    .tooltip_text("Remove")
+                    .valign(gtk::Align::Center)
+                    .css_classes(["flat"])
+                    .build();
+                let row = adw::ActionRow::builder()
+                    .title(glib::markup_escape_text(&name).as_str())
+                    .subtitle("New, level 1")
+                    .build();
+                row.add_suffix(&remove);
+                group.add(&row);
+                added.borrow_mut().push(name);
+                // One class at a time: the next one depends on this one.
+                button.set_sensitive(false);
+                remove.connect_clicked({
+                    let (group, added, button) = (group.clone(), added.clone(), button.clone());
+                    move |_| {
+                        group.remove(&row);
+                        added.borrow_mut().clear();
+                        button.set_sensitive(true);
+                    }
+                });
+            });
+        }
+    });
+    (group, added)
 }
 
 /// Each ability with its two Skills & Powers subabilities.
@@ -927,10 +1009,12 @@ struct Choices {
     wizard_levels: Rc<HashMap<String, u32>>,
     priest_levels: Rc<HashMap<String, u32>>,
     class_ids: HashMap<String, i32>,
+    /// Classes the character may add, or why none.
+    new_classes: ClassChoice,
 }
 
 impl Choices {
-    fn load(install: &Installation) -> cr_store::Result<Self> {
+    fn load(install: &Installation, character: &Character) -> cr_store::Result<Self> {
         let mut items = Vec::new();
         for part_type in ITEM_TYPES {
             items.extend(install.part_names(part_type)?);
@@ -949,6 +1033,7 @@ impl Choices {
             wizard_levels: Rc::new(install.spell_levels(true)?),
             priest_levels: Rc::new(install.spell_levels(false)?),
             class_ids: install.class_ids()?,
+            new_classes: install.class_table()?.choices(character),
         })
     }
 }
@@ -1239,6 +1324,7 @@ impl ListEditors {
             memorized,
             equipment,
             coins: std::array::from_fn(|c| self.coins[c].value() as u32),
+            new_classes: Vec::new(),
             spellbooks: self
                 .spellbooks
                 .iter()

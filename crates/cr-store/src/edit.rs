@@ -132,6 +132,12 @@ impl Installation {
         details.apply(&mut character);
         if let Some(lists) = lists {
             lists.apply(&mut character, &self.part_table()?)?;
+            if !lists.new_classes.is_empty() {
+                let table = self.class_table()?;
+                for class in &lists.new_classes {
+                    table.add(&mut character, class)?;
+                }
+            }
         }
         let format = |source| Error::Format {
             path: file.into(),
@@ -149,9 +155,15 @@ impl Installation {
             .find(|e| e.file.eq_ignore_ascii_case(file))
             .ok_or_else(|| Error::Invalid(format!("{file} is not in the character list")))?;
         entry.name.clone_from(&details.name);
+        let added = lists.map_or(0, |l| l.new_classes.len());
         for line in &mut entry.details {
             if line.starts_with(PLAYER_LINE) {
                 *line = format!("{PLAYER_LINE}{}", details.player);
+            } else if added > 0 && line.starts_with(CLASS_LINE) {
+                *line = format!("{CLASS_LINE}{}", character.data.class_title);
+            } else if added > 0 && line.starts_with(LEVEL_LINE) {
+                // A new class starts at level 1.
+                line.push_str(&"/1".repeat(added));
             }
         }
         let index_bytes = index.to_bytes().map_err(format)?;
@@ -169,6 +181,10 @@ impl Installation {
 
 /// The detail line of an Expansion index entry that names the player.
 const PLAYER_LINE: &str = "Player's Name: ";
+/// The detail lines of an index entry with the class title and the levels
+/// joined with "/".
+const CLASS_LINE: &str = "Class: ";
+const LEVEL_LINE: &str = "Level: ";
 
 /// `Chars/<file>`, refusing names that would leave the folder.
 fn character_path(file: &str) -> Result<String> {

@@ -76,3 +76,65 @@ fn carried_weight_matches_the_original() {
         );
     }
 }
+
+/// The classes offered to a human made from Borin (the Expansion's own
+/// dual-class dialog offered exactly these for the same abilities), and
+/// none to the demihumans.
+#[test]
+fn dual_class_choices_match_the_original() {
+    use cr_formats::character::Character;
+    use cr_store::dual::ClassChoice;
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = cr_store::Installation::open(dir).unwrap();
+    let fixtures = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/fixtures/characters"
+    );
+    let table = install.class_table().unwrap();
+    let borin =
+        Character::parse(&std::fs::read(format!("{fixtures}/90688519.dat")).unwrap()).unwrap();
+    assert!(matches!(table.choices(&borin), ClassChoice::Refused(_)));
+
+    let mut human = borin.clone();
+    human.data.race = "Human".into();
+    human.data.strength = [17; 3];
+    for (a, score) in human.data.abilities.iter_mut().zip([14, 16, 17, 13, 8]) {
+        *a = [score; 3];
+    }
+    let ClassChoice::Allowed(mut names) = table.choices(&human) else {
+        panic!("a human fighter with Str 17 may dual-class");
+    };
+    names.sort();
+    if install.path("UserDbas/AllowedU.dat").is_some() {
+        assert_eq!(
+            names,
+            [
+                "Air Elementalist",
+                "Alchemist",
+                "Conjurer",
+                "Earth Elementalist",
+                "Fire Elementalist",
+                "Geometer",
+                "Invoker",
+                "Mage",
+                "Shadow Mage",
+                "Song Wizard",
+                "Water Elementalist",
+                "Wild Mage",
+            ]
+        );
+    } else {
+        assert!(names.contains(&"Mage".to_owned()), "{names:?}");
+    }
+    table.add(&mut human, "Mage").unwrap();
+    assert_eq!(human.data.class_title, "Fighter/Mage");
+    assert_eq!(human.data.classes.names, ["Fighter", "Mage"]);
+    assert_eq!(human.data.class_slots[1].unknown_0x270.len(), 8);
+    assert!(table.add(&mut human, "Cleric").is_err());
+    // Below 15 in the fighter's prime requisite, no class.
+    human.data.classes.names.truncate(1);
+    human.data.strength = [14; 3];
+    assert!(matches!(table.choices(&human), ClassChoice::Refused(_)));
+}

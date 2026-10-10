@@ -6,6 +6,7 @@
 
 pub mod catalog;
 pub mod choices;
+pub mod dual;
 pub mod edit;
 pub mod lists;
 
