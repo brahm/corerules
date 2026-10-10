@@ -40,7 +40,10 @@ Early work (phase 0 of the plan): the file formats are being mapped.
       and ability scores, checked by opening the edited files in both
       original programs (close the original program while editing; it
       keeps the character list in memory)
-- [ ] Editing race, class, proficiencies, spells and equipment
+- [x] Editing weapon and nonweapon proficiencies, native languages,
+      spells known and items carried, checked in both original programs
+- [ ] Spellbooks and memorized spells, other equipment bundles, money
+- [ ] Changing race or class
 
 ## Layout
 
