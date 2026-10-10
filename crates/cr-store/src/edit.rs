@@ -131,7 +131,7 @@ impl Installation {
         let mut character = self.character(file)?;
         details.apply(&mut character);
         if let Some(lists) = lists {
-            lists.apply(&mut character, &self.part_table()?);
+            lists.apply(&mut character, &self.part_table()?)?;
         }
         let format = |source| Error::Format {
             path: file.into(),

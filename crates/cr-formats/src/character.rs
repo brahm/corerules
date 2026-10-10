@@ -239,7 +239,9 @@ record! {
         abilities: [[u32; 3]; 5],
         unknown_0x1980: [String; 2],
         unknown_0x162c: u32,
-        /// Unspent Skills & Powers character points, then the copper,
+        /// Unspent Skills & Powers character points (the nonweapon
+        /// proficiency page also writes its "Points Left" here for Core
+        /// Rules characters), then the copper,
         /// silver, electrum, gold and platinum totals the equipment page
         /// caches (the coins themselves are items in `inventory[6]`).
         unknown_0x1778: [u32; 6],

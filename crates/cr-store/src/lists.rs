@@ -15,8 +15,16 @@
 //! * items stay sorted by name in byte order, and an added item merges into
 //!   an item of the same name that holds nothing, as when buying.
 //!
-//! Skills & Powers character points are left as they are: removing or
-//! adding a proficiency here neither refunds nor spends them.
+//! * with Skills & Powers, a nonweapon proficiency is bought with
+//!   character points, so adding one spends its cost from the unspent
+//!   points and removing one refunds what it cost; a character without
+//!   enough points cannot take it;
+//! * native languages are kept in alphabetical order, as the program
+//!   saves them.
+//!
+//! Proficiency slots are not checked: the original computes them when it
+//! shows the character and simply shows a negative count when there are
+//! too many.
 
 use std::collections::HashMap;
 
@@ -72,13 +80,16 @@ impl CharacterLists {
         }
     }
 
-    pub fn apply(&self, character: &mut Character, parts: &PartTable) {
+    pub fn apply(&self, character: &mut Character, parts: &PartTable) -> Result<()> {
         let skills_and_powers = character.skills_and_powers();
         let keeps_weight = character.version.starts_with("TSRP3");
         let d = &mut character.data;
         d.weapon_proficiencies
             .clone_from(&self.weapon_proficiencies);
-        d.languages.clone_from(&self.languages);
+        if d.languages != self.languages {
+            d.languages.clone_from(&self.languages);
+            d.languages.sort();
+        }
         d.spells.clone_from(&self.wizard_spells);
         d.priest_spells.clone_from(&self.priest_spells);
 
@@ -101,6 +112,7 @@ impl CharacterLists {
                 .collect();
         let (mut names, mut costs, mut bonuses, mut details) =
             (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        let mut spent = 0i64;
         for name in &self.nonweapon_proficiencies {
             let old = d
                 .nonweapon_proficiencies
@@ -109,8 +121,10 @@ impl CharacterLists {
                 .find(|(i, n)| *n == name && kept[*i].is_some())
                 .and_then(|(i, _)| kept[i].take());
             let (cost, bonus, detail) = old.unwrap_or_else(|| {
+                let cost = parts.nonweapon_cost(name, skills_and_powers);
+                spent += i64::from(cost);
                 (
-                    parts.nonweapon_cost(name, skills_and_powers),
+                    cost,
                     d.nonweapon_bonuses.as_ref().map(|_| 0),
                     Object::StringArray(Vec::new()),
                 )
@@ -119,6 +133,18 @@ impl CharacterLists {
             costs.push(cost);
             bonuses.push(bonus.unwrap_or(0));
             details.push(detail);
+        }
+        if skills_and_powers {
+            let refunded: i64 = kept.iter().flatten().map(|k| i64::from(k.0)).sum();
+            let points = i64::from(d.unknown_0x1778[0]) + refunded - spent;
+            if points < 0 {
+                return Err(Error::Invalid(format!(
+                    "Not enough character points: the new proficiencies cost {spent}, \
+                     and {} are left",
+                    i64::from(d.unknown_0x1778[0]) + refunded
+                )));
+            }
+            d.unknown_0x1778[0] = points as u32;
         }
         d.nonweapon_proficiencies = names;
         d.nonweapon_costs = costs;
@@ -160,6 +186,7 @@ impl CharacterLists {
             let weight = f64::from(f32::from_bits(d.carried_weight)) + weight_change;
             d.carried_weight = (weight.max(0.0) as f32).to_bits();
         }
+        Ok(())
     }
 }
 
@@ -299,7 +326,7 @@ mod tests {
 
         // Unchanged lists leave the file as it was.
         let mut same = before.clone();
-        lists.apply(&mut same, &table());
+        lists.apply(&mut same, &table()).unwrap();
         assert_eq!(same, before);
 
         lists.nonweapon_proficiencies.remove(1);
@@ -309,7 +336,7 @@ mod tests {
         lists.carried.push("Torch".into());
         lists.carried.push("Torch".into());
         let mut after = before.clone();
-        lists.apply(&mut after, &table());
+        lists.apply(&mut after, &table()).unwrap();
         let (b, a) = (&before.data, &after.data);
 
         assert_eq!(
@@ -327,6 +354,9 @@ mod tests {
         assert_eq!(a.nonweapon_costs[1], b.nonweapon_costs[2]);
         assert_eq!(*a.nonweapon_costs.last().unwrap(), 1);
         assert_eq!(a.weapon_proficiencies.last().unwrap(), "Sword, long");
+        assert_eq!(a.languages, ["Dwarf", "Elf"]);
+        // Core Rules: no character points change hands.
+        assert_eq!(a.unknown_0x1778, b.unknown_0x1778);
 
         let torches: Vec<_> = a.inventory[CARRIED]
             .items
@@ -344,7 +374,7 @@ mod tests {
         let mut lists = CharacterLists::of(&after);
         lists.carried.retain(|n| n != "Backpack");
         let mut lighter = after.clone();
-        lists.apply(&mut lighter, &table());
+        lists.apply(&mut lighter, &table()).unwrap();
         let backpack = after.data.inventory[CARRIED]
             .items
             .iter()
@@ -353,5 +383,28 @@ mod tests {
         let expected = table().item_weight(backpack, false);
         assert!(expected >= 2.0);
         assert!((f64::from(weight(&after) - weight(&lighter)) - expected).abs() < 1e-4);
+    }
+
+    const LIRAEL: &[u8] = include_bytes!("../../../tests/fixtures/characters/90988519.dat");
+
+    #[test]
+    fn skills_and_powers_proficiencies_cost_character_points() {
+        let before = Character::parse(LIRAEL).unwrap();
+        let points = before.data.unknown_0x1778[0];
+        let mut lists = CharacterLists::of(&before);
+        let removed = before.data.nonweapon_costs[0];
+        lists.nonweapon_proficiencies.remove(0);
+        lists.nonweapon_proficiencies.push("Swimming".into());
+        let mut after = before.clone();
+        lists.apply(&mut after, &table()).unwrap();
+        assert_eq!(after.data.unknown_0x1778[0], points + removed - 2);
+
+        // More than the points left is refused.
+        let mut table = table();
+        table
+            .nonweapon_costs
+            .insert("Swimming".into(), (1, points + removed + 1));
+        let mut refused = before.clone();
+        assert!(lists.apply(&mut refused, &table).is_err());
     }
 }
