@@ -166,19 +166,32 @@ pub struct Character {
     pub data: CharacterData,
 }
 
+/// A character embedded in another object (an NPC in an encounter) is
+/// stored exactly like a character file.
+impl Field for Character {
+    fn read(r: &mut ArchiveReader) -> Result<Self> {
+        let version = r.read_string()?;
+        let data = CharacterData::read_fields(r, version_of(&version))?;
+        Ok(Self { version, data })
+    }
+
+    fn write(&self, w: &mut ArchiveWriter) -> Result<()> {
+        w.write_string(&self.version)?;
+        self.data.write_fields(w, version_of(&self.version))
+    }
+}
+
 impl Character {
     pub fn parse(data: &[u8]) -> Result<Self> {
         let mut r = ArchiveReader::new(data);
-        let version = r.read_string()?;
-        let data = CharacterData::read_fields(&mut r, version_of(&version))?;
+        let character = Self::read(&mut r)?;
         r.finish()?;
-        Ok(Self { version, data })
+        Ok(character)
     }
 
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
         let mut w = ArchiveWriter::new();
-        w.write_string(&self.version)?;
-        self.data.write_fields(&mut w, version_of(&self.version))?;
+        self.write(&mut w)?;
         Ok(w.into_bytes())
     }
 
