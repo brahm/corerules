@@ -2,7 +2,7 @@
 
 use std::process::ExitCode;
 
-use cr_formats::character::CharacterHeader;
+use cr_formats::character::Character;
 use cr_formats::database::survey;
 use cr_store::Installation;
 
@@ -67,11 +67,14 @@ fn cmd_survey(install: &Installation) -> cr_store::Result<()> {
 fn cmd_chars(install: &Installation) -> cr_store::Result<()> {
     let index = install.characters()?;
     for entry in &index.entries {
-        let header = install
+        let character = install
             .read(&format!("Chars/{}", entry.file))
             .ok()
-            .and_then(|data| CharacterHeader::parse(&data).ok());
-        let version = header.as_ref().map(|h| h.version.as_str()).unwrap_or("?");
+            .and_then(|data| Character::parse(&data).ok());
+        let version = character
+            .as_ref()
+            .map(|c| c.version.as_str())
+            .unwrap_or("unreadable");
         println!(
             "{:<24} {:<10} {}  [{}, {}]",
             entry.name,

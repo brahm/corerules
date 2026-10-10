@@ -1,8 +1,19 @@
 //! Character files: `Chars/index.chr` and one `<id>.dat` per character.
+//!
+//! A character file is a `CCharacterDoc` (`Serialize` at 0x41cd5b in
+//! TSRP3.EXE). It opens with a version string, `TSRP3 V54` for the
+//! Expansion and `TSRP V27` for Core Rules 2.0; the fields a version
+//! predates are absent, with the conditions copied from the load code.
+//! Unnamed fields keep the member offset they have in the original object.
 
-use crate::{ArchiveReader, ArchiveWriter, ClassInfo, Error, ObjectTag, Result};
+use crate::field::Field;
+use crate::inventory::InventoryBundle;
+use crate::{ArchiveReader, ArchiveWriter, ClassInfo, Error, Object, ObjectTag, Result, record};
 
 const MINI_CLASS: &str = "CCharacterMiniOb";
+
+/// The character layout the Expansion writes.
+pub const CURRENT_VERSION: i32 = 54;
 
 /// One entry of `index.chr` (`CCharacterMiniOb`), the summary the
 /// character list shows without opening each file.
@@ -12,13 +23,82 @@ pub struct CharacterEntry {
     /// File name inside `Chars/`, e.g. `90688519.dat`.
     pub file: String,
     pub race: String,
-    /// Fields not identified yet, kept verbatim for round-tripping.
-    pub unknown_a: i32,
-    pub unknown_b: i32,
-    pub unknown_c: i32,
-    pub unknown_d: u16,
+    /// Entry layout version, 3 in the Expansion. Versions 0 and 1 store
+    /// only `unknown_0x24` and the flag.
+    pub version: u32,
+    pub extra: Option<EntryExtra>,
+    pub unknown_0x24: u32,
+    /// 1 for the Core Rules fixture, 0 for the Skills & Powers one.
+    pub flag_0x28: u8,
     /// Display lines: rules system, player, party, race, class, level, kit.
     pub details: Vec<String>,
+}
+
+/// Fields of a [`CharacterEntry`] from layout version 2 on.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EntryExtra {
+    /// Read into a local and dropped by the Expansion (8 in both fixtures).
+    pub unknown: u32,
+    pub unknown_0x2c: String,
+}
+
+impl Field for CharacterEntry {
+    fn read(r: &mut ArchiveReader) -> Result<Self> {
+        let name = r.read_string()?;
+        let file = r.read_string()?;
+        let race = r.read_string()?;
+        let version = r.read_u32()?;
+        let (unknown, unknown_0x24, flag_0x28, unknown_0x2c) = if version > 1 {
+            (
+                Some(r.read_u32()?),
+                r.read_u32()?,
+                r.read_u8()?,
+                Some(r.read_string()?),
+            )
+        } else {
+            (None, version, r.read_u8()?, None)
+        };
+        let extra = match (unknown, unknown_0x2c) {
+            (Some(unknown), Some(unknown_0x2c)) => Some(EntryExtra {
+                unknown,
+                unknown_0x2c,
+            }),
+            _ => None,
+        };
+        Ok(Self {
+            name,
+            file,
+            race,
+            version,
+            extra,
+            unknown_0x24,
+            flag_0x28,
+            details: Field::read(r)?,
+        })
+    }
+
+    fn write(&self, w: &mut ArchiveWriter) -> Result<()> {
+        w.write_string(&self.name)?;
+        w.write_string(&self.file)?;
+        w.write_string(&self.race)?;
+        w.write_u32(self.version);
+        match (&self.extra, self.version > 1) {
+            (Some(extra), true) => {
+                w.write_u32(extra.unknown);
+                w.write_u32(self.unknown_0x24);
+                w.write_u8(self.flag_0x28);
+                w.write_string(&extra.unknown_0x2c)?;
+            }
+            (None, false) => w.write_u8(self.flag_0x28),
+            (_, expected) => {
+                return Err(Error::FieldMismatch {
+                    field: "extra",
+                    expected,
+                });
+            }
+        }
+        self.details.write(w)
+    }
 }
 
 /// `index.chr`: a `CObList` of [`CharacterEntry`] (`CCharacterFileList`).
@@ -33,7 +113,7 @@ impl CharacterIndex {
         let mut r = ArchiveReader::new(data);
         let count = r.read_count()?;
         let mut schema = 0;
-        let mut entries = Vec::with_capacity(count as usize);
+        let mut entries = Vec::with_capacity(count.min(1024) as usize);
         for _ in 0..count {
             let offset = r.position();
             match r.read_object_tag()? {
@@ -46,22 +126,9 @@ impl CharacterIndex {
                 }
                 tag => return Err(Error::UnexpectedTag { offset, tag }),
             }
-            entries.push(CharacterEntry {
-                name: r.read_string()?,
-                file: r.read_string()?,
-                race: r.read_string()?,
-                unknown_a: r.read_i32()?,
-                unknown_b: r.read_i32()?,
-                unknown_c: r.read_i32()?,
-                unknown_d: r.read_u16()?,
-                details: r.read_string_array()?,
-            });
+            entries.push(CharacterEntry::read(&mut r)?);
         }
-        if !r.is_at_end() {
-            return Err(Error::TrailingBytes {
-                trailing: r.remaining(),
-            });
-        }
+        r.finish()?;
         Ok(Self { schema, entries })
     }
 
@@ -74,63 +141,292 @@ impl CharacterIndex {
         w.write_count(self.entries.len() as u32);
         for e in &self.entries {
             w.write_object_tag(&class);
-            w.write_string(&e.name)?;
-            w.write_string(&e.file)?;
-            w.write_string(&e.race)?;
-            w.write_i32(e.unknown_a);
-            w.write_i32(e.unknown_b);
-            w.write_i32(e.unknown_c);
-            w.write_u16(e.unknown_d);
-            w.write_string_array(&e.details)?;
+            e.write(&mut w)?;
         }
         Ok(w.into_bytes())
     }
 }
 
-/// Which rule set a character was built with.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RulesSystem {
-    CoreRules,
-    SkillsAndPowers,
-    Other(i32),
-}
-
-impl From<i32> for RulesSystem {
-    fn from(v: i32) -> Self {
-        match v {
-            0 => Self::CoreRules,
-            1 => Self::SkillsAndPowers,
-            n => Self::Other(n),
-        }
+/// The character version a version string announces, the way the original
+/// reads it.
+pub fn version_of(version_string: &str) -> i32 {
+    match version_string {
+        "TSRP V27" => 27,
+        "TSRP3 V28" => 28,
+        s if s == format!("TSRP3 V{CURRENT_VERSION}") => CURRENT_VERSION,
+        s => crate::atol(s.find('V').map_or(s, |i| &s[i + 1..])),
     }
 }
 
-/// The identified start of a character file (`CCharacterDoc::Serialize`).
-/// The rest of the file is not mapped yet.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CharacterHeader {
-    /// Program and file version, e.g. `TSRP3 V54` for the Expansion.
+/// A character file (`CCharacterDoc`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Character {
+    /// `TSRP3 V54` for files the Expansion wrote.
     pub version: String,
-    pub rules: RulesSystem,
-    /// Empty in both fixtures; inferred to be the party name because the
-    /// index shows an empty "Party:" line for the same characters.
-    pub party: String,
-    pub player: String,
-    pub name: String,
-    pub class: String,
+    pub data: CharacterData,
 }
 
-impl CharacterHeader {
+impl Character {
     pub fn parse(data: &[u8]) -> Result<Self> {
         let mut r = ArchiveReader::new(data);
+        let version = r.read_string()?;
+        let data = CharacterData::read_fields(&mut r, version_of(&version))?;
+        r.finish()?;
+        Ok(Self { version, data })
+    }
+
+    pub fn to_bytes(&self) -> Result<Vec<u8>> {
+        let mut w = ArchiveWriter::new();
+        w.write_string(&self.version)?;
+        self.data.write_fields(&mut w, version_of(&self.version))?;
+        Ok(w.into_bytes())
+    }
+
+    /// Whether the character was built with Skills & Powers rather than
+    /// the Core Rules.
+    pub fn skills_and_powers(&self) -> bool {
+        self.data.skills_and_powers != 0
+    }
+}
+
+record! {
+    /// The fields of a character after its version string.
+    pub struct CharacterData(v) {
+        /// 1 when the character uses Skills & Powers.
+        skills_and_powers: u8,
+        unknown_0x1dac: u32,
+        player: String,
+        name: String,
+        /// Class as displayed, e.g. "Fighter/Mage".
+        class_title: String,
+        /// "NONE" in both fixtures.
+        unknown_0x90: String,
+        unknown_0x94: String,
+        /// Social class, e.g. "Lower middle class".
+        social_class: String,
+        unknown_0x1618: [u32; 5],
+        /// Height in inches, weight in pounds, age in years.
+        height: u32,
+        weight: u32,
+        age: u32,
+        unknown_0x163c: u32,
+        /// Strength as three values (the fixtures repeat the score), then
+        /// exceptional strength.
+        strength: [u32; 3],
+        exceptional_strength: u32,
+        /// Dexterity, Constitution, Intelligence, Wisdom and Charisma, three
+        /// values each like strength.
+        abilities: [[u32; 3]; 5],
+        unknown_0x1980: [String; 2],
+        unknown_0x162c: u32,
+        unknown_0x1778: [u32; 6],
+        unknown_0x17bc: [u32; 3],
+        unknown_0x17b8: u32,
+        unknown_0x196c: [Vec<String>; 3],
+        race: String,
+        /// "Hill dwarf", "High elf".
+        subrace: String,
+        /// "None" when the character has no kit.
+        kit: String,
+        unknown_0x124: [String; 3],
+        /// Compared with 1990, 1991 and 1992 after loading.
+        unknown_0x130: u32,
+        unknown_0x134: [u32; 4],
+        unknown_0x144: String,
+        unknown_0x148: [u32; 6],
+        unknown_0x1da4: u32,
+        unknown_0x186c: u32,
+        unknown_0x1874: u32,
+        unknown_0x1870: u32,
+        unknown_0x1dc4: u32,
+        flags_0x1ddc: Option<[u8; 2]> = if v > 30,
+        flag_0x1dde: Option<u8> = if v > 31,
+        flags_0x1ddf: Option<[u8; 6]> = if v > 32,
+        flag_0x1de1: Option<u8> = if v > 33,
+        flags_0x1de6: Option<[u8; 2]> = if v > 36,
+        flags_0x1de8: Option<[u8; 2]> = if v > 40,
+        flags_0x1dea: Option<[u8; 3]> = if v > 34,
+        unknown_0x1df0: Option<(u32, u8)> = if v > 37,
+        unknown_0x1df8: Option<u32> = if v > 41,
+        unknown_0x1dfc: Option<u32> = if v > 44,
+        unknown_0x39c: Option<String> = if v > 46,
+        unknown_0x1e50: u32,
+        flags_0x1e54: Option<[u8; 5]> = if v > 53,
+        unknown_0x1e5c: [u32; 3],
+        alignment: String,
+        unknown_0x1db8: [String; 2],
+        unknown_0x1e20: String,
+        unknown_0x1e88: String,
+        unknown_0x1e68: Option<[String; 13]> = if v > 27,
+        sheet_options: Option<SheetOptions> = if v > 28,
+        classes: ClassList,
+        weapon_proficiencies: Vec<String>,
+        unknown_0xac: [Vec<String>; 7],
+        unknown_0x19c4: Vec<String>,
+        racial_abilities: Vec<String>,
+        /// Spells, e.g. "Burning Hands".
+        spells: Vec<String>,
+        unknown_0x3b4: Vec<String>,
+        /// Five groups of eleven pairs of string lists (members 0x3c8 and
+        /// 0x814, 0x14 bytes apart, groups 0xdc apart).
+        unknown_0x3c8: [[(Vec<String>, Vec<String>); 11]; 5],
+        unknown_0x1878: Vec<String>,
+        rogue_skills: RogueSkills,
+        unknown_0xc60: [[u32; 100]; 5],
+        unknown_0x1430: [u32; 100],
+        /// A `CDWordArray` with one value per class level slot.
+        unknown_0x17e0: Vec<u32>,
+        unknown_0x17f4: Option<Vec<u32>> = if v > 50,
+        /// Per class slot: its abilities and three more lists.
+        class_slots: [ClassSlot; 5],
+        /// Armor and shield, e.g. "Full armor, brigandine".
+        armor: Vec<String>,
+        unknown_0x17a4: Vec<String>,
+        nonweapon_proficiencies: Vec<String>,
+        unknown_0x1830: [Vec<String>; 3],
+        unknown_0x98: Vec<String>,
+        /// `CStringArray` objects, five in both fixtures.
+        unknown_0x1808: Vec<Object>,
+        languages: Vec<String>,
+        unknown_0x1930: Option<[Vec<String>; 2]> = if v > 29,
+        unknown_0x1dc8: Option<Vec<String>> = if v > 35,
+        unknown_0x1958: Option<Vec<String>> = if v > 38,
+        /// Nine equipment bundles; the third holds what the character
+        /// carries.
+        inventory: [InventoryBundle; 9],
+        unknown_0x1ea4: Option<(u8, [Vec<String>; 2])> = if v > 39,
+        flag_0x1610: Option<u8> = if v > 42,
+        unknown_0x160c: Option<u32> = if v >= 44,
+        unknown_0x15e4: Option<[Vec<Object>; 2]> = if v >= 46,
+        unknown_0x1e28: Option<Vec<Object>> = if v > 47,
+        unknown_0x1e3c: Option<Vec<Object>> = if v > 49,
+        flag_0x1ea8: Option<u8> = if v > 48,
+        unknown_0x1e00: Option<Vec<String>> = if v > 51,
+        unknown_0x2174: Option<Vec<Object>> = if v > 52,
+    }
+}
+
+record! {
+    /// What the character holds per class slot (members 0x1a8, 0x270,
+    /// 0x2d4 and 0x338, 0x14 bytes per slot).
+    pub struct ClassSlot {
+        /// Class abilities, e.g. "Fighter, Followers (5)".
+        abilities: Vec<String>,
+        unknown_0x270: Vec<String>,
+        unknown_0x2d4: Vec<String>,
+        unknown_0x338: Vec<String>,
+    }
+}
+
+/// The character's classes: a `u32` count, ten values at member 0x50, then
+/// one class name per count (resolved to `CClassOb`s by name).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ClassList {
+    pub unknown_0x50: [u32; 10],
+    pub names: Vec<String>,
+}
+
+impl Field for ClassList {
+    fn read(r: &mut ArchiveReader) -> Result<Self> {
+        let count = r.read_u32()?;
+        let unknown_0x50 = Field::read(r)?;
+        let mut names = Vec::with_capacity(count.min(16) as usize);
+        for _ in 0..count {
+            names.push(r.read_string()?);
+        }
         Ok(Self {
-            version: r.read_string()?,
-            rules: r.read_i32()?.into(),
-            party: r.read_string()?,
-            player: r.read_string()?,
-            name: r.read_string()?,
-            class: r.read_string()?,
+            unknown_0x50,
+            names,
         })
+    }
+
+    fn write(&self, w: &mut ArchiveWriter) -> Result<()> {
+        w.write_u32(self.names.len() as u32);
+        self.unknown_0x50.write(w)?;
+        self.names.iter().try_for_each(|n| w.write_string(n))
+    }
+}
+
+/// `CCharacterDocRogueSkillsOb` (Serialize 0x59a8ab), stored inline: a
+/// `u32` count, then per entry a name and 100 values.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RogueSkills {
+    pub entries: Vec<(String, [u32; 100])>,
+}
+
+impl Field for RogueSkills {
+    fn read(r: &mut ArchiveReader) -> Result<Self> {
+        let count = r.read_u32()?;
+        let mut entries = Vec::with_capacity(count.min(64) as usize);
+        for _ in 0..count {
+            entries.push(Field::read(r)?);
+        }
+        Ok(Self { entries })
+    }
+
+    fn write(&self, w: &mut ArchiveWriter) -> Result<()> {
+        w.write_u32(self.entries.len() as u32);
+        self.entries.iter().try_for_each(|e| e.write(w))
+    }
+}
+
+/// `CCharacterSheetOptions` (Serialize 0x599eb8), stored inline. Its own
+/// version is 2 in the Expansion; version 1 stored the entries as a
+/// `CObArray`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SheetOptions {
+    pub version: u32,
+    pub unknown_0x260: u32,
+    pub unknown_0x25c: u32,
+    pub entries: SheetEntries,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SheetEntries {
+    /// Version 1.
+    Objects(Vec<Object>),
+    /// Later versions: a `u32` count and (name, value) pairs.
+    Pairs(Vec<(String, u32)>),
+}
+
+impl Field for SheetOptions {
+    fn read(r: &mut ArchiveReader) -> Result<Self> {
+        let version = r.read_u32()?;
+        let unknown_0x260 = r.read_u32()?;
+        let unknown_0x25c = r.read_u32()?;
+        let entries = if version == 1 {
+            SheetEntries::Objects(Field::read(r)?)
+        } else {
+            let count = r.read_u32()?;
+            let mut pairs = Vec::with_capacity(count.min(256) as usize);
+            for _ in 0..count {
+                pairs.push(Field::read(r)?);
+            }
+            SheetEntries::Pairs(pairs)
+        };
+        Ok(Self {
+            version,
+            unknown_0x260,
+            unknown_0x25c,
+            entries,
+        })
+    }
+
+    fn write(&self, w: &mut ArchiveWriter) -> Result<()> {
+        w.write_u32(self.version);
+        w.write_u32(self.unknown_0x260);
+        w.write_u32(self.unknown_0x25c);
+        match (&self.entries, self.version == 1) {
+            (SheetEntries::Objects(objects), true) => objects.write(w),
+            (SheetEntries::Pairs(pairs), false) => {
+                w.write_u32(pairs.len() as u32);
+                pairs.iter().try_for_each(|p| p.write(w))
+            }
+            (_, expected) => Err(Error::FieldMismatch {
+                field: "sheet_options.entries",
+                expected,
+            }),
+        }
     }
 }
 
@@ -149,6 +445,7 @@ mod tests {
         let names: Vec<_> = index.entries.iter().map(|e| e.name.as_str()).collect();
         assert_eq!(names, ["Borin Pedraforte", "Lirael Folhaverde"]);
         assert_eq!(index.entries[1].file, "90988519.dat");
+        assert_eq!(index.entries[1].version, 3);
         assert_eq!(index.entries[1].details[0], "Skills & Powers");
         assert_eq!(index.entries[1].details[4], "Class: Fighter/Mage");
     }
@@ -160,16 +457,47 @@ mod tests {
     }
 
     #[test]
-    fn character_headers() {
-        let borin = CharacterHeader::parse(BORIN).unwrap();
-        assert_eq!(borin.version, "TSRP3 V54");
-        assert_eq!(borin.rules, RulesSystem::CoreRules);
-        assert_eq!(borin.player, "Fixture One");
-        assert_eq!(borin.name, "Borin Pedraforte");
-        assert_eq!(borin.class, "Fighter");
+    fn version_strings() {
+        assert_eq!(version_of("TSRP3 V54"), 54);
+        assert_eq!(version_of("TSRP V27"), 27);
+        assert_eq!(version_of("TSRP3 V41"), 41);
+    }
 
-        let lirael = CharacterHeader::parse(LIRAEL).unwrap();
-        assert_eq!(lirael.rules, RulesSystem::SkillsAndPowers);
-        assert_eq!(lirael.class, "Fighter/Mage");
+    #[test]
+    fn characters_read_completely() {
+        let borin = Character::parse(BORIN).unwrap();
+        assert_eq!(borin.version, "TSRP3 V54");
+        assert!(!borin.skills_and_powers());
+        let d = &borin.data;
+        assert_eq!(d.player, "Fixture One");
+        assert_eq!(d.name, "Borin Pedraforte");
+        assert_eq!(
+            (d.race.as_str(), d.subrace.as_str()),
+            ("Dwarf", "Hill dwarf")
+        );
+        assert_eq!((d.height, d.weight, d.age), (47, 164, 63));
+        assert_eq!(d.strength, [17; 3]);
+        assert_eq!(d.abilities[4], [8; 3]);
+        assert_eq!(d.alignment, "Lawful Good");
+        assert_eq!(d.classes.names, ["Fighter"]);
+        assert_eq!(d.weapon_proficiencies, ["Axe, battle"]);
+        assert_eq!(d.class_slots[0].abilities[0], "Fighter, Followers (5)");
+        let pack = &d.inventory[2].items[0];
+        assert_eq!(pack.name, "Backpack");
+        assert!(pack.contents.is_some());
+
+        let lirael = Character::parse(LIRAEL).unwrap();
+        assert!(lirael.skills_and_powers());
+        assert_eq!(lirael.data.class_title, "Fighter/Mage");
+        assert_eq!(lirael.data.classes.names.len(), 2);
+        assert_eq!(lirael.data.spells, ["Burning Hands", "Armor"]);
+    }
+
+    #[test]
+    fn characters_round_trip_byte_for_byte() {
+        for data in [BORIN, LIRAEL] {
+            let character = Character::parse(data).unwrap();
+            assert_eq!(character.to_bytes().unwrap(), data);
+        }
     }
 }

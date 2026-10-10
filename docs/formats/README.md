@@ -27,48 +27,32 @@ without regard to case.
 | `Tables/*.tbl` | DMG tables for the generators | Plain text |
 | `*.xpt` / `*.xpx` | Exports from 2.0 / the Expansion | `CImportExportDoc` |
 
-## Database classes (Expansion)
+## How the formats were mapped
 
-| File | Records | Class (schema) |
-| --- | --- | --- |
-| Attack.dat | 21 | CMonsterAttackOb (88) |
-| Class.dat | 26 | CClassOb (88) |
-| Convert.dat | 1454 | CStringArray |
-| EncPlat.dat | 887 | CEncTemplateOb (88) |
-| Monster.dat | 1524 | CMonsterOb (88) |
-| MonType.dat | 298 | CMonsterTypeOb (95) |
-| Parts.dat | 733 | CPart (93) |
-| Phrase.dat | 442 | CPhraseSpacingOb (88) |
-| Psionic.dat | 231 | CPsionicPowerOb (96) |
-| Race.dat | 48 | CRaceOb (88) |
-| Spells.dat | 480 | CSpellsOb (88) |
-| Traps.dat | 3 | CTrapOb (95) |
-| Treasure.dat | 496 | CTreasureSingleTableOb (1) |
+Each class's layout comes from the load branch of its `Serialize` function
+in `TSRP3.EXE`, disassembled with radare2, and is checked by reading every
+shipped file to its last byte. Field names come from the data and the
+program's own strings; fields without enough evidence are named after their
+member offset in the original object (`unknown_0x2c` = `this + 0x2c`), so
+they can be traced back to the disassembly. Several classes carry their own
+version and skip fields older versions lacked; those conditions are copied
+from the code even where the shipped data only uses the newest version.
 
-## `CCharacterMiniOb` (index.chr entry)
+## Status
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| name | CString | |
-| file | CString | e.g. `90688519.dat` |
-| race | CString | |
-| ? | i32 | 3 in both fixtures |
-| ? | i32 | 8 in both fixtures |
-| ? | i32 | 0 in both fixtures |
-| ? | u16 | 1 for a Core Rules character, 0 for Skills & Powers |
-| details | CStringArray | rules system, player, party, race, class, level, kit |
+| File | Framing | Documented in | Rust |
+| --- | --- | --- | --- |
+| `Race.dat`, `RaceU.dat` | one `CObList` of `CRaceOb` (88) | [`race.rs`](../../crates/cr-formats/src/race.rs) | yes |
+| `Class.dat`, `ClassU.dat` | one `CObList` of `CClassOb` (88), each with a `TSRP3 V39` version string | [`classes.rs`](../../crates/cr-formats/src/classes.rs) | yes |
+| `Chars/<id>.dat` | `CCharacterDoc`, version `TSRP V27` to `TSRP3 V54` | [`character.rs`](../../crates/cr-formats/src/character.rs) | yes |
+| `Chars/index.chr` | one `CObList` of `CCharacterMiniOb` (95) | [`character.rs`](../../crates/cr-formats/src/character.rs) | yes |
+| `Parts.dat`, `PartsU.dat` | 21 `CObArray`s of `CPart` (93), one per part type | [parts.md](parts.md) | not yet |
+| `Spells.dat`, `SpellsU.dat` | two `CObArray`s of `CSpellsOb` (88): wizard, then priest | [parts.md](parts.md) | not yet |
+| `AllowedU.dat` | one `CObArray` of `CClassesAllowedOb` (95) | [parts.md](parts.md) | not yet |
+| `Treasure.dat`, `TreaBun.dat` | one `CObList` | [misc.md](misc.md) | not yet |
+| `Psionic.dat`, `Traps.dat`, `Phrase.DAT` | one `CObList` | [misc.md](misc.md) | not yet |
+| `Convert.dat` | eight `CMapStringToOb`s | [misc.md](misc.md) | not yet |
+| `Monster.dat`, `Attack.dat`, `MonType.dat`, `EncPlat.dat`, encounters | | in progress | not yet |
 
-## Character file (start)
-
-| Field | Type | Notes |
-| --- | --- | --- |
-| version | CString | `TSRP3 V54` from the Expansion |
-| rules | i32 | 0 Core Rules, 1 Skills & Powers |
-| party | CString | inferred; empty in both fixtures |
-| player | CString | |
-| name | CString | |
-| class | CString | |
-| kit | CString | `NONE` |
-
-Further on: height, weight and age as i32, then the six abilities as three
-i32 each. The rest is still being mapped.
+Equipment (`CInventoryBundle`) is shared by characters, treasure and
+monsters: [`inventory.rs`](../../crates/cr-formats/src/inventory.rs).

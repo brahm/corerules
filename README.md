@@ -8,16 +8,28 @@ open in the other.
 > This project contains no TSR or Wizards of the Coast content. It reads the
 > rules data from a Core Rules installation you already own.
 
+## Testing against your own installation
+
+The rules databases are copyrighted and are not part of this repository.
+To check the readers against them, point `CORERULES_DIR` at an installed
+copy (the folder that holds `Database/`):
+
+```sh
+CORERULES_DIR="$HOME/.wine/drive_c/Program Files/AD&D Core Rules 2.0" cargo test
+```
+
 ## Status
 
 Early work (phase 0 of the plan): the file formats are being mapped.
 
 - [x] MFC `CArchive` reader and writer, byte for byte
 - [x] Character list (`Chars/index.chr`), round-trip tested
-- [x] Character file header (version, rules system, names, class)
+- [x] Full character files (`TSRP V27` to `TSRP3 V54`), round-trip tested
+- [x] Races and classes, round-trip tested against a real installation
 - [x] Survey of the rules databases (`cr survey`)
-- [ ] Field layouts of each database class
-- [ ] Full character files
+- [x] Field layouts of parts, spells, treasure, psionics, traps (docs only)
+- [ ] Monsters and encounters
+- [ ] Remaining databases in Rust
 
 ## Layout
 

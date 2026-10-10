@@ -70,6 +70,14 @@ impl<'a> ArchiveReader<'a> {
         self.pos == self.data.len()
     }
 
+    /// Fails unless the whole input was read.
+    pub fn finish(&self) -> Result<()> {
+        match self.remaining() {
+            0 => Ok(()),
+            trailing => Err(Error::TrailingBytes { trailing }),
+        }
+    }
+
     pub fn read_bytes(&mut self, len: usize) -> Result<&'a [u8]> {
         if self.remaining() < len {
             return Err(Error::UnexpectedEof {

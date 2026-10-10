@@ -1,10 +1,32 @@
 //! Rule database files (`Database/*.dat`, `UserDbas/*U.dat`).
 //!
-//! Each one is a `CObList` of objects of one main class. Field layouts are
-//! being mapped class by class; until a class is mapped, [`survey`] reports
-//! what a file holds without decoding its records.
+//! Most are a `CObList` of objects of one main class, read with
+//! [`ObjectList`]. [`survey`] reports what a file holds without decoding its
+//! records, for classes not mapped yet.
 
-use crate::{ArchiveReader, ClassInfo, ObjectTag, Result};
+use crate::field::Field;
+use crate::{ArchiveReader, ArchiveWriter, ClassInfo, Object, ObjectTag, Result};
+
+/// A file holding one `CObList`: a count, then the objects.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ObjectList {
+    pub objects: Vec<Object>,
+}
+
+impl ObjectList {
+    pub fn parse(data: &[u8]) -> Result<Self> {
+        let mut r = ArchiveReader::new(data);
+        let objects = Field::read(&mut r)?;
+        r.finish()?;
+        Ok(Self { objects })
+    }
+
+    pub fn to_bytes(&self) -> Result<Vec<u8>> {
+        let mut w = ArchiveWriter::new();
+        self.objects.write(&mut w)?;
+        Ok(w.into_bytes())
+    }
+}
 
 /// What a database file contains, read from its first record.
 #[derive(Debug, Clone, PartialEq, Eq)]
