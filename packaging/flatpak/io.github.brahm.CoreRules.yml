@@ -1,0 +1,39 @@
+id: io.github.brahm.CoreRules
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: corerules
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  # Core Rules lives in a Wine prefix in the home folder, and characters are
+  # saved back there; the CD is mounted under /media or /run/media.
+  - --filesystem=home
+  - --filesystem=/media:ro
+  - --filesystem=/run/media:ro
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  # Cargo downloads the crates while building (local bundles only; Flathub
+  # would need vendored sources).
+  build-args:
+    - --share=network
+  env:
+    CARGO_HOME: /run/build/corerules/cargo
+modules:
+  - name: corerules
+    buildsystem: simple
+    build-commands:
+      - cargo build --release --locked
+      - packaging/install.sh / /app target/release
+    sources:
+      - type: dir
+        path: ../..
+        skip:
+          - target
+          - dist
+          - .flatpak-builder
+          - _build

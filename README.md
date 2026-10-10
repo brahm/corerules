@@ -10,6 +10,24 @@ open in the other.
 
 ![The app showing a character made in the original program](docs/screenshots/character.png)
 
+## Installing
+
+Every [release](https://github.com/brahm/corerules/releases/latest) has
+packages for x86-64 Linux:
+
+| System | Package | Install |
+| --- | --- | --- |
+| Fedora 44 or newer | `.rpm` | `sudo dnf install ./corerules-*.rpm` |
+| Ubuntu 24.04 or newer | `.deb` | `sudo apt install ./corerules_*_amd64.deb` |
+| Any distribution | `.flatpak` | `flatpak install --user CoreRules-*.flatpak` |
+| Any distribution (glibc 2.39+) | `.AppImage` | `chmod +x CoreRules-*.AppImage`, then run it |
+
+The app is called **Core Rules** in the applications menu (`corerules` on
+the command line); the `.deb` and `.rpm` also install the `cr` command-line
+tool. The Flatpak uses the GNOME 50 runtime from Flathub and may read and
+write your home folder, where Wine keeps Core Rules, and CDs under `/media`
+and `/run/media`.
+
 ## Testing against your own installation
 
 The rules databases are copyrighted and are not part of this repository.
@@ -62,11 +80,46 @@ can reuse them later.
 
 ## Building
 
+You need Rust 1.88 or newer, GTK 4.14 or newer and libadwaita 1.5 or newer.
+
+On Fedora 44 or newer:
+
 ```sh
-# Debian/Ubuntu: sudo apt install libgtk-4-dev libadwaita-1-dev
-cargo build
+sudo dnf install cargo rust gcc gtk4-devel libadwaita-devel
+cargo build --release
+cargo test
+./target/release/corerules
+```
+
+On Ubuntu 24.04 or newer (its packaged Rust is too old, so use
+[rustup](https://rustup.rs)):
+
+```sh
+sudo apt install build-essential libgtk-4-dev libadwaita-1-dev
+cargo build --release
 cargo test
 ```
+
+To install a build system-wide, run `packaging/install.sh / /usr/local`
+as root after `cargo build --release`.
+
+### Packages
+
+`packaging/` builds every package (the `.rpm` and Flatpak compile from source,
+the others package `target/release`):
+
+```sh
+packaging/deb/build.sh 0.1.0        # dist/corerules_0.1.0_amd64.deb (on Ubuntu 24.04)
+packaging/rpm/build.sh 0.1.0        # dist/corerules-0.1.0-1.fc44.x86_64.rpm (on Fedora 44, needs rpm-build)
+packaging/appimage/build.sh 0.1.0   # dist/CoreRules-0.1.0-x86_64.AppImage (on Ubuntu 24.04)
+flatpak-builder --user --install-deps-from=flathub --install build \
+    packaging/flatpak/io.github.brahm.CoreRules.yml
+```
+
+The Packages workflow in GitHub Actions builds all four, installs each one
+on clean Ubuntu 24.04, Ubuntu latest, Fedora 44 and Fedora latest
+containers and starts the app. Pushing a `v*` tag publishes them as a
+release; `packaging/release-notes.md` is its description.
 
 ## Using an original installation
 

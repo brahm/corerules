@@ -1,0 +1,198 @@
+name: Packages
+
+# Builds the .deb, .rpm, Flatpak and AppImage packages, installs each one on
+# a clean system and starts the app there. Pushing a v* tag (or running the
+# workflow by hand with a tag) also publishes them as a GitHub release.
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    paths:
+      - 'packaging/**'
+      - 'data/**'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release, created on this commit if missing (e.g. v0.1.0)'
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: |
+          tag="${{ inputs.tag || github.ref_name }}"
+          case "$tag" in
+            v[0-9]*) version=${tag#v} ;;
+            *) version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1); tag= ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+  # The .deb and the AppImage are built on Ubuntu 24.04, the oldest system
+  # they support.
+  ubuntu:
+    needs: version
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libadwaita-1-dev dpkg-dev file
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --locked
+      - run: packaging/deb/build.sh ${{ needs.version.outputs.version }}
+      - run: packaging/appimage/build.sh ${{ needs.version.outputs.version }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb
+          path: dist/*.deb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: appimage
+          path: dist/*.AppImage
+
+  rpm:
+    needs: version
+    runs-on: ubuntu-24.04
+    container: fedora:44
+    steps:
+      - run: dnf install -y git rpm-build cargo rust gcc gtk4-devel libadwaita-devel desktop-file-utils libappstream-glib
+      - uses: actions/checkout@v4
+      - run: git config --global --add safe.directory "$PWD"
+      - run: packaging/rpm/build.sh ${{ needs.version.outputs.version }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm
+          path: dist/*.rpm
+
+  flatpak:
+    needs: version
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: CoreRules-${{ needs.version.outputs.version }}.flatpak
+          manifest-path: packaging/flatpak/io.github.brahm.CoreRules.yml
+          cache-key: flatpak-builder-${{ github.sha }}
+          upload-artifact: false
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flatpak
+          path: CoreRules-${{ needs.version.outputs.version }}.flatpak
+
+  # Each package goes onto a clean container of the oldest and the newest
+  # supported release, and the app has to start and keep running. Minimal
+  # containers lack the Mesa drivers every desktop has, so the tests add them.
+  test-deb:
+    needs: ubuntu
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['ubuntu:24.04', 'ubuntu:latest']
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: deb
+      - run: apt-get update && apt-get install -y ./corerules_*.deb xvfb xauth dbus
+      - run: packaging/smoke-test.sh corerules
+      - run: command -v cr
+
+  test-rpm:
+    needs: rpm
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['fedora:44', 'fedora:latest']
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rpm
+      - run: dnf install -y ./corerules-*.rpm xorg-x11-server-Xvfb xorg-x11-xauth dbus-daemon dbus-tools which mesa-dri-drivers mesa-libEGL mesa-libGLES
+      - run: packaging/smoke-test.sh corerules
+
+  # The AppImage brings GTK and libadwaita; the systems get only the
+  # libraries AppImages leave to the host because every desktop has them
+  # (linuxdeploy's excludelist: X, OpenGL, Wayland, fonts and text shaping).
+  # FUSE is skipped by extract-and-run.
+  test-appimage:
+    needs: ubuntu
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['fedora:44', 'ubuntu:24.04']
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      APPIMAGE_EXTRACT_AND_RUN: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: appimage
+      - if: startsWith(matrix.image, 'fedora')
+        run: dnf install -y xorg-x11-server-Xvfb xorg-x11-xauth dbus-daemon dbus-tools which mesa-libEGL mesa-libGL mesa-libGLES mesa-libgbm mesa-dri-drivers libdrm libX11-xcb libwayland-client fontconfig freetype fribidi harfbuzz gmp libgpg-error libcom_err libstdc++ zlib-ng-compat dejavu-sans-fonts libxkbcommon shared-mime-info
+      - if: startsWith(matrix.image, 'ubuntu')
+        run: apt-get update && apt-get install -y xvfb xauth dbus libegl1 libgl1 libgles2 libgbm1 libgl1-mesa-dri libdrm2 libx11-xcb1 libwayland-client0 libfontconfig1 libfreetype6 libfribidi0 libharfbuzz0b libgmp10 libgpg-error0 libcom-err2 libstdc++6 zlib1g fonts-dejavu-core libxkbcommon0 shared-mime-info
+      - run: chmod +x CoreRules-*.AppImage && packaging/smoke-test.sh ./CoreRules-*.AppImage
+
+  test-flatpak:
+    needs: flatpak
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: flatpak
+      - run: sudo apt-get update && sudo apt-get install -y flatpak xvfb dbus
+      - run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y --noninteractive flathub org.gnome.Platform//50
+          flatpak install --user -y --noninteractive --bundle CoreRules-*.flatpak
+      - run: packaging/smoke-test.sh flatpak run io.github.brahm.CoreRules
+
+  release:
+    needs: [version, test-deb, test-rpm, test-appimage, test-flatpak]
+    if: needs.version.outputs.tag != ''
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - run: cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Core Rules ${{ needs.version.outputs.version }}
+          body_path: packaging/release-notes.md
+          prerelease: ${{ startsWith(needs.version.outputs.version, '0.') }}
+          files: dist/*
