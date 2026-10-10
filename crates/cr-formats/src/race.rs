@@ -19,8 +19,10 @@ record! {
         ability_limits: [[i32; 2]; 6],
         /// Ability adjustments in the same order (Dwarf: Con +1, Cha -1).
         ability_adjustments: [i32; 6],
-        /// Maximum level per class: Fighter, Paladin, Ranger, Thief, Bard,
-        /// Cleric, Druid, Mage, Illusionist (Dwarf: 15, -, -, 12, -, 10).
+        /// Maximum level per class: Fighter, Ranger, Paladin, Thief, Bard,
+        /// Cleric, Druid, Mage, specialist wizard (Dwarf: 15, -, -, 12, -,
+        /// 10; Elf: ranger 15, no paladin). 0 is both "not allowed" and,
+        /// for humans and the half-elf bard, "unlimited".
         level_limits: [i32; 9],
         unknown_0xa8: i32,
         unknown_0xac: i32,

@@ -65,6 +65,15 @@ Early work (phase 0 of the plan): the file formats are being mapped.
 - [x] Adding a class where the race may dual-class (humans), with the
       Player's Handbook requirements, checked in both original programs;
       race and the classes chosen at creation never change
+- [x] Creating characters (New Character, Ctrl+N), following the original
+      wizard: campaign setting, ability rolls (Methods I to VI or entered
+      scores), race and subrace, class, details, proficiencies, spells and
+      starting equipment; checked by opening the new files in both
+      original programs. The original has no notion of campaign settings,
+      so what each setting allows comes from its campaign book and only
+      narrows what the installed databases offer (`crates/cr-store/src/settings.rs`).
+      Not yet: Player's Option creation, rogue skill points, weapon
+      specialization and extra languages at creation
 
 ## Layout
 
