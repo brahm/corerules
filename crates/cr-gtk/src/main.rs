@@ -26,6 +26,9 @@ const APP_ID: &str = "io.github.brahm.CoreRules";
 fn main() -> glib::ExitCode {
     let app = adw::Application::builder().application_id(APP_ID).build();
     app.connect_activate(|app| {
+        // The icon is installed under the application id; X11 window
+        // managers read it from the window.
+        gtk::Window::set_default_icon_name(APP_ID);
         let window = Window::new(app);
         let start = std::env::args_os().nth(1).map(PathBuf::from);
         match start {

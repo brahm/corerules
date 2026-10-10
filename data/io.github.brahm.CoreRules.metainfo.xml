@@ -52,6 +52,11 @@
     <color type="primary" scheme_preference="dark">#77101b</color>
   </branding>
   <releases>
+    <release version="0.1.1" date="2026-10-10" type="development">
+      <description>
+        <p>New app icon: a burgundy tome with the dragon ampersand.</p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-10-10" type="development">
       <description>
         <p>First preview release.</p>

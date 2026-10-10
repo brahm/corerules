@@ -4,7 +4,7 @@
 %global debug_package %{nil}
 
 Name:           corerules
-Version:        %{?version_override}%{!?version_override:0.1.0}
+Version:        %{?version_override}%{!?version_override:0.1.1}
 Release:        1%{?dist}
 Summary:        Browse and edit AD&D Core Rules 2.0 characters and rules
 License:        MIT
@@ -46,9 +46,12 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/io.github.brah
 %{_bindir}/corerules
 %{_bindir}/cr
 %{_datadir}/applications/io.github.brahm.CoreRules.desktop
-%{_datadir}/icons/hicolor/scalable/apps/io.github.brahm.CoreRules.svg
+%{_datadir}/icons/hicolor/*/apps/io.github.brahm.CoreRules.png
 %{_metainfodir}/io.github.brahm.CoreRules.metainfo.xml
 
 %changelog
+* Sat Oct 10 2026 Brahm - 0.1.1-1
+- New app icon
+
 * Sat Oct 10 2026 Brahm - 0.1.0-1
 - First preview release
