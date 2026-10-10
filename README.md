@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="data/icons/hicolor/256x256/apps/io.github.brahm.CoreRules.png" width="128" height="128" alt="Core Rules icon">
+</p>
+
 # Core Rules
 
 A modern Linux replica of **AD&D Core Rules 2.0** (TSR/Evermore, 1998-1999),
