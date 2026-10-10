@@ -10,7 +10,7 @@ use cr_formats::database::ObjectList;
 fn installation() -> Option<PathBuf> {
     let dir = PathBuf::from(std::env::var_os("CORERULES_DIR")?);
     assert!(
-        dir.join("Database").is_dir(),
+        find(&dir, "Database").is_some_and(|d| d.is_dir()),
         "CORERULES_DIR has no Database folder"
     );
     Some(dir)
@@ -18,6 +18,13 @@ fn installation() -> Option<PathBuf> {
 
 /// Reads `relative` (matched case-insensitively), checks that it parses to
 /// the end and writes back identical bytes.
+/// Whether the installation is the Expansion rather than Core Rules 2.0;
+/// only the Expansion has `AllowedU.dat`. Checks of exact record counts
+/// apply to the Expansion's data.
+fn is_expansion() -> bool {
+    installation().is_some_and(|dir| find(&dir, "UserDbas/AllowedU.dat").is_some())
+}
+
 fn round_trip_list(relative: &str) {
     let Some(dir) = installation() else {
         eprintln!("CORERULES_DIR not set; skipping {relative}");
@@ -54,7 +61,22 @@ fn races() {
 #[test]
 fn classes() {
     round_trip_list("Database/Class.dat");
-    round_trip_list("UserDbas/ClassU.dat");
+    if is_expansion() {
+        round_trip_list("UserDbas/ClassU.dat");
+    }
+
+    use cr_formats::Object;
+    use cr_formats::classes::Class;
+    let Some(data) = installation_file("Database/Class.dat") else {
+        return;
+    };
+    let list = ObjectList::parse(&data).unwrap();
+    let Object::Class(fighter) = &list.objects[0] else {
+        panic!("not a class")
+    };
+    assert_eq!(fighter.name(), "Fighter");
+    // Each program writes its own layout.
+    assert_eq!(matches!(**fighter, Class::Expansion { .. }), is_expansion());
 }
 
 #[test]
@@ -132,6 +154,9 @@ fn parts() {
     let data = installation_file("Database/Parts.dat").unwrap();
     let file = PartsFile::parse(&data).unwrap();
     let kits = file.of_type("Character Kits").unwrap();
+    if !is_expansion() {
+        return;
+    }
     assert_eq!(kits.len(), 210);
     let Object::Part(kit) = &kits[0] else {
         panic!("not a part")
@@ -158,7 +183,9 @@ fn spells() {
 
 #[test]
 fn classes_allowed() {
-    round_trip_list("UserDbas/AllowedU.dat");
+    if is_expansion() {
+        round_trip_list("UserDbas/AllowedU.dat");
+    }
 }
 
 #[test]
@@ -175,6 +202,9 @@ fn monsters() {
         return;
     };
     let list = ObjectList::parse(&data).unwrap();
+    if !is_expansion() {
+        return;
+    }
     assert_eq!(list.objects.len(), 1524);
     let aboleth = list
         .objects

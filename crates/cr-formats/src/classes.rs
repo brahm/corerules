@@ -1,10 +1,13 @@
 //! Classes: `Database/Class.dat` and `UserDbas/ClassU.dat`, a `CObList` of
 //! `CClassOb` (schema 88, `CClassOb::Serialize` at 0x6644af in TSRP3.EXE).
 //!
-//! Each class starts with its own version string, `TSRP3 V39` in the
-//! Expansion. Older layouts lack the fields their version predates; the
-//! conditions below are copied from the load code. Unnamed fields keep the
-//! member offset they have in the original object.
+//! In the Expansion each class starts with its own version string, `TSRP3
+//! V39`; older layouts lack the fields their version predates, with the
+//! conditions copied from the load code. Core Rules 2.0 (`EVERMORE.EXE`,
+//! `CClassOb::Serialize` at 0x48c090) writes no version string and a
+//! shorter, fixed layout, [`Core20ClassData`]. Unnamed fields keep the
+//! member offset they have in the original object (2.0 offsets for the 2.0
+//! layout).
 
 use crate::field::Field;
 use crate::{ArchiveReader, ArchiveWriter, Object, Result, record};
@@ -26,24 +29,104 @@ pub fn version_of(version_string: &str) -> i32 {
     }
 }
 
-/// One class (`CClassOb`).
+/// One class (`CClassOb`), in the layout of the program that wrote it.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Class {
-    /// `TSRP3 V39` for files the Expansion wrote.
-    pub version: String,
-    pub data: ClassData,
+// Always boxed inside `Object`; boxing the variants too would only add
+// indirection.
+#[allow(clippy::large_enum_variant)]
+pub enum Class {
+    Expansion {
+        /// `TSRP3 V39` for files the Expansion wrote.
+        version: String,
+        data: ClassData,
+    },
+    Core20(Core20ClassData),
 }
 
+impl Class {
+    pub fn name(&self) -> &str {
+        match self {
+            Self::Expansion { data, .. } => &data.name,
+            Self::Core20(data) => &data.name,
+        }
+    }
+}
+
+/// Both programs store `CClassOb` under schema 88, so the layout is told
+/// apart by the first string: the Expansion's version string starts with
+/// `TSRP`, a 2.0 class starts with its name.
 impl Field for Class {
     fn read(r: &mut ArchiveReader) -> Result<Self> {
-        let version = r.read_string()?;
-        let data = ClassData::read_fields(r, version_of(&version))?;
-        Ok(Self { version, data })
+        let first = r.read_string()?;
+        if first.starts_with("TSRP") {
+            let data = ClassData::read_fields(r, version_of(&first))?;
+            Ok(Self::Expansion {
+                version: first,
+                data,
+            })
+        } else {
+            Core20ClassData::read_after_name(r, first).map(Self::Core20)
+        }
     }
 
     fn write(&self, w: &mut ArchiveWriter) -> Result<()> {
-        w.write_string(&self.version)?;
-        self.data.write_fields(w, version_of(&self.version))
+        match self {
+            Self::Expansion { version, data } => {
+                w.write_string(version)?;
+                data.write_fields(w, version_of(version))
+            }
+            Self::Core20(data) => {
+                if data.name.starts_with("TSRP") {
+                    return Err(crate::Error::Unencodable(data.name.clone()));
+                }
+                data.write(w)
+            }
+        }
+    }
+}
+
+record! {
+    /// A class as Core Rules 2.0 stores it. The first 33 values and the
+    /// experience table match the Expansion's [`ClassData`] in order and
+    /// sample values (Fighter: id 1000, Paladin minimum Str 12).
+    pub struct Core20ClassData {
+        name: String,
+        /// Same order as the Expansion's values from `unknown_0x14` to
+        /// `unknown_0xcc`.
+        unknown_0x10: [i32; 33],
+        experience: [i32; 101],
+        unknown_0x264: [[i32; 11]; 101],
+        unknown_0x13ec: [[i32; 11]; 101],
+        unknown_0x8: i32,
+        unknown_0x25f0: [i32; 8],
+        unknown_0x25d8: String,
+        /// Short name shown in multi-class titles ("F", "Pa"), like the
+        /// Expansion's `abbreviation`.
+        unknown_0x2610: [String; 9],
+        unknown_0x2634: [i32; 9],
+        unknown_0x25c4: [i32; 10],
+        unknown_0x58: [Vec<String>; 12],
+        unknown_0x26bc: [Vec<Object>; 10],
+    }
+}
+
+impl Core20ClassData {
+    fn read_after_name(r: &mut ArchiveReader, name: String) -> Result<Self> {
+        Ok(Self {
+            name,
+            unknown_0x10: Field::read(r)?,
+            experience: Field::read(r)?,
+            unknown_0x264: Field::read(r)?,
+            unknown_0x13ec: Field::read(r)?,
+            unknown_0x8: Field::read(r)?,
+            unknown_0x25f0: Field::read(r)?,
+            unknown_0x25d8: Field::read(r)?,
+            unknown_0x2610: Field::read(r)?,
+            unknown_0x2634: Field::read(r)?,
+            unknown_0x25c4: Field::read(r)?,
+            unknown_0x58: Field::read(r)?,
+            unknown_0x26bc: Field::read(r)?,
+        })
     }
 }
 
