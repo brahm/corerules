@@ -5,10 +5,16 @@ use std::process::ExitCode;
 use cr_formats::character::Character;
 use cr_formats::database::survey;
 use cr_store::Installation;
+use cr_store::edit::CharacterDetails;
 
 const USAGE: &str = "usage:
   cr survey [INSTALL_DIR]   list database files, record counts and classes
   cr chars [INSTALL_DIR]    list characters
+  cr edit INSTALL_DIR FILE FIELD=VALUE...
+                            change a character in Chars/FILE; fields: name,
+                            player, social_class, age, height, weight,
+                            str, dex, con, int, wis, cha (score and both
+                            subabilities), exceptional
 
 Without INSTALL_DIR, the installation in the Wine prefix is used.";
 
@@ -26,6 +32,7 @@ fn main() -> ExitCode {
     let result = install.and_then(|install| match command.as_str() {
         "survey" => cmd_survey(&install),
         "chars" => cmd_chars(&install),
+        "edit" => cmd_edit(&install, &args[2..]),
         _ => {
             eprintln!("{USAGE}");
             Ok(())
@@ -85,4 +92,37 @@ fn cmd_chars(install: &Installation) -> cr_store::Result<()> {
         );
     }
     Ok(())
+}
+
+fn cmd_edit(install: &Installation, args: &[String]) -> cr_store::Result<()> {
+    let invalid = |message: String| cr_store::Error::Invalid(message);
+    let (file, changes) = args
+        .split_first()
+        .ok_or_else(|| invalid("edit needs a character file".into()))?;
+    let mut details = CharacterDetails::of(&install.character(file)?);
+    for change in changes {
+        let (field, value) = change
+            .split_once('=')
+            .ok_or_else(|| invalid(format!("{change}: expected FIELD=VALUE")))?;
+        let number = || {
+            value
+                .parse::<u32>()
+                .map_err(|_| invalid(format!("{field}: {value} is not a number")))
+        };
+        const ABILITIES: [&str; 6] = ["str", "dex", "con", "int", "wis", "cha"];
+        match field {
+            "name" => details.name = value.into(),
+            "player" => details.player = value.into(),
+            "social_class" => details.social_class = value.into(),
+            "age" => details.age = number()?,
+            "height" => details.height = number()?,
+            "weight" => details.weight = number()?,
+            "exceptional" => details.exceptional_strength = number()?,
+            _ => match ABILITIES.iter().position(|a| *a == field) {
+                Some(i) => details.abilities[i] = [number()?; 3],
+                None => return Err(invalid(format!("unknown field {field}"))),
+            },
+        }
+    }
+    install.save_character_details(file, &details)
 }
