@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Core Rules
+GenericName=AD&D 2nd Edition Character Manager
+Comment=Browse and edit AD&D Core Rules 2.0 characters, rules and monsters
+Exec=corerules %f
+Icon=io.github.brahm.CoreRules
+Terminal=false
+Type=Application
+Categories=Game;RolePlaying;
+Keywords=AD&D;D&D;Dungeons;Dragons;RPG;TSR;Evermore;Character;
+StartupNotify=true

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e01b24"/>
+      <stop offset="1" stop-color="#a51d2d"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="104" width="112" height="16" rx="8" fill="#000" opacity="0.15"/>
+  <!-- d20 outline -->
+  <polygon points="64,8 112,36 112,92 64,120 16,92 16,36" fill="url(#top)"/>
+  <!-- facets -->
+  <polygon points="64,28 94,80 34,80" fill="#ed333b"/>
+  <polygon points="64,8 64,28 34,80 16,36" fill="#c01c28"/>
+  <polygon points="64,8 112,36 94,80 64,28" fill="#c01c28"/>
+  <polygon points="16,92 34,80 94,80 112,92 64,120" fill="#77101b"/>
+  <polygon points="16,36 34,80 16,92" fill="#8f1420"/>
+  <polygon points="112,36 112,92 94,80" fill="#8f1420"/>
+  <g fill="none" stroke="#f6f5f4" stroke-opacity="0.35" stroke-width="2" stroke-linejoin="round">
+    <polygon points="64,8 112,36 112,92 64,120 16,92 16,36"/>
+    <polygon points="64,28 94,80 34,80"/>
+  </g>
+  <text x="64" y="70" font-family="serif" font-weight="bold" font-size="26" text-anchor="middle" fill="#f6f5f4">20</text>
+</svg>

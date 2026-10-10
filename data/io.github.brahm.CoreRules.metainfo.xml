@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.brahm.CoreRules</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Core Rules</name>
+  <summary>Browse and edit AD&amp;D Core Rules 2.0 characters and rules</summary>
+  <developer id="io.github.brahm">
+    <name>Brahm</name>
+  </developer>
+  <description>
+    <p>
+      A modern replica of AD&amp;D Core Rules 2.0, the 1998 Windows character
+      manager for Advanced Dungeons &amp; Dragons 2nd Edition. It reads and
+      writes the data files of the original program, so characters made in
+      either program open in the other.
+    </p>
+    <p>
+      The app contains no rules content. It opens a Core Rules 2.0 (or
+      Expansion) installation you already own, or its CD, and shows:
+    </p>
+    <ul>
+      <li>Characters, with editing of abilities, proficiencies, languages, spells, equipment and money</li>
+      <li>Races, classes, items, spells and psionic powers</li>
+      <li>Monsters</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">io.github.brahm.CoreRules.desktop</launchable>
+  <url type="homepage">https://github.com/brahm/corerules</url>
+  <url type="bugtracker">https://github.com/brahm/corerules/issues</url>
+  <url type="vcs-browser">https://github.com/brahm/corerules</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/brahm/corerules/main/docs/screenshots/character.png</image>
+      <caption>A character made in the original program</caption>
+    </screenshot>
+  </screenshots>
+  <provides>
+    <binary>corerules</binary>
+  </provides>
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+  <content_rating type="oars-1.1"/>
+  <branding>
+    <color type="primary" scheme_preference="light">#f9c0c4</color>
+    <color type="primary" scheme_preference="dark">#77101b</color>
+  </branding>
+  <releases>
+    <release version="0.1.0" date="2026-10-10" type="development">
+      <description>
+        <p>First preview release.</p>
+        <ul>
+          <li>Opens Core Rules 2.0 and Expansion installations, or their CD</li>
+          <li>Browses characters, races, classes, items, spells, psionics and monsters</li>
+          <li>Edits characters and saves files the original programs open</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+</component>
