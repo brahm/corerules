@@ -13,6 +13,8 @@ install -Dm755 "$target/corerules" "$destdir$prefix/bin/corerules"
 install -Dm755 "$target/cr" "$destdir$prefix/bin/cr"
 install -Dm644 "$root/data/$app.desktop" "$destdir$prefix/share/applications/$app.desktop"
 install -Dm644 "$root/data/$app.metainfo.xml" "$destdir$prefix/share/metainfo/$app.metainfo.xml"
-install -Dm644 "$root/data/icons/hicolor/scalable/apps/$app.svg" \
-    "$destdir$prefix/share/icons/hicolor/scalable/apps/$app.svg"
+for icon in "$root"/data/icons/hicolor/*/apps/$app.png; do
+    size=$(basename "$(dirname "$(dirname "$icon")")")
+    install -Dm644 "$icon" "$destdir$prefix/share/icons/hicolor/$size/apps/$app.png"
+done
 install -Dm644 "$root/LICENSE" "$destdir$prefix/share/licenses/corerules/LICENSE"

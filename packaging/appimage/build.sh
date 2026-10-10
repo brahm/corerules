@@ -23,11 +23,14 @@ export DEPLOY_GTK_VERSION=4 APPIMAGE_EXTRACT_AND_RUN=1 NO_STRIP=1
 PATH="$tools:$PATH" linuxdeploy --appdir "$appdir" \
     --executable "$appdir/usr/bin/corerules" \
     --desktop-file "$appdir/usr/share/applications/io.github.brahm.CoreRules.desktop" \
-    --icon-file "$appdir/usr/share/icons/hicolor/scalable/apps/io.github.brahm.CoreRules.svg" \
+    --icon-file "$appdir/usr/share/icons/hicolor/256x256/apps/io.github.brahm.CoreRules.png" \
     --plugin gtk
 # libadwaita draws its own light and dark styles; a GTK_THEME set by the
 # plugin's hook only makes it warn and breaks the dark style.
 sed -i '/export GTK_THEME=/d' "$appdir"/apprun-hooks/*gtk*.sh
+# linuxdeploy links the smallest bundled size; file managers show .DirIcon.
+ln -sf usr/share/icons/hicolor/256x256/apps/io.github.brahm.CoreRules.png \
+    "$appdir/io.github.brahm.CoreRules.png"
 # The app plays no video, and GStreamer is not bundled.
 rm -rf "$appdir"/usr/lib/gtk-4.0/4.0.0/media
 mkdir -p dist

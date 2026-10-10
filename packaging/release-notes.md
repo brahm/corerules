@@ -1,3 +1,5 @@
+What's new in 0.1.1: a new app icon, a burgundy tome with the dragon ampersand.
+
 Preview release: the app opens a Core Rules 2.0 (or Expansion) installation
 or its CD, browses characters, races, classes, items, spells, psionics and
 monsters, and edits characters in files the original programs still open.

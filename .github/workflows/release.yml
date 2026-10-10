@@ -116,7 +116,7 @@ jobs:
           name: deb
       - run: apt-get update && apt-get install -y ./corerules_*.deb xvfb xauth dbus
       - run: packaging/smoke-test.sh corerules
-      - run: command -v cr
+      - run: command -v cr && test -f /usr/share/icons/hicolor/256x256/apps/io.github.brahm.CoreRules.png
 
   test-rpm:
     needs: rpm
@@ -133,6 +133,7 @@ jobs:
           name: rpm
       - run: dnf install -y ./corerules-*.rpm xorg-x11-server-Xvfb xorg-x11-xauth dbus-daemon dbus-tools which mesa-dri-drivers mesa-libEGL mesa-libGLES
       - run: packaging/smoke-test.sh corerules
+      - run: test -f /usr/share/icons/hicolor/256x256/apps/io.github.brahm.CoreRules.png
 
   # The AppImage brings GTK and libadwaita; the systems get only the
   # libraries AppImages leave to the host because every desktop has them
