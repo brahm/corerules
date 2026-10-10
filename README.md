@@ -42,8 +42,10 @@ Early work (phase 0 of the plan): the file formats are being mapped.
       keeps the character list in memory)
 - [x] Editing weapon and nonweapon proficiencies, native languages,
       spells known and items carried, checked in both original programs
-- [ ] Spellbooks and memorized spells, other equipment bundles, money
-- [ ] Changing race or class
+- [x] Spellbooks and memorized spells, all nine equipment groups with
+      quantities, and Spending Money, checked in both original programs
+- [ ] Adding a class where the race allows it (race and class themselves
+      stay as created)
 
 ## Layout
 
