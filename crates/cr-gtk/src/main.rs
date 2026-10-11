@@ -3,6 +3,7 @@
 
 mod create;
 mod lists;
+mod sheet;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -81,6 +82,13 @@ impl Window {
             browser: Rc::new(browser),
             install: Rc::default(),
         };
+        this.browser.sheet_button.connect_clicked({
+            let this = this.clone();
+            move |_| {
+                let key = this.browser.current_key.borrow().clone();
+                this.show_sheet(&key);
+            }
+        });
         this.browser.edit_button.connect_clicked({
             let this = this.clone();
             move |_| {
@@ -212,6 +220,21 @@ impl Window {
         self.toasts.add_toast(adw::Toast::new(message));
     }
 
+    /// Shows the character sheet of the character in `Chars/<file>`.
+    fn show_sheet(&self, file: &str) {
+        let sheet = match &*self.install.borrow() {
+            Some(install) => install.character(file).and_then(|c| install.sheet(&c)),
+            None => return,
+        };
+        match sheet {
+            Ok(sheet) => {
+                let this = self.clone();
+                sheet::show(&self.window, sheet, move |message| this.toast(message));
+            }
+            Err(e) => self.toast(&e.to_string()),
+        }
+    }
+
     /// Opens the editor for the character stored in `Chars/<file>`.
     fn edit_character(&self, file: &str) {
         let loaded = match &*self.install.borrow() {
@@ -288,6 +311,7 @@ struct Browser {
     detail: DetailPane,
     /// Shown on the detail page of entries that can be edited.
     edit_button: gtk::Button,
+    sheet_button: gtk::Button,
     /// The key of the entry on the detail page.
     current_key: Rc<RefCell<String>>,
 }
@@ -298,6 +322,7 @@ struct DetailPane {
     page: adw::NavigationPage,
     view: adw::ToolbarView,
     edit_button: gtk::Button,
+    sheet_button: gtk::Button,
     current_key: Rc<RefCell<String>>,
 }
 
@@ -306,6 +331,7 @@ impl DetailPane {
         self.page.set_title(&entry.title);
         self.view.set_content(Some(&detail(entry)));
         self.edit_button.set_visible(!entry.key.is_empty());
+        self.sheet_button.set_visible(!entry.key.is_empty());
         self.current_key.borrow_mut().clone_from(&entry.key);
     }
 
@@ -313,6 +339,7 @@ impl DetailPane {
         self.page.set_title("Details");
         self.view.set_content(Some(widget));
         self.edit_button.set_visible(false);
+        self.sheet_button.set_visible(false);
         self.current_key.borrow_mut().clear();
     }
 }
@@ -341,8 +368,14 @@ impl Browser {
             .tooltip_text("Edit")
             .visible(false)
             .build();
+        let sheet_button = gtk::Button::builder()
+            .icon_name("x-office-document-symbolic")
+            .tooltip_text("Character Sheet")
+            .visible(false)
+            .build();
         let detail_header = adw::HeaderBar::new();
         detail_header.pack_end(&edit_button);
+        detail_header.pack_end(&sheet_button);
         detail_view.add_top_bar(&detail_header);
         detail_view.set_content(Some(&placeholder("Nothing Selected", "")));
         detail_page.set_child(Some(&detail_view));
@@ -351,6 +384,7 @@ impl Browser {
             page: detail_page.clone(),
             view: detail_view,
             edit_button: edit_button.clone(),
+            sheet_button: sheet_button.clone(),
             current_key: current_key.clone(),
         };
 
@@ -554,6 +588,7 @@ impl Browser {
             selection,
             detail,
             edit_button,
+            sheet_button,
             current_key,
         }
     }
