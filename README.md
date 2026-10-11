@@ -101,6 +101,13 @@ Early work (phase 0 of the plan): the file formats are being mapped.
       Z, table rolls, intelligent weapons, spell scrolls, Calculate and the
       saved bundles of `UserDbas/TreaBunU.dat`; with the same seed it
       saves the same bundles as both original programs, byte for byte
+- [x] Encounter generator (backend and `cr encounter`): encounters from
+      templates with the originals' dice, lists, dependents, items and
+      treasure, the Encounter dialog's editing and totals, saved
+      encounters (`UserDbas/EncountU.dat`) and the 2-20 tables
+      (`UserDbas/EncTabU.dat`); with the same seed it makes the same
+      encounters as both original programs. NPC lines of a template wait
+      for the NPC generator
 
 ## Layout
 

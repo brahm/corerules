@@ -43,6 +43,22 @@ const USAGE: &str = "usage:
                             roll once (or N times) on one treasure table
   cr treasure INSTALL_DIR --saved [NAME]
                             list the saved treasure bundles, or print one
+  cr encounter INSTALL_DIR --templates [TEXT]
+                            list the encounter templates (whose name or
+                            monster type contains TEXT)
+  cr encounter INSTALL_DIR --template-text NAME
+                            print a template as the template printer does
+  cr encounter INSTALL_DIR [--seed N] --template NAME [--save NAME]
+                            make an encounter from a template as the
+                            original does and print it with its totals and
+                            treasure; --save adds it to UserDbas/EncountU.dat
+  cr encounter INSTALL_DIR --saved [NAME]
+                            list the saved encounters, or print one
+  cr encounter INSTALL_DIR --tables [NAME]
+                            list the 2-20 encounter tables, or print one
+                            with the candidates of its filter
+  cr encounter INSTALL_DIR [--seed N] --roll TABLE
+                            Roll and Generate on a 2-20 table
 
 Without INSTALL_DIR, the installation in the Wine prefix is used.";
 
@@ -63,6 +79,7 @@ fn main() -> ExitCode {
         "edit" => cmd_edit(&install, &args[2..]),
         "sheet" => cmd_sheet(&install, &args[2..]),
         "treasure" => cmd_treasure(&install, &args[2..]),
+        "encounter" => cmd_encounter(&install, &args[2..]),
         _ => {
             eprintln!("{USAGE}");
             Ok(())
@@ -264,6 +281,198 @@ fn cmd_treasure(install: &Installation, args: &[String]) -> cr_store::Result<()>
             println!();
         }
         print(&bundle, &rules);
+    }
+    Ok(())
+}
+
+/// What `cr encounter` was asked for.
+enum EncounterCommand {
+    Templates(Option<String>),
+    TemplateText(String),
+    Generate(String),
+    Saved(Option<String>),
+    Tables(Option<String>),
+    Roll(String),
+}
+
+fn cmd_encounter(install: &Installation, args: &[String]) -> cr_store::Result<()> {
+    use cr_store::encounter::{Rand, roll_and_pick};
+    let invalid = |message: String| cr_store::Error::Invalid(message);
+    let mut seed = None;
+    let mut save = None;
+    let mut command = None;
+    let mut args = args.iter().peekable();
+    while let Some(arg) = args.next() {
+        let mut value = |name: &str| {
+            args.next()
+                .cloned()
+                .ok_or_else(|| invalid(format!("{name} needs a value")))
+        };
+        let next = match arg.as_str() {
+            "--seed" => {
+                let text = value("--seed")?;
+                seed = Some(
+                    text.parse::<u32>()
+                        .map_err(|_| invalid(format!("{text} is not a number")))?,
+                );
+                continue;
+            }
+            "--save" => {
+                save = Some(value("--save")?);
+                continue;
+            }
+            "--template" => EncounterCommand::Generate(value("--template")?),
+            "--template-text" => EncounterCommand::TemplateText(value("--template-text")?),
+            "--roll" => EncounterCommand::Roll(value("--roll")?),
+            "--templates" | "--saved" | "--tables" => {
+                let name = args.next_if(|a| !a.starts_with("--")).cloned();
+                match arg.as_str() {
+                    "--templates" => EncounterCommand::Templates(name),
+                    "--saved" => EncounterCommand::Saved(name),
+                    _ => EncounterCommand::Tables(name),
+                }
+            }
+            _ => return Err(invalid(format!("unexpected argument {arg}"))),
+        };
+        command = Some(next);
+    }
+    let command = command.ok_or_else(|| {
+        invalid("encounter needs --templates, --template, --saved, --tables or --roll".into())
+    })?;
+
+    let print = |rules: &cr_store::encounter::EncounterRules,
+                 encounter: &cr_store::encounter::Encounter| {
+        print!("{}", rules.encounter_text(encounter));
+        let t = rules.totals(encounter);
+        use cr_store::treasure::thousands;
+        println!();
+        println!("Gold Value: {}", thousands(t.gold_value));
+        println!("Monster XP: {}", thousands(t.monster_xp));
+        println!("Treasure XP: {}", thousands(t.treasure_xp));
+    };
+    let generate = |rules: &cr_store::encounter::EncounterRules,
+                    template: &str,
+                    rand: &mut Rand|
+     -> cr_store::Result<cr_store::encounter::Encounter> {
+        let generated = rules.generate(template, rand)?;
+        for message in &generated.messages {
+            eprintln!("{message}");
+        }
+        let mut encounter = generated.encounter;
+        if let Some(name) = &save {
+            encounter.name = name.clone();
+        }
+        print(rules, &encounter);
+        if !generated.pending_npcs.is_empty() {
+            println!();
+            println!("NPCs to make with the NPC generator (not ported yet):");
+            for npc in &generated.pending_npcs {
+                let classes: Vec<String> = npc
+                    .npc
+                    .classes
+                    .iter()
+                    .map(|(c, l)| format!("{c} {l}"))
+                    .collect();
+                println!(
+                    "{} {} {} {}",
+                    npc.count,
+                    npc.npc.name,
+                    npc.npc.race,
+                    classes.join("/")
+                );
+            }
+        }
+        Ok(encounter)
+    };
+    let seeded = || {
+        let seed = seed.unwrap_or_else(Rand::clock_seed);
+        eprintln!("seed {seed}");
+        Rand::seeded(seed)
+    };
+
+    match command {
+        EncounterCommand::Templates(text) => {
+            let rules = install.encounter_rules()?;
+            let text = text.map(|t| t.to_lowercase());
+            for t in rules.templates() {
+                let matches = text.as_ref().is_none_or(|text| {
+                    t.name.to_lowercase().contains(text)
+                        || t.monster_type.to_lowercase().contains(text)
+                });
+                if matches {
+                    let user = if t.user { "  (user)" } else { "" };
+                    println!("{:<40} {}{user}", t.name, t.monster_type);
+                }
+            }
+        }
+        EncounterCommand::TemplateText(name) => {
+            let rules = install.encounter_rules()?;
+            let t = rules
+                .template(&name)
+                .ok_or_else(|| invalid(format!("no encounter template named {name}")))?;
+            print!("{}", rules.template_text(t));
+        }
+        EncounterCommand::Generate(template) => {
+            let rules = install.encounter_rules()?;
+            let encounter = generate(&rules, &template, &mut seeded())?;
+            if save.is_some() {
+                let mut list = install.saved_encounters()?;
+                cr_store::encounter::store_encounter(&mut list, encounter, None)
+                    .map_err(|e| invalid(e.to_string()))?;
+                install.write_saved_encounters(&list)?;
+            }
+        }
+        EncounterCommand::Saved(name) => {
+            let list = install.saved_encounters()?;
+            let Some(name) = name else {
+                for e in &list {
+                    println!("{:<40} {}", e.name, e.template);
+                }
+                return Ok(());
+            };
+            let encounter = list
+                .iter()
+                .find(|e| e.name == name)
+                .ok_or_else(|| invalid(format!("no saved encounter named {name}")))?;
+            print(&install.encounter_rules()?, encounter);
+        }
+        EncounterCommand::Tables(name) => {
+            let tables = install.frequency_tables()?;
+            let Some(name) = name else {
+                for t in &tables.tables {
+                    println!("{}", t.name);
+                }
+                return Ok(());
+            };
+            let table = tables
+                .table(&name)
+                .ok_or_else(|| invalid(format!("no 2-20 table named {name}")))?;
+            for (i, slot) in table.slots.iter().enumerate() {
+                println!("{:>2}  {slot}", i + 2);
+            }
+            let rules = install.encounter_rules()?;
+            let candidates = rules.candidates(&table.filter);
+            println!();
+            for (label, bucket) in ["Common", "Uncommon", "Rare", "Very rare"]
+                .iter()
+                .zip(&candidates)
+            {
+                println!("{label}: {} templates", bucket.len());
+            }
+        }
+        EncounterCommand::Roll(name) => {
+            let tables = install.frequency_tables()?;
+            let table = tables
+                .table(&name)
+                .ok_or_else(|| invalid(format!("no 2-20 table named {name}")))?;
+            let rules = install.encounter_rules()?;
+            let mut rand = seeded();
+            let i = roll_and_pick(&rules, table, &mut rand)
+                .ok_or_else(|| invalid("Unable to find a Template in the selected table".into()))?;
+            println!("Roll {}: {}", i + 2, table.slots[i]);
+            println!();
+            generate(&rules, &table.slots[i], &mut rand)?;
+        }
     }
     Ok(())
 }

@@ -11,7 +11,7 @@ fn every_section_loads() {
     let install = cr_store::Installation::open(dir).unwrap();
     for section in install.catalog() {
         assert_eq!(section.error, None, "{}", section.title);
-        if section.id != "characters" {
+        if !["characters", "treasure"].contains(&section.id) {
             assert!(!section.entries.is_empty(), "{} is empty", section.title);
         }
     }

@@ -23,17 +23,20 @@ record! {
         name: String,
         /// Always 0.
         unknown_0x2d0: i32,
-        /// Frequency in percent (65/20/11/4), as in [`Monster`].
+        /// Frequency in percent (65/20/11/4, 0 = exempt from the 2-20
+        /// tables), as in [`Monster`].
         frequency: i32,
-        /// 0 to 28.
-        unknown_0x338: i32,
+        /// "Number Of Hit Dice" of the 2-20 tables, 0 to 28.
+        hit_dice: i32,
         /// "Human", "Mammal".
         monster_type: String,
+        /// The description copied into each encounter.
         notes: String,
         /// "Any Land".
         climate_terrain: String,
-        /// 0/1 flags at +0x328, +0x32c, +0x330.
-        unknown_0x328: [i32; 3],
+        /// One-hot (+0x328, +0x32c, +0x330): both lair and wandering, lair
+        /// only, wandering only.
+        placement: [i32; 3],
         /// `CEncTemplateMonsterPropertiesOb`s.
         monsters: Vec<Object>,
         /// `CEncTemplateNPCPropertiesOb`s.
@@ -42,9 +45,10 @@ record! {
         traps: Vec<Object>,
         /// `CEncTemplateItemPropertiesOb`s.
         items: Vec<Object>,
-        unknown_0x4: [i32; 26],
-        /// Same shape as `Monster::unknown_0x4`.
-        unknown_0x6c: [i32; 150],
+        /// Lair treasure: how many of each treasure type A to Z.
+        lair_treasure: [i32; 26],
+        /// Climate (0-4) and terrain (5-36) flags, as `Monster::unknown_0x4`.
+        climates: [i32; 150],
     }
 }
 
@@ -52,24 +56,29 @@ record! {
     /// A monster entry of a template (`CEncTemplateMonsterPropertiesOb`,
     /// schema 88, size 0x7c, Serialize 0x651f4a).
     pub struct TemplateMonsterProperties {
-        /// Members +0x50 to +0x6c; the first two look like a min/max count
-        /// (1/4, 1/6, 1/10).
-        unknown_0x50: [i32; 8],
-        /// 0/1 flags at +0x38, +0x3c, +0x40.
-        unknown_0x38: [i32; 3],
-        /// Mostly 100.
-        unknown_0x70: i32,
-        unknown_0x74: i32,
-        unknown_0x78: i32,
+        /// Number appearing as N d S * M + B (+0x50 to +0x5c), then the
+        /// second box (+0x60 to +0x6c).
+        dice: [i32; 8],
+        /// 0/1 flags at +0x38, +0x3c, +0x40: dependent, "and", "or".
+        flags: [i32; 3],
+        /// Percent chance; 100 rolls nothing.
+        percent: i32,
+        /// "for every [n]"; 0 is a one-time addition.
+        per: i32,
+        /// "beyond [n]".
+        beyond: i32,
         /// "Ogre", "Orc, Leader".
         monster_name: String,
-        /// Empty or a second name ("Orc assistant").
+        /// The monster of the second box ("Orc assistant").
         second_name: String,
-        /// Empty or a third name ("Kuo-Toa").
-        third_name: String,
-        /// Usually all empty; else e.g. "Orc".
+        /// The monster a dependent line counts ("Kuo-Toa"), when
+        /// `monster_type` has no name.
+        reference_name: String,
+        /// The monster type a dependent line counts; usually all empty,
+        /// else e.g. "Orc".
         monster_type: MonsterType,
-        /// Full `CMonsterOb` copies (2207 in EncPlat.dat).
+        /// "randomly selected from the following list": full `CMonsterOb`
+        /// copies (2207 in EncPlat.dat).
         monsters: Vec<Object>,
     }
 }
@@ -78,22 +87,27 @@ record! {
     /// An NPC entry of a template (`CEncTemplateNPCPropertiesOb`, schema 88,
     /// size 0x104, Serialize 0x65295d).
     pub struct TemplateNpcProperties {
-        /// Members +0xd4 to +0xf0.
-        unknown_0xd4: [i32; 8],
-        /// 0/1 flags at +0xc8, +0xcc, +0xd0.
-        unknown_0xc8: [i32; 3],
-        /// Mostly 100.
-        unknown_0xf4: i32,
-        unknown_0xf8: i32,
-        unknown_0xfc: i32,
-        /// Empty or a race ("Elf", "Dwarf, Hill").
-        race: String,
-        /// "Halfling", "Gnome".
+        /// Number appearing as N d S * M + B (+0xd4 to +0xe0), then the
+        /// second box (+0xe4 to +0xf0).
+        dice: [i32; 8],
+        /// 0/1 flags at +0xc8, +0xcc, +0xd0: dependent, "and", "or".
+        flags: [i32; 3],
+        /// Percent chance; mostly 100.
+        percent: i32,
+        /// "for every [n]".
+        per: i32,
+        /// "beyond [n]".
+        beyond: i32,
+        /// The monster a dependent line counts ("Elf", "Dwarf, Hill"),
+        /// when `monster_type` has no name.
+        reference_name: String,
+        /// The monster type a dependent line counts ("Halfling", "Gnome").
         monster_type: MonsterType,
-        unknown_0x18: EncounterNpc,
-        /// Often empty strings with levels -1.
-        unknown_0x60: EncounterNpc,
-        /// `CEncounterNPCOb`s (571 in EncPlat.dat).
+        /// The NPC of the first box.
+        npc: EncounterNpc,
+        /// The NPC of the second box; often empty strings with levels -1.
+        second_npc: EncounterNpc,
+        /// The random list: `CEncounterNPCOb`s (571 in EncPlat.dat).
         npcs: Vec<Object>,
     }
 }
@@ -102,21 +116,26 @@ record! {
     /// An item entry of a template (`CEncTemplateItemPropertiesOb`, schema
     /// 88, size 0xe18, Serialize 0x650cde).
     pub struct TemplateItemProperties {
-        unknown_0xda0: i32,
-        /// Members +0xdb0 to +0xdd0.
-        unknown_0xdb0: [i32; 9],
-        /// Members +0xda4 to +0xdac.
-        unknown_0xda4: [i32; 3],
+        /// Percent chance.
+        percent: i32,
+        /// Number of items N d S * M + B (+0xdb0 to +0xdbc), the coin
+        /// (+0xdc0: 0 platinum, 1 gold, 2 silver, 3 copper) and the coins
+        /// N d S * M + B (+0xdc4 to +0xdd0).
+        dice: [i32; 9],
+        /// Dependent (+0xda4), "for every" (+0xda8), "beyond" (+0xdac).
+        dependency: [i32; 3],
+        /// The monster a dependent item counts, by name.
         monster: Box<Monster>,
+        /// The monster type a dependent item counts.
         monster_type: MonsterType,
         /// The item ("Catapult, Heavy", "Cart").
         part: Box<Part>,
-        /// "Orc, Leader", "Orc assistant".
+        /// Monsters whose number the item doubles ("Orc, Leader").
         monster_names: Vec<String>,
-        /// `CEncTemplateNumAppearOb`s.
-        unknown_0xde8: Vec<Object>,
-        /// `CEncTemplateNumAppearOb`s.
-        unknown_0xdfc: Vec<Object>,
+        /// `CEncTemplateNumAppearOb`s that appear with the items.
+        escorts: Vec<Object>,
+        /// `CEncTemplateNumAppearOb`s that appear for each item.
+        per_item: Vec<Object>,
     }
 }
 
@@ -124,13 +143,8 @@ record! {
     /// `CEncTemplateNumAppearOb` (schema 88, size 0x4fc, Serialize
     /// 0x6517d3).
     pub struct TemplateNumAppear {
-        /// 1, 5, 10.
-        unknown_0x4ec: i32,
-        /// 1, 6.
-        unknown_0x4f0: i32,
-        unknown_0x4f4: i32,
-        /// 0, 9.
-        unknown_0x4f8: i32,
+        /// Number appearing as N d S * M + B (1d6, 10d6, 1d1+9).
+        dice: [i32; 4],
         monster: Box<Monster>,
     }
 }
@@ -158,12 +172,13 @@ record! {
     pub struct Encounter {
         /// "Wandering Bugbear", "Huge Orc City".
         name: String,
+        /// Always 0.
         unknown_0x7c: i32,
-        /// "Bugbear", "Orc".
+        /// "Bugbear", "Orc"; "~All" when made from the "~All" list.
         monster_type: String,
         /// Name of the template it came from ("Orc, Lair (Huge city)").
         template: String,
-        unknown_0x78: String,
+        description: String,
         /// `CEncounterMonsterPackageOb`s.
         monsters: Vec<Object>,
         /// `CEncounterNPCPackageOb`s.
@@ -172,7 +187,8 @@ record! {
         traps: Vec<Object>,
         treasure: InventoryBundle,
         items: InventoryBundle,
-        unknown_0x4: [i32; 26],
+        /// The template's lair treasure types, A to Z.
+        lair_treasure: [i32; 26],
     }
 }
 
@@ -181,34 +197,36 @@ record! {
     /// (`CEncounterMonsterPackageOb`, schema 88, size 0x504, Serialize
     /// 0x6405b8).
     pub struct MonsterPackage {
-        /// 1, 5, 544, 1081.
-        unknown_0x4ec: i32,
+        /// How many (1, 5, 544, 1081).
+        count: i32,
         monster: Box<Monster>,
-        /// `CEncounterMonHpOb`s, one per individual monster.
-        individuals: Vec<Object>,
+        /// `CEncounterMonHpOb`s, one per distinct hit point value.
+        hit_points: Vec<Object>,
     }
 }
 
 record! {
-    /// One monster of a [`MonsterPackage`] (`CEncounterMonHpOb`, schema 88,
-    /// size 0xc, Serialize 0x650612).
+    /// Monsters of a [`MonsterPackage`] with the same hit points
+    /// (`CEncounterMonHpOb`, schema 88, size 0xc, Serialize 0x650612).
     pub struct MonsterHp {
-        /// 1 to 22.
-        unknown_0x4: i32,
-        /// 1 to 146; probably hit points.
-        unknown_0x8: i32,
+        hit_points: i32,
+        /// How many have them.
+        count: i32,
     }
 }
 
 record! {
-    /// An NPC in an encounter (`CEncounterNPCPackageOb`, schema 88, size
-    /// 0x21a4, Serialize 0x63bc0f); not in the shipped data.
+    /// NPCs in an encounter (`CEncounterNPCPackageOb`, schema 88, size
+    /// 0x21a4, 2.0 0x2028, Serialize 0x63bc0f); not in the shipped data.
     pub struct NpcPackage {
-        unknown_0x218c: i32,
-        /// A whole character, stored as in a `Chars/<id>.dat` file.
+        /// How many.
+        count: i32,
+        /// A whole character, stored as in a `Chars/<id>.dat` file
+        /// (`TSRP3 V54` or `TSRP2 V29`); every individual shares it.
         character: Box<Character>,
-        /// Element class not determined.
-        unknown_0x2190: Vec<Object>,
+        /// `CPartIDOb`s, one per individual, with the hit points in
+        /// `part_type`.
+        hit_points: Vec<Object>,
     }
 }
 
@@ -216,8 +234,9 @@ record! {
     /// One frequency table (`CEncounterFreqTableOb`, schema 1, size 0x28c,
     /// Serialize 0x63ff92); not in the shipped data.
     pub struct FrequencyTable {
-        unknown_0x274: String,
-        unknown_0x278: Vec<String>,
+        name: String,
+        /// The template names for the rolls 2 to 20.
+        slots: Vec<String>,
         table: FrequencyTableData,
     }
 }
@@ -226,17 +245,17 @@ record! {
     /// The object embedded at `CEncounterFreqTableOb + 0x4` (size 0x270,
     /// Serialize 0x64fe45). Constructor values in the field docs.
     pub struct FrequencyTableData {
-        /// 0.
-        unknown_0x260: i32,
-        /// 100.
-        unknown_0x264: i32,
-        /// 0.
-        unknown_0x268: i32,
-        unknown_0x25c: String,
-        /// 0.
-        unknown_0x26c: i32,
-        /// All 1.
-        unknown_0x4: [i32; 150],
+        /// Hit dice range of the filter, 0 to 100.
+        hit_dice_min: i32,
+        hit_dice_max: i32,
+        /// Templates: 0 all, 1 standard, 2 custom.
+        source: i32,
+        /// Climate/terrain category; "Any" takes every template.
+        category: String,
+        /// 0 lair and wandering, 1 lair or wandering, 2 wandering, 3 lair.
+        lair: i32,
+        /// Climate and terrain flags, all 1 from the constructor.
+        climates: [i32; 150],
     }
 }
 
@@ -276,15 +295,15 @@ mod tests {
         let doc = FrequencyTables {
             version: "TSRP3/FreqDoc/0001".into(),
             tables: vec![Object::FrequencyTable(Box::new(FrequencyTable {
-                unknown_0x274: "Forest".into(),
-                unknown_0x278: vec!["Orc".into()],
+                name: "Forest".into(),
+                slots: vec!["Orc".into()],
                 table: FrequencyTableData {
-                    unknown_0x260: 0,
-                    unknown_0x264: 100,
-                    unknown_0x268: 0,
-                    unknown_0x25c: String::new(),
-                    unknown_0x26c: 0,
-                    unknown_0x4: [1; 150],
+                    hit_dice_min: 0,
+                    hit_dice_max: 100,
+                    source: 0,
+                    category: String::new(),
+                    lair: 0,
+                    climates: [1; 150],
                 },
             }))],
         };
@@ -339,17 +358,17 @@ mod tests {
             unknown_0x7c: 0,
             monster_type: "Dwarf".into(),
             template: String::new(),
-            unknown_0x78: String::new(),
+            description: String::new(),
             monsters: vec![],
             npcs: vec![Object::NpcPackage(Box::new(NpcPackage {
-                unknown_0x218c: 1,
+                count: 1,
                 character: Box::new(character),
-                unknown_0x2190: vec![],
+                hit_points: vec![],
             }))],
             traps: vec![],
             treasure: empty.clone(),
             items: empty,
-            unknown_0x4: [0; 26],
+            lair_treasure: [0; 26],
         };
         let list = ObjectList {
             objects: vec![Object::Encounter(Box::new(encounter))],

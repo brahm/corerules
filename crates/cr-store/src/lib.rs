@@ -10,6 +10,7 @@ pub mod choices;
 pub mod create;
 pub mod dual;
 pub mod edit;
+pub mod encounter;
 pub mod lists;
 pub mod settings;
 pub mod sheet;

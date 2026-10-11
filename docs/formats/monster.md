@@ -198,13 +198,13 @@ All u32 fields are 0 in the shipped data except m_40.
 | 1 | s_2c4 | CString | +0x2c4 | template name ("Orc, Wandering"); unique |
 | 2 | m_2d0 | u32 | +0x2d0 | always 0 |
 | 3 | m_334 | u32 | +0x334 | frequency % (65/20/11/4), as CMonsterOb m_3c0 |
-| 4 | m_338 | u32 | +0x338 | 0..28 |
+| 4 | m_338 | u32 | +0x338 | "Number Of Hit Dice" of the 2-20 tables (0..28) |
 | 5 | s_2c8 | CString | +0x2c8 | type ("Human", "Mammal") |
-| 6 | s_2cc | CString | +0x2cc | notes text |
+| 6 | s_2cc | CString | +0x2cc | description, copied into each encounter |
 | 7 | s_2d4 | CString | +0x2d4 | climate/terrain ("Any Land") |
-| 8 | m_328 | u32 | +0x328 | 0/1 flag |
-| 9 | m_32c | u32 | +0x32c | 0/1 flag |
-| 10 | m_330 | u32 | +0x330 | 0/1 flag |
+| 8 | m_328 | u32 | +0x328 | one-hot with m_32c, m_330: both lair and wandering |
+| 9 | m_32c | u32 | +0x32c | lair only |
+| 10 | m_330 | u32 | +0x330 | wandering only |
 
 Then:
 
@@ -214,7 +214,7 @@ Then:
 | 12 | oa_2ec | CObArray<CEncTemplateNPCPropertiesOb> | +0x2ec | NPCs |
 | 13 | oa_300 | CObArray<CTrapOb> | +0x300 | traps (4 in data); see [misc.md](misc.md) |
 | 14 | oa_314 | CObArray<CEncTemplateItemPropertiesOb> | +0x314 | items (8 in data) |
-| 15 | t_4 | u32[26] | +0x4 | |
+| 15 | t_4 | u32[26] | +0x4 | lair treasure: count per treasure type A..Z |
 | 16 | t_6c | u32[150] | +0x6c | same shape as CMonsterOb t_4 (150 entries) |
 
 ### CEncTemplateMonsterPropertiesOb (schema 88, size 0x7c, Serialize 0x651f4a)
@@ -244,7 +244,10 @@ Then:
 | 18 | montype_18 | embedded CMonsterTypeOb | +0x18 | usually all empty; else e.g. "Orc" |
 | 19 | oa_4 | CObArray<CMonsterOb> | +0x4 | full monster copies (2207 in EncPlat.dat) |
 
-m_50 / m_54 look like a min/max count (1/4, 1/6, 1/10) but this is not confirmed.
+m_50..m_5c are the number appearing N d S * M + B, m_60..m_6c the second box; m_38, m_3c,
+m_40 are dependent / "and" / "or"; m_70 percent, m_74 "for every", m_78 "beyond"; s_4c and
+montype_18 name what a dependent line counts. The generator is described in
+[`encounter.rs`](../../crates/cr-store/src/encounter.rs).
 
 ### CEncTemplateNPCPropertiesOb (schema 88, size 0x104, Serialize 0x65295d)
 
@@ -352,14 +355,14 @@ m_50 / m_54 look like a min/max count (1/4, 1/6, 1/10) but this is not confirmed
 |---|---|---|---|---|
 | 1 | m_4ec | u32 | +0x4ec | (1, 5, 544, 1081...) |
 | 2 | monster_4 | embedded CMonsterOb | +0x4 | |
-| 3 | oa_4f0 | CObArray<CEncounterMonHpOb> | +0x4f0 | one entry per individual monster |
+| 3 | oa_4f0 | CObArray<CEncounterMonHpOb> | +0x4f0 | one entry per distinct hit point value, in first-occurrence order |
 
 ### CEncounterMonHpOb (schema 88, size 0xc, Serialize 0x650612)
 
 | # | field | type | offset | meaning |
 |---|---|---|---|---|
-| 1 | m_4 | u32 | +0x4 | 1..22 |
-| 2 | m_8 | u32 | +0x8 | hit points? (1..146) |
+| 1 | m_4 | u32 | +0x4 | hit points |
+| 2 | m_8 | u32 | +0x8 | how many monsters of the package have them |
 
 ### CEncounterNPCPackageOb (schema 88, size 0x21a4, Serialize 0x63bc0f) - not in shipped data
 
@@ -367,7 +370,7 @@ m_50 / m_54 look like a min/max count (1/4, 1/6, 1/10) but this is not confirmed
 |---|---|---|---|---|
 | 1 | m_218c | u32 | +0x218c | |
 | 2 | character_4 | embedded CCharacterDoc | +0x4 | vtable 0x79b428, Serialize 0x41cd5b: the same stream as a Chars/<id>.dat file (see [`character.rs`](../../crates/cr-formats/src/character.rs)) |
-| 3 | oa_2190 | CObArray | +0x2190 | element type not determined |
+| 3 | oa_2190 | CObArray<CPartIDOb> | +0x2190 | one per individual, hit points in the part type field |
 
 The embedded character is read with the same archive reader as the surrounding file, so
 class tags inside the character continue the archive's tag numbering.
