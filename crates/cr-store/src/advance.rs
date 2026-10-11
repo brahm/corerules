@@ -342,7 +342,7 @@ impl AdvanceRules {
         Some(limit.max(1) as u32)
     }
 
-    fn level_of(&self, character: &Character, g: usize) -> Result<u32> {
+    pub(crate) fn level_of(&self, character: &Character, g: usize) -> Result<u32> {
         let class = self.class(character, g)?;
         let level = class.level(i64::from(character.data.unknown_0x1618[g]));
         Ok(match self.limit(character, g, class) {
@@ -513,6 +513,27 @@ impl AdvanceRules {
             }
         }
         Ok(total as i32)
+    }
+
+    /// The class table's spell slots of class `g` at its level, as the
+    /// NPC experience value reads them (Expansion 0x43b133, 2.0 0x41ff10):
+    /// the alternative table when one of the class's abilities selects it
+    /// (part +0x784, 2.0 +0x5dc), else the main one, with no Wisdom,
+    /// specialist or kit slots. Indexed by spell level, 0 unused.
+    pub fn table_slots(&self, character: &Character, g: usize) -> Result<[i32; 11]> {
+        let class = self.class(character, g)?;
+        let level = self.level_of(character, g)? as usize;
+        let alternative = character.data.class_slots.get(g).is_some_and(|s| {
+            s.abilities
+                .iter()
+                .any(|a| self.alternative_slots.contains(a))
+        });
+        let table = if alternative {
+            &class.alternative_slots
+        } else {
+            &class.slots
+        };
+        Ok(table.get(level).copied().unwrap_or_default())
     }
 
     /// Spell slots of class `g` for spell levels 1 to 9, with Wisdom bonus

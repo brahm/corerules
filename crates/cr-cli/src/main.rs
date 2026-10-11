@@ -1,5 +1,6 @@
 //! `cr`: inspect an AD&D Core Rules 2.0 installation from the command line.
 
+use std::io::{ErrorKind, Write};
 use std::process::ExitCode;
 
 use cr_formats::character::Character;
@@ -62,6 +63,42 @@ const USAGE: &str = "usage:
 
 Without INSTALL_DIR, the installation in the Wine prefix is used.";
 
+/// `print!` to standard output that ends the program quietly when the
+/// reader has gone away (`cr encounter … | head`), where `print!` panics
+/// with "failed printing to stdout: Broken pipe".
+macro_rules! out {
+    ($($arg:tt)*) => {
+        write_stdout(format_args!($($arg)*))
+    };
+}
+
+/// `println!` with [`out!`]'s handling of a closed pipe.
+macro_rules! outln {
+    () => {
+        out!("\n")
+    };
+    ($($arg:tt)*) => {
+        out!("{}\n", format_args!($($arg)*))
+    };
+}
+
+/// Writes to standard output. A closed pipe exits with success, as a
+/// program killed by SIGPIPE would quietly stop; any other write error
+/// exits with failure.
+fn write_stdout(args: std::fmt::Arguments) {
+    if let Err(e) = std::io::stdout().lock().write_fmt(args) {
+        stdout_failed(e);
+    }
+}
+
+fn stdout_failed(e: std::io::Error) -> ! {
+    if e.kind() == ErrorKind::BrokenPipe {
+        std::process::exit(0);
+    }
+    eprintln!("cr: {e}");
+    std::process::exit(1);
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let (Some(command), dir) = (args.first(), args.get(1)) else {
@@ -85,6 +122,10 @@ fn main() -> ExitCode {
             Ok(())
         }
     });
+    // What is still buffered goes out before the exit status is decided.
+    if let Err(e) = std::io::stdout().flush() {
+        stdout_failed(e);
+    }
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
@@ -96,7 +137,7 @@ fn main() -> ExitCode {
 
 fn cmd_survey(install: &Installation) -> cr_store::Result<()> {
     for folder in ["Database", "UserDbas"] {
-        println!("{folder}/");
+        outln!("{folder}/");
         for path in install.data_files(folder)? {
             let name = path.file_name().unwrap().to_string_lossy().into_owned();
             let data = std::fs::read(&path).map_err(|source| cr_store::Error::Io {
@@ -109,9 +150,9 @@ fn cmd_survey(install: &Installation) -> cr_store::Result<()> {
                         .class
                         .map(|c| format!("{} (schema {})", c.name, c.schema))
                         .unwrap_or_default();
-                    println!("  {name:<14} {:>6} records  {class}", s.records);
+                    outln!("  {name:<14} {:>6} records  {class}", s.records);
                 }
-                Err(e) => println!("  {name:<14} not a record list: {e}"),
+                Err(e) => outln!("  {name:<14} not a record list: {e}"),
             }
         }
     }
@@ -129,7 +170,7 @@ fn cmd_chars(install: &Installation) -> cr_store::Result<()> {
             .as_ref()
             .map(|c| c.version.as_str())
             .unwrap_or("unreadable");
-        println!(
+        outln!(
             "{:<24} {:<10} {}  [{}, {}]",
             entry.name,
             entry.race,
@@ -181,7 +222,7 @@ fn cmd_sheet(install: &Installation, args: &[String]) -> cr_store::Result<()> {
     } else {
         sheet.to_txt(&date)
     };
-    print!("{text}");
+    out!("{text}");
     Ok(())
 }
 
@@ -229,10 +270,10 @@ fn cmd_treasure(install: &Installation, args: &[String]) -> cr_store::Result<()>
     }
 
     let print = |bundle: &Bundle, rules: &TreasureRules| {
-        print!("{}", bundle.to_text());
-        println!();
+        out!("{}", bundle.to_text());
+        outln!();
         for line in rules.summary(bundle).lines() {
-            println!("{line}");
+            outln!("{line}");
         }
     };
 
@@ -242,7 +283,7 @@ fn cmd_treasure(install: &Installation, args: &[String]) -> cr_store::Result<()>
             let mut names: Vec<&str> = list.iter().map(|t| t.name.as_str()).collect();
             names.sort_unstable();
             for name in names {
-                println!("{name}");
+                outln!("{name}");
             }
             return Ok(());
         };
@@ -263,7 +304,7 @@ fn cmd_treasure(install: &Installation, args: &[String]) -> cr_store::Result<()>
             let item = rules
                 .roll_table(&mut rand, &table)
                 .ok_or_else(|| invalid(format!("no treasure table named {table}")))?;
-            print!("{}", Bundle { items: vec![item] }.to_text());
+            out!("{}", Bundle { items: vec![item] }.to_text());
         }
         return Ok(());
     }
@@ -278,7 +319,7 @@ fn cmd_treasure(install: &Installation, args: &[String]) -> cr_store::Result<()>
         }
         rules.roll(&mut rand, &counts, roll.coin, &mut bundle);
         if i > 0 {
-            println!();
+            outln!();
         }
         print(&bundle, &rules);
     }
@@ -342,13 +383,13 @@ fn cmd_encounter(install: &Installation, args: &[String]) -> cr_store::Result<()
 
     let print = |rules: &cr_store::encounter::EncounterRules,
                  encounter: &cr_store::encounter::Encounter| {
-        print!("{}", rules.encounter_text(encounter));
+        out!("{}", rules.encounter_text(encounter));
         let t = rules.totals(encounter);
         use cr_store::treasure::thousands;
-        println!();
-        println!("Gold Value: {}", thousands(t.gold_value));
-        println!("Monster XP: {}", thousands(t.monster_xp));
-        println!("Treasure XP: {}", thousands(t.treasure_xp));
+        outln!();
+        outln!("Gold Value: {}", thousands(t.gold_value));
+        outln!("Monster XP: {}", thousands(t.monster_xp));
+        outln!("Treasure XP: {}", thousands(t.treasure_xp));
     };
     let generate = |rules: &cr_store::encounter::EncounterRules,
                     template: &str,
@@ -364,8 +405,8 @@ fn cmd_encounter(install: &Installation, args: &[String]) -> cr_store::Result<()
         }
         print(rules, &encounter);
         if !generated.pending_npcs.is_empty() {
-            println!();
-            println!("NPCs to make with the NPC generator (not ported yet):");
+            outln!();
+            outln!("NPCs to make with the NPC generator (not ported yet):");
             for npc in &generated.pending_npcs {
                 let classes: Vec<String> = npc
                     .npc
@@ -373,7 +414,7 @@ fn cmd_encounter(install: &Installation, args: &[String]) -> cr_store::Result<()
                     .iter()
                     .map(|(c, l)| format!("{c} {l}"))
                     .collect();
-                println!(
+                outln!(
                     "{} {} {} {}",
                     npc.count,
                     npc.npc.name,
@@ -401,7 +442,7 @@ fn cmd_encounter(install: &Installation, args: &[String]) -> cr_store::Result<()
                 });
                 if matches {
                     let user = if t.user { "  (user)" } else { "" };
-                    println!("{:<40} {}{user}", t.name, t.monster_type);
+                    outln!("{:<40} {}{user}", t.name, t.monster_type);
                 }
             }
         }
@@ -410,7 +451,7 @@ fn cmd_encounter(install: &Installation, args: &[String]) -> cr_store::Result<()
             let t = rules
                 .template(&name)
                 .ok_or_else(|| invalid(format!("no encounter template named {name}")))?;
-            print!("{}", rules.template_text(t));
+            out!("{}", rules.template_text(t));
         }
         EncounterCommand::Generate(template) => {
             let rules = install.encounter_rules()?;
@@ -426,7 +467,7 @@ fn cmd_encounter(install: &Installation, args: &[String]) -> cr_store::Result<()
             let list = install.saved_encounters()?;
             let Some(name) = name else {
                 for e in &list {
-                    println!("{:<40} {}", e.name, e.template);
+                    outln!("{:<40} {}", e.name, e.template);
                 }
                 return Ok(());
             };
@@ -440,7 +481,7 @@ fn cmd_encounter(install: &Installation, args: &[String]) -> cr_store::Result<()
             let tables = install.frequency_tables()?;
             let Some(name) = name else {
                 for t in &tables.tables {
-                    println!("{}", t.name);
+                    outln!("{}", t.name);
                 }
                 return Ok(());
             };
@@ -448,16 +489,16 @@ fn cmd_encounter(install: &Installation, args: &[String]) -> cr_store::Result<()
                 .table(&name)
                 .ok_or_else(|| invalid(format!("no 2-20 table named {name}")))?;
             for (i, slot) in table.slots.iter().enumerate() {
-                println!("{:>2}  {slot}", i + 2);
+                outln!("{:>2}  {slot}", i + 2);
             }
             let rules = install.encounter_rules()?;
             let candidates = rules.candidates(&table.filter);
-            println!();
+            outln!();
             for (label, bucket) in ["Common", "Uncommon", "Rare", "Very rare"]
                 .iter()
                 .zip(&candidates)
             {
-                println!("{label}: {} templates", bucket.len());
+                outln!("{label}: {} templates", bucket.len());
             }
         }
         EncounterCommand::Roll(name) => {
@@ -469,8 +510,8 @@ fn cmd_encounter(install: &Installation, args: &[String]) -> cr_store::Result<()
             let mut rand = seeded();
             let i = roll_and_pick(&rules, table, &mut rand)
                 .ok_or_else(|| invalid("Unable to find a Template in the selected table".into()))?;
-            println!("Roll {}: {}", i + 2, table.slots[i]);
-            println!();
+            outln!("Roll {}: {}", i + 2, table.slots[i]);
+            outln!();
             generate(&rules, &table.slots[i], &mut rand)?;
         }
     }

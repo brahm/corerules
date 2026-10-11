@@ -412,6 +412,43 @@ pub(super) fn build(rules: &SheetRules, ch: &Character) -> Result<Sheet> {
     })
 }
 
+/// The hit dice a character counts as when the encounter screens value it
+/// as a monster (Expansion 0x43b133, 2.0 0x41ff10), after the DMG's
+/// creature experience adjustments: the highest class level, +1 for an
+/// armor class of 0 or better (0x429ac5, 2.0 0x415250), +1 when the third
+/// psionic list is not empty (member 0x199c, 2.0 0x18fc), +2 when the
+/// second is not (0x1988, 2.0 0x18e8), per class +1 for slots at spell
+/// level 1 or 2 and +1 for slots at 3 to 9 in the class table at its
+/// level, and +1 for Intelligence above 12 (vtable 0xe8, 2.0 0xe4).
+pub(super) fn npc_hit_dice(rules: &SheetRules, ch: &Character) -> Result<i32> {
+    let ctx = Ctx::new(rules, ch)?;
+    let level = |c: &ClassInfo| i32::try_from(c.level).unwrap_or(i32::MAX);
+    let mut hd = ctx.classes.iter().map(level).max().unwrap_or(0).max(0);
+    if combat::armor_class(&ctx) < 1 {
+        hd += 1;
+    }
+    let psionic = &ch.data.unknown_0x196c;
+    if !psionic[2].is_empty() {
+        hd += 1;
+    }
+    if !psionic[1].is_empty() {
+        hd += 2;
+    }
+    for g in 0..ctx.classes.len() {
+        let slots = rules.advance.table_slots(ch, g)?;
+        if slots[1] != 0 || slots[2] != 0 {
+            hd += 1;
+        }
+        if slots[3..=9].iter().any(|&s| s != 0) {
+            hd += 1;
+        }
+    }
+    if ctx.scores.score(INT) > 12 {
+        hd += 1;
+    }
+    Ok(hd)
+}
+
 fn section(ctx: &Ctx, id: u32) -> Option<Section> {
     let core20 = ctx.flavor == Flavor::Core20;
     Some(match id {

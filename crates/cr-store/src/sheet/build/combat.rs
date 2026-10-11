@@ -279,8 +279,31 @@ pub(in crate::sheet) fn encumbrance(ctx: &Ctx) -> usize {
         .unwrap_or(5)
 }
 
+/// The final armor class (0x429ac5), -10 to 10.
+pub(in crate::sheet) fn armor_class(ctx: &Ctx) -> i32 {
+    armor(ctx).1
+}
+
 /// The Armor box (0x429ac5 → 0x5fac14): `label:value` lines, then FINAL.
 pub(in crate::sheet) fn armor_box(ctx: &Ctx) -> SheetBox {
+    let (lines, ac) = armor(ctx);
+    let mut rows: Vec<Vec<Cell>> = lines
+        .iter()
+        .map(|line| {
+            let (label, value) = line.split_once(':').unwrap_or((line, ""));
+            vec![Cell::new(label), Cell::new(value).right()]
+        })
+        .collect();
+    rows.push(vec![Cell::new("FINAL:"), Cell::new(ac.to_string()).right()]);
+    SheetBox {
+        title: "Armor".into(),
+        body: vec![table(2, rows)],
+    }
+}
+
+/// The armor class worked out (0x429ac5): its `label:value` lines and
+/// the final value, kept within -10 to 10.
+fn armor(ctx: &Ctx) -> (Vec<String>, i32) {
     let mut lines: Vec<String> = Vec::new();
     let mut natural = ctx.race().map_or(10, |r| r.unknown_0x16c[0]);
     if natural == 0 {
@@ -363,21 +386,7 @@ pub(in crate::sheet) fn armor_box(ctx: &Ctx) -> SheetBox {
         lines.push("Severe encumbrance penalty: 3".into());
         ac += 3;
     }
-    let mut rows: Vec<Vec<Cell>> = lines
-        .iter()
-        .map(|line| {
-            let (label, value) = line.split_once(':').unwrap_or((line, ""));
-            vec![Cell::new(label), Cell::new(value).right()]
-        })
-        .collect();
-    rows.push(vec![
-        Cell::new("FINAL:"),
-        Cell::new(ac.clamp(-10, 10).to_string()).right(),
-    ]);
-    SheetBox {
-        title: "Armor".into(),
-        body: vec![table(2, rows)],
-    }
+    (lines, ac.clamp(-10, 10))
 }
 
 /// Weapon parts: the `head.unknown_0x3b8` flags are melee, missile,

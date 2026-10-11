@@ -231,14 +231,29 @@ pub fn stat_line(package: &MonsterPackage, flavor: Flavor) -> String {
 
 /// A short line for an NPC package: number, name, race, class and the hit
 /// points of each individual. (The original's NPC stat line, 0x43b59b,
-/// needs the character sheet's values and is not ported.)
+/// needs the character sheet's values and is not ported;
+/// [`EncounterRules::npc_line`] adds its experience value.)
 pub fn npc_line(package: &NpcPackage) -> String {
     let d = &package.character.data;
-    let mut s = format!("{} {} {} {}", package.count, d.name, d.race, d.class_title);
+    let title = format!("{} {}", d.race, d.class_title);
+    npc_line_with(package, &title, None)
+}
+
+fn npc_line_with(package: &NpcPackage, title: &str, xp: Option<i32>) -> String {
+    let d = &package.character.data;
+    let mut s = format!("{} {} {title}", package.count, d.name);
+    let mut details = Vec::new();
     let hp = package.individual_hit_points();
     if !hp.is_empty() {
         let hp: Vec<String> = hp.iter().map(i32::to_string).collect();
-        s.push_str(&format!(" (hp {})", hp.join(", ")));
+        details.push(format!("hp {}", hp.join(", ")));
+    }
+    if let Some(xp) = xp {
+        // "XP %ld": no thousands separators, unlike the monsters' line.
+        details.push(format!("XP {xp}"));
+    }
+    if !details.is_empty() {
+        s.push_str(&format!(" ({})", details.join("; ")));
     }
     s
 }
@@ -255,6 +270,17 @@ impl EncounterRules {
     /// shows it.
     pub fn stat_line(&self, package: &MonsterPackage) -> String {
         stat_line(package, self.flavor)
+    }
+
+    /// [`npc_line`] with the classes as the original writes them
+    /// ([`npc_title`](Self::npc_title)) and ending with the experience
+    /// value of one individual, as the original's NPC stat line ends
+    /// ("…; XP 15)", 0x43b59b, 2.0 0x420300): "1 Borin Pedraforte Dwarf F1
+    /// (XP 15)".
+    pub fn npc_line(&self, package: &NpcPackage) -> String {
+        let title = self.npc_title(&package.character);
+        let xp = self.npc_experience(&package.character);
+        npc_line_with(package, &title, Some(xp))
     }
 
     /// Everything the encounter holds, merged as the printer merges it:
@@ -307,10 +333,14 @@ impl EncounterRules {
             xp = xp.wrapping_add(x);
             rows.push([thousands(p.count), thousands(x), p.monster.name.clone()]);
         }
+        // NPC rows count in the experience total but not in the number
+        // (0x64adf4).
         for p in &encounter.npcs {
+            let x = self.npc_experience(&p.character).wrapping_mul(p.count);
+            xp = xp.wrapping_add(x);
             rows.push([
                 thousands(p.count),
-                "0".into(),
+                thousands(x),
                 p.character.data.name.clone(),
             ]);
         }
@@ -361,7 +391,7 @@ impl EncounterRules {
         if !encounter.npcs.is_empty() {
             out.push_str("\nNon-Players Characters\n");
             for p in &encounter.npcs {
-                out.push_str(&npc_line(p));
+                out.push_str(&self.npc_line(p));
                 out.push('\n');
             }
         }

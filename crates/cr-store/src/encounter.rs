@@ -31,6 +31,7 @@ mod text;
 
 use std::cell::Cell;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use cr_formats::Object;
 use cr_formats::character::{CORE20_VERSION, Character};
@@ -48,6 +49,7 @@ pub use tables::{
 };
 pub use text::{dice_text, hit_dice_text, hit_point_text, npc_line, stat_line};
 
+use crate::sheet::SheetRules;
 use crate::treasure::TreasureRules;
 use crate::{Error, Installation, Result};
 
@@ -302,8 +304,9 @@ pub struct Totals {
     /// Treasure, items and what the monsters and NPCs carry, in gold
     /// pieces (each bundle's copper value floored separately).
     pub gold_value: i32,
-    /// The monsters' experience times their number. NPCs count for
-    /// nothing here (their experience value, 0x43b133, is not ported).
+    /// The monsters' experience times their number, plus each NPC
+    /// package's experience value ([`EncounterRules::npc_experience`])
+    /// times its number.
     pub monster_xp: i32,
     /// Experience of the magic items in the same bundles.
     pub treasure_xp: i32,
@@ -514,6 +517,9 @@ pub struct EncounterRules {
     by_name: HashMap<String, usize>,
     monsters: Monsters,
     treasure: TreasureRules,
+    /// Levels, armor class and the rest an NPC's experience value and
+    /// title need.
+    sheet: Arc<SheetRules>,
 }
 
 const TEMPLATES: [&str; 2] = ["Database/EncPlat.dat", "UserDbas/EncPlatU.dat"];
@@ -583,6 +589,7 @@ impl Installation {
             by_name,
             monsters,
             treasure,
+            sheet: Arc::new(self.sheet_rules()?),
         })
     }
 
@@ -842,8 +849,10 @@ impl Encounter {
             .collect()
     }
 
-    /// A package as the dialog's list writes it (0x63d876): "9 - Orc".
-    pub fn package_line(&self, package: Package) -> Option<String> {
+    /// A package as the dialog's list writes it (0x63d415 → 0x63d876, 2.0
+    /// 0x4b7520): "9 - Orc", "1 - Borin Pedraforte Dwarf F1", "13 - Human
+    /// T1" (see [`EncounterRules::npc_name`]).
+    pub fn package_line(&self, package: Package, rules: &EncounterRules) -> Option<String> {
         Some(match package {
             Package::Monster(i) => {
                 let p = self.monsters.get(i)?;
@@ -851,7 +860,7 @@ impl Encounter {
             }
             Package::Npc(i) => {
                 let p = self.npcs.get(i)?;
-                format!("{} - {}", p.count, p.character.data.name)
+                format!("{} - {}", p.count, rules.npc_name(p))
             }
         })
     }
@@ -1049,6 +1058,40 @@ impl EncounterRules {
         Some(package)
     }
 
+    /// The race and the classes with their levels, as the encounter list
+    /// shows an NPC (0x63bdda, 2.0 0x4c2620): the race (member 0x160),
+    /// a space, then [`SheetRules::class_levels_text`]: "Dwarf F1",
+    /// "Elf F4/M4".
+    pub fn npc_title(&self, character: &Character) -> String {
+        format!(
+            "{} {}",
+            character.data.race,
+            self.sheet.class_levels_text(character)
+        )
+    }
+
+    /// The name the encounter list gives an NPC package (0x63d415, 2.0
+    /// 0x4b7520): the character's name, a space and its
+    /// [title](Self::npc_title) when the package holds fewer than two
+    /// individuals ("Borin Pedraforte Dwarf F1"; a nameless character
+    /// keeps the space, " Human T5"), the title alone otherwise ("Human
+    /// T1").
+    pub fn npc_name(&self, package: &NpcPackage) -> String {
+        let title = self.npc_title(&package.character);
+        if package.count < 2 {
+            format!("{} {title}", package.character.data.name)
+        } else {
+            title
+        }
+    }
+
+    /// What one NPC of a package is worth (Expansion 0x43b133, 2.0
+    /// 0x41ff10), see [`SheetRules::npc_experience`]. A character whose
+    /// classes are not in the databases is worth 0.
+    pub fn npc_experience(&self, character: &Character) -> i32 {
+        self.sheet.npc_experience(character).unwrap_or(0)
+    }
+
     /// Encounter Totals (0x647983).
     pub fn totals(&self, encounter: &Encounter) -> Totals {
         let mut t = Totals::default();
@@ -1074,7 +1117,32 @@ impl EncounterRules {
                 .monster_xp
                 .wrapping_add(p.monster.experience.wrapping_mul(p.count));
         }
+        for p in &encounter.npcs {
+            t.monster_xp = t
+                .monster_xp
+                .wrapping_add(self.npc_experience(&p.character).wrapping_mul(p.count));
+        }
         t
+    }
+}
+
+/// The experience of a creature of `hit_dice` hit dice (Expansion
+/// 0x43b4df, 2.0 0x420230), the DMG's table: 7 below 1 hit die (or at 1
+/// with a modifier below -1), then 15, 35, 65, 120, 175, 270, 420, 650 and
+/// 975 for 1 to 9 (a positive modifier reads the next entry), 1,400 for 10,
+/// 2,000 for 11 and 12, and 1,000 per hit die above 10 from 13 on.
+pub fn experience_for_hit_dice(hit_dice: i32, modifier: i32) -> i32 {
+    const TABLE: [i32; 11] = [7, 15, 35, 65, 120, 175, 270, 420, 650, 975, 1400];
+    if hit_dice < 1 || (hit_dice == 1 && modifier < -1) {
+        7
+    } else if hit_dice < 10 {
+        TABLE[(hit_dice + i32::from(modifier > 0)) as usize]
+    } else if hit_dice == 10 {
+        1400
+    } else if hit_dice < 13 {
+        2000
+    } else {
+        (hit_dice - 10).wrapping_mul(1000)
     }
 }
 

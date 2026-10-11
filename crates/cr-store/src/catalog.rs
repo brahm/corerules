@@ -363,11 +363,15 @@ fn encounter_entry(e: &Encounter, rules: Option<&EncounterRules>) -> Entry {
                     format!("hp {}", hit_point_text(&p.hit_points)),
                 )
             })
-            .chain(e.npcs.iter().map(|p| {
-                (
+            .chain(e.npcs.iter().map(|p| match rules {
+                Some(rules) => (
+                    format!("{} - {}", p.count, rules.npc_name(p)),
+                    rules.npc_line(p),
+                ),
+                None => (
                     format!("{} - {}", p.count, p.character.data.name),
                     npc_line(p),
-                )
+                ),
             }))
             .collect(),
     });

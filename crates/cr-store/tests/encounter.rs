@@ -11,18 +11,21 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use cr_formats::character::Character;
+use cr_formats::character::{Character, EXPANSION_VERSION};
+use cr_formats::classes::Class;
 use cr_formats::database::ObjectList;
 use cr_formats::encounter::{
     EncounterTemplate, TemplateItemProperties, TemplateMonsterProperties, TemplateNumAppear,
 };
 use cr_formats::monster::Monster;
+use cr_formats::race::Race;
 use cr_formats::{ArchiveReader, Field, Object};
 use cr_store::Installation;
 use cr_store::encounter::{
     Dice, Encounter, EncounterRules, Flavor, FrequencyTable, FrequencyTables, LairMode, NameError,
     NpcPackage, Package, Rand, TableFilter, check_name, dice_text, encounters_to_bytes,
-    hit_point_text, parse_encounters, roll_2_to_20, roll_and_pick, store_encounter,
+    experience_for_hit_dice, hit_point_text, parse_encounters, roll_2_to_20, roll_and_pick,
+    store_encounter,
 };
 
 // ---- synthetic installation ----
@@ -399,7 +402,10 @@ fn editing_an_encounter() {
     assert!(e.add_npc(character.clone(), Flavor::Core20).is_err());
     e.add_npc(character, Flavor::Expansion).unwrap();
     assert_eq!(e.packages(), [Package::Monster(0), Package::Npc(0)]);
-    assert_eq!(e.package_line(Package::Monster(0)).unwrap(), "3 - Wolf");
+    assert_eq!(
+        e.package_line(Package::Monster(0), &rules).unwrap(),
+        "3 - Wolf"
+    );
 
     // Edit…: a new number rolls every hit point again.
     let before = r.calls();
@@ -443,6 +449,136 @@ fn editing_an_encounter() {
     store_encounter(&mut list, renamed.clone(), Some(0)).unwrap();
     store_encounter(&mut list, e, None).unwrap_err();
     assert_eq!(list, [renamed]);
+}
+
+#[test]
+fn experience_by_hit_dice() {
+    let xp = |hd, m| experience_for_hit_dice(hd, m);
+    assert_eq!([xp(-3, 0), xp(0, 5), xp(1, -2), xp(1, -1)], [7, 7, 7, 15]);
+    let table: Vec<i32> = (1..=9).map(|hd| xp(hd, 0)).collect();
+    assert_eq!(table, [15, 35, 65, 120, 175, 270, 420, 650, 975]);
+    // A positive modifier reads the next entry below 10 hit dice only.
+    assert_eq!([xp(1, 1), xp(9, 3), xp(10, 1)], [35, 1400, 1400]);
+    assert_eq!(
+        [xp(11, 0), xp(12, 0), xp(13, 0), xp(20, 0)],
+        [2000, 2000, 3000, 10000]
+    );
+}
+
+/// A 2.0-layout class: experience `(level - 1) * 2000`, the abbreviation,
+/// and spell slots from `slots` (level, spell level) on.
+fn class(name: &str, abbreviation: &str, group: i32, slots: &[(usize, usize)]) -> Object {
+    let Class::Core20(mut c) = blank::<Class>() else {
+        unreachable!()
+    };
+    c.name = name.into();
+    c.unknown_0x10[0] = group;
+    c.unknown_0x2610[0] = abbreviation.into();
+    for (level, xp) in c.experience.iter_mut().enumerate().skip(2) {
+        *xp = (level as i32 - 1) * 2000;
+    }
+    for &(from, spell_level) in slots {
+        for row in &mut c.unknown_0x264[from..] {
+            row[spell_level] = 1;
+        }
+    }
+    Object::Class(Box::new(Class::Core20(c)))
+}
+
+#[test]
+fn npc_experience_and_names() {
+    let (temp, install) = install("npcs", goblins(), vec![], true);
+    let mut dwarf: Race = blank();
+    dwarf.name = "Dwarf".into();
+    // Natural armor class 1.
+    dwarf.unknown_0x16c[0] = 1;
+    fs::write(
+        temp.0.join("Database/Race.dat"),
+        ObjectList {
+            objects: vec![Object::Race(Box::new(dwarf))],
+        }
+        .to_bytes()
+        .unwrap(),
+    )
+    .unwrap();
+    let classes = vec![
+        class("Fighter", "F", 0, &[]),
+        class("Mage", "M", 3, &[(1, 1), (5, 3)]),
+    ];
+    fs::write(
+        temp.0.join("Database/Class.dat"),
+        ObjectList { objects: classes }.to_bytes().unwrap(),
+    )
+    .unwrap();
+    let rules = install.encounter_rules().unwrap();
+
+    let mut c = Character::blank(EXPANSION_VERSION).unwrap();
+    c.data.name = "Borin".into();
+    c.data.race = "Elf".into();
+    c.data.classes.names = vec!["Fighter".into()];
+    // Dex 10, Int 12.
+    c.data.abilities[0] = [10; 3];
+    c.data.abilities[2] = [12; 3];
+    let xp = |c: &Character| rules.npc_experience(c);
+    // A Fighter 1 with armor class 10: 1 hit die.
+    assert_eq!(xp(&c), 15);
+    assert_eq!(rules.npc_title(&c), "Elf F1");
+    // Intelligence above 12: +1.
+    c.data.abilities[2] = [13; 3];
+    assert_eq!(xp(&c), 35);
+    c.data.abilities[2] = [12; 3];
+    // Armor class 0 or better (natural 1, Dex 17 -3): +1.
+    c.data.race = "Dwarf".into();
+    assert_eq!(xp(&c), 15);
+    c.data.abilities[0] = [17; 3];
+    assert_eq!(xp(&c), 35);
+    c.data.abilities[0] = [10; 3];
+    // The second psionic list +2, the third +1.
+    c.data.unknown_0x196c[1] = vec!["x".into()];
+    assert_eq!(xp(&c), 65);
+    c.data.unknown_0x196c[2] = vec!["y".into()];
+    assert_eq!(xp(&c), 120);
+    c.data.unknown_0x196c = Default::default();
+    // Fighter 3/Mage 5: the highest level, +1 for 1st-level slots, +1 for
+    // 3rd-level ones.
+    c.data.classes.names.push("Mage".into());
+    c.data.unknown_0x1618[..2].copy_from_slice(&[4000, 8000]);
+    assert_eq!(rules.npc_title(&c), "Dwarf F3/M5");
+    assert_eq!(xp(&c), experience_for_hit_dice(7, 0));
+    c.data.unknown_0x1618[1] = 6000;
+    assert_eq!(xp(&c), experience_for_hit_dice(5, 0));
+    // A class the databases lack: worth nothing, titled with level 0.
+    c.data.classes.names[1] = "Psionicist".into();
+    assert_eq!(xp(&c), 0);
+    assert_eq!(rules.npc_title(&c), "Dwarf F3/0");
+    c.data.classes.names.truncate(1);
+    c.data.unknown_0x1618[1] = 0;
+
+    // The list names a lone NPC with its name, a group without.
+    let mut e = Encounter::default();
+    e.add_npc(c, Flavor::Expansion).unwrap();
+    assert_eq!(
+        e.package_line(Package::Npc(0), &rules).unwrap(),
+        "1 - Borin Dwarf F3"
+    );
+    let mut r = Rand::seeded(1);
+    e.set_count(Package::Npc(0), 4, &rules, &mut r);
+    assert_eq!(rules.npc_name(&e.npcs[0]), "Dwarf F3");
+    assert_eq!(
+        e.package_line(Package::Npc(0), &rules).unwrap(),
+        "4 - Dwarf F3"
+    );
+    // Totals and the printout count each individual.
+    e.monsters.push(
+        rules
+            .new_monster_package("Goblin", Some(5), &mut r)
+            .unwrap(),
+    );
+    assert_eq!(rules.totals(&e).monster_xp, 5 * 10 + 4 * 65);
+    let text = rules.encounter_text(&e);
+    assert!(text.contains("         4           260  Borin\n"), "{text}");
+    assert!(text.contains("         5           310  TOTAL\n"), "{text}");
+    assert!(text.contains("\n4 Borin Dwarf F3 (XP 65)\n"), "{text}");
 }
 
 #[test]
@@ -698,4 +834,39 @@ fn golden_generations() {
         let text = rules.encounter_text(&ours);
         assert!(text.starts_with("AD&D [T3 Orc Wandering]\nTemplate: Orc, Wandering\n"));
     }
+}
+
+/// The NPC packages of "T3 Bandits" as the Expansion's Encounter dialog
+/// showed them (`screens/enc_dialog_bandit_npcs.png`): the list's names
+/// and Monster XP 1410, a Thief 1, 3 and 5 being worth 15, 65 and 175.
+#[test]
+fn golden_npc_packages() {
+    let (Some(dir), Some(install)) = (golden(), std::env::var_os("CORERULES_DIR")) else {
+        return;
+    };
+    let install = Installation::open(Path::new(&install)).unwrap();
+    let rules = install.encounter_rules().unwrap();
+    if rules.flavor() != Flavor::Expansion {
+        return;
+    }
+    let e = saved(
+        &dir.join("exp/EncountU_03_t3_orc_bandits.dat"),
+        "T3 Bandits",
+    );
+    let lines: Vec<String> = e
+        .packages()
+        .into_iter()
+        .map(|p| e.package_line(p, &rules).unwrap())
+        .collect();
+    assert_eq!(
+        lines,
+        ["13 - Human T1", "16 - Human T3", "1 - Erik Human T5"]
+    );
+    let xp: Vec<i32> = e
+        .npcs
+        .iter()
+        .map(|p| rules.npc_experience(&p.character))
+        .collect();
+    assert_eq!(xp, [15, 65, 175]);
+    assert_eq!(rules.totals(&e).monster_xp, 1410);
 }

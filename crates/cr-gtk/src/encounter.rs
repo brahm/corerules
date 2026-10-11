@@ -8,7 +8,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use cr_store::encounter::{
     Encounter, EncounterRules, FrequencyTable, LairMode, NameError, Package, PendingNpc, Source,
-    check_name, hit_point_text, npc_line, roll_2_to_20, roll_and_pick,
+    check_name, hit_point_text, roll_2_to_20, roll_and_pick,
 };
 use cr_store::sheet::{self as crsheet, Block, Cell, ListItem, Sheet, SheetBox, Table};
 use cr_store::treasure::{Bundle, Rand};
@@ -475,9 +475,9 @@ impl<H: Host + 'static> State<H> {
                 Package::Npc(i) => {
                     let p = &encounter.npcs[i];
                     (
-                        format!("{} × {}", p.count, p.character.data.name),
+                        format!("{} × {}", p.count, self.rules.npc_name(p).trim()),
                         "Nonplayer character".to_owned(),
-                        npc_line(p),
+                        self.rules.npc_line(p),
                         p.count,
                     )
                 }
@@ -817,7 +817,7 @@ impl<H: Host + 'static> State<H> {
         for p in &encounter.npcs {
             rows.push(vec![
                 Cell::new(p.count.to_string()).right(),
-                Cell::new(&p.character.data.name),
+                Cell::new(self.rules.npc_name(p).trim()),
                 Cell::new(""),
             ]);
         }
@@ -825,7 +825,7 @@ impl<H: Host + 'static> State<H> {
             .monsters
             .iter()
             .map(|p| self.rules.stat_line(p))
-            .chain(encounter.npcs.iter().map(npc_line))
+            .chain(encounter.npcs.iter().map(|p| self.rules.npc_line(p)))
             .collect();
         let mut boxes = vec![
             SheetBox {

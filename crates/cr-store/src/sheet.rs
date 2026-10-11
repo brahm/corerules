@@ -374,4 +374,37 @@ impl SheetRules {
     pub fn sheet(&self, character: &Character) -> Result<Sheet> {
         build::build(self, character)
     }
+
+    /// Each class's abbreviation and level, joined with "/": "F1",
+    /// "F4/M4" (Expansion 0x43ec93, 2.0 0x421bf0). A class missing from
+    /// the databases counts as level 0 with no abbreviation.
+    pub fn class_levels_text(&self, character: &Character) -> String {
+        character
+            .data
+            .classes
+            .names
+            .iter()
+            .enumerate()
+            .map(|(g, name)| {
+                let abbreviation = match self.classes.get(name) {
+                    Some(Class::Expansion { data, .. }) => data.abbreviation.as_str(),
+                    Some(Class::Core20(data)) => data.unknown_0x2610[0].as_str(),
+                    None => "",
+                };
+                let level = self.advance.level_of(character, g).unwrap_or(0);
+                format!("{abbreviation}{level}")
+            })
+            .collect::<Vec<_>>()
+            .join("/")
+    }
+
+    /// What `character` is worth as a monster in an encounter: the
+    /// experience of the hit dice it counts as (Expansion 0x43b133, 2.0
+    /// 0x41ff10), shown as the NPC stat line's XP and added to the
+    /// encounter's Monster XP once per individual. A Fighter 1 with an
+    /// armor class above 0 and Intelligence 12 or less is worth 15.
+    pub fn npc_experience(&self, character: &Character) -> Result<i32> {
+        let hit_dice = build::npc_hit_dice(self, character)?;
+        Ok(crate::encounter::experience_for_hit_dice(hit_dice, 0))
+    }
 }
