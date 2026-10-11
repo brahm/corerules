@@ -85,6 +85,18 @@ Early work (phase 0 of the plan): the file formats are being mapped.
       armor proficiencies, fighting styles and rogue skill points; checked
       against characters the Expansion made and by opening the new files
       in it
+- [x] Experience and levels: give or take away experience per class, to
+      all classes or split, with the prime requisite bonus, hit point
+      rolls for each level gained, PSPs, Skills & Powers character points
+      and the Expansion's racial level limits; spell slots per level
+      checked against memorized spells; checked against characters the
+      originals levelled up
+- [x] Character sheet: every section the originals export (abilities and
+      their tables, saving throws, THAC0, armor class, weapons, rogue
+      skills, turning undead, spells, psionics, inventory, encumbrance),
+      shown in the app, printed, saved as PDF, or exported as the
+      originals' TXT and HTML files, matching their exports line for line
+      (`cr sheet` does the same from the command line)
 
 ## Layout
 
