@@ -172,7 +172,38 @@ impl Installation {
             "face-devilish-symbolic",
             self.list_entries("Monster", monster_entry),
         ));
+        sections.push(section(
+            "treasure",
+            "Saved Treasure",
+            "user-bookmarks-symbolic",
+            self.treasure_entries(),
+        ));
         sections
+    }
+
+    /// The saved treasure bundles, sorted by name as the Saved Treasure
+    /// list shows them. The key is `treasure:` and the bundle's name.
+    fn treasure_entries(&self) -> std::result::Result<Vec<Entry>, String> {
+        let saved = self.saved_treasures().map_err(|e| e.to_string())?;
+        let rules = self.treasure_rules().ok();
+        Ok(sorted(
+            saved
+                .iter()
+                .map(|t| {
+                    let summary = rules.as_ref().map(|r| r.summary(&t.bundle));
+                    Entry {
+                        key: format!("{TREASURE_KEY}{}", t.name),
+                        title: t.name.clone(),
+                        subtitle: summary
+                            .as_ref()
+                            .map(|s| format!("{} gp", crate::treasure::thousands(s.value_cp / 100)))
+                            .unwrap_or_default(),
+                        groups: treasure_groups(&t.bundle, summary.as_ref()),
+                        text: String::new(),
+                    }
+                })
+                .collect(),
+        ))
     }
 
     fn character_entries(&self) -> std::result::Result<Vec<Entry>, String> {
@@ -241,6 +272,59 @@ impl Installation {
         let data = self.read(relative).map_err(|e| e.to_string())?;
         SpellsFile::parse(&data).map_err(|e| format!("{relative}: {e}"))
     }
+}
+
+/// Entry keys of saved treasure bundles start with this.
+pub const TREASURE_KEY: &str = "treasure:";
+
+/// A bundle as groups: the loose items, then one group per item that holds
+/// others ("Gems and Art"), then the Calculate summary.
+pub fn treasure_groups(
+    bundle: &crate::treasure::Bundle,
+    summary: Option<&crate::treasure::Summary>,
+) -> Vec<Group> {
+    let rows = |bundle: &crate::treasure::Bundle| -> Vec<(String, String)> {
+        bundle
+            .items
+            .iter()
+            .filter(|i| i.contents.is_none())
+            .map(|i| {
+                let spells: Vec<String> = i
+                    .spells()
+                    .iter()
+                    .map(|s| format!("{} ({})", s.name, s.pages))
+                    .collect();
+                (i.label(), spells.join(", "))
+            })
+            .collect()
+    };
+    let mut groups = vec![Group {
+        title: "Treasure".into(),
+        rows: rows(bundle),
+    }];
+    for item in &bundle.items {
+        if let Some(contents) = &item.contents {
+            groups.push(Group {
+                title: item.label(),
+                rows: rows(contents),
+            });
+        }
+    }
+    if let Some(summary) = summary {
+        groups.push(Group {
+            title: "Summary".into(),
+            rows: summary
+                .lines()
+                .iter()
+                .map(|l| match l.rsplit_once(": ") {
+                    Some((k, v)) => (k.to_owned(), v.to_owned()),
+                    None => (l.clone(), String::new()),
+                })
+                .collect(),
+        });
+    }
+    groups.retain(|g| !g.rows.is_empty());
+    groups
 }
 
 fn section(

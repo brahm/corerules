@@ -120,7 +120,7 @@ pub fn show(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) +
 
 /// Asks where to save, suggesting the file name the original uses
 /// (`Borin_Pedraforte.txt`).
-fn save_file(
+pub(crate) fn save_file(
     parent: &impl IsA<gtk::Widget>,
     title: &str,
     extension: &'static str,
@@ -133,7 +133,7 @@ fn save_file(
     let filters = gio::ListStore::new::<gtk::FileFilter>();
     filters.append(&filter);
     let dialog = gtk::FileDialog::builder()
-        .title("Save Character Sheet")
+        .title("Save As")
         .initial_name(format!("{}.{extension}", title.replace(' ', "_")))
         .filters(&filters)
         .modal(true)
@@ -464,7 +464,7 @@ fn print_items(sheet: &Sheet, context: &gtk::PrintContext, width: f64) -> Vec<(P
 type Pages = Vec<(usize, f64)>;
 
 /// Prints the sheet, or with `pdf` saves it there as a PDF.
-fn print_sheet(
+pub(crate) fn print_sheet(
     parent: &impl IsA<gtk::Widget>,
     sheet: &Rc<Sheet>,
     pdf: Option<std::path::PathBuf>,

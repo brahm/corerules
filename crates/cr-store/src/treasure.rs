@@ -1208,4 +1208,29 @@ impl Installation {
         add_saved(&mut list, name, bundle).map_err(|e| Error::Invalid(e.to_string()))?;
         self.write_saved_treasures(&list)
     }
+
+    /// Saves `bundle` under `name` in place of the saved bundle `old` (the
+    /// one the roller was opened on), keeping its place in the file; a
+    /// name used by another bundle is refused.
+    pub fn replace_saved_treasure(&self, old: &str, name: &str, bundle: &Bundle) -> Result<()> {
+        let mut list = self.saved_treasures()?;
+        let Some(index) = list.iter().position(|t| t.name == old) else {
+            return self.save_treasure(name, bundle);
+        };
+        let removed = list.remove(index);
+        add_saved(&mut list, name, bundle).map_err(|e| {
+            list.insert(index, removed.clone());
+            Error::Invalid(e.to_string())
+        })?;
+        let new = list.pop().expect("just added");
+        list.insert(index, new);
+        self.write_saved_treasures(&list)
+    }
+
+    /// Deletes the saved bundle named `name`.
+    pub fn delete_saved_treasure(&self, name: &str) -> Result<()> {
+        let mut list = self.saved_treasures()?;
+        list.retain(|t| t.name != name);
+        self.write_saved_treasures(&list)
+    }
 }

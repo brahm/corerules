@@ -4,6 +4,7 @@
 mod create;
 mod lists;
 mod sheet;
+mod treasure;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -14,13 +15,14 @@ use adw::prelude::*;
 use cr_formats::character::Character;
 use cr_store::Installation;
 use cr_store::advance::{AdvanceRules, Advancement};
-use cr_store::catalog::{Entry, Section};
+use cr_store::catalog::{Entry, Section, TREASURE_KEY};
 use cr_store::choices::{Caster, caster};
 use cr_store::dual::ClassChoice;
 use cr_store::edit::{ABILITY_RANGE, CharacterDetails};
 use cr_store::lists::{
     BUNDLE_NAMES, COINS, CharacterLists, ITEM_TYPES, Item, MONEY, Memorized, Spellbook,
 };
+use cr_store::treasure::Rand;
 use gtk::{gio, glib};
 use lists::{ListEditor, RowList, RowSpec, pick};
 
@@ -56,6 +58,9 @@ struct Window {
     toasts: adw::ToastOverlay,
     browser: Rc<Browser>,
     install: Rc<RefCell<Option<Installation>>>,
+    /// One random number stream for the session, as the originals seed
+    /// theirs once at start.
+    rand: Rc<RefCell<Rand>>,
 }
 
 impl Window {
@@ -81,6 +86,7 @@ impl Window {
             toasts,
             browser: Rc::new(browser),
             install: Rc::default(),
+            rand: Rc::new(RefCell::new(Rand::from_clock())),
         };
         this.browser.sheet_button.connect_clicked({
             let this = this.clone();
@@ -93,7 +99,10 @@ impl Window {
             let this = this.clone();
             move |_| {
                 let key = this.browser.current_key.borrow().clone();
-                this.edit_character(&key);
+                match key.strip_prefix(TREASURE_KEY) {
+                    Some(name) => this.roll_treasure(Some(name)),
+                    None => this.edit_character(&key),
+                }
             }
         });
 
@@ -109,9 +118,17 @@ impl Window {
                 move |_, _, _| this.new_character()
             })
             .build();
-        this.window.add_action_entries([open, new_character]);
+        let roll_treasure = gio::ActionEntry::builder("roll-treasure")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| this.roll_treasure(None)
+            })
+            .build();
+        this.window
+            .add_action_entries([open, new_character, roll_treasure]);
         app.set_accels_for_action("win.open", &["<Control>o"]);
         app.set_accels_for_action("win.new-character", &["<Control>n"]);
+        app.set_accels_for_action("win.roll-treasure", &["<Control>t"]);
         this.set_can_create(false);
         this
     }
@@ -180,13 +197,100 @@ impl Window {
     }
 
     fn set_can_create(&self, enabled: bool) {
-        if let Some(action) = self
-            .window
-            .lookup_action("new-character")
-            .and_downcast::<gio::SimpleAction>()
-        {
-            action.set_enabled(enabled);
+        for name in ["new-character", "roll-treasure"] {
+            if let Some(action) = self
+                .window
+                .lookup_action(name)
+                .and_downcast::<gio::SimpleAction>()
+            {
+                action.set_enabled(enabled);
+            }
         }
+    }
+
+    /// Opens the treasure roller, on the saved bundle `saved` if given.
+    fn roll_treasure(&self, saved: Option<&str>) {
+        let loaded = match &*self.install.borrow() {
+            Some(install) => install.treasure_rules().and_then(|rules| {
+                let bundle = match saved {
+                    Some(name) => install
+                        .saved_treasures()?
+                        .into_iter()
+                        .find(|t| t.name == name)
+                        .map(|t| t.bundle)
+                        .unwrap_or_default(),
+                    None => Default::default(),
+                };
+                Ok((rules, bundle))
+            }),
+            None => return,
+        };
+        let (rules, bundle) = match loaded {
+            Ok(loaded) => loaded,
+            Err(e) => return self.toast(&e.to_string()),
+        };
+        let reload = {
+            let this = self.clone();
+            move |key: Option<String>| {
+                let install = this.install.borrow();
+                let Some(install) = install.as_ref() else {
+                    return;
+                };
+                this.browser.show_section("treasure");
+                this.browser.load(install.catalog(), key.as_deref());
+            }
+        };
+        let store = treasure::Store {
+            save: Box::new({
+                let (this, reload) = (self.clone(), reload.clone());
+                move |old, name, bundle| {
+                    {
+                        let install = this.install.borrow();
+                        let install = install
+                            .as_ref()
+                            .ok_or("The installation is no longer open")?;
+                        match old {
+                            Some(old) => install.replace_saved_treasure(old, name, bundle),
+                            None => install.save_treasure(name, bundle),
+                        }
+                        .map_err(|e| e.to_string())?;
+                    }
+                    reload(Some(format!("{TREASURE_KEY}{name}")));
+                    Ok(())
+                }
+            }),
+            delete: Box::new({
+                let this = self.clone();
+                move |name| {
+                    {
+                        let install = this.install.borrow();
+                        let install = install
+                            .as_ref()
+                            .ok_or("The installation is no longer open")?;
+                        install
+                            .delete_saved_treasure(name)
+                            .map_err(|e| e.to_string())?;
+                    }
+                    reload(None);
+                    Ok(())
+                }
+            }),
+        };
+        let this = self.clone();
+        treasure::roller(
+            &self.window,
+            Rc::new(rules),
+            self.rand.clone(),
+            treasure::Start {
+                bundle,
+                ..Default::default()
+            },
+            treasure::Mode::Free {
+                saved: saved.map(str::to_owned),
+            },
+            store,
+            move |message| this.toast(message),
+        );
     }
 
     /// Opens the New Character dialog.
@@ -291,6 +395,7 @@ impl Window {
 fn open_menu() -> gtk::MenuButton {
     let menu = gio::Menu::new();
     menu.append(Some("_New Character…"), Some("win.new-character"));
+    menu.append(Some("_Roll Treasure…"), Some("win.roll-treasure"));
     menu.append(Some("_Open Folder…"), Some("win.open"));
     gtk::MenuButton::builder()
         .icon_name("open-menu-symbolic")
@@ -331,7 +436,8 @@ impl DetailPane {
         self.page.set_title(&entry.title);
         self.view.set_content(Some(&detail(entry)));
         self.edit_button.set_visible(!entry.key.is_empty());
-        self.sheet_button.set_visible(!entry.key.is_empty());
+        self.sheet_button
+            .set_visible(!entry.key.is_empty() && !entry.key.starts_with(TREASURE_KEY));
         self.current_key.borrow_mut().clone_from(&entry.key);
     }
 
@@ -796,8 +902,11 @@ fn detail(entry: &Entry) -> gtk::Widget {
                 .title(glib::markup_escape_text(key).as_str())
                 .subtitle(glib::markup_escape_text(value).as_str())
                 .subtitle_selectable(true)
-                .css_classes(["property"])
                 .build();
+            // A row without a value is a list item, not a property.
+            if !value.is_empty() {
+                row.add_css_class("property");
+            }
             widget.add(&row);
         }
         page.add(&widget);
