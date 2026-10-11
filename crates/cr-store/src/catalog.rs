@@ -10,6 +10,8 @@ use cr_formats::inventory::InventoryBundle;
 use cr_formats::parts::PartsFile;
 use cr_formats::spells::SpellsFile;
 
+use crate::encounter::{Encounter, EncounterRules, hit_point_text, npc_line};
+use crate::treasure::thousands;
 use crate::{Error, Installation, Result};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -172,6 +174,25 @@ impl Installation {
             "face-devilish-symbolic",
             self.list_entries("Monster", monster_entry),
         ));
+        let rules = self.encounter_rules().map_err(|e| e.to_string());
+        sections.push(section(
+            "encounters",
+            "Encounters",
+            "mark-location-symbolic",
+            self.encounter_entries(rules.as_ref().ok()),
+        ));
+        sections.push(section(
+            "templates",
+            "Encounter Templates",
+            "view-list-bullet-symbolic",
+            rules.as_ref().map(template_entries).map_err(Clone::clone),
+        ));
+        sections.push(section(
+            "tables",
+            "Encounter Tables",
+            "view-grid-symbolic",
+            self.table_entries(),
+        ));
         sections.push(section(
             "treasure",
             "Saved Treasure",
@@ -179,6 +200,44 @@ impl Installation {
             self.treasure_entries(),
         ));
         sections
+    }
+
+    /// The saved encounters, standard ones (shipped empty) first. The key
+    /// is `encounter:` and the encounter's name.
+    fn encounter_entries(
+        &self,
+        rules: Option<&EncounterRules>,
+    ) -> std::result::Result<Vec<Entry>, String> {
+        let saved = self.saved_encounters().map_err(|e| e.to_string())?;
+        Ok(sorted(
+            saved.iter().map(|e| encounter_entry(e, rules)).collect(),
+        ))
+    }
+
+    /// The user's 2-20 encounter tables (`UserDbas/EncTabU.dat`).
+    fn table_entries(&self) -> std::result::Result<Vec<Entry>, String> {
+        let tables = self.frequency_tables().map_err(|e| e.to_string())?;
+        Ok(sorted(
+            tables
+                .tables
+                .iter()
+                .map(|t| Entry {
+                    key: format!("{TABLE_KEY}{}", t.name),
+                    title: t.name.clone(),
+                    subtitle: format!(
+                        "{} of 19 rolls filled",
+                        t.slots.iter().filter(|s| !s.is_empty()).count()
+                    ),
+                    groups: vec![Group {
+                        title: "Rolls".into(),
+                        rows: (2..=20)
+                            .map(|roll| (roll.to_string(), t.slot(roll).unwrap_or("").to_owned()))
+                            .collect(),
+                    }],
+                    text: String::new(),
+                })
+                .collect(),
+        ))
     }
 
     /// The saved treasure bundles, sorted by name as the Saved Treasure
@@ -272,6 +331,140 @@ impl Installation {
         let data = self.read(relative).map_err(|e| e.to_string())?;
         SpellsFile::parse(&data).map_err(|e| format!("{relative}: {e}"))
     }
+}
+
+/// Entry keys of saved encounters, templates and 2-20 tables start with
+/// these.
+pub const ENCOUNTER_KEY: &str = "encounter:";
+pub const TEMPLATE_KEY: &str = "template:";
+pub const TABLE_KEY: &str = "table:";
+
+fn encounter_entry(e: &Encounter, rules: Option<&EncounterRules>) -> Entry {
+    let mut groups = Vec::new();
+    if let Some(rules) = rules {
+        let t = rules.totals(e);
+        groups.push(Group {
+            title: "Encounter Totals".into(),
+            rows: vec![
+                ("Gold Value".into(), thousands(t.gold_value)),
+                ("Monster XP".into(), thousands(t.monster_xp)),
+                ("Treasure XP".into(), thousands(t.treasure_xp)),
+            ],
+        });
+    }
+    groups.push(Group {
+        title: "Monsters and Nonplayer Characters".into(),
+        rows: e
+            .monsters
+            .iter()
+            .map(|p| {
+                (
+                    format!("{} - {}", p.count, p.monster.name),
+                    format!("hp {}", hit_point_text(&p.hit_points)),
+                )
+            })
+            .chain(e.npcs.iter().map(|p| {
+                (
+                    format!("{} - {}", p.count, p.character.data.name),
+                    npc_line(p),
+                )
+            }))
+            .collect(),
+    });
+    groups.extend(treasure_groups(&e.treasure, None));
+    groups.push(Group {
+        title: "Items".into(),
+        rows: e
+            .items
+            .items
+            .iter()
+            .map(|i| (i.label(), String::new()))
+            .collect(),
+    });
+    groups.push(Group {
+        title: "Traps".into(),
+        rows: e
+            .traps
+            .iter()
+            .map(|t| (t.name.clone(), t.damage.clone()))
+            .collect(),
+    });
+    groups.retain(|g| !g.rows.is_empty());
+    Entry {
+        key: format!("{ENCOUNTER_KEY}{}", e.name),
+        title: e.name.clone(),
+        subtitle: if e.template.is_empty() {
+            e.monster_type.clone()
+        } else {
+            e.template.clone()
+        },
+        groups,
+        text: e.description.clone(),
+    }
+}
+
+fn template_entries(rules: &EncounterRules) -> Vec<Entry> {
+    sorted(
+        rules
+            .templates()
+            .iter()
+            .map(|t| {
+                let frequency = match t.frequency {
+                    65.. => "Common",
+                    20.. => "Uncommon",
+                    11.. => "Rare",
+                    4.. => "Very Rare",
+                    _ => "Exempt from tables",
+                };
+                let placement = match t.placement {
+                    [_, true, _] => "Lair only",
+                    [_, _, true] => "Wandering only",
+                    _ => "Lair and wandering",
+                };
+                let lair: Vec<String> = t
+                    .lair_treasure
+                    .iter()
+                    .zip(crate::treasure::LETTERS)
+                    .filter(|(n, _)| **n != 0)
+                    .map(|(n, c)| format!("{n}x{c}"))
+                    .collect();
+                let rows = [
+                    ("Monster Type", t.monster_type.clone()),
+                    ("Climate/Terrain", t.climate_terrain.clone()),
+                    ("Frequency", frequency.to_owned()),
+                    ("Hit Dice", t.hit_dice.to_string()),
+                    ("Encountered", placement.to_owned()),
+                    ("Lair Treasure", lair.join(", ")),
+                    (
+                        "Database",
+                        if t.user { "Custom" } else { "Standard" }.to_owned(),
+                    ),
+                ];
+                let text = rules.template_text(t);
+                // The printout repeats the name and type on its first lines.
+                let text = text.splitn(3, '\n').nth(2).unwrap_or("").trim().to_owned();
+                Entry {
+                    key: format!("{TEMPLATE_KEY}{}", t.name),
+                    title: t.name.clone(),
+                    subtitle: t.monster_type.clone(),
+                    groups: vec![Group {
+                        title: "Template".into(),
+                        rows: rows
+                            .into_iter()
+                            .filter(|(_, v)| !v.is_empty())
+                            .map(|(k, v)| (k.to_owned(), v))
+                            .collect(),
+                    }],
+                    text: [t.description.trim(), &text]
+                        .iter()
+                        .filter(|s| !s.is_empty())
+                        .cloned()
+                        .collect::<Vec<_>>()
+                        .join("\n\n"),
+                }
+            })
+            .collect(),
+    )
 }
 
 /// Entry keys of saved treasure bundles start with this.

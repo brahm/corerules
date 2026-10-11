@@ -1,0 +1,1400 @@
+//! Encounters: generating one from a template or a 2-20 table, the
+//! Encounter dialog (monsters, NPCs, treasure, items, traps and totals),
+//! and the 2-20 table editor.
+
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use adw::prelude::*;
+use cr_store::encounter::{
+    Encounter, EncounterRules, FrequencyTable, LairMode, NameError, Package, PendingNpc, Source,
+    check_name, hit_point_text, npc_line, roll_2_to_20, roll_and_pick,
+};
+use cr_store::sheet::{self as crsheet, Block, Cell, ListItem, Sheet, SheetBox, Table};
+use cr_store::treasure::{Bundle, Rand};
+use cr_store::{Installation, Result};
+use gtk::{gio, glib};
+
+use crate::treasure;
+
+/// What the encounter dialogs need from the window.
+pub trait Host {
+    fn with_install<T>(&self, run: impl FnOnce(&Installation) -> Result<T>) -> Option<Result<T>>;
+    fn rand(&self) -> Rc<RefCell<Rand>>;
+    fn toast(&self, message: &str);
+    /// Reloads the sections and shows the entry `key` of section `section`.
+    fn reload(&self, section: &str, key: Option<String>);
+    /// How the treasure roller saves and deletes bundles.
+    fn treasure_store(&self) -> treasure::Store;
+    fn parent(&self) -> gtk::Widget;
+}
+
+type Shared<H> = Rc<H>;
+
+fn errors<T>(host: &impl Host, result: Option<Result<T>>) -> Option<T> {
+    match result? {
+        Ok(value) => Some(value),
+        Err(e) => {
+            host.toast(&e.to_string());
+            None
+        }
+    }
+}
+
+/// Generates an encounter from the template `name` and opens it.
+pub fn create_from_template<H: Host + 'static>(host: &Shared<H>, name: &str) {
+    let Some(rules) = errors(&**host, host.with_install(|i| i.encounter_rules())) else {
+        return;
+    };
+    let generated = rules.generate(name, &mut host.rand().borrow_mut());
+    match generated {
+        Ok(g) => {
+            for message in &g.messages {
+                host.toast(message);
+            }
+            editor(host, Rc::new(rules), g.encounter, None, g.pending_npcs);
+        }
+        Err(e) => {
+            // As the original: "Creating an Empty Encounter".
+            host.toast(&format!("{e}. Creating an empty encounter."));
+            editor(host, Rc::new(rules), Encounter::default(), None, Vec::new());
+        }
+    }
+}
+
+/// Roll and Generate on a saved 2-20 table: a uniformly drawn filled roll.
+pub fn roll_and_generate<H: Host + 'static>(host: &Shared<H>, table: &str) {
+    let Some((rules, tables)) = errors(
+        &**host,
+        host.with_install(|i| Ok((i.encounter_rules()?, i.frequency_tables()?))),
+    ) else {
+        return;
+    };
+    let Some(table) = tables.table(table) else {
+        return;
+    };
+    let pick = roll_and_pick(&rules, table, &mut host.rand().borrow_mut());
+    match pick {
+        Some(i) => {
+            host.toast(&format!("Rolled {}: {}", i + 2, table.slots[i]));
+            create_from_template(host, &table.slots[i].clone());
+        }
+        None => host.toast("The table has no templates; fill it first"),
+    }
+}
+
+/// Opens the saved encounter `name`.
+pub fn open_saved<H: Host + 'static>(host: &Shared<H>, name: &str) {
+    let Some((rules, saved)) = errors(
+        &**host,
+        host.with_install(|i| Ok((i.encounter_rules()?, i.saved_encounters()?))),
+    ) else {
+        return;
+    };
+    let Some(encounter) = saved.into_iter().find(|e| e.name == name) else {
+        return;
+    };
+    editor(
+        host,
+        Rc::new(rules),
+        encounter,
+        Some(name.to_owned()),
+        Vec::new(),
+    );
+}
+
+/// New Encounter: the original's "Select an Encounter Template", with an
+/// empty encounter first.
+pub fn choose_template<H: Host + 'static>(host: &Shared<H>) {
+    let Some(rules) = errors(&**host, host.with_install(|i| i.encounter_rules())) else {
+        return;
+    };
+    let mut names: Vec<(String, String)> = rules
+        .templates()
+        .iter()
+        .map(|t| (t.name.clone(), t.monster_type.clone()))
+        .collect();
+    names.sort_by_key(|(n, _)| n.to_lowercase());
+    let search = gtk::SearchEntry::builder()
+        .placeholder_text("Search Templates")
+        .hexpand(true)
+        .build();
+    let list = gtk::ListBox::builder()
+        .css_classes(["boxed-list"])
+        .selection_mode(gtk::SelectionMode::None)
+        .build();
+    let empty = adw::ActionRow::builder()
+        .title("Empty Encounter")
+        .subtitle("Add monsters and characters yourself")
+        .activatable(true)
+        .build();
+    list.append(&empty);
+    let rows: Vec<(adw::ActionRow, String)> = names
+        .iter()
+        .map(|(name, kind)| {
+            let row = adw::ActionRow::builder()
+                .title(glib::markup_escape_text(name).as_str())
+                .subtitle(glib::markup_escape_text(kind).as_str())
+                .activatable(true)
+                .build();
+            list.append(&row);
+            (row, format!("{name}\n{kind}").to_lowercase())
+        })
+        .collect();
+    search.connect_search_changed({
+        let rows = rows.clone();
+        let empty = empty.clone();
+        move |s| {
+            let needle = s.text().to_lowercase();
+            empty.set_visible(needle.is_empty());
+            for (row, text) in &rows {
+                row.set_visible(text.contains(&needle));
+            }
+        }
+    });
+    let content = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .margin_top(12)
+        .margin_bottom(24)
+        .margin_start(12)
+        .margin_end(12)
+        .build();
+    content.append(&list);
+    let scroll = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .vexpand(true)
+        .child(&adw::Clamp::builder().child(&content).build())
+        .build();
+    let header = adw::HeaderBar::new();
+    let view = adw::ToolbarView::new();
+    view.add_top_bar(&header);
+    let bar = gtk::SearchBar::builder()
+        .child(&search)
+        .search_mode_enabled(true)
+        .build();
+    view.add_top_bar(&bar);
+    view.set_content(Some(&scroll));
+    let dialog = adw::Dialog::builder()
+        .title("New Encounter")
+        .content_width(560)
+        .content_height(640)
+        .width_request(360)
+        .height_request(294)
+        .child(&view)
+        .build();
+    let rules = Rc::new(rules);
+    list.connect_row_activated({
+        let (host, dialog, rules) = (host.clone(), dialog.clone(), rules.clone());
+        move |_, row| {
+            dialog.close();
+            if row.index() == 0 {
+                editor(&host, rules.clone(), Encounter::default(), None, Vec::new());
+            } else {
+                let name = &names[row.index() as usize - 1].0;
+                create_from_template(&host, name);
+            }
+        }
+    });
+    dialog.present(Some(&host.parent()));
+    search.grab_focus();
+}
+
+struct State<H: Host> {
+    host: Shared<H>,
+    rules: Rc<EncounterRules>,
+    encounter: RefCell<Encounter>,
+    /// The name the encounter is saved under.
+    saved: RefCell<Option<String>>,
+    pending: Vec<PendingNpc>,
+    page: adw::PreferencesPage,
+    /// The groups rebuilt when the encounter changes.
+    groups: RefCell<Vec<adw::PreferencesGroup>>,
+    notes: adw::PreferencesGroup,
+    /// Gold Value, Monster XP and Treasure XP.
+    totals: Vec<gtk::Label>,
+    dialog: adw::Dialog,
+    delete: std::cell::OnceCell<gio::SimpleAction>,
+}
+
+/// The Encounter dialog.
+pub fn editor<H: Host + 'static>(
+    host: &Shared<H>,
+    rules: Rc<EncounterRules>,
+    encounter: Encounter,
+    saved: Option<String>,
+    pending: Vec<PendingNpc>,
+) {
+    let name = adw::EntryRow::builder()
+        .title("Name")
+        .text(&encounter.name)
+        .build();
+    let template = adw::ActionRow::builder()
+        .title("Template")
+        .subtitle(if encounter.template.is_empty() {
+            "None".to_owned()
+        } else {
+            glib::markup_escape_text(&encounter.template).to_string()
+        })
+        .css_classes(["property"])
+        .build();
+    let kind = adw::EntryRow::builder()
+        .title("Monster Type")
+        .text(&encounter.monster_type)
+        .build();
+    let about = adw::PreferencesGroup::builder().title("Encounter").build();
+    about.add(&name);
+    about.add(&template);
+    about.add(&kind);
+    let description = gtk::TextView::builder()
+        .wrap_mode(gtk::WrapMode::WordChar)
+        .top_margin(12)
+        .bottom_margin(12)
+        .left_margin(12)
+        .right_margin(12)
+        .height_request(100)
+        .css_classes(["card"])
+        .build();
+    description.buffer().set_text(&encounter.description);
+    let notes = adw::PreferencesGroup::builder()
+        .title("Description")
+        .build();
+    notes.add(&description);
+
+    let totals_group = adw::PreferencesGroup::builder()
+        .title("Encounter Totals")
+        .build();
+    let totals: Vec<gtk::Label> = ["Gold Value", "Monster XP", "Treasure XP"]
+        .iter()
+        .map(|title| {
+            let row = adw::ActionRow::builder().title(*title).build();
+            let label = gtk::Label::builder()
+                .css_classes(["dim-label", "numeric"])
+                .build();
+            row.add_suffix(&label);
+            totals_group.add(&row);
+            label
+        })
+        .collect();
+    let page = adw::PreferencesPage::new();
+    page.add(&about);
+    page.add(&totals_group);
+
+    let save = gtk::Button::builder()
+        .label("_Save")
+        .use_underline(true)
+        .css_classes(["suggested-action"])
+        .build();
+    let menu = gio::Menu::new();
+    let print_section = gio::Menu::new();
+    print_section.append(Some("_Print…"), Some("encounter.print"));
+    print_section.append(Some("Save as P_DF…"), Some("encounter.pdf"));
+    menu.append_section(None, &print_section);
+    let delete_section = gio::Menu::new();
+    delete_section.append(Some("_Delete Encounter"), Some("encounter.delete"));
+    menu.append_section(None, &delete_section);
+    let header = adw::HeaderBar::new();
+    header.pack_end(
+        &gtk::MenuButton::builder()
+            .icon_name("view-more-symbolic")
+            .tooltip_text("Encounter Menu")
+            .menu_model(&menu)
+            .build(),
+    );
+    header.pack_end(&save);
+    let view = adw::ToolbarView::new();
+    view.add_top_bar(&header);
+    view.set_content(Some(&page));
+    let dialog = adw::Dialog::builder()
+        .title(saved.as_deref().unwrap_or("New Encounter"))
+        .content_width(760)
+        .content_height(760)
+        .width_request(360)
+        .height_request(294)
+        .child(&view)
+        .build();
+
+    let state = Rc::new(State {
+        host: host.clone(),
+        rules,
+        encounter: RefCell::new(encounter),
+        saved: RefCell::new(saved),
+        pending,
+        page,
+        groups: RefCell::default(),
+        notes,
+        totals,
+        dialog: dialog.clone(),
+        delete: std::cell::OnceCell::new(),
+    });
+    state.refresh();
+
+    name.connect_changed({
+        let state = state.clone();
+        move |e| state.encounter.borrow_mut().name = e.text().to_string()
+    });
+    kind.connect_changed({
+        let state = state.clone();
+        move |e| state.encounter.borrow_mut().monster_type = e.text().to_string()
+    });
+    description.buffer().connect_changed({
+        let state = state.clone();
+        move |b| {
+            state.encounter.borrow_mut().description =
+                b.text(&b.start_iter(), &b.end_iter(), false).to_string()
+        }
+    });
+    save.connect_clicked({
+        let state = state.clone();
+        move |_| state.save()
+    });
+
+    let actions = gio::SimpleActionGroup::new();
+    let add = |name: &str, run: Box<dyn Fn()>| -> gio::SimpleAction {
+        let a = gio::SimpleAction::new(name, None);
+        a.connect_activate(move |_, _| run());
+        actions.add_action(&a);
+        a
+    };
+    let toast = {
+        let host = host.clone();
+        move |m: &str| host.toast(m)
+    };
+    add("print", {
+        let (state, toast) = (state.clone(), toast.clone());
+        Box::new(move || {
+            let sheet = Rc::new(state.sheet());
+            crate::sheet::print_sheet(&state.dialog, &sheet, None, &toast)
+        })
+    });
+    add("pdf", {
+        let state = state.clone();
+        Box::new(move || {
+            let sheet = Rc::new(state.sheet());
+            let (dialog, toast) = (state.dialog.clone(), toast.clone());
+            let title = sheet.title.clone();
+            crate::sheet::save_file(&state.dialog, &title, "pdf", "PDF documents", move |path| {
+                crate::sheet::print_sheet(&dialog, &sheet, Some(path), &toast)
+            });
+        })
+    });
+    let delete = add("delete", {
+        let state = state.clone();
+        Box::new(move || state.confirm_delete())
+    });
+    delete.set_enabled(state.saved.borrow().is_some());
+    let _ = state.delete.set(delete);
+    dialog.insert_action_group("encounter", Some(&actions));
+    dialog.present(Some(&host.parent()));
+}
+
+impl<H: Host + 'static> State<H> {
+    /// Rebuilds the groups that show the encounter's contents, keeping
+    /// the description last.
+    fn refresh(self: &Rc<Self>) {
+        for group in self.groups.borrow_mut().drain(..) {
+            self.page.remove(&group);
+        }
+        if self.notes.parent().is_some() {
+            self.page.remove(&self.notes);
+        }
+        self.update_totals();
+        let groups: Vec<adw::PreferencesGroup> = [
+            self.packages_group(),
+            self.pending_group(),
+            self.treasure_group(),
+            self.items_group(),
+            self.traps_group(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        for group in &groups {
+            self.page.add(group);
+        }
+        self.page.add(&self.notes);
+        *self.groups.borrow_mut() = groups;
+    }
+
+    fn update_totals(&self) {
+        let t = self.rules.totals(&self.encounter.borrow());
+        for (label, value) in self
+            .totals
+            .iter()
+            .zip([t.gold_value, t.monster_xp, t.treasure_xp])
+        {
+            label.set_label(&cr_store::treasure::thousands(value));
+        }
+    }
+
+    fn packages_group(self: &Rc<Self>) -> Option<adw::PreferencesGroup> {
+        let add_monster = gtk::Button::builder()
+            .label("Add _Monster…")
+            .use_underline(true)
+            .css_classes(["flat"])
+            .build();
+        let add_npc = gtk::Button::builder()
+            .label("Add _NPC…")
+            .use_underline(true)
+            .css_classes(["flat"])
+            .build();
+        let buttons = gtk::Box::builder().spacing(6).build();
+        buttons.append(&add_monster);
+        buttons.append(&add_npc);
+        add_monster.connect_clicked({
+            let state = self.clone();
+            move |_| state.choose_monster()
+        });
+        add_npc.connect_clicked({
+            let state = self.clone();
+            move |_| state.choose_npc()
+        });
+        let group = adw::PreferencesGroup::builder()
+            .title("Monsters and Nonplayer Characters")
+            .header_suffix(&buttons)
+            .build();
+        let encounter = self.encounter.borrow();
+        if encounter.monsters.is_empty() && encounter.npcs.is_empty() {
+            group.add(
+                &adw::ActionRow::builder()
+                    .title("No monsters or characters")
+                    .css_classes(["dim-label"])
+                    .build(),
+            );
+        }
+        for package in encounter.packages() {
+            let (title, subtitle, stats, count) = match package {
+                Package::Monster(i) => {
+                    let p = &encounter.monsters[i];
+                    (
+                        format!("{} × {}", p.count, p.monster.name),
+                        format!("Hit points {}", hit_point_text(&p.hit_points)),
+                        self.rules.stat_line(p),
+                        p.count,
+                    )
+                }
+                Package::Npc(i) => {
+                    let p = &encounter.npcs[i];
+                    (
+                        format!("{} × {}", p.count, p.character.data.name),
+                        "Nonplayer character".to_owned(),
+                        npc_line(p),
+                        p.count,
+                    )
+                }
+            };
+            let row = adw::ExpanderRow::builder()
+                .title(glib::markup_escape_text(&title).as_str())
+                .subtitle(glib::markup_escape_text(&subtitle).as_str())
+                .build();
+            let remove = gtk::Button::builder()
+                .icon_name("user-trash-symbolic")
+                .tooltip_text("Remove")
+                .valign(gtk::Align::Center)
+                .css_classes(["flat"])
+                .build();
+            remove.connect_clicked({
+                let state = self.clone();
+                move |_| {
+                    state.encounter.borrow_mut().remove(package);
+                    state.refresh();
+                }
+            });
+            row.add_suffix(&remove);
+            let number = adw::SpinRow::builder()
+                .title("Number")
+                .subtitle(if matches!(package, Package::Monster(_)) {
+                    "Changing it rolls the hit points again"
+                } else {
+                    ""
+                })
+                .adjustment(&gtk::Adjustment::new(
+                    count as f64,
+                    1.0,
+                    100_000_000.0,
+                    1.0,
+                    10.0,
+                    0.0,
+                ))
+                .build();
+            let stat = gtk::Label::builder()
+                .label(&stats)
+                .wrap(true)
+                .wrap_mode(gtk::pango::WrapMode::WordChar)
+                .xalign(0.0)
+                .selectable(true)
+                .margin_top(12)
+                .margin_bottom(12)
+                .margin_start(12)
+                .margin_end(12)
+                .build();
+            number.connect_value_notify({
+                let (state, row, stat) = (self.clone(), row.clone(), stat.clone());
+                move |spin| {
+                    let count = spin.value() as i32;
+                    let rand = state.host.rand();
+                    state.encounter.borrow_mut().set_count(
+                        package,
+                        count,
+                        &state.rules,
+                        &mut rand.borrow_mut(),
+                    );
+                    if let Package::Monster(i) = package
+                        && let Some(p) = state.encounter.borrow().monsters.get(i)
+                    {
+                        row.set_title(&glib::markup_escape_text(&format!(
+                            "{} × {}",
+                            p.count, p.monster.name
+                        )));
+                        row.set_subtitle(&glib::markup_escape_text(&format!(
+                            "Hit points {}",
+                            hit_point_text(&p.hit_points)
+                        )));
+                        stat.set_label(&state.rules.stat_line(p));
+                    }
+                    state.update_totals();
+                }
+            });
+            row.add_row(&number);
+            row.add_row(&stat);
+            group.add(&row);
+        }
+        Some(group)
+    }
+
+    fn pending_group(&self) -> Option<adw::PreferencesGroup> {
+        if self.pending.is_empty() {
+            return None;
+        }
+        let group = adw::PreferencesGroup::builder()
+            .title("Characters Not Generated")
+            .description(
+                "The template also calls for these nonplayer characters. Generating \
+                 them needs the NPC generator, which is not available yet; add saved \
+                 characters with Add NPC instead.",
+            )
+            .build();
+        for p in &self.pending {
+            let classes: Vec<String> = p
+                .npc
+                .classes
+                .iter()
+                .map(|(c, l)| format!("{c} {l}"))
+                .collect();
+            let row = adw::ActionRow::builder()
+                .title(glib::markup_escape_text(&format!("{} × {}", p.count, p.npc.race)).as_str())
+                .subtitle(glib::markup_escape_text(&classes.join(" / ")).as_str())
+                .build();
+            group.add(&row);
+        }
+        Some(group)
+    }
+
+    fn treasure_group(self: &Rc<Self>) -> Option<adw::PreferencesGroup> {
+        let roll = gtk::Button::builder()
+            .label("_Roll Treasure…")
+            .use_underline(true)
+            .css_classes(["flat"])
+            .build();
+        roll.connect_clicked({
+            let state = self.clone();
+            move |_| state.open_roller()
+        });
+        let encounter = self.encounter.borrow();
+        let summary = self.rules.treasure_rules().summary(&encounter.treasure);
+        let group = adw::PreferencesGroup::builder()
+            .title("Treasure")
+            .header_suffix(&roll)
+            .build();
+        if encounter.treasure.is_empty() {
+            group.set_description(Some(
+                "Roll the treasure of the monsters' treasure types and the lair",
+            ));
+        } else {
+            group.set_description(Some(&format!(
+                "{} gp",
+                cr_store::treasure::thousands(summary.value_cp / 100)
+            )));
+        }
+        bundle_rows(&group, &encounter.treasure);
+        Some(group)
+    }
+
+    fn items_group(&self) -> Option<adw::PreferencesGroup> {
+        let encounter = self.encounter.borrow();
+        if encounter.items.is_empty() {
+            return None;
+        }
+        let group = adw::PreferencesGroup::builder().title("Items").build();
+        bundle_rows(&group, &encounter.items);
+        Some(group)
+    }
+
+    fn traps_group(&self) -> Option<adw::PreferencesGroup> {
+        let encounter = self.encounter.borrow();
+        if encounter.traps.is_empty() {
+            return None;
+        }
+        let group = adw::PreferencesGroup::builder().title("Traps").build();
+        for trap in &encounter.traps {
+            group.add(
+                &adw::ActionRow::builder()
+                    .title(glib::markup_escape_text(&trap.name).as_str())
+                    .subtitle(glib::markup_escape_text(&trap.damage).as_str())
+                    .build(),
+            );
+        }
+        Some(group)
+    }
+
+    /// Treasure…: the roller with the encounter's treasure types; Use
+    /// Treasure puts the bundle in the encounter.
+    fn open_roller(self: &Rc<Self>) {
+        let encounter = self.encounter.borrow();
+        let mut counts = [0u32; 26];
+        for (c, n) in counts.iter_mut().zip(encounter.treasure_counts()) {
+            *c = n.max(0) as u32;
+        }
+        let state = self.clone();
+        let host = self.host.clone();
+        treasure::roller(
+            &self.dialog,
+            Rc::new(self.rules.treasure_rules().clone()),
+            self.host.rand(),
+            treasure::Start {
+                counts,
+                bundle: encounter.treasure.clone(),
+            },
+            treasure::Mode::Pick {
+                use_bundle: Box::new(move |bundle: Bundle| {
+                    state.encounter.borrow_mut().treasure = bundle;
+                    state.refresh();
+                }),
+            },
+            self.host.treasure_store(),
+            move |m| host.toast(m),
+        );
+    }
+
+    /// Add…: a monster from the database, with its number.
+    fn choose_monster(self: &Rc<Self>) {
+        let mut names: Vec<String> = self
+            .rules
+            .monsters()
+            .iter()
+            .map(|m| m.name.clone())
+            .collect();
+        names.sort_by_key(|n| n.to_lowercase());
+        names.dedup();
+        let state = self.clone();
+        pick_from(
+            &self.dialog,
+            "Add Monster",
+            "Search Monsters",
+            names,
+            move |name| {
+                let rand = state.host.rand();
+                let package = state
+                    .rules
+                    .new_monster_package(&name, None, &mut rand.borrow_mut());
+                if let Some(package) = package {
+                    state.encounter.borrow_mut().monsters.push(package);
+                    state.refresh();
+                }
+            },
+        );
+    }
+
+    /// Add NPC…: a saved character.
+    fn choose_npc(self: &Rc<Self>) {
+        let Some(index) = errors(&*self.host, self.host.with_install(|i| i.characters())) else {
+            return;
+        };
+        let files: Vec<(String, String)> = index
+            .entries
+            .iter()
+            .map(|e| (e.name.clone(), e.file.clone()))
+            .collect();
+        let state = self.clone();
+        pick_from(
+            &self.dialog,
+            "Add NPC",
+            "Search Characters",
+            files.iter().map(|(n, _)| n.clone()).collect(),
+            move |name| {
+                let Some((_, file)) = files.iter().find(|(n, _)| *n == name) else {
+                    return;
+                };
+                let flavor = state.rules.flavor();
+                let added = state.host.with_install(|i| {
+                    let character = i.character(file)?;
+                    state.encounter.borrow_mut().add_npc(character, flavor)
+                });
+                if errors(&*state.host, added).is_some() {
+                    state.refresh();
+                }
+            },
+        );
+    }
+
+    /// OK: checks the name, then adds or replaces the saved encounter.
+    fn save(self: &Rc<Self>) {
+        let encounter = self.encounter.borrow().clone();
+        let old = self.saved.borrow().clone();
+        let result = self.host.with_install(|install| {
+            let mut list = install.saved_encounters()?;
+            let except = old
+                .as_ref()
+                .and_then(|o| list.iter().position(|e| &e.name == o));
+            check_name(&list, &encounter.name, except)
+                .map_err(|e: NameError| cr_store::Error::Invalid(e.to_string()))?;
+            match except {
+                Some(i) => list[i] = encounter.clone(),
+                None => list.push(encounter.clone()),
+            }
+            install.write_saved_encounters(&list)
+        });
+        if errors(&*self.host, result).is_some() {
+            let name = encounter.name.clone();
+            self.dialog.set_title(&name);
+            *self.saved.borrow_mut() = Some(name.clone());
+            if let Some(delete) = self.delete.get() {
+                delete.set_enabled(true);
+            }
+            self.host.toast("Encounter saved");
+            self.host.reload(
+                "encounters",
+                Some(format!("{}{name}", cr_store::catalog::ENCOUNTER_KEY)),
+            );
+        }
+    }
+
+    fn confirm_delete(self: &Rc<Self>) {
+        let Some(name) = self.saved.borrow().clone() else {
+            return;
+        };
+        let alert = adw::AlertDialog::builder()
+            .heading("Delete Encounter?")
+            .body(format!(
+                "“{name}” will be removed from the saved encounters"
+            ))
+            .default_response("cancel")
+            .close_response("cancel")
+            .build();
+        alert.add_responses(&[("cancel", "_Cancel"), ("delete", "_Delete")]);
+        alert.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
+        let state = self.clone();
+        alert.connect_response(Some("delete"), move |_, _| {
+            let result = state.host.with_install(|install| {
+                let mut list = install.saved_encounters()?;
+                list.retain(|e| e.name != name);
+                install.write_saved_encounters(&list)
+            });
+            if errors(&*state.host, result).is_some() {
+                state.host.toast("Encounter deleted");
+                state.host.reload("encounters", None);
+                state.dialog.close();
+            }
+        });
+        alert.present(Some(&self.dialog));
+    }
+
+    /// The encounter as a printable page (the original's View/Print).
+    fn sheet(&self) -> Sheet {
+        let encounter = self.encounter.borrow();
+        let t = self.rules.totals(&encounter);
+        let mut rows = vec![vec![
+            Cell::header("Number"),
+            Cell::header("Monster"),
+            Cell::header("Hit Points"),
+        ]];
+        for p in &encounter.monsters {
+            rows.push(vec![
+                Cell::new(p.count.to_string()).right(),
+                Cell::new(&p.monster.name),
+                Cell::new(hit_point_text(&p.hit_points)),
+            ]);
+        }
+        for p in &encounter.npcs {
+            rows.push(vec![
+                Cell::new(p.count.to_string()).right(),
+                Cell::new(&p.character.data.name),
+                Cell::new(""),
+            ]);
+        }
+        let stats: Vec<String> = encounter
+            .monsters
+            .iter()
+            .map(|p| self.rules.stat_line(p))
+            .chain(encounter.npcs.iter().map(npc_line))
+            .collect();
+        let mut boxes = vec![
+            SheetBox {
+                title: "Encounter Totals".into(),
+                body: vec![Block::Table(Table {
+                    columns: 2,
+                    rows: [
+                        ("Gold Value", t.gold_value),
+                        ("Monster XP", t.monster_xp),
+                        ("Treasure XP", t.treasure_xp),
+                    ]
+                    .iter()
+                    .map(|(k, v)| {
+                        vec![
+                            Cell::new(*k),
+                            Cell::new(cr_store::treasure::thousands(*v)).right(),
+                        ]
+                    })
+                    .collect(),
+                })],
+            },
+            SheetBox {
+                title: "Monsters and Nonplayer Characters".into(),
+                body: vec![Block::Table(Table { columns: 3, rows })],
+            },
+        ];
+        if !stats.is_empty() {
+            boxes.push(SheetBox {
+                title: "Statistics".into(),
+                body: vec![Block::Paragraph(stats.join("\n\n"))],
+            });
+        }
+        for (title, bundle) in [
+            ("Treasure", &encounter.treasure),
+            ("Items", &encounter.items),
+        ] {
+            if !bundle.is_empty() {
+                boxes.push(SheetBox {
+                    title: title.into(),
+                    body: vec![Block::List(list_items(bundle))],
+                });
+            }
+        }
+        if !encounter.description.trim().is_empty() {
+            boxes.push(SheetBox {
+                title: "Description".into(),
+                body: vec![Block::Paragraph(encounter.description.clone())],
+            });
+        }
+        Sheet {
+            title: if encounter.name.is_empty() {
+                "Encounter".into()
+            } else {
+                encounter.name.clone()
+            },
+            flavor: self.rules.flavor(),
+            sections: boxes
+                .into_iter()
+                .map(|b| crsheet::Section {
+                    id: 0,
+                    content: crsheet::SectionContent::Columns(vec![vec![b]]),
+                })
+                .collect(),
+        }
+    }
+}
+
+fn list_items(bundle: &Bundle) -> Vec<ListItem> {
+    bundle
+        .items
+        .iter()
+        .map(|item| {
+            let mut children: Vec<ListItem> = item
+                .spells()
+                .iter()
+                .map(|s| ListItem {
+                    text: format!("{} ({})", s.name, s.pages),
+                    children: None,
+                })
+                .collect();
+            if let Some(contents) = &item.contents {
+                children.extend(list_items(contents));
+            }
+            ListItem {
+                text: item.label(),
+                children: (!children.is_empty()).then_some(children),
+            }
+        })
+        .collect()
+}
+
+/// A bundle's items as rows; an item holding others expands.
+fn bundle_rows(group: &adw::PreferencesGroup, bundle: &Bundle) {
+    for item in &bundle.items {
+        let title = glib::markup_escape_text(&item.label()).to_string();
+        let spells: Vec<String> = item
+            .spells()
+            .iter()
+            .map(|s| format!("{} ({})", s.name, s.pages))
+            .collect();
+        let subtitle = glib::markup_escape_text(&spells.join(", ")).to_string();
+        match &item.contents {
+            Some(contents) => {
+                let row = adw::ExpanderRow::builder()
+                    .title(title)
+                    .subtitle(subtitle)
+                    .build();
+                for inner in &contents.items {
+                    row.add_row(
+                        &adw::ActionRow::builder()
+                            .title(glib::markup_escape_text(&inner.label()).as_str())
+                            .build(),
+                    );
+                }
+                group.add(&row);
+            }
+            None => group.add(
+                &adw::ActionRow::builder()
+                    .title(title)
+                    .subtitle(subtitle)
+                    .subtitle_lines(0)
+                    .build(),
+            ),
+        }
+    }
+}
+
+/// A searchable list of names; activating one closes it and calls `chosen`.
+fn pick_from(
+    parent: &impl IsA<gtk::Widget>,
+    title: &str,
+    placeholder: &str,
+    names: Vec<String>,
+    chosen: impl Fn(String) + 'static,
+) {
+    let search = gtk::SearchEntry::builder()
+        .placeholder_text(placeholder)
+        .hexpand(true)
+        .build();
+    let list = gtk::ListBox::builder()
+        .css_classes(["boxed-list"])
+        .selection_mode(gtk::SelectionMode::None)
+        .build();
+    let rows: Vec<(adw::ActionRow, String)> = names
+        .iter()
+        .map(|name| {
+            let row = adw::ActionRow::builder()
+                .title(glib::markup_escape_text(name).as_str())
+                .activatable(true)
+                .build();
+            list.append(&row);
+            (row, name.to_lowercase())
+        })
+        .collect();
+    let empty = adw::StatusPage::builder()
+        .title("No Results")
+        .icon_name("edit-find-symbolic")
+        .css_classes(["compact"])
+        .visible(names.is_empty())
+        .build();
+    if names.is_empty() {
+        empty.set_title("Nothing to Add");
+    }
+    search.connect_search_changed({
+        let (rows, empty, list) = (rows.clone(), empty.clone(), list.clone());
+        move |s| {
+            let needle = s.text().to_lowercase();
+            let mut shown = 0;
+            for (row, text) in &rows {
+                let show = text.contains(&needle);
+                row.set_visible(show);
+                shown += show as usize;
+            }
+            empty.set_visible(shown == 0);
+            list.set_visible(shown > 0);
+        }
+    });
+    let content = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .margin_top(12)
+        .margin_bottom(24)
+        .margin_start(12)
+        .margin_end(12)
+        .build();
+    content.append(&list);
+    content.append(&empty);
+    let view = adw::ToolbarView::new();
+    view.add_top_bar(&adw::HeaderBar::new());
+    view.add_top_bar(
+        &gtk::SearchBar::builder()
+            .child(&search)
+            .search_mode_enabled(true)
+            .build(),
+    );
+    view.set_content(Some(
+        &gtk::ScrolledWindow::builder()
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .vexpand(true)
+            .child(&adw::Clamp::builder().child(&content).build())
+            .build(),
+    ));
+    let dialog = adw::Dialog::builder()
+        .title(title)
+        .content_width(480)
+        .content_height(600)
+        .width_request(360)
+        .height_request(294)
+        .child(&view)
+        .build();
+    list.connect_row_activated({
+        let dialog = dialog.clone();
+        move |_, row| {
+            let name = names[row.index() as usize].clone();
+            dialog.close();
+            chosen(name);
+        }
+    });
+    dialog.present(Some(parent));
+    search.grab_focus();
+}
+
+/// The 2-20 table editor: name, filter, the 19 rolls, Fill, Roll and
+/// Generate. `saved` is the table's name when it is already saved.
+pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
+    let Some((rules, tables)) = errors(
+        &**host,
+        host.with_install(|i| Ok((i.encounter_rules()?, i.frequency_tables()?))),
+    ) else {
+        return;
+    };
+    let rules = Rc::new(rules);
+    let table = saved
+        .and_then(|n| tables.table(n).cloned())
+        .unwrap_or_else(|| FrequencyTable::new(""));
+    let table = Rc::new(RefCell::new(table));
+
+    let name = adw::EntryRow::builder()
+        .title("Name")
+        .text(&table.borrow().name)
+        .build();
+    let about = adw::PreferencesGroup::new();
+    about.add(&name);
+
+    // Filter.
+    let filter = table.borrow().filter.clone();
+    let database = adw::ComboRow::builder()
+        .title("Database")
+        .model(&gtk::StringList::new(&["All", "Standard", "Custom"]))
+        .selected(filter.source.clamp(0, 2) as u32)
+        .build();
+    let lair = adw::ComboRow::builder()
+        .title("Lair and/or Wandering")
+        .model(&gtk::StringList::new(&[
+            "Lair and Wandering",
+            "Lair or Wandering",
+            "Wandering",
+            "Lair",
+        ]))
+        .selected(filter.lair.clamp(0, 3) as u32)
+        .build();
+    let min = adw::SpinRow::builder()
+        .title("Fewest Hit Dice")
+        .adjustment(&gtk::Adjustment::new(
+            filter.hit_dice.0 as f64,
+            0.0,
+            100.0,
+            1.0,
+            5.0,
+            0.0,
+        ))
+        .build();
+    let max = adw::SpinRow::builder()
+        .title("Most Hit Dice")
+        .adjustment(&gtk::Adjustment::new(
+            filter.hit_dice.1 as f64,
+            0.0,
+            100.0,
+            1.0,
+            5.0,
+            0.0,
+        ))
+        .build();
+    let climates = adw::ExpanderRow::builder()
+        .title("Climate and Terrain")
+        .subtitle("Where the templates may be encountered")
+        .build();
+    let mut checks = Vec::new();
+    for (i, place) in CLIMATES.iter().chain(TERRAINS.iter()).enumerate() {
+        let check = gtk::CheckButton::builder()
+            .active(filter.climates[i] != 0)
+            .valign(gtk::Align::Center)
+            .build();
+        let row = adw::ActionRow::builder()
+            .title(*place)
+            .activatable_widget(&check)
+            .build();
+        row.add_prefix(&check);
+        climates.add_row(&row);
+        checks.push(check);
+    }
+    let filter_group = adw::PreferencesGroup::builder()
+        .title("Filter")
+        .description("Fill picks templates that pass the filter, by frequency")
+        .build();
+    filter_group.add(&database);
+    filter_group.add(&min);
+    filter_group.add(&max);
+    filter_group.add(&lair);
+    filter_group.add(&climates);
+    let read_filter = {
+        let (database, lair, min, max, checks, table) = (
+            database.clone(),
+            lair.clone(),
+            min.clone(),
+            max.clone(),
+            checks.clone(),
+            table.clone(),
+        );
+        move || {
+            let mut t = table.borrow_mut();
+            t.filter.source = Source::of(database.selected() as i32).raw();
+            t.filter.lair = LairMode::of(lair.selected() as i32).raw();
+            t.filter.hit_dice = (min.value() as i32, max.value() as i32);
+            for (i, check) in checks.iter().enumerate() {
+                t.filter.climates[i] = check.is_active() as i32;
+            }
+        }
+    };
+
+    // Rolls.
+    let mut names: Vec<String> = rules.templates().iter().map(|t| t.name.clone()).collect();
+    names.sort_by_key(|n| n.to_lowercase());
+    names.dedup();
+    let mut choices = vec!["(None)".to_owned()];
+    choices.extend(names);
+    let choices = Rc::new(choices);
+    let model = gtk::StringList::new(&choices.iter().map(String::as_str).collect::<Vec<_>>());
+    let fill = gtk::Button::builder()
+        .label("_Fill")
+        .use_underline(true)
+        .tooltip_text("Pick a template for every roll")
+        .css_classes(["flat"])
+        .build();
+    let roll = gtk::Button::builder()
+        .label("_Roll")
+        .use_underline(true)
+        .tooltip_text("Roll 1d8+1d12 and create its encounter")
+        .css_classes(["flat"])
+        .build();
+    let buttons = gtk::Box::builder().spacing(6).build();
+    buttons.append(&fill);
+    buttons.append(&roll);
+    let slots_group = adw::PreferencesGroup::builder()
+        .title("Rolls")
+        .header_suffix(&buttons)
+        .build();
+    let slot_rows: Vec<adw::ComboRow> = (0..19)
+        .map(|i| {
+            let row = adw::ComboRow::builder()
+                .title((i + 2).to_string())
+                .model(&model)
+                .enable_search(true)
+                .build();
+            slots_group.add(&row);
+            row
+        })
+        .collect();
+    let show_slots = {
+        let (rows, table, choices) = (slot_rows.clone(), table.clone(), choices.clone());
+        move || {
+            // Selecting writes back to the table.
+            let slots = table.borrow().slots.clone();
+            for (row, slot) in rows.iter().zip(&slots) {
+                let index = choices.iter().position(|c| c == slot).unwrap_or(0);
+                row.set_selected(index as u32);
+            }
+        }
+    };
+    show_slots();
+    for (i, row) in slot_rows.iter().enumerate() {
+        let (table, choices) = (table.clone(), choices.clone());
+        row.connect_selected_notify(move |row| {
+            let index = row.selected() as usize;
+            let value = if index == 0 {
+                String::new()
+            } else {
+                choices[index].clone()
+            };
+            let mut t = table.borrow_mut();
+            t.slots.resize(19, String::new());
+            t.slots[i] = value;
+        });
+    }
+    fill.connect_clicked({
+        let (rules, table, host, read_filter, show_slots) = (
+            rules.clone(),
+            table.clone(),
+            host.clone(),
+            read_filter.clone(),
+            show_slots.clone(),
+        );
+        move |_| {
+            read_filter();
+            let filter = table.borrow().filter.clone();
+            let candidates = rules.candidates(&filter);
+            let count: usize = candidates[..4].iter().map(Vec::len).sum();
+            table
+                .borrow_mut()
+                .fill(&candidates, &mut host.rand().borrow_mut());
+            show_slots();
+            host.toast(&format!("{count} templates pass the filter"));
+        }
+    });
+
+    let page = adw::PreferencesPage::new();
+    page.add(&about);
+    page.add(&filter_group);
+    page.add(&slots_group);
+    let save = gtk::Button::builder()
+        .label("_Save")
+        .use_underline(true)
+        .css_classes(["suggested-action"])
+        .build();
+    let delete = gtk::Button::builder()
+        .icon_name("user-trash-symbolic")
+        .tooltip_text("Delete Table")
+        .visible(saved.is_some())
+        .build();
+    let header = adw::HeaderBar::new();
+    header.pack_start(&delete);
+    header.pack_end(&save);
+    let view = adw::ToolbarView::new();
+    view.add_top_bar(&header);
+    view.set_content(Some(&page));
+    let dialog = adw::Dialog::builder()
+        .title(saved.unwrap_or("New Encounter Table"))
+        .content_width(640)
+        .content_height(760)
+        .width_request(360)
+        .height_request(294)
+        .child(&view)
+        .build();
+
+    roll.connect_clicked({
+        let (rules, table, host, dialog) =
+            (rules.clone(), table.clone(), host.clone(), dialog.clone());
+        move |_| {
+            let r = roll_2_to_20(&rules, &mut host.rand().borrow_mut());
+            let slot = table.borrow().slot(r).map(str::to_owned);
+            match slot {
+                Some(name) if !name.is_empty() => {
+                    host.toast(&format!("Rolled {r}: {name}"));
+                    dialog.close();
+                    create_from_template(&host, &name);
+                }
+                _ => host.toast(&format!("Rolled {r}, which has no template")),
+            }
+        }
+    });
+    let old = saved.map(str::to_owned);
+    save.connect_clicked({
+        let (table, host, dialog, old) = (table.clone(), host.clone(), dialog.clone(), old.clone());
+        move |_| {
+            read_filter();
+            let mut t = table.borrow().clone();
+            t.name = name.text().trim().to_owned();
+            if t.name.is_empty() {
+                return host.toast("A name must be supplied.");
+            }
+            let result = host.with_install(|install| {
+                let mut tables = install.frequency_tables()?;
+                let clash = tables
+                    .tables
+                    .iter()
+                    .any(|x| x.name.eq_ignore_ascii_case(&t.name) && Some(&x.name) != old.as_ref());
+                if clash {
+                    return Err(cr_store::Error::Invalid("Name already used.".into()));
+                }
+                match old
+                    .as_ref()
+                    .and_then(|o| tables.tables.iter().position(|x| &x.name == o))
+                {
+                    Some(i) => tables.tables[i] = t.clone(),
+                    None => tables.tables.push(t.clone()),
+                }
+                install.write_frequency_tables(&tables)
+            });
+            if errors(&*host, result).is_some() {
+                host.toast("Table saved");
+                host.reload(
+                    "tables",
+                    Some(format!("{}{}", cr_store::catalog::TABLE_KEY, t.name)),
+                );
+                dialog.close();
+            }
+        }
+    });
+    delete.connect_clicked({
+        let (host, dialog) = (host.clone(), dialog.clone());
+        move |_| {
+            let Some(old) = old.clone() else { return };
+            let alert = adw::AlertDialog::builder()
+                .heading("Delete Encounter Table?")
+                .body(format!("“{old}” will be removed"))
+                .default_response("cancel")
+                .close_response("cancel")
+                .build();
+            alert.add_responses(&[("cancel", "_Cancel"), ("delete", "_Delete")]);
+            alert.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
+            let (host, dialog2) = (host.clone(), dialog.clone());
+            alert.connect_response(Some("delete"), move |_, _| {
+                let result = host.with_install(|install| {
+                    let mut tables = install.frequency_tables()?;
+                    tables.tables.retain(|t| t.name != old);
+                    install.write_frequency_tables(&tables)
+                });
+                if errors(&*host, result).is_some() {
+                    host.toast("Table deleted");
+                    host.reload("tables", None);
+                    dialog2.close();
+                }
+            });
+            alert.present(Some(&dialog));
+        }
+    });
+    dialog.present(Some(&host.parent()));
+}
+
+/// Climate flags 0-4 of templates and tables.
+const CLIMATES: [&str; 5] = [
+    "Arctic",
+    "Sub-Arctic",
+    "Temperate",
+    "Sub-Tropical",
+    "Tropical",
+];
+
+/// Terrain flags 5-36 (table 0x67f3cc).
+const TERRAINS: [&str; 32] = [
+    "Aerial",
+    "Bush",
+    "Caves",
+    "Coastal",
+    "Deserts",
+    "Farmland",
+    "Forests",
+    "Glaciers",
+    "Grasslands",
+    "Jungles",
+    "Fresh-Water Lakes",
+    "Salt-Water Lakes",
+    "High Mountains",
+    "High Mountain Forests",
+    "High Mountain Lakes",
+    "Low Mountains",
+    "Low Mountain Forests",
+    "Low Mountain Lakes",
+    "Deep Oceans",
+    "Shallow Oceans",
+    "Parkland",
+    "Scrub Plains",
+    "Rain Forests",
+    "Fresh-Water Rivers",
+    "Salt-Water Rivers",
+    "Rough/Hills",
+    "Salt Marshes",
+    "Steppes",
+    "Subterranean",
+    "Fresh-Water Swamps",
+    "Salt-Water Swamps",
+    "Tundras",
+];

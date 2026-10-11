@@ -2,6 +2,7 @@
 //! panes (sections, entries, details) that collapse on narrow windows.
 
 mod create;
+mod encounter;
 mod lists;
 mod sheet;
 mod treasure;
@@ -15,7 +16,7 @@ use adw::prelude::*;
 use cr_formats::character::Character;
 use cr_store::Installation;
 use cr_store::advance::{AdvanceRules, Advancement};
-use cr_store::catalog::{Entry, Section, TREASURE_KEY};
+use cr_store::catalog::{ENCOUNTER_KEY, Entry, Section, TABLE_KEY, TEMPLATE_KEY, TREASURE_KEY};
 use cr_store::choices::{Caster, caster};
 use cr_store::dual::ClassChoice;
 use cr_store::edit::{ABILITY_RANGE, CharacterDetails};
@@ -99,9 +100,28 @@ impl Window {
             let this = this.clone();
             move |_| {
                 let key = this.browser.current_key.borrow().clone();
-                match key.strip_prefix(TREASURE_KEY) {
-                    Some(name) => this.roll_treasure(Some(name)),
-                    None => this.edit_character(&key),
+                let host = Rc::new(this.clone());
+                if let Some(name) = key.strip_prefix(TREASURE_KEY) {
+                    this.roll_treasure(Some(name))
+                } else if let Some(name) = key.strip_prefix(ENCOUNTER_KEY) {
+                    encounter::open_saved(&host, name)
+                } else if let Some(name) = key.strip_prefix(TABLE_KEY) {
+                    encounter::table_editor(&host, Some(name))
+                } else {
+                    this.edit_character(&key)
+                }
+            }
+        });
+
+        this.browser.generate_button.connect_clicked({
+            let this = this.clone();
+            move |_| {
+                let key = this.browser.current_key.borrow().clone();
+                let host = Rc::new(this.clone());
+                if let Some(name) = key.strip_prefix(TEMPLATE_KEY) {
+                    encounter::create_from_template(&host, name)
+                } else if let Some(name) = key.strip_prefix(TABLE_KEY) {
+                    encounter::roll_and_generate(&host, name)
                 }
             }
         });
@@ -124,11 +144,29 @@ impl Window {
                 move |_, _, _| this.roll_treasure(None)
             })
             .build();
-        this.window
-            .add_action_entries([open, new_character, roll_treasure]);
+        let new_encounter = gio::ActionEntry::builder("new-encounter")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| encounter::choose_template(&Rc::new(this.clone()))
+            })
+            .build();
+        let new_table = gio::ActionEntry::builder("new-table")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| encounter::table_editor(&Rc::new(this.clone()), None)
+            })
+            .build();
+        this.window.add_action_entries([
+            open,
+            new_character,
+            roll_treasure,
+            new_encounter,
+            new_table,
+        ]);
         app.set_accels_for_action("win.open", &["<Control>o"]);
         app.set_accels_for_action("win.new-character", &["<Control>n"]);
         app.set_accels_for_action("win.roll-treasure", &["<Control>t"]);
+        app.set_accels_for_action("win.new-encounter", &["<Control>e"]);
         this.set_can_create(false);
         this
     }
@@ -197,7 +235,12 @@ impl Window {
     }
 
     fn set_can_create(&self, enabled: bool) {
-        for name in ["new-character", "roll-treasure"] {
+        for name in [
+            "new-character",
+            "roll-treasure",
+            "new-encounter",
+            "new-table",
+        ] {
             if let Some(action) = self
                 .window
                 .lookup_action(name)
@@ -229,53 +272,7 @@ impl Window {
             Ok(loaded) => loaded,
             Err(e) => return self.toast(&e.to_string()),
         };
-        let reload = {
-            let this = self.clone();
-            move |key: Option<String>| {
-                let install = this.install.borrow();
-                let Some(install) = install.as_ref() else {
-                    return;
-                };
-                this.browser.show_section("treasure");
-                this.browser.load(install.catalog(), key.as_deref());
-            }
-        };
-        let store = treasure::Store {
-            save: Box::new({
-                let (this, reload) = (self.clone(), reload.clone());
-                move |old, name, bundle| {
-                    {
-                        let install = this.install.borrow();
-                        let install = install
-                            .as_ref()
-                            .ok_or("The installation is no longer open")?;
-                        match old {
-                            Some(old) => install.replace_saved_treasure(old, name, bundle),
-                            None => install.save_treasure(name, bundle),
-                        }
-                        .map_err(|e| e.to_string())?;
-                    }
-                    reload(Some(format!("{TREASURE_KEY}{name}")));
-                    Ok(())
-                }
-            }),
-            delete: Box::new({
-                let this = self.clone();
-                move |name| {
-                    {
-                        let install = this.install.borrow();
-                        let install = install
-                            .as_ref()
-                            .ok_or("The installation is no longer open")?;
-                        install
-                            .delete_saved_treasure(name)
-                            .map_err(|e| e.to_string())?;
-                    }
-                    reload(None);
-                    Ok(())
-                }
-            }),
-        };
+        let store = self.treasure_store();
         let this = self.clone();
         treasure::roller(
             &self.window,
@@ -291,6 +288,59 @@ impl Window {
             store,
             move |message| this.toast(message),
         );
+    }
+
+    /// How the treasure roller saves and deletes bundles.
+    fn treasure_store(&self) -> treasure::Store {
+        treasure::Store {
+            save: Box::new({
+                let this = self.clone();
+                move |old, name, bundle| {
+                    {
+                        let install = this.install.borrow();
+                        let install = install
+                            .as_ref()
+                            .ok_or("The installation is no longer open")?;
+                        match old {
+                            Some(old) => install.replace_saved_treasure(old, name, bundle),
+                            None => install.save_treasure(name, bundle),
+                        }
+                        .map_err(|e| e.to_string())?;
+                    }
+                    this.reload("treasure", Some(format!("{TREASURE_KEY}{name}")));
+                    Ok(())
+                }
+            }),
+            delete: Box::new({
+                let this = self.clone();
+                move |name| {
+                    {
+                        let install = this.install.borrow();
+                        let install = install
+                            .as_ref()
+                            .ok_or("The installation is no longer open")?;
+                        install
+                            .delete_saved_treasure(name)
+                            .map_err(|e| e.to_string())?;
+                    }
+                    this.reload("treasure", None);
+                    Ok(())
+                }
+            }),
+        }
+    }
+
+    /// Reloads the sections and shows the entry `key` of `section`.
+    fn reload(&self, section: &str, key: Option<String>) {
+        let install = self.install.borrow();
+        let Some(install) = install.as_ref() else {
+            return;
+        };
+        self.browser.show_section(section);
+        self.browser.load(install.catalog(), key.as_deref());
+        if key.is_none() {
+            self.browser.show_section(section);
+        }
     }
 
     /// Opens the New Character dialog.
@@ -392,9 +442,40 @@ impl Window {
     }
 }
 
+impl encounter::Host for Window {
+    fn with_install<T>(
+        &self,
+        run: impl FnOnce(&Installation) -> cr_store::Result<T>,
+    ) -> Option<cr_store::Result<T>> {
+        self.install.borrow().as_ref().map(run)
+    }
+
+    fn rand(&self) -> Rc<RefCell<Rand>> {
+        self.rand.clone()
+    }
+
+    fn toast(&self, message: &str) {
+        Window::toast(self, message)
+    }
+
+    fn reload(&self, section: &str, key: Option<String>) {
+        Window::reload(self, section, key)
+    }
+
+    fn treasure_store(&self) -> treasure::Store {
+        Window::treasure_store(self)
+    }
+
+    fn parent(&self) -> gtk::Widget {
+        self.window.clone().upcast()
+    }
+}
+
 fn open_menu() -> gtk::MenuButton {
     let menu = gio::Menu::new();
     menu.append(Some("_New Character…"), Some("win.new-character"));
+    menu.append(Some("New _Encounter…"), Some("win.new-encounter"));
+    menu.append(Some("New Encounter _Table…"), Some("win.new-table"));
     menu.append(Some("_Roll Treasure…"), Some("win.roll-treasure"));
     menu.append(Some("_Open Folder…"), Some("win.open"));
     gtk::MenuButton::builder()
@@ -417,6 +498,8 @@ struct Browser {
     /// Shown on the detail page of entries that can be edited.
     edit_button: gtk::Button,
     sheet_button: gtk::Button,
+    /// Creates an encounter from a template or a 2-20 table.
+    generate_button: gtk::Button,
     /// The key of the entry on the detail page.
     current_key: Rc<RefCell<String>>,
 }
@@ -428,6 +511,7 @@ struct DetailPane {
     view: adw::ToolbarView,
     edit_button: gtk::Button,
     sheet_button: gtk::Button,
+    generate_button: gtk::Button,
     current_key: Rc<RefCell<String>>,
 }
 
@@ -435,9 +519,23 @@ impl DetailPane {
     fn show(&self, entry: &Entry) {
         self.page.set_title(&entry.title);
         self.view.set_content(Some(&detail(entry)));
-        self.edit_button.set_visible(!entry.key.is_empty());
-        self.sheet_button
-            .set_visible(!entry.key.is_empty() && !entry.key.starts_with(TREASURE_KEY));
+        let key = &entry.key;
+        let character = !key.is_empty() && !key.contains(':');
+        self.edit_button.set_visible(
+            character
+                || [TREASURE_KEY, ENCOUNTER_KEY, TABLE_KEY]
+                    .iter()
+                    .any(|p| key.starts_with(p)),
+        );
+        self.sheet_button.set_visible(character);
+        self.generate_button
+            .set_visible(key.starts_with(TEMPLATE_KEY) || key.starts_with(TABLE_KEY));
+        self.generate_button
+            .set_tooltip_text(Some(if key.starts_with(TABLE_KEY) {
+                "Roll and Create Encounter"
+            } else {
+                "Create Encounter"
+            }));
         self.current_key.borrow_mut().clone_from(&entry.key);
     }
 
@@ -446,6 +544,7 @@ impl DetailPane {
         self.view.set_content(Some(widget));
         self.edit_button.set_visible(false);
         self.sheet_button.set_visible(false);
+        self.generate_button.set_visible(false);
         self.current_key.borrow_mut().clear();
     }
 }
@@ -479,7 +578,13 @@ impl Browser {
             .tooltip_text("Character Sheet")
             .visible(false)
             .build();
+        let generate_button = gtk::Button::builder()
+            .icon_name("media-playlist-shuffle-symbolic")
+            .tooltip_text("Create Encounter")
+            .visible(false)
+            .build();
         let detail_header = adw::HeaderBar::new();
+        detail_header.pack_end(&generate_button);
         detail_header.pack_end(&edit_button);
         detail_header.pack_end(&sheet_button);
         detail_view.add_top_bar(&detail_header);
@@ -491,6 +596,7 @@ impl Browser {
             view: detail_view,
             edit_button: edit_button.clone(),
             sheet_button: sheet_button.clone(),
+            generate_button: generate_button.clone(),
             current_key: current_key.clone(),
         };
 
@@ -633,7 +739,18 @@ impl Browser {
                 let sections = sections.borrow();
                 let section = &sections[index];
                 *current.borrow_mut() = index;
-                new_button.set_visible(section.id == "characters");
+                let new = match section.id {
+                    "characters" => Some(("win.new-character", "New Character")),
+                    "encounters" => Some(("win.new-encounter", "New Encounter")),
+                    "tables" => Some(("win.new-table", "New Encounter Table")),
+                    "treasure" => Some(("win.roll-treasure", "Roll Treasure")),
+                    _ => None,
+                };
+                new_button.set_visible(new.is_some());
+                if let Some((action, tooltip)) = new {
+                    new_button.set_action_name(Some(action));
+                    new_button.set_tooltip_text(Some(tooltip));
+                }
                 entries_page.set_title(section.title);
                 inner_page.set_title(section.title);
                 search.set_text("");
@@ -695,6 +812,7 @@ impl Browser {
             detail,
             edit_button,
             sheet_button,
+            generate_button,
             current_key,
         }
     }

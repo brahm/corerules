@@ -16,8 +16,6 @@ pub enum Mode {
     Free { saved: Option<String> },
     /// An encounter's treasure: the "Use Treasure" button hands the bundle
     /// back, as the original's Ok does in that mode.
-    // Used by the encounter screen.
-    #[allow(dead_code)]
     Pick { use_bundle: Box<dyn Fn(Bundle)> },
 }
 
