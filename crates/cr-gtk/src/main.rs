@@ -1189,6 +1189,9 @@ fn experience_group(
                         let mut text =
                             format!("Level {} · {} XP", class.level, thousands(class.experience));
                         match (class.next, class.limit) {
+                            (_, Some(limit)) if class.level >= limit => {
+                                text.push_str(&format!(" · level limit {limit}"))
+                            }
                             (Some(next), _) => {
                                 text.push_str(&format!(" · next level at {}", thousands(next)))
                             }

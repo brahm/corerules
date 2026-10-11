@@ -370,7 +370,7 @@ impl AdvanceRules {
                     name: d.classes.names[g].clone(),
                     experience: d.unknown_0x1618[g],
                     level,
-                    next: (next > 0 && limit.is_none_or(|l| level < l)).then_some(next as u32),
+                    next: (next > 0 && next != i32::MAX as i64).then_some(next as u32),
                     limit,
                 })
             })

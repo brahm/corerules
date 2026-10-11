@@ -356,7 +356,7 @@ pub(super) fn default_sections(rules: &SheetRules, ch: &Character) -> Result<Vec
         ids::PROFICIENCIES,
         ids::WEAPONS,
     ];
-    if ctx.race().is_some_and(|r| !r.abilities.is_empty()) {
+    if !ch.data.racial_abilities.is_empty() {
         list.push(ids::RACIAL);
     }
     list.push(ids::CLASS_ABILITIES);
