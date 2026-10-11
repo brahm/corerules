@@ -351,6 +351,12 @@ impl AdvanceRules {
         })
     }
 
+    /// Whether the class named `name` casts priest spells and wizard
+    /// spells.
+    pub fn casts(&self, name: &str) -> (bool, bool) {
+        self.classes.get(name).map_or((false, false), |c| c.casts)
+    }
+
     /// Each class with its experience and level.
     pub fn levels(&self, character: &Character) -> Result<Vec<ClassLevel>> {
         let d = &character.data;

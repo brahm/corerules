@@ -12,6 +12,7 @@ pub mod dual;
 pub mod edit;
 pub mod lists;
 pub mod settings;
+pub mod sheet;
 
 use std::fs;
 use std::io;
