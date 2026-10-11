@@ -1,14 +1,15 @@
-What's new in 0.2.0:
+What's new in 0.3.0:
 
-- New Character (Ctrl+N): the original's creation wizard, with Core Rules
-  methods I to VI and Player's Option (Skills & Powers) methods VII to X
-- Edit weapon and nonweapon proficiencies, languages, spells known,
-  spellbooks and memorized spells
-- Edit all nine equipment groups with quantities, and spending money
-- Humans can add a class (dual-class) under the Player's Handbook rules;
-  race and the classes chosen at creation never change
+- Add experience to a character, to one class, to all or split between
+  them, with the prime requisite bonus
+- Levels go up with hit point rolls, psionic strength points, Skills &
+  Powers character points and the Expansion's racial level limits
+- Memorizing spells shows the slots per spell level, as the original
+  counts them
+- Character sheet: view it, print it, save it as PDF, or export it as HTML
+  (both programs) or text (Expansion), matching the original's exports
 
-Every change was checked by opening the files in both original programs.
+Every change was checked against both original programs.
 
 Preview release: the app opens a Core Rules 2.0 (or Expansion) installation
 or its CD, browses characters, races, classes, items, spells, psionics and

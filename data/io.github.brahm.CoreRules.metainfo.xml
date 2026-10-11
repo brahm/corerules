@@ -52,6 +52,16 @@
     <color type="primary" scheme_preference="dark">#77101b</color>
   </branding>
   <releases>
+    <release version="0.3.0" date="2026-10-11" type="development">
+      <description>
+        <p>Characters can now gain experience, and their sheet can be printed.</p>
+        <ul>
+          <li>Add experience and level up, with hit point rolls, Skills &amp; Powers points and racial level limits</li>
+          <li>Spell slots per spell level when memorizing spells</li>
+          <li>Character sheet: view, print, save as PDF and export HTML or text</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.0" date="2026-10-10" type="development">
       <description>
         <p>Characters can now be created and fully edited.</p>

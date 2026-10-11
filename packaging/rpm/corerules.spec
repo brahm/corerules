@@ -4,7 +4,7 @@
 %global debug_package %{nil}
 
 Name:           corerules
-Version:        %{?version_override}%{!?version_override:0.2.0}
+Version:        %{?version_override}%{!?version_override:0.3.0}
 Release:        1%{?dist}
 Summary:        Browse and edit AD&D Core Rules 2.0 characters and rules
 License:        MIT
@@ -50,6 +50,13 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/io.github.brah
 %{_metainfodir}/io.github.brahm.CoreRules.metainfo.xml
 
 %changelog
+* Sun Oct 11 2026 Brahm - 0.3.0-1
+- Character advancement: add experience (prime requisite bonus, split
+  between classes), level up with hit point rolls, Skills & Powers points
+  and racial level limits; spell slots per spell level
+- Character sheet: view, print, save as PDF and export HTML or text in the
+  original's layout
+
 * Sat Oct 10 2026 Brahm - 0.2.0-1
 - Create characters (Core Rules and Player's Option) and edit their
   proficiencies, spells, spellbooks, equipment and money; humans can add a class
