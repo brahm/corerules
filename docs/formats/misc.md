@@ -132,7 +132,7 @@ rtc 0x831cd8, schema 1, size 0x68, Serialize 0x54963d. Ctor 0x54869e (CStrings a
 | 12 | sub2_sides | u32 | +0x48 | |
 | 13 | sub2_bonus | u32 | +0x4c | |
 | 14 | sub2_table | CString | +0x50 | `DMG Treasure: Necklace of Prayer Beads Magical Beads` |
-| 15 | m54 | u8 | +0x54 | 25 on swords, 5 on other weapons, else 0 (percent; likely intelligent-weapon chance) |
+| 15 | m54 | u8 | +0x54 | 25 on swords, 5 on other weapons, else 0: percent chance of an intelligent weapon (roller 0x5462c7) |
 | 16 | spell_min_level | u32 | +0x58 | spell scrolls: lowest spell level (1..4) |
 | 17 | spell_max_level | u32 | +0x5c | highest spell level (4..9) |
 | 18 | spell_count | u32 | +0x60 | number of spells (1..7) |

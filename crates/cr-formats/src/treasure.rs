@@ -46,8 +46,8 @@ record! {
         /// Rolls on `sub_table_2` (`Necklace of Prayer Beads`: 1d4+2).
         sub_table_2_dice: [u32; 3],
         sub_table_2: String,
-        /// 25 on swords, 5 on other weapons, else 0; probably the percent
-        /// chance of an intelligent weapon.
+        /// 25 on swords, 5 on other weapons, else 0: the percent chance of
+        /// an intelligent weapon (0x5462c7).
         unknown_0x54: u8,
         /// Spell scrolls: lowest and highest spell level (1..4, 4..9) and
         /// the number of spells (1..7).

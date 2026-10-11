@@ -32,6 +32,17 @@ const USAGE: &str = "usage:
                             the character file at path FILE) as the export
                             writes it: TXT (default with the Expansion) or
                             HTML (Core Rules 2.0 exports HTML only)
+  cr treasure INSTALL_DIR [--seed N] [--electrum] [--accumulate] LETTERS...
+                            roll treasure types as the Treasure roller does
+                            (A B B Q, or Bx2) and print the bundle and its
+                            Calculate summary; a lone / starts another roll
+                            from the same dice, and --electrum and
+                            --accumulate (add to the bundle before) apply
+                            to the roll they are given in
+  cr treasure INSTALL_DIR [--seed N] [--count N] --table NAME
+                            roll once (or N times) on one treasure table
+  cr treasure INSTALL_DIR --saved [NAME]
+                            list the saved treasure bundles, or print one
 
 Without INSTALL_DIR, the installation in the Wine prefix is used.";
 
@@ -51,6 +62,7 @@ fn main() -> ExitCode {
         "chars" => cmd_chars(&install),
         "edit" => cmd_edit(&install, &args[2..]),
         "sheet" => cmd_sheet(&install, &args[2..]),
+        "treasure" => cmd_treasure(&install, &args[2..]),
         _ => {
             eprintln!("{USAGE}");
             Ok(())
@@ -153,6 +165,106 @@ fn cmd_sheet(install: &Installation, args: &[String]) -> cr_store::Result<()> {
         sheet.to_txt(&date)
     };
     print!("{text}");
+    Ok(())
+}
+
+/// One roll of `cr treasure`: letters, Accumulate Rolls, the coin.
+#[derive(Default)]
+struct TreasureRoll {
+    letters: String,
+    accumulate: bool,
+    coin: cr_store::treasure::Coin,
+}
+
+fn cmd_treasure(install: &Installation, args: &[String]) -> cr_store::Result<()> {
+    use cr_store::treasure::{Bundle, Coin, Rand, TreasureRules, parse_letters};
+    let invalid = |message: String| cr_store::Error::Invalid(message);
+    let mut seed = None;
+    let mut table = None;
+    let mut count = 1u32;
+    let mut saved = None;
+    let mut rolls = vec![TreasureRoll::default()];
+    let mut args = args.iter();
+    while let Some(arg) = args.next() {
+        let mut value = |name: &str| {
+            args.next()
+                .ok_or_else(|| invalid(format!("{name} needs a value")))
+        };
+        let number = |text: &String| {
+            text.parse::<u32>()
+                .map_err(|_| invalid(format!("{text} is not a number")))
+        };
+        let roll = rolls.last_mut().unwrap();
+        match arg.as_str() {
+            "--seed" => seed = Some(number(value("--seed")?)?),
+            "--count" => count = number(value("--count")?)?,
+            "--table" => table = Some(value("--table")?.clone()),
+            "--electrum" => roll.coin = Coin::Electrum,
+            "--accumulate" => roll.accumulate = true,
+            "--saved" => saved = Some(None),
+            "/" => rolls.push(TreasureRoll::default()),
+            _ if saved == Some(None) => saved = Some(Some(arg.clone())),
+            _ => {
+                roll.letters.push(' ');
+                roll.letters.push_str(arg);
+            }
+        }
+    }
+
+    let print = |bundle: &Bundle, rules: &TreasureRules| {
+        print!("{}", bundle.to_text());
+        println!();
+        for line in rules.summary(bundle).lines() {
+            println!("{line}");
+        }
+    };
+
+    if let Some(name) = saved {
+        let list = install.saved_treasures()?;
+        let Some(name) = name else {
+            let mut names: Vec<&str> = list.iter().map(|t| t.name.as_str()).collect();
+            names.sort_unstable();
+            for name in names {
+                println!("{name}");
+            }
+            return Ok(());
+        };
+        let treasure = list
+            .iter()
+            .find(|t| t.name == name)
+            .ok_or_else(|| invalid(format!("no saved treasure named {name}")))?;
+        print(&treasure.bundle, &install.treasure_rules()?);
+        return Ok(());
+    }
+
+    let rules = install.treasure_rules()?;
+    let seed = seed.unwrap_or_else(Rand::clock_seed);
+    eprintln!("seed {seed}");
+    let mut rand = Rand::seeded(seed);
+    if let Some(table) = table {
+        for _ in 0..count {
+            let item = rules
+                .roll_table(&mut rand, &table)
+                .ok_or_else(|| invalid(format!("no treasure table named {table}")))?;
+            print!("{}", Bundle { items: vec![item] }.to_text());
+        }
+        return Ok(());
+    }
+    if rolls.iter().all(|r| r.letters.trim().is_empty()) {
+        return Err(invalid("treasure needs letters, --table or --saved".into()));
+    }
+    let mut bundle = Bundle::default();
+    for (i, roll) in rolls.iter().enumerate() {
+        let counts = parse_letters(&roll.letters).map_err(invalid)?;
+        if !roll.accumulate {
+            bundle = Bundle::default();
+        }
+        rules.roll(&mut rand, &counts, roll.coin, &mut bundle);
+        if i > 0 {
+            println!();
+        }
+        print(&bundle, &rules);
+    }
     Ok(())
 }
 

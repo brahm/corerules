@@ -64,9 +64,11 @@ impl Field for InventoryItem {
 
 record! {
     /// The optional 0x50-byte object behind `CInventoryItem + 0x18`
-    /// (Serialize 0x4adc02).
+    /// (Serialize 0x4adc02): the spells of a scroll.
     pub struct InventoryExtra {
+        /// Pages: capacity and used; then the number of spells.
         unknown_0x4: [u32; 3],
+        /// Spell names; then their pages and wizard (1) or priest (0).
         unknown_0x10: Vec<String>,
         /// A `CDWordArray`.
         unknown_0x24: Vec<u32>,

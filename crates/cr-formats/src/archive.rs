@@ -288,6 +288,13 @@ impl ArchiveWriter {
     }
 }
 
+/// The Windows-1252 bytes of `s`, as the original compares strings with
+/// `strcmp`; lossy for characters outside the code page.
+pub fn ansi_bytes(s: &str) -> Vec<u8> {
+    let (bytes, _, _) = WINDOWS_1252.encode(s);
+    bytes.into_owned()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

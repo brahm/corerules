@@ -97,6 +97,10 @@ Early work (phase 0 of the plan): the file formats are being mapped.
       shown in the app, printed, saved as PDF, or exported as the
       originals' TXT and HTML files, matching their exports line for line
       (`cr sheet` does the same from the command line)
+- [x] Treasure generator (backend and `cr treasure`): treasure types A to
+      Z, table rolls, intelligent weapons, spell scrolls, Calculate and the
+      saved bundles of `UserDbas/TreaBunU.dat`; with the same seed it
+      saves the same bundles as both original programs, byte for byte
 
 ## Layout
 

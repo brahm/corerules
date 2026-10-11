@@ -1048,7 +1048,7 @@ fn new_file_name(chars: &Path, index: &CharacterIndex) -> String {
 }
 
 /// Writes a file that does not exist yet, through a temporary name.
-fn write_new(path: &Path, bytes: &[u8]) -> Result<()> {
+pub(crate) fn write_new(path: &Path, bytes: &[u8]) -> Result<()> {
     let temporary = with_suffix(path, ".tmp");
     fs::write(&temporary, bytes).map_err(|source| Error::Io {
         path: temporary.clone(),

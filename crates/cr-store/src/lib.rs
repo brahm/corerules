@@ -13,6 +13,7 @@ pub mod edit;
 pub mod lists;
 pub mod settings;
 pub mod sheet;
+pub mod treasure;
 
 use std::fs;
 use std::io;
