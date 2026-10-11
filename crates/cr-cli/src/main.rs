@@ -27,6 +27,11 @@ const USAGE: &str = "usage:
                             AMOUNT may be negative; prime requisite bonus
                             applied); limits=0|1|2 (Expansion level
                             limits: none, racial, with prime bonuses)
+  cr sheet INSTALL_DIR FILE [--html|--txt]
+                            print the character sheet of Chars/FILE (or of
+                            the character file at path FILE) as the export
+                            writes it: TXT (default with the Expansion) or
+                            HTML (Core Rules 2.0 exports HTML only)
 
 Without INSTALL_DIR, the installation in the Wine prefix is used.";
 
@@ -45,6 +50,7 @@ fn main() -> ExitCode {
         "survey" => cmd_survey(&install),
         "chars" => cmd_chars(&install),
         "edit" => cmd_edit(&install, &args[2..]),
+        "sheet" => cmd_sheet(&install, &args[2..]),
         _ => {
             eprintln!("{USAGE}");
             Ok(())
@@ -103,6 +109,50 @@ fn cmd_chars(install: &Installation) -> cr_store::Result<()> {
             version
         );
     }
+    Ok(())
+}
+
+fn cmd_sheet(install: &Installation, args: &[String]) -> cr_store::Result<()> {
+    use cr_store::sheet::{Flavor, Timestamp};
+    let invalid = |message: String| cr_store::Error::Invalid(message);
+    let mut file = None;
+    let mut html = None;
+    for arg in args {
+        match arg.as_str() {
+            "--html" => html = Some(true),
+            "--txt" => html = Some(false),
+            _ if file.is_none() => file = Some(arg),
+            _ => return Err(invalid(format!("unexpected argument {arg}"))),
+        }
+    }
+    let file = file.ok_or_else(|| invalid("sheet needs a character file".into()))?;
+    let path = std::path::Path::new(file);
+    let character = if path.is_file() {
+        let data = std::fs::read(path).map_err(|source| cr_store::Error::Io {
+            path: path.into(),
+            source,
+        })?;
+        cr_formats::character::Character::parse(&data).map_err(|source| {
+            cr_store::Error::Format {
+                path: path.into(),
+                source,
+            }
+        })?
+    } else {
+        install.character(file)?
+    };
+    let sheet = install.sheet(&character)?;
+    let html = html.unwrap_or(sheet.flavor == Flavor::Core20);
+    if !html && sheet.flavor == Flavor::Core20 {
+        return Err(invalid("Core Rules 2.0 exports HTML only".into()));
+    }
+    let date = Timestamp::now_utc().format(sheet.flavor);
+    let text = if html {
+        sheet.to_html(&date)
+    } else {
+        sheet.to_txt(&date)
+    };
+    print!("{text}");
     Ok(())
 }
 
