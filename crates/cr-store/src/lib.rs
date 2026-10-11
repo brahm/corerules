@@ -4,6 +4,7 @@
 //! inconsistent case (`Database` from the installer, `DATABASE` on the CD,
 //! `index.chr` next to `INDEX.CHR`). Every lookup here ignores case.
 
+pub mod advance;
 pub mod catalog;
 pub mod choices;
 pub mod create;
