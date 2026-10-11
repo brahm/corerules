@@ -90,7 +90,10 @@ fn adding_experience_matches_the_original() {
             .unwrap();
         assert_eq!(levels(&rules, &kip), [5]);
         let rolls = &kip.data.unknown_0xc60[0];
-        assert_eq!(rolls[0], load(&golden, "kip_cleric_before.dat").data.unknown_0xc60[0][0]);
+        assert_eq!(
+            rolls[0],
+            load(&golden, "kip_cleric_before.dat").data.unknown_0xc60[0][0]
+        );
         assert!(rolls[1..5].iter().all(|r| (1..=8).contains(r)));
         assert_eq!(rolls[5], 0);
 

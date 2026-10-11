@@ -105,6 +105,8 @@ pub struct CharacterLists {
     pub spellbooks: Vec<Spellbook>,
     /// Classes to add, in order (see [`crate::dual`]); empty as read.
     pub new_classes: Vec<String>,
+    /// Experience and levels, when they changed.
+    pub advancement: Option<crate::advance::Advancement>,
 }
 
 /// An item in a bundle.
@@ -181,6 +183,7 @@ impl CharacterLists {
                     .sum()
             }),
             new_classes: Vec::new(),
+            advancement: None,
             spellbooks: d
                 .inventory
                 .iter()

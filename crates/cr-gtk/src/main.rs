@@ -12,6 +12,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use cr_formats::character::Character;
 use cr_store::Installation;
+use cr_store::advance::{AdvanceRules, Advancement};
 use cr_store::catalog::{Entry, Section};
 use cr_store::choices::{Caster, caster};
 use cr_store::dual::ClassChoice;
@@ -876,13 +877,37 @@ fn character_editor(
     appearance.add(&height);
     appearance.add(&weight);
     let (class_group, new_classes) = classes_group(classes, &choices.new_classes);
+    let advanced = Rc::new(RefCell::new(choices.character.clone()));
+    let level_listeners: Listeners = Rc::default();
+    let experience = experience_group(&choices.advance, &advanced, &level_listeners);
     let page = adw::PreferencesPage::new();
     page.add(&character);
     page.add(&class_group);
+    page.add(&experience);
     page.add(&appearance);
     page.add(&abilities);
 
     let editors = ListEditors::new(lists, &choices, classes);
+    // Memorized spells against the slots of the levels the character has
+    // now, as the original's memorize dialog counts them.
+    for (slot, _, list) in &editors.memorized {
+        let show = {
+            let (list, rules, advanced, slot) = (
+                list.clone(),
+                choices.advance.clone(),
+                advanced.clone(),
+                *slot,
+            );
+            move || {
+                let slots = rules.spell_slots(&advanced.borrow(), slot).ok().flatten();
+                list.group
+                    .set_description(slots_text(slots, &list.values()).as_deref());
+            }
+        };
+        show();
+        list.connect_changed(show.clone());
+        level_listeners.borrow_mut().push(Box::new(show));
+    }
     let stack = adw::ViewStack::new();
     stack.add_titled_with_icon(&page, Some("details"), "Details", "avatar-default-symbolic");
     stack.add_titled_with_icon(
@@ -945,6 +970,7 @@ fn character_editor(
         }
     });
     let skills_and_powers = details.skills_and_powers;
+    let original = choices.character.clone();
     save_button.connect_clicked({
         let dialog = dialog.clone();
         move |_| {
@@ -968,6 +994,10 @@ fn character_editor(
             };
             let mut lists = editors.lists();
             lists.new_classes = new_classes.borrow().clone();
+            let advancement = Advancement::between(&original, &advanced.borrow());
+            if advancement != Advancement::of(&original) {
+                lists.advancement = Some(advancement);
+            }
             match save(&details, &lists) {
                 Ok(()) => {
                     dialog.close();
@@ -1058,6 +1088,293 @@ fn classes_group(
     (group, added)
 }
 
+/// Experience, levels and hit points, with a button to give or take away
+/// experience as the original's Level... dialog does. Changes go to
+/// `advanced`, a copy of the character that the save compares with the
+/// character as read.
+fn experience_group(
+    rules: &Rc<AdvanceRules>,
+    advanced: &Rc<RefCell<Character>>,
+    listeners: &Listeners,
+) -> adw::PreferencesGroup {
+    let add = gtk::Button::builder()
+        .label("Add…")
+        .tooltip_text("Add or take away experience")
+        .valign(gtk::Align::Center)
+        .css_classes(["flat"])
+        .build();
+    let group = adw::PreferencesGroup::builder()
+        .title("Experience")
+        .header_suffix(&add)
+        .build();
+    let character = advanced.borrow().clone();
+    let class_rows: Vec<adw::ActionRow> = character
+        .data
+        .classes
+        .names
+        .iter()
+        .map(|name| {
+            let row = adw::ActionRow::builder()
+                .title(glib::markup_escape_text(name).as_str())
+                .build();
+            group.add(&row);
+            row
+        })
+        .collect();
+    let hit_points = gtk::Label::builder()
+        .css_classes(["numeric"])
+        .valign(gtk::Align::Center)
+        .build();
+    let hp_row = adw::ActionRow::builder().title("Hit Points").build();
+    hp_row.add_suffix(&hit_points);
+    group.add(&hp_row);
+    let points = character.skills_and_powers().then(|| {
+        let label = gtk::Label::builder()
+            .css_classes(["numeric"])
+            .valign(gtk::Align::Center)
+            .build();
+        let row = adw::ActionRow::builder()
+            .title("Character Points")
+            .subtitle("Unspent")
+            .build();
+        row.add_suffix(&label);
+        group.add(&row);
+        label
+    });
+    let refresh = Rc::new({
+        let (rules, advanced, listeners) = (rules.clone(), advanced.clone(), listeners.clone());
+        move || {
+            for listener in listeners.borrow().iter() {
+                listener();
+            }
+            let character = advanced.borrow();
+            match rules.levels(&character) {
+                Ok(levels) => {
+                    for (row, class) in class_rows.iter().zip(levels) {
+                        let mut text =
+                            format!("Level {} · {} XP", class.level, thousands(class.experience));
+                        match (class.next, class.limit) {
+                            (Some(next), _) => {
+                                text.push_str(&format!(" · next level at {}", thousands(next)))
+                            }
+                            (None, Some(limit)) => {
+                                text.push_str(&format!(" · level limit {limit}"))
+                            }
+                            (None, None) => {}
+                        }
+                        row.set_subtitle(&text);
+                    }
+                }
+                Err(e) => group_error(&class_rows, &e.to_string()),
+            }
+            hit_points.set_label(
+                &rules
+                    .hit_points(&character)
+                    .map_or_else(|_| "?".into(), |hp| hp.to_string()),
+            );
+            if let Some(points) = &points {
+                points.set_label(&character.data.unknown_0x1778[0].to_string());
+            }
+        }
+    });
+    refresh();
+    if rules.expansion() {
+        let limits = adw::ComboRow::builder()
+            .title("Level Limits")
+            .model(&gtk::StringList::new(&[
+                "None",
+                "Racial Limits",
+                "Racial Limits and Prime Requisite Bonus",
+            ]))
+            .selected(character.data.unknown_0x1dc4.min(2))
+            .build();
+        limits.connect_selected_notify({
+            let (advanced, refresh) = (advanced.clone(), refresh.clone());
+            move |limits| {
+                advanced.borrow_mut().data.unknown_0x1dc4 = limits.selected();
+                refresh();
+            }
+        });
+        group.add(&limits);
+    }
+    add.connect_clicked({
+        let (rules, advanced) = (rules.clone(), advanced.clone());
+        move |button| {
+            let refresh = refresh.clone();
+            experience_dialog(button, &rules, &advanced, move || refresh());
+        }
+    });
+    group
+}
+
+/// Callbacks run when the character's levels change.
+type Listeners = Rc<RefCell<Vec<Box<dyn Fn()>>>>;
+
+/// "1st: 2 of 3 · 2nd: 0 of 1" for the memorized spells (values are their
+/// spell levels) against the slots, marking levels over the limit.
+fn slots_text(slots: Option<[u32; 9]>, memorized: &[(u32, Option<u32>)]) -> Option<String> {
+    let slots = slots?;
+    let parts: Vec<String> = (1..=9u32)
+        .filter_map(|level| {
+            let used = memorized.iter().filter(|(l, _)| *l == level).count() as u32;
+            let have = slots[level as usize - 1];
+            if have == 0 && used == 0 {
+                return None;
+            }
+            let over = if used > have { " (too many)" } else { "" };
+            Some(format!("{}: {used} of {have}{over}", ordinal(level)))
+        })
+        .collect();
+    Some(if parts.is_empty() {
+        "No spell slots at this level".into()
+    } else {
+        parts.join(" · ")
+    })
+}
+
+fn group_error(rows: &[adw::ActionRow], message: &str) {
+    for row in rows {
+        row.set_subtitle(&glib::markup_escape_text(message));
+    }
+}
+
+/// 12345 as "12,345", as the original shows experience.
+fn thousands(n: u32) -> String {
+    let digits = n.to_string();
+    let mut out = String::new();
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
+            out.push(',');
+        }
+        out.push(c);
+    }
+    out
+}
+
+/// Asks how much experience to give to which classes, then gives it.
+fn experience_dialog(
+    parent: &impl IsA<gtk::Widget>,
+    rules: &Rc<AdvanceRules>,
+    advanced: &Rc<RefCell<Character>>,
+    changed: impl Fn() + 'static,
+) {
+    let character = advanced.borrow().clone();
+    let names = character.data.classes.names.clone();
+    let amount = adw::SpinRow::builder()
+        .title("Experience")
+        .subtitle("Negative to take experience away")
+        .numeric(true)
+        .adjustment(&gtk::Adjustment::new(
+            1000.0,
+            -10_000_000.0,
+            10_000_000.0,
+            100.0,
+            1000.0,
+            0.0,
+        ))
+        .build();
+    let mut targets: Vec<String> = names.clone();
+    if names.len() > 1 {
+        targets.push("All Classes".into());
+        targets.push("Split Between Classes".into());
+    }
+    let target = adw::ComboRow::builder()
+        .title("Give To")
+        .model(&gtk::StringList::new(
+            &targets.iter().map(String::as_str).collect::<Vec<_>>(),
+        ))
+        .build();
+    if names.len() > 1 {
+        target.set_selected(names.len() as u32 + 1);
+    }
+    let prime = adw::SwitchRow::builder()
+        .title("Prime Requisite Bonus")
+        .subtitle("10% more for a class whose prime requisites are all 16 or more")
+        .active(true)
+        .build();
+    let points = adw::SpinRow::builder()
+        .title("Character Points per Level")
+        .numeric(true)
+        .adjustment(&gtk::Adjustment::new(3.0, 0.0, 10.0, 1.0, 1.0, 0.0))
+        .visible(character.skills_and_powers())
+        .build();
+    let group = adw::PreferencesGroup::builder()
+        .description("Each level gained rolls its hit points. Levels lost keep their rolls, as in the original.")
+        .build();
+    group.add(&amount);
+    group.add(&target);
+    group.add(&prime);
+    group.add(&points);
+    let page = adw::PreferencesPage::new();
+    page.add(&group);
+    let cancel = gtk::Button::with_mnemonic("_Cancel");
+    let give = gtk::Button::builder()
+        .label("_Add")
+        .use_underline(true)
+        .css_classes(["suggested-action"])
+        .build();
+    let header = adw::HeaderBar::builder()
+        .show_start_title_buttons(false)
+        .show_end_title_buttons(false)
+        .build();
+    header.pack_start(&cancel);
+    header.pack_end(&give);
+    let error = adw::Banner::new("");
+    let view = adw::ToolbarView::new();
+    view.add_top_bar(&header);
+    view.add_top_bar(&error);
+    view.set_content(Some(&page));
+    let dialog = adw::Dialog::builder()
+        .title("Add Experience")
+        .content_width(420)
+        .child(&view)
+        .default_widget(&give)
+        .build();
+    cancel.connect_clicked({
+        let dialog = dialog.clone();
+        move |_| {
+            dialog.close();
+        }
+    });
+    give.connect_clicked({
+        let (dialog, rules, advanced) = (dialog.clone(), rules.clone(), advanced.clone());
+        move |_| {
+            let n = names.len();
+            let amount = amount.value() as i64;
+            let selected = target.selected() as usize;
+            let (classes, amount) = match selected {
+                g if g < n => (vec![g], amount),
+                g if g == n => ((0..n).collect(), amount),
+                _ => ((0..n).collect(), amount / n as i64),
+            };
+            let mut dice = cr_store::create::Dice::default();
+            let mut character = advanced.borrow().clone();
+            let result = classes.into_iter().rev().try_for_each(|g| {
+                rules.add_experience(
+                    &mut character,
+                    g,
+                    amount,
+                    prime.is_active(),
+                    points.value() as u32,
+                    &mut dice,
+                )
+            });
+            match result {
+                Ok(()) => {
+                    *advanced.borrow_mut() = character;
+                    changed();
+                    dialog.close();
+                }
+                Err(e) => {
+                    error.set_title(&glib::markup_escape_text(&e.to_string()));
+                    error.set_revealed(true);
+                }
+            }
+        }
+    });
+    dialog.present(Some(parent));
+}
+
 /// Each ability with its two Skills & Powers subabilities.
 const ABILITY_NAMES: [[&str; 3]; 6] = [
     ["Strength", "Stamina", "Muscle"],
@@ -1081,6 +1398,9 @@ struct Choices {
     class_ids: HashMap<String, i32>,
     /// Classes the character may add, or why none.
     new_classes: ClassChoice,
+    advance: Rc<AdvanceRules>,
+    /// The character as read, for experience and levels.
+    character: Character,
 }
 
 impl Choices {
@@ -1104,6 +1424,8 @@ impl Choices {
             priest_levels: Rc::new(install.spell_levels(false)?),
             class_ids: install.class_ids()?,
             new_classes: install.class_table()?.choices(character),
+            advance: Rc::new(install.advance_rules()?),
+            character: character.clone(),
         })
     }
 }
@@ -1395,6 +1717,7 @@ impl ListEditors {
             equipment,
             coins: std::array::from_fn(|c| self.coins[c].value() as u32),
             new_classes: Vec::new(),
+            advancement: None,
             spellbooks: self
                 .spellbooks
                 .iter()

@@ -22,7 +22,11 @@ const USAGE: &str = "usage:
                             service, transport; book+=SPELL:PAGES (first
                             spellbook); memorized+=CLASS:LEVEL:SPELL and
                             priest-memorized+=...; coins cp= sp= ep= gp= pp=;
-                            class+=NAME (humans: dual-class)
+                            class+=NAME (humans: dual-class);
+                            xp=CLASS:AMOUNT (CLASS 0-4, all or split;
+                            AMOUNT may be negative; prime requisite bonus
+                            applied); limits=0|1|2 (Expansion level
+                            limits: none, racial, with prime bonuses)
 
 Without INSTALL_DIR, the installation in the Wine prefix is used.";
 
@@ -110,6 +114,10 @@ fn cmd_edit(install: &Installation, args: &[String]) -> cr_store::Result<()> {
     let character = install.character(file)?;
     let mut details = CharacterDetails::of(&character);
     let mut lists = CharacterLists::of(&character);
+    // Experience goes to a copy, whose changes are saved with the lists.
+    let mut advanced = character.clone();
+    let mut rules = None;
+    let mut dice = cr_store::create::Dice::default();
     for change in changes {
         if let Some((list, value, add)) = list_change(change) {
             const BUNDLES: [&str; 9] = [
@@ -203,6 +211,42 @@ fn cmd_edit(install: &Installation, args: &[String]) -> cr_store::Result<()> {
             .position(|c| *c == field)
         {
             lists.coins[c] = number()?;
+            continue;
+        }
+        if field == "xp" || field == "limits" {
+            if rules.is_none() {
+                rules = Some(install.advance_rules()?);
+            }
+            let rules = rules.as_ref().unwrap();
+            if field == "limits" {
+                advanced.data.unknown_0x1dc4 = number()?.min(2);
+            } else {
+                let (class, amount) = value
+                    .split_once(':')
+                    .ok_or_else(|| invalid("xp takes CLASS:AMOUNT".into()))?;
+                let amount: i64 = amount
+                    .parse()
+                    .map_err(|_| invalid(format!("{amount} is not a number")))?;
+                let n = advanced.data.classes.names.len();
+                let (classes, amount) = match class {
+                    "all" => ((0..n).collect::<Vec<_>>(), amount),
+                    "split" => ((0..n).collect(), amount / n.max(1) as i64),
+                    _ => {
+                        let g: usize = class
+                            .parse()
+                            .ok()
+                            .filter(|&g| g < n)
+                            .ok_or_else(|| invalid(format!("no class {class}")))?;
+                        (vec![g], amount)
+                    }
+                };
+                for g in classes.into_iter().rev() {
+                    rules.add_experience(&mut advanced, g, amount, true, 3, &mut dice)?;
+                }
+            }
+            lists.advancement = Some(cr_store::advance::Advancement::between(
+                &character, &advanced,
+            ));
             continue;
         }
         match field {

@@ -138,7 +138,22 @@ impl Installation {
                     table.add(&mut character, class)?;
                 }
             }
+            if let Some(advancement) = &lists.advancement {
+                advancement.apply(&mut character);
+            }
         }
+        // The index entry lists the levels joined with "/".
+        let levels = match lists {
+            Some(l) if !l.new_classes.is_empty() || l.advancement.is_some() => Some(
+                self.advance_rules()?
+                    .levels(&character)?
+                    .iter()
+                    .map(|c| c.level.to_string())
+                    .collect::<Vec<_>>()
+                    .join("/"),
+            ),
+            _ => None,
+        };
         let format = |source| Error::Format {
             path: file.into(),
             source,
@@ -155,15 +170,14 @@ impl Installation {
             .find(|e| e.file.eq_ignore_ascii_case(file))
             .ok_or_else(|| Error::Invalid(format!("{file} is not in the character list")))?;
         entry.name.clone_from(&details.name);
-        let added = lists.map_or(0, |l| l.new_classes.len());
+        let added = lists.is_some_and(|l| !l.new_classes.is_empty());
         for line in &mut entry.details {
             if line.starts_with(PLAYER_LINE) {
                 *line = format!("{PLAYER_LINE}{}", details.player);
-            } else if added > 0 && line.starts_with(CLASS_LINE) {
+            } else if added && line.starts_with(CLASS_LINE) {
                 *line = format!("{CLASS_LINE}{}", character.data.class_title);
-            } else if added > 0 && line.starts_with(LEVEL_LINE) {
-                // A new class starts at level 1.
-                line.push_str(&"/1".repeat(added));
+            } else if let Some(levels) = levels.as_ref().filter(|_| line.starts_with(LEVEL_LINE)) {
+                *line = format!("{LEVEL_LINE}{levels}");
             }
         }
         let index_bytes = index.to_bytes().map_err(format)?;

@@ -296,6 +296,11 @@ impl AdvanceRules {
             .ok_or_else(|| Error::Invalid(format!("{name} is not a class in the databases")))
     }
 
+    /// Whether the installation has the Expansion's databases.
+    pub fn expansion(&self) -> bool {
+        self.expansion
+    }
+
     pub fn dual_classed(&self, character: &Character) -> bool {
         character.data.classes.names.len() >= 2 && self.dual_races.contains(&character.data.race)
     }
@@ -390,7 +395,11 @@ impl AdvanceRules {
     ) -> Result<()> {
         let mut amount = amount;
         if prime_bonus {
-            let percent = if self.prime_bonus(character, g)? { 110 } else { 100 };
+            let percent = if self.prime_bonus(character, g)? {
+                110
+            } else {
+                100
+            };
             // C integer division truncates toward zero, as here.
             amount = amount * percent / 100;
         }
@@ -510,9 +519,7 @@ impl AdvanceRules {
         }
         let level = self.level_of(character, g)? as usize;
         let abilities = &character.data.class_slots[g].abilities;
-        let alternative = abilities
-            .iter()
-            .any(|a| self.alternative_slots.contains(a))
+        let alternative = abilities.iter().any(|a| self.alternative_slots.contains(a))
             || class.slots.iter().flatten().all(|&s| s <= 0);
         let table = if alternative {
             &class.alternative_slots
@@ -560,5 +567,51 @@ pub fn max_spell_level(int: i32) -> u32 {
         14..=15 => 7,
         16..=17 => 8,
         _ => 9,
+    }
+}
+
+/// What advancing a character changed, to carry from an editor to the
+/// save: experience, the rolls of new levels, PSPs, character points
+/// gained or lost, and the level limits mode.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Advancement {
+    pub experience: [u32; 5],
+    pub rolls: [[u32; 100]; 5],
+    pub psionic: [u32; 100],
+    /// Character points gained (or lost) with the levels.
+    pub points: i64,
+    /// Expansion only: 0 no limits, 1 racial limits, 2 with prime
+    /// requisite bonuses.
+    pub level_limits: u32,
+}
+
+impl Advancement {
+    pub fn of(character: &Character) -> Self {
+        let d = &character.data;
+        Self {
+            experience: d.unknown_0x1618,
+            rolls: d.unknown_0xc60,
+            psionic: d.unknown_0x1430,
+            points: 0,
+            level_limits: d.unknown_0x1dc4,
+        }
+    }
+
+    /// The change from `before` to `after`.
+    pub fn between(before: &Character, after: &Character) -> Self {
+        Self {
+            points: i64::from(after.data.unknown_0x1778[0])
+                - i64::from(before.data.unknown_0x1778[0]),
+            ..Self::of(after)
+        }
+    }
+
+    pub fn apply(&self, character: &mut Character) {
+        let d = &mut character.data;
+        d.unknown_0x1618 = self.experience;
+        d.unknown_0xc60 = self.rolls;
+        d.unknown_0x1430 = self.psionic;
+        d.unknown_0x1dc4 = self.level_limits;
+        d.unknown_0x1778[0] = (i64::from(d.unknown_0x1778[0]) + self.points).max(0) as u32;
     }
 }
