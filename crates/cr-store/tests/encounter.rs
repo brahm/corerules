@@ -836,6 +836,53 @@ fn golden_generations() {
     }
 }
 
+/// "T3 Bandits" was made in the session of "T3 Orc Wandering" (seed 628)
+/// after 1073 draws: the NPC generator replays its packages.
+#[test]
+fn golden_npc_generation() {
+    let (Some(dir), Some(install)) = (golden(), std::env::var_os("CORERULES_DIR")) else {
+        return;
+    };
+    let install = Installation::open(Path::new(&install)).unwrap();
+    let rules = install.encounter_rules().unwrap();
+    if rules.flavor() != Flavor::Expansion {
+        return;
+    }
+    let theirs = saved(
+        &dir.join("exp/EncountU_03_t3_orc_bandits.dat"),
+        "T3 Bandits",
+    );
+    let mut rand = Rand::seeded(628);
+    (0..1073).for_each(|_| {
+        rand.rand();
+    });
+    let g = rules.generate("Human, Bandit/Brigand", &mut rand).unwrap();
+    assert!(g.pending_npcs.is_empty());
+    // Only the note that rogue skill points are not simulated.
+    assert!(
+        g.messages
+            .iter()
+            .all(|m| m.starts_with("Rogue skill points")),
+        "{:?}",
+        g.messages
+    );
+    let ours = &g.encounter.npcs;
+    assert_eq!(ours.len(), theirs.npcs.len());
+    for (o, t) in ours.iter().zip(&theirs.npcs) {
+        assert_eq!(o.count, t.count);
+        assert_eq!(o.individual_hit_points(), t.individual_hit_points());
+        let (o, t) = (&o.character.data, &t.character.data);
+        assert_eq!(
+            (&o.name, &o.class_title, &o.kit, &o.alignment),
+            (&t.name, &t.class_title, &t.kit, &t.alignment)
+        );
+        assert_eq!((o.strength, o.abilities), (t.strength, t.abilities));
+        assert_eq!(o.weapon_proficiencies, t.weapon_proficiencies);
+        assert_eq!(o.nonweapon_proficiencies, t.nonweapon_proficiencies);
+        assert_eq!(o.inventory, t.inventory);
+    }
+}
+
 /// The NPC packages of "T3 Bandits" as the Expansion's Encounter dialog
 /// showed them (`screens/enc_dialog_bandit_npcs.png`): the list's names
 /// and Monster XP 1410, a Thief 1, 3 and 5 being worth 15, 65 and 175.

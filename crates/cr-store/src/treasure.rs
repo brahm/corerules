@@ -89,6 +89,11 @@ impl Rand {
         ((self.state >> 16) & 0x7fff) as i32
     }
 
+    /// The generator's state (what `srand` set, advanced by every draw).
+    pub fn state(&self) -> u32 {
+        self.state
+    }
+
     /// How many values have been drawn since seeding.
     pub fn calls(&self) -> u64 {
         self.calls

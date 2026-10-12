@@ -3,9 +3,11 @@
 
 use cr_formats::monster::Monster;
 
+use cr_formats::parts::PartId;
+
 use super::{
     Dice, Encounter, EncounterRules, ItemLine, MonsterLine, MonsterPackage, NpcDescription,
-    NpcLine, Reference, Template, coin_name,
+    NpcLine, NpcPackage, Reference, Template, coin_name,
 };
 use crate::treasure::{Bundle, Coin, Item, Rand};
 use crate::{Error, Result};
@@ -14,14 +16,20 @@ use crate::{Error, Result};
 #[derive(Debug, Clone, PartialEq)]
 pub struct Generated {
     pub encounter: Encounter,
-    /// NPC packages the NPC generator would have made, in the order they
-    /// would be in the encounter. Their counts are exact up to the first
-    /// one; after it the original draws for the character and its hit
-    /// points, which are not made here.
+    /// NPC packages the NPC generator could not make (see
+    /// [`messages`](Self::messages)), in the order they would be in the
+    /// encounter; empty when every NPC line was generated. The stream
+    /// after the first one no longer follows the original's.
     pub pending_npcs: Vec<PendingNpc>,
     /// The original's message boxes ("Unable to find the Monster in the
-    /// Database: …").
+    /// Database: …"), and where the NPC generator took a fallback.
     pub messages: Vec<String>,
+}
+
+/// An NPC package made, or one left to the caller.
+enum NpcResult {
+    Made(Box<NpcPackage>),
+    Pending(PendingNpc),
 }
 
 /// An NPC package still to be made by the NPC generator.
@@ -89,8 +97,10 @@ impl EncounterRules {
         run.encounter.lair_treasure = template.lair_treasure;
         run.treasure();
         run.encounter.traps = template.traps.clone();
+        // Every NPC line makes a package object in both passes.
         for dependent in [false, true] {
             for (i, line) in template.npcs.iter().enumerate() {
+                run.npc_package_object();
                 if line.dependent == dependent {
                     run.npc_line(i, line);
                 }
@@ -417,23 +427,44 @@ impl Run<'_> {
         self.encounter.treasure = bundle;
     }
 
-    /// One NPC line (0x644e7d). The packages the NPC generator would make
-    /// are recorded as pending; the draws it makes are not.
+    /// The package object every NPC line makes in each pass
+    /// (`CEncounterNPCPackageOb` 0x63b961: the base document constructor,
+    /// one draw).
+    fn npc_package_object(&mut self) {
+        self.between(0, 3);
+    }
+
+    /// One NPC line (0x644e7d) in its pass.
     fn npc_line(&mut self, index: usize, line: &NpcLine) {
+        if line.dependent {
+            // 0x646530 / 0x645d68 / 0x64616b are not decoded: the counts
+            // follow the monster lines' rules.
+            let m = "Dependent NPC lines (0x646530, 0x645d68, 0x64616b) are not decoded; their numbers follow the monster lines' rules.";
+            if !self.messages.iter().any(|x| x == m) {
+                self.messages.push(m.into());
+            }
+        }
         let r = self.or_roll(line.or);
         let main = if r < 51 {
             self.npc_primary(index, line)
         } else {
             self.npc_second(index, line, true)
         };
-        if line.and
-            && main.is_some()
-            && let Some(p) = self.npc_second(index, line, false)
-        {
-            self.pending.push(p);
+        if line.and && main.is_some() {
+            self.npc_package_object();
+            if let Some(p) = self.npc_second(index, line, false) {
+                self.push_npc(p);
+            }
         }
         if let Some(p) = main {
-            self.pending.push(p);
+            self.push_npc(p);
+        }
+    }
+
+    fn push_npc(&mut self, p: NpcResult) {
+        match p {
+            NpcResult::Made(p) => self.encounter.npcs.push(*p),
+            NpcResult::Pending(p) => self.pending.push(p),
         }
     }
 
@@ -445,9 +476,61 @@ impl Run<'_> {
         Some(self.groups(&line.reference, line.per, line.beyond)?.max(1))
     }
 
-    /// Primary (0x645760) and dependent primary (0x646530): at least one
-    /// NPC, no No. Appearing fallback.
-    fn npc_primary(&mut self, index: usize, line: &NpcLine) -> Option<PendingNpc> {
+    /// The generator for one NPC description (0x65351a); `count` is rolled
+    /// once the character is made. Without the generator, or when it
+    /// cannot make the NPC, the line comes back pending.
+    fn make_npc(
+        &mut self,
+        index: usize,
+        npc: &NpcDescription,
+        count: impl FnOnce(&mut Rand) -> i32,
+    ) -> NpcResult {
+        let made = match &self.rules.npc {
+            Ok(rules) => rules
+                .encounter_npc(self.rand, &npc.race, &npc.classes, count)
+                .map_err(|e| (e.to_string(), None)),
+            Err(e) => Err((
+                format!("The NPC generator is not available: {e}"),
+                Some(count),
+            )),
+        };
+        match made {
+            Ok(made) => {
+                for m in made.messages {
+                    if !self.messages.contains(&m) {
+                        self.messages.push(m);
+                    }
+                }
+                NpcResult::Made(Box::new(NpcPackage {
+                    count: made.count,
+                    character: made.character,
+                    hit_points: made
+                        .hit_points
+                        .into_iter()
+                        .map(|h| PartId {
+                            name: String::new(),
+                            part_type: h,
+                        })
+                        .collect(),
+                }))
+            }
+            Err((message, count)) => {
+                if !self.messages.contains(&message) {
+                    self.messages.push(message);
+                }
+                let n = count.map_or(1, |c| c(self.rand)).max(1);
+                NpcResult::Pending(PendingNpc {
+                    line: index,
+                    npc: npc.clone(),
+                    count: n,
+                })
+            }
+        }
+    }
+
+    /// Primary (0x645760; dependent 0x646530): at least one NPC, no No.
+    /// Appearing fallback; a list of two or more NPCs splits the number.
+    fn npc_primary(&mut self, index: usize, line: &NpcLine) -> Option<NpcResult> {
         if self.fails(line.percent) {
             return None;
         }
@@ -458,11 +541,7 @@ impl Run<'_> {
         }
         let n = n.max(1);
         if line.list.len() < 2 {
-            return Some(PendingNpc {
-                line: index,
-                npc: line.npc.clone(),
-                count: n,
-            });
+            return Some(self.make_npc(index, &line.npc, move |_| n));
         }
         let mut tally = vec![0i32; line.list.len()];
         let last = line.list.len() as i32 - 1;
@@ -475,37 +554,34 @@ impl Run<'_> {
         let mut first = None;
         for (npc, &count) in line.list.iter().zip(&tally) {
             if count > 0 {
-                let p = PendingNpc {
-                    line: index,
-                    npc: npc.clone(),
-                    count,
-                };
                 if first.is_none() {
-                    first = Some(p);
+                    first = Some(self.make_npc(index, npc, move |_| count));
                 } else {
-                    self.pending.push(p);
+                    self.npc_package_object();
+                    let p = self.make_npc(index, npc, move |_| count);
+                    self.push_npc(p);
                 }
             }
         }
         first
     }
 
-    /// "or" (0x6455a7, 0x645d68) and "and" (0x64542c, 0x64616b): the
-    /// second NPC; the original makes the character before rolling the
-    /// number.
-    fn npc_second(&mut self, index: usize, line: &NpcLine, or: bool) -> Option<PendingNpc> {
+    /// "or" (0x6455a7; dependent 0x645d68) and "and" (0x64542c; dependent
+    /// 0x64616b): the second NPC; the character is made before the number
+    /// is rolled.
+    fn npc_second(&mut self, index: usize, line: &NpcLine, or: bool) -> Option<NpcResult> {
         if or && self.fails(line.percent) {
             return None;
         }
         let k = self.npc_groups(line)?;
-        let mut n = 0i32;
-        for _ in 0..k {
-            n = n.wrapping_add(self.dice(line.second_dice));
-        }
-        Some(PendingNpc {
-            line: index,
-            npc: line.second_npc.clone(),
-            count: n.max(1),
-        })
+        let rules = self.rules;
+        let dice = line.second_dice;
+        Some(self.make_npc(index, &line.second_npc, move |rand| {
+            let mut n = 0i32;
+            for _ in 0..k {
+                n = n.wrapping_add(rules.roll(rand, dice));
+            }
+            n.max(1)
+        }))
     }
 }

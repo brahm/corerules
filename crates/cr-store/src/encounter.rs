@@ -7,11 +7,11 @@
 //! Generation reproduces the originals for a given seed: it draws from the
 //! MSVC `rand()` ([`Rand`]) in the same order, quirks included, and rolls
 //! the treasure with the treasure engine from the same stream. NPC lines
-//! of a template need the NPC generator, which is not ported yet: they
-//! come back as [`PendingNpc`]s instead of NPC packages, and the rolls the
-//! generator would make are missing from the stream (the NPCs are the last
-//! step, so everything else matches). Addresses are the Expansion's unless
-//! marked "2.0".
+//! of a template run the NPC generator ([`crate::npc`]) from the same
+//! stream too; only when it cannot make an NPC (its data failed to load,
+//! or the line names an unknown race or class) does the line come back as
+//! a [`PendingNpc`] instead of an NPC package. Addresses are the
+//! Expansion's unless marked "2.0".
 //!
 //! ```no_run
 //! # fn main() -> cr_store::Result<()> {
@@ -49,6 +49,7 @@ pub use tables::{
 };
 pub use text::{dice_text, hit_dice_text, hit_point_text, npc_line, stat_line};
 
+use crate::npc::NpcRules;
 use crate::sheet::SheetRules;
 use crate::treasure::TreasureRules;
 use crate::{Error, Installation, Result};
@@ -520,6 +521,9 @@ pub struct EncounterRules {
     /// Levels, armor class and the rest an NPC's experience value and
     /// title need.
     sheet: Arc<SheetRules>,
+    /// The NPC generator for the template's NPC lines, or why it could
+    /// not be loaded.
+    npc: std::result::Result<Arc<NpcRules>, String>,
 }
 
 const TEMPLATES: [&str; 2] = ["Database/EncPlat.dat", "UserDbas/EncPlatU.dat"];
@@ -590,6 +594,7 @@ impl Installation {
             monsters,
             treasure,
             sheet: Arc::new(self.sheet_rules()?),
+            npc: self.npc_rules().map(Arc::new).map_err(|e| e.to_string()),
         })
     }
 

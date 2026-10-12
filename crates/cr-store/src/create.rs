@@ -71,7 +71,7 @@ pub const STANDARD_PACK: (&str, [(&str, u32); 4]) = (
 );
 
 /// The `CCharacterMiniOb` schema both programs write.
-const INDEX_SCHEMA: u16 = 95;
+pub(crate) const INDEX_SCHEMA: u16 = 95;
 
 /// Wizards get their spellbook for free.
 pub const SPELLBOOK: &str = "Spellbook";
@@ -439,7 +439,7 @@ fn dexterity_skill_adjustments(dexterity: u32) -> [i32; 5] {
 /// The rogue skill a class ability gives: "Thief, Pick pockets* (10)" is
 /// pick pockets. The star marks the skills that take points; a ranger's
 /// "Hide in shadows (5)" is not one.
-fn rogue_skill_of(ability: &str) -> Option<usize> {
+pub(crate) fn rogue_skill_of(ability: &str) -> Option<usize> {
     let name = ability.split_once(", ").map_or(ability, |(_, n)| n);
     let (name, _) = name.split_once('*')?;
     let name = name.trim();
@@ -1024,7 +1024,7 @@ fn helper_classes(object: &Object) -> Vec<String> {
 
 /// An eight-digit name like the original's (`92385619.dat`) that no
 /// character uses yet.
-fn new_file_name(chars: &Path, index: &CharacterIndex) -> String {
+pub(crate) fn new_file_name(chars: &Path, index: &CharacterIndex) -> String {
     let seconds = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_secs());

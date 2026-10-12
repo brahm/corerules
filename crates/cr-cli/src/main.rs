@@ -60,6 +60,16 @@ const USAGE: &str = "usage:
                             with the candidates of its filter
   cr encounter INSTALL_DIR [--seed N] --roll TABLE
                             Roll and Generate on a 2-20 table
+  cr npc INSTALL_DIR [--seed N] [--race NAME] [--class NAME [--level N]]...
+         [--count N] [--po] [--save [--party NAME]]
+                            make NPCs as Create NPC does (a race, by default
+                            Human, and classes with their levels, default
+                            1) and print a summary of each; without --class,
+                            as Create Multiple NPCs does (a random race
+                            unless --race, classes from AllowedU.dat, every
+                            level --level, default 1); --count makes that
+                            many (default 1), --po uses Player's Option,
+                            --save adds them to Chars/ as NPCs
 
 Without INSTALL_DIR, the installation in the Wine prefix is used.";
 
@@ -117,6 +127,7 @@ fn main() -> ExitCode {
         "sheet" => cmd_sheet(&install, &args[2..]),
         "treasure" => cmd_treasure(&install, &args[2..]),
         "encounter" => cmd_encounter(&install, &args[2..]),
+        "npc" => cmd_npc(&install, &args[2..]),
         _ => {
             eprintln!("{USAGE}");
             Ok(())
@@ -406,7 +417,7 @@ fn cmd_encounter(install: &Installation, args: &[String]) -> cr_store::Result<()
         print(rules, &encounter);
         if !generated.pending_npcs.is_empty() {
             outln!();
-            outln!("NPCs to make with the NPC generator (not ported yet):");
+            outln!("NPCs the NPC generator could not make:");
             for npc in &generated.pending_npcs {
                 let classes: Vec<String> = npc
                     .npc
@@ -717,4 +728,185 @@ fn list_change(change: &str) -> Option<(&str, &str, bool)> {
     } else {
         left.strip_suffix('-').map(|list| (list, value, false))
     }
+}
+
+fn cmd_npc(install: &Installation, args: &[String]) -> cr_store::Result<()> {
+    use cr_store::npc::{GroupOptions, Npc, NpcOptions, Rand};
+    let invalid = |message: String| cr_store::Error::Invalid(message);
+    let mut seed = None;
+    let mut race = None;
+    let mut classes: Vec<(String, i32)> = Vec::new();
+    let mut level = None;
+    let mut count = 1i32;
+    let mut po = false;
+    let mut save = false;
+    let mut party = String::new();
+    let mut args = args.iter();
+    while let Some(arg) = args.next() {
+        let mut value = |name: &str| {
+            args.next()
+                .cloned()
+                .ok_or_else(|| invalid(format!("{name} needs a value")))
+        };
+        let number = |text: String| {
+            text.parse::<i32>()
+                .map_err(|_| invalid(format!("{text} is not a number")))
+        };
+        match arg.as_str() {
+            "--seed" => {
+                let text = value("--seed")?;
+                seed = Some(
+                    text.parse::<u32>()
+                        .map_err(|_| invalid(format!("{text} is not a number")))?,
+                );
+            }
+            "--race" => race = Some(value("--race")?),
+            "--class" => classes.push((value("--class")?, 1)),
+            "--level" => {
+                let n = number(value("--level")?)?;
+                match classes.last_mut() {
+                    Some(c) => c.1 = n,
+                    None => level = Some(n),
+                }
+            }
+            "--count" => count = number(value("--count")?)?,
+            "--po" => po = true,
+            "--save" => save = true,
+            "--party" => party = value("--party")?,
+            _ => return Err(invalid(format!("unexpected argument {arg}"))),
+        }
+    }
+    let rules = install.npc_rules()?;
+    let seed = seed.unwrap_or_else(Rand::clock_seed);
+    eprintln!("seed {seed}");
+    let mut rand = Rand::seeded(seed);
+    let npcs: Vec<Npc> = if classes.is_empty() {
+        let l = level.unwrap_or(1);
+        rules.generate_group(
+            &mut rand,
+            &GroupOptions {
+                number: (count, count),
+                race,
+                levels: [(l, l); 5],
+                players_option: po,
+            },
+        )?
+    } else {
+        let race = race.unwrap_or_else(|| "Human".into());
+        let options = NpcOptions {
+            players_option: po,
+            abilities: None,
+        };
+        (0..count.max(1))
+            .map(|_| rules.generate(&mut rand, &race, &classes, &options))
+            .collect::<cr_store::Result<_>>()?
+    };
+    for (i, npc) in npcs.iter().enumerate() {
+        if i > 0 {
+            outln!();
+        }
+        print_npc(npc);
+        for m in &npc.messages {
+            eprintln!("{}: {m}", npc.character.data.name);
+        }
+        if save {
+            let file = install.save_npc(npc, &party)?;
+            outln!("Saved as Chars/{file}");
+        }
+    }
+    Ok(())
+}
+
+fn print_npc(npc: &cr_store::npc::Npc) {
+    let d = &npc.character.data;
+    let levels: Vec<String> = npc.classes.iter().map(|(_, l)| l.to_string()).collect();
+    outln!("{}", d.name);
+    outln!(
+        "{} ({}), {} {}, {}",
+        d.race,
+        d.subrace,
+        d.class_title,
+        levels.join("/"),
+        if d.unknown_0x163c == 0 {
+            "female"
+        } else {
+            "male"
+        }
+    );
+    outln!("Kit: {}  Alignment: {}", d.kit, d.alignment);
+    outln!(
+        "Social class: {}  Background: {}",
+        d.social_class,
+        d.unknown_0x90
+    );
+    let strength = if d.exceptional_strength > 0 {
+        format!("{}/{:02}", d.strength[0], d.exceptional_strength % 100)
+    } else {
+        d.strength[0].to_string()
+    };
+    let a = &d.abilities;
+    outln!(
+        "Str {strength} Dex {} Con {} Int {} Wis {} Cha {}",
+        a[0][0],
+        a[1][0],
+        a[2][0],
+        a[3][0],
+        a[4][0]
+    );
+    outln!(
+        "Hit points: {}  Height {} in, weight {} lb, age {}",
+        npc.hit_points,
+        d.height,
+        d.weight,
+        d.age
+    );
+    let list = |title: &str, items: &[String]| {
+        if !items.is_empty() {
+            outln!("{title}: {}", items.join(", "));
+        }
+    };
+    let specialized: Vec<String> = d
+        .weapon_proficiencies
+        .iter()
+        .map(|w| {
+            if d.unknown_0xac[3].contains(w) {
+                format!("{w} (specialized)")
+            } else {
+                w.clone()
+            }
+        })
+        .collect();
+    list("Weapons", &specialized);
+    list("Nonweapon proficiencies", &d.nonweapon_proficiencies);
+    list("Languages", &d.languages);
+    list("Wizard spells", &d.spells);
+    list("Priest spells", &d.priest_spells);
+    let memorized: Vec<String> = d
+        .unknown_0x3c8
+        .iter()
+        .flat_map(|c| c.iter())
+        .flat_map(|(w, p)| w.iter().chain(p))
+        .cloned()
+        .collect();
+    list("Memorized", &memorized);
+    let powers: Vec<String> = d.unknown_0x196c[1]
+        .iter()
+        .chain(&d.unknown_0x196c[2])
+        .cloned()
+        .collect();
+    list("Psionic disciplines", &d.unknown_0x196c[0]);
+    list("Psionic powers", &powers);
+    let items: Vec<String> = d
+        .inventory
+        .iter()
+        .flat_map(|b| &b.items)
+        .map(|i| {
+            if i.quantity > 1 {
+                format!("{} x{}", i.name, i.quantity)
+            } else {
+                i.name.clone()
+            }
+        })
+        .collect();
+    list("Equipment", &items);
 }
