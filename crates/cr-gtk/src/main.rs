@@ -4,6 +4,7 @@
 mod create;
 mod encounter;
 mod lists;
+mod npc;
 mod sheet;
 mod treasure;
 
@@ -23,6 +24,7 @@ use cr_store::edit::{ABILITY_RANGE, CharacterDetails};
 use cr_store::lists::{
     BUNDLE_NAMES, COINS, CharacterLists, ITEM_TYPES, Item, MONEY, Memorized, Spellbook,
 };
+use cr_store::npc::NpcRules;
 use cr_store::treasure::Rand;
 use gtk::{gio, glib};
 use lists::{ListEditor, RowList, RowSpec, pick};
@@ -62,6 +64,8 @@ struct Window {
     /// One random number stream for the session, as the originals seed
     /// theirs once at start.
     rand: Rc<RefCell<Rand>>,
+    /// The NPC generator of the open installation, loaded on first use.
+    npc_rules: Rc<RefCell<Option<Rc<NpcRules>>>>,
 }
 
 impl Window {
@@ -88,6 +92,7 @@ impl Window {
             browser: Rc::new(browser),
             install: Rc::default(),
             rand: Rc::new(RefCell::new(Rand::from_clock())),
+            npc_rules: Rc::default(),
         };
         this.browser.sheet_button.connect_clicked({
             let this = this.clone();
@@ -110,6 +115,14 @@ impl Window {
                 } else {
                     this.edit_character(&key)
                 }
+            }
+        });
+
+        this.browser.convert_button.connect_clicked({
+            let this = this.clone();
+            move |_| {
+                let key = this.browser.current_key.borrow().clone();
+                this.convert_to_character(&key);
             }
         });
 
@@ -138,6 +151,18 @@ impl Window {
                 move |_, _, _| this.new_character()
             })
             .build();
+        let new_npc = gio::ActionEntry::builder("new-npc")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| npc::new_npc(&Rc::new(this.clone()))
+            })
+            .build();
+        let new_npc_group = gio::ActionEntry::builder("new-npc-group")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| npc::new_group(&Rc::new(this.clone()))
+            })
+            .build();
         let roll_treasure = gio::ActionEntry::builder("roll-treasure")
             .activate({
                 let this = this.clone();
@@ -159,12 +184,15 @@ impl Window {
         this.window.add_action_entries([
             open,
             new_character,
+            new_npc,
+            new_npc_group,
             roll_treasure,
             new_encounter,
             new_table,
         ]);
         app.set_accels_for_action("win.open", &["<Control>o"]);
         app.set_accels_for_action("win.new-character", &["<Control>n"]);
+        app.set_accels_for_action("win.new-npc", &["<Control><Shift>n"]);
         app.set_accels_for_action("win.roll-treasure", &["<Control>t"]);
         app.set_accels_for_action("win.new-encounter", &["<Control>e"]);
         this.set_can_create(false);
@@ -231,12 +259,15 @@ impl Window {
         )));
         self.stack.set_visible_child_name("browser");
         *self.install.borrow_mut() = Some(install);
+        self.npc_rules.borrow_mut().take();
         self.set_can_create(true);
     }
 
     fn set_can_create(&self, enabled: bool) {
         for name in [
             "new-character",
+            "new-npc",
+            "new-npc-group",
             "roll-treasure",
             "new-encounter",
             "new-table",
@@ -370,6 +401,21 @@ impl Window {
         });
     }
 
+    /// Convert to Character: the selected NPC becomes a player character.
+    fn convert_to_character(&self, file: &str) {
+        let result = match &*self.install.borrow() {
+            Some(install) => install.convert_to_character(file),
+            None => return,
+        };
+        match result {
+            Ok(()) => {
+                self.reload("characters", Some(file.to_owned()));
+                self.toast("Converted to a character");
+            }
+            Err(e) => self.toast(&e.to_string()),
+        }
+    }
+
     fn toast(&self, message: &str) {
         self.toasts.add_toast(adw::Toast::new(message));
     }
@@ -442,6 +488,49 @@ impl Window {
     }
 }
 
+impl npc::Host for Window {
+    fn with_install<T>(
+        &self,
+        run: impl FnOnce(&Installation) -> cr_store::Result<T>,
+    ) -> Option<cr_store::Result<T>> {
+        self.install.borrow().as_ref().map(run)
+    }
+
+    fn npc_rules(&self) -> Option<Rc<NpcRules>> {
+        if let Some(rules) = &*self.npc_rules.borrow() {
+            return Some(rules.clone());
+        }
+        let loaded = self.install.borrow().as_ref()?.npc_rules();
+        match loaded {
+            Ok(rules) => {
+                let rules = Rc::new(rules);
+                *self.npc_rules.borrow_mut() = Some(rules.clone());
+                Some(rules)
+            }
+            Err(e) => {
+                self.toast(&e.to_string());
+                None
+            }
+        }
+    }
+
+    fn rand(&self) -> Rc<RefCell<Rand>> {
+        self.rand.clone()
+    }
+
+    fn toast(&self, message: &str) {
+        Window::toast(self, message)
+    }
+
+    fn reload(&self, section: &str, key: Option<String>) {
+        Window::reload(self, section, key)
+    }
+
+    fn parent(&self) -> gtk::Widget {
+        self.window.clone().upcast()
+    }
+}
+
 impl encounter::Host for Window {
     fn with_install<T>(
         &self,
@@ -474,6 +563,8 @@ impl encounter::Host for Window {
 fn open_menu() -> gtk::MenuButton {
     let menu = gio::Menu::new();
     menu.append(Some("_New Character…"), Some("win.new-character"));
+    menu.append(Some("New N_PC…"), Some("win.new-npc"));
+    menu.append(Some("New NPC _Group…"), Some("win.new-npc-group"));
     menu.append(Some("New _Encounter…"), Some("win.new-encounter"));
     menu.append(Some("New Encounter _Table…"), Some("win.new-table"));
     menu.append(Some("_Roll Treasure…"), Some("win.roll-treasure"));
@@ -498,6 +589,8 @@ struct Browser {
     /// Shown on the detail page of entries that can be edited.
     edit_button: gtk::Button,
     sheet_button: gtk::Button,
+    /// Clears the NPC mark of a generated character.
+    convert_button: gtk::Button,
     /// Creates an encounter from a template or a 2-20 table.
     generate_button: gtk::Button,
     /// The key of the entry on the detail page.
@@ -511,6 +604,7 @@ struct DetailPane {
     view: adw::ToolbarView,
     edit_button: gtk::Button,
     sheet_button: gtk::Button,
+    convert_button: gtk::Button,
     generate_button: gtk::Button,
     current_key: Rc<RefCell<String>>,
 }
@@ -528,6 +622,7 @@ impl DetailPane {
                     .any(|p| key.starts_with(p)),
         );
         self.sheet_button.set_visible(character);
+        self.convert_button.set_visible(character && entry.npc);
         self.generate_button
             .set_visible(key.starts_with(TEMPLATE_KEY) || key.starts_with(TABLE_KEY));
         self.generate_button
@@ -544,6 +639,7 @@ impl DetailPane {
         self.view.set_content(Some(widget));
         self.edit_button.set_visible(false);
         self.sheet_button.set_visible(false);
+        self.convert_button.set_visible(false);
         self.generate_button.set_visible(false);
         self.current_key.borrow_mut().clear();
     }
@@ -578,6 +674,11 @@ impl Browser {
             .tooltip_text("Character Sheet")
             .visible(false)
             .build();
+        let convert_button = gtk::Button::builder()
+            .icon_name("avatar-default-symbolic")
+            .tooltip_text("Convert to Character")
+            .visible(false)
+            .build();
         let generate_button = gtk::Button::builder()
             .icon_name("media-playlist-shuffle-symbolic")
             .tooltip_text("Create Encounter")
@@ -587,6 +688,7 @@ impl Browser {
         detail_header.pack_end(&generate_button);
         detail_header.pack_end(&edit_button);
         detail_header.pack_end(&sheet_button);
+        detail_header.pack_end(&convert_button);
         detail_view.add_top_bar(&detail_header);
         detail_view.set_content(Some(&placeholder("Nothing Selected", "")));
         detail_page.set_child(Some(&detail_view));
@@ -596,6 +698,7 @@ impl Browser {
             view: detail_view,
             edit_button: edit_button.clone(),
             sheet_button: sheet_button.clone(),
+            convert_button: convert_button.clone(),
             generate_button: generate_button.clone(),
             current_key: current_key.clone(),
         };
@@ -812,6 +915,7 @@ impl Browser {
             detail,
             edit_button,
             sheet_button,
+            convert_button,
             generate_button,
             current_key,
         }

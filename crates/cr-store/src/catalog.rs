@@ -36,6 +36,8 @@ pub struct Entry {
     pub groups: Vec<Group>,
     /// Long rules text, shown below the groups.
     pub text: String,
+    /// A character the NPC generator made (index entry +0x24).
+    pub npc: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -222,6 +224,7 @@ impl Installation {
                 .tables
                 .iter()
                 .map(|t| Entry {
+                    npc: false,
                     key: format!("{TABLE_KEY}{}", t.name),
                     title: t.name.clone(),
                     subtitle: format!(
@@ -251,6 +254,7 @@ impl Installation {
                 .map(|t| {
                     let summary = rules.as_ref().map(|r| r.summary(&t.bundle));
                     Entry {
+                        npc: false,
                         key: format!("{TREASURE_KEY}{}", t.name),
                         title: t.name.clone(),
                         subtitle: summary
@@ -278,10 +282,17 @@ impl Installation {
                         source,
                     })
                 }) {
-                    Ok(c) => Entry {
-                        key: e.file.clone(),
-                        ..character_entry(&c)
-                    },
+                    Ok(c) => {
+                        let mut entry = Entry {
+                            key: e.file.clone(),
+                            npc: e.unknown_0x24 != 0,
+                            ..character_entry(&c)
+                        };
+                        if entry.npc {
+                            entry.subtitle = format!("NPC · {}", entry.subtitle);
+                        }
+                        entry
+                    }
                     Err(err) => Entry {
                         title: e.name.clone(),
                         subtitle: e.race.clone(),
@@ -395,6 +406,7 @@ fn encounter_entry(e: &Encounter, rules: Option<&EncounterRules>) -> Entry {
     });
     groups.retain(|g| !g.rows.is_empty());
     Entry {
+        npc: false,
         key: format!("{ENCOUNTER_KEY}{}", e.name),
         title: e.name.clone(),
         subtitle: if e.template.is_empty() {
@@ -448,6 +460,7 @@ fn template_entries(rules: &EncounterRules) -> Vec<Entry> {
                 // The printout repeats the name and type on its first lines.
                 let text = text.splitn(3, '\n').nth(2).unwrap_or("").trim().to_owned();
                 Entry {
+                    npc: false,
                     key: format!("{TEMPLATE_KEY}{}", t.name),
                     title: t.name.clone(),
                     subtitle: t.monster_type.clone(),
@@ -578,6 +591,7 @@ fn character_entry(c: &Character) -> Entry {
         sub => format!("{} ({sub})", d.race),
     };
     Entry {
+        npc: false,
         key: String::new(),
         title: d.name.clone(),
         subtitle: format!("{race} {}", d.class_title),
@@ -658,6 +672,7 @@ fn race_entry(object: &Object) -> Option<Entry> {
         .map(|(name, a)| format!("{name} {a:+}"))
         .collect();
     Some(Entry {
+        npc: false,
         key: String::new(),
         title: r.name.clone(),
         subtitle: adjustments.join(", "),
@@ -742,6 +757,7 @@ fn part_entry(object: &Object) -> Option<Entry> {
         return None;
     }
     Some(Entry {
+        npc: false,
         key: String::new(),
         title: p.head.name.clone(),
         subtitle: String::new(),
@@ -756,6 +772,7 @@ fn spell_entry(object: &Object) -> Option<Entry> {
     };
     let kind = if s.priest != 0 { "Priest" } else { "Wizard" };
     Some(Entry {
+        npc: false,
         key: String::new(),
         title: s.name.clone(),
         subtitle: format!("{kind} level {}", s.level),
@@ -778,6 +795,7 @@ fn psionic_entry(object: &Object) -> Option<Entry> {
         return None;
     };
     Some(Entry {
+        npc: false,
         key: String::new(),
         title: p.name.clone(),
         subtitle: p.cost.clone(),
@@ -812,6 +830,7 @@ fn monster_entry(object: &Object) -> Option<Entry> {
     .collect::<Vec<_>>()
     .join(", ");
     Some(Entry {
+        npc: false,
         key: String::new(),
         title: m.name.clone(),
         subtitle: m.climate_terrain.clone(),

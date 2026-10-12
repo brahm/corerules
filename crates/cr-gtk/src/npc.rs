@@ -1,0 +1,545 @@
+//! NPC Generation: the New NPC dialog (Create NPC, with Ability Scores…)
+//! and the New NPC Group dialog (Create Multiple NPCs).
+
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use adw::prelude::*;
+use cr_store::npc::{Abilities, GroupOptions, Npc, NpcOptions, NpcRules};
+use cr_store::treasure::{Flavor, Rand};
+use cr_store::{Installation, Result};
+use gtk::glib;
+
+/// What the NPC dialogs need from the window.
+pub trait Host {
+    fn with_install<T>(&self, run: impl FnOnce(&Installation) -> Result<T>) -> Option<Result<T>>;
+    /// The generator of the open installation, kept for the session as
+    /// the original keeps its kit edits.
+    fn npc_rules(&self) -> Option<Rc<NpcRules>>;
+    fn rand(&self) -> Rc<RefCell<Rand>>;
+    fn toast(&self, message: &str);
+    /// Reloads the sections and shows the entry `key` of section `section`.
+    fn reload(&self, section: &str, key: Option<String>);
+    fn parent(&self) -> gtk::Widget;
+}
+
+const ABILITIES: [&str; 6] = [
+    "Strength",
+    "Dexterity",
+    "Constitution",
+    "Intelligence",
+    "Wisdom",
+    "Charisma",
+];
+
+/// The class groups of Create Multiple NPCs, in combination order.
+const GROUPS: [&str; 5] = ["Warrior", "Rogue", "Priest", "Wizard", "Psionicist"];
+
+fn spin_row(title: &str, value: i32, min: i32, max: i32) -> adw::SpinRow {
+    adw::SpinRow::builder()
+        .title(title)
+        .adjustment(&gtk::Adjustment::new(
+            value as f64,
+            min as f64,
+            max as f64,
+            1.0,
+            5.0,
+            0.0,
+        ))
+        .build()
+}
+
+fn spin_button(value: i32, min: i32, max: i32) -> gtk::SpinButton {
+    gtk::SpinButton::builder()
+        .adjustment(&gtk::Adjustment::new(
+            value as f64,
+            min as f64,
+            max as f64,
+            1.0,
+            5.0,
+            0.0,
+        ))
+        .valign(gtk::Align::Center)
+        .build()
+}
+
+fn combo_row(title: &str, items: &[String]) -> adw::ComboRow {
+    let items: Vec<&str> = items.iter().map(String::as_str).collect();
+    adw::ComboRow::builder()
+        .title(title)
+        .model(&gtk::StringList::new(&items))
+        .enable_search(true)
+        .expression(gtk::PropertyExpression::new(
+            gtk::StringObject::static_type(),
+            None::<gtk::Expression>,
+            "string",
+        ))
+        .build()
+}
+
+fn rules_row() -> adw::ComboRow {
+    adw::ComboRow::builder()
+        .title("Rules")
+        .model(&gtk::StringList::new(&["Core Rules", "Player's Option"]))
+        .build()
+}
+
+fn dialog(title: &str, page: &adw::PreferencesPage, create: &gtk::Button) -> adw::Dialog {
+    let header = adw::HeaderBar::new();
+    header.pack_end(create);
+    let view = adw::ToolbarView::new();
+    view.add_top_bar(&header);
+    view.set_content(Some(page));
+    adw::Dialog::builder()
+        .title(title)
+        .content_width(520)
+        .content_height(720)
+        .width_request(360)
+        .height_request(294)
+        .child(&view)
+        .build()
+}
+
+fn create_button(label: &str) -> gtk::Button {
+    gtk::Button::builder()
+        .label(label)
+        .use_underline(true)
+        .css_classes(["suggested-action"])
+        .build()
+}
+
+/// Logs the generator's notes: fallbacks for paths of the original that
+/// are not decoded, and the original's own messages.
+fn log_messages(npc: &Npc) {
+    for message in &npc.messages {
+        eprintln!("{}: {message}", npc.character.data.name);
+    }
+}
+
+/// Opens the New NPC dialog.
+pub fn new_npc<H: Host + 'static>(host: &Rc<H>) {
+    let Some(rules) = host.npc_rules() else {
+        return;
+    };
+    let standard = rules.standard_races();
+    let all = rules.races();
+    let expansion = rules.flavor() == Flavor::Expansion;
+
+    // Race and class.
+    let all_races = adw::SwitchRow::builder()
+        .title("All Races")
+        .subtitle("Include races that are not standard")
+        .build();
+    let race = combo_row("Race", if standard.is_empty() { &all } else { &standard });
+    let all_classes = adw::SwitchRow::builder()
+        .title("All Classes")
+        .subtitle("Include classes the race may not take")
+        .build();
+    let class = adw::ComboRow::builder().title("Class").build();
+    let rules_choice = rules_row();
+    let character = adw::PreferencesGroup::builder().title("Character").build();
+    character.add(&race);
+    character.add(&all_races);
+    character.add(&class);
+    character.add(&all_classes);
+    character.add(&rules_choice);
+
+    // Levels, one per class of the chosen combination.
+    let levels_group = adw::PreferencesGroup::builder().title("Levels").build();
+    let level_rows: Rc<RefCell<Vec<adw::SpinRow>>> = Rc::default();
+    let options: Rc<RefCell<Vec<Vec<String>>>> = Rc::default();
+
+    // Ability scores.
+    let roll = gtk::Button::builder()
+        .label("_Roll")
+        .use_underline(true)
+        .valign(gtk::Align::Center)
+        .css_classes(["flat"])
+        .build();
+    let clear = gtk::Button::builder()
+        .label("_Clear")
+        .use_underline(true)
+        .valign(gtk::Align::Center)
+        .css_classes(["flat"])
+        .visible(false)
+        .build();
+    let ability_buttons = gtk::Box::builder().spacing(6).build();
+    ability_buttons.append(&clear);
+    ability_buttons.append(&roll);
+    let abilities_group = adw::PreferencesGroup::builder()
+        .title("Ability Scores")
+        .description("Rolled with the NPC unless you roll them now")
+        .header_suffix(&ability_buttons)
+        .build();
+    let ability_rows: Vec<adw::SpinRow> = ABILITIES
+        .iter()
+        .map(|name| {
+            let row = spin_row(name, 10, 1, 25);
+            row.set_visible(false);
+            abilities_group.add(&row);
+            row
+        })
+        .collect();
+    let exceptional = spin_row("Exceptional Strength", 0, 0, 100);
+    exceptional.set_subtitle("1 to 100 for 18/01 to 18/00");
+    exceptional.set_visible(false);
+    abilities_group.add(&exceptional);
+    let rolled: Rc<RefCell<Option<Abilities>>> = Rc::default();
+
+    let party = adw::EntryRow::builder().title("Party").build();
+    let save_group = adw::PreferencesGroup::new();
+    save_group.add(&party);
+    save_group.set_visible(expansion);
+
+    let page = adw::PreferencesPage::new();
+    page.add(&character);
+    page.add(&levels_group);
+    page.add(&abilities_group);
+    page.add(&save_group);
+    let create = create_button("_Create");
+    let dialog = dialog("New NPC", &page, &create);
+
+    let selected_race = {
+        let race = race.clone();
+        move || {
+            race.selected_item()
+                .and_downcast::<gtk::StringObject>()
+                .map(|s| s.string().to_string())
+                .unwrap_or_default()
+        }
+    };
+    let selected_classes = {
+        let (class, options) = (class.clone(), options.clone());
+        move || {
+            options
+                .borrow()
+                .get(class.selected() as usize)
+                .cloned()
+                .unwrap_or_default()
+        }
+    };
+    let show_levels = {
+        let (levels_group, level_rows) = (levels_group.clone(), level_rows.clone());
+        let selected_classes = selected_classes.clone();
+        move || {
+            let old: Vec<i32> = level_rows
+                .borrow()
+                .iter()
+                .map(|r| r.value() as i32)
+                .collect();
+            for row in level_rows.borrow_mut().drain(..) {
+                levels_group.remove(&row);
+            }
+            for (i, name) in selected_classes().iter().enumerate() {
+                let row = spin_row(name, old.get(i).copied().unwrap_or(1), 1, 30);
+                levels_group.add(&row);
+                level_rows.borrow_mut().push(row);
+            }
+        }
+    };
+    let show_classes = {
+        let (rules, class, all_classes, options) = (
+            rules.clone(),
+            class.clone(),
+            all_classes.clone(),
+            options.clone(),
+        );
+        let (selected_race, show_levels) = (selected_race.clone(), show_levels.clone());
+        move || {
+            let race = selected_race();
+            let mut list = if all_classes.is_active() {
+                Vec::new()
+            } else {
+                rules.class_options(&race)
+            };
+            if list.is_empty() {
+                list = rules.classes().into_iter().map(|c| vec![c]).collect();
+            }
+            // Single classes before multi-class combinations.
+            list.sort_by_key(Vec::len);
+            let names: Vec<String> = list.iter().map(|c| c.join("/")).collect();
+            let names: Vec<&str> = names.iter().map(String::as_str).collect();
+            *options.borrow_mut() = list;
+            class.set_model(Some(&gtk::StringList::new(&names)));
+            class.set_selected(0);
+            show_levels();
+        }
+    };
+    show_classes();
+    race.connect_selected_notify({
+        let show_classes = show_classes.clone();
+        move |_| show_classes()
+    });
+    all_classes.connect_active_notify({
+        let show_classes = show_classes.clone();
+        move |_| show_classes()
+    });
+    class.connect_selected_notify({
+        let show_levels = show_levels.clone();
+        move |_| show_levels()
+    });
+    all_races.connect_active_notify({
+        let race = race.clone();
+        move |row| {
+            let current = race
+                .selected_item()
+                .and_downcast::<gtk::StringObject>()
+                .map(|s| s.string().to_string());
+            let list = if row.is_active() || standard.is_empty() {
+                &all
+            } else {
+                &standard
+            };
+            let names: Vec<&str> = list.iter().map(String::as_str).collect();
+            race.set_model(Some(&gtk::StringList::new(&names)));
+            let keep = current.and_then(|c| list.iter().position(|r| *r == c));
+            race.set_selected(keep.unwrap_or(0) as u32);
+        }
+    });
+
+    let chosen = {
+        let level_rows = level_rows.clone();
+        let selected_classes = selected_classes.clone();
+        move || -> Vec<(String, i32)> {
+            selected_classes()
+                .into_iter()
+                .zip(level_rows.borrow().iter())
+                .map(|(c, row)| (c, row.value() as i32))
+                .collect()
+        }
+    };
+    let show_abilities = {
+        let (ability_rows, exceptional, clear, abilities_group) = (
+            ability_rows.clone(),
+            exceptional.clone(),
+            clear.clone(),
+            abilities_group.clone(),
+        );
+        move |a: Option<&Abilities>| {
+            abilities_group.set_description(Some(if a.is_some() {
+                "The NPC keeps these scores"
+            } else {
+                "Rolled with the NPC unless you roll them now"
+            }));
+            for (i, row) in ability_rows.iter().enumerate() {
+                row.set_visible(a.is_some());
+                if let Some(a) = a {
+                    row.set_value(a.scores[i] as f64);
+                }
+            }
+            exceptional.set_visible(a.is_some_and(|a| a.exceptional > 0));
+            exceptional.set_value(a.map_or(0, |a| a.exceptional) as f64);
+            clear.set_visible(a.is_some());
+        }
+    };
+    roll.connect_clicked({
+        let (rules, host, rules_choice, rolled) = (
+            rules.clone(),
+            host.clone(),
+            rules_choice.clone(),
+            rolled.clone(),
+        );
+        let (selected_race, chosen, show_abilities) = (
+            selected_race.clone(),
+            chosen.clone(),
+            show_abilities.clone(),
+        );
+        move |_| {
+            let options = NpcOptions {
+                players_option: rules_choice.selected() == 1,
+                abilities: None,
+            };
+            let result = rules.roll_abilities_only(
+                &mut host.rand().borrow_mut(),
+                &selected_race(),
+                &chosen(),
+                &options,
+            );
+            match result {
+                Ok(a) => {
+                    show_abilities(Some(&a));
+                    *rolled.borrow_mut() = Some(a);
+                }
+                Err(e) => host.toast(&e.to_string()),
+            }
+        }
+    });
+    clear.connect_clicked({
+        let (rolled, show_abilities) = (rolled.clone(), show_abilities.clone());
+        move |_| {
+            *rolled.borrow_mut() = None;
+            show_abilities(None);
+        }
+    });
+
+    create.connect_clicked({
+        let (host, dialog) = (host.clone(), dialog.clone());
+        move |_| {
+            let classes = chosen();
+            if classes.is_empty() {
+                return host.toast("You must select a class for your NPC");
+            }
+            // The spinners edit what Ability Scores… rolled.
+            let abilities = rolled.borrow().map(|mut a| {
+                for (i, row) in ability_rows.iter().enumerate() {
+                    a.scores[i] = row.value() as i32;
+                }
+                a.exceptional = if a.scores[0] == 18 {
+                    exceptional.value() as i32
+                } else {
+                    0
+                };
+                a
+            });
+            let options = NpcOptions {
+                players_option: rules_choice.selected() == 1,
+                abilities,
+            };
+            let npc = rules.generate(
+                &mut host.rand().borrow_mut(),
+                &selected_race(),
+                &classes,
+                &options,
+            );
+            let npc = match npc {
+                Ok(npc) => npc,
+                Err(e) => return host.toast(&e.to_string()),
+            };
+            log_messages(&npc);
+            let party = party.text().trim().to_owned();
+            match host.with_install(|install| install.save_npc(&npc, &party)) {
+                Some(Ok(file)) => {
+                    dialog.close();
+                    host.reload("characters", Some(file));
+                    host.toast(&format!(
+                        "{} was created",
+                        glib::markup_escape_text(&npc.character.data.name)
+                    ));
+                }
+                Some(Err(e)) => host.toast(&e.to_string()),
+                None => {}
+            }
+        }
+    });
+    dialog.present(Some(&host.parent()));
+}
+
+/// Opens the New NPC Group dialog.
+pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
+    let Some(rules) = host.npc_rules() else {
+        return;
+    };
+    let mut races = vec!["Random".to_owned()];
+    races.extend(rules.races());
+    let race = combo_row("Race", &races);
+    let fewest = spin_row("Fewest", 1, 1, 100);
+    let most = spin_row("Most", 1, 1, 100);
+    let rules_choice = rules_row();
+    let party = adw::EntryRow::builder().title("Group Name").build();
+    let group = adw::PreferencesGroup::builder()
+        .title("Group")
+        .description("Each NPC takes a class combination its race allows")
+        .build();
+    group.add(&party);
+    group.add(&race);
+    group.add(&fewest);
+    group.add(&most);
+    group.add(&rules_choice);
+
+    let levels_group = adw::PreferencesGroup::builder()
+        .title("Levels")
+        .description("Lowest and highest level for each class group")
+        .build();
+    let levels: Vec<(gtk::SpinButton, gtk::SpinButton)> = GROUPS
+        .iter()
+        .map(|name| {
+            let low = spin_button(1, 1, 30);
+            let high = spin_button(1, 1, 30);
+            low.update_property(&[gtk::accessible::Property::Label(&format!(
+                "Lowest {name} Level"
+            ))]);
+            high.update_property(&[gtk::accessible::Property::Label(&format!(
+                "Highest {name} Level"
+            ))]);
+            let to = gtk::Label::new(Some("to"));
+            to.add_css_class("dim-label");
+            let row = adw::ActionRow::builder().title(*name).build();
+            row.add_suffix(&low);
+            row.add_suffix(&to);
+            row.add_suffix(&high);
+            levels_group.add(&row);
+            (low, high)
+        })
+        .collect();
+
+    let page = adw::PreferencesPage::new();
+    page.add(&group);
+    page.add(&levels_group);
+    let create = create_button("_Create");
+    let dialog = dialog("New NPC Group", &page, &create);
+    fewest.connect_value_notify({
+        let most = most.clone();
+        move |row| {
+            if most.value() < row.value() {
+                most.set_value(row.value());
+            }
+        }
+    });
+    most.connect_value_notify({
+        let fewest = fewest.clone();
+        move |row| {
+            if fewest.value() > row.value() {
+                fewest.set_value(row.value());
+            }
+        }
+    });
+
+    create.connect_clicked({
+        let (host, dialog) = (host.clone(), dialog.clone());
+        move |_| {
+            let name = party.text().trim().to_owned();
+            if name.is_empty() {
+                return host.toast("A group name must be supplied.");
+            }
+            let mut options = GroupOptions {
+                number: (fewest.value() as i32, most.value() as i32),
+                race: match race.selected() {
+                    0 => None,
+                    i => races.get(i as usize).cloned(),
+                },
+                players_option: rules_choice.selected() == 1,
+                ..Default::default()
+            };
+            for (slot, (low, high)) in options.levels.iter_mut().zip(&levels) {
+                let (low, high) = (low.value() as i32, high.value() as i32);
+                *slot = (low.min(high), low.max(high));
+            }
+            let npcs = rules.generate_group(&mut host.rand().borrow_mut(), &options);
+            let npcs = match npcs {
+                Ok(npcs) => npcs,
+                Err(e) => return host.toast(&e.to_string()),
+            };
+            let saved = host.with_install(|install| {
+                let mut last = None;
+                for npc in &npcs {
+                    log_messages(npc);
+                    last = Some(install.save_npc(npc, &name)?);
+                }
+                Ok(last)
+            });
+            match saved {
+                Some(Ok(last)) => {
+                    dialog.close();
+                    host.reload("characters", last);
+                    host.toast(&match npcs.len() {
+                        1 => "1 NPC was created".to_owned(),
+                        n => format!("{n} NPCs were created"),
+                    });
+                }
+                Some(Err(e)) => host.toast(&e.to_string()),
+                None => {}
+            }
+        }
+    });
+    dialog.present(Some(&host.parent()));
+}

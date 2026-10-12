@@ -218,6 +218,38 @@ impl Installation {
     }
 }
 
+impl Installation {
+    /// Convert to Character: clears the NPC mark of the character in
+    /// `Chars/<file>` (data +0x1da4) and of its list entry (+0x24).
+    pub fn convert_to_character(&self, file: &str) -> Result<()> {
+        let mut character = self.character(file)?;
+        character.data.unknown_0x1da4 = 0;
+        let format = |source| Error::Format {
+            path: file.into(),
+            source,
+        };
+        let bytes = character.to_bytes().map_err(format)?;
+        let index_path = self
+            .path("Chars/index.chr")
+            .ok_or_else(|| Error::Invalid("The character list is missing".into()))?;
+        let mut index = self.characters()?;
+        let entry = index
+            .entries
+            .iter_mut()
+            .find(|e| e.file.eq_ignore_ascii_case(file))
+            .ok_or_else(|| Error::Invalid(format!("{file} is not in the character list")))?;
+        entry.unknown_0x24 = 0;
+        let index_bytes = index.to_bytes().map_err(format)?;
+        Character::parse(&bytes).map_err(format)?;
+        CharacterIndex::parse(&index_bytes).map_err(format)?;
+        let path = self
+            .path(&format!("Chars/{file}"))
+            .ok_or_else(|| Error::Invalid(format!("{file} not found")))?;
+        replace(&path, &bytes)?;
+        replace(&index_path, &index_bytes)
+    }
+}
+
 /// The character list entry of an NPC (+0x24 set, the party in +0x2c).
 fn npc_entry(npc: &Npc, party: &str, file: &str) -> CharacterEntry {
     let c = &npc.character;
@@ -275,6 +307,43 @@ impl NpcRules {
     /// Class names, in database order.
     pub fn classes(&self) -> Vec<String> {
         self.data.classes.iter().map(|c| c.name.clone()).collect()
+    }
+
+    /// Race names the "Select from Standard races" choice offers.
+    pub fn standard_races(&self) -> Vec<String> {
+        self.data
+            .races
+            .iter()
+            .filter(|r| r.unknown_0x1e0[1] != 0)
+            .map(|r| r.name.clone())
+            .collect()
+    }
+
+    /// The class combinations `AllowedU.dat` gives a race (a subrace
+    /// uses its parent race's), in the warrior, rogue, priest, wizard,
+    /// psionicist order of each combination. Empty when the file has
+    /// nothing for the race.
+    pub fn class_options(&self, race: &str) -> Vec<Vec<String>> {
+        let d = &self.data;
+        let mut name = race;
+        if let Some(r) = d.race(race).map(|i| &d.races[i])
+            && r.unknown_0x184 != 0
+            && d.race(&r.unknown_0x188).is_some()
+        {
+            name = &r.unknown_0x188;
+        }
+        let mut options: Vec<Vec<String>> = Vec::new();
+        for combination in d.allowed.get(name).into_iter().flatten() {
+            let classes: Vec<String> = combination
+                .iter()
+                .filter(|c| !c.is_empty())
+                .cloned()
+                .collect();
+            if !classes.is_empty() && !options.contains(&classes) {
+                options.push(classes);
+            }
+        }
+        options
     }
 
     pub fn flavor(&self) -> Flavor {
