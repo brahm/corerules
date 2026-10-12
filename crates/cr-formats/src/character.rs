@@ -89,7 +89,13 @@ impl Field for CharacterEntry {
         w.write_string(&self.name)?;
         w.write_string(&self.file)?;
         w.write_string(&self.race)?;
-        w.write_u32(self.version);
+        // Layouts 0 and 1 have no separate flag: this u32 is the NPC mark
+        // (+0x24), 1 for an NPC (Evermore 0x42c690).
+        w.write_u32(if self.version > 1 {
+            self.version
+        } else {
+            self.unknown_0x24
+        });
         match (&self.extra, self.version > 1) {
             (Some(extra), true) => {
                 w.write_u32(extra.unknown);
@@ -540,6 +546,21 @@ mod tests {
     fn index_round_trips_byte_for_byte() {
         let index = CharacterIndex::parse(INDEX).unwrap();
         assert_eq!(index.to_bytes().unwrap(), INDEX);
+    }
+
+    #[test]
+    fn old_layout_writes_the_npc_mark() {
+        let mut index = CharacterIndex::parse(INDEX).unwrap();
+        let entry = &mut index.entries[0];
+        entry.version = 1;
+        entry.extra = None;
+        entry.unknown_0x24 = 1;
+        let read = CharacterIndex::parse(&index.to_bytes().unwrap()).unwrap();
+        assert_eq!(read.entries[0].unknown_0x24, 1);
+        let entry = &mut index.entries[0];
+        entry.unknown_0x24 = 0;
+        let read = CharacterIndex::parse(&index.to_bytes().unwrap()).unwrap();
+        assert_eq!(read.entries[0].unknown_0x24, 0);
     }
 
     #[test]

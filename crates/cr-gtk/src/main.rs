@@ -258,9 +258,19 @@ impl Window {
                 .unwrap_or_default()
         )));
         self.stack.set_visible_child_name("browser");
+        // Create Multiple NPCs draws from the race/class combinations of
+        // AllowedU.dat, which only the Expansion has.
+        let groups = install.path("UserDbas/AllowedU.dat").is_some();
         *self.install.borrow_mut() = Some(install);
         self.npc_rules.borrow_mut().take();
         self.set_can_create(true);
+        if let Some(action) = self
+            .window
+            .lookup_action("new-npc-group")
+            .and_downcast::<gio::SimpleAction>()
+        {
+            action.set_enabled(groups);
+        }
     }
 
     fn set_can_create(&self, enabled: bool) {

@@ -189,7 +189,13 @@ impl Installation {
                 source,
             }
         };
-        let bytes = npc.character.to_bytes().map_err(format("NPC"))?;
+        // The party is also kept in the character (doc +0x1dc0): the
+        // originals rebuild the list entry from it on Update NPC.
+        let mut character = npc.character.clone();
+        if let Some(lines) = character.data.unknown_0x1e68.as_mut() {
+            lines[3] = party.into();
+        }
+        let bytes = character.to_bytes().map_err(format("NPC"))?;
         let chars = match self.path("Chars") {
             Some(dir) => dir,
             None => {
@@ -267,7 +273,7 @@ fn npc_entry(npc: &Npc, party: &str, file: &str) -> CharacterEntry {
             name: c.data.name.clone(),
             file: file.into(),
             race: c.data.race.clone(),
-            version: 0,
+            version: 1,
             extra: None,
             unknown_0x24: 1,
             flag_0x28: 1,
