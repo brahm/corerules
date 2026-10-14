@@ -9,6 +9,8 @@ use cr_store::Installation;
 use cr_store::edit::CharacterDetails;
 use cr_store::lists::{CharacterLists, Item};
 
+mod userdb;
+
 const USAGE: &str = "usage:
   cr survey [INSTALL_DIR]   list database files, record counts and classes
   cr chars [INSTALL_DIR]    list characters
@@ -70,6 +72,14 @@ const USAGE: &str = "usage:
                             level --level, default 1); --count makes that
                             many (default 1), --po uses Player's Option,
                             --save adds them to Chars/ as NPCs
+  cr userdb INSTALL_DIR KIND list [--standard|--custom]
+  cr userdb INSTALL_DIR KIND copy FROM NEW_NAME
+  cr userdb INSTALL_DIR KIND delete NAME
+                            list the standard and custom records of a
+                            user database, copy one to a new custom record
+                            or delete a custom one (UserDbas/ is rewritten,
+                            keeping a .bak); KIND: spells, powers, traps,
+                            monster-types, monsters, races, classes, parts
 
 Without INSTALL_DIR, the installation in the Wine prefix is used.";
 
@@ -128,6 +138,7 @@ fn main() -> ExitCode {
         "treasure" => cmd_treasure(&install, &args[2..]),
         "encounter" => cmd_encounter(&install, &args[2..]),
         "npc" => cmd_npc(&install, &args[2..]),
+        "userdb" => userdb::cmd(&install, &args[2..]),
         _ => {
             eprintln!("{USAGE}");
             Ok(())

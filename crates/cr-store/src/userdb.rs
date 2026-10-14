@@ -81,6 +81,39 @@ impl Filter {
     }
 }
 
+/// Catalog entry keys of standard and user records start with this:
+/// `udb:<section>:<standard|custom>:<name>`.
+pub const KEY: &str = "udb:";
+
+/// The catalog key of the record `name` of a section.
+pub fn key(section: &str, origin: Origin, name: &str) -> String {
+    let origin = match origin {
+        Origin::Standard => "standard",
+        Origin::Custom => "custom",
+    };
+    format!("{KEY}{section}:{origin}:{name}")
+}
+
+/// The section, origin and name of a key made by [`key`].
+pub fn parse_key(key: &str) -> Option<(&str, Origin, &str)> {
+    let mut parts = key.strip_prefix(KEY)?.splitn(3, ':');
+    let section = parts.next()?;
+    let origin = match parts.next()? {
+        "standard" => Origin::Standard,
+        "custom" => Origin::Custom,
+        _ => return None,
+    };
+    Some((section, origin, parts.next()?))
+}
+
+/// What lists show for where a record comes from.
+pub fn origin_label(origin: Origin) -> &'static str {
+    match origin {
+        Origin::Standard => "Standard",
+        Origin::Custom => "Custom",
+    }
+}
+
 /// Why a name was refused, as the original's name check (0x6842cc and
 /// its siblings) decides.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -850,6 +883,16 @@ mod tests {
         assert_eq!(dice_text(1, 4, 2), "1d4+2");
         assert_eq!(dice_text(0, 0, 1), "1");
         assert_eq!(dice_text(2, 8, -1), "2d8-1");
+    }
+
+    #[test]
+    fn keys_round_trip() {
+        let k = key("weapons", Origin::Custom, "Sword: long");
+        assert_eq!(
+            parse_key(&k),
+            Some(("weapons", Origin::Custom, "Sword: long"))
+        );
+        assert_eq!(parse_key("table:x"), None);
     }
 
     #[test]

@@ -12,6 +12,8 @@ use cr_formats::spells::SpellsFile;
 
 use crate::encounter::{Encounter, EncounterRules, hit_point_text, npc_line};
 use crate::treasure::thousands;
+use crate::userdb::tables::{self, TableDb};
+use crate::userdb::{Origin, origin_label};
 use crate::{Error, Installation, Result};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -81,6 +83,8 @@ impl Installation {
     pub fn catalog(&self) -> Vec<Section> {
         let parts = self.load_parts();
         let spells = self.load_spells();
+        let user_parts = self.load_user_parts();
+        let user_spells = self.load_user_spells();
         let mut sections = vec![
             section(
                 "characters",
@@ -92,13 +96,13 @@ impl Installation {
                 "races",
                 "Races",
                 "system-users-symbolic",
-                self.list_entries("Race", race_entry),
+                self.udb_entries("Race", "races", race_entry),
             ),
             section(
                 "classes",
                 "Classes",
                 "emblem-system-symbolic",
-                self.list_entries("Class", class_entry),
+                self.udb_entries("Class", "classes", class_entry),
             ),
         ];
         for (id, title, icon, part_type) in [
@@ -134,14 +138,24 @@ impl Installation {
                 "Non-Weapon Proficiencies",
             ),
         ] {
-            let entries = match &parts {
-                Ok(parts) => Ok(parts
-                    .of_type(part_type)
-                    .unwrap_or_default()
-                    .iter()
-                    .filter_map(part_entry)
-                    .collect()),
-                Err(e) => Err(e.clone()),
+            let entries = match (&parts, &user_parts) {
+                (Ok(parts), Ok(user)) => Ok(sorted(
+                    [
+                        (Origin::Standard, Some(parts)),
+                        (Origin::Custom, user.as_ref()),
+                    ]
+                    .into_iter()
+                    .filter_map(|(origin, file)| Some((origin, file?)))
+                    .flat_map(|(origin, file)| {
+                        file.of_type(part_type)
+                            .unwrap_or_default()
+                            .iter()
+                            .filter_map(part_entry)
+                            .map(move |e| udb_mark(e, id, origin))
+                    })
+                    .collect(),
+                )),
+                (Err(e), _) | (_, Err(e)) => Err(e.clone()),
             };
             sections.push(section(id, title, icon, entries));
         }
@@ -149,18 +163,23 @@ impl Installation {
             ("wizard-spells", "Wizard Spells", true),
             ("priest-spells", "Priest Spells", false),
         ] {
-            let entries = match &spells {
-                Ok(spells) => Ok(sorted(
-                    if wizard {
-                        &spells.wizard
-                    } else {
-                        &spells.priest
-                    }
-                    .iter()
-                    .filter_map(spell_entry)
+            let entries = match (&spells, &user_spells) {
+                (Ok(spells), Ok(user)) => Ok(sorted(
+                    [
+                        (Origin::Standard, Some(spells)),
+                        (Origin::Custom, user.as_ref()),
+                    ]
+                    .into_iter()
+                    .filter_map(|(origin, file)| Some((origin, file?)))
+                    .flat_map(|(origin, file)| {
+                        if wizard { &file.wizard } else { &file.priest }
+                            .iter()
+                            .filter_map(spell_entry)
+                            .map(move |e| udb_mark(e, id, origin))
+                    })
                     .collect(),
                 )),
-                Err(e) => Err(e.clone()),
+                (Err(e), _) | (_, Err(e)) => Err(e.clone()),
             };
             sections.push(section(id, title, "weather-clear-night-symbolic", entries));
         }
@@ -168,13 +187,25 @@ impl Installation {
             "psionics",
             "Psionic Powers",
             "display-brightness-symbolic",
-            self.list_entries("Psionic", psionic_entry),
+            self.udb_entries("Psionic", "psionics", psionic_entry),
         ));
         sections.push(section(
             "monsters",
             "Monsters",
             "face-devilish-symbolic",
-            self.list_entries("Monster", monster_entry),
+            self.udb_entries("Monster", "monsters", monster_entry),
+        ));
+        sections.push(section(
+            "monster-types",
+            "Monster Types",
+            "view-list-symbolic",
+            self.udb_entries("MonType", "monster-types", monster_type_entry),
+        ));
+        sections.push(section(
+            "traps",
+            "Traps",
+            "dialog-warning-symbolic",
+            self.udb_entries("Traps", "traps", trap_entry),
         ));
         let rules = self.encounter_rules().map_err(|e| e.to_string());
         sections.push(section(
@@ -201,7 +232,93 @@ impl Installation {
             "user-bookmarks-symbolic",
             self.treasure_entries(),
         ));
+        sections.push(section(
+            "treasure-tables",
+            "Treasure Tables",
+            "view-grid-symbolic",
+            self.treasure_table_entries(),
+        ));
         sections
+    }
+
+    /// The records of `Database/<name>.dat` then `UserDbas/<name>U.dat`,
+    /// keyed for the user database editors of section `id`.
+    fn udb_entries(
+        &self,
+        name: &str,
+        id: &str,
+        entry: fn(&Object) -> Option<Entry>,
+    ) -> std::result::Result<Vec<Entry>, String> {
+        let mut entries = Vec::new();
+        for (origin, relative) in [
+            (Origin::Standard, format!("Database/{name}.dat")),
+            (Origin::Custom, format!("UserDbas/{name}U.dat")),
+        ] {
+            let Some(path) = self.path(&relative) else {
+                continue;
+            };
+            let data = self.read(&relative).map_err(|e| e.to_string())?;
+            let list = ObjectList::parse(&data)
+                .map_err(|source| Error::Format { path, source }.to_string())?;
+            entries.extend(
+                list.objects
+                    .iter()
+                    .filter_map(entry)
+                    .map(|e| udb_mark(e, id, origin)),
+            );
+        }
+        Ok(sorted(entries))
+    }
+
+    /// The treasure tables (`UserDbas/Treasure.dat`, else the shipped
+    /// ones).
+    fn treasure_table_entries(&self) -> std::result::Result<Vec<Entry>, String> {
+        let db = TableDb::load(self).map_err(|e| e.to_string())?;
+        Ok(sorted(
+            db.tables
+                .iter()
+                .map(|t| {
+                    let rows = tables::entries(t);
+                    let ranges = tables::ranges(t);
+                    let entry = Entry {
+                        title: t.name.clone(),
+                        subtitle: format!("{} entries", rows.len()),
+                        groups: groups([Group {
+                            title: "Entries".into(),
+                            rows: rows
+                                .iter()
+                                .zip(&ranges)
+                                .map(|(e, range)| (range.clone(), table_entry_text(e)))
+                                .collect(),
+                        }]),
+                        ..Default::default()
+                    };
+                    udb_mark(entry, "treasure-tables", tables::origin(t))
+                })
+                .collect(),
+        ))
+    }
+
+    fn load_user_parts(&self) -> std::result::Result<Option<PartsFile>, String> {
+        let relative = "UserDbas/PartsU.dat";
+        if self.path(relative).is_none() {
+            return Ok(None);
+        }
+        let data = self.read(relative).map_err(|e| e.to_string())?;
+        PartsFile::parse(&data)
+            .map(Some)
+            .map_err(|e| format!("{relative}: {e}"))
+    }
+
+    fn load_user_spells(&self) -> std::result::Result<Option<SpellsFile>, String> {
+        let relative = "UserDbas/SpellsU.dat";
+        if self.path(relative).is_none() {
+            return Ok(None);
+        }
+        let data = self.read(relative).map_err(|e| e.to_string())?;
+        SpellsFile::parse(&data)
+            .map(Some)
+            .map_err(|e| format!("{relative}: {e}"))
     }
 
     /// The saved encounters, standard ones (shipped empty) first. The key
@@ -319,16 +436,6 @@ impl Installation {
             objects.extend(list.objects);
         }
         Ok(objects)
-    }
-
-    fn list_entries(
-        &self,
-        name: &str,
-        entry: fn(&Object) -> Option<Entry>,
-    ) -> std::result::Result<Vec<Entry>, String> {
-        self.list_objects(name)
-            .map(|objects| sorted(objects.iter().filter_map(entry).collect()))
-            .map_err(|e| e.to_string())
     }
 
     fn load_parts(&self) -> std::result::Result<PartsFile, String> {
@@ -699,7 +806,7 @@ fn class_entry(object: &Object) -> Option<Entry> {
     // The 2.0 layout keeps the same leading values without names: the
     // requirements are values 2 to 7, the identifier value 22, and the
     // first string list holds the class abilities.
-    let (requirements, id, experience, alignments, abilities): (_, _, _, &[String], &[String]) =
+    let (requirements, _id, experience, alignments, abilities): (_, _, _, &[String], &[String]) =
         match &**class {
             Class::Expansion { data, .. } => (
                 data.ability_requirements,
@@ -726,10 +833,12 @@ fn class_entry(object: &Object) -> Option<Entry> {
             minimums = minimums.row(name, min);
         }
     }
-    entry.subtitle = class_group(id).to_owned();
+    let group = crate::userdb::classes::class_group(class)
+        .map_or("Other", |g| crate::userdb::classes::GROUPS[g]);
+    entry.subtitle = group.to_owned();
     entry.groups = groups([
         Group::new("Class")
-            .row("Group", class_group(id))
+            .row("Group", group)
             .list("Alignments", alignments)
             .row("Level 2", format!("{} XP", experience[2]))
             .row("Level 10", format!("{} XP", experience[10])),
@@ -737,18 +846,6 @@ fn class_entry(object: &Object) -> Option<Entry> {
         Group::new("Class Abilities").list("Abilities", abilities),
     ]);
     Some(entry)
-}
-
-/// The class group a class identifier falls in (Fighter 1000, Mage 2000).
-fn class_group(id: i32) -> &'static str {
-    match id / 1000 {
-        1 => "Warrior",
-        2 => "Rogue",
-        3 => "Priest",
-        4 => "Wizard",
-        5 => "Psionicist",
-        _ => "Other",
-    }
 }
 
 fn part_entry(object: &Object) -> Option<Entry> {
@@ -864,4 +961,63 @@ fn monster_entry(object: &Object) -> Option<Entry> {
         ]),
         text: m.description.clone(),
     })
+}
+
+/// Keys `entry` for the user database editors and says where it comes
+/// from in its subtitle.
+fn udb_mark(mut entry: Entry, section: &str, origin: Origin) -> Entry {
+    entry.key = crate::userdb::key(section, origin, &entry.title);
+    let label = origin_label(origin);
+    entry.subtitle = if entry.subtitle.is_empty() {
+        label.to_owned()
+    } else {
+        format!("{label} · {}", entry.subtitle)
+    };
+    entry
+}
+
+fn monster_type_entry(object: &Object) -> Option<Entry> {
+    let Object::MonsterType(t) = object else {
+        return None;
+    };
+    Some(Entry {
+        title: t.name.clone(),
+        groups: groups([Group::new("Monster Type").row("Bitmap", &t.picture)]),
+        ..Default::default()
+    })
+}
+
+fn trap_entry(object: &Object) -> Option<Entry> {
+    let Object::Trap(t) = object else {
+        return None;
+    };
+    Some(Entry {
+        title: t.name.clone(),
+        subtitle: t.unknown_0x4.clone(),
+        groups: groups([Group::new("Trap")
+            .row("Location", &t.unknown_0x4)
+            .row("Damage", &t.damage)
+            .row("Detection Modifier", &t.unknown_0x14)
+            .row("Characters Trapped", &t.unknown_0x10)
+            .row("Saving Throw", &t.unknown_0xc)
+            .row("Special Effects", &t.unknown_0x8)]),
+        ..Default::default()
+    })
+}
+
+/// One treasure-table row as the editor's list shows it: "Udb sword",
+/// "2d6 × Gold Pieces", "Table: Gems".
+fn table_entry_text(e: &cr_formats::treasure::TreasureTableEntry) -> String {
+    let [n, s, m] = e.quantity_dice;
+    let count = crate::userdb::dice_text(n.into(), s.into(), m.into());
+    let item = if e.is_table != 0 {
+        format!("Table: {}", e.item.name)
+    } else {
+        e.item.name.clone()
+    };
+    if count == "1" {
+        item
+    } else {
+        format!("{count} × {item}")
+    }
 }

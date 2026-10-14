@@ -7,6 +7,7 @@ mod lists;
 mod npc;
 mod sheet;
 mod treasure;
+mod userdb;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -112,6 +113,8 @@ impl Window {
                     encounter::open_saved(&host, name)
                 } else if let Some(name) = key.strip_prefix(TABLE_KEY) {
                     encounter::table_editor(&host, Some(name))
+                } else if key.starts_with(cr_store::userdb::KEY) {
+                    userdb::edit(&host, &key)
                 } else {
                     this.edit_character(&key)
                 }
@@ -195,6 +198,7 @@ impl Window {
         app.set_accels_for_action("win.new-npc", &["<Control><Shift>n"]);
         app.set_accels_for_action("win.roll-treasure", &["<Control>t"]);
         app.set_accels_for_action("win.new-encounter", &["<Control>e"]);
+        userdb::add_actions(&this.window, Rc::new(this.clone()));
         this.set_can_create(false);
         this
     }
@@ -264,6 +268,7 @@ impl Window {
         *self.install.borrow_mut() = Some(install);
         self.npc_rules.borrow_mut().take();
         self.set_can_create(true);
+        userdb::set_flavor(&self.window, groups);
         if let Some(action) = self
             .window
             .lookup_action("new-npc-group")
@@ -541,6 +546,40 @@ impl npc::Host for Window {
     }
 }
 
+impl userdb::Host for Window {
+    fn with_install<T>(
+        &self,
+        run: impl FnOnce(&Installation) -> cr_store::Result<T>,
+    ) -> Option<cr_store::Result<T>> {
+        self.install.borrow().as_ref().map(run)
+    }
+
+    fn toast(&self, message: &str) {
+        Window::toast(self, message)
+    }
+
+    fn reload(&self, section: &str, key: Option<String>) {
+        Window::reload(self, section, key)
+    }
+
+    fn parent(&self) -> gtk::Widget {
+        self.window.clone().upcast()
+    }
+
+    fn current_key(&self) -> String {
+        self.browser.current_key.borrow().clone()
+    }
+
+    fn current_section(&self) -> String {
+        let index = self.browser.sidebar_list.selected_row().map(|r| r.index());
+        let sections = self.browser.sections.borrow();
+        index
+            .and_then(|i| sections.get(i as usize))
+            .map(|s| s.id.to_owned())
+            .unwrap_or_default()
+    }
+}
+
 impl encounter::Host for Window {
     fn with_install<T>(
         &self,
@@ -617,6 +656,8 @@ struct DetailPane {
     convert_button: gtk::Button,
     generate_button: gtk::Button,
     current_key: Rc<RefCell<String>>,
+    /// Copy, New and Delete for standard and custom records.
+    udb_actions: userdb::DetailActions,
 }
 
 impl DetailPane {
@@ -627,10 +668,12 @@ impl DetailPane {
         let character = !key.is_empty() && !key.contains(':');
         self.edit_button.set_visible(
             character
+                || userdb::editable(key)
                 || [TREASURE_KEY, ENCOUNTER_KEY, TABLE_KEY]
                     .iter()
                     .any(|p| key.starts_with(p)),
         );
+        self.udb_actions.update(key);
         self.sheet_button.set_visible(character);
         self.convert_button.set_visible(character && entry.npc);
         self.generate_button
@@ -651,6 +694,7 @@ impl DetailPane {
         self.sheet_button.set_visible(false);
         self.convert_button.set_visible(false);
         self.generate_button.set_visible(false);
+        self.udb_actions.update("");
         self.current_key.borrow_mut().clear();
     }
 }
@@ -699,6 +743,8 @@ impl Browser {
         detail_header.pack_end(&edit_button);
         detail_header.pack_end(&sheet_button);
         detail_header.pack_end(&convert_button);
+        let udb_actions = userdb::DetailActions::new();
+        udb_actions.pack(&detail_header);
         detail_view.add_top_bar(&detail_header);
         detail_view.set_content(Some(&placeholder("Nothing Selected", "")));
         detail_page.set_child(Some(&detail_view));
@@ -711,6 +757,7 @@ impl Browser {
             convert_button: convert_button.clone(),
             generate_button: generate_button.clone(),
             current_key: current_key.clone(),
+            udb_actions,
         };
 
         // Entries.
@@ -719,17 +766,22 @@ impl Browser {
             .placeholder_text("Search")
             .hexpand(true)
             .build();
+        let origin_filter = userdb::origin_filter();
         let filter = gtk::CustomFilter::new({
-            let search = search.clone();
+            let (search, origin_filter) = (search.clone(), origin_filter.clone());
             move |item| {
                 let needle = search.text().to_lowercase();
-                needle.is_empty() || {
-                    let item = item.downcast_ref::<glib::BoxedAnyObject>().unwrap();
-                    let row = item.borrow::<Row>();
-                    row.title.to_lowercase().contains(&needle)
-                        || row.subtitle.to_lowercase().contains(&needle)
-                }
+                let item = item.downcast_ref::<glib::BoxedAnyObject>().unwrap();
+                let row = item.borrow::<Row>();
+                userdb::passes(&origin_filter, row.origin)
+                    && (needle.is_empty()
+                        || row.title.to_lowercase().contains(&needle)
+                        || row.subtitle.to_lowercase().contains(&needle))
             }
+        });
+        origin_filter.connect_selected_notify({
+            let filter = filter.clone();
+            move |_| filter.changed(gtk::FilterChange::Different)
         });
         search.connect_search_changed({
             let filter = filter.clone();
@@ -800,6 +852,7 @@ impl Browser {
             .build();
         let entries_header = adw::HeaderBar::new();
         entries_header.pack_start(&new_button);
+        entries_header.pack_end(&origin_filter);
         let entries_view = adw::ToolbarView::new();
         entries_view.add_top_bar(&entries_header);
         entries_view.add_top_bar(&search_bar);
@@ -843,6 +896,7 @@ impl Browser {
         sidebar_list.connect_row_selected({
             let sections = sections.clone();
             let (model, search, inner) = (model.clone(), search.clone(), inner.clone());
+            let filtered = filtered.clone();
             let (entries_page, inner_page, detail) =
                 (entries_page.clone(), inner_page.clone(), detail.clone());
             let current = current.clone();
@@ -853,17 +907,19 @@ impl Browser {
                 let section = &sections[index];
                 *current.borrow_mut() = index;
                 let new = match section.id {
-                    "characters" => Some(("win.new-character", "New Character")),
-                    "encounters" => Some(("win.new-encounter", "New Encounter")),
-                    "tables" => Some(("win.new-table", "New Encounter Table")),
-                    "treasure" => Some(("win.roll-treasure", "Roll Treasure")),
+                    "characters" => Some(("win.new-character", "New Character".into())),
+                    "encounters" => Some(("win.new-encounter", "New Encounter".into())),
+                    "tables" => Some(("win.new-table", "New Encounter Table".into())),
+                    "treasure" => Some(("win.roll-treasure", "Roll Treasure".into())),
+                    id if userdb::can_create(id) => Some(("win.udb-new", userdb::new_tooltip(id))),
                     _ => None,
                 };
                 new_button.set_visible(new.is_some());
                 if let Some((action, tooltip)) = new {
                     new_button.set_action_name(Some(action));
-                    new_button.set_tooltip_text(Some(tooltip));
+                    new_button.set_tooltip_text(Some(&tooltip));
                 }
+                origin_filter.set_visible(userdb::has_origins(section.id));
                 entries_page.set_title(section.title);
                 inner_page.set_title(section.title);
                 search.set_text("");
@@ -876,12 +932,13 @@ impl Browser {
                             index: i,
                             title: e.title.clone(),
                             subtitle: e.subtitle.clone(),
+                            origin: userdb::origin_of(&e.key),
                         })
                     })
                     .collect();
                 *section_title.borrow_mut() = section.title.to_owned();
                 model.splice(0, model.n_items(), &rows);
-                show_empty(rows.len() as u32);
+                show_empty(filtered.n_items());
                 detail.show_placeholder(&match &section.error {
                     Some(error) => {
                         placeholder_text("Could Not Read", "dialog-error-symbolic", error)
@@ -1000,6 +1057,8 @@ struct Row {
     index: usize,
     title: String,
     subtitle: String,
+    /// Standard or custom, for the records of the user databases.
+    origin: Option<cr_store::userdb::Origin>,
 }
 
 fn row_factory() -> gtk::SignalListItemFactory {
