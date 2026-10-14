@@ -1,0 +1,590 @@
+//! Custom Races (`UserDbas/RaceU.dat`): IDD 141 "Races", the IDD 142
+//! race editor and its sub-dialogs, used for subraces too.
+//!
+//! Races and subraces share one name space. A subrace has
+//! `unknown_0x184` = 1 and its parent race in `unknown_0x188`; its editor
+//! hides Dual-Class, Character Points, Ability Scores and Special and shows
+//! Movement instead. Core Rules 2.0 keeps the allowed classes, multi-classes
+//! and level limits in the race itself (Class Info and Level Limits); the
+//! Expansion keeps them in `AllowedU.dat` ([`super::allowed`]).
+
+use cr_formats::race::{MultiClass, Race};
+use cr_formats::{ArchiveReader, Field, Object};
+
+use super::classes::ClassEntry;
+use super::{
+    FieldDesc, FieldKind, Flavor, NewContext, Options, Sources, UserKind, Value, udb_int, udb_list,
+    udb_multiline, udb_text,
+};
+use crate::{Installation, Result};
+
+pub struct Races;
+
+/// The folder a new race's portraits are looked for in.
+pub const PORTRAIT_FOLDER: &str = "C:\\Program Files\\AD&D Core Rules 2.0\\Bitmaps\\Portrait\\";
+
+/// The Alignment page's checks, by index of `unknown_0x190`.
+pub const ALIGNMENTS: [&str; 10] = [
+    "Any",
+    "Chaotic Good",
+    "Chaotic Evil",
+    "Chaotic Neutral",
+    "Lawful Evil",
+    "Lawful Good",
+    "Lawful Neutral",
+    "Neutral Evil",
+    "Neutral Good",
+    "True Neutral",
+];
+
+pub const ABILITIES: [&str; 6] = [
+    "Strength",
+    "Dexterity",
+    "Constitution",
+    "Intelligence",
+    "Wisdom",
+    "Charisma",
+];
+
+/// The thieving skills of the Special page: `thief_adjustments`, then
+/// `unknown_0x158`.
+pub const THIEF_SKILLS: [&str; 13] = [
+    "Pick Pockets",
+    "Open Locks",
+    "Find/Remove Traps",
+    "Move Silently",
+    "Hide in Shadows",
+    "Detect Noise",
+    "Climb Walls",
+    "Read Languages",
+    "Detect Magic",
+    "Detect Illusion",
+    "Bribe",
+    "Tunneling",
+    "Escape Bonds",
+];
+
+/// `level_limits` slots, in file (group) order.
+pub const LIMIT_CLASSES: [&str; 9] = [
+    "Fighter",
+    "Ranger",
+    "Paladin",
+    "Thief",
+    "Bard",
+    "Cleric",
+    "Druid",
+    "Mage",
+    "Specialist",
+];
+
+pub fn is_subrace(r: &Race) -> bool {
+    r.unknown_0x184 != 0
+}
+
+fn is_race(r: &Race) -> bool {
+    !is_subrace(r)
+}
+
+/// Zero bytes to read an empty race from.
+const ZEROS: [u8; 1024] = [0; 1024];
+
+/// A new race, or with `parent` a new subrace of it, as the editor's New
+/// leaves it.
+pub fn new_race(parent: &str) -> Race {
+    let mut r = Race::read(&mut ArchiveReader::new(&ZEROS)).expect("zero bytes read as a race");
+    r.unknown_0x16c = [10, 0];
+    PORTRAIT_FOLDER.clone_into(&mut r.portrait_folder);
+    if !parent.is_empty() {
+        r.unknown_0x184 = 1;
+        parent.clone_into(&mut r.unknown_0x188);
+        r.unknown_0xa8 = 45;
+        r.unknown_0xac = 5;
+    }
+    r
+}
+
+/// "Fighter/Thief": a multi-class combination by its class names, in group
+/// order.
+pub fn multiclass_name(m: &MultiClass, class_ids: &[ClassEntry]) -> String {
+    m.classes
+        .iter()
+        .filter(|id| **id != 0)
+        .map(|id| {
+            class_ids
+                .iter()
+                .find(|c| c.id == *id)
+                .map_or_else(|| id.to_string(), |c| c.name.clone())
+        })
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
+/// The combination a name of [`multiclass_name`] stands for; `None` when a
+/// class is unknown or two share a group.
+pub fn multiclass_of(name: &str, class_ids: &[ClassEntry]) -> Option<MultiClass> {
+    let mut classes = [0; 5];
+    for part in name.split('/') {
+        let class = class_ids.iter().find(|c| c.name == part)?;
+        let group = class.group?;
+        if classes[group] != 0 {
+            return None;
+        }
+        classes[group] = class.id;
+    }
+    Some(MultiClass { classes })
+}
+
+fn multiclass_names(r: &Race, class_ids: &[ClassEntry]) -> Vec<String> {
+    r.multi_classes
+        .iter()
+        .filter_map(|o| match o {
+            Object::MultiClass(m) => Some(multiclass_name(m, class_ids)),
+            _ => None,
+        })
+        .collect()
+}
+
+fn indexed(
+    page: &'static str,
+    label: &'static str,
+    kind: FieldKind,
+    get: fn(&Race, usize) -> Value,
+    set: fn(&mut Race, usize, &Value, &Sources),
+    i: usize,
+) -> FieldDesc<Race> {
+    FieldDesc::new(page, label, kind, get, set).arg(i)
+}
+
+const INT: FieldKind = FieldKind::Int {
+    min: -1000,
+    max: 100_000,
+};
+const CHECK: FieldKind = FieldKind::Check;
+
+impl UserKind for Races {
+    type Rec = Race;
+    const NOUN: &'static str = "Race";
+    const FILE: &'static str = "UserDbas/RaceU.dat";
+
+    fn name(r: &Race) -> &str {
+        &r.name
+    }
+
+    fn set_name(r: &mut Race, name: &str) {
+        name.clone_into(&mut r.name);
+    }
+
+    fn standard(install: &Installation) -> Result<Vec<Race>> {
+        super::standard_list(install, "Race", pick)
+    }
+
+    fn parse_user(data: &[u8]) -> std::result::Result<Vec<Race>, cr_formats::Error> {
+        super::parse_list(data).map(|l| l.into_iter().filter_map(pick).collect())
+    }
+
+    fn user_bytes(records: &[Race]) -> std::result::Result<Vec<u8>, cr_formats::Error> {
+        super::list_bytes(
+            records
+                .iter()
+                .cloned()
+                .map(|r| Object::Race(Box::new(r)))
+                .collect(),
+        )
+    }
+
+    fn new_record(context: &NewContext) -> Race {
+        new_race(&context.parent)
+    }
+
+    fn copied(r: &mut Race) {
+        r.id = 0;
+    }
+
+    fn fields(flavor: Flavor) -> Vec<FieldDesc<Race>> {
+        type Rec = Race;
+        const MAIN: &str = "Race";
+        let mut f = vec![
+            udb_text!(MAIN, "Name", 50, name),
+            FieldDesc::new(
+                MAIN,
+                "Parent Race",
+                FieldKind::Choice(Options::Source("main-races")),
+                |r: &Race, _| Value::Text(r.unknown_0x188.clone()),
+                |r, _, v, _| r.unknown_0x188 = v.text(),
+            )
+            .visible(is_subrace)
+            .enabled(|_| false),
+            indexed(
+                MAIN,
+                "Core Rules Race",
+                CHECK,
+                |r: &Race, i| Value::Bool(r.unknown_0x1e0[i] != 0),
+                |r, i, v, _| r.unknown_0x1e0[i] = i32::from(v.bool()),
+                0,
+            ),
+        ];
+        if flavor == Flavor::Expansion {
+            f.push(
+                indexed(
+                    MAIN,
+                    "Dual-Class",
+                    CHECK,
+                    |r: &Race, i| Value::Bool(r.unknown_0x1e0[i] != 0),
+                    |r, i, v, _| r.unknown_0x1e0[i] = i32::from(v.bool()),
+                    2,
+                )
+                .visible(is_race),
+            );
+        }
+        f.extend([
+            udb_int!(MAIN, "Starting", 0, 100_000, unknown_0xa8)
+                .group("Character Points")
+                .enabled(is_race),
+            udb_int!(MAIN, "Retained", 0, 100_000, unknown_0xac)
+                .group("Character Points")
+                .enabled(is_race),
+        ]);
+        for (i, label, group) in [
+            (0, "Male", "Height (inches)"),
+            (1, "Female", "Height (inches)"),
+            (2, "Dice", "Height (inches)"),
+            (3, "Sides", "Height (inches)"),
+            (4, "Male", "Weight (lbs.)"),
+            (5, "Female", "Weight (lbs.)"),
+            (6, "Dice", "Weight (lbs.)"),
+            (7, "Sides", "Weight (lbs.)"),
+            (8, "Base", "Starting Age (years)"),
+            (9, "Dice", "Starting Age (years)"),
+            (10, "Sides", "Starting Age (years)"),
+        ] {
+            f.push(
+                indexed(
+                    MAIN,
+                    label,
+                    INT,
+                    |r: &Race, i| Value::Int(r.physical[i].into()),
+                    |r, i, v, _| r.physical[i] = v.int() as i32,
+                    i,
+                )
+                .group(group),
+            );
+        }
+        f.push(udb_int!(MAIN, "Number of Hands", 0, 100, unknown_0x21c[0]));
+        f.push(udb_text!(MAIN, "Race Image", 0, portrait));
+
+        // Evermore: Class Info and Level Limits.
+        if flavor == Flavor::Core20 {
+            const CLASSES: &str = "Class Info";
+            f.push(udb_list!(
+                CLASSES,
+                "Allowed Classes",
+                Options::Source("classes"),
+                unknown_0x1b8
+            ));
+            f.push(
+                FieldDesc::new(
+                    CLASSES,
+                    "Multi-Classes",
+                    FieldKind::Dual(Options::Source("multiclasses")),
+                    |r: &Race, _| Value::List(multiclass_names(r, &[])),
+                    |r, _, v, sources| {
+                        r.multi_classes = v
+                            .list()
+                            .iter()
+                            .filter_map(|n| multiclass_of(n, &sources.classes))
+                            .map(Object::MultiClass)
+                            .collect();
+                    },
+                )
+                .with_sources(|r: &Race, sources| Value::List(multiclasses(r, sources))),
+            );
+            f.push(indexed(
+                CLASSES,
+                "Dual-Class",
+                CHECK,
+                |r: &Race, i| Value::Bool(r.unknown_0x1e0[i] != 0),
+                |r, i, v, _| r.unknown_0x1e0[i] = i32::from(v.bool()),
+                2,
+            ));
+            // The dialog lists the classes alphabetically.
+            let mut order: Vec<usize> = (0..LIMIT_CLASSES.len()).collect();
+            order.sort_by_key(|i| LIMIT_CLASSES[*i]);
+            for i in order {
+                f.push(
+                    indexed(
+                        "Level Limits",
+                        LIMIT_CLASSES[i],
+                        FieldKind::Int { min: 0, max: 100 },
+                        |r: &Race, i| Value::Int(r.level_limits[i].into()),
+                        |r, i, v, _| r.level_limits[i] = v.int() as i32,
+                        i,
+                    )
+                    .group("Racial Level Limits by Class (0: cannot choose)"),
+                );
+            }
+        }
+
+        // Ability Scores (races only).
+        let strength_check = match flavor {
+            Flavor::Expansion => "Allow Exceptional Strength",
+            Flavor::Core20 => "Allow Extra Strength",
+        };
+        for (i, ability) in ABILITIES.iter().enumerate() {
+            for (label, get, set) in [
+                (
+                    "Minimum",
+                    (|r: &Race, i: usize| Value::Int(r.ability_limits[i][0].into()))
+                        as fn(&Race, usize) -> Value,
+                    (|r: &mut Race, i: usize, v: &Value, _: &Sources| {
+                        r.ability_limits[i][0] = v.int() as i32
+                    }) as fn(&mut Race, usize, &Value, &Sources),
+                ),
+                (
+                    "Maximum",
+                    |r: &Race, i| Value::Int(r.ability_limits[i][1].into()),
+                    |r, i, v, _| r.ability_limits[i][1] = v.int() as i32,
+                ),
+                (
+                    "Adjustment",
+                    |r: &Race, i| Value::Int(r.ability_adjustments[i].into()),
+                    |r, i, v, _| r.ability_adjustments[i] = v.int() as i32,
+                ),
+            ] {
+                f.push(
+                    indexed(
+                        "Ability Scores",
+                        label,
+                        FieldKind::Int { min: -25, max: 25 },
+                        get,
+                        set,
+                        i,
+                    )
+                    .group(ability)
+                    .visible(is_race),
+                );
+            }
+        }
+        f.push(
+            FieldDesc::new(
+                "Ability Scores",
+                strength_check,
+                CHECK,
+                |r: &Race, _| Value::Bool(r.unknown_0x40 != 0),
+                |r, _, v, _| r.unknown_0x40 = i32::from(v.bool()),
+            )
+            .group("Options")
+            .visible(is_race),
+        );
+        f.push(
+            FieldDesc::new(
+                "Ability Scores",
+                "Plus one to any score (Example: Mongrelman)",
+                CHECK,
+                |r: &Race, _| Value::Bool(r.unknown_0x5c != 0),
+                |r, _, v, _| r.unknown_0x5c = i32::from(v.bool()),
+            )
+            .group("Options")
+            .visible(is_race),
+        );
+
+        // Special (races only).
+        const SPECIAL: &str = "Special";
+        for (i, skill) in THIEF_SKILLS.iter().enumerate() {
+            f.push(
+                indexed(
+                    SPECIAL,
+                    skill,
+                    FieldKind::Int {
+                        min: -100,
+                        max: 100,
+                    },
+                    |r: &Race, i| {
+                        Value::Int(
+                            match i {
+                                0..8 => r.thief_adjustments[i],
+                                _ => r.unknown_0x158[i - 8],
+                            }
+                            .into(),
+                        )
+                    },
+                    |r, i, v, _| match i {
+                        0..8 => r.thief_adjustments[i] = v.int() as i32,
+                        _ => r.unknown_0x158[i - 8] = v.int() as i32,
+                    },
+                    i,
+                )
+                .group("Thieving Skill Racial Adjustments")
+                .visible(is_race),
+            );
+        }
+        f.extend([
+            udb_int!(
+                SPECIAL,
+                "Natural Armor Class (10 is standard)",
+                -10,
+                10,
+                unknown_0x16c[0]
+            )
+            .group("Combat")
+            .visible(is_race),
+            udb_int!(
+                SPECIAL,
+                "Bonus Hit Points at First",
+                0,
+                1000,
+                unknown_0x16c[1]
+            )
+            .group("Combat")
+            .visible(is_race),
+            udb_text!(
+                SPECIAL,
+                "Natural Attacks (without a weapon)",
+                0,
+                unknown_0x180
+            )
+            .group("Combat")
+            .visible(is_race),
+        ]);
+        // Special's movement for a race, the Movement page for a subrace.
+        for (page, visible) in [
+            (SPECIAL, is_race as fn(&Race) -> bool),
+            ("Movement", is_subrace),
+        ] {
+            f.extend([
+                udb_int!(page, "Unencumbered Movement", 0, 1000, movement)
+                    .group("Movement Rate")
+                    .visible(visible),
+                udb_int!(page, "Swimming", 0, 1000, unknown_0x178[0])
+                    .group("Movement Rate")
+                    .visible(visible),
+                udb_int!(page, "Flying", 0, 1000, unknown_0x178[1])
+                    .group("Movement Rate")
+                    .visible(visible),
+            ]);
+        }
+
+        // Skill Package.
+        f.extend([
+            udb_list!(
+                "Skill Package",
+                "Selected Abilities",
+                Options::Source("Racial Abilities"),
+                abilities
+            ),
+            udb_int!(
+                "Skill Package",
+                "Character Point Cost",
+                0,
+                100_000,
+                unknown_0xe0
+            ),
+            udb_list!(
+                "Languages",
+                "Languages",
+                Options::Source("Languages"),
+                languages
+            ),
+            udb_multiline!("Description", "Description", unknown_0x8),
+            udb_multiline!("Penalties", "Penalties", description),
+        ]);
+        for (i, alignment) in ALIGNMENTS.iter().enumerate() {
+            f.push(
+                indexed(
+                    "Alignment",
+                    alignment,
+                    CHECK,
+                    |r: &Race, i| Value::Bool(r.unknown_0x190[i] != 0),
+                    |r, i, v, _| r.unknown_0x190[i] = i32::from(v.bool()),
+                    i,
+                )
+                .group("Alignments Allowed"),
+            );
+        }
+        f
+    }
+
+    fn delete_warning(r: &Race) -> Option<String> {
+        let what = if is_subrace(r) { "Subrace" } else { "Race" };
+        Some(format!(
+            "Any character or NPC created from the deleted {what} will no longer function correctly"
+        ))
+    }
+
+    fn summary(r: &Race) -> String {
+        if is_subrace(r) {
+            format!("Subrace of {}", r.unknown_0x188)
+        } else {
+            "Race".into()
+        }
+    }
+}
+
+/// The multi-class names of `r`, with class names from `sources`.
+pub fn multiclasses(r: &Race, sources: &Sources) -> Vec<String> {
+    multiclass_names(r, &sources.classes)
+}
+
+fn pick(o: Object) -> Option<Race> {
+    match o {
+        Object::Race(r) => Some(*r),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::userdb::testing::TempInstall;
+    use crate::userdb::{NameError, UserDb};
+
+    #[test]
+    fn subraces_share_the_race_names_and_warn_on_delete() {
+        let mut dwarf = new_race("");
+        dwarf.name = "Dwarf".into();
+        dwarf.id = 106;
+        let t = TempInstall::new(
+            "races",
+            &[("Database/Race.dat", Races::user_bytes(&[dwarf]).unwrap())],
+        );
+        let mut db = UserDb::<Races>::load(&t.install).unwrap();
+        let mut sub = db.new_record(0, "Dwarf");
+        assert_eq!(
+            (
+                sub.unknown_0x184,
+                sub.unknown_0x188.as_str(),
+                sub.unknown_0xa8
+            ),
+            (1, "Dwarf", 45)
+        );
+        sub.name = "dwarf".into();
+        assert_eq!(db.add(sub.clone()), Err(NameError::UsedByStandard));
+        sub.name = "Udb dwarf".into();
+        assert!(
+            Races::delete_warning(&sub)
+                .unwrap()
+                .contains("deleted Subrace")
+        );
+        let fields = Races::fields(Flavor::Expansion);
+        let special = fields.iter().find(|f| f.page == "Special").unwrap();
+        assert!(!special.is_visible(&sub));
+        let movement = fields.iter().find(|f| f.page == "Movement").unwrap();
+        movement.set(&mut sub, &Value::Int(6), &Sources::default());
+        assert_eq!(sub.movement, 6);
+        db.add(sub.clone()).unwrap();
+        db.save(&t.install).unwrap();
+        assert_eq!(UserDb::<Races>::load(&t.install).unwrap().user, [sub]);
+    }
+
+    #[test]
+    fn multiclasses_round_trip_by_name() {
+        let ids = [("Fighter", 1000), ("Thief", 2000)].map(|(n, id)| ClassEntry {
+            name: n.into(),
+            id,
+            group: crate::userdb::classes::group_of(id),
+        });
+        let m = multiclass_of("Fighter/Thief", &ids).unwrap();
+        assert_eq!(m.classes, [1000, 2000, 0, 0, 0]);
+        assert_eq!(multiclass_name(&m, &ids), "Fighter/Thief");
+        assert!(multiclass_of("Fighter/Fighter", &ids).is_none());
+    }
+}
