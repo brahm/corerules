@@ -18,6 +18,7 @@ pub mod settings;
 pub mod sheet;
 pub mod tables;
 pub mod treasure;
+pub mod userdb;
 
 use std::fs;
 use std::io;
