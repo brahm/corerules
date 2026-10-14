@@ -1,11 +1,13 @@
 //! The GNOME app: browses the data of a Core Rules installation in three
 //! panes (sections, entries, details) that collapse on narrow windows.
 
+mod books;
 mod create;
 mod encounter;
 mod lists;
 mod npc;
 mod sheet;
+mod tables;
 mod treasure;
 
 use std::cell::RefCell;
@@ -181,6 +183,24 @@ impl Window {
                 move |_, _, _| encounter::table_editor(&Rc::new(this.clone()), None)
             })
             .build();
+        let open_book = gio::ActionEntry::builder("open-book")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate({
+                let this = this.clone();
+                move |_, _, name| {
+                    if let Some(name) = name.and_then(|n| n.str()) {
+                        this.open_book(name, None)
+                    }
+                }
+            })
+            .build();
+        let roll_table = gio::ActionEntry::builder("roll-table")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| this.roll_table()
+            })
+            .build();
+        this.window.add_action_entries([open_book, roll_table]);
         this.window.add_action_entries([
             open,
             new_character,
@@ -194,6 +214,7 @@ impl Window {
         app.set_accels_for_action("win.new-character", &["<Control>n"]);
         app.set_accels_for_action("win.new-npc", &["<Control><Shift>n"]);
         app.set_accels_for_action("win.roll-treasure", &["<Control>t"]);
+        app.set_accels_for_action("win.roll-table", &["<Control><Shift>t"]);
         app.set_accels_for_action("win.new-encounter", &["<Control>e"]);
         this.set_can_create(false);
         this
@@ -281,6 +302,8 @@ impl Window {
             "roll-treasure",
             "new-encounter",
             "new-table",
+            "open-book",
+            "roll-table",
         ] {
             if let Some(action) = self
                 .window
@@ -489,6 +512,28 @@ impl Window {
         );
     }
 
+    /// Opens a book in its reader window, searching for `find` if given.
+    fn open_book(&self, name: &str, find: Option<&str>) {
+        let opened = match &*self.install.borrow() {
+            Some(install) => books::open(&self.window, install, name, find),
+            None => return,
+        };
+        if let Err(e) = opened {
+            self.toast(&e);
+        }
+    }
+
+    /// Opens the Roll on a Table dialog.
+    fn roll_table(&self) {
+        let Some(root) = self.install.borrow().as_ref().map(|i| i.root().to_owned()) else {
+            return;
+        };
+        let this = self.clone();
+        tables::open(&self.window, root, self.rand.clone(), move |name, find| {
+            this.open_book(name, find)
+        });
+    }
+
     fn show_status(&self, widget: &impl IsA<gtk::Widget>) {
         if let Some(old) = self.stack.child_by_name("status") {
             self.stack.remove(&old);
@@ -578,6 +623,7 @@ fn open_menu() -> gtk::MenuButton {
     menu.append(Some("New _Encounter…"), Some("win.new-encounter"));
     menu.append(Some("New Encounter _Table…"), Some("win.new-table"));
     menu.append(Some("_Roll Treasure…"), Some("win.roll-treasure"));
+    menu.append(Some("Roll on a _Table…"), Some("win.roll-table"));
     menu.append(Some("_Open Folder…"), Some("win.open"));
     gtk::MenuButton::builder()
         .icon_name("open-menu-symbolic")
@@ -1121,6 +1167,9 @@ fn detail(entry: &Entry) -> gtk::Widget {
     }
     heading.add(&column);
     page.add(&heading);
+    if let Some(group) = books::detail_group(&entry.key) {
+        page.add(&group);
+    }
 
     for group in &entry.groups {
         if group.rows.is_empty() {

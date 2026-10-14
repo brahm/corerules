@@ -5,6 +5,7 @@
 //! `index.chr` next to `INDEX.CHR`). Every lookup here ignores case.
 
 pub mod advance;
+pub mod books;
 pub mod catalog;
 pub mod choices;
 pub mod create;
@@ -15,6 +16,7 @@ pub mod lists;
 pub mod npc;
 pub mod settings;
 pub mod sheet;
+pub mod tables;
 pub mod treasure;
 
 use std::fs;

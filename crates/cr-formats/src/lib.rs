@@ -19,7 +19,9 @@ pub mod parts;
 pub mod phrase;
 pub mod psionic;
 pub mod race;
+pub mod rtf;
 pub mod spells;
+pub mod tbl;
 pub mod traps;
 pub mod treasure;
 

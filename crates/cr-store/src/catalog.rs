@@ -201,6 +201,12 @@ impl Installation {
             "user-bookmarks-symbolic",
             self.treasure_entries(),
         ));
+        sections.push(section(
+            "books",
+            "Books",
+            "accessories-dictionary-symbolic",
+            Ok(self.book_entries()),
+        ));
         sections
     }
 

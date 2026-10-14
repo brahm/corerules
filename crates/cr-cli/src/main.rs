@@ -70,6 +70,18 @@ const USAGE: &str = "usage:
                             level --level, default 1); --count makes that
                             many (default 1), --po uses Player's Option,
                             --save adds them to Chars/ as NPCs
+  cr books [INSTALL_DIR]    list the rule books in Books/ by shelf
+  cr book INSTALL_DIR NAME [--outline|--text]
+                            print the contents outline (default) or the
+                            text of a book; NAME is the file (PhbBk), the
+                            registry number or the title
+  cr table INSTALL_DIR      list the Table Rolls entries with their keys
+  cr table INSTALL_DIR ID [--seed N] [--param N]...
+                            roll on a table as Table Rolls does: ID is a
+                            list key (dmg:88, phb:10, poct:critical) with
+                            --param giving each parameter's option number
+                            (from 0), or a table id (20088) rolled as a
+                            follow-up roll would
 
 Without INSTALL_DIR, the installation in the Wine prefix is used.";
 
@@ -128,6 +140,9 @@ fn main() -> ExitCode {
         "treasure" => cmd_treasure(&install, &args[2..]),
         "encounter" => cmd_encounter(&install, &args[2..]),
         "npc" => cmd_npc(&install, &args[2..]),
+        "books" => cmd_books(&install),
+        "book" => cmd_book(&install, &args[2..]),
+        "table" => cmd_table(&install, &args[2..]),
         _ => {
             eprintln!("{USAGE}");
             Ok(())
@@ -909,4 +924,135 @@ fn print_npc(npc: &cr_store::npc::Npc) {
         })
         .collect();
     list("Equipment", &items);
+}
+
+fn cmd_books(install: &Installation) -> cr_store::Result<()> {
+    for book in install.books() {
+        outln!(
+            "{:<17} {:<10} {:>8}  {}",
+            book.info.category.title(),
+            book.info.short_name(),
+            book.size,
+            book.info.title
+        );
+    }
+    Ok(())
+}
+
+fn cmd_book(install: &Installation, args: &[String]) -> cr_store::Result<()> {
+    let invalid = |message: String| cr_store::Error::Invalid(message);
+    let mut name = None;
+    let mut text = false;
+    for arg in args {
+        match arg.as_str() {
+            "--outline" => text = false,
+            "--text" => text = true,
+            _ if name.is_none() => name = Some(arg.as_str()),
+            _ => return Err(invalid(format!("unexpected argument {arg}"))),
+        }
+    }
+    let name = name.ok_or_else(|| invalid("book needs a book name".into()))?;
+    let book = install
+        .book(name)
+        .ok_or_else(|| invalid(format!("no book {name} in Books/")))?;
+    let doc = install.read_book(&book)?;
+    if text {
+        for p in &doc.paragraphs {
+            outln!("{}", p.text());
+            for picture in p.pictures() {
+                outln!(
+                    "[picture: {:?}, {} bytes, {}x{} twips]",
+                    picture.format,
+                    picture.data.len(),
+                    picture.width,
+                    picture.height
+                );
+            }
+        }
+        return Ok(());
+    }
+    for h in cr_store::books::outline(&doc, book.info.heading_colors) {
+        outln!("{}{}", "  ".repeat(h.level as usize), h.title);
+    }
+    Ok(())
+}
+
+fn cmd_table(install: &Installation, args: &[String]) -> cr_store::Result<()> {
+    use cr_store::tables::{LIST, Session, TableBook};
+    use cr_store::treasure::Rand;
+
+    let invalid = |message: String| cr_store::Error::Invalid(message);
+    let key = |book: TableBook| match book {
+        TableBook::HighLevel => "dmo",
+        TableBook::Dmg => "dmg",
+        TableBook::Phb => "phb",
+        TableBook::CombatTactics => "poct",
+        TableBook::SkillsPowers => "posp",
+        TableBook::SpellsMagic => "posm",
+    };
+    let entry_key = |e: &cr_store::tables::ListEntry| match (e.number, e.label) {
+        (Some(n), _) => format!("{}:{n}", key(e.book)),
+        (None, label) => format!(
+            "{}:{}",
+            key(e.book),
+            label
+                .unwrap_or("")
+                .split_whitespace()
+                .next()
+                .unwrap_or("")
+                .to_lowercase()
+        ),
+    };
+    let rolls = install.table_rolls()?;
+    let mut id = None;
+    let mut seed = None;
+    let mut params = Vec::new();
+    let mut args = args.iter();
+    while let Some(arg) = args.next() {
+        let mut value = |name: &str| {
+            args.next()
+                .ok_or_else(|| invalid(format!("{name} needs a value")))
+        };
+        let number = |text: &String| {
+            text.parse::<u32>()
+                .map_err(|_| invalid(format!("{text} is not a number")))
+        };
+        match arg.as_str() {
+            "--seed" => seed = Some(number(value("--seed")?)?),
+            "--param" => params.push(number(value("--param")?)? as usize),
+            _ if id.is_none() => id = Some(arg.clone()),
+            _ => return Err(invalid(format!("unexpected argument {arg}"))),
+        }
+    }
+    let Some(id) = id else {
+        for book in rolls.books() {
+            outln!("{}", book.title());
+            for e in rolls.entries(book) {
+                outln!("  {:<14} {}", entry_key(e), rolls.entry_title(e));
+                for (i, p) in rolls.params(e, &[]).iter().enumerate() {
+                    outln!("      --param {i}: {} ({})", p.label, p.options.join(", "));
+                }
+            }
+        }
+        return Ok(());
+    };
+    let seed = seed.unwrap_or_else(Rand::clock_seed);
+    eprintln!("seed {seed}");
+    let mut rand = Rand::seeded(seed);
+    let mut session = Session::default();
+    let result = if let Ok(table) = id.parse::<i32>() {
+        if rolls.table(table).is_none() {
+            return Err(invalid(format!("no table {table} in Tables/")));
+        }
+        rolls.roll_id(table, &mut session, &mut rand)
+    } else {
+        let wanted = id.to_lowercase();
+        let entry = LIST
+            .iter()
+            .find(|e| entry_key(e) == wanted)
+            .ok_or_else(|| invalid(format!("no table {id}; cr table INSTALL_DIR lists them")))?;
+        rolls.roll(entry, &params, &mut session, &mut rand)
+    };
+    out!("{}", result.to_text());
+    Ok(())
 }
