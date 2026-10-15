@@ -248,6 +248,11 @@ const SUBABILITY_BONUS: [i32; 26] = [
     -5, -5, -5, -5, -4, -3, -2, -1, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 5, 5, 5, 5, 5, 5, 5,
 ];
 
+/// 0x42d7bc: the Skills & Powers proficiency bonus of a subability.
+pub(super) fn subability_bonus(score: i32) -> i32 {
+    at(&SUBABILITY_BONUS, score)
+}
+
 /// A nonweapon proficiency's score (0x438ca1). With the Core Rules: its
 /// ability plus its modifier (`data.unknown_0x480[1]`). With Skills &
 /// Powers: its initial rating (`data.unknown_0x480[0]`) plus the bonus of

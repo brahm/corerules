@@ -15,6 +15,7 @@ use crate::Result;
 use crate::lists::BUNDLE_NAMES;
 
 mod combat;
+mod nwp;
 mod rogue;
 mod spells;
 
@@ -952,9 +953,30 @@ fn proficiencies(ctx: &Ctx) -> Section {
             Flavor::Core20 => Block::Lines(names),
         }],
     };
-    let nonweapon = SheetBox {
-        title: "Non-Weapon Proficiencies".into(),
-        body: vec![table(3, nonweapon_rows(ctx))],
+    let nonweapon = match ctx.flavor {
+        Flavor::Expansion => {
+            let (list, secondary) = nwp::rows(ctx);
+            let mut rows = Vec::new();
+            for r in list {
+                rows.push(vec![Cell::new(r.name).span(2), Cell::new(r.score).right()]);
+                if !r.extra.is_empty() {
+                    rows.push(vec![Cell::new(""), Cell::new(r.extra).span(2)]);
+                }
+            }
+            SheetBox {
+                title: if secondary {
+                    "Secondary Skills"
+                } else {
+                    "Non-Weapon Proficiencies"
+                }
+                .into(),
+                body: vec![table(3, rows)],
+            }
+        }
+        Flavor::Core20 => SheetBox {
+            title: "Non-Weapon Proficiencies".into(),
+            body: vec![table(3, nonweapon_rows(ctx))],
+        },
     };
     Section {
         id: ids::PROFICIENCIES,
@@ -970,48 +992,21 @@ fn weapon_proficiency_name(ctx: &Ctx, name: &str) -> String {
     }
 }
 
-/// The nonweapon proficiencies with their scores (0x438ca1), then the
-/// native languages.
+/// 2.0's nonweapon proficiencies with their scores, in the order of the
+/// file.
 fn nonweapon_rows(ctx: &Ctx) -> Vec<Vec<Cell>> {
     let d = &ctx.ch.data;
-    let mut list: Vec<(&String, i32)> = d
-        .nonweapon_proficiencies
+    d.nonweapon_proficiencies
         .iter()
         .enumerate()
-        .map(|(i, name)| (name, rogue::nonweapon_score(ctx, i, name)))
-        .collect();
-    // 2.0 keeps the order of the file.
-    if ctx.flavor == Flavor::Expansion {
-        list.sort_by(|a, b| a.0.cmp(b.0));
-    }
-    let mut rows = Vec::new();
-    for (name, score) in list {
-        rows.push(vec![
-            Cell::new(name.clone()).span(2),
-            ctx.value(score.to_string()),
-        ]);
-    }
-    let languages: Vec<String> = d.languages.iter().map(|l| language_name(l)).collect();
-    if ctx.flavor == Flavor::Expansion {
-        rows.push(vec![
-            Cell::new("Native Languages").span(2),
-            Cell::new("").right(),
-        ]);
-        if ctx.sp {
-            rows.push(vec![Cell::new(""), Cell::new(languages.join(", ")).span(2)]);
-        } else {
-            for language in languages {
-                rows.push(vec![Cell::new(""), Cell::new(language).span(2)]);
-            }
-        }
-    }
-    rows
-}
-
-/// A language as the sheet shows it: "Elf, high dialect" becomes "Elf -
-/// high dialect".
-fn language_name(name: &str) -> String {
-    name.replacen(", ", " - ", 1)
+        .map(|(i, name)| {
+            let score = rogue::nonweapon_score(ctx, i, name);
+            vec![
+                Cell::new(name.clone()).span(2),
+                ctx.value(score.to_string()),
+            ]
+        })
+        .collect()
 }
 
 /// A part's name as the ability boxes show it: without the "Race, " or
