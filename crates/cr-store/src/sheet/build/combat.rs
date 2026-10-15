@@ -5,6 +5,7 @@ use cr_formats::classes::Class;
 use cr_formats::parts::Part;
 
 use super::{AIM, BALANCE, Ctx, MUSCLE, STAMINA, STR, single, table};
+use crate::npc::data::PartExt;
 use crate::sheet::tables::{self, at};
 use crate::sheet::{Cell, Flavor, Section, SheetBox, ids};
 
@@ -301,9 +302,18 @@ pub(in crate::sheet) fn armor_box(ctx: &Ctx) -> SheetBox {
     }
 }
 
+/// An armor class value a part does not set (0x429ac5 skips -99 and 100).
+fn ac_of(p: &Part) -> Option<i32> {
+    match p.n(0x270) {
+        -99 | 100 => None,
+        v => Some(v),
+    }
+}
+
 /// The armor class worked out (0x429ac5): its `label:value` lines and
 /// the final value, kept within -10 to 10.
 fn armor(ctx: &Ctx) -> (Vec<String>, i32) {
+    let d = &ctx.ch.data;
     let mut lines: Vec<String> = Vec::new();
     let mut natural = ctx.race().map_or(10, |r| r.unknown_0x16c[0]);
     if natural == 0 {
@@ -319,56 +329,174 @@ fn armor(ctx: &Ctx) -> (Vec<String>, i32) {
             }
         }
     }
+    // 0x43974c: the racial abilities' magic.
+    natural -= ctx
+        .racial_abilities()
+        .iter()
+        .map(|p| p.head.unknown_0x44c[0])
+        .sum::<i32>();
     lines.push(format!("Natural armor class: {natural}"));
     let mut ac = natural;
-    let worn: Vec<&Part> = ctx.worn.clone();
-    let body = worn.iter().find(|p| p.head.unknown_0x248 == 1);
-    let shield = worn.iter().find(|p| p.head.unknown_0x248 == 3);
-    let mut magic_armor = false;
-    if let Some(armor) = body {
-        let bonus = (10 - armor.head.unknown_0x250[8]).max(if natural < 10 { 1 } else { 0 });
-        lines.push(format!("{}:-{bonus}", armor.head.name));
-        ac -= bonus;
-        let magic = armor.head.unknown_0x44c[0];
-        if magic != 0 {
-            magic_armor = true;
-            lines.push(format!("Magic Armor adj.: -{magic}"));
-            ac -= magic;
+    let hands = ctx.race().map_or(0, |r| r.unknown_0x21c[0]);
+    // The Worn bundle split as 0x43a908 does: armor parts, and the other
+    // parts that are magic items (+0x224).
+    let mut armor_list: Vec<&Part> = Vec::new();
+    let mut magic_list: Vec<&Part> = Vec::new();
+    for item in &d.inventory[super::WORN].items {
+        let Some(p) = ctx.part(&item.name) else {
+            continue;
+        };
+        if ctx.rules.part_types.get(&item.name) == Some(&1) {
+            armor_list.push(p);
+        } else if p.n(0x224) != 0 {
+            magic_list.push(p);
         }
     }
-    if let Some(shield) = shield {
-        let magic = shield.head.unknown_0x44c[0];
-        if magic != 0 {
-            lines.push(format!("{} magic adj.:-{magic}", shield.head.name));
-            ac -= magic;
+    // An item that sets the armor class outright (+0x808).
+    for p in &magic_list {
+        if p.n(0x808) != 0 {
+            let v = p.n(0x270);
+            lines.push(format!("{}: {v}", p.head.name));
+            return (lines, v);
         }
-        let bonus = 10 - shield.head.unknown_0x250[8];
-        lines.push(format!("{} adj.: -{bonus}", shield.head.name));
-        ac -= bonus;
     }
-    if body.is_none() {
-        for part in &worn {
-            if part.data.unknown_0x584[1] != 0 {
-                let bonus = 10 - part.head.unknown_0x250[8];
-                lines.push(format!("{}: -{bonus}", part.head.name));
+    let mut body = false;
+    let mut body_magic_item = false;
+    let mut heavy = true;
+    for p in &armor_list {
+        if p.n(0x808) != 0 {
+            let v = p.n(0x270);
+            lines.push(format!("{}{v}", p.head.name));
+            return (lines, v);
+        }
+        if p.n(0x248) != 1 {
+            continue;
+        }
+        body = true;
+        if p.n(0x270) < 7 {
+            heavy = false;
+        }
+        if p.n(0x224) != 0 {
+            body_magic_item = true;
+        }
+        if let Some(v) = ac_of(p) {
+            let mut bonus = 10 - v;
+            if natural < 10 {
+                bonus -= 10 - natural;
+                bonus = bonus.max(1);
+            }
+            if bonus != 0 {
                 ac -= bonus;
+                lines.push(format!("{}:{}", p.head.name, -bonus));
+            }
+            let magic = p.head.unknown_0x44c[0];
+            if magic != 0 {
+                ac -= magic;
+                lines.push(format!("Magic Armor adj.: {}", -magic));
             }
         }
     }
-    if !magic_armor {
-        let mut counted = false;
-        for part in &worn {
-            let protection = part.data.unknown_0x584[2] != 0 || part.data.unknown_0x584[3] != 0;
-            if !protection || (shield.is_some() && counted) {
-                continue;
-            }
-            let magic = part.head.unknown_0x44c[0];
-            if magic != 0 {
-                lines.push(format!("{} magic adj.:-{magic}", part.head.name));
-                ac -= magic;
-                counted = true;
+    let mut used_hands = 0;
+    for name in &d.unknown_0x98 {
+        let Some(p) = ctx.part(name) else { break };
+        used_hands += p.n(0x24c);
+        if p.n(0x594) != 0 {
+            ac -= 2;
+            lines.push(format!("{} magic adj.: -2", p.head.name));
+        }
+    }
+    let shield = armor_list.iter().find(|p| p.n(0x248) == 3).copied();
+    let mut shield_bonus = 0;
+    if let Some(p) = shield {
+        if p.n(0x224) != 0 {
+            body_magic_item = true;
+        }
+        let free = used_hands < hands;
+        let prof = |i: usize| d.unknown_0x134[i] != 0;
+        let found = [
+            (
+                3,
+                0x7e0,
+                3,
+                "Body shield proficiency bonus: -3 (-4 vs. missiles)",
+            ),
+            (2, 0x7dc, 3, "Medium shield proficiency bonus: -3"),
+            (1, 0x7d8, 2, "Small shield proficiency bonus: -2"),
+            (0, 0x7d4, 1, "Buckler shield proficiency bonus: -1"),
+        ]
+        .into_iter()
+        .find(|&(i, off, _, _)| prof(i) && p.n(off) != 0 && free);
+        if let Some((_, _, v, text)) = found {
+            ac -= v;
+            lines.push(text.into());
+        }
+        if let Some(v) = ac_of(p) {
+            shield_bonus += 10 - v;
+        }
+        let magic = p.head.unknown_0x44c[0];
+        if magic != 0 {
+            ac -= magic;
+            lines.push(format!("{} magic adj.:{}", p.head.name, -magic));
+        }
+    }
+    // Magic items; of those that do not add up (+0x590) only the best
+    // counts.
+    let mut counted = true;
+    let mut best: Option<&Part> = None;
+    for p in &magic_list {
+        counted = true;
+        if p.n(0x58c) != 0 && (!heavy || body_magic_item || shield.is_some()) {
+            counted = false;
+        }
+        if p.n(0x588) != 0 && body {
+            counted = false;
+        }
+        let single = p.n(0x590) != 0;
+        if single {
+            if body_magic_item {
+                counted = false;
+            } else {
+                if let Some(prev) = best {
+                    if prev.head.unknown_0x44c[0] < p.head.unknown_0x44c[0] {
+                        if let Some(v) = ac_of(prev) {
+                            ac += natural - v;
+                        }
+                        ac += prev.head.unknown_0x44c[0];
+                    } else {
+                        counted = false;
+                    }
+                }
+                best = Some(p);
             }
         }
+        if counted && p.n(0x808) == 0 {
+            if let Some(v) = ac_of(p) {
+                ac -= natural - v;
+                lines.push(format!("{}: {}", p.head.name, -(natural - v)));
+            }
+            let magic = p.head.unknown_0x44c[0];
+            ac -= magic;
+            if magic != 0 && !single {
+                lines.push(format!("{} magic adj.:{}", p.head.name, -magic));
+            }
+        }
+    }
+    if let Some(p) = best
+        && counted
+    {
+        lines.push(format!(
+            "{} magic adj.:{}",
+            p.head.name, -p.head.unknown_0x44c[0]
+        ));
+    }
+    if hands <= used_hands {
+        shield_bonus = 0;
+    }
+    if let Some(p) = shield
+        && shield_bonus != 0
+    {
+        ac -= shield_bonus;
+        lines.push(format!("{} adj.: {}", p.head.name, -shield_bonus));
     }
     let dex = at(
         &tables::DEFENSIVE_ADJUSTMENT,
@@ -385,6 +513,17 @@ fn armor(ctx: &Ctx) -> (Vec<String>, i32) {
     if encumbrance(ctx) >= 4 {
         lines.push("Severe encumbrance penalty: 3".into());
         ac += 3;
+    }
+    // Without body armor and unencumbered, the first class ability that
+    // gives it (+0x780) is worth 2.
+    if !body && encumbrance(ctx) == 0 {
+        let ability = (0..ctx.classes.len())
+            .flat_map(|g| ctx.class_abilities(g))
+            .find(|p| p.n(0x780) != 0);
+        if let Some(p) = ability {
+            ac -= 2;
+            lines.push(format!("{}: -2", p.head.name));
+        }
     }
     (lines, ac.clamp(-10, 10))
 }
