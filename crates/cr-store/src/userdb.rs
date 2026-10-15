@@ -29,6 +29,7 @@ pub mod monsters;
 pub mod parts;
 pub mod powers;
 pub mod races;
+pub mod slots;
 pub mod spells;
 pub mod tables;
 pub mod traps;
@@ -140,6 +141,16 @@ pub enum Value {
     List(Vec<String>),
     /// Count, sides and bonus.
     Dice([i64; 3]),
+    /// A real number (a container's capacity in pounds).
+    Real(f64),
+    /// Names, each with a number (`CPartIDOb` lists: a skill and its
+    /// bonus, a weapon and the level it becomes free at).
+    Pairs(Vec<(String, i64)>),
+    /// Choose-N-of groups (`CListOfListsOfOptions`): how many to pick and
+    /// out of which names.
+    Groups(Vec<(i64, Vec<String>)>),
+    /// A table of numbers, one row per level.
+    Grid(Vec<Vec<i64>>),
 }
 
 impl Value {
@@ -150,6 +161,22 @@ impl Value {
             Self::Bool(b) => b.to_string(),
             Self::List(l) => l.join(", "),
             Self::Dice([n, s, m]) => dice_text(*n, *s, *m),
+            Self::Real(x) => x.to_string(),
+            Self::Pairs(p) => p
+                .iter()
+                .map(|(n, v)| format!("{n} ({v})"))
+                .collect::<Vec<_>>()
+                .join(", "),
+            Self::Groups(g) => g
+                .iter()
+                .map(|(n, l)| format!("{n} of [{}]", l.join(", ")))
+                .collect::<Vec<_>>()
+                .join("; "),
+            Self::Grid(rows) => rows
+                .iter()
+                .map(|r| r.iter().map(i64::to_string).collect::<Vec<_>>().join(" "))
+                .collect::<Vec<_>>()
+                .join(" / "),
         }
     }
 
@@ -158,7 +185,37 @@ impl Value {
             Self::Int(n) => *n,
             Self::Bool(b) => i64::from(*b),
             Self::Text(s) => s.trim().parse().unwrap_or(0),
+            Self::Real(x) => *x as i64,
             _ => 0,
+        }
+    }
+
+    pub fn real(&self) -> f64 {
+        match self {
+            Self::Real(x) => *x,
+            Self::Text(s) => s.trim().parse().unwrap_or(0.0),
+            v => v.int() as f64,
+        }
+    }
+
+    pub fn pairs(&self) -> Vec<(String, i64)> {
+        match self {
+            Self::Pairs(p) => p.clone(),
+            v => v.list().into_iter().map(|n| (n, 0)).collect(),
+        }
+    }
+
+    pub fn groups(&self) -> Vec<(i64, Vec<String>)> {
+        match self {
+            Self::Groups(g) => g.clone(),
+            _ => Vec::new(),
+        }
+    }
+
+    pub fn grid(&self) -> Vec<Vec<i64>> {
+        match self {
+            Self::Grid(g) => g.clone(),
+            _ => Vec::new(),
         }
     }
 
@@ -170,6 +227,7 @@ impl Value {
         match self {
             Self::List(l) => l.clone(),
             Self::Text(s) if !s.is_empty() => vec![s.clone()],
+            Self::Pairs(p) => p.iter().map(|(n, _)| n.clone()).collect(),
             _ => Vec::new(),
         }
     }
@@ -205,7 +263,7 @@ pub enum Options {
 }
 
 /// The control a field gets.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FieldKind {
     /// One line of text, at most `max` characters (0: no limit).
     Text {
@@ -229,6 +287,48 @@ pub enum FieldKind {
     /// (Available ⇄ Selected).
     Dual(Options),
     Dice,
+    /// A check with a number: the original's "sentinel" controls, whose
+    /// check is on when the number is not `none` and whose number is
+    /// greyed while it is off (unchecking stores `none`, checking starts
+    /// from `min.max(0)`). The label is the check's. With `inverted`, the
+    /// check is on when the number *is* `none` ("Not limited by
+    /// weight").
+    OptInt {
+        min: i64,
+        max: i64,
+        none: i64,
+        inverted: bool,
+    },
+    /// A real number ([`Value::Real`]); `none` as for [`Self::OptInt`]
+    /// with `inverted`, under the label `check`.
+    Real {
+        min: f64,
+        max: f64,
+        none: Option<(f64, &'static str)>,
+    },
+    /// Like [`Self::Dual`] behind a check (labelled with the field's
+    /// label): the check is on while the list has names, and unchecking
+    /// it empties the list.
+    Checked(Options),
+    /// Names with a number each ([`Value::Pairs`]): the originals'
+    /// AddRemoveNumString dialog (`402490`).
+    Pairs {
+        options: Options,
+        number: &'static str,
+        min: i64,
+        max: i64,
+    },
+    /// Choose-N-of groups ([`Value::Groups`]): the ListOfListsOfOptions
+    /// dialog (`4b2d50`).
+    Groups(Options),
+    /// One row per level ([`Value::Grid`]), the first row being level
+    /// `first`.
+    Grid {
+        columns: &'static [&'static str],
+        first: i64,
+        min: i64,
+        max: i64,
+    },
 }
 
 /// One control of an editor: where it goes, how it looks and which part
