@@ -7,8 +7,8 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use cr_store::sheet::{self as crsheet, Block, Cell, ListItem, Sheet, SheetBox, Table};
-use cr_store::treasure::{Bundle, Coin, Counts, Item, LETTERS, Rand, TreasureRules};
-use gtk::{gio, glib};
+use cr_store::treasure::{Bundle, Coin, Counts, LETTERS, Rand, TreasureRules};
+use gtk::gio;
 
 /// Where the roller was opened from.
 pub enum Mode {
@@ -53,6 +53,7 @@ struct State {
     delete: std::cell::OnceCell<gio::SimpleAction>,
     empty: adw::StatusPage,
     results: gtk::Box,
+    edit: std::cell::OnceCell<crate::bundle::Edit>,
 }
 
 /// Opens the roller over `parent` with `bundle` and the treasure type
@@ -144,7 +145,9 @@ pub fn roller(
     let empty = adw::StatusPage::builder()
         .icon_name("media-playlist-shuffle-symbolic")
         .title("No Treasure")
-        .description("Choose how many of each treasure type to roll, then press Roll")
+        .description(
+            "Choose how many of each treasure type to roll, then press Roll, or add items yourself",
+        )
         .css_classes(["compact"])
         .vexpand(true)
         .build();
@@ -264,7 +267,33 @@ pub fn roller(
         delete: std::cell::OnceCell::new(),
         empty,
         results,
+        edit: std::cell::OnceCell::new(),
     });
+    let edit = Rc::new(crate::bundle::Editing {
+        rules: state.rules.clone(),
+        parent: dialog.clone().upcast(),
+        get: Box::new({
+            let state = Rc::downgrade(&state);
+            move || Some(state.upgrade()?.bundle.borrow().clone())
+        }),
+        set: Box::new({
+            let state = Rc::downgrade(&state);
+            move |bundle| {
+                if let Some(state) = state.upgrade() {
+                    *state.bundle.borrow_mut() = bundle;
+                    state.refresh();
+                }
+            }
+        }),
+    });
+    state
+        .items
+        .set_header_suffix(Some(&crate::bundle::add_button(&edit)));
+    let add_first = crate::bundle::add_button(&edit);
+    add_first.set_css_classes(&["pill"]);
+    add_first.set_halign(gtk::Align::Center);
+    state.empty.set_child(Some(&add_first));
+    let _ = state.edit.set(edit);
     state.refresh();
 
     roll.connect_clicked({
@@ -373,11 +402,12 @@ impl State {
         if !has_items {
             return;
         }
-        let mut rows = Vec::new();
-        for (i, item) in bundle.items.iter().enumerate() {
-            let row = self.item_row(item, &[i]);
-            self.items.add(&row);
-            rows.push(row);
+        let rows = match self.edit.get() {
+            Some(edit) => crate::bundle::rows(edit, &bundle),
+            None => Vec::new(),
+        };
+        for row in &rows {
+            self.items.add(row);
         }
         *self.rows.borrow_mut() = rows;
         for line in self.rules.summary(&bundle).lines() {
@@ -391,73 +421,6 @@ impl State {
             );
             self.summary.add(&row);
             self.summary_rows.borrow_mut().push(row);
-        }
-    }
-
-    /// One item, with a button to remove it; an item that holds others
-    /// expands to show them.
-    fn item_row(self: &Rc<Self>, item: &Item, path: &[usize]) -> gtk::Widget {
-        let spells: Vec<String> = item
-            .spells()
-            .iter()
-            .map(|s| format!("{} ({})", s.name, s.pages))
-            .collect();
-        let remove = gtk::Button::builder()
-            .icon_name("user-trash-symbolic")
-            .tooltip_text("Remove")
-            .valign(gtk::Align::Center)
-            .css_classes(["flat"])
-            .build();
-        remove.connect_clicked({
-            let (state, path) = (self.clone(), path.to_vec());
-            move |_| {
-                state.remove(&path);
-                state.refresh();
-            }
-        });
-        let title = glib::markup_escape_text(&item.label()).to_string();
-        let subtitle = glib::markup_escape_text(&spells.join(", ")).to_string();
-        match &item.contents {
-            Some(contents) => {
-                let row = adw::ExpanderRow::builder()
-                    .title(title)
-                    .subtitle(subtitle)
-                    .build();
-                row.add_suffix(&remove);
-                for (i, inner) in contents.items.iter().enumerate() {
-                    let mut inner_path = path.to_vec();
-                    inner_path.push(i);
-                    row.add_row(&self.item_row(inner, &inner_path));
-                }
-                row.upcast()
-            }
-            None => {
-                let row = adw::ActionRow::builder()
-                    .title(title)
-                    .subtitle(subtitle)
-                    .subtitle_lines(0)
-                    .build();
-                if item.flag {
-                    row.add_css_class("dim-label");
-                }
-                row.add_suffix(&remove);
-                row.upcast()
-            }
-        }
-    }
-
-    fn remove(&self, path: &[usize]) {
-        let mut bundle = self.bundle.borrow_mut();
-        let mut items = &mut bundle.items;
-        for &i in &path[..path.len() - 1] {
-            match items.get_mut(i).and_then(|item| item.contents.as_mut()) {
-                Some(contents) => items = &mut contents.items,
-                None => return,
-            }
-        }
-        let last = path[path.len() - 1];
-        if last < items.len() {
-            items.remove(last);
         }
     }
 

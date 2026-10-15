@@ -2,6 +2,7 @@
 //! panes (sections, entries, details) that collapse on narrow windows.
 
 mod books;
+mod bundle;
 mod create;
 mod encounter;
 mod lists;
@@ -647,6 +648,10 @@ impl encounter::Host for Window {
 
     fn treasure_store(&self) -> treasure::Store {
         Window::treasure_store(self)
+    }
+
+    fn trap_record(&self, action: &str, origin: cr_store::userdb::Origin, name: &str) {
+        userdb::trap_action(&Rc::new(self.clone()), action, origin, name)
     }
 
     fn parent(&self) -> gtk::Widget {

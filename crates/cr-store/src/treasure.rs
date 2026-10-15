@@ -10,6 +10,7 @@
 //! [`TreasureRules`] follows the installation's program. Addresses are the
 //! Expansion's unless marked "2.0".
 
+mod edit;
 mod intelligent;
 mod letters;
 
@@ -24,6 +25,9 @@ use cr_formats::spells::SpellsFile;
 use cr_formats::treasure::{Treasure, TreasureTableEntry};
 
 pub use crate::sheet::Flavor;
+pub use edit::{
+    ADD_CATEGORIES, MoveError, PendingMove, SCROLL_SPELL_LIMIT, ScrollError, SpellCopy, list_cmp,
+};
 pub use letters::{MonsterTreasure, encounter_counts, parse_letters};
 
 use crate::{Error, Installation, Result};
@@ -380,12 +384,42 @@ struct Table {
 /// What Calculate reads from a part.
 #[derive(Debug, Clone, Copy)]
 struct PartValue {
-    /// pp, gp, sp, cp (+0x1f8..+0x204).
+    /// pp, gp, sp, cp (+0x1f8..+0x204), the Skills & Powers prices.
     price: [i32; 4],
+    /// The Player's Handbook's (+0x208..+0x214).
+    handbook: [i32; 4],
     /// +0x230.
     xp: i32,
     /// +0x224.
     magical: bool,
+}
+
+/// Which price list the value of an item comes from. The original's price
+/// getters (0x6610a6, 0x6610df, 0x661118, 0x661151; 2.0 0x54ec60) read
+/// each coin of the Player's Handbook price instead of the Skills & Powers
+/// one when the global 0x85f478 (2.0 0x6e7f90) is set and that coin is not
+/// zero. The global starts at 0; making a character sets it, and loading
+/// or copying one sets it to "the character does not use Skills & Powers"
+/// (0x446a40 callers 0x419607, 0x41cd5b, 0x41adb5); so it follows the last
+/// character the program read.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Prices {
+    /// Skills & Powers prices only (the global clear).
+    #[default]
+    SkillsAndPowers,
+    /// Player's Handbook coins where they are not zero.
+    Handbook,
+}
+
+impl Prices {
+    /// The prices in force after the program read `character`.
+    pub fn after(character: &cr_formats::character::Character) -> Prices {
+        if character.skills_and_powers() {
+            Prices::SkillsAndPowers
+        } else {
+            Prices::Handbook
+        }
+    }
 }
 
 /// Part type names as Calculate writes them (0x468c52).
@@ -474,6 +508,9 @@ pub struct TreasureRules {
     /// Part maps by type, user parts first then standard ones, keyed by the
     /// trimmed upper-case name.
     parts: [[HashMap<String, PartValue>; PART_TYPE_COUNT]; 2],
+    /// Part names by type as the files have them, in file order, user
+    /// parts first then standard ones.
+    part_names: [[Vec<String>; PART_TYPE_COUNT]; 2],
 }
 
 impl Installation {
@@ -517,6 +554,7 @@ impl Installation {
             tables,
             spells: Default::default(),
             parts: Default::default(),
+            part_names: Default::default(),
         };
         for (i, t) in rules.tables.iter().enumerate() {
             rules.by_name.entry(t.name.clone()).or_insert(i);
@@ -556,6 +594,7 @@ impl Installation {
                 for object in array {
                     if let Object::Part(part) = object {
                         let h = &part.head;
+                        rules.part_names[source][t].push(h.name.clone());
                         rules.parts[source][t].insert(
                             part_key(&h.name),
                             PartValue {
@@ -564,6 +603,12 @@ impl Installation {
                                     h.unknown_0x1f8[1],
                                     h.unknown_0x1f8[2],
                                     h.unknown_0x1f8[3],
+                                ],
+                                handbook: [
+                                    h.unknown_0x1f8[4],
+                                    h.unknown_0x1f8[5],
+                                    h.unknown_0x1f8[6],
+                                    h.unknown_0x1f8[7],
                                 ],
                                 xp: h.unknown_0x230,
                                 magical: h.unknown_0x224 != 0,
@@ -1070,19 +1115,33 @@ impl TreasureRules {
     /// everything in `bundle` that is a part, by part type. Flagged lines
     /// count for nothing but their contents do.
     pub fn summary(&self, bundle: &Bundle) -> Summary {
+        self.summary_with(bundle, Prices::SkillsAndPowers)
+    }
+
+    /// [`summary`](Self::summary) with the prices of `prices`.
+    pub fn summary_with(&self, bundle: &Bundle, prices: Prices) -> Summary {
         let mut summary = Summary::default();
-        self.add_to_summary(bundle, &mut summary);
+        self.add_to_summary(bundle, prices, &mut summary);
         summary
     }
 
-    fn add_to_summary(&self, bundle: &Bundle, s: &mut Summary) {
+    /// Adds `bundle` to `s`; see [`summary`](Self::summary).
+    pub fn add_to_summary(&self, bundle: &Bundle, prices: Prices, s: &mut Summary) {
         for item in &bundle.items {
             if !item.flag
                 && let Some(t) = self.part_type(&item.name)
                 && let Some(part) = self.part(&item.name, t)
             {
                 let qty = item.quantity as i32;
-                let [pp, gp, sp, cp] = part.price;
+                let mut price = part.price;
+                if prices == Prices::Handbook {
+                    for (p, h) in price.iter_mut().zip(part.handbook) {
+                        if h != 0 {
+                            *p = h;
+                        }
+                    }
+                }
+                let [pp, gp, sp, cp] = price;
                 let value = pp
                     .wrapping_mul(500)
                     .wrapping_add(gp.wrapping_mul(100))
@@ -1101,7 +1160,7 @@ impl TreasureRules {
                 }
             }
             if let Some(contents) = &item.contents {
-                self.add_to_summary(contents, s);
+                self.add_to_summary(contents, prices, s);
             }
         }
     }

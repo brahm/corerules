@@ -349,7 +349,7 @@ impl EncounterRules {
         out.push('\n');
 
         let merged = self.merged_treasure(encounter);
-        let summary = self.treasure.summary(&merged);
+        let summary = self.treasure.summary_with(&merged, encounter.prices());
         out.push_str(&format!(
             "{:>10}  {:>12}  {:>12}  Category\n",
             "Number", "Experience", "Gold Value"
