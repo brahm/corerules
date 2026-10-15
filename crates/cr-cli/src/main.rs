@@ -93,7 +93,8 @@ const USAGE: &str = "usage:
                             keeping a .bak); KIND: spells, powers, traps,
                             monster-types, monsters, races, classes, parts
 
-Without INSTALL_DIR, the installation in the Wine prefix is used.";
+Without INSTALL_DIR, the data package in ~/.local/share/corerules/data
+is used, else the installation in the Wine prefix.";
 
 /// `print!` to standard output that ends the program quietly when the
 /// reader has gone away (`cr encounter … | head`), where `print!` panics
@@ -133,27 +134,33 @@ fn stdout_failed(e: std::io::Error) -> ! {
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let (Some(command), dir) = (args.first(), args.get(1)) else {
+    let Some(command) = args.first() else {
         eprintln!("{USAGE}");
         return ExitCode::FAILURE;
     };
-    let install = match dir {
-        Some(dir) => Installation::open(dir),
-        None => Installation::discover()
-            .ok_or_else(|| cr_store::Error::NotAnInstallation(cr_store::DEFAULT_WINE_PATH.into())),
+    // INSTALL_DIR may be left out whenever the next argument is not a
+    // folder: the data package or the Wine installation is used.
+    let (install, rest) = match args.get(1).filter(|d| std::path::Path::new(d).is_dir()) {
+        Some(dir) => (Installation::open(dir), &args[2..]),
+        None => (
+            Installation::discover().ok_or_else(|| {
+                cr_store::Error::NotAnInstallation(cr_store::DEFAULT_WINE_PATH.into())
+            }),
+            &args[1..],
+        ),
     };
     let result = install.and_then(|install| match command.as_str() {
         "survey" => cmd_survey(&install),
         "chars" => cmd_chars(&install),
-        "edit" => cmd_edit(&install, &args[2..]),
-        "sheet" => cmd_sheet(&install, &args[2..]),
-        "treasure" => cmd_treasure(&install, &args[2..]),
-        "encounter" => cmd_encounter(&install, &args[2..]),
-        "npc" => cmd_npc(&install, &args[2..]),
+        "edit" => cmd_edit(&install, rest),
+        "sheet" => cmd_sheet(&install, rest),
+        "treasure" => cmd_treasure(&install, rest),
+        "encounter" => cmd_encounter(&install, rest),
+        "npc" => cmd_npc(&install, rest),
         "books" => cmd_books(&install),
-        "book" => cmd_book(&install, &args[2..]),
-        "table" => cmd_table(&install, &args[2..]),
-        "userdb" => userdb::cmd(&install, &args[2..]),
+        "book" => cmd_book(&install, rest),
+        "table" => cmd_table(&install, rest),
+        "userdb" => userdb::cmd(&install, rest),
         _ => {
             eprintln!("{USAGE}");
             Ok(())

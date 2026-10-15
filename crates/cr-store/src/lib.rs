@@ -43,6 +43,15 @@ pub enum Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Where `packaging/extract-data.sh --install` puts the data package.
+pub fn data_package_dir() -> Option<PathBuf> {
+    let data = std::env::var_os("XDG_DATA_HOME")
+        .filter(|d| !d.is_empty())
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| Path::new(&h).join(".local/share")))?;
+    Some(data.join("corerules").join("data"))
+}
+
 /// Folder where the installer puts Core Rules inside a Wine prefix.
 pub const DEFAULT_WINE_PATH: &str = "drive_c/Program Files/AD&D Core Rules 2.0";
 
@@ -59,8 +68,16 @@ impl Installation {
         Ok(Self { root })
     }
 
-    /// Looks for an installation in the usual Wine prefix (`$WINEPREFIX`, else `~/.wine`).
+    /// Looks for the data package made by `extract-data.sh` in the app's
+    /// data folder (`$XDG_DATA_HOME/corerules/data`, else
+    /// `~/.local/share/corerules/data`), then for an installation in the
+    /// usual Wine prefix (`$WINEPREFIX`, else `~/.wine`).
     pub fn discover() -> Option<Self> {
+        if let Some(dir) = data_package_dir()
+            && let Ok(install) = Self::open(dir)
+        {
+            return Some(install);
+        }
         let prefix = std::env::var_os("WINEPREFIX")
             .map(PathBuf::from)
             .or_else(|| std::env::var_os("HOME").map(|h| Path::new(&h).join(".wine")))?;

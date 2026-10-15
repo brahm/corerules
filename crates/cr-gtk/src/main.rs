@@ -260,6 +260,7 @@ impl Window {
             .description(match error {
                 Some(error) => glib::markup_escape_text(error).to_string(),
                 None => "Open the folder where AD&amp;D Core Rules 2.0 is installed, \
+                         a data package made with extract-data.sh, \
                          or the root of its CD"
                     .to_owned(),
             })

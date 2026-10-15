@@ -32,6 +32,22 @@ tool. The Flatpak uses the GNOME 50 runtime from Flathub and may read and
 write your home folder, where Wine keeps Core Rules, and CDs under `/media`
 and `/run/media`.
 
+## Running without Wine
+
+The app needs the rules data of a Core Rules installation you own. Instead
+of keeping Wine around, copy what the app uses into a local data package
+once:
+
+```sh
+packaging/extract-data.sh "$HOME/.wine"            # writes corerules-data-*.tar.gz
+packaging/extract-data.sh --install corerules-data-expansion.tar.gz
+```
+
+`--install` unpacks it into `~/.local/share/corerules/data`, where the app
+and `cr` look first (`--install` also takes the installation folder
+directly). The package holds TSR/Wizards of the Coast content: keep it for
+your own use and do not redistribute it.
+
 ## Testing against your own installation
 
 The rules databases are copyrighted and are not part of this repository.
