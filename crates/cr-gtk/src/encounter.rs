@@ -417,6 +417,15 @@ impl<H: Host + 'static> State<H> {
     /// Rebuilds the groups that show the encounter's contents, keeping
     /// the description last.
     fn refresh(self: &Rc<Self>) {
+        // Keep the place in the page: rebuilding would move the focus to
+        // the first entry and scroll there.
+        let scroll = self
+            .page
+            .first_child()
+            .and_downcast::<gtk::ScrolledWindow>()
+            .map(|s| s.vadjustment());
+        let at = scroll.as_ref().map(|a| a.value());
+        self.dialog.set_focus(None::<&gtk::Widget>);
         for group in self.groups.borrow_mut().drain(..) {
             self.page.remove(&group);
         }
@@ -439,6 +448,9 @@ impl<H: Host + 'static> State<H> {
         }
         self.page.add(&self.notes);
         *self.groups.borrow_mut() = groups;
+        if let (Some(adjustment), Some(at)) = (scroll, at) {
+            glib::idle_add_local_once(move || adjustment.set_value(at));
+        }
     }
 
     fn update_totals(&self) {
@@ -806,11 +818,11 @@ impl<H: Host + 'static> State<H> {
                     }
                     let button = gtk::MenuButton::builder()
                         .icon_name("view-more-symbolic")
-                        .tooltip_text("Trap Menu")
                         .valign(gtk::Align::Center)
                         .menu_model(&menu)
                         .css_classes(["flat"])
                         .build();
+                    button.update_property(&[gtk::accessible::Property::Label("Trap Menu")]);
                     button.insert_action_group("trap", Some(&actions));
                     row.add_suffix(&button);
                     row.connect_activated({

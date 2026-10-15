@@ -8,7 +8,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use cr_store::sheet::{self as crsheet, Block, Cell, ListItem, Sheet, SheetBox, Table};
 use cr_store::treasure::{Bundle, Coin, Counts, LETTERS, Rand, TreasureRules};
-use gtk::gio;
+use gtk::{gio, glib};
 
 /// Where the roller was opened from.
 pub enum Mode {
@@ -54,6 +54,7 @@ struct State {
     empty: adw::StatusPage,
     results: gtk::Box,
     edit: std::cell::OnceCell<crate::bundle::Edit>,
+    scroll: gtk::ScrolledWindow,
 }
 
 /// Opens the roller over `parent` with `bundle` and the treasure type
@@ -268,6 +269,7 @@ pub fn roller(
         empty,
         results,
         edit: std::cell::OnceCell::new(),
+        scroll: scroll.clone(),
     });
     let edit = Rc::new(crate::bundle::Editing {
         rules: state.rules.clone(),
@@ -389,6 +391,13 @@ impl State {
 
     /// Shows the bundle and its summary.
     fn refresh(self: &Rc<Self>) {
+        // Keep the place: removing the focused row would scroll to the top.
+        let adjustment = self.scroll.vadjustment();
+        let at = adjustment.value();
+        if let Some(root) = self.scroll.root() {
+            root.set_focus(None::<&gtk::Widget>);
+        }
+        glib::idle_add_local_once(move || adjustment.set_value(at));
         for row in self.rows.borrow_mut().drain(..) {
             self.items.remove(&row);
         }

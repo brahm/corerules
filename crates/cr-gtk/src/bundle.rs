@@ -77,7 +77,12 @@ fn item_row(edit: &Edit, item: &Item, path: &[usize]) -> gtk::Widget {
         let (edit, path) = (edit.clone(), path.to_vec());
         Box::new(move || move_dialog(&edit, &path))
     }));
-    if item.extra.is_some() || item.name.contains("Scroll") {
+    // Edit Scrolls refuses anything else (0x5452aa), so it is offered
+    // only where it can work or explains why not.
+    if item.extra.is_some()
+        || item.name == "Spell Scroll, Wizard"
+        || item.name == "Spell Scroll, Priest"
+    {
         entries.push(("Edit _Spells…", {
             let (edit, path) = (edit.clone(), path.to_vec());
             Box::new(move || edit_spells(&edit, &path))
@@ -153,11 +158,11 @@ fn row_menu(entries: Vec<Entry>) -> gtk::MenuButton {
     }
     let button = gtk::MenuButton::builder()
         .icon_name("view-more-symbolic")
-        .tooltip_text("Edit")
         .valign(gtk::Align::Center)
         .menu_model(&menu)
         .css_classes(["flat"])
         .build();
+    button.update_property(&[gtk::accessible::Property::Label("Edit")]);
     button.insert_action_group("row", Some(&actions));
     button
 }
