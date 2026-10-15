@@ -121,6 +121,9 @@ pub(super) struct Ctx<'a> {
     /// Parts of the top-level items readied and worn.
     pub readied: Vec<&'a Part>,
     pub worn: Vec<&'a Part>,
+    /// The kit's data, when the kit part has it.
+    pub kit_data: Option<&'a cr_formats::parts::PartKitData>,
+    pub kit: Option<crate::npc::data::Kit>,
 }
 
 impl<'a> Ctx<'a> {
@@ -158,7 +161,18 @@ impl<'a> Ctx<'a> {
             scores: Scores::default(),
             readied: top(READIED),
             worn: top(WORN),
+            kit_data: None,
+            kit: None,
         };
+        ctx.kit_data = ctx
+            .part(&ch.data.kit)
+            .and_then(|p| p.data.kit.as_ref())
+            .and_then(|k| k.as_deref())
+            .and_then(|o| match o {
+                Object::PartKit(k) => k.data.as_ref(),
+                _ => None,
+            });
+        ctx.kit = ctx.kit_data.map(crate::npc::data::Kit::of);
         ctx.scores = ctx.compute_scores();
         Ok(ctx)
     }

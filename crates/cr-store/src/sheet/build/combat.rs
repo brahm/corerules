@@ -722,6 +722,7 @@ fn melee_thac0(ctx: &Ctx, p: &Part, hand: Hand) -> Option<i32> {
     if mastery(ctx, p) {
         t -= 3;
     }
+    t += kit_thac0(ctx, p);
     if let Some(primary) = hand
         && !two_weapon_style(ctx)
     {
@@ -766,6 +767,33 @@ fn two_weapon_style(ctx: &Ctx) -> bool {
     }
 }
 
+/// The kit's THAC0 adjustment for a weapon (0x423a3d, 0x425799): -1 for
+/// a weapon of its list (+0xf8, 0x43f9d9), its bonus for every weapon
+/// (+0x34c) and for the weapons it names (+0x350, +0x354).
+fn kit_thac0(ctx: &Ctx, p: &Part) -> i32 {
+    let Some(kit) = &ctx.kit else { return 0 };
+    let mut t = 0;
+    if kit.sa(0xf8).iter().any(|n| n == launcher_name(p)) {
+        t -= 1;
+    }
+    t += kit.i(0x34c);
+    if kit.i(0x350) != 0 && kit.sa(0x354).iter().any(|n| *n == p.head.name) {
+        t += kit.i(0x350);
+    }
+    t
+}
+
+/// The kit's damage bonus for a weapon (0x428a99, 0x427a8f): +0x80 for
+/// every weapon, +0x368 for the weapons +0x36c names.
+fn kit_damage(ctx: &Ctx, p: &Part) -> i32 {
+    let Some(kit) = &ctx.kit else { return 0 };
+    let mut b = kit.i(0x80);
+    if kit.i(0x368) != 0 && kit.sa(0x36c).iter().any(|n| *n == p.head.name) {
+        b += kit.i(0x368);
+    }
+    b
+}
+
 /// What the melee and missile THAC0 share: magic, weapon of choice,
 /// proficiency, racial bonus and encumbrance.
 fn common_thac0(ctx: &Ctx, p: &Part) -> i32 {
@@ -778,6 +806,18 @@ fn common_thac0(ctx: &Ctx, p: &Part) -> i32 {
     }
     bonus += racial_weapon_bonus(ctx, p).0;
     bonus -= encumbrance_penalty(ctx);
+    // "Class ability bonus": per class, a class ability that lists the
+    // weapon (+0x4fc).
+    let key = launcher_name(p);
+    for g in 0..ctx.classes.len() {
+        if ctx
+            .class_abilities(g)
+            .iter()
+            .any(|a| a.data.unknown_0x4fc.iter().any(|n| n == key))
+        {
+            bonus += 1;
+        }
+    }
     bonus
 }
 
@@ -792,6 +832,10 @@ fn missile_thac0(ctx: &Ctx, p: &Part) -> Option<i32> {
     if mastery(ctx, p) {
         t -= 2;
     }
+    if specialized(ctx, p) && !mastery(ctx, p) {
+        t -= 1;
+    }
+    t += kit_thac0(ctx, p);
     Some(clamp_thac0(ctx, t))
 }
 
@@ -869,12 +913,12 @@ fn melee_damage_bonus(ctx: &Ctx, p: &Part, own: i32) -> i32 {
     }
     b += p.head.unknown_0x44c[1];
     b += racial_weapon_bonus(ctx, p).1;
-    b
+    b + kit_damage(ctx, p)
 }
 
 /// The damage bonus of ammunition shot from `launcher` (0x427a8f small,
 /// 0x42754d large): its own bonus, Strength as far as the launcher allows,
-/// the ammunition's magic and racial bonuses.
+/// the launcher's and the ammunition's magic, racial and kit bonuses.
 fn ammo_damage_bonus(ctx: &Ctx, launcher: &Part, ammo: &Part, own: i32) -> i32 {
     if !is_missile(launcher) {
         return 0;
@@ -884,7 +928,8 @@ fn ammo_damage_bonus(ctx: &Ctx, launcher: &Part, ammo: &Part, own: i32) -> i32 {
         strength = 0;
     }
     strength = strength.min(launcher.data.unknown_0x7cc[0]);
-    own + strength + ammo.head.unknown_0x44c[1] + racial_weapon_bonus(ctx, ammo).1
+    let magic = launcher.head.unknown_0x44c[1] + ammo.head.unknown_0x44c[1];
+    own + strength + magic + racial_weapon_bonus(ctx, ammo).1 + kit_damage(ctx, ammo)
 }
 
 /// One row of the weapon tables: the weapon (or ammunition, indented, with
@@ -910,7 +955,11 @@ fn walk<'a>(items: &'a [cr_formats::inventory::InventoryItem], names: &mut Vec<&
 /// The name ammunition lists its launchers by (0x660e0c): the weapon it
 /// is a version of, unless +0x424 is set.
 fn launcher_name(p: &Part) -> &str {
-    if p.n(0x424) == 0 { p.s(0x428) } else { &p.head.name }
+    if p.n(0x424) == 0 {
+        p.s(0x428)
+    } else {
+        &p.head.name
+    }
 }
 
 /// The weapon list (0x5fc26d): every weapon readied, carried and worn,

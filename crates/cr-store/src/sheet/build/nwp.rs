@@ -59,20 +59,12 @@ impl<'a, 'c> Rules<'a, 'c> {
                 _ => [Vec::new(), Vec::new()],
             });
         }
-        let kit_data = ctx
-            .part(&ctx.ch.data.kit)
-            .and_then(|p| p.data.kit.as_ref())
-            .and_then(|k| k.as_deref())
-            .and_then(|o| match o {
-                Object::PartKit(k) => k.data.as_ref(),
-                _ => None,
-            });
         Self {
             ctx,
             klasses,
             level_lists,
-            kit_data,
-            kit: kit_data.map(Kit::of),
+            kit_data: ctx.kit_data,
+            kit: ctx.kit.clone(),
         }
     }
 
