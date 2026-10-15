@@ -251,6 +251,8 @@ pub struct FieldDesc<R> {
     pub arg: usize,
     /// Re-evaluated whenever a value changes (XP Value needs Magic).
     pub enabled: Option<fn(&R) -> bool>,
+    /// Like `enabled`, for a rule that needs [`arg`](Self::arg).
+    pub enabled_at: Option<fn(&R, usize) -> bool>,
     /// Evaluated when the editor opens (subrace pages, priest spheres).
     pub visible: Option<fn(&R) -> bool>,
 }
@@ -273,6 +275,7 @@ impl<R> FieldDesc<R> {
             source_getter: None,
             arg: 0,
             enabled: None,
+            enabled_at: None,
             visible: None,
         }
     }
@@ -313,6 +316,11 @@ impl<R> FieldDesc<R> {
         self
     }
 
+    pub fn enabled_at(mut self, rule: fn(&R, usize) -> bool) -> Self {
+        self.enabled_at = Some(rule);
+        self
+    }
+
     pub fn visible(mut self, rule: fn(&R) -> bool) -> Self {
         self.visible = Some(rule);
         self
@@ -320,6 +328,7 @@ impl<R> FieldDesc<R> {
 
     pub fn is_enabled(&self, record: &R) -> bool {
         self.enabled.is_none_or(|rule| rule(record))
+            && self.enabled_at.is_none_or(|rule| rule(record, self.arg))
     }
 
     pub fn is_visible(&self, record: &R) -> bool {

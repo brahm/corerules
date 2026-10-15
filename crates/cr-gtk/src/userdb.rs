@@ -1508,12 +1508,8 @@ fn allowed_classes<H: Host + 'static>(host: &Shared<H>, race: &str) {
     let groups_of = {
         let class_list = class_list.clone();
         move |name: &str| -> Option<[String; 5]> {
-            let mut slots: [String; 5] = Default::default();
-            for part in name.split('/') {
-                let g = class_list.iter().find(|c| c.name == part)?.group?;
-                part.clone_into(&mut slots[g]);
-            }
-            Some(slots)
+            let names: Vec<&str> = name.split('/').collect();
+            Allowed::from_names(&names, &class_list, 0).map(|a| a.classes)
         }
     };
     let groups_of = Rc::new(groups_of);
