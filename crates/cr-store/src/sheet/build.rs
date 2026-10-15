@@ -1096,13 +1096,18 @@ fn inventory(ctx: &Ctx, id: u32, with_spells: bool) -> Section {
     single(id, "Inventory", vec![Block::List(bundles)])
 }
 
-/// The items of a bundle. A book's spells, "name (pages)" each, are one
-/// list entry in the Expansion and one entry each in 2.0.
+/// The items of a bundle, a book's spells "name (pages)" one entry each.
+/// The Expansion writes quantities with thousands separators.
 fn items(ctx: &Ctx, list: &[InventoryItem], with_spells: bool) -> Vec<ListItem> {
     list.iter()
         .map(|item| {
             let text = if item.quantity > 1 {
-                format!("{} x{}", item.name, item.quantity)
+                let n = if ctx.expansion() {
+                    thousands(i64::from(item.quantity))
+                } else {
+                    item.quantity.to_string()
+                };
+                format!("{} x{n}", item.name)
             } else {
                 item.name.clone()
             };
@@ -1116,23 +1121,13 @@ fn items(ctx: &Ctx, list: &[InventoryItem], with_spells: bool) -> Vec<ListItem> 
                 && let Some(extra) = &item.extra
                 && !extra.unknown_0x10.is_empty()
             {
-                let lines = extra.unknown_0x10.iter().enumerate().map(|(s, name)| {
+                let entries = extra.unknown_0x10.iter().enumerate().map(|(s, name)| {
                     let pages = extra.unknown_0x24.get(s).copied().unwrap_or(0);
-                    format!("{name} ({pages})\n")
-                });
-                let entries: Vec<ListItem> = if ctx.expansion() {
-                    vec![ListItem {
-                        text: lines.collect(),
+                    ListItem {
+                        text: format!("{name} ({pages})\n"),
                         children: None,
-                    }]
-                } else {
-                    lines
-                        .map(|text| ListItem {
-                            text,
-                            children: None,
-                        })
-                        .collect()
-                };
+                    }
+                });
                 children.get_or_insert_with(Vec::new).extend(entries);
             }
             ListItem { text, children }
