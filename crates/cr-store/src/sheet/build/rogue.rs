@@ -68,18 +68,22 @@ fn ability_adjustment(ctx: &Ctx, id: usize) -> i32 {
     }
 }
 
-/// The armor adjustment of skill `id` (0x59b282) from the parts with
-/// thief skill adjustments (`data.unknown_0x598`).
+/// The armor adjustment of skill `id` (0x59b282): the sum of the worn
+/// parts' thief skill adjustments (`data.unknown_0x59c`, when
+/// `data.unknown_0x598` is set), and whether body armor (+0x248 1) is
+/// worn, which takes away the no-armor bonus.
 fn part_adjustment(parts: &[&Part], id: usize) -> (bool, i32) {
-    let mut any = false;
+    let mut armored = false;
     let mut sum = 0;
     for p in parts {
         if p.data.unknown_0x598 != 0 {
-            any = true;
             sum += p.data.unknown_0x59c[id - 1];
         }
+        if p.head.unknown_0x248 == 1 {
+            armored = true;
+        }
     }
-    (any, sum)
+    (armored, sum)
 }
 
 /// The rogue skills (0x59aa97), sorted by name.
