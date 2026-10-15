@@ -877,7 +877,13 @@ fn attacks(ctx: &Ctx, p: &Part, missile: bool, hand: Hand) -> String {
     if missile {
         // The rate of fire "a/b": the Expansion shows `a`, 2.0 (0x421d40)
         // the whole fraction, with 0 read as 1 and "/1" left out.
-        let rof = &p.head.unknown_0x41c;
+        // 0x6614d0: a Core Rules character reads the Core Rules rate
+        // (+0x408) when it is filled in.
+        let rof = if !ctx.sp && !p.head.unknown_0x408.is_empty() {
+            &p.head.unknown_0x408
+        } else {
+            &p.head.unknown_0x41c
+        };
         let mut parts = rof.split('/').map(|s| atoi(s).max(1));
         let n = parts.next().unwrap_or(1);
         let d = parts.next().unwrap_or(1);
