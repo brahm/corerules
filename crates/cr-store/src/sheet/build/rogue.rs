@@ -4,6 +4,7 @@
 use cr_formats::parts::Part;
 
 use super::{AIM, BALANCE, Ctx, DEX, MUSCLE, STR, ability_display_name, single, table};
+use crate::npc::data::PartExt;
 use crate::sheet::tables::{self, at};
 use crate::sheet::{Cell, Section, ids};
 
@@ -307,6 +308,20 @@ pub(in crate::sheet) fn nonweapon_score(ctx: &Ctx, index: usize, name: &str) -> 
         named_score(ctx, &h.unknown_0x460).unwrap_or(0) + part.data.unknown_0x480[1]
     };
     total += extra;
+    // Slots spent beyond what the proficiency costs: its Core Rules cost
+    // (+0x47c), one more outside the classes' groups.
+    if let Some(&spent) = ctx.ch.data.nonweapon_costs.get(index) {
+        let g = |x: i32| ctx.has_group(x);
+        let n = |o: u32| part.n(o) != 0;
+        let in_group = n(0x48c)
+            || (n(0x490) && g(2))
+            || (n(0x494) && g(1))
+            || (n(0x498) && g(0))
+            || (n(0x49c) && g(3))
+            || (n(0x4a0) && g(4));
+        let cost = part.n(0x47c) + i32::from(!in_group);
+        total += (spent as i32 - cost).max(0);
+    }
     if ctx.ch.data.unknown_0xac[5].iter().any(|n| n == name) {
         total += 1;
     }
