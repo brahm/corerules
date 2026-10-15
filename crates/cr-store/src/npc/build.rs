@@ -6,8 +6,8 @@ use cr_formats::character::{CORE20_VERSION, Character, SheetEntries, SheetOption
 use cr_formats::inventory::{InventoryBundle, InventoryExtra, InventoryItem};
 
 use super::Gen;
+use super::rogue::KitBonus;
 use super::state::{It, STR};
-use crate::create::rogue_skill_of;
 use crate::lists::PartTable;
 use crate::{Error, Result};
 
@@ -137,21 +137,31 @@ impl Gen<'_> {
             slot.unknown_0x2d4 = self.minor.get(g).cloned().unwrap_or_default();
             slot.unknown_0x338 = self.major.get(g).cloned().unwrap_or_default();
         }
-        // The rogue skills of the first class that has them; their points
-        // (§9 of the specification) are not simulated.
-        if let Some(k) = self.classes.iter().find(|k| k.flag(0x27a4)) {
-            d.rogue_skills.entries = k
-                .sa(0x2724)
-                .iter()
-                .filter(|a| rogue_skill_of(a).is_some())
-                .map(|a| (a.clone(), [0; 100]))
-                .collect();
+        // Rogue skills (0x4c751c), saved as they stand: name and 100 levels.
+        d.rogue_skills.entries = self
+            .rogue
+            .iter()
+            .map(|(n, v)| (n.clone(), v.map(|x| x as u32)))
+            .collect();
+        if d.flag_0x1610.is_some() {
+            d.flag_0x1610 = Some(u8::from(self.m1610));
         }
-        let has_rogue = !d.rogue_skills.entries.is_empty();
-        if has_rogue {
-            self.warn(
-                "Rogue skill points are not simulated; the skills are listed with no points.",
-            );
+        if d.unknown_0x15e4.is_some() {
+            let objects = |list: &[Option<KitBonus>]| -> Vec<Option<Box<Object>>> {
+                list.iter()
+                    .map(|b| {
+                        b.as_ref().map(|(name, level, amount)| {
+                            Box::new(Object::KitBonus(cr_formats::classes::KitBonus {
+                                version: 1,
+                                name: name.clone(),
+                                unknown_0x8: *level,
+                                unknown_0xc: *amount,
+                            }))
+                        })
+                    })
+                    .collect()
+            };
+            d.unknown_0x15e4 = Some([objects(&self.rogue_random), objects(&self.rogue_fixed)]);
         }
         let bytes = character.to_bytes().map_err(format)?;
         Character::parse(&bytes).map_err(format)?;

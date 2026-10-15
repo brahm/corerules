@@ -25,6 +25,8 @@ pub const LANGUAGES: usize = 6;
 pub const EQUIPMENT: usize = 7;
 pub const MAGIC_ITEMS: usize = 8;
 pub const SCHOOLS: usize = 9;
+pub const TRAITS: usize = 11;
+pub const DISADVANTAGES: usize = 12;
 pub const CLASS_ABILITIES: usize = 14;
 pub const KITS: usize = 15;
 pub const SPHERES: usize = 18;
@@ -284,6 +286,8 @@ pub struct Kit {
     pub has_0x470: bool,
     /// The kit's proficiency objects (+0x2f8) exist.
     pub has_0x2f8: bool,
+    /// Fixed rogue skill adjustments (+0x174 `CPartIDOb`s: skill, amount).
+    pub rogue_adjust: Vec<(String, i32)>,
 }
 
 impl Kit {
@@ -531,6 +535,15 @@ impl Kit {
             .collect();
         k.has_0x470 = d.unknown_0x470.as_ref().is_some_and(|v| !v.is_empty());
         k.has_0x2f8 = d.unknown_0x2f8.as_ref().is_some_and(|v| !v.is_empty());
+        k.rogue_adjust = d
+            .unknown_0x174
+            .iter()
+            .flatten()
+            .filter_map(|o| match o {
+                Object::PartId(p) => Some((p.name.clone(), p.part_type)),
+                _ => None,
+            })
+            .collect();
         k
     }
 }
@@ -640,7 +653,6 @@ impl Klass {
                 let one = |v: Option<u8>| v.map(|x| vec![x]);
                 for (base, v) in [
                     (0x278d, one(d.flag_0x278d)),
-                    (0x486e, d.flags_0x486e.map(|a| a.to_vec())),
                     (0x278e, d.flags_0x278e.map(|a| a.to_vec())),
                     (0x2790, one(d.flag_0x2790)),
                     (0x2791, one(d.flag_0x2791)),
@@ -648,7 +660,6 @@ impl Klass {
                     (0x2793, d.flags_0x2793.map(|a| a.to_vec())),
                     (0x279d, one(d.flag_0x279d)),
                     (0x279e, d.flags_0x279e.map(|a| a.to_vec())),
-                    (0x27a0, d.flags_0x27a0.map(|a| a.to_vec())),
                     (0x27a4, one(d.flag_0x27a4)),
                     (0x2795, d.flags_0x2795.map(|a| a.to_vec())),
                     (0x2797, one(d.flag_0x2797)),
@@ -663,6 +674,21 @@ impl Klass {
                 ] {
                     if let Some(v) = v {
                         set(base, &v);
+                    }
+                }
+                // Groups whose members are not consecutive (0x6644af).
+                for (offs, v) in [
+                    (
+                        &[0x486e, 0x48ac, 0x4a58, 0x27a5, 0x486d][..],
+                        d.flags_0x486e.map(|a| a.to_vec()),
+                    ),
+                    (
+                        &[0x27a0, 0x27a2, 0x27a3][..],
+                        d.flags_0x27a0.map(|a| a.to_vec()),
+                    ),
+                ] {
+                    for (&o, x) in offs.iter().zip(v.unwrap_or_default()) {
+                        flags.insert(o, x);
                     }
                 }
                 let mut lists = HashMap::new();

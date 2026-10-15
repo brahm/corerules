@@ -128,6 +128,11 @@ fn fields(c: &Character) -> Vec<(&'static str, String)> {
         ("book_pages", format!("{book_pages:?}")),
         ("psionics", format!("{:?}", d.unknown_0x196c)),
         ("psp", format!("{:?}", &d.unknown_0x1430[..10])),
+        ("rogue", format!("{:?}", d.rogue_skills.entries)),
+        (
+            "rogue_kit",
+            format!("{:?} {:?}", d.flag_0x1610, d.unknown_0x15e4),
+        ),
     ]
 }
 
@@ -219,11 +224,7 @@ fn golden_single_npcs() {
         let npc = rules.generate(&mut rand, race, &cl, &options).unwrap();
         check_stream(file, &t, line, &rand);
         compare(file, &npc.character, &saved(&dir, &format!("t3/{file}")));
-        let only_rogue = npc
-            .messages
-            .iter()
-            .all(|m| m.starts_with("Rogue skill points"));
-        assert!(only_rogue, "{file}: {:?}", npc.messages);
+        assert!(npc.messages.is_empty(), "{file}: {:?}", npc.messages);
     }
 }
 

@@ -153,6 +153,16 @@ pub struct Gen<'a> {
     pub book_p: Vec<String>,
     pub psi: Psionics,
     pub psp: Vec<i32>,
+    /// Traits (+0x1830) and disadvantages (+0x1844), Player's Option.
+    pub traits: Vec<String>,
+    pub disadvantages: Vec<String>,
+    /// Rogue skills (+0x15c8): name and the points of each level.
+    pub rogue: Vec<(String, [i32; 100])>,
+    /// +0x1610: the kit's fixed rogue adjustments were applied.
+    pub m1610: bool,
+    /// +0x15e4 (random, by level) and +0x15f8 (fixed) kit bonus objects.
+    pub rogue_random: Vec<Option<super::rogue::KitBonus>>,
+    pub rogue_fixed: Vec<Option<super::rogue::KitBonus>>,
 }
 
 impl<'a> Gen<'a> {
@@ -238,6 +248,12 @@ impl<'a> Gen<'a> {
             book_p: Vec::new(),
             psi: Psionics::default(),
             psp: vec![0; 101],
+            traits: Vec::new(),
+            disadvantages: Vec::new(),
+            rogue: Vec::new(),
+            m1610: false,
+            rogue_random: Vec::new(),
+            rogue_fixed: Vec::new(),
         })
     }
 
@@ -777,12 +793,20 @@ impl<'a> Gen<'a> {
         self.hp = hp;
     }
 
-    /// 0x43ba4a(g), non-dual: the warriors' table when a class is a
-    /// warrior, class g has +0x279c or a class ability has +0x7b0.
+    /// 0x43ba4a(g): the warriors' table when a class is a warrior, class g
+    /// has +0x279c or a class ability has +0x7b0.
+    /// Dual-class: class g alone (a warrior, +0x279c, or one of its own
+    /// class abilities with +0x7b0).
     fn con_hp(&self, g: usize) -> i32 {
-        let war = self.has_group(0)
-            || self.classes[g].flag(0x279c)
-            || self.class_ability_any(|p| p.n(0x7b0) != 0);
+        let war = if self.dual() {
+            self.classes[g].group == 0
+                || self.classes[g].flag(0x279c)
+                || self.class_abilities[g].iter().any(|p| p.n(0x7b0) != 0)
+        } else {
+            self.has_group(0)
+                || self.classes[g].flag(0x279c)
+                || self.class_ability_any(|p| p.n(0x7b0) != 0)
+        };
         let table = if war { &CON_HP_WARRIOR } else { &CON_HP };
         table[self.fitness().clamp(0, 25) as usize]
     }
@@ -790,9 +814,23 @@ impl<'a> Gen<'a> {
     /// 0x42e0ab: the maximum hit points of the rolls in `hp`.
     pub fn max_hp(&mut self) -> i32 {
         if self.dual() {
-            // 0x42e0ab / 0x43ba4a, dual-class paths: not decoded; the
-            // multi-class formula is used.
-            self.warn("Dual-class maximum hit points (0x42e0ab) are not decoded; the multi-class formula was used.");
+            // The level counter runs on across the classes: each class adds
+            // the rolls of its levels above the earlier classes', each with
+            // its own Con bonus while within +0x88; no clamp.
+            let mut total = 0i32;
+            let mut level = 1;
+            for g in 0..self.classes.len() {
+                let last = self.classes[g].v(0x88);
+                let bonus = self.con_hp(g);
+                while level <= self.levels[g] {
+                    total = total.wrapping_add(self.hp[g][(level - 1) as usize]);
+                    if level <= last {
+                        total = total.wrapping_add(bonus);
+                    }
+                    level += 1;
+                }
+            }
+            return total;
         }
         let n = self.classes.len() as i32;
         let mut s: i32 = (0..self.classes.len())

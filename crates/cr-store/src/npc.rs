@@ -33,6 +33,7 @@ mod magic;
 mod names;
 mod prof;
 mod program;
+mod rogue;
 mod state;
 
 use std::collections::HashMap;
@@ -412,6 +413,7 @@ impl NpcRules {
         g.st_wp();
         g.st_lang2();
         g.st_hp();
+        g.st_rogue();
         g.st_equip();
         g.st_spells();
         g.st_psionics();
