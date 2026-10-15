@@ -894,14 +894,31 @@ pub(in crate::sheet) struct WeaponRow<'a> {
     launcher: Option<&'a Part>,
 }
 
+/// The item names of a bundle and the bundles inside it, depth first
+/// (0x4abc84), once each, leaving out items marked +0x04.
+fn walk<'a>(items: &'a [cr_formats::inventory::InventoryItem], names: &mut Vec<&'a str>) {
+    for item in items {
+        if item.flag_0x4 == 0 && !names.contains(&item.name.as_str()) {
+            names.push(&item.name);
+        }
+        if let Some(cr_formats::Object::InventoryBundle(b)) = item.contents.as_deref() {
+            walk(&b.items, names);
+        }
+    }
+}
+
+/// The name ammunition lists its launchers by (0x660e0c): the weapon it
+/// is a version of, unless +0x424 is set.
+fn launcher_name(p: &Part) -> &str {
+    if p.n(0x424) == 0 { p.s(0x428) } else { &p.head.name }
+}
+
 /// The weapon list (0x5fc26d): every weapon readied, carried and worn,
-/// each launcher followed by the ammunition it fires.
+/// in bundles too, each launcher followed by the ammunition it fires.
 pub(in crate::sheet) fn weapon_rows<'a>(ctx: &Ctx<'a>) -> Vec<WeaponRow<'a>> {
     let mut names: Vec<&str> = Vec::new();
     for b in [super::READIED, super::CARRIED, super::WORN] {
-        for item in &ctx.ch.data.inventory[b].items {
-            names.push(&item.name);
-        }
+        walk(&ctx.ch.data.inventory[b].items, &mut names);
     }
     let weapons: Vec<&Part> = names
         .iter()
@@ -918,8 +935,9 @@ pub(in crate::sheet) fn weapon_rows<'a>(ctx: &Ctx<'a>) -> Vec<WeaponRow<'a>> {
             launcher: None,
         });
         if is_launcher(w) {
+            let key = launcher_name(w);
             for a in &weapons {
-                if is_ammo(a) && a.data.unknown_0x434.contains(&w.head.name) {
+                if is_ammo(a) && a.data.unknown_0x434.iter().any(|l| l == key) {
                     rows.push(WeaponRow {
                         part: a,
                         launcher: Some(w),
