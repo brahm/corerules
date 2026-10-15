@@ -269,6 +269,8 @@ pub struct SheetRules {
     part_types: HashMap<String, usize>,
     wizard_spells: Vec<Spell>,
     priest_spells: Vec<Spell>,
+    /// Psionic powers, the database's before the user's.
+    powers: Vec<cr_formats::psionic::PsionicPower>,
     /// The installation folder as the original sees it, for the default
     /// portrait path.
     windows_root: String,
@@ -278,6 +280,11 @@ impl SheetRules {
     /// A part by name, ignoring case as the original's map does.
     pub(crate) fn part(&self, name: &str) -> Option<&Part> {
         self.parts.get(&name.to_uppercase())
+    }
+
+    /// A psionic power by name (0x60015f), the first that has it.
+    pub(crate) fn power(&self, name: &str) -> Option<&cr_formats::psionic::PsionicPower> {
+        self.powers.iter().find(|p| p.name == name)
     }
 
     /// The type of the part a name looks up.
@@ -303,6 +310,7 @@ impl Installation {
             part_types: HashMap::new(),
             wizard_spells: Vec::new(),
             priest_spells: Vec::new(),
+            powers: Vec::new(),
             windows_root: "C:\\Program Files\\AD&D Core Rules 2.0".into(),
         };
         for object in self.list_objects("Class")? {
@@ -353,6 +361,13 @@ impl Installation {
                     if let Object::Spell(spell) = object {
                         list.push(*spell);
                     }
+                }
+            }
+        }
+        if self.path("Database/Psionic.dat").is_some() {
+            for object in self.list_objects("Psionic")? {
+                if let Object::PsionicPower(p) = object {
+                    rules.powers.push(*p);
                 }
             }
         }

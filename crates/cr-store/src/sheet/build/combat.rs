@@ -782,7 +782,7 @@ fn kit_thac0(ctx: &Ctx, p: &Part) -> i32 {
         t -= 1;
     }
     t += kit.i(0x34c);
-    if kit.i(0x350) != 0 && kit.sa(0x354).iter().any(|n| *n == p.head.name) {
+    if kit.i(0x350) != 0 && kit.sa(0x354).contains(&p.head.name) {
         t += kit.i(0x350);
     }
     t
@@ -793,7 +793,7 @@ fn kit_thac0(ctx: &Ctx, p: &Part) -> i32 {
 fn kit_damage(ctx: &Ctx, p: &Part) -> i32 {
     let Some(kit) = &ctx.kit else { return 0 };
     let mut b = kit.i(0x80);
-    if kit.i(0x368) != 0 && kit.sa(0x36c).iter().any(|n| *n == p.head.name) {
+    if kit.i(0x368) != 0 && kit.sa(0x36c).contains(&p.head.name) {
         b += kit.i(0x368);
     }
     b
