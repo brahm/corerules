@@ -254,12 +254,10 @@ fn cmd_sheet(install: &Installation, args: &[String]) -> cr_store::Result<()> {
         return Err(invalid("Core Rules 2.0 exports HTML only".into()));
     }
     let date = Timestamp::now_utc().format(sheet.flavor);
-    let text = if html {
-        sheet.to_html(&date)
-    } else {
-        sheet.to_txt(&date)
-    };
-    out!("{text}");
+    let bytes = sheet.export(html, &date);
+    if let Err(e) = std::io::stdout().lock().write_all(&bytes) {
+        stdout_failed(e);
+    }
     Ok(())
 }
 

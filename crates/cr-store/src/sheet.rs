@@ -262,15 +262,28 @@ pub struct SheetRules {
     advance: AdvanceRules,
     classes: HashMap<String, Class>,
     races: HashMap<String, Race>,
-    /// Every part by name, the databases' before the user's.
+    /// Every part by its name in capitals (the original's map key, so
+    /// lookups ignore case), the databases' before the user's.
     parts: HashMap<String, Part>,
-    /// Part type (index into `PART_TYPES`) of each part name.
+    /// Part type (index into `PART_TYPES`) of each part, by the same key.
     part_types: HashMap<String, usize>,
     wizard_spells: Vec<Spell>,
     priest_spells: Vec<Spell>,
     /// The installation folder as the original sees it, for the default
     /// portrait path.
     windows_root: String,
+}
+
+impl SheetRules {
+    /// A part by name, ignoring case as the original's map does.
+    pub(crate) fn part(&self, name: &str) -> Option<&Part> {
+        self.parts.get(&name.to_uppercase())
+    }
+
+    /// The type of the part a name looks up.
+    pub(crate) fn part_type(&self, name: &str) -> Option<usize> {
+        self.part_types.get(&name.to_uppercase()).copied()
+    }
 }
 
 impl Installation {
@@ -316,8 +329,9 @@ impl Installation {
             for (t, array) in file.arrays.into_iter().enumerate() {
                 for object in array {
                     if let Object::Part(part) = object {
-                        rules.part_types.entry(part.head.name.clone()).or_insert(t);
-                        rules.parts.entry(part.head.name.clone()).or_insert(*part);
+                        let key = part.head.name.to_uppercase();
+                        rules.part_types.entry(key.clone()).or_insert(t);
+                        rules.parts.entry(key).or_insert(*part);
                     }
                 }
             }

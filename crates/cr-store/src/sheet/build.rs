@@ -149,7 +149,7 @@ impl<'a> Ctx<'a> {
             ch.data.inventory[b]
                 .items
                 .iter()
-                .filter_map(|i| rules.parts.get(&i.name))
+                .filter_map(|i| rules.part(&i.name))
                 .collect()
         };
         let mut ctx = Self {
@@ -188,7 +188,7 @@ impl<'a> Ctx<'a> {
     }
 
     pub fn part(&self, name: &str) -> Option<&'a Part> {
-        self.rules.parts.get(name)
+        self.rules.part(name)
     }
 
     /// The readied and worn top-level item parts, readied first.
@@ -649,11 +649,8 @@ fn personal(ctx: &Ctx) -> Section {
 
 /// The kit, when the character has one the databases know.
 fn kit_name<'a>(ctx: &Ctx<'a>) -> Option<&'a str> {
-    let kit = &ctx.ch.data.kit;
-    ctx.rules
-        .parts
-        .get_key_value(kit)
-        .map(|(name, _)| name.as_str())
+    let kit = ctx.ch.data.kit.as_str();
+    ctx.part(kit).map(|_| kit)
 }
 
 /// Ability Scores (0x5a29bf).

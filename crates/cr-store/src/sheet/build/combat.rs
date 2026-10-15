@@ -346,7 +346,7 @@ fn armor(ctx: &Ctx) -> (Vec<String>, i32) {
         let Some(p) = ctx.part(&item.name) else {
             continue;
         };
-        if ctx.rules.part_types.get(&item.name) == Some(&1) {
+        if ctx.rules.part_type(&item.name) == Some(1) {
             armor_list.push(p);
         } else if p.n(0x224) != 0 {
             magic_list.push(p);
@@ -971,7 +971,7 @@ pub(in crate::sheet) fn weapon_rows<'a>(ctx: &Ctx<'a>) -> Vec<WeaponRow<'a>> {
     }
     let weapons: Vec<&Part> = names
         .iter()
-        .filter(|n| ctx.rules.part_types.get(**n) == Some(&0))
+        .filter(|n| ctx.rules.part_type(n) == Some(0))
         .filter_map(|n| ctx.part(n))
         .collect();
     let mut rows = Vec::new();
