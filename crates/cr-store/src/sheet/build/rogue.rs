@@ -215,7 +215,10 @@ pub(in crate::sheet) fn ability_value(
         }
         // Scroll use: Skills & Powers by level; the Core Rules from 10th
         // level, 85 for a bard (2001), else 75 for a thief (2000).
-        4 if ctx.sp => SP_SCROLL_USE.get(level.max(0) as usize).copied().unwrap_or(80),
+        4 if ctx.sp => SP_SCROLL_USE
+            .get(level.max(0) as usize)
+            .copied()
+            .unwrap_or(80),
         4 if level > 9 => {
             let ids: Vec<i32> = ctx
                 .classes

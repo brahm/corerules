@@ -694,15 +694,20 @@ fn encumbrance_penalty(ctx: &Ctx) -> i32 {
 /// The magic attack bonus of a weapon (0x447700), less 3 for a weapon
 /// that needs a class (0x447720) the character lacks.
 fn magic_attack(ctx: &Ctx, p: &Part) -> i32 {
-    let mut magic = p.head.unknown_0x44c[2];
-    if p.head.unknown_0x80c[1] != 0
-        && !ctx.classes.iter().any(|c| {
-            matches!(c.class, Some(Class::Expansion { data, .. }) if data.flag_0x278d.unwrap_or(0) == 1)
-        })
-    {
-        magic -= 3;
+    p.head.unknown_0x44c[2] - class_item_penalty(ctx, p)
+}
+
+/// 3 for a weapon that needs a class (0x447720) none of the character's
+/// classes is (0x447780), else 0.
+fn class_item_penalty(ctx: &Ctx, p: &Part) -> i32 {
+    let has = ctx.classes.iter().any(|c| {
+        matches!(c.class, Some(Class::Expansion { data, .. }) if data.flag_0x278d.unwrap_or(0) == 1)
+    });
+    if p.head.unknown_0x80c[1] != 0 && !has {
+        3
+    } else {
+        0
     }
-    magic
 }
 
 /// Two-weapon fighting: `Some(true)` for the primary hand, `Some(false)`
@@ -911,7 +916,7 @@ fn melee_damage_bonus(ctx: &Ctx, p: &Part, own: i32) -> i32 {
     } else if specialized(ctx, p) {
         b += 2;
     }
-    b += p.head.unknown_0x44c[1];
+    b += p.head.unknown_0x44c[1] - class_item_penalty(ctx, p);
     b += racial_weapon_bonus(ctx, p).1;
     b + kit_damage(ctx, p)
 }
@@ -919,7 +924,9 @@ fn melee_damage_bonus(ctx: &Ctx, p: &Part, own: i32) -> i32 {
 /// The damage bonus of ammunition shot from `launcher` (0x427a8f small,
 /// 0x42754d large): its own bonus, Strength as far as the launcher allows,
 /// the launcher's and the ammunition's magic, racial and kit bonuses.
-fn ammo_damage_bonus(ctx: &Ctx, launcher: &Part, ammo: &Part, own: i32) -> i32 {
+/// A thrown weapon or a firearm without ammunition rows (`ammo` `None`)
+/// counts as its own ammunition.
+fn ammo_damage_bonus(ctx: &Ctx, launcher: &Part, ammo: Option<&Part>, own: i32) -> i32 {
     if !is_missile(launcher) {
         return 0;
     }
@@ -928,8 +935,15 @@ fn ammo_damage_bonus(ctx: &Ctx, launcher: &Part, ammo: &Part, own: i32) -> i32 {
         strength = 0;
     }
     strength = strength.min(launcher.data.unknown_0x7cc[0]);
-    let magic = launcher.head.unknown_0x44c[1] + ammo.head.unknown_0x44c[1];
-    own + strength + magic + racial_weapon_bonus(ctx, ammo).1 + kit_damage(ctx, ammo)
+    let mut magic = launcher.head.unknown_0x44c[1];
+    let shot = match ammo {
+        Some(a) => {
+            magic += a.head.unknown_0x44c[1];
+            a
+        }
+        None => launcher,
+    };
+    own + strength + magic + racial_weapon_bonus(ctx, shot).1 + kit_damage(ctx, shot)
 }
 
 /// One row of the weapon tables: the weapon (or ammunition, indented, with
@@ -1011,20 +1025,36 @@ fn weapon_cells(ctx: &Ctx, row: &WeaponRow, hand: Hand) -> Vec<Cell> {
             String::new(),
             String::new(),
             String::new(),
-            damage_text(s.small, ammo_damage_bonus(ctx, launcher, p, s.small.2)),
-            damage_text(s.large, ammo_damage_bonus(ctx, launcher, p, s.large.2)),
+            damage_text(
+                s.small,
+                ammo_damage_bonus(ctx, launcher, Some(p), s.small.2),
+            ),
+            damage_text(
+                s.large,
+                ammo_damage_bonus(ctx, launcher, Some(p), s.large.2),
+            ),
         ),
         None => {
             let melee = melee_thac0(ctx, p, hand);
             let missile = missile_thac0(ctx, p);
             let attacks = attacks(ctx, p, melee.is_none(), hand);
+            // 0x5fcabd: melee damage when there is a melee THAC0, else
+            // the weapon shot as its own ammunition.
+            let shown = |t: Option<i32>| t.is_some_and(|t| t != 99);
             let (small, large) = if is_launcher(p) {
                 (String::new(), String::new())
-            } else {
+            } else if shown(melee) {
                 (
                     damage_text(s.small, melee_damage_bonus(ctx, p, s.small.2)),
                     damage_text(s.large, melee_damage_bonus(ctx, p, s.large.2)),
                 )
+            } else if shown(missile) {
+                (
+                    damage_text(s.small, ammo_damage_bonus(ctx, p, None, s.small.2)),
+                    damage_text(s.large, ammo_damage_bonus(ctx, p, None, s.large.2)),
+                )
+            } else {
+                (String::new(), String::new())
             };
             (
                 p.head.name.clone(),
