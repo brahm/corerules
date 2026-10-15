@@ -173,13 +173,15 @@ const RANGER_MOVE: [i32; 16] = [
     0, 15, 21, 27, 33, 40, 47, 55, 62, 70, 78, 86, 94, 99, 99, 99,
 ];
 
+/// Skills & Powers scroll use by level 0 to 11 (0x5fd6f7); 80 above.
+const SP_SCROLL_USE: [i32; 12] = [0, 10, 10, 20, 20, 30, 30, 40, 50, 60, 70, 80];
+
 /// The value an ability box shows after a class or racial ability's name
 /// (0x5fd6f7), by the part's kind (`data.unknown_0x778[1]`): 1 Dexterity
 /// plus level, 2 and 7 the rangers' hide in shadows table, 3 and 8 their
 /// move silently table, 5 a percentage (`data.unknown_0x510[5]`, plus
 /// `[6]` per level after the first, at most `data.unknown_0x52c`), 6 the
-/// rogue skill's final score. Kind 4 (scroll use) shows nothing below
-/// 10th level. A racial ability (`class` `None`) shows its percentage.
+/// rogue skill's final score, 4 the chance to use scrolls. A racial ability (`class` `None`) shows its percentage.
 /// `None` when there is nothing, or 0, to show.
 pub(in crate::sheet) fn ability_value(
     ctx: &Ctx,
@@ -206,6 +208,26 @@ pub(in crate::sheet) fn ability_value(
             let d = &part.data;
             let v = d.unknown_0x510[5] + d.unknown_0x510[6] * (level - 1);
             v.min(d.unknown_0x52c.unwrap_or(i32::MAX))
+        }
+        // Scroll use: Skills & Powers by level; the Core Rules from 10th
+        // level, 85 for a bard (2001), else 75 for a thief (2000).
+        4 if ctx.sp => SP_SCROLL_USE.get(level.max(0) as usize).copied().unwrap_or(80),
+        4 if level > 9 => {
+            let ids: Vec<i32> = ctx
+                .classes
+                .iter()
+                .filter_map(|c| match c.class {
+                    Some(cr_formats::classes::Class::Expansion { data, .. }) => Some(data.id),
+                    _ => None,
+                })
+                .collect();
+            if ids.contains(&2001) {
+                85
+            } else if ids.contains(&2000) {
+                75
+            } else {
+                0
+            }
         }
         6 => skills(ctx)
             .into_iter()
