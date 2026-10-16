@@ -5,7 +5,7 @@ use cr_formats::classes::Class;
 use cr_formats::parts::Part;
 
 use super::{AIM, BALANCE, Ctx, MUSCLE, STAMINA, STR, single, table};
-use crate::npc::data::PartExt;
+use crate::npc::data::{Klass, PartExt};
 use crate::sheet::tables::{self, at};
 use crate::sheet::{Cell, Flavor, Section, SheetBox, ids};
 
@@ -360,6 +360,10 @@ fn armor(ctx: &Ctx) -> (Vec<String>, i32) {
             return (lines, v);
         }
     }
+    let base_ac = kit_base_ac(ctx);
+    let reference = if base_ac != 0 { base_ac } else { 10 };
+    let mut allowed = true;
+    let mut light = true;
     let mut body = false;
     let mut body_magic_item = false;
     let mut heavy = true;
@@ -379,10 +383,22 @@ fn armor(ctx: &Ctx) -> (Vec<String>, i32) {
         if p.n(0x224) != 0 {
             body_magic_item = true;
         }
+        if !ctx.classes.iter().any(|c| {
+            let k = c.class.map(Klass::of).unwrap_or_default();
+            let base = if p.data.unknown_0x430.is_empty() {
+                &p.head.name
+            } else {
+                &p.data.unknown_0x430
+            };
+            k.sa(0x302c).contains(base)
+        }) {
+            allowed = false;
+        }
+        light = is_light_armor(p);
         if let Some(v) = ac_of(p) {
             let mut bonus = 10 - v;
-            if natural < 10 {
-                bonus -= 10 - natural;
+            if natural < reference {
+                bonus -= reference - natural;
                 bonus = bonus.max(1);
             }
             if bonus != 0 {
@@ -514,9 +530,28 @@ fn armor(ctx: &Ctx) -> (Vec<String>, i32) {
         lines.push("Severe encumbrance penalty: 3".into());
         ac += 3;
     }
+    // The kit's lines, named after the kit part.
+    let mut kit_bonus = false;
+    if let (Some(kit), Some(part)) = (&ctx.kit, ctx.part(&ctx.ch.data.kit)) {
+        let name = &part.head.name;
+        if kit.flag(0x7c) && light {
+            ac -= 2;
+            lines.push(format!("{name} Kit bonus: -2"));
+            kit_bonus = true;
+        }
+        if kit.flag(0x189) && !allowed {
+            ac += 1;
+            lines.push(format!("{name} Armor out of class penalty: +1"));
+        }
+        let v = kit.i(0x19c);
+        if v != 0 {
+            ac += v;
+            lines.push(format!("{name} Armor class bonus: +{v}"));
+        }
+    }
     // Without body armor and unencumbered, the first class ability that
     // gives it (+0x780) is worth 2.
-    if !body && encumbrance(ctx) == 0 {
+    if !body && encumbrance(ctx) == 0 && !kit_bonus {
         let ability = (0..ctx.classes.len())
             .flat_map(|g| ctx.class_abilities(g))
             .find(|p| p.n(0x780) != 0);
@@ -524,6 +559,10 @@ fn armor(ctx: &Ctx) -> (Vec<String>, i32) {
             ac -= 2;
             lines.push(format!("{}: -2", p.head.name));
         }
+    }
+    // The kit's base armor class counts without a line of its own.
+    if base_ac != 0 {
+        ac -= 10 - base_ac;
     }
     (lines, ac.clamp(-10, 10))
 }
@@ -727,7 +766,7 @@ fn melee_thac0(ctx: &Ctx, p: &Part, hand: Hand) -> Option<i32> {
     if mastery(ctx, p) {
         t -= 3;
     }
-    t += kit_thac0(ctx, p);
+    t += kit_thac0(ctx, p, true);
     if let Some(primary) = hand
         && !two_weapon_style(ctx)
     {
@@ -746,13 +785,6 @@ fn melee_thac0(ctx: &Ctx, p: &Part, hand: Hand) -> Option<i32> {
 /// padded, hide or elven chain. Fighting with two weapons then costs
 /// nothing.
 fn two_weapon_style(ctx: &Ctx) -> bool {
-    const LIGHT: [&str; 5] = [
-        " leather",
-        " studded leather",
-        " padded",
-        " hide",
-        " elven chain",
-    ];
     let style = (0..ctx.classes.len()).any(|g| {
         ctx.class_abilities(g)
             .iter()
@@ -765,17 +797,20 @@ fn two_weapon_style(ctx: &Ctx) -> bool {
             .copied()
             .filter(|p| p.head.unknown_0x248 == 1)
             .collect();
-        armor.is_empty()
-            || armor
-                .iter()
-                .any(|p| LIGHT.iter().any(|l| p.head.name.contains(l)))
+        armor.is_empty() || armor.iter().any(|p| is_light_armor(p))
     }
 }
 
 /// The kit's THAC0 adjustment for a weapon (0x423a3d, 0x425799): -1 for
 /// a weapon of its list (+0xf8, 0x43f9d9), its bonus for every weapon
 /// (+0x34c) and for the weapons it names (+0x350, +0x354).
-fn kit_thac0(ctx: &Ctx, p: &Part) -> i32 {
+///
+/// With `melee`, the Cavalier bonuses for the weapons the character's
+/// strings +0x1e14 (contained in the name) and +0x1e18 (the name) give;
+/// then, for a kit that chooses a focus weapon (+0x4ac), +1 for other
+/// weapons (+0x4b1) and -1 for the focus weapon (+0x7a melee, +0x7b
+/// missile).
+fn kit_thac0(ctx: &Ctx, p: &Part, melee: bool) -> i32 {
     let Some(kit) = &ctx.kit else { return 0 };
     let mut t = 0;
     if kit.sa(0xf8).iter().any(|n| n == launcher_name(p)) {
@@ -785,7 +820,68 @@ fn kit_thac0(ctx: &Ctx, p: &Part) -> i32 {
     if kit.i(0x350) != 0 && kit.sa(0x354).contains(&p.head.name) {
         t += kit.i(0x350);
     }
+    if melee {
+        t -= cavalier_bonus(ctx, p);
+    }
+    if kit.flag(0x4ac) {
+        let focus = focus_weapon(ctx) == launcher_name(p);
+        if kit.flag(0x4b1) && !focus {
+            t += 1;
+        }
+        if kit.flag(if melee { 0x7a } else { 0x7b }) && focus {
+            t -= 1;
+        }
+    }
     t
+}
+
+/// One of the character's strings +0x1e68 (`unknown_0x1e68`), read in
+/// the order 0x1e68, 0x1e6c, 0x1e24, 0x1dc0, 0x1e14, 0x1e18, 0x1e1c,
+/// 0x1e70 to 0x1e84.
+fn character_string<'a>(ctx: &Ctx<'a>, i: usize) -> &'a str {
+    ctx.ch
+        .data
+        .unknown_0x1e68
+        .as_ref()
+        .map_or("", |a| a[i].as_str())
+}
+
+/// The kit's focus weapon (+0x1e1c, 0x447840).
+fn focus_weapon<'a>(ctx: &Ctx<'a>) -> &'a str {
+    character_string(ctx, 6)
+}
+
+/// The Cavalier kit bonuses (0x423a3d): for a weapon whose name contains
+/// +0x1e14, 1 from 3rd level and one more every 6 levels from 9th; for
+/// the weapon +0x1e18 names, 1 from 5th and one more every 6 from 11th.
+/// Nothing from level 101.
+fn cavalier_bonus(ctx: &Ctx, p: &Part) -> i32 {
+    let level = ctx
+        .classes
+        .iter()
+        .map(|c| c.level as i32)
+        .max()
+        .unwrap_or(0);
+    if level >= 101 {
+        return 0;
+    }
+    let steps = |from: i32, every_from: i32| {
+        let mut b = i32::from(level > from);
+        if level > every_from {
+            b += (level - every_from - 1) / 6 + 1;
+        }
+        b
+    };
+    let name = p.head.name.as_str();
+    let (lance, weapon) = (character_string(ctx, 4), character_string(ctx, 5));
+    let mut b = 0;
+    if !lance.is_empty() && name.contains(lance) {
+        b += steps(2, 8);
+    }
+    if !weapon.is_empty() && name == weapon {
+        b += steps(4, 10);
+    }
+    b
 }
 
 /// The kit's damage bonus for a weapon (0x428a99, 0x427a8f): +0x80 for
@@ -797,6 +893,36 @@ fn kit_damage(ctx: &Ctx, p: &Part) -> i32 {
         b += kit.i(0x368);
     }
     b
+}
+
+/// Leather, studded leather, padded, hide or elven chain (0x43aa99).
+fn is_light_armor(p: &Part) -> bool {
+    const LIGHT: [&str; 5] = [
+        " leather",
+        " studded leather",
+        " padded",
+        " hide",
+        " elven chain",
+    ];
+    LIGHT.iter().any(|l| p.head.name.contains(l))
+}
+
+/// The kit's base armor class (0x4435b0): from level +0x18c (when above
+/// 0 and reached), +0x190 changed by +0x194 per level after it, not
+/// below +0x198; 0 for none.
+fn kit_base_ac(ctx: &Ctx) -> i32 {
+    let Some(kit) = &ctx.kit else { return 0 };
+    let from = kit.i(0x18c);
+    let level = ctx
+        .classes
+        .iter()
+        .map(|c| c.level as i32)
+        .max()
+        .unwrap_or(0);
+    if from <= 0 || from > level {
+        return 0;
+    }
+    (kit.i(0x190) + kit.i(0x194) * (level - from)).max(kit.i(0x198))
 }
 
 /// What the melee and missile THAC0 share: magic, weapon of choice,
@@ -840,7 +966,7 @@ fn missile_thac0(ctx: &Ctx, p: &Part) -> Option<i32> {
     if specialized(ctx, p) && !mastery(ctx, p) {
         t -= 1;
     }
-    t += kit_thac0(ctx, p);
+    t += kit_thac0(ctx, p, false);
     Some(clamp_thac0(ctx, t))
 }
 
@@ -949,7 +1075,16 @@ fn ammo_damage_bonus(ctx: &Ctx, launcher: &Part, ammo: Option<&Part>, own: i32) 
         }
         None => launcher,
     };
-    own + strength + magic + racial_weapon_bonus(ctx, shot).1 + kit_damage(ctx, shot)
+    // The kit's focus missile weapon (+0x4ac, +0x7b) gains 1.
+    let focus = ctx
+        .kit
+        .as_ref()
+        .is_some_and(|k| k.flag(0x4ac) && k.flag(0x7b) && focus_weapon(ctx) == launcher_name(shot));
+    own + strength
+        + magic
+        + racial_weapon_bonus(ctx, shot).1
+        + kit_damage(ctx, shot)
+        + i32::from(focus)
 }
 
 /// One row of the weapon tables: the weapon (or ammunition, indented, with
