@@ -896,6 +896,25 @@ impl Sources {
                     .map(|t| t.name.clone())
                     .collect(),
                 "weapon-groups" => parts::weapon_groups(install)?,
+                "standard-classes" => {
+                    sources.classes = classes::class_list(install)?;
+                    sources
+                        .classes
+                        .iter()
+                        .filter(|c| c.id != 0)
+                        .map(|c| c.name.clone())
+                        .collect()
+                }
+                "priest-spells" => {
+                    let mut names: Vec<String> = spells::all_spells(install)?
+                        .into_iter()
+                        .filter(|s| s.priest != 0)
+                        .map(|s| s.name)
+                        .collect();
+                    names.sort_by_key(|n| n.to_lowercase());
+                    names.dedup();
+                    names
+                }
                 "weapon-proficiencies" => parts::weapon_proficiencies(install)?,
                 "rogue-skills" => parts::rogue_skills(install)?,
                 "class-combinations" => {

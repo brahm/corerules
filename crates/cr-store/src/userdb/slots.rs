@@ -926,6 +926,9 @@ pub fn class(c: &ClassData, off: usize) -> Option<Slot<'_>> {
         0x14..=0x18 if (off - 0x14).is_multiple_of(4) => {
             Some(Slot::I32(&c.unknown_0x14[(off - 0x14) / 4]))
         }
+        0x1c..=0x30 if (off - 0x1c).is_multiple_of(4) => {
+            Some(Slot::I32(&c.ability_requirements[(off - 0x1c) / 4]))
+        }
         0x34..=0x48 if (off - 0x34).is_multiple_of(4) => {
             Some(Slot::I32(&c.unknown_0x34[(off - 0x34) / 4]))
         }
@@ -1016,6 +1019,7 @@ pub fn class(c: &ClassData, off: usize) -> Option<Slot<'_>> {
             .map(|a| Slot::I32(&a[(off - 0x3380) / 4])),
         0x3514 => Some(Slot::Objs(&c.unknown_0x3514)),
         0x3528 => Some(Slot::Objs(&c.kit_bonuses)),
+        0x354c => Some(Slot::Str(&c.abbreviation)),
         0x353c..=0x3544 if (off - 0x353c).is_multiple_of(4) => {
             Some(Slot::Str(&c.unknown_0x353c[(off - 0x353c) / 4]))
         }
@@ -1065,6 +1069,9 @@ pub fn class_mut(c: &mut ClassData, off: usize) -> Option<SlotMut<'_>> {
         0xc => Some(SlotMut::I32(&mut c.unknown_0xc)),
         0x14..=0x18 if (off - 0x14).is_multiple_of(4) => {
             Some(SlotMut::I32(&mut c.unknown_0x14[(off - 0x14) / 4]))
+        }
+        0x1c..=0x30 if (off - 0x1c).is_multiple_of(4) => {
+            Some(SlotMut::I32(&mut c.ability_requirements[(off - 0x1c) / 4]))
         }
         0x34..=0x48 if (off - 0x34).is_multiple_of(4) => {
             Some(SlotMut::I32(&mut c.unknown_0x34[(off - 0x34) / 4]))
@@ -1174,6 +1181,7 @@ pub fn class_mut(c: &mut ClassData, off: usize) -> Option<SlotMut<'_>> {
             .map(|a| SlotMut::I32(&mut a[(off - 0x3380) / 4])),
         0x3514 => Some(SlotMut::Objs(&mut c.unknown_0x3514)),
         0x3528 => Some(SlotMut::Objs(&mut c.kit_bonuses)),
+        0x354c => Some(SlotMut::Str(&mut c.abbreviation)),
         0x353c..=0x3544 if (off - 0x353c).is_multiple_of(4) => {
             Some(SlotMut::Str(&mut c.unknown_0x353c[(off - 0x353c) / 4]))
         }

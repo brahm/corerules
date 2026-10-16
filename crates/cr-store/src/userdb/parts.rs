@@ -397,7 +397,7 @@ fn records_of(file: PartsFile) -> Vec<PartRec> {
 mod tests {
     use super::*;
     use crate::userdb::testing::TempInstall;
-    use crate::userdb::{Sources, UserDb};
+    use crate::userdb::{FieldKind, Sources, UserDb};
 
     fn context(flavor: Flavor, scope: usize) -> NewContext {
         NewContext {
@@ -481,6 +481,35 @@ mod tests {
             names_by_origin(&t.install).unwrap()[KITS],
             [("sword".to_owned(), Origin::Custom)]
         );
+    }
+
+    #[test]
+    fn every_number_and_check_reaches_its_member() {
+        let sources = Sources::default();
+        for flavor in [Flavor::Expansion, Flavor::Core20] {
+            for field in Parts::fields(flavor) {
+                let mut r = Parts::new_record(&context(flavor, KITS));
+                let probe = match field.kind {
+                    FieldKind::Int { min, max } => {
+                        Value::Int(if min <= 2 && 2 <= max { 2 } else { min })
+                    }
+                    FieldKind::Check => Value::Int(1),
+                    FieldKind::Text { .. } | FieldKind::MultiLine => Value::Text("X".into()),
+                    _ => continue,
+                };
+                field.set(&mut r, &probe, &sources);
+                let got = field.get(&r);
+                // Core Rules 2.0 parts lack the members of the version
+                // block; their fields read 0.
+                if flavor == Flavor::Core20 && got.int() == 0 && got.text().is_empty() {
+                    continue;
+                }
+                match probe {
+                    Value::Text(_) => assert_eq!(got.text(), probe.text(), "{}", field.label),
+                    _ => assert_eq!(got.int(), probe.int(), "{} {:#x}", field.label, field.arg),
+                }
+            }
+        }
     }
 
     #[test]
