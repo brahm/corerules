@@ -199,6 +199,11 @@ impl Default for GroupOptions {
 const GROUP_NAMES: [&str; 5] = ["Warrior", "Rogue", "Priest", "Wizard", "Psionicist"];
 
 impl GroupOptions {
+    /// Sorts lines as the dialog's list holds them (by [`Self::label`]).
+    pub fn sort(lines: &mut [GroupOptions]) {
+        lines.sort_by_cached_key(|l| list_box_key(&l.label()));
+    }
+
     /// The line as the dialog's list shows it (0x4e5a37); the list is
     /// sorted by this text and Create Group goes down the sorted list.
     pub fn label(&self) -> String {
@@ -412,6 +417,39 @@ impl NpcRules {
     /// Class names, in database order.
     pub fn classes(&self) -> Vec<String> {
         self.data.classes.iter().map(|c| c.name.clone()).collect()
+    }
+
+    /// The classes of a class group (warrior, rogue, priest, wizard,
+    /// psionicist: the order of [`GroupOptions::classes`]), in database
+    /// order.
+    pub fn group_classes(&self, group: usize) -> Vec<String> {
+        self.data
+            .classes
+            .iter()
+            .filter(|c| c.group == group as i32)
+            .map(|c| c.name.clone())
+            .collect()
+    }
+
+    /// Kit names (the Character Kits parts), in database order.
+    pub fn kits(&self) -> Vec<String> {
+        self.data.parts[data::KITS]
+            .iter()
+            .map(|p| p.head.name.clone())
+            .collect()
+    }
+
+    /// The nine alignments, as the program names them.
+    pub fn alignments(&self) -> Vec<String> {
+        state::ALIGNMENTS
+            .iter()
+            .map(|a| self.data.t(a.0).to_owned())
+            .collect()
+    }
+
+    /// The program's message when no class is given.
+    pub fn no_class_message(&self) -> String {
+        self.data.t(texts::NO_CLASS).to_owned()
     }
 
     /// Race names the "Select from Standard races" choice offers.
