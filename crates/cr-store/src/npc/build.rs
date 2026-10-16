@@ -92,7 +92,7 @@ impl Gen<'_> {
         d.nonweapon_proficiencies = self.nwp.iter().map(|n| n.0.clone()).collect();
         d.nonweapon_costs = self.nwp.iter().map(|n| u(n.1)).collect();
         if d.nonweapon_bonuses.is_some() {
-            d.nonweapon_bonuses = Some(vec![0; self.nwp.len()]);
+            d.nonweapon_bonuses = Some(self.nwp.iter().map(|n| u(n.2)).collect());
         }
         d.nonweapon_details = (0..self.nwp.len())
             .map(|i| Object::StringArray(self.nwp_langs.get(&i).cloned().unwrap_or_default()))

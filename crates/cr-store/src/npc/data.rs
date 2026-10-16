@@ -14,6 +14,8 @@ use cr_formats::parts::{Part, PartKitData, PartsFile};
 use cr_formats::race::Race;
 use cr_formats::spells::SpellsFile;
 
+use super::exe::Image;
+use crate::treasure::Flavor;
 use crate::{Error, Installation, Result};
 
 /// Part types (`PART_TYPES`).
@@ -282,10 +284,14 @@ pub struct Kit {
     pub wp_options: Vec<Options>,
     /// The class combinations the kit allows (+0x65c), as titles.
     pub combinations: Vec<String>,
-    /// The kit's weapon bonus objects (+0x470) exist.
-    pub has_0x470: bool,
-    /// The kit's proficiency objects (+0x2f8) exist.
-    pub has_0x2f8: bool,
+    /// Weapons the kit makes free from a level (+0x470 `CPartIDOb`s:
+    /// weapon, level).
+    pub free_weapons: Vec<(String, i32)>,
+    /// Proficiencies the kit makes free from a level (+0x2f8).
+    pub free_nwp: Vec<(String, i32)>,
+    /// The kit's spell table by level (+0x648 `CPartKitLevelOb`s; `None`
+    /// for a null entry).
+    pub spell_table: Vec<Option<[i32; 10]>>,
     /// Fixed rogue skill adjustments (+0x174 `CPartIDOb`s: skill, amount).
     pub rogue_adjust: Vec<(String, i32)>,
 }
@@ -533,8 +539,26 @@ impl Kit {
                 _ => None,
             })
             .collect();
-        k.has_0x470 = d.unknown_0x470.as_ref().is_some_and(|v| !v.is_empty());
-        k.has_0x2f8 = d.unknown_0x2f8.as_ref().is_some_and(|v| !v.is_empty());
+        let ids = |l: &Option<Vec<Object>>| -> Vec<(String, i32)> {
+            l.iter()
+                .flatten()
+                .filter_map(|o| match o {
+                    Object::PartId(p) => Some((p.name.clone(), p.part_type)),
+                    _ => None,
+                })
+                .collect()
+        };
+        k.free_weapons = ids(&d.unknown_0x470);
+        k.free_nwp = ids(&d.unknown_0x2f8);
+        k.spell_table = d
+            .levels
+            .iter()
+            .flatten()
+            .map(|o| match o {
+                Object::PartKitLevel(l) => Some(l.unknown_0x4),
+                _ => None,
+            })
+            .collect();
         k.rogue_adjust = d
             .unknown_0x174
             .iter()
@@ -574,9 +598,10 @@ pub struct Klass {
     pub wizard_caster: bool,
     pub s3000: Option<String>,
     lists: HashMap<u32, Vec<String>>,
-    /// The per-level proficiency objects (+0x3514, +0x3528) exist.
-    pub has_0x3514: bool,
-    pub has_0x3528: bool,
+    /// The proficiencies the class gains by level (+0x3514,
+    /// `CPartKitBonusOb`): name, level (+8) and kind (+0xc, 0 for a
+    /// nonweapon proficiency).
+    pub level_profs: Vec<(String, i32, i32)>,
 }
 
 impl Klass {
@@ -729,8 +754,16 @@ impl Klass {
                     wizard_caster: d.unknown_0x2774[1] != 0,
                     s3000: d.unknown_0x3000.clone(),
                     lists,
-                    has_0x3514: !d.unknown_0x3514.is_empty(),
-                    has_0x3528: !d.kit_bonuses.is_empty(),
+                    level_profs: d
+                        .unknown_0x3514
+                        .iter()
+                        .filter_map(|o| match o {
+                            Object::KitBonus(b) => {
+                                Some((b.name.clone(), b.unknown_0x8, b.unknown_0xc))
+                            }
+                            _ => None,
+                        })
+                        .collect(),
                 }
             }
             // Core Rules 2.0: the 33 values and the tables in the same
@@ -846,6 +879,8 @@ pub struct Data {
     pub powers: Vec<Power>,
     /// Combinations by race; a later record of a race replaces an earlier.
     pub allowed: HashMap<String, Vec<Combination>>,
+    /// The tight weapon groups' ids (CPartDoc +0x248, from the program).
+    pub tight_groups: HashMap<String, i32>,
 }
 
 fn upper(s: &str) -> String {
@@ -863,8 +898,18 @@ impl Data {
         }
     }
 
-    pub fn load(install: &Installation) -> Result<Self> {
+    pub fn load(install: &Installation, flavor: Flavor) -> Result<Self> {
         let mut d = Self::empty();
+        let image = Image::open(install, flavor)?;
+        if flavor == Flavor::Expansion {
+            // The part document's constructor 0x677978 (adds: 0x572030).
+            d.tight_groups = image
+                .id_tables(0x677978, 0x3800, 0x572030)
+                .remove(&0x248)
+                .unwrap_or_default()
+                .into_iter()
+                .collect();
+        }
         for object in install.list_objects("Race")? {
             if let Object::Race(r) = object {
                 d.races.push(*r);
@@ -1006,6 +1051,19 @@ impl Data {
         ANY_TYPE_ORDER
             .iter()
             .find_map(|&t| self.find_index(t, &u).map(|i| &self.parts[t][i]))
+    }
+
+    /// The kit of the part 0x465f6c finds by that name (0x6618ce), if it
+    /// is a kit.
+    pub fn find_kit(&self, name: &str) -> Option<&Kit> {
+        let u = upper(name);
+        let t = *ANY_TYPE_ORDER
+            .iter()
+            .find(|&&t| self.find_index(t, &u).is_some())?;
+        if t != KITS {
+            return None;
+        }
+        self.kits[self.find_index(t, &u)?].as_ref()
     }
 
     /// 0x468356: the type of the first map holding the name, else -1.

@@ -136,15 +136,20 @@ impl<'a> Gen<'a> {
         m.min(self.kit().map_or(99, |k| k.i_or(0x1f4, 99)))
     }
 
-    /// 0x431639: the class table +0x414 (+0x159c with a class ability
-    /// +0x784).
+    /// 0x431639: the kit's spell table (+0x648) with kit +0x5da, else the
+    /// class table +0x414 (+0x159c with a class ability +0x784).
     fn spell_slots(&mut self, g: usize, sl: i32) -> i32 {
-        if self.kit().is_some_and(|k| k.flag(0x5da)) {
-            // 0x431639: the kit's spell table (+0x648) is not decoded.
-            self.warn("A kit's spell table (+0x5da/+0x648, 0x431639) is not decoded; the class table was used.");
-        }
         let k = self.classes[g];
         let lv = self.levels[g];
+        // With +0x5da, the kit's table for the class level (no Wisdom
+        // bonus).
+        if let Some(kit) = self.kit()
+            && kit.flag(0x5da)
+            && lv > 0
+            && let Some(Some(row)) = kit.spell_table.get(lv as usize - 1)
+        {
+            return row[(sl - 1).rem_euclid(10) as usize];
+        }
         let alt = self.class_abilities[g].iter().any(|p| p.n(0x784) != 0);
         let table = if alt { &k.alt_slots } else { &k.slots };
         table

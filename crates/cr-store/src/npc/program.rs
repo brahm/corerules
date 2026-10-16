@@ -441,8 +441,6 @@ pub const CAPACITY: [i32; 31] = [
     0, 1, 4, 8, 17, 17, 39, 39, 66, 66, 77, 77, 94, 94, 116, 116, 131, 158, 189, 214, 239, 264,
     314, 414, 564, 614, 714, 864, 1014, 1314, 1614,
 ];
-/// Tight groups whose id (0x677978) is 6.
-pub const TIGHT_GROUPS_6: &[&str] = &["Bows"];
 
 /// 0x4ce3d6: the "common weapon" tests on the upper-cased name.
 pub const COMMON_WEAPON_RULES: &[NameRule] = &[

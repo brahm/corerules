@@ -391,6 +391,16 @@ impl Gen<'_> {
                 }
             }
         }
+        // A kit with +0x4b2 refuses magical weapons other than its weapon
+        // of choice.
+        let choice = &self.wp.s788;
+        if !choice.is_empty()
+            && mag
+            && self.kit().is_some_and(|k| k.flag(0x4b2))
+            && name0(w) != choice
+        {
+            ok = false;
+        }
         ok
     }
 
@@ -586,8 +596,20 @@ impl Gen<'_> {
         self.eq.m704 = 0;
         self.eq.m708 = 0;
         let done = |g: &Self| g.eq.m700 && g.eq.m701;
+        // The kit's weapon of choice first, as the specializations.
+        let choice = self.wp.s788.clone();
+        if !choice.is_empty() {
+            let c = self.weapon_candidates(std::slice::from_ref(&choice), false, true);
+            self.eq_buy_weapon(&c);
+        }
         if !self.weapon_spec.is_empty() {
-            let c = self.weapon_candidates(&self.weapon_spec, false, true);
+            let spec: Vec<String> = self
+                .weapon_spec
+                .iter()
+                .filter(|s| **s != choice)
+                .cloned()
+                .collect();
+            let c = self.weapon_candidates(&spec, false, true);
             self.eq_buy_weapon(&c);
         }
         if done(self) {

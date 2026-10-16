@@ -434,16 +434,11 @@ impl Run<'_> {
         self.between(0, 3);
     }
 
-    /// One NPC line (0x644e7d) in its pass.
+    /// One NPC line (0x644e7d) in its pass. A dependent line (0x646530,
+    /// 0x645d68, 0x64616b) rolls its percentage first, then counts the
+    /// first pass's monsters it refers to: `k` groups (at least 1) of its
+    /// dice, as a monster line does.
     fn npc_line(&mut self, index: usize, line: &NpcLine) {
-        if line.dependent {
-            // 0x646530 / 0x645d68 / 0x64616b are not decoded: the counts
-            // follow the monster lines' rules.
-            let m = "Dependent NPC lines (0x646530, 0x645d68, 0x64616b) are not decoded; their numbers follow the monster lines' rules.";
-            if !self.messages.iter().any(|x| x == m) {
-                self.messages.push(m.into());
-            }
-        }
         let r = self.or_roll(line.or);
         let main = if r < 51 {
             self.npc_primary(index, line)

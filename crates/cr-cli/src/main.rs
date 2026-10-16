@@ -815,6 +815,7 @@ fn cmd_npc(install: &Installation, args: &[String]) -> cr_store::Result<()> {
                 race,
                 levels: [(l, l); 5],
                 players_option: po,
+                ..GroupOptions::default()
             },
         )?
     } else {
