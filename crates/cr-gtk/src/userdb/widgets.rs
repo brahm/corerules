@@ -347,7 +347,7 @@ pub fn checked_control(
 /// A check with a number ([`FieldKind::OptInt`]).
 pub fn opt_int_control(
     label: &str,
-    (min, max, none, inverted): (i64, i64, i64, bool),
+    (min, max, none, start, inverted): (i64, i64, i64, i64, bool),
     value: impl Fn() -> Value + 'static,
     changed: Rc<dyn Fn(Value)>,
 ) -> (gtk::Widget, Box<dyn Fn()>) {
@@ -369,7 +369,6 @@ pub fn opt_int_control(
     row.add_prefix(&check);
     row.add_suffix(&spin);
     let loading = Rc::new(Cell::new(false));
-    let start = min.max(0).min(max);
     check.connect_toggled({
         let (changed, loading, spin) = (changed.clone(), loading.clone(), spin.clone());
         move |c| {
@@ -391,7 +390,9 @@ pub fn opt_int_control(
     });
     let load = move || {
         let v = value().int();
-        let numbered = v != none;
+        // A "not limited" check is on for any negative number when the
+        // limit-free value is negative (the Container page tests `< 0`).
+        let numbered = v != none && !(inverted && none < 0 && v < 0);
         loading.set(true);
         check.set_active(numbered != inverted);
         spin.set_sensitive(numbered);
@@ -452,8 +453,9 @@ pub fn real_control(
         loading.set(true);
         let limited = match (&check, none) {
             (Some(check), Some((none, _))) => {
-                check.set_active(v == none);
-                v != none
+                let unlimited = if none < 0.0 { v < 0.0 } else { v == none };
+                check.set_active(unlimited);
+                !unlimited
             }
             _ => true,
         };

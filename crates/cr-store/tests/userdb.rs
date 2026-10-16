@@ -419,8 +419,8 @@ fn parts_golden() {
     set(&f, &mut sword, phb, "Weapon Size", text("M"));
     set(&f, &mut sword, phb, "Weapon Type", text("S"));
     set(&f, &mut sword, "", "Melee Weapon", Value::Bool(true));
-    set(&f, &mut sword, "", "# of Hands Needed", Value::Int(1));
-    set(&f, &mut sword, phb, "Gold", Value::Int(15));
+    set(&f, &mut sword, "", "# of hands needed", Value::Int(1));
+    set(&f, &mut sword, phb, "Gold Pieces", Value::Int(15));
     db.add(sword).unwrap();
     if s.expansion() {
         let mut kit = db.new_record(KITS, "");
@@ -429,10 +429,11 @@ fn parts_golden() {
             &f,
             &mut kit,
             "",
-            "Starting Money = Dice × Multiplier + Add",
+            "Starting money = dice * multiplier + add",
             Value::Bool(true),
         );
-        set(&f, &mut kit, "", "Dice", Value::Dice([3, 6, 0]));
+        set(&f, &mut kit, "", "# of dice", Value::Int(3));
+        set(&f, &mut kit, "", "# of sides", Value::Int(6));
         set(&f, &mut kit, "", "Multiplier", Value::Int(10));
         db.add(kit).unwrap();
     }

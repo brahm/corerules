@@ -28,6 +28,7 @@ pub mod classes;
 pub mod monsters;
 pub mod parts;
 pub mod powers;
+pub mod program;
 pub mod races;
 pub mod slots;
 pub mod spells;
@@ -289,14 +290,16 @@ pub enum FieldKind {
     Dice,
     /// A check with a number: the original's "sentinel" controls, whose
     /// check is on when the number is not `none` and whose number is
-    /// greyed while it is off (unchecking stores `none`, checking starts
-    /// from `min.max(0)`). The label is the check's. With `inverted`, the
-    /// check is on when the number *is* `none` ("Not limited by
-    /// weight").
+    /// greyed while it is off (unchecking stores `none`, checking stores
+    /// `start`, the value the original's click handler puts in). The
+    /// label is the check's. With `inverted`, the check is on when the
+    /// number *is* `none` ("Not limited by weight"; a negative `none`
+    /// then stands for any negative number).
     OptInt {
         min: i64,
         max: i64,
         none: i64,
+        start: i64,
         inverted: bool,
     },
     /// A real number ([`Value::Real`]); `none` as for [`Self::OptInt`]
@@ -811,6 +814,9 @@ pub struct Sources {
     pub attacks: Vec<cr_formats::monster::MonsterAttack>,
     /// Class names, identifiers and groups, for multi-classes.
     pub classes: Vec<classes::ClassEntry>,
+    /// Every spell (standard then user), for lists that keep copies of
+    /// them (a kit's bonus spells).
+    pub spells: Vec<cr_formats::spells::Spell>,
 }
 
 impl Sources {
@@ -840,7 +846,13 @@ impl Sources {
                     options: Options::Source(n),
                     ..
                 }
-                | FieldKind::Dual(Options::Source(n)) => Some(n),
+                | FieldKind::Dual(Options::Source(n))
+                | FieldKind::Checked(Options::Source(n))
+                | FieldKind::Groups(Options::Source(n))
+                | FieldKind::Pairs {
+                    options: Options::Source(n),
+                    ..
+                } => Some(n),
                 _ => None,
             })
             .collect();
@@ -884,6 +896,26 @@ impl Sources {
                     .map(|t| t.name.clone())
                     .collect(),
                 "weapon-groups" => parts::weapon_groups(install)?,
+                "weapon-proficiencies" => parts::weapon_proficiencies(install)?,
+                "rogue-skills" => parts::rogue_skills(install)?,
+                "class-combinations" => {
+                    sources.classes = classes::class_list(install)?;
+                    let mut names: Vec<String> =
+                        sources.classes.iter().map(|c| c.name.clone()).collect();
+                    names.extend(classes::multiclass_names(&sources.classes));
+                    names
+                }
+                "spells" => {
+                    sources.spells = spells::all_spells(install)?;
+                    let mut names: Vec<String> =
+                        sources.spells.iter().map(|s| s.name.clone()).collect();
+                    names.sort_by_key(|n| n.to_lowercase());
+                    names.dedup();
+                    names
+                }
+                n if program::is_program_list(n) => {
+                    program::program_list(install, crate::encounter::flavor_of(install), n)?
+                }
                 n if n.starts_with("monster-") => monsters::distinct(install, n)?,
                 n => match parts::source_type(n) {
                     Some(t) => {

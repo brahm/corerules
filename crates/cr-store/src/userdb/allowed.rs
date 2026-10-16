@@ -95,7 +95,7 @@ impl Allowed {
         self.classes.iter().filter(|c| !c.is_empty()).count() > 1
     }
 
-    fn of(data: &ClassesAllowedHelperData) -> Self {
+    pub(crate) fn of(data: &ClassesAllowedHelperData) -> Self {
         let mut a = Self::new(
             [
                 data.warrior.clone(),
@@ -110,7 +110,7 @@ impl Allowed {
         a
     }
 
-    fn helper(&self) -> Object {
+    pub(crate) fn helper(&self) -> Object {
         let [warrior, rogue, priest, wizard, psionicist] = self.classes.clone();
         Object::ClassesAllowedHelper(Box::new(ClassesAllowedHelper {
             version: 1,

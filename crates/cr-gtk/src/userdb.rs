@@ -956,10 +956,11 @@ fn control<R: Clone + 'static, H: Host + 'static>(
             min,
             max,
             none,
+            start,
             inverted,
         } => widgets::opt_int_control(
             label,
-            (min, max, none, inverted),
+            (min, max, none, start, inverted),
             value,
             emit(changed, index),
         ),

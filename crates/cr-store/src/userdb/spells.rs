@@ -160,6 +160,17 @@ impl UserKind for Spells {
     }
 }
 
+/// Every spell, standard (`Database/Spells.dat`) then user, in file order.
+pub fn all_spells(install: &Installation) -> Result<Vec<Spell>> {
+    let mut spells = Spells::standard(install)?;
+    if let Some(path) = install.path(Spells::FILE) {
+        let file = SpellsFile::parse(&install.read(Spells::FILE)?)
+            .map_err(|source| Error::Format { path, source })?;
+        spells.extend(spells_of(file));
+    }
+    Ok(spells)
+}
+
 fn spells_of(file: SpellsFile) -> Vec<Spell> {
     file.wizard
         .into_iter()

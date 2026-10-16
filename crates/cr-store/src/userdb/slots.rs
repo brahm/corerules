@@ -77,8 +77,12 @@ pub fn kit(k: &PartKitData, off: usize) -> Option<Slot<'_>> {
         0x75..=0x7c => Some(Slot::U8(&k.flags_0x75[off - 0x75])),
         0x80 => Some(Slot::I32(&k.unknown_0x80)),
         0x84 => Some(Slot::U8(&k.flag_0x84)),
-        0x88..=0x98 if (off - 0x88).is_multiple_of(4) => Some(Slot::I32(&k.unknown_0x88[(off - 0x88) / 4])),
-        0x9c..=0xa4 if (off - 0x9c).is_multiple_of(4) => Some(Slot::Str(&k.unknown_0x9c[(off - 0x9c) / 4])),
+        0x88..=0x98 if (off - 0x88).is_multiple_of(4) => {
+            Some(Slot::I32(&k.unknown_0x88[(off - 0x88) / 4]))
+        }
+        0x9c..=0xa4 if (off - 0x9c).is_multiple_of(4) => {
+            Some(Slot::Str(&k.unknown_0x9c[(off - 0x9c) / 4]))
+        }
         0xa8 => Some(Slot::List(&k.unknown_0xa8)),
         0xbc => Some(Slot::List(&k.unknown_0xbc)),
         0xd0 => Some(Slot::List(&k.unknown_0xd0)),
@@ -919,24 +923,38 @@ pub fn class(c: &ClassData, off: usize) -> Option<Slot<'_>> {
         0x4 => Some(Slot::Str(&c.name)),
         0x8 => Some(Slot::Str(&c.unknown_0x8)),
         0xc => Some(Slot::I32(&c.unknown_0xc)),
-        0x14..=0x18 if (off - 0x14).is_multiple_of(4) => Some(Slot::I32(&c.unknown_0x14[(off - 0x14) / 4])),
-        0x34..=0x48 if (off - 0x34).is_multiple_of(4) => Some(Slot::I32(&c.unknown_0x34[(off - 0x34) / 4])),
+        0x14..=0x18 if (off - 0x14).is_multiple_of(4) => {
+            Some(Slot::I32(&c.unknown_0x14[(off - 0x14) / 4]))
+        }
+        0x34..=0x48 if (off - 0x34).is_multiple_of(4) => {
+            Some(Slot::I32(&c.unknown_0x34[(off - 0x34) / 4]))
+        }
         0x4c => Some(Slot::I32(&c.unknown_0x4c)),
         0x50 => Some(Slot::I32(&c.unknown_0x50)),
-        0x54..=0x58 if (off - 0x54).is_multiple_of(4) => Some(Slot::I32(&c.unknown_0x54[(off - 0x54) / 4])),
+        0x54..=0x58 if (off - 0x54).is_multiple_of(4) => {
+            Some(Slot::I32(&c.unknown_0x54[(off - 0x54) / 4]))
+        }
         0x5c => Some(Slot::List(&c.abilities)),
         0x70 => Some(Slot::List(&c.unknown_0x70)),
-        0x84..=0x8c if (off - 0x84).is_multiple_of(4) => Some(Slot::I32(&c.unknown_0x84[(off - 0x84) / 4])),
+        0x84..=0x8c if (off - 0x84).is_multiple_of(4) => {
+            Some(Slot::I32(&c.unknown_0x84[(off - 0x84) / 4]))
+        }
         0x90 => Some(Slot::I32(&c.unknown_0x90)),
         0x94..=0x9c if (off - 0x94).is_multiple_of(4) => c
             .unknown_0x94
             .as_ref()
             .map(|a| Slot::I32(&a[(off - 0x94) / 4])),
         0xa0 => Some(Slot::List(&c.alignments)),
-        0xb4..=0xb8 if (off - 0xb4).is_multiple_of(4) => Some(Slot::I32(&c.unknown_0xb4[(off - 0xb4) / 4])),
-        0xbc..=0xc4 if (off - 0xbc).is_multiple_of(4) => Some(Slot::I32(&c.unknown_0xbc[(off - 0xbc) / 4])),
+        0xb4..=0xb8 if (off - 0xb4).is_multiple_of(4) => {
+            Some(Slot::I32(&c.unknown_0xb4[(off - 0xb4) / 4]))
+        }
+        0xbc..=0xc4 if (off - 0xbc).is_multiple_of(4) => {
+            Some(Slot::I32(&c.unknown_0xbc[(off - 0xbc) / 4]))
+        }
         0xc8 => Some(Slot::I32(&c.unknown_0xc8)),
-        0xcc..=0xe0 if (off - 0xcc).is_multiple_of(4) => Some(Slot::I32(&c.unknown_0xcc[(off - 0xcc) / 4])),
+        0xcc..=0xe0 if (off - 0xcc).is_multiple_of(4) => {
+            Some(Slot::I32(&c.unknown_0xcc[(off - 0xcc) / 4]))
+        }
         0x27c..=0x40c if (off - 0x27c).is_multiple_of(4) => c
             .unknown_0x27c
             .as_ref()
