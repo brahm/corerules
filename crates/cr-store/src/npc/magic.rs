@@ -5,7 +5,9 @@ use std::collections::HashMap;
 
 use super::Gen;
 use super::data::{EQUIPMENT, PartExt, SCHOOLS, SPHERES, Spell};
+use super::program::Tx;
 use super::state::{Book, It, Psionics, inv_add};
+use super::texts::*;
 
 /// 0x421f1f: the highest spell level by Intelligence.
 const INT_MAX_SPELL_LEVEL: [i32; 26] = [
@@ -41,12 +43,12 @@ const INT_MAX_SPELLS: [i32; 26] = [
     i32::MAX,
 ];
 
-pub const DISCIPLINES: [&str; 5] = [
-    "Clairsentient",
-    "Psychokinetic",
-    "Psychometabolic",
-    "Psychoportive",
-    "Telepathic",
+pub const DISCIPLINES: [Tx; 5] = [
+    CLAIRSENTIENT,
+    PSYCHOKINETIC,
+    PSYCHOMETABOLIC,
+    PSYCHOPORTIVE,
+    TELEPATHIC,
 ];
 /// 0x42fa1a: devotions by level (without and with the bonus).
 const PSI_DEV: [[i32; 21]; 2] = [
@@ -382,9 +384,9 @@ impl<'a> Gen<'a> {
             }
             if sl == 1 {
                 n -= 1;
-                self.book_w.push("Read Magic".into());
+                self.book_w.push(self.t(READ_MAGIC).into());
                 for l in [&mut sp, &mut general] {
-                    if let Some(i) = rfind(l, "Read Magic") {
+                    if let Some(i) = rfind(l, self.t(READ_MAGIC)) {
                         l.remove(i);
                     }
                 }
@@ -508,7 +510,7 @@ impl<'a> Gen<'a> {
     /// "Spellbook" items (list 4); a spell takes level + 0..5 pages.
     fn spellbooks(&mut self) {
         let d = self.d;
-        let Some(i) = d.part_exact(EQUIPMENT, "Spellbook") else {
+        let Some(i) = d.part_exact(EQUIPMENT, self.t(SPELLBOOK)) else {
             self.warn("There is no Spellbook part; no spellbook was made.");
             return;
         };
@@ -551,7 +553,7 @@ impl<'a> Gen<'a> {
                 bk.wizard.push(wiz);
             }
             for b in books {
-                let mut it = It::new("Spellbook", 1);
+                let mut it = It::new(self.t(SPELLBOOK), 1);
                 it.book = Some(b);
                 inv_add(&mut self.inventory[4], it, false);
             }
@@ -614,8 +616,7 @@ impl<'a> Gen<'a> {
             let dn = usize::try_from(pw.discipline)
                 .ok()
                 .and_then(|i| DISCIPLINES.get(i))
-                .copied()
-                .unwrap_or("");
+                .map_or("", |&t| self.t(t));
             if !p.disciplines.iter().any(|x| x == dn) {
                 continue;
             }
@@ -648,7 +649,7 @@ impl<'a> Gen<'a> {
             secondary: std::mem::take(&mut self.psi.secondary),
             ..Psionics::default()
         };
-        let mut pool: Vec<&str> = DISCIPLINES.to_vec();
+        let mut pool: Vec<&str> = DISCIPLINES.iter().map(|&t| self.t(t)).collect();
         let mut cnt: HashMap<String, i32> = HashMap::new();
         let (mut nd, mut ns, mut nv) = (0, 0, 0);
         let mut fail = false;
@@ -685,8 +686,7 @@ impl<'a> Gen<'a> {
                     let pw = &self.d.powers[cand[k]];
                     let dn = DISCIPLINES
                         .get(pw.discipline.max(0) as usize)
-                        .copied()
-                        .unwrap_or("");
+                        .map_or("", |&t| self.t(t));
                     *cnt.entry(dn.to_owned()).or_insert(0) += 1;
                     if kind {
                         self.psi.devotions.push(pw.name.clone());

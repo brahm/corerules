@@ -15,6 +15,7 @@ use cr_formats::race::Race;
 use cr_formats::spells::SpellsFile;
 
 use super::exe::Image;
+use super::program::{Program, Tx};
 use crate::treasure::Flavor;
 use crate::{Error, Installation, Result};
 
@@ -881,6 +882,8 @@ pub struct Data {
     pub allowed: HashMap<String, Vec<Combination>>,
     /// The tight weapon groups' ids (CPartDoc +0x248, from the program).
     pub tight_groups: HashMap<String, i32>,
+    /// The texts and tables read from the program.
+    pub program: Program,
 }
 
 fn upper(s: &str) -> String {
@@ -888,6 +891,16 @@ fn upper(s: &str) -> String {
 }
 
 impl Data {
+    /// The program text `tx`.
+    pub fn t(&self, tx: Tx) -> &str {
+        self.program.text(tx)
+    }
+
+    /// `s` is one of the program texts `any`.
+    pub fn is(&self, s: &str, any: &[Tx]) -> bool {
+        any.iter().any(|&t| s == self.t(t))
+    }
+
     /// No records, every part type present.
     pub fn empty() -> Self {
         Data {
@@ -910,6 +923,7 @@ impl Data {
                 .into_iter()
                 .collect();
         }
+        d.program = Program::read(&image, flavor)?;
         for object in install.list_objects("Race")? {
             if let Object::Race(r) = object {
                 d.races.push(*r);

@@ -458,7 +458,9 @@ fn golden_group_explicit_options() {
         Choice::Random,
     );
     let mut rand = at(&t, 2);
-    let npcs = rules.generate_groups(&mut rand, std::slice::from_ref(&a)).unwrap();
+    let npcs = rules
+        .generate_groups(&mut rand, std::slice::from_ref(&a))
+        .unwrap();
     check_stream("10", &t, 2, &rand);
     compare_all(
         "10",

@@ -11,7 +11,8 @@ use super::Session;
 use super::data::{CLASS_ABILITIES, Data, KITS, Kit, Klass, PartExt, RACIAL_ABILITIES};
 use super::equip::Equipment;
 use super::prof::Weapons;
-use super::program::BACKGROUNDS;
+use super::program::Tx;
+use super::texts::*;
 use crate::treasure::Rand;
 use crate::{Error, Result};
 
@@ -111,24 +112,24 @@ const KIT_TESTS: [(usize, Option<usize>, u32); 18] = [
 
 /// The alignments in 0x4c209c's order and the kit flag of each
 /// (0x670ed3: +6 .. +0xe).
-pub const ALIGNMENTS: [(&str, u32); 9] = [
-    ("Lawful Good", 6),
-    ("Lawful Neutral", 7),
-    ("Lawful Evil", 8),
-    ("Neutral Good", 9),
-    ("True Neutral", 10),
-    ("Neutral Evil", 11),
-    ("Chaotic Good", 12),
-    ("Chaotic Neutral", 13),
-    ("Chaotic Evil", 14),
+pub const ALIGNMENTS: [(Tx, u32); 9] = [
+    (LAWFUL_GOOD, 6),
+    (LAWFUL_NEUTRAL, 7),
+    (LAWFUL_EVIL, 8),
+    (NEUTRAL_GOOD, 9),
+    (TRUE_NEUTRAL, 10),
+    (NEUTRAL_EVIL, 11),
+    (CHAOTIC_GOOD, 12),
+    (CHAOTIC_NEUTRAL, 13),
+    (CHAOTIC_EVIL, 14),
 ];
 
 /// The order 0x4c209c lists a kit's alignments in (indexes into
 /// [`ALIGNMENTS`]; Chaotic Evil twice).
 const KIT_ALIGN_ORDER: [usize; 10] = [8, 1, 2, 3, 5, 6, 7, 8, 4, 0];
 
-fn align_flag(name: &str) -> Option<u32> {
-    ALIGNMENTS.iter().find(|a| a.0 == name).map(|a| a.1)
+fn align_flag(d: &Data, name: &str) -> Option<u32> {
+    ALIGNMENTS.iter().find(|a| d.t(a.0) == name).map(|a| a.1)
 }
 
 /// Psionic disciplines and powers.
@@ -240,9 +241,7 @@ impl<'a> Gen<'a> {
         po: bool,
     ) -> Result<Self> {
         if classes.is_empty() {
-            return Err(Error::Invalid(
-                "You must select a class for your NPC".into(),
-            ));
+            return Err(Error::Invalid(d.t(NO_CLASS).into()));
         }
         let mut ks = Vec::new();
         for (name, _) in classes {
@@ -334,6 +333,11 @@ impl<'a> Gen<'a> {
             return 0;
         }
         (self.r.rand() % n).wrapping_add(lo)
+    }
+
+    /// The program text `tx` (read from the installation's program).
+    pub fn t(&self, tx: Tx) -> &'a str {
+        self.d.program.text(tx)
     }
 
     /// `mod(n)` (0x554d70).
@@ -436,7 +440,7 @@ impl<'a> Gen<'a> {
                 break;
             }
         }
-        if self.race.name.to_uppercase().contains("SWANMAY") {
+        if self.race.name.to_uppercase().contains(self.t(SWANMAY)) {
             self.sex = 0;
         }
         let sub = self.subrace.name.clone();
@@ -558,7 +562,7 @@ impl<'a> Gen<'a> {
                 self.alignment = a.clone();
                 return;
             }
-            Opt::Random => self.alignment = ALIGNMENTS[0].0.into(),
+            Opt::Random => self.alignment = self.t(ALIGNMENTS[0].0).into(),
             _ => {}
         }
         let list = self.classes[0].sa(0xa0);
@@ -573,7 +577,7 @@ impl<'a> Gen<'a> {
                 self.alignment = list[i as usize].clone();
                 return;
             }
-            if align_flag(x).is_some_and(has) {
+            if align_flag(self.d, x).is_some_and(has) {
                 filtered.push(x);
             }
         }
@@ -583,7 +587,7 @@ impl<'a> Gen<'a> {
                 .iter()
                 .map(|&i| ALIGNMENTS[i])
                 .filter(|a| has(a.1))
-                .map(|a| a.0)
+                .map(|a| self.t(a.0))
                 .collect();
             if !all.is_empty() {
                 pick = all[self.between(0, all.len() as i32 - 1) as usize].into();
@@ -592,7 +596,8 @@ impl<'a> Gen<'a> {
             pick = filtered[self.between(0, filtered.len() as i32 - 1) as usize].into();
         }
         if pick.is_empty() {
-            pick = ALIGNMENTS[self.modn(9) as usize].0.into();
+            let i = self.modn(9) as usize;
+            pick = self.t(ALIGNMENTS[i].0).into();
         }
         self.alignment = pick;
     }
@@ -693,7 +698,7 @@ impl<'a> Gen<'a> {
             (0x6c, s[5][1]),
         ];
         // 0x670ed3: b6..be; any other alignment reads +0x63.
-        let align_flag = align_flag(&self.alignment).unwrap_or(99);
+        let align_flag = align_flag(self.d, &self.alignment).unwrap_or(99);
         let mut cand = Vec::new();
         for (p, kit) in self.d.parts[KITS].iter().zip(&self.d.kits) {
             let Some(kit) = kit else { continue };
@@ -788,7 +793,7 @@ impl<'a> Gen<'a> {
             String::new()
         };
         self.social = if s.is_empty() {
-            "Middle lower class".into()
+            self.t(MIDDLE_LOWER_CLASS).into()
         } else {
             s
         };
@@ -798,8 +803,10 @@ impl<'a> Gen<'a> {
     /// index 0, yet the saved character then reads "NONE" (the first
     /// entry): the field is taken as the drawn entry.
     pub fn st_background(&mut self) {
-        let i = self.between(1, BACKGROUNDS.len() as i32) - 1;
-        self.background = BACKGROUNDS[i as usize].into();
+        let d = self.d;
+        let list = &d.program.backgrounds;
+        let i = self.between(1, list.len() as i32) - 1;
+        self.background = list.get(i as usize).cloned().unwrap_or_default();
     }
 
     fn dice(&mut self, base: i32, n: i32, s: i32) -> i32 {
@@ -840,6 +847,7 @@ impl<'a> Gen<'a> {
     /// copper.
     pub fn st_money(&mut self) {
         let kit = self.kit();
+        let d = self.d;
         let f32of = |x: f64| f64::from(x as f32);
         let factor = |kit: &Kit, social: &str, name: &str| -> (f64, f64) {
             let pct = match kit.i(0x8c) {
@@ -847,7 +855,7 @@ impl<'a> Gen<'a> {
                 p => p,
             };
             let mut f = f32of(f64::from(pct) * f64::from(0.01f32));
-            if name == "Cavalier" && social == "Lower class" {
+            if name == d.t(CAVALIER) && social == d.t(LOWER_CLASS) {
                 f = 1.0;
             }
             let b = f32of(f64::from(kit.i(0x88)) * f64::from(0.01f32));
@@ -898,7 +906,7 @@ impl<'a> Gen<'a> {
                 gp = gp.wrapping_shl(1);
             }
         }
-        let add = if self.social == "Lower class" {
+        let add = if self.social == self.t(LOWER_CLASS) {
             25
         } else {
             100

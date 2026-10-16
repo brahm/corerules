@@ -4,34 +4,36 @@
 
 use super::Gen;
 use super::data::{CLASS_ABILITIES, DISADVANTAGES, PartExt, TRAITS};
+use super::program::Tx;
+use super::texts::*;
 use crate::sheet::tables;
 
 /// 0x59ad4d: the first keyword found in the upper-cased skill name gives
 /// its id, 1 to 13.
-const SKILL_IDS: [&str; 13] = [
-    "PICK POCKETS",
-    "OPEN LOCKS",
-    "FIND/REMOVE TRAPS",
-    "MOVE SILENTLY",
-    "HIDE IN SHADOWS",
-    "DETECT NOISE",
-    "CLIMB WALLS",
-    "READ LANGUAGES",
-    "DETECT MAGIC",
-    "DETECT ILLUSION",
-    "BRIBE",
-    "TUNNELING",
-    "ESCAPING BONDS",
+const SKILL_IDS: [Tx; 13] = [
+    PICK_POCKETS,
+    OPEN_LOCKS_UC,
+    FIND_REMOVE_TRAPS,
+    MOVE_SILENTLY,
+    HIDE_IN_SHADOWS,
+    DETECT_NOISE,
+    CLIMB_WALLS,
+    READ_LANGUAGES,
+    DETECT_MAGIC,
+    DETECT_ILLUSION,
+    BRIBE,
+    TUNNELING,
+    ESCAPING_BONDS,
 ];
 
 /// A skill's highest value the distribution fills to.
 const CAP: i32 = 95;
 
-fn skill_id(name: &str) -> usize {
+fn skill_id<'t>(name: &str, text: impl Fn(Tx) -> &'t str) -> usize {
     let upper = name.to_uppercase();
     SKILL_IDS
         .iter()
-        .position(|k| upper.contains(k))
+        .position(|&k| upper.contains(text(k)))
         .map_or(0, |i| i + 1)
 }
 
@@ -108,7 +110,7 @@ impl Gen<'_> {
     fn rogue_final(&self, s: usize, level: i32) -> i32 {
         let (name, values) = &self.rogue[s - 1];
         let mut total: i32 = values[..level.clamp(0, 100) as usize].iter().sum();
-        let id = skill_id(name);
+        let id = skill_id(name, |t| self.t(t));
         if id == 0 {
             return 0;
         }
@@ -303,9 +305,15 @@ mod tests {
 
     #[test]
     fn skill_ids_follow_the_keyword_order() {
-        assert_eq!(skill_id("Thief, Pick pockets* (10)"), 1);
-        assert_eq!(skill_id("Thief, Find/remove traps* (10)"), 3);
-        assert_eq!(skill_id("Thief, Climb walls* (5)"), 7);
-        assert_eq!(skill_id("Thief, Backstab (10)"), 0);
+        let text = |t: Tx| match t {
+            t if t == SKILL_IDS[0] => "PICK",
+            t if t == SKILL_IDS[2] => "TRAPS",
+            t if t == SKILL_IDS[6] => "CLIMB",
+            _ => "\u{1}",
+        };
+        assert_eq!(skill_id("Thief, Pick pockets* (10)", text), 1);
+        assert_eq!(skill_id("Thief, Find/remove traps* (10)", text), 3);
+        assert_eq!(skill_id("Thief, Climb walls* (5)", text), 7);
+        assert_eq!(skill_id("Thief, Backstab (10)", text), 0);
     }
 }

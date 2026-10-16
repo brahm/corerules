@@ -140,7 +140,6 @@ impl Image {
 
     /// The texts `push offset text` puts on the stack in the function at
     /// `va`, in code order, up to `len` bytes.
-    #[allow(dead_code)]
     pub fn pushed_texts(&self, va: u32, len: usize) -> Vec<String> {
         let code = self.at(va);
         let code = &code[..len.min(code.len())];
@@ -163,7 +162,6 @@ impl Image {
     /// [ebp+d], offset text` before each call to `picker` with `lea reg,
     /// [ebp+d]`: the first table seen at each displacement, up to its
     /// NULL.
-    #[allow(dead_code)]
     pub fn stack_tables(&self, va: u32, len: usize, picker: u32) -> HashMap<i32, Vec<String>> {
         let code = self.at(va);
         let code = &code[..len.min(code.len())];

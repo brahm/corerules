@@ -6,7 +6,9 @@ use cr_formats::parts::Part;
 
 use super::Gen;
 use super::data::{LANGUAGES, NONWEAPON, PartExt, RACIAL_ABILITIES, WEAPONS};
-use super::program::{COMMON_WEAPON_RULES, EXCLUDED_WEAPON_RULES, Level, NameRule};
+use super::program::Tx;
+use super::program::{Level, NameRule};
+use super::texts::*;
 
 /// Intelligence (Knowledge) to bonus languages, 0x422376.
 const INT_LANGS: [i32; 26] = [
@@ -15,12 +17,12 @@ const INT_LANGS: [i32; 26] = [
 
 /// 0x4d534b's proficiencies by class group rank (warrior, rogue,
 /// psionicist, priest, wizard), Core Rules.
-const GROUP_NWP_CORE: [&[&str]; 5] = [
-    &["Blind Fighting", "Running"],
-    &["Tumbling", "Tightrope Walking"],
-    &["Engineering"],
-    &["Religion", "Spellcraft", "Herbalism"],
-    &["Spellcraft", "Reading/Writing", "Ancient History"],
+const GROUP_NWP_CORE: [&[Tx]; 5] = [
+    &[BLIND_FIGHTING, RUNNING],
+    &[TUMBLING, TIGHTROPE_WALKING],
+    &[ENGINEERING],
+    &[RELIGION, SPELLCRAFT, HERBALISM],
+    &[SPELLCRAFT, READING_WRITING, ANCIENT_HISTORY],
 ];
 
 /// The weapon proficiency stage's state (members of `CNPCGeneration`).
@@ -75,33 +77,6 @@ fn damage_type(w: &Part, core: bool) -> &str {
 pub fn pierce_slash(w: &Part, core: bool) -> bool {
     let s = damage_type(w, core);
     s.contains('P') || s.contains('S')
-}
-
-/// 0x4d8040: the upper-cased name holds one of these.
-const CLUB_WORDS: [&str; 6] = [
-    "CLUB",
-    "QUARTERSTAFF",
-    "BELAYING PIN",
-    "BLOWGUN",
-    "BO STICK",
-    "BOOMERANG",
-];
-/// 0x4d81ad: the club kit's replacements.
-const CLUB_CHOICES: [&str; 8] = [
-    "Belaying pin",
-    "Blowgun",
-    "Bo stick",
-    "Boomerang",
-    "Club",
-    "Club, great",
-    "Club, war",
-    "Quarterstaff",
-];
-
-/// 0x4d8040: a club-like weapon.
-fn is_club(name: &str) -> bool {
-    let u = name.to_uppercase();
-    CLUB_WORDS.iter().any(|w| u.contains(w))
 }
 
 /// 0x479ef2(tight, broad): the broad weapon group holds the tight one.
@@ -172,15 +147,18 @@ impl Gen<'_> {
             || (p.n(0x494) != 0 && (g(1) || kr))
             || (p.n(0x4a0) != 0 && (g(4) || kpsi));
         if !ing {
-            ing = match p.s(0x460) {
-                "Strength" => fs,
-                "Dexterity" => fd,
-                "Constitution" => fc,
-                "Wisdom" => fw,
-                "Intelligence" => fi,
-                "Charisma" => fch,
-                _ => false,
-            };
+            let a = p.s(0x460);
+            ing = [
+                (STRENGTH, fs),
+                (DEXTERITY, fd),
+                (CONSTITUTION, fc),
+                (WISDOM, fw),
+                (INTELLIGENCE, fi),
+                (CHARISMA, fch),
+            ]
+            .iter()
+            .find(|e| a == self.t(e.0))
+            .is_some_and(|e| e.1);
         }
         if !ing && kit.is_some_and(|k| k.sa(0x2bc).iter().any(|n| n == name)) {
             ing = true;
@@ -276,7 +254,8 @@ impl Gen<'_> {
             return false;
         }
         if let Some(p) = self.d.find_in(NONWEAPON, name)
-            && (p.s(0x458).contains("Intelligence") || p.s(0x45c).contains("Intelligence"))
+            && (p.s(0x458).contains(self.t(INTELLIGENCE))
+                || p.s(0x45c).contains(self.t(INTELLIGENCE)))
             && p.n(0x478) <= self.lang_pool
         {
             self.lang_pool -= p.n(0x478);
@@ -360,8 +339,8 @@ impl Gen<'_> {
         self.nwp_class_lists();
         self.nwp_kit_lists();
         let mut spent = self.nwp_bonus_lists();
-        if !self.languages.iter().any(|l| l == "Common") {
-            let r = self.nwp_learn("Modern Languages");
+        if !self.languages.iter().any(|l| l == self.t(COMMON)) {
+            let r = self.nwp_learn(self.t(MODERN_LANGUAGES));
             if r > -1 {
                 spent += r;
             }
@@ -584,8 +563,8 @@ impl Gen<'_> {
                 k = rank;
             }
         }
-        for n in GROUP_NWP_CORE[k as usize] {
-            self.nwp_learn(n);
+        for &n in GROUP_NWP_CORE[k as usize] {
+            self.nwp_learn(self.t(n));
         }
     }
 
@@ -613,11 +592,22 @@ impl Gen<'_> {
 
     // ---- weapon proficiencies ----
 
+    /// 0x4d8040: a club-like weapon (the upper-cased name holds one of the
+    /// program's club words).
+    fn is_club(&self, name: &str) -> bool {
+        let u = name.to_uppercase();
+        self.d
+            .program
+            .club_words
+            .iter()
+            .any(|w| u.contains(w.as_str()))
+    }
+
     /// Runs the straight-line name tests of 0x4ce3d6 / 0x4d6dc6.
     fn run_name_rules(&self, rules: &[NameRule], name: &str, hit: i32, end: i32) -> Option<i32> {
         let mut i = 0;
         while i < rules.len() {
-            match rules[i] {
+            match &rules[i] {
                 NameRule::Stop => return None,
                 NameRule::Eq(s) => {
                     if name == s {
@@ -625,7 +615,7 @@ impl Gen<'_> {
                     }
                 }
                 NameRule::Find(s) => {
-                    if name.contains(s) {
+                    if name.contains(s.as_str()) {
                         return Some(hit);
                     }
                 }
@@ -635,22 +625,22 @@ impl Gen<'_> {
                     race,
                     find,
                 } => {
-                    let v = if parent {
+                    let v = if *parent {
                         self.race.unknown_0x188.as_str()
                     } else {
                         self.race.name.as_str()
                     };
-                    if (v == race) == equal && name.contains(find) {
+                    if (v == race) == *equal && name.contains(find.as_str()) {
                         return Some(hit);
                     }
                 }
                 NameRule::Gate { when, to } => {
-                    let ok = match when {
+                    let ok = match *when {
                         Level::Above(k) => self.m738 > k,
                         Level::Below(k) => self.m738 < k,
                     };
                     if ok {
-                        match to {
+                        match *to {
                             Some(t) => {
                                 i = t;
                                 continue;
@@ -671,13 +661,13 @@ impl Gen<'_> {
         if self.d.user_weapon(name) {
             return true;
         }
-        self.run_name_rules(COMMON_WEAPON_RULES, &name.to_uppercase(), 0, 1) != Some(0)
+        self.run_name_rules(&self.d.program.common_rules, &name.to_uppercase(), 0, 1) != Some(0)
     }
 
     /// 0x4d6dc6: the weapon is excluded.
     pub(super) fn excluded_weapon(&self, w: &Part) -> bool {
         let name = w.name();
-        if let Some(r) = self.run_name_rules(EXCLUDED_WEAPON_RULES, name, 1, 0) {
+        if let Some(r) = self.run_name_rules(&self.d.program.excluded_rules, name, 1, 0) {
             return r != 0;
         }
         let Some(kit) = self.kit() else { return true };
@@ -710,7 +700,7 @@ impl Gen<'_> {
         if k.flag(0x27a0) && pierce_slash(w, self.core) {
             return false;
         }
-        if k.s3000.as_deref() != Some("Only from list below") {
+        if k.s3000.as_deref() != Some(self.t(ONLY_FROM_LIST_BELOW)) {
             // 0x669550: the damage-type list is not decoded; refused.
             self.warn("A class's weapon damage-type list (0x669550) is not decoded; its weapons were refused.");
         }
@@ -1140,7 +1130,8 @@ impl Gen<'_> {
             self.wp_pick(&l30, false);
         }
         if self.wp.m790 {
-            self.wp.chosen.push(CLUB_CHOICES[4].into());
+            let club = self.d.program.club_choices.get(4).cloned();
+            self.wp.chosen.extend(club);
         }
         self.wp.d8 = ld8;
         self.wp.l4c = l4c;
@@ -1175,7 +1166,7 @@ impl Gen<'_> {
                 if w.n(0x3b8) != 0 {
                     self.wp.m7d0 += 1;
                 }
-                if self.wp.m790 && is_club(name) {
+                if self.wp.m790 && self.is_club(name) {
                     self.wp.m790 = false;
                 }
             }
@@ -1208,12 +1199,16 @@ impl Gen<'_> {
         while self.wp.slots >= 1 && tries < 40 {
             tries += 1;
             let mut name = list[(self.between(1, n) - 1) as usize].clone();
-            if self.wp.m790 && !is_club(&name) && tries < 8 {
+            if self.wp.m790 && !self.is_club(&name) && tries < 8 {
                 // 0x4d81ad: one of eight club-like weapons, taken when it
                 // is in the list.
-                let alt = CLUB_CHOICES[self.modn(CLUB_CHOICES.len() as i32) as usize];
-                if list.iter().any(|x| x == alt) {
-                    name = alt.to_owned();
+                let d = self.d;
+                let choices = &d.program.club_choices;
+                if !choices.is_empty() {
+                    let alt = &choices[self.modn(choices.len() as i32) as usize];
+                    if list.iter().any(|x| x == alt) {
+                        name = alt.clone();
+                    }
                 }
             }
             if self.wp.m7c8 {
@@ -1271,7 +1266,7 @@ impl Gen<'_> {
                 }
             }
             self.wp.chosen.push(name.clone());
-            if self.wp.m790 && is_club(&name) {
+            if self.wp.m790 && self.is_club(&name) {
                 self.wp.m790 = false;
             }
             if self.wp.m78c > 0 && self.is_sword(&name) {
@@ -1346,18 +1341,18 @@ impl Gen<'_> {
         // The +0x768 / +0x754 lists are filled only by 0x4d5a07, which
         // returns at once in Core Rules: a Stout or Hairfoot halfling gets
         // no racial language here.
-        if !(sn.contains("Stout halfling") || sn.contains("Hairfoot halfling")) {
+        if !(sn.contains(self.t(STOUT_HALFLING)) || sn.contains(self.t(HAIRFOOT_HALFLING))) {
             self.languages.extend(sub.languages.iter().cloned());
         }
-        if matches!(
+        if self.d.is(
             sn,
-            "Human" | "Half-orc" | "Half-ogre" | "Half-elf" | "Standard half-elf"
+            &[HUMAN, HALF_ORC, HALF_OGRE, HALF_ELF, STANDARD_HALF_ELF],
         ) && !self
             .languages
             .iter()
-            .any(|l| l == "Human, Regional dialect")
+            .any(|l| l == self.t(HUMAN_REGIONAL_DIALECT))
         {
-            self.languages.push("Human, Regional dialect".into());
+            self.languages.push(self.t(HUMAN_REGIONAL_DIALECT).into());
         }
         self.lang_nwp();
     }
@@ -1386,9 +1381,11 @@ impl Gen<'_> {
             let mut list = self.nwp_langs.remove(&i).unwrap_or_default();
             for _ in 0..per {
                 let mut got = None;
-                if !common_done && name == "Modern Languages" && !list.iter().any(|l| l == "Common")
+                if !common_done
+                    && name == self.t(MODERN_LANGUAGES)
+                    && !list.iter().any(|l| l == self.t(COMMON))
                 {
-                    got = Some("Common".to_owned());
+                    got = Some(self.t(COMMON).to_owned());
                     common_done = true;
                 }
                 while got.is_none() {

@@ -8,7 +8,9 @@ use super::Gen;
 use super::data::{ARMOR, Data, EQUIPMENT, MAGIC_ITEMS, PartExt, WEAPONS};
 use super::prof::{name0, pierce_slash};
 use super::program::CAPACITY;
+use super::program::Tx;
 use super::state::{It, STR, inv_add};
+use super::texts::*;
 
 /// The generator's item lists by member offset; the character's nine
 /// bundles take them in [`INV_ORDER`].
@@ -76,38 +78,32 @@ pub struct Equipment {
 }
 
 /// Proficiency gear of 0x4cbc6e: (proficiency, [(item, free)]).
-const NWP_GEAR: [(&str, &[(&str, bool)]); 10] = [
-    ("Heal", &[("Healer's bag", true)]),
-    ("Tailor", &[("Sewing needle", false)]),
-    ("Navigation", &[("Sextant", false)]),
-    ("Herbalist", &[("Herbs (per lb)", true)]),
-    ("Rope use", &[("Rope, silk (50 ft)", true)]),
+const NWP_GEAR: [(Tx, &[(Tx, bool)]); 10] = [
+    (HEAL, &[(HEALER_S_BAG, true)]),
+    (TAILOR, &[(SEWING_NEEDLE, false)]),
+    (NAVIGATION, &[(SEXTANT, false)]),
+    (HERBALIST, &[(HERBS_PER_LB, true)]),
+    (ROPE_USE, &[(ROPE_SILK_50_FT, true)]),
     (
-        "Reading/Writing",
-        &[
-            ("Writing ink (per vial)", false),
-            ("Paper (per sheet)", false),
-        ],
+        READING_WRITING,
+        &[(WRITING_INK_PER_VIAL, false), (PAPER_PER_SHEET, false)],
     ),
-    ("Boat Piloting", &[("Sextant", false)]),
-    (
-        "Fishing",
-        &[("Fishhook", true), ("Fishing net (10 ft sq)", false)],
-    ),
-    ("Cobbling", &[("Boots, soft", false)]),
-    ("Mountaineering", &[("Crampons", false)]),
+    (BOAT_PILOTING, &[(SEXTANT, false)]),
+    (FISHING, &[(FISHHOOK, true), (FISHING_NET_10_FT_SQ, false)]),
+    (COBBLING, &[(BOOTS_SOFT, false)]),
+    (MOUNTAINEERING, &[(CRAMPONS, false)]),
 ];
 
 /// 0x4d6504: the container a weapon or its ammunition is carried in.
-fn container_for(p: &Part) -> &'static str {
+fn container_for<'a>(d: &'a Data, p: &Part) -> &'a str {
     if p.n(0x2c0) != 0 {
-        "Knife sheath"
+        d.t(KNIFE_SHEATH)
     } else if p.n(0x2c8) != 0 {
-        "Quiver"
+        d.t(QUIVER)
     } else if p.n(0x2cc) != 0 {
-        "Scabbard, hanger, baldric"
+        d.t(SCABBARD_HANGER_BALDRIC)
     } else if p.n(0x2b8) != 0 {
-        "Bolt case"
+        d.t(BOLT_CASE)
     } else {
         ""
     }
@@ -311,13 +307,14 @@ impl Gen<'_> {
         self.eq.race_eq = d.parts[EQUIPMENT]
             .iter()
             .filter(|p| {
-                matches!(
-                    (p.s(0x244), rn),
-                    ("Dwarven Equipment", "Dwarf")
-                        | ("Halfling Equipment", "Halfling")
-                        | ("Elven Equipment", "Elf")
-                        | ("Gnomish Equipment", "Gnome")
-                )
+                [
+                    (DWARVEN_EQUIPMENT, DWARF),
+                    (HALFLING_EQUIPMENT, HALFLING),
+                    (ELVEN_EQUIPMENT, ELF),
+                    (GNOMISH_EQUIPMENT, GNOME),
+                ]
+                .iter()
+                .any(|&(e, r)| p.s(0x244) == d.t(e) && rn == d.t(r))
             })
             .map(|p| p.name().to_owned())
             .collect();
@@ -428,7 +425,7 @@ impl Gen<'_> {
             if ap.n(0x228) != 0 && l < 2 && kit.is_some_and(|k| k.flag(0x75)) {
                 continue;
             }
-            let cont = container_for(ap);
+            let cont = container_for(self.d, ap);
             if cont.is_empty() {
                 let q = self.between(5, 20);
                 self.buy(a, L380, q, true);
@@ -456,16 +453,16 @@ impl Gen<'_> {
         if !self.eq.horse.is_empty() {
             return;
         }
-        if name.contains("Lance") {
-            if name.contains("heavy") {
-                self.eq.horse = "Horse, heavy war".into();
-            } else if name.contains("medium") {
-                self.eq.horse = "Horse, medium war".into();
-            } else if name.contains("light") {
-                self.eq.horse = "Horse, light war".into();
+        if name.contains(self.t(LANCE)) {
+            if name.contains(self.t(HEAVY)) {
+                self.eq.horse = self.t(HORSE_HEAVY_WAR).into();
+            } else if name.contains(self.t(MEDIUM)) {
+                self.eq.horse = self.t(HORSE_MEDIUM_WAR).into();
+            } else if name.contains(self.t(LIGHT)) {
+                self.eq.horse = self.t(HORSE_LIGHT_WAR).into();
             }
-        } else if name.contains("horseman") {
-            self.eq.horse = "Horse, light war".into();
+        } else if name.contains(self.t(HORSEMAN)) {
+            self.eq.horse = self.t(HORSE_LIGHT_WAR).into();
         }
     }
 
@@ -490,7 +487,7 @@ impl Gen<'_> {
                 continue;
             }
             let cur = w.name();
-            let dart = cur.contains("Dart ") || cur == "Dart";
+            let dart = cur.contains(self.t(DART_SP)) || cur == self.t(DART);
             if !self.eq.m701 {
                 if self.buy(cur, L4C4, 1, true) {
                     self.lance_horse(cur);
@@ -502,7 +499,7 @@ impl Gen<'_> {
                     last = name0(w).to_owned();
                     if w.n(0x3b8) != 0 {
                         self.eq.m704 += 1;
-                        let cont = container_for(w);
+                        let cont = container_for(d, w);
                         if !cont.is_empty() {
                             self.buy(cont, L3EC, 1, false);
                         }
@@ -518,14 +515,14 @@ impl Gen<'_> {
                 && !(self.eq.m704 > 0 && w.n(0x3bc) == 0)
                 && self.buy(cur, L6C, 1, false)
             {
-                if self.eq.horse.is_empty() && cur.contains("Lance") {
+                if self.eq.horse.is_empty() && cur.contains(self.t(LANCE)) {
                     let l = self.m738;
                     if l > 15 {
-                        self.eq.horse = "Horse, heavy war".into();
+                        self.eq.horse = self.t(HORSE_HEAVY_WAR).into();
                     } else if l > 10 {
-                        self.eq.horse = "Horse, medium war".into();
+                        self.eq.horse = self.t(HORSE_MEDIUM_WAR).into();
                     } else if l > 6 {
-                        self.eq.horse = "Horse, light war".into();
+                        self.eq.horse = self.t(HORSE_LIGHT_WAR).into();
                     }
                 }
                 if dart {
@@ -536,7 +533,7 @@ impl Gen<'_> {
                 last = name0(w).to_owned();
                 if w.n(0x3b8) != 0 {
                     self.eq.m704 += 1;
-                    let cont = container_for(w);
+                    let cont = container_for(d, w);
                     if !cont.is_empty() {
                         // The weapon moves from +0x6c into a container
                         // worn on +0x3ec.
@@ -659,7 +656,7 @@ impl Gen<'_> {
 
     /// 0x4ca7ab: body armor and shield.
     fn eq_armor(&mut self) {
-        if self.race.name == "Aarakocra" || !self.has_kit_part() {
+        if self.race.name == self.t(AARAKOCRA) || !self.has_kit_part() {
             return;
         }
         let d = self.d;
@@ -675,9 +672,9 @@ impl Gen<'_> {
             let mut keep = true;
             if special {
                 if a.n(0x44c) < 0
-                    || nm.contains("missile attraction")
-                    || nm.contains("missile att")
-                    || (nm.contains("blending") && l < 2)
+                    || nm.contains(self.t(MISSILE_ATTRACTION))
+                    || nm.contains(self.t(MISSILE_ATT))
+                    || (nm.contains(self.t(BLENDING)) && l < 2)
                 {
                     continue;
                 }
@@ -699,28 +696,27 @@ impl Gen<'_> {
                 if l == 1 && kit.map_or(0, |k| k.i(0x98)) > a.n(0x270) {
                     continue;
                 }
-                if nm.contains("Drow") || nm.contains("sea elf") {
+                if nm.contains(self.t(DROW)) || nm.contains(self.t(SEA_ELF)) {
                     keep = false;
                 }
-                if (nm.contains("Dwarven") && rn != "Dwarf")
-                    || (nm.contains("Gnomish") && rn != "Gnome")
+                if (nm.contains(self.t(DWARVEN)) && rn != self.t(DWARF))
+                    || (nm.contains(self.t(GNOMISH)) && rn != self.t(GNOME))
                 {
                     continue;
                 }
                 if a.n(0x44c) < 0 {
                     keep = false;
                 }
-                if nm.contains("missile attraction") || nm.contains("missile att") {
+                if nm.contains(self.t(MISSILE_ATTRACTION)) || nm.contains(self.t(MISSILE_ATT)) {
                     continue;
                 }
-                match a.s(0x244) {
-                    "Dwarven Equipment" if rn != "Dwarf" => continue,
-                    "Halfling Equipment" if rn != "Halfling" => continue,
-                    "Elven Equipment" if !matches!(rn.as_str(), "Elf" | "Half-elf" | "Human") => {
-                        continue;
-                    }
-                    "Gnomish Equipment" if rn != "Gnome" => continue,
-                    _ => {}
+                let e = a.s(0x244);
+                if (e == d.t(DWARVEN_EQUIPMENT) && rn != d.t(DWARF))
+                    || (e == d.t(HALFLING_EQUIPMENT) && rn != d.t(HALFLING))
+                    || (e == d.t(ELVEN_EQUIPMENT) && !d.is(&rn, &[ELF, HALF_ELF, HUMAN]))
+                    || (e == d.t(GNOMISH_EQUIPMENT) && rn != d.t(GNOME))
+                {
+                    continue;
                 }
             }
             if level_gate(l, a.n(0x44c)) {
@@ -745,7 +741,7 @@ impl Gen<'_> {
             while !ok && tries < 20 {
                 tries += 1;
                 let nm = body[self.between(0, body.len() as i32 - 1) as usize].clone();
-                if nm.contains("of blending") && tries < 4 {
+                if nm.contains(self.t(OF_BLENDING)) && tries < 4 {
                     continue;
                 }
                 ok = self.buy(&nm, L3EC, 1, false);
@@ -759,13 +755,13 @@ impl Gen<'_> {
 
     /// 0x4c167c("Backpack"): paid when affordable, else free.
     fn eq_backpack(&mut self) -> Option<It> {
-        let p = self.d.find("Backpack")?;
+        let p = self.d.find(self.t(BACKPACK))?;
         let cost = p.price(1);
         if cost < self.eq.budget {
             self.eq.budget -= cost;
         }
         self.eq.w = f32_of(f64::from(p.weight()) + f64::from(self.eq.w));
-        Some(It::new("Backpack", 1))
+        Some(It::new(self.t(BACKPACK), 1))
     }
 
     /// 0x4d76b4: the kit's item lists, free, filed by category.
@@ -793,70 +789,68 @@ impl Gen<'_> {
         let t = self.d.part_type(nm);
         let mut chk = true;
         if t == 0 {
-            cat = "Weapon";
+            cat = self.t(WEAPON);
             if free {
                 chk = false;
             }
         }
         let file = |g: &mut Self, list| g.buy_to(nm, Dest::List(list), 1, free, chk);
-        match cat {
-            "Clothing" | "Household" | "Tack" | "Misc" => {
-                if !(p.weight() <= 20.0 && file(self, L380)) {
-                    file(self, L530);
-                }
-            }
-            "Animal" | "Transportation: Animals" => {
-                file(self, L458);
-            }
-            "Services" => {
-                file(self, L59C);
-            }
-            "Food" => {
-                file(self, L608);
-            }
-            "Transportation" | "Transportation: Wheeled" | "Transportation: Watercraft" => {
-                file(self, L674);
-            }
-            _ if t == 0 => {
-                if !(p.weight() <= 5.0 && file(self, L380)) {
-                    file(self, L530);
-                }
-            }
-            _ => {
+        let d = self.d;
+        if d.is(cat, &[CLOTHING, HOUSEHOLD, TACK, MISC]) {
+            if !(p.weight() <= 20.0 && file(self, L380)) {
                 file(self, L530);
             }
+        } else if d.is(cat, &[ANIMAL, TRANSPORTATION_ANIMALS]) {
+            file(self, L458);
+        } else if cat == d.t(SERVICES) {
+            file(self, L59C);
+        } else if cat == d.t(FOOD) {
+            file(self, L608);
+        } else if d.is(
+            cat,
+            &[
+                TRANSPORTATION,
+                TRANSPORTATION_WHEELED,
+                TRANSPORTATION_WATERCRAFT,
+            ],
+        ) {
+            file(self, L674);
+        } else if t == 0 {
+            if !(p.weight() <= 5.0 && file(self, L380)) {
+                file(self, L530);
+            }
+        } else {
+            file(self, L530);
         }
     }
 
     /// 0x4c96c7
     fn eq_basics(&mut self) {
         let soc = self.social.clone();
-        self.buy("Wineskin", L380, 1, false);
-        let rations = match soc.as_str() {
-            "Lower class" => "Rations,standard (1 week)",
-            "Middle lower class" => "Rations,iron (1 week)",
-            _ => "Dry rations (1 week)",
+        self.buy(self.t(WINESKIN), L380, 1, false);
+        let rations = if soc == self.t(LOWER_CLASS) {
+            RATIONS_STANDARD_1_WEEK
+        } else if soc == self.t(MIDDLE_LOWER_CLASS) {
+            RATIONS_IRON_1_WEEK
+        } else {
+            DRY_RATIONS_1_WEEK
         };
-        self.buy(rations, L380, 1, true);
-        self.buy("Flint and steel", L380, 1, false);
-        if self.between(1, 10) < 2 && soc != "Lower class" {
-            self.buy("Lantern, hooded", L380, 1, false);
-            self.buy("Oil, lamp (per flask)", L380, 1, false);
+        self.buy(self.t(rations), L380, 1, true);
+        self.buy(self.t(FLINT_AND_STEEL), L380, 1, false);
+        if self.between(1, 10) < 2 && soc != self.t(LOWER_CLASS) {
+            self.buy(self.t(LANTERN_HOODED), L380, 1, false);
+            self.buy(self.t(OIL_LAMP_PER_FLASK), L380, 1, false);
         } else {
             let q = self.between(1, 6);
-            self.buy("Torch", L380, q, false);
+            self.buy(self.t(TORCH), L380, q, false);
         }
         if self.between(1, 10) < 4 {
             let q = self.between(1, 6);
-            self.buy("Candle", L380, q, false);
+            self.buy(self.t(CANDLE), L380, q, false);
         }
-        for nm in [
-            "Signal whistle",
-            "Winter blanket",
-            "Oil, Greek fire (flask)",
-        ] {
+        for nm in [SIGNAL_WHISTLE, WINTER_BLANKET, OIL_GREEK_FIRE_FLASK] {
             if self.between(1, 7) < 2 {
-                self.buy(nm, L380, 1, false);
+                self.buy(self.t(nm), L380, 1, false);
             }
         }
     }
@@ -865,54 +859,50 @@ impl Gen<'_> {
     fn eq_nwp_kit(&mut self) {
         let names: Vec<String> = self.nwp.iter().map(|n| n.0.clone()).collect();
         for nm in &names {
-            if nm == "Disguise" {
-                self.buy("Weaponblack", L380, 1, false);
-                if self.between(1, 5) < 3 && self.social != "Upper class" {
-                    self.buy("Ruff", L380, 1, false);
+            if nm == self.t(DISGUISE) {
+                self.buy(self.t(WEAPONBLACK), L380, 1, false);
+                if self.between(1, 5) < 3 && self.social != self.t(UPPER_CLASS) {
+                    self.buy(self.t(RUFF), L380, 1, false);
                 }
             }
             for (k, list) in NWP_GEAR {
-                if nm == k {
+                if nm == self.t(k) {
                     for &(it, free) in list {
-                        self.buy(it, L380, 1, free);
+                        self.buy(self.t(it), L380, 1, free);
                     }
                 }
             }
-            if nm == "Animal Training" {
+            if nm == self.t(ANIMAL_TRAINING) {
                 let pet = match self.between(1, 6) {
-                    2 => "Dog, guard",
-                    3 => "Dog, war",
-                    4 => "Dog, hunting",
-                    5 => "Pigeon, homing",
-                    _ => "",
+                    2 => Some(DOG_GUARD),
+                    3 => Some(DOG_WAR),
+                    4 => Some(DOG_HUNTING),
+                    5 => Some(PIGEON_HOMING),
+                    _ => None,
                 };
-                if !pet.is_empty() {
-                    self.buy(pet, L458, 1, false);
+                if let Some(pet) = pet {
+                    self.buy(self.t(pet), L458, 1, false);
                 }
             }
-            if nm == "Falconry (CRE)" {
-                self.buy("Falcon, trained", L458, 1, true);
+            if nm == self.t(FALCONRY_CRE) {
+                self.buy(self.t(FALCON_TRAINED), L458, 1, true);
             }
-            if nm == "Riding, Land" {
+            if nm == self.t(RIDING_LAND) {
                 let r = self.between(1, 5);
                 if self.m738 > 1 && r < 3 {
-                    self.eq.horse = "Horse, riding".into();
+                    self.eq.horse = self.t(HORSE_RIDING).into();
                 }
             }
         }
         if self.has_kit_part() {
-            match self.kit_name.as_str() {
-                "Explorer" => {
-                    self.buy("Spyglass", L380, 1, false);
-                }
-                "Jester" => {
-                    self.buy("Liripipe", L380, 1, false);
-                }
-                "Scholar" => {
-                    self.buy("Writing ink (per vial)", L380, 1, false);
-                    self.buy("Paper (per sheet)", L380, 1, false);
-                }
-                _ => {}
+            let kit = self.kit_name.as_str();
+            if kit == self.t(EXPLORER) {
+                self.buy(self.t(SPYGLASS), L380, 1, false);
+            } else if kit == self.t(JESTER) {
+                self.buy(self.t(LIRIPIPE), L380, 1, false);
+            } else if kit == self.t(SCHOLAR) {
+                self.buy(self.t(WRITING_INK_PER_VIAL), L380, 1, false);
+                self.buy(self.t(PAPER_PER_SHEET), L380, 1, false);
             }
         }
     }
@@ -920,17 +910,17 @@ impl Gen<'_> {
     /// 0x4cb9ca (warriors), 0x4cc460 (wizards), 0x4cbb74 (priests).
     fn eq_group_gear(&mut self) {
         if self.has_group(0) {
-            for nm in ["Block and tackle", "Whetstone", "Cassock", "Grappling hook"] {
+            for nm in [BLOCK_AND_TACKLE, WHETSTONE, CASSOCK, GRAPPLING_HOOK] {
                 if self.between(1, 5) < 3 {
-                    self.buy(nm, L380, 1, false);
+                    self.buy(self.t(nm), L380, 1, false);
                 }
             }
         }
         if self.has_group(3) && self.between(1, 5) < 3 {
-            self.buy("Glass bottle", L380, 1, false);
+            self.buy(self.t(GLASS_BOTTLE), L380, 1, false);
         }
         if self.has_group(2) {
-            self.buy("Holy item", L380, 1, false);
+            self.buy(self.t(HOLY_ITEM), L380, 1, false);
         }
     }
 
@@ -947,16 +937,20 @@ impl Gen<'_> {
         if self.between(1, 40) < mx {
             s = list[k as usize].clone();
         }
-        if s.contains("Robe of the Archmagi") {
-            s = match self.alignment.as_str() {
-                "Lawful Good" | "Neutral Good" | "Chaotic Good" => "Robe of the Archmagi (Good)",
-                "True Neutral" | "Lawful Neutral" | "Chaotic Neutral" => {
-                    "Robe of the Archmagi (Neutral)"
-                }
-                "Neutral Evil" | "Lawful Evil" | "Chaotic Evil" => "Robe of the Archmagi (Evil)",
-                _ => "Cloak of Protection +1",
-            }
-            .into();
+        if s.contains(self.t(ROBE_OF_THE_ARCHMAGI)) {
+            let a = self.alignment.as_str();
+            let d = self.d;
+            s = d
+                .t(if d.is(a, &[LAWFUL_GOOD, NEUTRAL_GOOD, CHAOTIC_GOOD]) {
+                    ROBE_OF_THE_ARCHMAGI_GOOD
+                } else if d.is(a, &[TRUE_NEUTRAL, LAWFUL_NEUTRAL, CHAOTIC_NEUTRAL]) {
+                    ROBE_OF_THE_ARCHMAGI_NEUTRAL
+                } else if d.is(a, &[NEUTRAL_EVIL, LAWFUL_EVIL, CHAOTIC_EVIL]) {
+                    ROBE_OF_THE_ARCHMAGI_EVIL
+                } else {
+                    CLOAK_OF_PROTECTION_1
+                })
+                .into();
         }
         s
     }
@@ -973,73 +967,75 @@ impl Gen<'_> {
     /// Clothes by social class (0x4c9a75, 0x4ca197, 0x4ca618).
     fn eq_social(&mut self) {
         let soc = self.social.clone();
-        match soc.as_str() {
-            "Upper class" => {
+        if soc == self.t(UPPER_CLASS) {
+            {
                 if !self.female() || self.between(1, 5) > 3 {
-                    self.buy("Shirt", L3EC, 1, true);
+                    self.buy(self.t(SHIRT), L3EC, 1, true);
                     if self.between(1, 5) < 4 {
-                        self.buy("Breeches", L3EC, 1, true);
+                        self.buy(self.t(BREECHES), L3EC, 1, true);
                     } else {
-                        self.buy("Cannons", L3EC, 1, true);
+                        self.buy(self.t(CANNONS), L3EC, 1, true);
                     }
                 } else {
-                    self.buy("Garnache", L3EC, 1, true);
+                    self.buy(self.t(GARNACHE), L3EC, 1, true);
                 }
                 let s = self.eq_cloak();
                 if s.is_empty() {
                     if self.between(1, 5) < 2 {
-                        self.buy("Fine fur cloak", L3EC, 1, false);
+                        self.buy(self.t(FINE_FUR_CLOAK), L3EC, 1, false);
                     } else if self.between(1, 5) < 3 {
-                        self.buy("Embroidered robe", L3EC, 1, false);
+                        self.buy(self.t(EMBROIDERED_ROBE), L3EC, 1, false);
                     }
                 } else {
                     self.buy(&s, L3EC, 1, false);
                 }
                 for (nm, die, list) in [
-                    ("Sash", 2, L380),
-                    ("Gorget", 3, L3EC),
-                    ("Pin", 3, L3EC),
-                    ("Ruff", 3, L3EC),
-                    ("Ferronniere", 3, L3EC),
-                    ("Signet ring/personal seal", 3, L380),
-                    ("Perfume (per vial)", 2, L380),
+                    (SASH, 2, L380),
+                    (GORGET, 3, L3EC),
+                    (PIN, 3, L3EC),
+                    (RUFF, 3, L3EC),
+                    (FERRONNIERE, 3, L3EC),
+                    (SIGNET_RING_PERSONAL_SEAL, 3, L380),
+                    (PERFUME_PER_VIAL, 2, L380),
                 ] {
                     if self.between(1, 5) < die {
-                        self.buy(nm, list, 1, false);
+                        self.buy(self.t(nm), list, 1, false);
                     }
                 }
-                self.buy("Gipser", L3EC, 1, false);
+                self.buy(self.t(GIPSER), L3EC, 1, false);
             }
-            "Middle lower class" => {
+        } else if soc == self.t(MIDDLE_LOWER_CLASS) {
+            {
                 if !self.female() || self.between(1, 5) > 3 {
-                    self.buy("Shirt", L3EC, 1, true);
+                    self.buy(self.t(SHIRT), L3EC, 1, true);
                     if self.between(1, 5) < 2 {
-                        self.buy("Breeches", L3EC, 1, true);
+                        self.buy(self.t(BREECHES), L3EC, 1, true);
                     } else {
-                        self.buy("Braies", L3EC, 1, true);
+                        self.buy(self.t(BRAIES), L3EC, 1, true);
                     }
                 } else {
-                    self.buy("Common gown", L3EC, 1, true);
+                    self.buy(self.t(COMMON_GOWN), L3EC, 1, true);
                 }
                 let s = self.eq_cloak();
                 if s.is_empty() {
                     if self.between(1, 5) < 2 {
-                        self.buy("Common robe", L3EC, 1, false);
+                        self.buy(self.t(COMMON_ROBE), L3EC, 1, false);
                     }
                 } else {
                     self.buy(&s, L3EC, 1, false);
                 }
                 if self.between(1, 5) < 4 {
-                    self.buy("Belt pouch, small", L3EC, 1, false);
+                    self.buy(self.t(BELT_POUCH_SMALL), L3EC, 1, false);
                 }
             }
-            _ => {
+        } else {
+            {
                 if self.between(1, 5) < 3 {
-                    self.buy("Slop", L3EC, 1, true);
+                    self.buy(self.t(SLOP), L3EC, 1, true);
                 } else {
-                    self.buy("Chainse, chemise", L3EC, 1, true);
+                    self.buy(self.t(CHAINSE_CHEMISE), L3EC, 1, true);
                 }
-                self.buy("Braies", L3EC, 1, true);
+                self.buy(self.t(BRAIES), L3EC, 1, true);
                 let s = self.eq_cloak();
                 if !s.is_empty() {
                     self.buy(&s, L3EC, 1, false);
@@ -1053,24 +1049,24 @@ impl Gen<'_> {
         if self.wears_clothes() {
             let s = self.eq_cloak();
             let cloak = if s.is_empty() {
-                "Good cloth cloak".to_owned()
+                self.t(GOOD_CLOTH_CLOAK).to_owned()
             } else {
                 s
             };
             self.buy(&cloak, L3EC, 1, false);
             if !self.female() || self.between(1, 5) > 3 {
-                self.buy("Shirt", L3EC, 1, true);
-                self.buy("Breeches", L3EC, 1, true);
+                self.buy(self.t(SHIRT), L3EC, 1, true);
+                self.buy(self.t(BREECHES), L3EC, 1, true);
             } else if self.between(1, 5) < 3 {
-                self.buy("Common robe", L3EC, 1, true);
+                self.buy(self.t(COMMON_ROBE), L3EC, 1, true);
             } else {
-                self.buy("Gown, common", L3EC, 1, true);
+                self.buy(self.t(GOWN_COMMON), L3EC, 1, true);
             }
         }
         if self.between(1, 5) < 3 {
-            self.buy("Belt pouch, small", L3EC, 1, false);
+            self.buy(self.t(BELT_POUCH_SMALL), L3EC, 1, false);
         } else {
-            self.buy("Belt pouch, large", L3EC, 1, false);
+            self.buy(self.t(BELT_POUCH_LARGE), L3EC, 1, false);
         }
     }
 
@@ -1152,10 +1148,10 @@ impl Gen<'_> {
             .collect();
         for abl in &abilities {
             for (j, nm) in abl.iter().enumerate() {
-                if nm.contains("Open locks") {
-                    self.buy("Thieves' picks", L380, 1, true);
+                if nm.contains(self.t(OPEN_LOCKS)) {
+                    self.buy(self.t(THIEVES_PICKS), L380, 1, true);
                 }
-                if j == 0 && nm.contains("Bard") {
+                if j == 0 && nm.contains(self.t(BARD)) {
                     let list = self.eq.magic[M308].clone();
                     let n = list.len() as i32;
                     let mut k = 0;
@@ -1166,21 +1162,21 @@ impl Gen<'_> {
                         if self.between(2, 40) < self.m738 {
                             self.buy(&list[(k - 1) as usize], L6C, 1, false);
                         } else {
-                            self.buy("Musical instrument (small)", L6C, 1, false);
+                            self.buy(self.t(MUSICAL_INSTRUMENT_SMALL), L6C, 1, false);
                         }
                     }
                 }
-                if nm.contains("Faithful mount") {
+                if nm.contains(self.t(FAITHFUL_MOUNT)) {
                     let l0 = self.levels[0];
                     if l0 > 3 {
                         let lo = if l0 > 5 { 4 } else { 0 };
                         let r = self.between(lo, l0);
                         if r >= 11 {
-                            self.eq.horse = "Horse, heavy war".into();
+                            self.eq.horse = self.t(HORSE_HEAVY_WAR).into();
                         } else if r >= 7 {
-                            self.eq.horse = "Horse, medium war".into();
+                            self.eq.horse = self.t(HORSE_MEDIUM_WAR).into();
                         } else if r >= 4 {
-                            self.eq.horse = "Horse, light war".into();
+                            self.eq.horse = self.t(HORSE_LIGHT_WAR).into();
                         }
                     }
                 }
@@ -1213,13 +1209,9 @@ impl Gen<'_> {
         self.eq.budget = cp;
         self.coins = (gp, sp, cp);
         let mut out = Vec::new();
-        for (name, n) in [
-            ("* Copper Pieces", cp),
-            ("* Silver Pieces", sp),
-            ("* Gold Pieces", gp),
-        ] {
+        for (name, n) in [(COPPER_PIECES, cp), (SILVER_PIECES, sp), (GOLD_PIECES, gp)] {
             if n != 0 {
-                inv_add(&mut out, It::new(name, n), true);
+                inv_add(&mut out, It::new(self.t(name), n), true);
             }
         }
         out
@@ -1227,20 +1219,18 @@ impl Gen<'_> {
 
     /// 0x4d663c: the horse (a pony for small races) with its tack.
     fn eq_mount(&mut self) {
-        if self.eq.horse.is_empty()
-            || matches!(self.race.name.as_str(), "Aarakocra" | "Centaur" | "Wemic")
-        {
+        if self.eq.horse.is_empty() || self.d.is(&self.race.name, &[AARAKOCRA, CENTAUR, WEMIC]) {
             return;
         }
-        if matches!(
-            self.race.name.as_str(),
-            "Halfling" | "Gnome" | "Dwarf" | "Kobold"
-        ) {
-            self.eq.horse = "Pony".into();
+        if self
+            .d
+            .is(&self.race.name, &[HALFLING, GNOME, DWARF, KOBOLD])
+        {
+            self.eq.horse = self.t(PONY).into();
         }
         let mut b = Vec::new();
-        for nm in ["Saddle, riding", "Bit and bridle", "Saddle blanket"] {
-            inv_add(&mut b, It::new(nm, 1), true);
+        for nm in [SADDLE_RIDING, BIT_AND_BRIDLE, SADDLE_BLANKET] {
+            inv_add(&mut b, It::new(self.t(nm), 1), true);
         }
         let mut it = It::new(self.eq.horse.clone(), 1);
         it.bundle = Some(b);
@@ -1264,9 +1254,9 @@ impl Gen<'_> {
         self.eq_nwp_kit();
         self.eq_group_gear();
         if self.wears_clothes() {
-            if matches!(
-                self.social.as_str(),
-                "Upper class" | "Middle lower class" | "Lower class"
+            if self.d.is(
+                &self.social,
+                &[UPPER_CLASS, MIDDLE_LOWER_CLASS, LOWER_CLASS],
             ) {
                 self.eq_social();
             } else {

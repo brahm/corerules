@@ -36,6 +36,7 @@ mod prof;
 mod program;
 mod rogue;
 mod state;
+mod texts;
 
 use std::collections::HashMap;
 use std::fs;
@@ -841,6 +842,17 @@ mod tests {
     fn rules() -> NpcRules {
         let mut data = Data::empty();
         data.races = vec![race("Human"), race("Gnome")];
+        // Stand-ins for the program's name tables (read from the
+        // installation's program otherwise).
+        let p = &mut data.program;
+        p.set_name_key(4, "HUMAN");
+        p.set_name_key(5, "GNOME");
+        p.set_names((0x4b8b0b, 0x194), &["Abe", "Bo"]);
+        p.set_names((0x4b8f34, 0x164), &["Cy"]);
+        p.set_text(program::NORM, "Norm");
+        p.set_text(texts::DAVID, "David");
+        p.set_text(texts::NORMA, "Norma");
+        p.set_text(texts::LOUISE, "Louise");
         let common = [
             (0x84, 10),
             (0x88, 9),
