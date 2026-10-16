@@ -26,25 +26,48 @@
 //! * Dice, subtable ranges, parameter lists and follow-up rules (v3 table
 //!   ids, v4/v5 sub-subtable ids, location codes of the critical hit
 //!   tables) are those of the code.
+//! * A roll on several dice rolls them all before printing any row, as
+//!   the original's output routine (0x529707) does.
+//! * Tables the originals compute in code (DMO 14, 16, 17; DMG 47, 70,
+//!   84, 85, 112, 118; PHB 43, 61; S&P 25, 31, 36, 83; S&M 14, 15, 47, 48;
+//!   the item tables 91, 108, 116, 117 and the 900xx handlers) follow the
+//!   code's dice, thresholds and re-roll rules: the turning undead matrix
+//!   is the code's (which differs from the book in several rows), Wild
+//!   Talents 96-100 and Table 116's 95-97/100 rows roll again as the code
+//!   does, Gems split value and class and pick a gem, and Table 84 offers
+//!   the treasure generator.
+//! * Dice text: "1d6 rounds" and the like in entries are replaced by a
+//!   roll, pattern by pattern in the code's order (two lists, one for the
+//!   parameter dialogs and one for the plain ones), with "x 10" totals and
+//!   singular units for a result of 1, including the original's
+//!   "spellls" for one wish spell.
+//! * The text the code prints itself (headings, the rows of the tables it
+//!   works out, footnotes, the options of the parameter dialogs) is read
+//!   at run time from the installation's `Program/Tsrp3.exe` or
+//!   `Program/Evermore.exe` ([`program`], addresses in [`strings`]), and
+//!   only from the builds the addresses were taken from (size and hash).
+//!   Without such a program that text is left blank and the result says
+//!   why. Fixed-width headings are cut into columns at their ruler line.
 //!
-//! Where this differs (the code was not followed far enough, or prints
-//! text this project cannot ship):
+//! Where this differs (the code was not followed far enough):
 //!
 //! * The first roll of a dialog: the original compares with an
 //!   uninitialised previous result (stack memory); here the first roll is
 //!   free.
-//! * Tables the originals compute entirely in code with their own text
-//!   (DMO 14, 16, 17; DMG 47, 84, 112, 118; PHB 43, 61; S&P 25, 31, 36;
-//!   S&M 14, 15, 47, 48) are not rolled; the result refers to the book.
-//! * Some handlers re-roll in special cases (Table 36 "roll twice", the
-//!   Wild Talents 97-100 rows); those print the table's entry instead.
-//! * Spell scrolls pick each spell with `rand() % n` among the database's
-//!   spells of the level; the original (0x52a35e) draws from its own
-//!   spell index, so the names differ for the same seed.
+//! * Random spells (scrolls, Infinite Spells) pick with `rand() % n`
+//!   among the spells of the level in Spells.dat, then the user
+//!   database's, in file order; the original (0x52a35e) draws from its
+//!   own spell index, so the names differ for the same seed. Blank
+//!   Infinite Spells pages are left out.
+//! * Double-clicking a result to open the item in the database is not
+//!   offered.
 //! * Column layout: the original pads to fixed character columns in a
 //!   proportional font, so its columns do not line up; here they do.
 
+mod code;
 mod data;
+mod program;
+mod strings;
 
 use std::collections::HashMap;
 
@@ -53,6 +76,8 @@ use cr_formats::spells::SpellsFile;
 use cr_formats::tbl::{TableFile, TableRecord};
 
 pub use data::{LIST, TABLE_BOOKS};
+use program::Program;
+pub use program::Txt;
 
 use crate::books::{BOOKS, table_captions};
 use crate::encounter::flavor_of;
@@ -136,27 +161,27 @@ pub enum Title {
     Entry,
     /// The table file's own header line.
     Header,
-    /// A fixed label.
-    Label(&'static str),
+    /// A line of the program's text.
+    Text(Txt),
     /// No title: the rows continue the block above.
     None,
 }
 
-/// A column after the roll.
+/// A column after the roll; the labels come from the heading.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Col {
     /// The entry's text, with its continuation lines.
-    Name(&'static str),
-    Item1(&'static str),
-    Item2(&'static str),
+    Name,
+    Item1,
+    Item2,
     /// v3 as an experience point value (blank when 0 or less).
     Xp,
     /// v3 as a number.
-    V3(&'static str),
+    V3,
     /// v4 with a sign (+1, -1).
-    SignedV4(&'static str),
+    SignedV4,
     /// Objects of art: v3 dice of v4 sides times v5, rolled.
-    Art(&'static str),
+    Art,
 }
 
 /// What else an entry produces.
@@ -175,30 +200,45 @@ pub struct RollSpec {
     /// `None`: one die as large as the table's highest roll.
     pub dice: Option<Dice>,
     pub title: Title,
-    pub subtitle: Option<&'static str>,
+    pub subtitle: Option<Txt>,
+    /// The heading lines the program prints (the ruler last).
+    pub head: &'static [Txt],
     pub cols: &'static [Col],
     /// How many times to roll (Ranger's and Thief's followers).
     pub rolls: Option<Dice>,
     /// Roll on the tables the entry's v3 to v5 name.
     pub follow: bool,
     pub extra: Extra,
+    /// Roll the dice written in the entry's text and Item1 column.
+    pub dice_text: Option<DiceList>,
+    /// Footnote lines under the rows.
+    pub notes: &'static [Txt],
 }
 
 impl RollSpec {
-    pub const fn new(id: i32, dice: Dice, title: Title, cols: &'static [Col]) -> Self {
+    pub const fn new(
+        id: i32,
+        dice: Dice,
+        title: Title,
+        head: &'static [Txt],
+        cols: &'static [Col],
+    ) -> Self {
         Self {
             id,
             dice: Some(dice),
             title,
             subtitle: None,
+            head,
             cols,
             rolls: None,
             follow: true,
             extra: Extra::None,
+            dice_text: None,
+            notes: &[],
         }
     }
 
-    pub const fn subtitle(mut self, subtitle: &'static str) -> Self {
+    pub const fn subtitle(mut self, subtitle: Txt) -> Self {
         self.subtitle = Some(subtitle);
         self
     }
@@ -212,13 +252,76 @@ impl RollSpec {
         self.extra = extra;
         self
     }
+
+    pub const fn notes(mut self, notes: &'static [Txt]) -> Self {
+        self.notes = notes;
+        self
+    }
+
+    pub const fn dice_text(mut self, list: DiceList) -> Self {
+        self.dice_text = Some(list);
+        self
+    }
+}
+
+/// The two dice pattern lists of the dice text: the parameter dialog's
+/// (0x519d97) and the plain Roll Results dialog's (0x52bf8d).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DiceList {
+    A,
+    B,
+}
+
+/// What the originals work out in code ([`code`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Code {
+    /// DM Option: High-Level Campaigns Tables 14, 16 and 17 by rank.
+    Disease,
+    Crush,
+    Wounding,
+    /// Turning undead (DMG 47, PHB 61, S&P 36): class, then level.
+    TurnUndead,
+    /// PHB Table 43 by class group.
+    Funds,
+    /// DMG Table 112 by caster level.
+    SpellFailure,
+    /// DMG Table 118.
+    Languages,
+    /// S&P Tables 25 and 31 by level.
+    ScrollUse,
+    /// S&M Table 14 by rarity.
+    FieldSearch,
+    /// S&M Table 15 by rarity.
+    Purchase,
+    /// S&M Table 47 by the number of targets.
+    WholeBody,
+    /// S&M Table 48 by damage potential.
+    Severity,
+    /// DMG Table 84: the treasure generator.
+    Treasure,
+    /// The specific trait after DMG Table 70.
+    SpecificTrait,
+    /// DMG Table 85 with the gem.
+    Gems,
+    /// Ioun stones (Table 101's id 90040, which has no file).
+    IounStones,
+    /// S&P Table 83 with its rows that roll again.
+    WildTalents,
+    /// DMG Table 116 with its rows that roll again and Table 117.
+    Powers,
+    /// Book of Infinite Spells (90018).
+    InfiniteSpells,
+    /// Prayer beads (90034).
+    PrayerBeads,
+    /// Robe of Useful Items (90039).
+    UsefulItems,
 }
 
 /// One branch of a subtable choice: taken when the die is at most `hi`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Branch {
     pub hi: i32,
-    pub label: &'static str,
+    pub label: Option<Txt>,
     pub steps: &'static [Step],
 }
 
@@ -234,7 +337,11 @@ pub struct Critical {
     pub location_dice: &'static [Dice],
     /// By weapon size or damage (parameter 3): the severity dice.
     pub severity_dice: &'static [Dice],
-    pub label: &'static str,
+    pub label: Txt,
+    /// Headings: the rolled location, a called shot, the effect.
+    pub location_head: &'static [Txt],
+    pub called_head: &'static [Txt],
+    pub effect_head: &'static [Txt],
 }
 
 /// One step of a list entry.
@@ -259,15 +366,16 @@ pub enum Step {
         row_param: usize,
         dice: &'static [Dice],
         title: Title,
-        label: &'static str,
-        unit: &'static str,
+        /// The heading: the text before the row's name, and after it.
+        label: Txt,
+        unit: Option<Txt>,
     },
     /// Dice chosen by a parameter, their `plus` the base.
     Formula {
         param: usize,
         dice: &'static [Dice],
-        label: &'static str,
-        unit: &'static str,
+        /// The text before the name of the row parameter `param` picks.
+        label: Txt,
     },
     /// PO: Spells & Magic Tables 23 and 24 (parameter 0 is the spell
     /// level). `check`: Table 23 first, Table 24 when insane.
@@ -275,12 +383,14 @@ pub enum Step {
         check: bool,
     },
     Critical(&'static Critical),
+    Code(Code),
 }
 
 /// Where the options of a parameter come from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Options {
-    Fixed(&'static [&'static str]),
+    /// Lines of the program's text.
+    Text(&'static [Txt]),
     /// The names of a table's entries (races, spell levels).
     Rows(i32),
     /// The header of each table, up to `cut` (spell types).
@@ -288,6 +398,9 @@ pub enum Options {
     /// The first row of the location table of the target type chosen in
     /// parameter 0, then its entries: called shots.
     CalledShot,
+    /// One of these lists, by the option chosen in parameter `.0` (the
+    /// turning levels by class).
+    ByParam(usize, &'static [&'static [Txt]]),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -303,7 +416,7 @@ pub struct ListEntry {
     /// The table's number in the book.
     pub number: Option<u16>,
     /// The title when the table has no number.
-    pub label: Option<&'static str>,
+    pub label: Option<Txt>,
     pub params: &'static [ParamSpec],
     /// Empty: the original works the table out in code, with its own
     /// text; the result refers to the book.
@@ -337,6 +450,8 @@ pub struct RollResult {
     /// The book and table number to read instead, for tables that are not
     /// rolled here.
     pub book_table: Option<(TableBook, u16)>,
+    /// The original opens the treasure generator for this entry.
+    pub treasure: bool,
 }
 
 impl RollResult {
@@ -374,8 +489,12 @@ impl Block {
                 out.push('\n');
             }
             let columns = self.header.len();
-            let mut widths: Vec<usize> = self.header.iter().map(|h| h.chars().count()).collect();
-            widths[0] = widths[0].max(4);
+            // At least as wide as the rules under the labels.
+            let mut widths: Vec<usize> = self
+                .header
+                .iter()
+                .map(|h| h.chars().count().max(4))
+                .collect();
             for row in &self.rows {
                 for (c, cell) in row.iter().enumerate().take(columns) {
                     let w = cell.lines().map(|l| l.chars().count()).max().unwrap_or(0);
@@ -474,6 +593,8 @@ pub struct TableRolls {
     /// (level, name) of every wizard and priest spell.
     wizard_spells: Vec<(i32, String)>,
     priest_spells: Vec<(i32, String)>,
+    /// The program the code's own text is read from, or why it cannot be.
+    program: std::result::Result<Program, String>,
 }
 
 /// Table id to file and the number of records the program reads (0x534d15,
@@ -514,9 +635,16 @@ impl Installation {
             }
         }
         let (mut wizard_spells, mut priest_spells) = (Vec::new(), Vec::new());
-        if let Ok(data) = self.read("Database/Spells.dat")
-            && let Ok(spells) = SpellsFile::parse(&data)
-        {
+        for file in ["Database/Spells.dat", "UserDbas/SpellsU.dat"] {
+            if self.path(file).is_none() {
+                continue;
+            }
+            let Ok(data) = self.read(file) else {
+                continue;
+            };
+            let Ok(spells) = SpellsFile::parse(&data) else {
+                continue;
+            };
             for (list, out) in [
                 (&spells.wizard, &mut wizard_spells),
                 (&spells.priest, &mut priest_spells),
@@ -535,6 +663,7 @@ impl Installation {
             captions,
             wizard_spells,
             priest_spells,
+            program: Program::load(self, flavor),
         })
     }
 }
@@ -564,6 +693,40 @@ impl TableRolls {
         LIST.iter().filter(|e| e.book == book).collect()
     }
 
+    /// A spell of the level (0x52a35e): `rand() % n` among the spells of
+    /// the level, the database's first, then the user's, in file order.
+    fn random_spell(&self, rand: &mut Rand, wizard: bool, level: i32) -> Option<String> {
+        let spells = if wizard {
+            &self.wizard_spells
+        } else {
+            &self.priest_spells
+        };
+        let of_level: Vec<&str> = spells
+            .iter()
+            .filter(|(l, _)| *l == level)
+            .map(|(_, n)| n.as_str())
+            .collect();
+        if of_level.is_empty() {
+            return None;
+        }
+        Some(of_level[(rand.rand() as usize) % of_level.len()].to_owned())
+    }
+
+    /// A string of the program's own text, as it is there (padding
+    /// included); `None` without the program.
+    pub fn text(&self, t: Txt) -> Option<&str> {
+        self.program.as_ref().ok()?.get(t)
+    }
+
+    /// Why the program's own text is not available, if it is not.
+    pub fn text_problem(&self) -> Option<&str> {
+        self.program.as_ref().err().map(String::as_str)
+    }
+
+    fn text_or_blank(&self, t: Txt) -> String {
+        self.text(t).unwrap_or("").trim().to_owned()
+    }
+
     /// The book's caption for a table number.
     pub fn caption(&self, book: TableBook, number: u16) -> Option<&str> {
         self.captions.get(&book)?.get(&number).map(String::as_str)
@@ -580,7 +743,7 @@ impl TableRolls {
     pub fn entry_title(&self, entry: &ListEntry) -> String {
         match (entry.number, entry.label) {
             (Some(n), _) => self.table_title(entry.book, n),
-            (None, Some(label)) => label.to_owned(),
+            (None, Some(label)) => self.text_or_blank(label),
             (None, None) => String::new(),
         }
     }
@@ -601,7 +764,7 @@ impl TableRolls {
 
     fn options(&self, entry: &ListEntry, options: Options, chosen: &[usize]) -> Vec<String> {
         match options {
-            Options::Fixed(list) => list.iter().map(|s| (*s).to_owned()).collect(),
+            Options::Text(list) => list.iter().map(|t| self.text_or_blank(*t)).collect(),
             Options::Rows(id) => self
                 .table(id)
                 .map(|t| {
@@ -618,8 +781,16 @@ impl TableRolls {
                     title.split(cut).next().unwrap_or("").trim().to_owned()
                 })
                 .collect(),
+            Options::ByParam(param, lists) => {
+                let list = lists
+                    .get(chosen.get(param).copied().unwrap_or(0))
+                    .or(lists.first())
+                    .copied()
+                    .unwrap_or(&[]);
+                list.iter().map(|t| self.text_or_blank(*t)).collect()
+            }
             Options::CalledShot => {
-                let mut out = vec!["Random location".to_owned()];
+                let mut out = vec![self.text_or_blank(strings::RANDOM_LOCATION)];
                 if let Some(table) = self.location_table(entry, chosen) {
                     for e in &table.entries {
                         if let Some(name) = e.lines().first() {
@@ -661,6 +832,7 @@ impl TableRolls {
             rand,
             out: RollResult::default(),
             depth: 0,
+            missing_text: false,
         };
         if entry.steps.is_empty() {
             let number = entry.number.unwrap_or(0);
@@ -677,7 +849,7 @@ impl TableRolls {
             return run.out;
         }
         run.steps(entry.steps);
-        run.out
+        run.finish()
     }
 
     /// Rolls on a table by id, as a follow-up roll would (`cr table`).
@@ -692,9 +864,10 @@ impl TableRolls {
             rand,
             out: RollResult::default(),
             depth: 0,
+            missing_text: false,
         };
         run.follow(id, None);
-        run.out
+        run.finish()
     }
 }
 
@@ -708,12 +881,66 @@ struct Run<'a> {
     rand: &'a mut Rand,
     out: RollResult,
     depth: u32,
+    /// Some of the program's text was wanted and not available.
+    missing_text: bool,
 }
 
 /// Deepest chain of follow-up tables.
 const MAX_DEPTH: u32 = 8;
 
 impl Run<'_> {
+    /// The result, with a note when text of the program was missing.
+    fn finish(mut self) -> RollResult {
+        if self.missing_text {
+            let problem = self
+                .rolls
+                .text_problem()
+                .map_or_else(|| "has no such text".to_owned(), str::to_owned);
+            self.out.blocks.push(Block {
+                notes: vec![format!(
+                    "Some text of this result is read from the original program, \
+                     and {problem}; it is left blank."
+                )],
+                ..Default::default()
+            });
+        }
+        self.out
+    }
+
+    /// A string of the program's text, untrimmed.
+    fn raw(&mut self, t: Txt) -> String {
+        match self.rolls.text(t) {
+            Some(s) => s.to_owned(),
+            None => {
+                self.missing_text = true;
+                String::new()
+            }
+        }
+    }
+
+    /// A string of the program's text, trimmed.
+    fn txt(&mut self, t: Txt) -> String {
+        self.raw(t).trim().to_owned()
+    }
+
+    fn raws(&mut self, lines: &[Txt]) -> Vec<String> {
+        lines.iter().map(|t| self.raw(*t)).collect()
+    }
+
+    /// A heading's column labels, fitted to `n` columns.
+    fn head(&mut self, lines: &[Txt], n: usize) -> Vec<String> {
+        let lines = self.raws(lines);
+        let lines: Vec<&str> = lines.iter().map(String::as_str).collect();
+        program::heading(&lines, n)
+    }
+
+    /// Footnote lines as paragraphs.
+    fn notes(&mut self, lines: &[Txt]) -> Vec<String> {
+        let lines = self.raws(lines);
+        let lines: Vec<&str> = lines.iter().map(String::as_str).collect();
+        program::paragraphs(&lines)
+    }
+
     fn param(&self, index: usize) -> usize {
         self.params.get(index).copied().unwrap_or(0)
     }
@@ -732,11 +959,14 @@ impl Run<'_> {
                 if let Some(b) = branches.iter().find(|b| b.hi >= r) {
                     let first = self.out.blocks.len();
                     self.steps(b.steps);
-                    if let Some(block) = self.out.blocks.get_mut(first) {
-                        block.subtitle = Some(match block.subtitle.take() {
-                            Some(inner) => format!("{}, {inner}", b.label),
-                            None => b.label.to_owned(),
-                        });
+                    if let Some(label) = b.label {
+                        let label = self.txt(label);
+                        if let Some(block) = self.out.blocks.get_mut(first) {
+                            block.subtitle = Some(match block.subtitle.take() {
+                                Some(inner) => format!("{label}, {inner}"),
+                                None => label,
+                            });
+                        }
                     }
                 }
             }
@@ -764,15 +994,34 @@ impl Run<'_> {
                 };
                 let dice = dice.get(row).copied().unwrap_or(d(1, 6));
                 let roll = self.session.roll(self.rand, dice);
-                let name = record.lines().first().copied().unwrap_or("").to_owned();
+                let name = record
+                    .lines()
+                    .first()
+                    .copied()
+                    .unwrap_or("")
+                    .trim()
+                    .to_owned();
+                // 0x50d35c: the program's words, the race, the sex, the unit.
+                let mut heading = self.raw(label) + &name;
+                if let Some(entry) = self.entry
+                    && let Some(p) = entry.params.get(id_param)
+                {
+                    let options = self.rolls.options(entry, p.options, self.params);
+                    if let Some(option) = options.get(self.param(id_param)) {
+                        heading = heading + " " + option;
+                    }
+                }
+                if let Some(unit) = unit {
+                    heading += &self.raw(unit);
+                }
                 let title = self.title(title, Some(table));
                 self.out.blocks.push(Block {
                     title,
-                    header: vec!["Roll".into(), format!("{label} {name}")],
+                    header: vec!["Roll".into(), heading.trim().to_owned()],
                     rows: vec![vec![
                         roll.to_string(),
                         format!(
-                            "{} + {} ({}) = {} {unit}",
+                            "{} + {} ({}) = {}",
                             record.v3,
                             roll,
                             dice.text(),
@@ -782,44 +1031,51 @@ impl Run<'_> {
                     ..Default::default()
                 });
             }
-            Step::Formula {
-                param,
-                dice,
-                label,
-                unit,
-            } => {
+            Step::Formula { param, dice, label } => {
                 let dice = dice.get(self.param(param)).copied().unwrap_or(d(1, 6));
                 let base = Dice { plus: 0, ..dice };
                 let roll = self.session.roll(self.rand, base);
                 let row = vec![
                     roll.to_string(),
                     format!(
-                        "{} + {} ({}) = {} {unit}",
+                        "{} + {} ({}) = {}",
                         dice.plus,
                         roll,
                         base.text(),
                         dice.plus + roll
                     ),
                 ];
+                // 0x50db13: the program's words and the race.
+                let name = self
+                    .entry
+                    .and_then(|e| e.params.get(param))
+                    .map(|p| {
+                        self.rolls
+                            .options(self.entry.unwrap(), p.options, self.params)
+                    })
+                    .and_then(|o| o.get(self.param(param)).cloned())
+                    .unwrap_or_default();
+                let heading = self.raw(label) + &name;
                 self.out.blocks.push(Block {
-                    header: vec!["Roll".into(), label.into()],
+                    header: vec!["Roll".into(), heading.trim().to_owned()],
                     rows: vec![row],
                     ..Default::default()
                 });
             }
             Step::Insanity { check } => self.insanity(check),
             Step::Critical(crit) => self.critical(crit),
+            Step::Code(code) => self.code(code),
         }
     }
 
-    fn title(&self, title: Title, table: Option<&TableFile>) -> Option<String> {
+    fn title(&mut self, title: Title, table: Option<&TableFile>) -> Option<String> {
         match title {
             Title::Table(n) => Some(self.rolls.table_title(self.book, n)),
             Title::Entry => self.entry.map(|e| self.rolls.entry_title(e)),
             Title::Header => table
                 .map(|t| t.title.trim().to_owned())
                 .filter(|t| !t.is_empty() && t != "Item0"),
-            Title::Label(l) => Some(l.to_owned()),
+            Title::Text(t) => Some(self.txt(t)),
             Title::None => None,
         }
     }
@@ -851,19 +1107,12 @@ impl Run<'_> {
             }
             None => 1,
         };
-        let mut header = vec!["Roll".to_owned()];
-        header.extend(spec.cols.iter().map(|c| match c {
-            Col::Name(l)
-            | Col::Item1(l)
-            | Col::Item2(l)
-            | Col::V3(l)
-            | Col::SignedV4(l)
-            | Col::Art(l) => (*l).to_owned(),
-            Col::Xp => "XP Value".to_owned(),
-        }));
+        let header = self.head(spec.head, spec.cols.len() + 1);
+        let title = self.title(spec.title, Some(table));
+        let subtitle = spec.subtitle.map(|t| self.txt(t));
         let block = Block {
-            title: self.title(spec.title, Some(table)),
-            subtitle: spec.subtitle.map(str::to_owned),
+            title,
+            subtitle,
             header,
             ..Default::default()
         };
@@ -872,9 +1121,14 @@ impl Run<'_> {
         if spec.rolls.is_some() {
             self.out.blocks[index].notes.push(format!("{times} rolls"));
         }
+        let notes = self.notes(spec.notes);
+        self.out.blocks[index].notes.extend(notes);
         let mut follows = Vec::new();
-        for _ in 0..times {
-            let roll = fixed.unwrap_or_else(|| self.session.roll(self.rand, dice));
+        // All the rolls first, then the rows (0x5383b2, then 0x529707).
+        let rolls: Vec<i32> = (0..times)
+            .map(|_| fixed.unwrap_or_else(|| self.session.roll(self.rand, dice)))
+            .collect();
+        for roll in rolls {
             let Some(record) = table.lookup(roll) else {
                 self.out.blocks[index]
                     .rows
@@ -883,11 +1137,11 @@ impl Run<'_> {
             };
             let mut row = vec![roll.to_string()];
             for col in spec.cols {
-                row.push(self.cell(col, record));
+                row.push(self.cell(col, record, spec.dice_text));
             }
             self.out.blocks[index].rows.push(row);
             if let Extra::Scroll(wizard) = spec.extra {
-                self.scroll(index, record, wizard);
+                self.scroll(record, wizard);
             }
             if spec.follow {
                 follows.push((record.clone(), spec.id));
@@ -898,11 +1152,17 @@ impl Run<'_> {
         }
     }
 
-    fn cell(&mut self, col: &Col, r: &TableRecord) -> String {
+    fn cell(&mut self, col: &Col, r: &TableRecord, dice: Option<DiceList>) -> String {
         match col {
-            Col::Name(_) => r.lines().join("\n"),
-            Col::Item1(_) => r.item1.clone().unwrap_or_default(),
-            Col::Item2(_) => r.item2.clone().unwrap_or_default(),
+            Col::Name => match &r.name {
+                Some(name) => code::text_lines(self.rand, name, dice),
+                None => String::new(),
+            },
+            Col::Item1 => match (&r.item1, dice) {
+                (Some(item), Some(list)) => code::dice_text(self.rand, item, list),
+                (item, _) => item.clone().unwrap_or_default(),
+            },
+            Col::Item2 => r.item2.clone().unwrap_or_default(),
             Col::Xp => {
                 if r.v3 > 0 {
                     r.v3.to_string()
@@ -910,9 +1170,9 @@ impl Run<'_> {
                     String::new()
                 }
             }
-            Col::V3(_) => r.v3.to_string(),
-            Col::SignedV4(_) => format!("{:+}", r.v4),
-            Col::Art(_) => {
+            Col::V3 => r.v3.to_string(),
+            Col::SignedV4 => format!("{:+}", r.v4),
+            Col::Art => {
                 let mut value = 0i32;
                 for _ in 0..r.v3.max(0) {
                     value = value.wrapping_add(range(self.rand, 1, r.v4));
@@ -930,7 +1190,7 @@ impl Run<'_> {
 
     /// The spells of a scroll: the count from the name, each level from v3
     /// to v4.
-    fn scroll(&mut self, index: usize, record: &TableRecord, wizard: bool) {
+    fn scroll(&mut self, record: &TableRecord, wizard: bool) {
         let count = record
             .name
             .as_deref()
@@ -945,33 +1205,22 @@ impl Run<'_> {
         if count == 0 {
             return;
         }
-        let spells = if wizard {
-            &self.rolls.wizard_spells
-        } else {
-            &self.rolls.priest_spells
-        };
-        let block = &mut self.out.blocks[index];
-        block.notes.push(format!(
-            "{count} {} spell{}:",
-            if wizard { "wizard" } else { "priest" },
-            if count == 1 { "" } else { "s" }
-        ));
+        // 0x51efc2: a heading, then a line for each spell.
+        let mut rows = Vec::new();
         for _ in 0..count {
             let level = range(self.rand, record.v3, record.v4);
-            let of_level: Vec<&str> = spells
-                .iter()
-                .filter(|(l, _)| *l == level)
-                .map(|(_, n)| n.as_str())
-                .collect();
-            let name = if of_level.is_empty() {
-                String::new()
-            } else {
-                of_level[(self.rand.rand() as usize) % of_level.len()].to_owned()
-            };
-            self.out.blocks[index]
-                .notes
-                .push(format!("  Level {level}  {name}"));
+            let name = self
+                .rolls
+                .random_spell(self.rand, wizard, level)
+                .unwrap_or_default();
+            rows.push(vec![level.to_string(), name]);
         }
+        let header = self.head(strings::SPELL_HEAD, 2);
+        self.out.blocks.push(Block {
+            header,
+            rows,
+            ..Default::default()
+        });
     }
 
     /// Follows the table ids an entry names in v3, v4 and v5.
@@ -981,7 +1230,7 @@ impl Run<'_> {
                 continue;
             }
             if value == from {
-                // "Roll twice on this table ignoring scores of N and up".
+                // An entry naming its own table: roll twice below its range.
                 let Some(table) = self.rolls.table(from) else {
                     continue;
                 };
@@ -990,7 +1239,8 @@ impl Run<'_> {
                     continue;
                 }
                 self.depth += 1;
-                let spec = RollSpec::new(from, d(1, die), Title::None, data::cols_of(from));
+                let (head, cols) = data::cols_of(from);
+                let spec = RollSpec::new(from, d(1, die), Title::None, head, cols);
                 for _ in 0..2 {
                     self.roll(
                         &RollSpec {
@@ -1019,7 +1269,10 @@ impl Run<'_> {
             None => self.roll(
                 &RollSpec {
                     dice: None,
-                    ..RollSpec::new(id, d(1, 1), Title::Header, data::cols_of(id))
+                    ..{
+                        let (head, cols) = data::cols_of(id);
+                        RollSpec::new(id, d(1, 1), Title::Header, head, cols)
+                    }
                 },
                 None,
             ),
@@ -1038,14 +1291,14 @@ impl Run<'_> {
         if check {
             let roll = self.session.roll(self.rand, d(1, 100));
             let insane = roll <= row.v3;
+            let header = self.head(strings::INSANITY_HEAD, 3);
+            let result = self.txt(strings::INSANE[usize::from(!insane)]);
+            let notes = self.notes(strings::INSANITY_NOTE);
             self.out.blocks.push(Block {
                 title: Some(self.rolls.table_title(TableBook::SpellsMagic, 23)),
-                header: vec!["Roll".into(), "Chance of Insanity".into(), "Result".into()],
-                rows: vec![vec![
-                    roll.to_string(),
-                    format!("{}%", row.v3),
-                    if insane { "Insane" } else { "Sane" }.into(),
-                ]],
+                header,
+                rows: vec![vec![roll.to_string(), format!("{}%", row.v3), result]],
+                notes,
                 ..Default::default()
             });
             if !insane {
@@ -1062,10 +1315,14 @@ impl Run<'_> {
             .or(chart.entries.last())
             .map(|r| r.lines().join("\n"))
             .unwrap_or_default();
+        // 0x50fed0: the modified roll and the result.
+        let header = self.head(strings::CHART_HEAD, 2);
+        let notes = self.notes(strings::CHART_NOTE);
         self.out.blocks.push(Block {
             title: Some(self.rolls.table_title(TableBook::SpellsMagic, 24)),
-            header: vec!["Roll".into(), "Modified".into(), "Result".into()],
-            rows: vec![vec![raw.to_string(), modified.to_string(), name]],
+            header,
+            rows: vec![vec![modified.to_string(), name]],
+            notes,
             ..Default::default()
         });
     }
@@ -1082,18 +1339,19 @@ impl Run<'_> {
             return;
         };
         let Some(locations) = self.rolls.table(location_id) else {
-            return self.missing(location_id, Title::Label(crit.label));
+            return self.missing(location_id, Title::Text(crit.label));
         };
         let kind = crit.kinds.get(kind).copied().unwrap_or(crit.kinds[0]);
+        let title = self.txt(crit.label);
         let mut block = Block {
-            title: Some(crit.label.to_owned()),
+            title: Some(title),
             ..Default::default()
         };
         let location = if called == 0 {
             let dice = crit.location_dice.get(size).copied().unwrap_or(d(1, 10));
             let roll = self.session.roll(self.rand, dice);
             let record = locations.lookup(roll).or(locations.entries.last());
-            block.header = vec!["Roll".into(), "Strike Location".into()];
+            block.header = self.head(crit.location_head, 2);
             let name = record.map(|r| r.lines().join("\n")).unwrap_or_default();
             block.rows.push(vec![roll.to_string(), name]);
             record.cloned()
@@ -1110,7 +1368,7 @@ impl Run<'_> {
                     .first()
                     .is_some_and(|n| n.split_whitespace().collect::<Vec<_>>().join(" ") == wanted)
             });
-            block.header = vec!["Strike Location".into()];
+            block.header = self.head(crit.called_head, 1);
             block.rows.push(vec![wanted]);
             record.cloned()
         };
@@ -1119,28 +1377,30 @@ impl Run<'_> {
             return;
         };
         let dice = crit.severity_dice.get(severity).copied().unwrap_or(d(1, 6));
-        self.effect(location.v3 + kind + offset, dice, kind, offset, 0);
+        self.effect(crit, location.v3 + kind + offset, dice, kind, offset, 0);
     }
 
     /// The effect of a critical hit on a location, and an extra location
     /// when the effect names one.
-    fn effect(&mut self, id: i32, dice: Dice, kind: i32, offset: i32, depth: u32) {
+    fn effect(&mut self, crit: &Critical, id: i32, dice: Dice, kind: i32, offset: i32, depth: u32) {
         let Some(table) = self.rolls.table(id) else {
             return self.missing(id, Title::None);
         };
         let roll = self.session.roll(self.rand, dice);
         let record = table.lookup(roll).or(table.entries.last()).cloned();
-        let text = record
-            .as_ref()
-            .map(|r| r.lines().join("\n"))
-            .unwrap_or_default();
+        // The effects have their dice rolled (0x510a8c, 0x512448).
+        let text = match record.as_ref().and_then(|r| r.name.as_deref()) {
+            Some(name) => code::text_lines(self.rand, name, Some(DiceList::A)),
+            None => String::new(),
+        };
+        let header = self.head(crit.effect_head, 2);
         self.out.blocks.push(Block {
             subtitle: Some(table.title.trim().to_owned()),
-            header: vec!["Severity".into(), "Effect".into()],
+            header,
             rows: vec![vec![roll.to_string(), text]],
             ..Default::default()
         });
-        // "Additional abdomen hit": a location table (d100) whose entry
+        // An extra hit: a location table (d100) whose entry
         // carries a location code.
         if let Some(r) = record
             && depth < 2
@@ -1149,13 +1409,14 @@ impl Run<'_> {
         {
             let roll = self.session.roll(self.rand, d(1, extra.max_roll().max(1)));
             if let Some(loc) = extra.lookup(roll).cloned() {
+                let header = self.head(strings::EXTRA_LOCATION_HEAD, 2);
                 self.out.blocks.push(Block {
-                    header: vec!["Roll".into(), "Additional Location".into()],
+                    header,
                     rows: vec![vec![roll.to_string(), loc.lines().join("\n")]],
                     ..Default::default()
                 });
                 if loc.v3 >= 10000 {
-                    self.effect(loc.v3 + kind + offset, dice, kind, offset, depth + 1);
+                    self.effect(crit, loc.v3 + kind + offset, dice, kind, offset, depth + 1);
                 }
             }
         }

@@ -21,12 +21,14 @@ thread_local! {
 }
 
 /// Opens the dialog over `parent`. `open_book` opens a book (by file name)
-/// at a search, for the tables the original works out in code.
+/// at a search; `open_treasure` opens the treasure generator, which DMG
+/// Table 84 opens in the original.
 pub fn open(
     parent: &adw::ApplicationWindow,
     root: PathBuf,
     rand: Rc<RefCell<Rand>>,
     open_book: impl Fn(&str, Option<&str>) + 'static,
+    open_treasure: impl Fn() + 'static,
 ) {
     let dialog = adw::Dialog::builder()
         .title("Roll on a Table")
@@ -61,6 +63,7 @@ pub fn open(
         header,
         rand,
         open_book: Rc::new(open_book),
+        open_treasure: Rc::new(open_treasure),
     };
     match cached {
         Some(rolls) => ui.show(rolls),
@@ -95,6 +98,7 @@ struct Ui {
     header: adw::HeaderBar,
     rand: Rc<RefCell<Rand>>,
     open_book: Rc<OpenBook>,
+    open_treasure: Rc<dyn Fn()>,
 }
 
 /// The dialog once the tables are loaded.
@@ -114,6 +118,7 @@ struct Roller {
     session: RefCell<Session>,
     again: gtk::Button,
     read: gtk::Button,
+    treasure: gtk::Button,
     copy: gtk::Button,
 }
 
@@ -232,6 +237,11 @@ impl Ui {
             .use_underline(true)
             .visible(false)
             .build();
+        let treasure = gtk::Button::builder()
+            .label("Open _Treasure Generator")
+            .use_underline(true)
+            .visible(false)
+            .build();
         let again = gtk::Button::builder()
             .label("Roll _Again")
             .use_underline(true)
@@ -245,6 +255,7 @@ impl Ui {
             .build();
         let bar = gtk::ActionBar::new();
         bar.pack_start(&read);
+        bar.pack_start(&treasure);
         bar.pack_end(&roll);
         bar.pack_end(&again);
         self.view.add_bottom_bar(&bar);
@@ -266,6 +277,7 @@ impl Ui {
             session: RefCell::default(),
             again: again.clone(),
             read: read.clone(),
+            treasure: treasure.clone(),
             copy: copy.clone(),
         });
 
@@ -322,6 +334,12 @@ impl Ui {
                 dialog.close();
                 open_book(book.short_name(), Some(&format!("Table {number}:")));
             }
+        });
+        let open_treasure = self.open_treasure.clone();
+        let dialog = self.dialog.clone();
+        treasure.connect_clicked(move |_| {
+            dialog.close();
+            open_treasure();
         });
         // The dialog keeps its roller alive.
         let keep = RefCell::new(Some(roller));
@@ -432,7 +450,9 @@ impl Roller {
         );
         self.show(&result);
         self.read.set_visible(result.book_table.is_some());
-        self.again.set_sensitive(result.book_table.is_none());
+        self.treasure.set_visible(result.treasure);
+        self.again
+            .set_sensitive(result.book_table.is_none() && !result.treasure);
         self.copy.set_sensitive(true);
         self.result.replace(Some(result));
     }

@@ -534,9 +534,14 @@ impl Window {
             return;
         };
         let this = self.clone();
-        tables::open(&self.window, root, self.rand.clone(), move |name, find| {
-            this.open_book(name, find)
-        });
+        let treasure = self.clone();
+        tables::open(
+            &self.window,
+            root,
+            self.rand.clone(),
+            move |name, find| this.open_book(name, find),
+            move || treasure.roll_treasure(None),
+        );
     }
 
     fn show_status(&self, widget: &impl IsA<gtk::Widget>) {

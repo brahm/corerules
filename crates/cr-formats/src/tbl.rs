@@ -47,33 +47,38 @@ impl TableRecord {
     /// The name split at its `/nK` markers: the first line, then the lines
     /// printed under it. A trailing empty line is dropped.
     pub fn lines(&self) -> Vec<&str> {
-        let Some(name) = &self.name else {
-            return Vec::new();
-        };
-        let mut lines = Vec::new();
-        let bytes = name.as_bytes();
-        let mut start = 0;
-        let mut i = 0;
-        while i + 2 < bytes.len() {
-            if bytes[i] == b'/' && bytes[i + 1] == b'n' && (b'1'..=b'9').contains(&bytes[i + 2]) {
-                lines.push(name[start..i].trim_end());
-                i += 3;
-                start = i;
-            } else {
-                i += 1;
-            }
+        match &self.name {
+            Some(name) => split_lines(name),
+            None => Vec::new(),
         }
-        lines.push(name[start..].trim_end());
-        if lines.len() > 1 && lines.last().is_some_and(|l| l.is_empty()) {
-            lines.pop();
-        }
-        lines
     }
 
     /// The numbers v3 to v5.
     pub fn values(&self) -> [i32; 3] {
         [self.v3, self.v4, self.v5]
     }
+}
+
+/// A name split at its `/nK` markers, as [`TableRecord::lines`] does.
+pub fn split_lines(name: &str) -> Vec<&str> {
+    let mut lines = Vec::new();
+    let bytes = name.as_bytes();
+    let mut start = 0;
+    let mut i = 0;
+    while i + 2 < bytes.len() {
+        if bytes[i] == b'/' && bytes[i + 1] == b'n' && (b'1'..=b'9').contains(&bytes[i + 2]) {
+            lines.push(name[start..i].trim_end());
+            i += 3;
+            start = i;
+        } else {
+            i += 1;
+        }
+    }
+    lines.push(name[start..].trim_end());
+    if lines.len() > 1 && lines.last().is_some_and(|l| l.is_empty()) {
+        lines.pop();
+    }
+    lines
 }
 
 /// A whole table: the header record and the entries after it.
