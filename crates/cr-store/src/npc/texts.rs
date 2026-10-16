@@ -142,6 +142,8 @@ pub const OIL_GREEK_FIRE_FLASK: Tx = Tx(0x8206ec, 0x0);
 pub const OIL_LAMP_PER_FLASK: Tx = Tx(0x8206a4, 0x6d6928);
 pub const ONLY_FROM_LIST_BELOW: Tx = Tx(0x84c814, 0x0);
 /// The error when no class is given.
+/// 0x669550: the damage type that any class list allows.
+pub const NONE_DAMAGE: Tx = Tx(0x84c82c, 0x0);
 pub const NO_CLASS: Tx = Tx(0x81fa3c, 0x6d6808);
 pub const OPEN_LOCKS: Tx = Tx(0x82134c, 0x0);
 pub const OPEN_LOCKS_UC: Tx = Tx(0x839524, 0x6c3318);
@@ -354,6 +356,7 @@ pub const ALL: &[Tx] = &[
     OIL_GREEK_FIRE_FLASK,
     OIL_LAMP_PER_FLASK,
     ONLY_FROM_LIST_BELOW,
+    NONE_DAMAGE,
     NO_CLASS,
     OPEN_LOCKS,
     OPEN_LOCKS_UC,

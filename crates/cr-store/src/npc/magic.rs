@@ -3,6 +3,8 @@
 
 use std::collections::HashMap;
 
+use cr_formats::Object;
+
 use super::Gen;
 use super::data::{EQUIPMENT, PartExt, SCHOOLS, SPHERES, Spell};
 use super::program::Tx;
@@ -172,19 +174,19 @@ impl<'a> Gen<'a> {
         0
     }
 
-    /// Fallback of 0x4792d3: a school or sphere part's spell list +0x748.
-    fn part_lists(&mut self, t: usize, name: &str) -> bool {
-        let d = self.d;
-        if let Some(i) = d.part_exact(t, name)
-            && !d.parts[t][i].data.unknown_0x748.is_empty()
-        {
-            self.warn("School and sphere spell lists (+0x748, 0x4792d3) are not decoded and were ignored.");
-        }
-        false
+    /// 0x4792d3 → 0x660d2d: the school or sphere part `name` (0x465e59)
+    /// lists the spell in its `CSpellsOb`s (+0x748, compared by name).
+    fn part_lists(&self, t: usize, name: &str, spell: &str) -> bool {
+        self.d.find_in(t, name).is_some_and(|p| {
+            p.data
+                .unknown_0x748
+                .iter()
+                .any(|o| matches!(o, Object::Spell(s) if s.name == spell))
+        })
     }
 
-    fn any_listed(&mut self, t: usize, names: &[String], spell_list: &[String]) -> bool {
-        has_any(names, spell_list) || names.iter().any(|x| self.part_lists(t, x))
+    fn any_listed(&self, t: usize, names: &[String], spell: &Spell, list: &[String]) -> bool {
+        has_any(names, list) || names.iter().any(|x| self.part_lists(t, x, &spell.name))
     }
 
     /// 0x4792d3(out, W, P, schools, minor, major, lvl, 0); lvl 0 = any.
@@ -202,7 +204,7 @@ impl<'a> Gen<'a> {
                 if lvl != 0 && s.level != lvl {
                     continue;
                 }
-                if self.any_listed(SCHOOLS, schools, &s.schools) {
+                if self.any_listed(SCHOOLS, schools, s, &s.schools) {
                     out.push(s);
                 }
             }
@@ -214,7 +216,7 @@ impl<'a> Gen<'a> {
             } else {
                 for s in &d.priest_spells {
                     if (lvl == 0 || s.level == lvl) && s.level < 4 {
-                        if self.any_listed(SPHERES, minor, &s.spheres) {
+                        if self.any_listed(SPHERES, minor, s, &s.spheres) {
                             out.push(s);
                         } else {
                             rest.push(s);
@@ -239,7 +241,7 @@ impl<'a> Gen<'a> {
                 if lvl != 0 && s.level != lvl {
                     continue;
                 }
-                if self.any_listed(SPHERES, major, &s.spheres) {
+                if self.any_listed(SPHERES, major, s, &s.spheres) {
                     out.push(s);
                 }
             }
@@ -324,8 +326,11 @@ impl<'a> Gen<'a> {
             }
             for _ in 0..self.spell_slots(g, sl) {
                 if list.is_empty() {
-                    // The original reads a stale pointer here.
-                    self.warn("The priest spell list ran out while memorizing (stale read in the original); the rest were skipped.");
+                    // 0x4de740 draws between(0, -1) = 0 without a draw,
+                    // reads the stale slot 0 and calls RemoveAt(0, 1) on
+                    // the empty array (0x736cf0), whose memmove of -4
+                    // bytes faults: the original stops here.
+                    self.warn("The priest spell list ran out while memorizing; the original stops with a fault here (0x4de740 removes from the empty list), so the rest were skipped.");
                     break;
                 }
                 let k = self.between(0, list.len() as i32 - 1) as usize;

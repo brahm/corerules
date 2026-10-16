@@ -220,6 +220,9 @@ pub struct Program {
     pub club_words: Vec<String>,
     /// 0x4d81ad: the club kit's replacements.
     pub club_choices: Vec<String>,
+    /// 0x4d7d99: the upper-cased words of a missile weapon a kit's
+    /// +0x3fc list does not let in.
+    pub missile_words: Vec<String>,
 }
 
 fn rules(shapes: &[(usize, Shape)], texts: &[String]) -> Option<Vec<NameRule>> {
@@ -273,6 +276,7 @@ impl Program {
             excluded_rules: Vec::new(),
             club_words: Vec::new(),
             club_choices: Vec::new(),
+            missile_words: Vec::new(),
         }
     }
 
@@ -307,6 +311,7 @@ impl Program {
                     .stack_tables(0x4d81ad, 0x400, 0x4c2042)
                     .remove(&-36)
                     .unwrap_or_default();
+                p.missile_words = take(image.pushed_texts(0x4d7d99, 0x2a0), 11, "missile words")?;
             }
             Flavor::Core20 => {
                 for (key, vas) in EV_NAME_TABLES {

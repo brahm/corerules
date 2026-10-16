@@ -772,9 +772,11 @@ impl Gen<'_> {
                 match self.d.find(nm) {
                     Some(p) => self.eq_file(p, true),
                     None => {
-                        // 0x4d79c6 with a missing part: not decoded.
+                        // 0x4d79c6 is called with the null part 0x465f6c
+                        // returns and reads its category (+0x240): the
+                        // original faults there.
                         self.warn(format!(
-                            "Kit item {nm} is not in the database and was skipped (0x4d79c6)."
+                            "Kit item {nm} is not in the database; the original stops with a fault here (0x4d79c6 reads the missing part), so it was skipped."
                         ));
                     }
                 }

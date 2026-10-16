@@ -592,6 +592,22 @@ impl Gen<'_> {
 
     // ---- weapon proficiencies ----
 
+    /// 0x4d7d99: a missile weapon (+0x3bc) that needs no ammunition
+    /// (+0x3c0) and is none of the program's guns and engines passes a
+    /// kit's +0x3fc list.
+    fn kit_missile(&self, w: &Part) -> bool {
+        if w.n(0x3bc) == 0 || w.n(0x3c0) != 0 {
+            return false;
+        }
+        let u = w.name().to_uppercase();
+        !self
+            .d
+            .program
+            .missile_words
+            .iter()
+            .any(|k| u.contains(k.as_str()))
+    }
+
     /// 0x4d8040: a club-like weapon (the upper-cased name holds one of the
     /// program's club words).
     fn is_club(&self, name: &str) -> bool {
@@ -700,11 +716,15 @@ impl Gen<'_> {
         if k.flag(0x27a0) && pierce_slash(w, self.core) {
             return false;
         }
-        if k.s3000.as_deref() != Some(self.t(ONLY_FROM_LIST_BELOW)) {
-            // 0x669550: the damage-type list is not decoded; refused.
-            self.warn("A class's weapon damage-type list (0x669550) is not decoded; its weapons were refused.");
+        // 0x669550: unless the class takes only its list, a damage type
+        // of "none", or one its +0x3000 text holds (CString::Find, so an
+        // empty damage type too), is allowed.
+        let list = k.s3000.as_deref().unwrap_or("");
+        if list == self.t(ONLY_FROM_LIST_BELOW) {
+            return false;
         }
-        false
+        let damage = damage_type(w, self.core);
+        damage == self.t(NONE_DAMAGE) || list.contains(damage)
     }
 
     /// 0x440996
@@ -1059,9 +1079,7 @@ impl Gen<'_> {
                 }
             }
             if !sa3fc.is_empty() {
-                if !has(sa3fc, name) {
-                    // 0x4d7d99 is not decoded: the weapon is skipped.
-                    self.warn("A kit's weapon list (+0x3fc, 0x4d7d99) is not decoded; weapons outside it were skipped.");
+                if !has(sa3fc, name) && !self.kit_missile(w) {
                     continue;
                 }
                 flag = true;
