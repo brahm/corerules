@@ -6,7 +6,9 @@ use cr_formats::parts::Part;
 
 use super::Gen;
 use super::data::{LANGUAGES, NONWEAPON, PartExt, RACIAL_ABILITIES, WEAPONS};
-use super::program::{COMMON_WEAPON_RULES, EXCLUDED_WEAPON_RULES, Level, NameRule, TIGHT_GROUPS_6};
+use super::program::Tx;
+use super::program::{Level, NameRule};
+use super::texts::*;
 
 /// Intelligence (Knowledge) to bonus languages, 0x422376.
 const INT_LANGS: [i32; 26] = [
@@ -15,12 +17,12 @@ const INT_LANGS: [i32; 26] = [
 
 /// 0x4d534b's proficiencies by class group rank (warrior, rogue,
 /// psionicist, priest, wizard), Core Rules.
-const GROUP_NWP_CORE: [&[&str]; 5] = [
-    &["Blind Fighting", "Running"],
-    &["Tumbling", "Tightrope Walking"],
-    &["Engineering"],
-    &["Religion", "Spellcraft", "Herbalism"],
-    &["Spellcraft", "Reading/Writing", "Ancient History"],
+const GROUP_NWP_CORE: [&[Tx]; 5] = [
+    &[BLIND_FIGHTING, RUNNING],
+    &[TUMBLING, TIGHTROPE_WALKING],
+    &[ENGINEERING],
+    &[RELIGION, SPELLCRAFT, HERBALISM],
+    &[SPELLCRAFT, READING_WRITING, ANCIENT_HISTORY],
 ];
 
 /// The weapon proficiency stage's state (members of `CNPCGeneration`).
@@ -36,6 +38,8 @@ pub struct Weapons {
     pub m7cc: i32,
     pub m7d0: i32,
     pub chosen: Vec<String>,
+    /// +0x788: the kit's weapon of choice.
+    pub s788: String,
     pub spec: Vec<String>,
     pub plain: Vec<String>,
     pub slots: i32,
@@ -75,7 +79,39 @@ pub fn pierce_slash(w: &Part, core: bool) -> bool {
     s.contains('P') || s.contains('S')
 }
 
+/// 0x479ef2(tight, broad): the broad weapon group holds the tight one.
+fn broad_has_tight(tight: i32, broad: i32) -> bool {
+    if matches!(tight, 6 | 10 | 11 | 12 | 30 | 31) {
+        return false;
+    }
+    match broad {
+        2 => (2..=5).contains(&tight),
+        3 => (7..=9).contains(&tight),
+        4 => (13..=18).contains(&tight),
+        5 => (19..=21).contains(&tight),
+        6 => (22..=29).contains(&tight),
+        7 => (32..=35).contains(&tight),
+        _ => false,
+    }
+}
+
+/// The broad group id of the swords (CPartDoc +0x234).
+const BROAD_SWORDS: i32 = 6;
+
 impl Gen<'_> {
+    /// 0x4798c2 for the swords: one of the weapon's groups (+0x1cc) is a
+    /// tight group (+0x248 ids) of the broad group.
+    fn is_sword(&self, name: &str) -> bool {
+        let tight = &self.d.tight_groups;
+        self.d.find_in(WEAPONS, name).is_some_and(|w| {
+            w.sa(0x1cc).iter().any(|g| {
+                tight
+                    .get(g)
+                    .is_some_and(|&t| broad_has_tight(t, BROAD_SWORDS))
+            })
+        })
+    }
+
     // ---- nonweapon proficiencies ----
 
     fn nwp_known(&self, name: &str) -> Option<usize> {
@@ -89,7 +125,7 @@ impl Gen<'_> {
     }
 
     /// 0x43776b
-    pub(super) fn nwp_cost(&mut self, part: Option<&Part>) -> i32 {
+    pub(super) fn nwp_cost(&self, part: Option<&Part>) -> i32 {
         let Some(p) = part else { return 0 };
         let name = p.name();
         let core = self.core;
@@ -111,15 +147,18 @@ impl Gen<'_> {
             || (p.n(0x494) != 0 && (g(1) || kr))
             || (p.n(0x4a0) != 0 && (g(4) || kpsi));
         if !ing {
-            ing = match p.s(0x460) {
-                "Strength" => fs,
-                "Dexterity" => fd,
-                "Constitution" => fc,
-                "Wisdom" => fw,
-                "Intelligence" => fi,
-                "Charisma" => fch,
-                _ => false,
-            };
+            let a = p.s(0x460);
+            ing = [
+                (STRENGTH, fs),
+                (DEXTERITY, fd),
+                (CONSTITUTION, fc),
+                (WISDOM, fw),
+                (INTELLIGENCE, fi),
+                (CHARISMA, fch),
+            ]
+            .iter()
+            .find(|e| a == self.t(e.0))
+            .is_some_and(|e| e.1);
         }
         if !ing && kit.is_some_and(|k| k.sa(0x2bc).iter().any(|n| n == name)) {
             ing = true;
@@ -134,12 +173,11 @@ impl Gen<'_> {
             if cost > 0 && kit.s(0xa4) == name {
                 cost = 0;
             }
-            if cost > 0 && kit.has_0x2f8 {
-                // 0x43776b: the kit's proficiency objects (+0x2f8) are not
-                // decoded; ignored.
-                self.warn(
-                    "Kit proficiency objects (+0x2f8, 0x43776b) are not decoded and were ignored.",
-                );
+            // 0x4381c8(name, 0x43fac6): the kit's +0x2f8 objects up to the
+            // highest class level.
+            let top = self.char_level();
+            if cost > 0 && kit.free_nwp.iter().any(|(n, l)| n == name && *l <= top) {
+                cost = 0;
             }
             if cost > 0 && self.nwp_bonus(p) {
                 cost = 0;
@@ -148,23 +186,46 @@ impl Gen<'_> {
         cost.max(0)
     }
 
-    /// 0x440ddf: proficiencies the classes and kit grant.
-    fn nwp_bonus(&mut self, p: &Part) -> bool {
+    /// 0x440ddf: proficiencies the classes and kit grant: class +0x2fa0,
+    /// char +0x1944 (empty here), the class's level proficiencies
+    /// (0x6684f0: kind 0 up to the class level; outside Player's Option
+    /// only for a proficiency without +0x75c), char +0x1e28 (filled only by
+    /// the sheet), then the kit's +0xa4. (Class +0x3528 is read only by
+    /// the sheet's score code 0x438ca1.)
+    fn nwp_bonus(&self, p: &Part) -> bool {
         let name = p.name();
-        for k in self.classes.clone() {
+        for (k, &level) in self.classes.iter().zip(&self.levels) {
             if k.sa(0x2fa0).iter().any(|n| n == name) {
                 return true;
             }
-            if k.has_0x3514 || k.has_0x3528 {
-                // 0x440ddf: the per-level proficiency lists are not decoded.
-                self.warn("Class per-level proficiency lists (+0x3514/+0x3528, 0x440ddf) are not decoded and were ignored.");
+            if k.level_profs.iter().any(|(n, l, kind)| {
+                *kind == 0 && *l <= level && n == name && (!self.core || p.n(0x75c) == 0)
+            }) {
+                return true;
             }
         }
         self.kit().is_some_and(|k| k.s(0xa4) == name)
     }
 
+    /// Class g's level proficiencies of kind 0 up to its level (0x4420f1,
+    /// 0x4d3c02).
+    fn level_profs(&self, g: usize) -> Vec<String> {
+        let level = self.levels[g];
+        self.classes[g]
+            .level_profs
+            .iter()
+            .filter(|(_, l, kind)| *l <= level && *kind == 0)
+            .map(|(n, ..)| n.clone())
+            .collect()
+    }
+
     fn nwp_add(&mut self, name: &str, cost: i32) {
-        self.nwp.push((name.to_owned(), cost));
+        self.nwp_add_extra(name, cost, 0);
+    }
+
+    /// 0x4300b5(name, cost, extra).
+    fn nwp_add_extra(&mut self, name: &str, cost: i32, extra: i32) {
+        self.nwp.push((name.to_owned(), cost, extra));
     }
 
     /// 0x4d4e81
@@ -193,7 +254,8 @@ impl Gen<'_> {
             return false;
         }
         if let Some(p) = self.d.find_in(NONWEAPON, name)
-            && (p.s(0x458).contains("Intelligence") || p.s(0x45c).contains("Intelligence"))
+            && (p.s(0x458).contains(self.t(INTELLIGENCE))
+                || p.s(0x45c).contains(self.t(INTELLIGENCE)))
             && p.n(0x478) <= self.lang_pool
         {
             self.lang_pool -= p.n(0x478);
@@ -277,8 +339,8 @@ impl Gen<'_> {
         self.nwp_class_lists();
         self.nwp_kit_lists();
         let mut spent = self.nwp_bonus_lists();
-        if !self.languages.iter().any(|l| l == "Common") {
-            let r = self.nwp_learn("Modern Languages");
+        if !self.languages.iter().any(|l| l == self.t(COMMON)) {
+            let r = self.nwp_learn(self.t(MODERN_LANGUAGES));
             if r > -1 {
                 spent += r;
             }
@@ -290,21 +352,25 @@ impl Gen<'_> {
         self.nwp_random();
     }
 
-    /// 0x4420f1
+    /// 0x4420f1: every class's +0x2fa0 list, then every class's level
+    /// proficiencies, each at its cost when that is below 1; then the
+    /// kit's +0xa4.
     fn nwp_class_free(&mut self) {
         let d = self.d;
-        for k in self.classes.clone() {
-            for n in k.sa(0x2fa0) {
-                let p = d.find_in(NONWEAPON, n);
-                if p.is_some() && !self.nwp_forbidden(p) && self.nwp_known(n).is_none() {
-                    let cost = self.nwp_cost(p);
-                    if cost < 1 {
-                        self.nwp_add(n, cost);
-                    }
+        let mut names: Vec<String> = Vec::new();
+        for k in &self.classes {
+            names.extend(k.sa(0x2fa0).iter().cloned());
+        }
+        for g in 0..self.classes.len() {
+            names.extend(self.level_profs(g));
+        }
+        for n in &names {
+            let p = d.find_in(NONWEAPON, n);
+            if p.is_some() && !self.nwp_forbidden(p) && self.nwp_known(n).is_none() {
+                let cost = self.nwp_cost(p);
+                if cost < 1 {
+                    self.nwp_add(n, cost);
                 }
-            }
-            if k.has_0x3514 {
-                self.warn("Class per-level proficiency lists (+0x3514, 0x4420f1) are not decoded and were ignored.");
             }
         }
         if let Some(kit) = self.kit() {
@@ -323,9 +389,8 @@ impl Gen<'_> {
     fn nwp_auto_zero(&mut self) {
         let d = self.d;
         for p in &d.parts[NONWEAPON] {
-            if self.core && p.n(0x75c) != 0 && self.classes.iter().any(|k| k.has_0x3514) {
-                // 0x4d9527
-                self.warn("Language proficiency copies from class level lists (0x4d9527) are not decoded.");
+            if self.core && p.n(0x75c) != 0 {
+                self.lang_copies(p);
             }
             if self.nwp_cost(Some(p)) == 0
                 && self.nwp_known(p.name()).is_none()
@@ -336,15 +401,54 @@ impl Gen<'_> {
         }
     }
 
-    /// 0x4d3c02
+    /// 0x4d9527 (Core Rules, a language-teaching proficiency): each class
+    /// whose level proficiencies (any kind, up to its level) name it more
+    /// often than recorded in char +0x1e3c gets the missing copies (cost
+    /// 0, the proficiency's cost as the third member), and the count is
+    /// recorded.
+    fn lang_copies(&mut self, p: &Part) {
+        let name = p.name();
+        for g in 0..self.classes.len() {
+            let level = self.levels[g];
+            let count = self.classes[g]
+                .level_profs
+                .iter()
+                .filter(|(n, l, _)| *l <= level && n == name)
+                .count() as i32;
+            let had = self
+                .lang_counts
+                .iter()
+                .find(|(c, n, _)| *c == g && n == name)
+                .map_or(0, |e| e.2);
+            if count > 0 && had < count {
+                for _ in 0..count - had {
+                    let cost = self.nwp_cost(Some(p));
+                    self.nwp_add_extra(name, 0, cost);
+                }
+                match self
+                    .lang_counts
+                    .iter_mut()
+                    .find(|(c, n, _)| *c == g && n == name)
+                {
+                    Some(e) => e.2 = count,
+                    None => self.lang_counts.push((g, name.to_owned(), count)),
+                }
+            }
+        }
+    }
+
+    /// 0x4d3c02: every class's +0x2fa0 list, then every class's level
+    /// proficiencies, free.
     fn nwp_class_lists(&mut self) {
         for k in self.classes.clone() {
             for n in k.sa(0x2fa0) {
                 self.nwp_take_free(n, true);
             }
         }
-        if self.classes.iter().any(|k| k.has_0x3514) {
-            self.warn("Class per-level proficiency lists (+0x3514, 0x4d3c02) are not decoded and were ignored.");
+        for g in 0..self.classes.len() {
+            for n in self.level_profs(g) {
+                self.nwp_take_free(&n, true);
+            }
         }
     }
 
@@ -365,8 +469,9 @@ impl Gen<'_> {
                 if want == n {
                     for name in opts {
                         if self.nwp_take_free(name, true) == -2 {
-                            // 0x4d3e6c: the language choice is not decoded.
-                            self.warn("A kit's language proficiency choice (0x4d3e6c) is not decoded and was skipped.");
+                            // A known language-teaching proficiency: Core
+                            // Rules adds it again at cost 0.
+                            self.nwp_add(name, 0);
                         }
                     }
                 } else {
@@ -458,8 +563,8 @@ impl Gen<'_> {
                 k = rank;
             }
         }
-        for n in GROUP_NWP_CORE[k as usize] {
-            self.nwp_learn(n);
+        for &n in GROUP_NWP_CORE[k as usize] {
+            self.nwp_learn(self.t(n));
         }
     }
 
@@ -487,11 +592,38 @@ impl Gen<'_> {
 
     // ---- weapon proficiencies ----
 
+    /// 0x4d7d99: a missile weapon (+0x3bc) that needs no ammunition
+    /// (+0x3c0) and is none of the program's guns and engines passes a
+    /// kit's +0x3fc list.
+    fn kit_missile(&self, w: &Part) -> bool {
+        if w.n(0x3bc) == 0 || w.n(0x3c0) != 0 {
+            return false;
+        }
+        let u = w.name().to_uppercase();
+        !self
+            .d
+            .program
+            .missile_words
+            .iter()
+            .any(|k| u.contains(k.as_str()))
+    }
+
+    /// 0x4d8040: a club-like weapon (the upper-cased name holds one of the
+    /// program's club words).
+    fn is_club(&self, name: &str) -> bool {
+        let u = name.to_uppercase();
+        self.d
+            .program
+            .club_words
+            .iter()
+            .any(|w| u.contains(w.as_str()))
+    }
+
     /// Runs the straight-line name tests of 0x4ce3d6 / 0x4d6dc6.
     fn run_name_rules(&self, rules: &[NameRule], name: &str, hit: i32, end: i32) -> Option<i32> {
         let mut i = 0;
         while i < rules.len() {
-            match rules[i] {
+            match &rules[i] {
                 NameRule::Stop => return None,
                 NameRule::Eq(s) => {
                     if name == s {
@@ -499,7 +631,7 @@ impl Gen<'_> {
                     }
                 }
                 NameRule::Find(s) => {
-                    if name.contains(s) {
+                    if name.contains(s.as_str()) {
                         return Some(hit);
                     }
                 }
@@ -509,22 +641,22 @@ impl Gen<'_> {
                     race,
                     find,
                 } => {
-                    let v = if parent {
+                    let v = if *parent {
                         self.race.unknown_0x188.as_str()
                     } else {
                         self.race.name.as_str()
                     };
-                    if (v == race) == equal && name.contains(find) {
+                    if (v == race) == *equal && name.contains(find.as_str()) {
                         return Some(hit);
                     }
                 }
                 NameRule::Gate { when, to } => {
-                    let ok = match when {
+                    let ok = match *when {
                         Level::Above(k) => self.m738 > k,
                         Level::Below(k) => self.m738 < k,
                     };
                     if ok {
-                        match to {
+                        match *to {
                             Some(t) => {
                                 i = t;
                                 continue;
@@ -545,13 +677,13 @@ impl Gen<'_> {
         if self.d.user_weapon(name) {
             return true;
         }
-        self.run_name_rules(COMMON_WEAPON_RULES, &name.to_uppercase(), 0, 1) != Some(0)
+        self.run_name_rules(&self.d.program.common_rules, &name.to_uppercase(), 0, 1) != Some(0)
     }
 
     /// 0x4d6dc6: the weapon is excluded.
     pub(super) fn excluded_weapon(&self, w: &Part) -> bool {
         let name = w.name();
-        if let Some(r) = self.run_name_rules(EXCLUDED_WEAPON_RULES, name, 1, 0) {
+        if let Some(r) = self.run_name_rules(&self.d.program.excluded_rules, name, 1, 0) {
             return r != 0;
         }
         let Some(kit) = self.kit() else { return true };
@@ -584,11 +716,15 @@ impl Gen<'_> {
         if k.flag(0x27a0) && pierce_slash(w, self.core) {
             return false;
         }
-        if k.s3000.as_deref() != Some("Only from list below") {
-            // 0x669550: the damage-type list is not decoded; refused.
-            self.warn("A class's weapon damage-type list (0x669550) is not decoded; its weapons were refused.");
+        // 0x669550: unless the class takes only its list, a damage type
+        // of "none", or one its +0x3000 text holds (CString::Find, so an
+        // empty damage type too), is allowed.
+        let list = k.s3000.as_deref().unwrap_or("");
+        if list == self.t(ONLY_FROM_LIST_BELOW) {
+            return false;
         }
-        false
+        let damage = damage_type(w, self.core);
+        damage == self.t(NONE_DAMAGE) || list.contains(damage)
     }
 
     /// 0x440996
@@ -684,14 +820,13 @@ impl Gen<'_> {
         0
     }
 
-    /// 0x44681a: the kit grants the weapon (+0x484).
-    pub(super) fn kit_grants(&mut self, n: &str) -> bool {
+    /// 0x44681a: the kit grants the weapon: its +0x470 objects up to the
+    /// highest class level (0x443e4f), else its +0x484 list (0x4454c8).
+    pub(super) fn kit_grants(&self, n: &str) -> bool {
         let Some(kit) = self.kit() else { return false };
-        if kit.has_0x470 {
-            // 0x44681a: the kit's bonus objects (+0x470) are not decoded.
-            self.warn("Kit weapon bonus objects (+0x470) are not decoded and were ignored.");
-        }
-        kit.sa(0x484).iter().any(|x| x == n)
+        let top = self.char_level();
+        kit.free_weapons.iter().any(|(w, l)| *l <= top && w == n)
+            || kit.sa(0x484).iter().any(|x| x == n)
     }
 
     /// 0x43d7bc(char, w, 0x377) for a weapon: 0 = usable.
@@ -741,8 +876,13 @@ impl Gen<'_> {
             return 999;
         };
         let Some(kit) = self.kit() else { return 999 };
-        if kit.has_0x470 {
-            self.warn("Kit weapon bonus objects (+0x470) are not decoded and were ignored.");
+        // The kit's +0x470 weapons are free from their level (+0x738).
+        if kit
+            .free_weapons
+            .iter()
+            .any(|(w, l)| w == name && *l <= self.m738)
+        {
+            return 0;
         }
         if kit.flag(0x444) || kit.sa(0x384).iter().any(|n| n == name) {
             cost -= 1;
@@ -797,10 +937,11 @@ impl Gen<'_> {
                 return 1;
             }
         }
+        // A tight group with id 6 (the bows).
         if let Some(w) = self.d.find_in(WEAPONS, name)
             && w.sa(0x1cc)
                 .iter()
-                .any(|g| TIGHT_GROUPS_6.contains(&g.as_str()))
+                .any(|g| self.d.tight_groups.get(g) == Some(&6))
         {
             return 2;
         }
@@ -938,9 +1079,7 @@ impl Gen<'_> {
                 }
             }
             if !sa3fc.is_empty() {
-                if !has(sa3fc, name) {
-                    // 0x4d7d99 is not decoded: the weapon is skipped.
-                    self.warn("A kit's weapon list (+0x3fc, 0x4d7d99) is not decoded; weapons outside it were skipped.");
+                if !has(sa3fc, name) && !self.kit_missile(w) {
                     continue;
                 }
                 flag = true;
@@ -1009,7 +1148,8 @@ impl Gen<'_> {
             self.wp_pick(&l30, false);
         }
         if self.wp.m790 {
-            self.wp.chosen.push("Club".into());
+            let club = self.d.program.club_choices.get(4).cloned();
+            self.wp.chosen.extend(club);
         }
         self.wp.d8 = ld8;
         self.wp.l4c = l4c;
@@ -1044,8 +1184,8 @@ impl Gen<'_> {
                 if w.n(0x3b8) != 0 {
                     self.wp.m7d0 += 1;
                 }
-                if self.wp.m790 {
-                    self.warn("The club kit path (0x4d8040) is not decoded and was skipped.");
+                if self.wp.m790 && self.is_club(name) {
+                    self.wp.m790 = false;
                 }
             }
         }
@@ -1077,8 +1217,17 @@ impl Gen<'_> {
         while self.wp.slots >= 1 && tries < 40 {
             tries += 1;
             let mut name = list[(self.between(1, n) - 1) as usize].clone();
-            if self.wp.m790 {
-                self.warn("The club kit path (0x4d8040) is not decoded and was skipped.");
+            if self.wp.m790 && !self.is_club(&name) && tries < 8 {
+                // 0x4d81ad: one of eight club-like weapons, taken when it
+                // is in the list.
+                let d = self.d;
+                let choices = &d.program.club_choices;
+                if !choices.is_empty() {
+                    let alt = &choices[self.modn(choices.len() as i32) as usize];
+                    if list.iter().any(|x| x == alt) {
+                        name = alt.clone();
+                    }
+                }
             }
             if self.wp.m7c8 {
                 if lac > 0 {
@@ -1092,8 +1241,10 @@ impl Gen<'_> {
             if self.wp.chosen.contains(&name) {
                 continue;
             }
-            if self.wp.m78c > 0 {
-                self.warn("A kit's sword list (0x4d6c6c) is not decoded and was ignored.");
+            // 0x4d6c6c: while the kit's sword list (+0x398) is pending, a
+            // sword must come from it.
+            if self.wp.m78c > 0 && self.is_sword(&name) && !has(ksa(0x398), &name) {
+                continue;
             }
             let Some(w) = self.d.find_in(WEAPONS, &name) else {
                 if n < 2 {
@@ -1133,10 +1284,22 @@ impl Gen<'_> {
                 }
             }
             self.wp.chosen.push(name.clone());
-            if kflag(0x4ac) {
-                self.warn(
-                    "A kit's weapon of choice (+0x4ac, +0x788) is not decoded and was ignored.",
-                );
+            if self.wp.m790 && self.is_club(&name) {
+                self.wp.m790 = false;
+            }
+            if self.wp.m78c > 0 && self.is_sword(&name) {
+                self.wp.m78c = 0;
+            }
+            if self.wp.s788.is_empty() && kflag(0x4ac) {
+                // The kit's weapon of choice (+0x788): the first weapon taken
+                // that passes +0x4ad (+0x3b8), +0x4ae (+0x3bc) and +0x4af
+                // (+0x3bc set, +0x3c0 clear).
+                let fails = (kflag(0x4ad) && w.n(0x3b8) == 0)
+                    || (kflag(0x4ae) && w.n(0x3bc) == 0)
+                    || (kflag(0x4af) && (w.n(0x3bc) == 0 || w.n(0x3c0) != 0));
+                if !fails {
+                    self.wp.s788 = name.clone();
+                }
             }
             if w.n(0x3bc) != 0 {
                 cnt3bc += 1;
@@ -1196,18 +1359,18 @@ impl Gen<'_> {
         // The +0x768 / +0x754 lists are filled only by 0x4d5a07, which
         // returns at once in Core Rules: a Stout or Hairfoot halfling gets
         // no racial language here.
-        if !(sn.contains("Stout halfling") || sn.contains("Hairfoot halfling")) {
+        if !(sn.contains(self.t(STOUT_HALFLING)) || sn.contains(self.t(HAIRFOOT_HALFLING))) {
             self.languages.extend(sub.languages.iter().cloned());
         }
-        if matches!(
+        if self.d.is(
             sn,
-            "Human" | "Half-orc" | "Half-ogre" | "Half-elf" | "Standard half-elf"
+            &[HUMAN, HALF_ORC, HALF_OGRE, HALF_ELF, STANDARD_HALF_ELF],
         ) && !self
             .languages
             .iter()
-            .any(|l| l == "Human, Regional dialect")
+            .any(|l| l == self.t(HUMAN_REGIONAL_DIALECT))
         {
-            self.languages.push("Human, Regional dialect".into());
+            self.languages.push(self.t(HUMAN_REGIONAL_DIALECT).into());
         }
         self.lang_nwp();
     }
@@ -1236,9 +1399,11 @@ impl Gen<'_> {
             let mut list = self.nwp_langs.remove(&i).unwrap_or_default();
             for _ in 0..per {
                 let mut got = None;
-                if !common_done && name == "Modern Languages" && !list.iter().any(|l| l == "Common")
+                if !common_done
+                    && name == self.t(MODERN_LANGUAGES)
+                    && !list.iter().any(|l| l == self.t(COMMON))
                 {
-                    got = Some("Common".to_owned());
+                    got = Some(self.t(COMMON).to_owned());
                     common_done = true;
                 }
                 while got.is_none() {

@@ -384,7 +384,10 @@ record! {
         unknown_0x1ea4: Option<(u8, [Vec<String>; 2])> = if v > 39,
         flag_0x1610: Option<u8> = if v > 42,
         unknown_0x160c: Option<u32> = if v >= 44,
-        unknown_0x15e4: Option<[Vec<Object>; 2]> = if v >= 46,
+        /// The kit's rogue skill bonuses (`CPartKitBonusOb`): +0x15e4 the
+        /// random ones by level (an entry may be `NULL`), +0x15f8 the
+        /// fixed ones.
+        unknown_0x15e4: Option<[Vec<Option<Box<Object>>>; 2]> = if v >= 46,
         unknown_0x1e28: Option<Vec<Object>> = if v > 47,
         unknown_0x1e3c: Option<Vec<Object>> = if v > 49,
         flag_0x1ea8: Option<u8> = if v > 48,

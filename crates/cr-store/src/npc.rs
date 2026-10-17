@@ -29,11 +29,14 @@
 mod build;
 pub(crate) mod data;
 mod equip;
+mod exe;
 mod magic;
 mod names;
 mod prof;
 mod program;
+mod rogue;
 mod state;
+mod texts;
 
 use std::collections::HashMap;
 use std::fs;
@@ -49,8 +52,9 @@ use crate::encounter::flavor_of;
 use crate::lists::PartTable;
 pub use crate::treasure::{Flavor, Rand};
 use crate::{Error, Installation, Result};
+use cr_formats::race::Race;
 use data::Data;
-use state::Gen;
+use state::{Gen, Opt};
 
 /// What lasts between the NPCs of one session: the kit lists the spell
 /// stage filters in place (kit +0x230 and +0x208, 0x4df3ec), by kit.
@@ -131,16 +135,47 @@ pub struct EncounterNpc {
     pub messages: Vec<String>,
 }
 
-/// Choices of the Create Multiple NPCs dialog (the combination branch:
-/// the classes come from `AllowedU.dat`).
+/// A choice of the New NPC Group dialog that may be "~Random".
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub enum Choice {
+    #[default]
+    Random,
+    Name(String),
+}
+
+impl Choice {
+    fn opt(&self) -> Opt {
+        match self {
+            Choice::Random => Opt::Random,
+            Choice::Name(n) => Opt::Name(n.clone()),
+        }
+    }
+
+    fn label(&self) -> &str {
+        match self {
+            Choice::Random => "~Random",
+            Choice::Name(n) => n,
+        }
+    }
+}
+
+/// One line of the New NPC Group dialog (the options object 0x4e0f30
+/// fills).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GroupOptions {
     /// How many NPCs, low to high.
     pub number: (i32, i32),
     /// A race or subrace name; `None` is "~Random".
     pub race: Option<String>,
-    /// Level ranges per class group: warrior, rogue, priest, wizard,
-    /// psionicist.
+    /// The class of each class group (warrior, rogue, priest, wizard,
+    /// psionicist); `None` takes no class of that group.
+    pub classes: [Option<Choice>; 5],
+    /// "~Random" class with "Allowed" (+0x5c): one of the race's
+    /// `AllowedU.dat` combinations instead of `classes`.
+    pub allowed_combination: bool,
+    pub kit: Choice,
+    pub alignment: Choice,
+    /// Level ranges per class group, in the order of `classes`.
     pub levels: [(i32, i32); 5],
     pub players_option: bool,
 }
@@ -150,10 +185,78 @@ impl Default for GroupOptions {
         Self {
             number: (1, 1),
             race: None,
+            classes: Default::default(),
+            allowed_combination: true,
+            kit: Choice::Random,
+            alignment: Choice::Random,
             levels: [(1, 1); 5],
             players_option: false,
         }
     }
+}
+
+/// The class groups' names in the order of [`GroupOptions::classes`].
+const GROUP_NAMES: [&str; 5] = ["Warrior", "Rogue", "Priest", "Wizard", "Psionicist"];
+
+impl GroupOptions {
+    /// Sorts lines as the dialog's list holds them (by [`Self::label`]).
+    pub fn sort(lines: &mut [GroupOptions]) {
+        lines.sort_by_cached_key(|l| list_box_key(&l.label()));
+    }
+
+    /// The line as the dialog's list shows it (0x4e5a37); the list is
+    /// sorted by this text and Create Group goes down the sorted list.
+    pub fn label(&self) -> String {
+        let (lo, hi) = self.number;
+        let mut s = if lo == hi {
+            format!("{hi} ")
+        } else {
+            format!("{lo} to {hi} ")
+        };
+        s += &format!("Race: {}   ", self.race.as_deref().unwrap_or("~Random"));
+        // 0x4e5c5e: warrior, wizard, rogue, priest, psionicist.
+        let class = if self.allowed_combination {
+            "~Random".to_owned()
+        } else {
+            [0, 3, 1, 2, 4]
+                .into_iter()
+                .filter_map(|g| match &self.classes[g] {
+                    None => None,
+                    Some(Choice::Random) => Some(format!("~Random {}", GROUP_NAMES[g])),
+                    Some(Choice::Name(n)) if n.is_empty() => None,
+                    Some(Choice::Name(n)) => Some(n.clone()),
+                })
+                .collect::<Vec<_>>()
+                .join("/")
+        };
+        s += &format!("Class: {class}   ");
+        s += &format!("Kit: {}   ", self.kit.label());
+        s += &format!("Alignment: {}   ", self.alignment.label());
+        s
+    }
+}
+
+/// A sort key approximating the list box's comparison
+/// (`CompareString` with `NORM_IGNORECASE`): case is ignored, hyphens and
+/// apostrophes count only to break ties, and other symbols sort before
+/// digits, digits before letters.
+fn list_box_key(s: &str) -> (Vec<(u8, char)>, String) {
+    let primary = s
+        .chars()
+        .filter(|&c| c != '-' && c != '\'')
+        .map(|c| {
+            let l = c.to_lowercase().next().unwrap_or(c);
+            let class = if l.is_alphabetic() {
+                2
+            } else if l.is_ascii_digit() {
+                1
+            } else {
+                0
+            };
+            (class, l)
+        })
+        .collect();
+    (primary, s.to_owned())
 }
 
 /// Everything the NPC generator reads, and its session state.
@@ -171,10 +274,11 @@ const EV_FALLBACK: &str = "Core Rules 2.0 generator: the name and abilities foll
 impl Installation {
     /// Loads the NPC generator's data.
     pub fn npc_rules(&self) -> Result<NpcRules> {
+        let flavor = flavor_of(self);
         Ok(NpcRules {
-            data: Data::load(self)?,
+            data: Data::load(self, flavor)?,
             parts: self.part_table()?,
-            flavor: flavor_of(self),
+            flavor,
             session: Session::default(),
         })
     }
@@ -315,6 +419,39 @@ impl NpcRules {
         self.data.classes.iter().map(|c| c.name.clone()).collect()
     }
 
+    /// The classes of a class group (warrior, rogue, priest, wizard,
+    /// psionicist: the order of [`GroupOptions::classes`]), in database
+    /// order.
+    pub fn group_classes(&self, group: usize) -> Vec<String> {
+        self.data
+            .classes
+            .iter()
+            .filter(|c| c.group == group as i32)
+            .map(|c| c.name.clone())
+            .collect()
+    }
+
+    /// Kit names (the Character Kits parts), in database order.
+    pub fn kits(&self) -> Vec<String> {
+        self.data.parts[data::KITS]
+            .iter()
+            .map(|p| p.head.name.clone())
+            .collect()
+    }
+
+    /// The nine alignments, as the program names them.
+    pub fn alignments(&self) -> Vec<String> {
+        state::ALIGNMENTS
+            .iter()
+            .map(|a| self.data.t(a.0).to_owned())
+            .collect()
+    }
+
+    /// The program's message when no class is given.
+    pub fn no_class_message(&self) -> String {
+        self.data.t(texts::NO_CLASS).to_owned()
+    }
+
     /// Race names the "Select from Standard races" choice offers.
     pub fn standard_races(&self) -> Vec<String> {
         self.data
@@ -378,6 +515,7 @@ impl NpcRules {
             classes,
             options.players_option,
         )?;
+
         if self.flavor == Flavor::Core20 {
             g.warn(EV_FALLBACK);
         }
@@ -412,6 +550,7 @@ impl NpcRules {
         g.st_wp();
         g.st_lang2();
         g.st_hp();
+        g.st_rogue();
         g.st_equip();
         g.st_spells();
         g.st_psionics();
@@ -517,7 +656,11 @@ impl NpcRules {
                 players_option: options.players_option,
                 abilities: None,
             };
-            let mut npc = self.generate(rand, &race, &classes, &npc_options)?;
+            let mut g = self.start(rand, &race, &classes, &npc_options)?;
+            g.set_options(options.kit.opt(), options.alignment.opt());
+            self.front(&mut g, &npc_options);
+            Self::stages(&mut g);
+            let mut npc = self.finish(g, &classes)?;
             if let Some(m) = message {
                 npc.messages.insert(0, m);
             }
@@ -526,8 +669,20 @@ impl NpcRules {
         Ok(out)
     }
 
-    /// 0x4be9c0: the race (0x4d1f99) and an `AllowedU.dat` combination
-    /// with levels (0x4d21c3).
+    /// Create Group (0x4e3480) with several lines: the lines in the order
+    /// the dialog's sorted list holds them ([`GroupOptions::label`]).
+    pub fn generate_groups(&self, rand: &mut Rand, lines: &[GroupOptions]) -> Result<Vec<Npc>> {
+        let mut sorted: Vec<&GroupOptions> = lines.iter().collect();
+        sorted.sort_by_cached_key(|l| list_box_key(&l.label()));
+        let mut out = Vec::new();
+        for line in sorted {
+            out.extend(self.generate_group(rand, line)?);
+        }
+        Ok(out)
+    }
+
+    /// 0x4be9c0: the race (0x4d1f99) and the classes with their levels
+    /// (0x4d21c3).
     fn group_pick(&self, rand: &mut Rand, options: &GroupOptions) -> Result<Pick> {
         let d = &self.data;
         if d.races.is_empty() || d.classes.is_empty() {
@@ -535,32 +690,91 @@ impl NpcRules {
                 "the databases have no races or classes".into(),
             ));
         }
+        // 0x4d1f99: "~Random" draws over every race and subrace.
+        let random_race =
+            |rand: &mut Rand| &d.races[between(rand, 0, d.races.len() as i32 - 1) as usize];
         let mut r = match &options.race {
-            None => &d.races[between(rand, 0, d.races.len() as i32 - 1) as usize],
+            None => random_race(rand),
             Some(name) => d
                 .race(name)
                 .map(|i| &d.races[i])
                 .ok_or_else(|| Error::Invalid(format!("no race named {name}")))?,
         };
-        if r.unknown_0x184 != 0
-            && let Some(i) = d.race(&r.unknown_0x188)
-        {
-            r = &d.races[i];
+        if options.allowed_combination || options.classes.iter().all(Option::is_none) {
+            // The combination branch takes a subrace's parent race.
+            if r.unknown_0x184 != 0
+                && let Some(i) = d.race(&r.unknown_0x188)
+            {
+                r = &d.races[i];
+            }
+            return Ok(self.group_combination(rand, r, &options.levels));
         }
+        // Every group draws its level when its range is valid; the level
+        // runs on otherwise.
+        let mut out: Vec<(String, i32)> = Vec::new();
+        let mut lvl = 1;
+        for (g, (choice, &(lo, hi))) in options.classes.iter().zip(&options.levels).enumerate() {
+            if lo <= hi && hi > 0 {
+                lvl = between(rand, lo, hi);
+            }
+            match choice {
+                None => {}
+                Some(Choice::Name(n)) if n.is_empty() => {}
+                Some(Choice::Name(n)) => out.push((n.clone(), lvl)),
+                Some(Choice::Random) => {
+                    // 0x4729ec: the classes of the group, in list order.
+                    let list: Vec<&str> = d
+                        .classes
+                        .iter()
+                        .filter(|k| k.group == g as i32)
+                        .map(|k| k.name.as_str())
+                        .collect();
+                    if !list.is_empty() {
+                        let i = between(rand, 0, list.len() as i32 - 1) as usize;
+                        out.push((list[i].to_owned(), lvl));
+                    }
+                }
+            }
+        }
+        if options.race.is_none() {
+            // Up to 30 tries for a race whose combinations (0x47c830)
+            // hold the title; the 30th draw is kept as it is.
+            let title = out
+                .iter()
+                .map(|c| c.0.as_str())
+                .collect::<Vec<_>>()
+                .join("/");
+            for _ in 0..30 {
+                if self.race_combinations(r).contains(&title) {
+                    break;
+                }
+                r = random_race(rand);
+            }
+        }
+        if out.is_empty() {
+            out.push((d.classes[0].name.clone(), 1));
+        }
+        Ok((r.name.clone(), out, None))
+    }
+
+    /// 0x4d21c3, combination branch: one of the race's `AllowedU.dat`
+    /// combinations, the levels drawn per group.
+    fn group_combination(&self, rand: &mut Rand, r: &Race, levels: &[(i32, i32); 5]) -> Pick {
+        let d = &self.data;
         let Some(combos) = d.allowed.get(&r.name).filter(|c| !c.is_empty()) else {
-            return Ok((
+            return (
                 r.name.clone(),
                 vec![(d.classes[0].name.clone(), 1)],
                 Some(format!(
                     "Race/Class combination information unavailable for race: {}",
                     r.name
                 )),
-            ));
+            );
         };
         let h = &combos[between(rand, 0, combos.len() as i32 - 1) as usize];
         let mut out: Vec<(String, i32)> = Vec::new();
         let mut lvl = 1;
-        for (name, &(lo, hi)) in h.iter().zip(&options.levels) {
+        for (name, &(lo, hi)) in h.iter().zip(levels) {
             if name.is_empty() {
                 continue;
             }
@@ -575,7 +789,61 @@ impl NpcRules {
             }
             out.push((name.clone(), lvl));
         }
-        Ok((r.name.clone(), out, None))
+        (r.name.clone(), out, None)
+    }
+
+    /// 0x47c830: the titles of the race's `AllowedU.dat` combinations. A
+    /// race without an entry gets one built by 0x47c91e: each class of
+    /// its +0x1b8 list alone, then each multi-class object (+0x1cc); the
+    /// program also saves that entry, which changes nothing later.
+    fn race_combinations(&self, r: &Race) -> Vec<String> {
+        let d = &self.data;
+        let title = |slots: &[String; 5]| {
+            slots
+                .iter()
+                .filter(|n| !n.is_empty())
+                .cloned()
+                .collect::<Vec<_>>()
+                .join("/")
+        };
+        if let Some(combos) = d.allowed.get(&r.name) {
+            return combos.iter().map(title).collect();
+        }
+        // 0x689761: each named class goes to its group's slot, the first
+        // of a group wins.
+        let combine = |names: &[&str]| {
+            let mut slots: [String; 5] = Default::default();
+            for n in names {
+                if let Some(k) = d.class(n).map(|i| &d.classes[i])
+                    && (0..5).contains(&k.group)
+                    && slots[k.group as usize].is_empty()
+                {
+                    slots[k.group as usize] = k.name.clone();
+                }
+            }
+            title(&slots)
+        };
+        let mut out: Vec<String> = r.unknown_0x1b8.iter().map(|n| combine(&[n])).collect();
+        for o in &r.multi_classes {
+            if let cr_formats::Object::MultiClass(m) = o {
+                // 0x68ad26: the class whose id (+0x10) is in a slot, the
+                // last one of the list.
+                let names: Vec<&str> = m
+                    .classes
+                    .iter()
+                    .filter(|&&id| id != 0)
+                    .filter_map(|&id| {
+                        d.classes
+                            .iter()
+                            .rev()
+                            .find(|k| k.v(0x10) == id)
+                            .map(|k| k.name.as_str())
+                    })
+                    .collect();
+                out.push(combine(&names));
+            }
+        }
+        out
     }
 }
 
@@ -612,6 +880,17 @@ mod tests {
     fn rules() -> NpcRules {
         let mut data = Data::empty();
         data.races = vec![race("Human"), race("Gnome")];
+        // Stand-ins for the program's name tables (read from the
+        // installation's program otherwise).
+        let p = &mut data.program;
+        p.set_name_key(4, "HUMAN");
+        p.set_name_key(5, "GNOME");
+        p.set_names((0x4b8b0b, 0x194), &["Abe", "Bo"]);
+        p.set_names((0x4b8f34, 0x164), &["Cy"]);
+        p.set_text(program::NORM, "Norm");
+        p.set_text(texts::DAVID, "David");
+        p.set_text(texts::NORMA, "Norma");
+        p.set_text(texts::LOUISE, "Louise");
         let common = [
             (0x84, 10),
             (0x88, 9),

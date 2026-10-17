@@ -3,9 +3,13 @@
 
 use std::collections::HashMap;
 
+use cr_formats::Object;
+
 use super::Gen;
 use super::data::{EQUIPMENT, PartExt, SCHOOLS, SPHERES, Spell};
+use super::program::Tx;
 use super::state::{Book, It, Psionics, inv_add};
+use super::texts::*;
 
 /// 0x421f1f: the highest spell level by Intelligence.
 const INT_MAX_SPELL_LEVEL: [i32; 26] = [
@@ -41,12 +45,12 @@ const INT_MAX_SPELLS: [i32; 26] = [
     i32::MAX,
 ];
 
-pub const DISCIPLINES: [&str; 5] = [
-    "Clairsentient",
-    "Psychokinetic",
-    "Psychometabolic",
-    "Psychoportive",
-    "Telepathic",
+pub const DISCIPLINES: [Tx; 5] = [
+    CLAIRSENTIENT,
+    PSYCHOKINETIC,
+    PSYCHOMETABOLIC,
+    PSYCHOPORTIVE,
+    TELEPATHIC,
 ];
 /// 0x42fa1a: devotions by level (without and with the bonus).
 const PSI_DEV: [[i32; 21]; 2] = [
@@ -136,15 +140,20 @@ impl<'a> Gen<'a> {
         m.min(self.kit().map_or(99, |k| k.i_or(0x1f4, 99)))
     }
 
-    /// 0x431639: the class table +0x414 (+0x159c with a class ability
-    /// +0x784).
+    /// 0x431639: the kit's spell table (+0x648) with kit +0x5da, else the
+    /// class table +0x414 (+0x159c with a class ability +0x784).
     fn spell_slots(&mut self, g: usize, sl: i32) -> i32 {
-        if self.kit().is_some_and(|k| k.flag(0x5da)) {
-            // 0x431639: the kit's spell table (+0x648) is not decoded.
-            self.warn("A kit's spell table (+0x5da/+0x648, 0x431639) is not decoded; the class table was used.");
-        }
         let k = self.classes[g];
         let lv = self.levels[g];
+        // With +0x5da, the kit's table for the class level (no Wisdom
+        // bonus).
+        if let Some(kit) = self.kit()
+            && kit.flag(0x5da)
+            && lv > 0
+            && let Some(Some(row)) = kit.spell_table.get(lv as usize - 1)
+        {
+            return row[(sl - 1).rem_euclid(10) as usize];
+        }
         let alt = self.class_abilities[g].iter().any(|p| p.n(0x784) != 0);
         let table = if alt { &k.alt_slots } else { &k.slots };
         table
@@ -165,19 +174,19 @@ impl<'a> Gen<'a> {
         0
     }
 
-    /// Fallback of 0x4792d3: a school or sphere part's spell list +0x748.
-    fn part_lists(&mut self, t: usize, name: &str) -> bool {
-        let d = self.d;
-        if let Some(i) = d.part_exact(t, name)
-            && !d.parts[t][i].data.unknown_0x748.is_empty()
-        {
-            self.warn("School and sphere spell lists (+0x748, 0x4792d3) are not decoded and were ignored.");
-        }
-        false
+    /// 0x4792d3 → 0x660d2d: the school or sphere part `name` (0x465e59)
+    /// lists the spell in its `CSpellsOb`s (+0x748, compared by name).
+    fn part_lists(&self, t: usize, name: &str, spell: &str) -> bool {
+        self.d.find_in(t, name).is_some_and(|p| {
+            p.data
+                .unknown_0x748
+                .iter()
+                .any(|o| matches!(o, Object::Spell(s) if s.name == spell))
+        })
     }
 
-    fn any_listed(&mut self, t: usize, names: &[String], spell_list: &[String]) -> bool {
-        has_any(names, spell_list) || names.iter().any(|x| self.part_lists(t, x))
+    fn any_listed(&self, t: usize, names: &[String], spell: &Spell, list: &[String]) -> bool {
+        has_any(names, list) || names.iter().any(|x| self.part_lists(t, x, &spell.name))
     }
 
     /// 0x4792d3(out, W, P, schools, minor, major, lvl, 0); lvl 0 = any.
@@ -195,7 +204,7 @@ impl<'a> Gen<'a> {
                 if lvl != 0 && s.level != lvl {
                     continue;
                 }
-                if self.any_listed(SCHOOLS, schools, &s.schools) {
+                if self.any_listed(SCHOOLS, schools, s, &s.schools) {
                     out.push(s);
                 }
             }
@@ -207,7 +216,7 @@ impl<'a> Gen<'a> {
             } else {
                 for s in &d.priest_spells {
                     if (lvl == 0 || s.level == lvl) && s.level < 4 {
-                        if self.any_listed(SPHERES, minor, &s.spheres) {
+                        if self.any_listed(SPHERES, minor, s, &s.spheres) {
                             out.push(s);
                         } else {
                             rest.push(s);
@@ -232,7 +241,7 @@ impl<'a> Gen<'a> {
                 if lvl != 0 && s.level != lvl {
                     continue;
                 }
-                if self.any_listed(SPHERES, major, &s.spheres) {
+                if self.any_listed(SPHERES, major, s, &s.spheres) {
                     out.push(s);
                 }
             }
@@ -317,8 +326,11 @@ impl<'a> Gen<'a> {
             }
             for _ in 0..self.spell_slots(g, sl) {
                 if list.is_empty() {
-                    // The original reads a stale pointer here.
-                    self.warn("The priest spell list ran out while memorizing (stale read in the original); the rest were skipped.");
+                    // 0x4de740 draws between(0, -1) = 0 without a draw,
+                    // reads the stale slot 0 and calls RemoveAt(0, 1) on
+                    // the empty array (0x736cf0), whose memmove of -4
+                    // bytes faults: the original stops here.
+                    self.warn("The priest spell list ran out while memorizing; the original stops with a fault here (0x4de740 removes from the empty list), so the rest were skipped.");
                     break;
                 }
                 let k = self.between(0, list.len() as i32 - 1) as usize;
@@ -377,9 +389,9 @@ impl<'a> Gen<'a> {
             }
             if sl == 1 {
                 n -= 1;
-                self.book_w.push("Read Magic".into());
+                self.book_w.push(self.t(READ_MAGIC).into());
                 for l in [&mut sp, &mut general] {
-                    if let Some(i) = rfind(l, "Read Magic") {
+                    if let Some(i) = rfind(l, self.t(READ_MAGIC)) {
                         l.remove(i);
                     }
                 }
@@ -503,7 +515,7 @@ impl<'a> Gen<'a> {
     /// "Spellbook" items (list 4); a spell takes level + 0..5 pages.
     fn spellbooks(&mut self) {
         let d = self.d;
-        let Some(i) = d.part_exact(EQUIPMENT, "Spellbook") else {
+        let Some(i) = d.part_exact(EQUIPMENT, self.t(SPELLBOOK)) else {
             self.warn("There is no Spellbook part; no spellbook was made.");
             return;
         };
@@ -546,7 +558,7 @@ impl<'a> Gen<'a> {
                 bk.wizard.push(wiz);
             }
             for b in books {
-                let mut it = It::new("Spellbook", 1);
+                let mut it = It::new(self.t(SPELLBOOK), 1);
                 it.book = Some(b);
                 inv_add(&mut self.inventory[4], it, false);
             }
@@ -609,8 +621,7 @@ impl<'a> Gen<'a> {
             let dn = usize::try_from(pw.discipline)
                 .ok()
                 .and_then(|i| DISCIPLINES.get(i))
-                .copied()
-                .unwrap_or("");
+                .map_or("", |&t| self.t(t));
             if !p.disciplines.iter().any(|x| x == dn) {
                 continue;
             }
@@ -643,7 +654,7 @@ impl<'a> Gen<'a> {
             secondary: std::mem::take(&mut self.psi.secondary),
             ..Psionics::default()
         };
-        let mut pool: Vec<&str> = DISCIPLINES.to_vec();
+        let mut pool: Vec<&str> = DISCIPLINES.iter().map(|&t| self.t(t)).collect();
         let mut cnt: HashMap<String, i32> = HashMap::new();
         let (mut nd, mut ns, mut nv) = (0, 0, 0);
         let mut fail = false;
@@ -680,8 +691,7 @@ impl<'a> Gen<'a> {
                     let pw = &self.d.powers[cand[k]];
                     let dn = DISCIPLINES
                         .get(pw.discipline.max(0) as usize)
-                        .copied()
-                        .unwrap_or("");
+                        .map_or("", |&t| self.t(t));
                     *cnt.entry(dn.to_owned()).or_insert(0) += 1;
                     if kind {
                         self.psi.devotions.push(pw.name.clone());

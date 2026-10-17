@@ -16,7 +16,7 @@ use cr_formats::character::Character;
 use cr_formats::inventory::InventoryBundle;
 use cr_store::Installation;
 use cr_store::encounter::{Encounter, parse_encounters};
-use cr_store::npc::{Flavor, GroupOptions, Npc, NpcOptions, NpcRules, Rand};
+use cr_store::npc::{Choice, Flavor, GroupOptions, Npc, NpcOptions, NpcRules, Rand};
 
 fn golden() -> Option<(PathBuf, Installation)> {
     let dir = PathBuf::from(std::env::var_os("CORERULES_GOLDEN")?);
@@ -47,8 +47,12 @@ fn at(trace: &[u32], line: usize) -> Rand {
 /// The stream ended where the trace goes on.
 fn check_stream(label: &str, trace: &[u32], line: usize, rand: &Rand) {
     let next = line + rand.calls() as usize;
+    // One past the trace's last call: the state that call left.
+    let after_last = |i: usize| {
+        (i == trace.len()).then(|| trace[i - 1].wrapping_mul(214_013).wrapping_add(2_531_011))
+    };
     assert_eq!(
-        trace.get(next).copied(),
+        trace.get(next).copied().or_else(|| after_last(next)),
         Some(rand.state()),
         "{label}: {} draws do not end where trace line {next} starts",
         rand.calls()
@@ -128,6 +132,11 @@ fn fields(c: &Character) -> Vec<(&'static str, String)> {
         ("book_pages", format!("{book_pages:?}")),
         ("psionics", format!("{:?}", d.unknown_0x196c)),
         ("psp", format!("{:?}", &d.unknown_0x1430[..10])),
+        ("rogue", format!("{:?}", d.rogue_skills.entries)),
+        (
+            "rogue_kit",
+            format!("{:?} {:?}", d.flag_0x1610, d.unknown_0x15e4),
+        ),
     ]
 }
 
@@ -219,11 +228,7 @@ fn golden_single_npcs() {
         let npc = rules.generate(&mut rand, race, &cl, &options).unwrap();
         check_stream(file, &t, line, &rand);
         compare(file, &npc.character, &saved(&dir, &format!("t3/{file}")));
-        let only_rogue = npc
-            .messages
-            .iter()
-            .all(|m| m.starts_with("Rogue skill points"));
-        assert!(only_rogue, "{file}: {:?}", npc.messages);
+        assert!(npc.messages.is_empty(), "{file}: {:?}", npc.messages);
     }
 }
 
@@ -376,5 +381,227 @@ fn golden_evermore_prefix() {
         let theirs: Vec<u32> = golden.data.abilities.iter().map(|a| a[0]).collect();
         assert_eq!(ours, theirs, "{file}");
         assert!(npc.messages.iter().any(|m| m.contains("Core Rules 2.0")));
+    }
+}
+
+/// A group line with explicit classes (by group: 0 warrior, 1 rogue, 2
+/// priest, 3 wizard, 4 psionicist) and level ranges.
+fn line(
+    number: (i32, i32),
+    race: Option<String>,
+    classes: &[(usize, Choice)],
+    levels: &[(usize, (i32, i32))],
+    kit: Choice,
+    alignment: Choice,
+) -> GroupOptions {
+    let mut o = GroupOptions {
+        number,
+        race,
+        allowed_combination: false,
+        kit,
+        alignment,
+        ..GroupOptions::default()
+    };
+    for (g, c) in classes {
+        o.classes[*g] = Some(c.clone());
+    }
+    for &(g, l) in levels {
+        o.levels[g] = l;
+    }
+    o
+}
+
+fn compare_all(label: &str, npcs: &[Npc], dir: &Path, files: &[String]) {
+    assert_eq!(npcs.len(), files.len(), "{label}: NPCs");
+    for (npc, file) in npcs.iter().zip(files) {
+        compare(file, &npc.character, &saved(dir, file));
+        assert!(npc.messages.is_empty(), "{file}: {:?}", npc.messages);
+    }
+}
+
+#[test]
+fn golden_group_explicit_options() {
+    let Some((dir, install)) = golden() else {
+        return;
+    };
+    let rules = rules(&install);
+    if rules.flavor() != Flavor::Expansion || !dir.join("t3/trace_session2.log").exists() {
+        return;
+    }
+    let t = trace(&dir.join("t3/trace_session2.log"));
+    let thief = Choice::Name("Thief".into());
+    // The kits, alignment and races as the saved characters hold them.
+    let g12 = saved(&dir, "t3/12_group_halfling_thief5_burglar_NE.dat");
+    let g11 = saved(&dir, "t3/11_group_gnome_thief3_mouseburglar.dat");
+    let a = line(
+        (1, 1),
+        Some(g12.data.race.clone()),
+        &[(1, thief.clone())],
+        &[(1, (5, 5))],
+        Choice::Name(g12.data.kit.clone()),
+        Choice::Name(g12.data.alignment.clone()),
+    );
+    let b = line(
+        (2, 2),
+        None,
+        &[(0, Choice::Random), (1, thief.clone())],
+        &[(0, (2, 4)), (1, (1, 3))],
+        Choice::Random,
+        Choice::Random,
+    );
+    let c = line(
+        (1, 1),
+        Some(g11.data.race.clone()),
+        &[(1, thief)],
+        &[(0, (2, 4)), (1, (3, 3))],
+        Choice::Name(g11.data.kit.clone()),
+        Choice::Random,
+    );
+    let mut rand = at(&t, 2);
+    let npcs = rules
+        .generate_groups(&mut rand, std::slice::from_ref(&a))
+        .unwrap();
+    check_stream("10", &t, 2, &rand);
+    compare_all(
+        "10",
+        &npcs,
+        &dir,
+        &["t3/10_halfling_thief5_burglar_NE.dat".into()],
+    );
+    // The dialog's list is sorted: C, A, B.
+    let mut rand = at(&t, 186);
+    let npcs = rules.generate_groups(&mut rand, &[a, b, c]).unwrap();
+    check_stream("11..14", &t, 186, &rand);
+    let files: Vec<String> = [
+        "11_group_gnome_thief3_mouseburglar",
+        "12_group_halfling_thief5_burglar_NE",
+        "13_group_random_ranger_thief",
+        "14_group_random_paladin_thief",
+    ]
+    .iter()
+    .map(|f| format!("t3/{f}.dat"))
+    .collect();
+    compare_all("11..14", &npcs, &dir, &files);
+}
+
+#[test]
+fn golden_group_explicit_kits() {
+    let Some((dir, install)) = golden() else {
+        return;
+    };
+    let rules = rules(&install);
+    if rules.flavor() != Flavor::Expansion || !dir.join("t3/trace_session3.log").exists() {
+        return;
+    }
+    let t = trace(&dir.join("t3/trace_session3.log"));
+    // File, classes by group, levels by group (warrior, rogue, wizard).
+    type Line = (&'static str, &'static [(usize, &'static str)], [i32; 3]);
+    let cases: [Line; 9] = [
+        (
+            "15_group_halfling_fighter3_forestwalker",
+            &[(0, "Fighter")],
+            [3, 5, 5],
+        ),
+        (
+            "16_group_halfling_ft_3_3_cartographer",
+            &[(0, "Fighter"), (1, "Thief")],
+            [3, 3, 5],
+        ),
+        (
+            "17_group_halfling_thief3_urchin",
+            &[(1, "Thief")],
+            [3, 3, 5],
+        ),
+        ("18_group_human_bard4_gypsy", &[(1, "Bard")], [4, 4, 0]),
+        ("19_group_human_bard5_loremaster", &[(1, "Bard")], [9, 5, 5]),
+        (
+            "20_group_human_fighter4_sharpshooter",
+            &[(0, "Fighter")],
+            [4, 0, 0],
+        ),
+        ("21_group_human_mage5_wujen", &[(3, "Mage")], [9, 4, 5]),
+        (
+            "22_group_human_paladin4_errant",
+            &[(0, "Paladin")],
+            [4, 4, 0],
+        ),
+        (
+            "23_group_human_ranger9_feralan",
+            &[(0, "Ranger")],
+            [9, 4, 0],
+        ),
+    ];
+    let files: Vec<String> = cases.iter().map(|c| format!("t3/{}.dat", c.0)).collect();
+    let mut lines: Vec<GroupOptions> = cases
+        .iter()
+        .zip(&files)
+        .map(|((_, classes, lv), file)| {
+            let g = saved(&dir, file);
+            let classes: Vec<(usize, Choice)> = classes
+                .iter()
+                .map(|&(grp, n)| (grp, Choice::Name(n.into())))
+                .collect();
+            let levels: Vec<(usize, (i32, i32))> = [0, 1, 3]
+                .into_iter()
+                .zip(lv)
+                .filter(|(_, l)| **l > 0)
+                .map(|(grp, &l)| (grp, (l, l)))
+                .collect();
+            line(
+                (1, 1),
+                Some(g.data.race.clone()),
+                &classes,
+                &levels,
+                Choice::Name(g.data.kit.clone()),
+                Choice::Random,
+            )
+        })
+        .collect();
+    // Given in another order: Create Group takes the sorted list's.
+    lines.reverse();
+    let mut rand = at(&t, 2);
+    let npcs = rules.generate_groups(&mut rand, &lines).unwrap();
+    check_stream("15..23", &t, 2, &rand);
+    compare_all("15..23", &npcs, &dir, &files);
+}
+
+#[test]
+fn golden_encounter_dependent_npc_lines() {
+    let Some((dir, install)) = golden() else {
+        return;
+    };
+    let encounter_rules = install.encounter_rules().unwrap();
+    if encounter_rules.flavor() != Flavor::Expansion || !dir.join("t3/trace_session3.log").exists()
+    {
+        return;
+    }
+    let t = trace(&dir.join("t3/trace_session3.log"));
+    let list: Vec<Encounter> =
+        parse_encounters(&fs::read(dir.join("t3/24_EncountU_gentry_merchants.dat")).unwrap())
+            .unwrap();
+    let n = list.len();
+    for (theirs, line, end) in [(&list[n - 2], 1691, 3486), (&list[n - 1], 3492, 5003)] {
+        let template = theirs.template.clone();
+        let mut rand = at(&t, line);
+        let g = encounter_rules.generate(&template, &mut rand).unwrap();
+        assert!(g.messages.is_empty(), "{template}: {:?}", g.messages);
+        assert_eq!(
+            line + rand.calls() as usize,
+            end,
+            "{template}: the generation ends where the trace's OK starts"
+        );
+        check_stream(&template, &t, line, &rand);
+        let ours = &g.encounter.npcs;
+        assert_eq!(ours.len(), theirs.npcs.len(), "{template}: packages");
+        for (i, (o, t)) in ours.iter().zip(&theirs.npcs).enumerate() {
+            let label = format!("{template} [{i}]");
+            assert_eq!(o.count, t.count, "{label}: count");
+            assert_eq!(
+                o.individual_hit_points(),
+                t.individual_hit_points(),
+                "{label}: hit points"
+            );
+            compare(&label, &o.character, &t.character);
+        }
     }
 }

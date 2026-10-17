@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
-use cr_store::npc::{Abilities, GroupOptions, Npc, NpcOptions, NpcRules};
+use cr_store::npc::{Abilities, Choice, GroupOptions, Npc, NpcOptions, NpcRules};
 use cr_store::treasure::{Flavor, Rand};
 use cr_store::{Installation, Result};
 use gtk::glib;
@@ -377,7 +377,7 @@ pub fn new_npc<H: Host + 'static>(host: &Rc<H>) {
         move |_| {
             let classes = chosen();
             if classes.is_empty() {
-                return host.toast("You must select a class for your NPC");
+                return host.toast(&rules.no_class_message());
             }
             // The spinners edit what Ability Scores… rolled.
             let abilities = rolled.borrow().map(|mut a| {
@@ -424,27 +424,84 @@ pub fn new_npc<H: Host + 'static>(host: &Rc<H>) {
     dialog.present(Some(&host.parent()));
 }
 
-/// Opens the New NPC Group dialog.
+/// "~Random" in the dialog's choices.
+const RANDOM: &str = "~Random";
+/// The class choice that takes no class of a group.
+const NO_CLASS: &str = "None";
+/// The kit choice that takes no kit.
+const NO_KIT: &str = "NONE";
+
+/// A choice row's selection: `items[0]` is "~Random".
+fn choice(row: &adw::ComboRow, items: &[String]) -> Choice {
+    match row.selected() {
+        0 => Choice::Random,
+        i => items
+            .get(i as usize)
+            .map_or(Choice::Random, |n| Choice::Name(n.clone())),
+    }
+}
+
+/// Opens the New NPC Group dialog: one or more lines (number, race,
+/// classes, kit, alignment and levels), made in the order of the sorted
+/// list as Create Group does.
 pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
     let Some(rules) = host.npc_rules() else {
         return;
     };
-    let mut races = vec!["Random".to_owned()];
+    let mut races = vec![RANDOM.to_owned()];
     races.extend(rules.races());
     let race = combo_row("Race", &races);
     let fewest = spin_row("Fewest", 1, 1, 100);
     let most = spin_row("Most", 1, 1, 100);
     let rules_choice = rules_row();
     let party = adw::EntryRow::builder().title("Group Name").build();
-    let group = adw::PreferencesGroup::builder()
-        .title("Group")
-        .description("Each NPC takes a class combination its race allows")
-        .build();
+    let group = adw::PreferencesGroup::builder().title("Group").build();
     group.add(&party);
     group.add(&race);
     group.add(&fewest);
     group.add(&most);
     group.add(&rules_choice);
+
+    let allowed = adw::SwitchRow::builder()
+        .title("Allowed Combination")
+        .subtitle("Each NPC takes a class combination its race allows")
+        .active(true)
+        .build();
+    let classes_group = adw::PreferencesGroup::builder()
+        .title("Classes")
+        .description("A class of each group, or none")
+        .build();
+    classes_group.add(&allowed);
+    let class_rows: Vec<(adw::ComboRow, Vec<String>)> = GROUPS
+        .iter()
+        .enumerate()
+        .map(|(g, name)| {
+            let mut items = vec![RANDOM.to_owned(), NO_CLASS.to_owned()];
+            items.extend(rules.group_classes(g));
+            let row = combo_row(name, &items);
+            // Without a choice only the warrior group takes a class.
+            row.set_selected(if g == 0 { 0 } else { 1 });
+            row.set_sensitive(false);
+            classes_group.add(&row);
+            (row, items)
+        })
+        .collect();
+    allowed.connect_active_notify({
+        let rows: Vec<adw::ComboRow> = class_rows.iter().map(|r| r.0.clone()).collect();
+        move |switch| {
+            for row in &rows {
+                row.set_sensitive(!switch.is_active());
+            }
+        }
+    });
+    let mut kits = vec![RANDOM.to_owned(), NO_KIT.to_owned()];
+    kits.extend(rules.kits());
+    let kit = combo_row("Kit", &kits);
+    let mut alignments = vec![RANDOM.to_owned()];
+    alignments.extend(rules.alignments());
+    let alignment = combo_row("Alignment", &alignments);
+    classes_group.add(&kit);
+    classes_group.add(&alignment);
 
     let levels_group = adw::PreferencesGroup::builder()
         .title("Levels")
@@ -472,9 +529,77 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
         })
         .collect();
 
+    // The lines added so far, shown sorted as the original's list.
+    let lines: Rc<RefCell<Vec<GroupOptions>>> = Rc::default();
+    let lines_group = adw::PreferencesGroup::builder()
+        .title("Lines")
+        .description("Without lines, Create makes the line above")
+        .build();
+    let add = gtk::Button::builder()
+        .label("_Add Line")
+        .use_underline(true)
+        .valign(gtk::Align::Center)
+        .build();
+    lines_group.set_header_suffix(Some(&add));
+    let line_rows: Rc<RefCell<Vec<adw::ActionRow>>> = Rc::default();
+
+    let current = {
+        let (fewest, most, race, races) = (fewest.clone(), most.clone(), race.clone(), races);
+        let (rules_choice, allowed) = (rules_choice.clone(), allowed.clone());
+        let (kit, alignment) = (kit.clone(), alignment.clone());
+        move || {
+            let mut options = GroupOptions {
+                number: (fewest.value() as i32, most.value() as i32),
+                race: match race.selected() {
+                    0 => None,
+                    i => races.get(i as usize).cloned(),
+                },
+                allowed_combination: allowed.is_active(),
+                kit: choice(&kit, &kits),
+                alignment: choice(&alignment, &alignments),
+                players_option: rules_choice.selected() == 1,
+                ..Default::default()
+            };
+            for (slot, (row, items)) in options.classes.iter_mut().zip(&class_rows) {
+                *slot = match row.selected() {
+                    1 => None,
+                    _ => Some(choice(row, items)),
+                };
+            }
+            for (slot, (low, high)) in options.levels.iter_mut().zip(&levels) {
+                let (low, high) = (low.value() as i32, high.value() as i32);
+                *slot = (low.min(high), low.max(high));
+            }
+            options
+        }
+    };
+    let current = Rc::new(current);
+    add.connect_clicked({
+        let (lines, line_rows, lines_group) =
+            (lines.clone(), line_rows.clone(), lines_group.clone());
+        let current = current.clone();
+        move |_| {
+            let mut lines = lines.borrow_mut();
+            lines.push(current());
+            GroupOptions::sort(&mut lines);
+            for row in line_rows.borrow_mut().drain(..) {
+                lines_group.remove(&row);
+            }
+            for line in lines.iter() {
+                let row = adw::ActionRow::builder()
+                    .title(glib::markup_escape_text(&line.label()))
+                    .build();
+                lines_group.add(&row);
+                line_rows.borrow_mut().push(row);
+            }
+        }
+    });
+
     let page = adw::PreferencesPage::new();
     page.add(&group);
+    page.add(&classes_group);
     page.add(&levels_group);
+    page.add(&lines_group);
     let create = create_button("_Create");
     let dialog = dialog("New NPC Group", &page, &create);
     fewest.connect_value_notify({
@@ -501,20 +626,11 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
             if name.is_empty() {
                 return host.toast("A group name must be supplied.");
             }
-            let mut options = GroupOptions {
-                number: (fewest.value() as i32, most.value() as i32),
-                race: match race.selected() {
-                    0 => None,
-                    i => races.get(i as usize).cloned(),
-                },
-                players_option: rules_choice.selected() == 1,
-                ..Default::default()
-            };
-            for (slot, (low, high)) in options.levels.iter_mut().zip(&levels) {
-                let (low, high) = (low.value() as i32, high.value() as i32);
-                *slot = (low.min(high), low.max(high));
+            let mut lines = lines.borrow().clone();
+            if lines.is_empty() {
+                lines.push(current());
             }
-            let npcs = rules.generate_group(&mut host.rand().borrow_mut(), &options);
+            let npcs = rules.generate_groups(&mut host.rand().borrow_mut(), &lines);
             let npcs = match npcs {
                 Ok(npcs) => npcs,
                 Err(e) => return host.toast(&e.to_string()),

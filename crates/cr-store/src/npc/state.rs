@@ -11,7 +11,8 @@ use super::Session;
 use super::data::{CLASS_ABILITIES, Data, KITS, Kit, Klass, PartExt, RACIAL_ABILITIES};
 use super::equip::Equipment;
 use super::prof::Weapons;
-use super::program::BACKGROUNDS;
+use super::program::Tx;
+use super::texts::*;
 use crate::treasure::Rand;
 use crate::{Error, Result};
 
@@ -75,6 +76,62 @@ pub fn inv_add(list: &mut Vec<It>, it: It, merge: bool) {
     list.insert(at, it);
 }
 
+/// A kit or alignment choice of the options object (+0x14c): empty from
+/// Create NPC, "~Random" or a name from Create Multiple NPCs.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub enum Opt {
+    #[default]
+    Empty,
+    Random,
+    Name(String),
+}
+
+/// The kit tests of 0x4c2a75 and 0x4d9eb0 in their order: the ability
+/// (0..6) and sub-ability (`None`: the score itself, else 0 or 1), and the
+/// offset of the kit's minimum byte.
+const KIT_TESTS: [(usize, Option<usize>, u32); 18] = [
+    (0, None, 0x4c),
+    (0, Some(1), 0x50),
+    (0, Some(0), 0x4e),
+    (1, None, 0x52),
+    (1, Some(0), 0x54),
+    (1, Some(1), 0x56),
+    (2, None, 0x58),
+    (2, Some(0), 0x5a),
+    (2, Some(1), 0x5c),
+    (3, None, 0x5e),
+    (3, Some(0), 0x62),
+    (3, Some(1), 0x60),
+    (4, None, 0x64),
+    (4, Some(0), 0x66),
+    (4, Some(1), 0x68),
+    (5, None, 0x6a),
+    (5, Some(0), 0x6e),
+    (5, Some(1), 0x6c),
+];
+
+/// The alignments in 0x4c209c's order and the kit flag of each
+/// (0x670ed3: +6 .. +0xe).
+pub const ALIGNMENTS: [(Tx, u32); 9] = [
+    (LAWFUL_GOOD, 6),
+    (LAWFUL_NEUTRAL, 7),
+    (LAWFUL_EVIL, 8),
+    (NEUTRAL_GOOD, 9),
+    (TRUE_NEUTRAL, 10),
+    (NEUTRAL_EVIL, 11),
+    (CHAOTIC_GOOD, 12),
+    (CHAOTIC_NEUTRAL, 13),
+    (CHAOTIC_EVIL, 14),
+];
+
+/// The order 0x4c209c lists a kit's alignments in (indexes into
+/// [`ALIGNMENTS`]; Chaotic Evil twice).
+const KIT_ALIGN_ORDER: [usize; 10] = [8, 1, 2, 3, 5, 6, 7, 8, 4, 0];
+
+fn align_flag(d: &Data, name: &str) -> Option<u32> {
+    ALIGNMENTS.iter().find(|a| d.t(a.0) == name).map(|a| a.1)
+}
+
 /// Psionic disciplines and powers.
 #[derive(Debug, Clone, Default)]
 pub struct Psionics {
@@ -116,6 +173,11 @@ pub struct Gen<'a> {
     /// leadership/appearance.
     pub subs: [[i32; 2]; 6],
     pub alignment: String,
+    /// The options object's kit (+0xc) and alignment (+0x10), and the kit
+    /// of the kit option (0x465f6c, 0x6618ce).
+    pub opt_kit: Opt,
+    pub opt_align: Opt,
+    pub in_kit: Option<&'a Kit>,
     pub kit_name: String,
     pub kit_idx: Option<usize>,
     pub class_abilities: Vec<Vec<&'a Part>>,
@@ -130,7 +192,10 @@ pub struct Gen<'a> {
     pub gold: i32,
     pub budget: i32,
 
-    pub nwp: Vec<(String, i32)>,
+    /// Name, cost and the third member of 0x4300b5.
+    pub nwp: Vec<(String, i32, i32)>,
+    /// char +0x1e3c: (class, proficiency, copies) 0x4d9527 recorded.
+    pub lang_counts: Vec<(usize, String, i32)>,
     pub slots: i32,
     pub lang_pool: i32,
     pub m784: i32,
@@ -153,6 +218,16 @@ pub struct Gen<'a> {
     pub book_p: Vec<String>,
     pub psi: Psionics,
     pub psp: Vec<i32>,
+    /// Traits (+0x1830) and disadvantages (+0x1844), Player's Option.
+    pub traits: Vec<String>,
+    pub disadvantages: Vec<String>,
+    /// Rogue skills (+0x15c8): name and the points of each level.
+    pub rogue: Vec<(String, [i32; 100])>,
+    /// +0x1610: the kit's fixed rogue adjustments were applied.
+    pub m1610: bool,
+    /// +0x15e4 (random, by level) and +0x15f8 (fixed) kit bonus objects.
+    pub rogue_random: Vec<Option<super::rogue::KitBonus>>,
+    pub rogue_fixed: Vec<Option<super::rogue::KitBonus>>,
 }
 
 impl<'a> Gen<'a> {
@@ -166,9 +241,7 @@ impl<'a> Gen<'a> {
         po: bool,
     ) -> Result<Self> {
         if classes.is_empty() {
-            return Err(Error::Invalid(
-                "You must select a class for your NPC".into(),
-            ));
+            return Err(Error::Invalid(d.t(NO_CLASS).into()));
         }
         let mut ks = Vec::new();
         for (name, _) in classes {
@@ -204,6 +277,9 @@ impl<'a> Gen<'a> {
             exc: 0,
             subs: [[0; 2]; 6],
             alignment: String::new(),
+            opt_kit: Opt::Empty,
+            opt_align: Opt::Empty,
+            in_kit: None,
             kit_name: String::new(),
             kit_idx: None,
             class_abilities: Vec::new(),
@@ -217,6 +293,7 @@ impl<'a> Gen<'a> {
             gold: 0,
             budget: 0,
             nwp: Vec::new(),
+            lang_counts: Vec::new(),
             slots: 0,
             lang_pool: 0,
             m784: 0,
@@ -238,6 +315,12 @@ impl<'a> Gen<'a> {
             book_p: Vec::new(),
             psi: Psionics::default(),
             psp: vec![0; 101],
+            traits: Vec::new(),
+            disadvantages: Vec::new(),
+            rogue: Vec::new(),
+            m1610: false,
+            rogue_random: Vec::new(),
+            rogue_fixed: Vec::new(),
         })
     }
 
@@ -250,6 +333,11 @@ impl<'a> Gen<'a> {
             return 0;
         }
         (self.r.rand() % n).wrapping_add(lo)
+    }
+
+    /// The program text `tx` (read from the installation's program).
+    pub fn t(&self, tx: Tx) -> &'a str {
+        self.d.program.text(tx)
     }
 
     /// `mod(n)` (0x554d70).
@@ -352,7 +440,7 @@ impl<'a> Gen<'a> {
                 break;
             }
         }
-        if self.race.name.to_uppercase().contains("SWANMAY") {
+        if self.race.name.to_uppercase().contains(self.t(SWANMAY)) {
             self.sex = 0;
         }
         let sub = self.subrace.name.clone();
@@ -396,6 +484,12 @@ impl<'a> Gen<'a> {
                 if k.v(0x1c + 4 * i as u32) > 3 {
                     *a += bonus;
                 }
+            }
+        }
+        if let Some(kit) = self.in_kit {
+            for (i, a) in v.iter_mut().enumerate() {
+                let off = 0x4c + 6 * i as u32;
+                *a = (*a).max(kit.b(off)).min(kit.max(off));
             }
         }
         for a in v.iter_mut() {
@@ -443,18 +537,135 @@ impl<'a> Gen<'a> {
         }
     }
 
-    /// 0x4c209c (no input alignment): one of class 0's alignments.
+    /// Sets the kit and alignment options of Create Multiple NPCs.
+    pub fn set_options(&mut self, kit: Opt, alignment: Opt) {
+        let norm = |o: Opt| match o {
+            Opt::Name(s) if s.is_empty() => Opt::Empty,
+            o => o,
+        };
+        let (kit, alignment) = (norm(kit), norm(alignment));
+        self.in_kit = match &kit {
+            Opt::Name(s) if s != "NONE" => self.d.find_kit(s),
+            _ => None,
+        };
+        self.opt_kit = kit;
+        self.opt_align = alignment;
+    }
+
+    /// 0x4c209c: an alignment option is kept ("~Random" presets Lawful
+    /// Good). Without a kit option one of class 0's alignments (+0xa0);
+    /// with one, the class alignments the kit allows, else every
+    /// alignment the kit allows, else any (0x4c1966).
     pub fn st_alignment(&mut self) {
+        match &self.opt_align {
+            Opt::Name(a) => {
+                self.alignment = a.clone();
+                return;
+            }
+            Opt::Random => self.alignment = self.t(ALIGNMENTS[0].0).into(),
+            _ => {}
+        }
         let list = self.classes[0].sa(0xa0);
-        if !list.is_empty() {
-            let i = self.between(0, list.len() as i32 - 1);
-            self.alignment = list[i as usize].clone();
+        let kit = self.in_kit;
+        let has = |off: u32| kit.is_some_and(|k| k.flag(off));
+        let mut filtered: Vec<&str> = Vec::new();
+        for x in list {
+            if matches!(&self.opt_kit, Opt::Empty | Opt::Random)
+                || self.opt_kit == Opt::Name("NONE".into())
+            {
+                let i = self.between(0, list.len() as i32 - 1);
+                self.alignment = list[i as usize].clone();
+                return;
+            }
+            if align_flag(self.d, x).is_some_and(has) {
+                filtered.push(x);
+            }
+        }
+        let mut pick = String::new();
+        if filtered.is_empty() {
+            let all: Vec<&str> = KIT_ALIGN_ORDER
+                .iter()
+                .map(|&i| ALIGNMENTS[i])
+                .filter(|a| has(a.1))
+                .map(|a| self.t(a.0))
+                .collect();
+            if !all.is_empty() {
+                pick = all[self.between(0, all.len() as i32 - 1) as usize].into();
+            }
+        } else {
+            pick = filtered[self.between(0, filtered.len() as i32 - 1) as usize].into();
+        }
+        if pick.is_empty() {
+            let i = self.modn(9) as usize;
+            pick = self.t(ALIGNMENTS[i].0).into();
+        }
+        self.alignment = pick;
+    }
+
+    /// An ability or sub-ability as the vtable getters read it: a
+    /// sub-ability reads its score outside Player's Option.
+    fn abil_get(&self, i: usize, sub: Option<usize>) -> i32 {
+        match sub {
+            Some(j) if self.po => self.subs[i][j],
+            _ => self.ab[i],
         }
     }
 
-    /// 0x4c2a75 (no input kit), then the kit's experience (0x4c3d1d), the
-    /// class abilities (0x442cac) and their flags (0x4c7cb2).
+    fn abil_set(&mut self, i: usize, sub: Option<usize>, v: i32) {
+        match sub {
+            Some(j) => self.subs[i][j] = v,
+            None => self.ab[i] = v,
+        }
+    }
+
+    /// 0x4d9eb0 (a kit option): every class's minima (+0x34..) raise the
+    /// scores, then each is held within the kit's minimum and maximum.
+    fn fit_to_kit(&mut self) {
+        for k in self.classes.clone() {
+            for i in 0..6 {
+                let min = k.v(0x34 + 4 * i as u32);
+                if self.abil_get(i, None) < min {
+                    self.ab[i] = min;
+                }
+            }
+        }
+        let Some(kit) = self.kit() else { return };
+        for (i, sub, off) in KIT_TESTS {
+            if self.abil_get(i, sub) < kit.b(off) {
+                self.abil_set(i, sub, kit.b(off));
+            }
+            if kit.max(off) < self.abil_get(i, sub) {
+                self.abil_set(i, sub, kit.max(off));
+            }
+        }
+    }
+
+    /// 0x4c2a75: a kit option is kept (and the scores fitted to it);
+    /// "~Random" presets "None" and draws like Create NPC: one of the kits
+    /// the character qualifies for, then the kit's experience (0x4c3d1d).
+    /// Then the class abilities (0x442cac) and their flags (0x4c7cb2).
     pub fn st_kit(&mut self) {
+        let explicit = match &self.opt_kit {
+            Opt::Name(ks) => Some(ks.clone()),
+            Opt::Random => {
+                self.kit_name = "None".into();
+                None
+            }
+            _ => None,
+        };
+        if let Some(ks) = explicit {
+            // An explicit kit (also "None"): set, the scores fitted to it,
+            // and no kit experience.
+            self.kit_idx = self.d.part_exact(KITS, &ks);
+            self.kit_name = ks;
+            self.fit_to_kit();
+        } else {
+            self.pick_kit();
+        }
+        self.class_abilities_of();
+    }
+
+    fn pick_kit(&mut self) {
         let mut low = 100_000;
         for k in &self.classes {
             for i in 0..6 {
@@ -487,18 +698,7 @@ impl<'a> Gen<'a> {
             (0x6c, s[5][1]),
         ];
         // 0x670ed3: b6..be; any other alignment reads +0x63.
-        let align_flag = match self.alignment.as_str() {
-            "Lawful Good" => 6,
-            "Lawful Neutral" => 7,
-            "Lawful Evil" => 8,
-            "Neutral Good" => 9,
-            "True Neutral" => 10,
-            "Neutral Evil" => 11,
-            "Chaotic Good" => 12,
-            "Chaotic Neutral" => 13,
-            "Chaotic Evil" => 14,
-            _ => 99,
-        };
+        let align_flag = align_flag(self.d, &self.alignment).unwrap_or(99);
         let mut cand = Vec::new();
         for (p, kit) in self.d.parts[KITS].iter().zip(&self.d.kits) {
             let Some(kit) = kit else { continue };
@@ -551,6 +751,10 @@ impl<'a> Gen<'a> {
                 *x = (i64::from(*x) * f / 100) as i32;
             }
         }
+    }
+
+    /// The class abilities (0x442cac) and their flags (0x4c7cb2).
+    fn class_abilities_of(&mut self) {
         self.class_abilities = self
             .classes
             .iter()
@@ -589,19 +793,20 @@ impl<'a> Gen<'a> {
             String::new()
         };
         self.social = if s.is_empty() {
-            "Middle lower class".into()
+            self.t(MIDDLE_LOWER_CLASS).into()
         } else {
             s
         };
     }
 
-    /// 0x4c5c34: one of the program's 21 backgrounds; "NONE" leaves it
-    /// empty.
+    /// 0x4c5c34: one of the program's 21 backgrounds. The code skips
+    /// index 0, yet the saved character then reads "NONE" (the first
+    /// entry): the field is taken as the drawn entry.
     pub fn st_background(&mut self) {
-        let i = self.between(1, BACKGROUNDS.len() as i32) - 1;
-        if i != 0 {
-            self.background = BACKGROUNDS[i as usize].into();
-        }
+        let d = self.d;
+        let list = &d.program.backgrounds;
+        let i = self.between(1, list.len() as i32) - 1;
+        self.background = list.get(i as usize).cloned().unwrap_or_default();
     }
 
     fn dice(&mut self, base: i32, n: i32, s: i32) -> i32 {
@@ -642,6 +847,7 @@ impl<'a> Gen<'a> {
     /// copper.
     pub fn st_money(&mut self) {
         let kit = self.kit();
+        let d = self.d;
         let f32of = |x: f64| f64::from(x as f32);
         let factor = |kit: &Kit, social: &str, name: &str| -> (f64, f64) {
             let pct = match kit.i(0x8c) {
@@ -649,7 +855,7 @@ impl<'a> Gen<'a> {
                 p => p,
             };
             let mut f = f32of(f64::from(pct) * f64::from(0.01f32));
-            if name == "Cavalier" && social == "Lower class" {
+            if name == d.t(CAVALIER) && social == d.t(LOWER_CLASS) {
                 f = 1.0;
             }
             let b = f32of(f64::from(kit.i(0x88)) * f64::from(0.01f32));
@@ -700,7 +906,7 @@ impl<'a> Gen<'a> {
                 gp = gp.wrapping_shl(1);
             }
         }
-        let add = if self.social == "Lower class" {
+        let add = if self.social == self.t(LOWER_CLASS) {
             25
         } else {
             100
@@ -777,12 +983,20 @@ impl<'a> Gen<'a> {
         self.hp = hp;
     }
 
-    /// 0x43ba4a(g), non-dual: the warriors' table when a class is a
-    /// warrior, class g has +0x279c or a class ability has +0x7b0.
+    /// 0x43ba4a(g): the warriors' table when a class is a warrior, class g
+    /// has +0x279c or a class ability has +0x7b0.
+    /// Dual-class: class g alone (a warrior, +0x279c, or one of its own
+    /// class abilities with +0x7b0).
     fn con_hp(&self, g: usize) -> i32 {
-        let war = self.has_group(0)
-            || self.classes[g].flag(0x279c)
-            || self.class_ability_any(|p| p.n(0x7b0) != 0);
+        let war = if self.dual() {
+            self.classes[g].group == 0
+                || self.classes[g].flag(0x279c)
+                || self.class_abilities[g].iter().any(|p| p.n(0x7b0) != 0)
+        } else {
+            self.has_group(0)
+                || self.classes[g].flag(0x279c)
+                || self.class_ability_any(|p| p.n(0x7b0) != 0)
+        };
         let table = if war { &CON_HP_WARRIOR } else { &CON_HP };
         table[self.fitness().clamp(0, 25) as usize]
     }
@@ -790,9 +1004,23 @@ impl<'a> Gen<'a> {
     /// 0x42e0ab: the maximum hit points of the rolls in `hp`.
     pub fn max_hp(&mut self) -> i32 {
         if self.dual() {
-            // 0x42e0ab / 0x43ba4a, dual-class paths: not decoded; the
-            // multi-class formula is used.
-            self.warn("Dual-class maximum hit points (0x42e0ab) are not decoded; the multi-class formula was used.");
+            // The level counter runs on across the classes: each class adds
+            // the rolls of its levels above the earlier classes', each with
+            // its own Con bonus while within +0x88; no clamp.
+            let mut total = 0i32;
+            let mut level = 1;
+            for g in 0..self.classes.len() {
+                let last = self.classes[g].v(0x88);
+                let bonus = self.con_hp(g);
+                while level <= self.levels[g] {
+                    total = total.wrapping_add(self.hp[g][(level - 1) as usize]);
+                    if level <= last {
+                        total = total.wrapping_add(bonus);
+                    }
+                    level += 1;
+                }
+            }
+            return total;
         }
         let n = self.classes.len() as i32;
         let mut s: i32 = (0..self.classes.len())
