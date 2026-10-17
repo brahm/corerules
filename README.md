@@ -30,13 +30,14 @@ packages for x86-64 Linux:
 | Fedora 44 or newer | `.rpm` | `sudo dnf install ./corerules-*.rpm` |
 | Ubuntu 26.04 or newer | `.deb` | `sudo apt install ./corerules_*_amd64.deb` |
 | Any distribution | `.flatpak` | `flatpak install --user CoreRules-*.flatpak` |
-| Any distribution (glibc 2.39+) | `.AppImage` | `chmod +x CoreRules-*.AppImage`, then run it |
+| Any distribution (glibc 2.43+) | `.AppImage` | `chmod +x CoreRules-*.AppImage`, then run it |
 
 The app is called **Core Rules** in the applications menu (`corerules` on
 the command line); the `.deb` and `.rpm` also install the `cr` command-line
-tool. The Flatpak uses the GNOME 50 runtime from Flathub and may read and
+tool. The Flatpak uses the GNOME 51 runtime from Flathub and may read and
 write your home folder, where Wine keeps Core Rules, and CDs under `/media`
-and `/run/media`.
+and `/run/media`. The AppImage bundles the GNOME 51 libraries (GTK,
+libadwaita and the rest).
 
 ## Running without Wine
 
@@ -208,14 +209,13 @@ the others package `target/release`):
 ```sh
 packaging/deb/build.sh 0.1.0        # dist/corerules_0.1.0_amd64.deb (on Ubuntu 26.04)
 packaging/rpm/build.sh 0.1.0        # dist/corerules-0.1.0-1.fc44.x86_64.rpm (on Fedora 44, needs rpm-build)
-packaging/appimage/build.sh 0.1.0   # dist/CoreRules-0.1.0-x86_64.AppImage (on Ubuntu 24.04)
+packaging/appimage/build-in-sdk.sh 0.1.0  # dist/CoreRules-0.1.0-x86_64.AppImage (in the GNOME 51 SDK)
 flatpak-builder --user --install-deps-from=flathub --install build \
     packaging/flatpak/io.github.brahm.CoreRules.yml
 ```
 
 The Packages workflow in GitHub Actions builds all four, installs each one
-on clean Ubuntu 24.04 (AppImage), Ubuntu 26.04, Ubuntu latest, Fedora 44
-and Fedora latest
+on clean Ubuntu 26.04, Ubuntu latest, Fedora 44 and Fedora latest
 containers and starts the app. Pushing a `v*` tag publishes them as a
 release; `packaging/release-notes.md` is its description.
 

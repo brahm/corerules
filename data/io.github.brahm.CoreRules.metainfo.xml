@@ -52,6 +52,18 @@
     <color type="primary" scheme_preference="dark">#77101b</color>
   </branding>
   <releases>
+    <release version="0.6.0" date="2026-10-17" type="development">
+      <description>
+        <p>Parties, the Expansion as the place for new content, and Windows' list order.</p>
+        <ul>
+          <li>Manage parties and delete characters, with Undo</li>
+          <li>Core Rules 2.0 installations open read-only; Import Core Rules 2.0 brings their characters and records into the Expansion</li>
+          <li>Lists sort exactly as Windows sorts them</li>
+          <li>Player's Option NPCs choose kit languages and pay base prices as the original does</li>
+          <li>The Flatpak and the AppImage use the GNOME 51 platform</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.0" date="2026-10-17" type="development">
       <description>
         <p>Records and characters can now travel in DM Toolkit packages.</p>

@@ -1,16 +1,20 @@
-What's new in 0.5.0:
+What's new in 0.6.0:
 
-- DM Toolkit packages: Import… and Export… in the main menu read and write
-  the `.xpx` packages of the Expansion and the `.xpt` packages of Core
-  Rules 2.0, with characters and any record you made (races, classes,
-  items, spells, monsters, encounters, traps, psionic powers, treasure
-  bundles), exactly as the original programs do; a 2.0 package imported
-  into the Expansion is converted like the original converts it
-- New Package… and Edit Package… create a package or change one, adding
-  your records and characters or taking items out
-- `cr export`, `cr import` and `cr package` do the same from the command
-  line
-- There is no `.mon` file: both originals export monsters in packages
+- Parties: Manage Parties… puts characters in a party, takes them out or
+  deletes every member, and a character page can delete its character,
+  with Undo (`cr party` and `cr delete` from the command line)
+- New content follows the Expansion: a Core Rules 2.0 installation opens
+  read-only, and Import Core Rules 2.0… brings its characters and records
+  into an Expansion installation, converted as the Expansion converts a
+  2.0 package; `.xpt` packages are only imported
+- Lists sort exactly as Windows sorts them
+- Player's Option NPCs choose the languages their kit offers and pay the
+  base prices, as the original does
+- Table Rolls: the first roll of each dialog compares with what the last
+  one left, as in the original
+- The class editor offers the original's weapon categories
+- The Flatpak uses the GNOME 51 runtime, and the AppImage carries the
+  GNOME 51 libraries
 
 Every change was checked against both original programs.
 
@@ -25,7 +29,8 @@ It contains no rules content; you need your own copy of Core Rules.
 | Ubuntu 26.04 or newer | `corerules_*_amd64.deb` | `sudo apt install ./corerules_*_amd64.deb` |
 | Fedora 44 or newer | `corerules-*.fc44.x86_64.rpm` | `sudo dnf install ./corerules-*.rpm` |
 | Any distribution with Flatpak | `CoreRules-*.flatpak` | `flatpak install --user CoreRules-*.flatpak` |
-| Any distribution (glibc 2.39+) | `CoreRules-*-x86_64.AppImage` | `chmod +x CoreRules-*.AppImage` and run it |
+| Any distribution (glibc 2.43+) | `CoreRules-*-x86_64.AppImage` | `chmod +x CoreRules-*.AppImage` and run it |
 
-The Flatpak needs the GNOME 50 runtime from Flathub, which `flatpak install`
-offers to fetch. `SHA256SUMS` lists the checksums of every file.
+The Flatpak needs the GNOME 51 runtime from Flathub, which `flatpak install`
+offers to fetch. The AppImage bundles the GTK, libadwaita and other
+libraries of GNOME 51 and runs on Fedora 44, Ubuntu 26.04 and newer. `SHA256SUMS` lists the checksums of every file.
