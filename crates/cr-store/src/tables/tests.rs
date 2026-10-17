@@ -850,7 +850,8 @@ fn spell_picks_match_the_original() {
     }
     let (zeta, alpha) = (name_hash("Zeta Test Eight"), name_hash("Alpha Test Eight"));
     let priest = name_hash("Test Priest Four");
-    let cases: [(u32, u16, Vec<(&str, u32)>); 5] = [
+    type Case<'a> = (u32, u16, Vec<(&'a str, u32)>);
+    let cases: [Case; 5] = [
         (1234, 90, vec![("3", 138688210)]),
         (
             123,
