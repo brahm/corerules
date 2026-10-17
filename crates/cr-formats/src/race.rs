@@ -35,7 +35,8 @@ record! {
         unknown_0x244: [i32; 5],
         unknown_0xdc: String,
         unknown_0xe0: i32,
-        /// Rules text shown on the race page.
+        /// The race's penalties text (Penalties dialog); the general
+        /// description is `unknown_0x8`.
         description: String,
         unknown_0x188: String,
         unknown_0x2ac: String,
@@ -97,8 +98,8 @@ record! {
 
 record! {
     /// One allowed multi-class combination (`CClassMultiClassOb`, schema
-    /// 94): a class id per class group, 0 for none (warrior 1000s, wizard
-    /// 2000s, priest 3000s, rogue 4000s, psionicist 5000s).
+    /// 94): a class id per class group, 0 for none (warrior 1000s, rogue
+    /// 2000s, priest 3000s, wizard 4000s, psionicist 5000s).
     pub struct MultiClass {
         classes: [i32; 5],
     }

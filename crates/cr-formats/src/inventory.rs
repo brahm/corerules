@@ -64,7 +64,8 @@ impl Field for InventoryItem {
 
 record! {
     /// The optional 0x50-byte object behind `CInventoryItem + 0x18`
-    /// (Serialize 0x4adc02): the spells of a scroll.
+    /// (Serialize 0x4adc02): the pages of an item that has them, the spells
+    /// written in a spellbook or on a scroll.
     pub struct InventoryExtra {
         /// Pages: capacity and used; then the number of spells.
         unknown_0x4: [u32; 3],

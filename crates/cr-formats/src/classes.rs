@@ -141,7 +141,7 @@ record! {
         unknown_0x4c: i32,
         /// Skills & Powers character points a 1st-level character of the
         /// class spends on class abilities (Fighter 15, Cleric 125), then
-        /// a second value (30 for most classes).
+        /// the class's maximum level (+0x58, 30 for most classes).
         unknown_0x54: [i32; 2],
         unknown_0x84: [i32; 3],
         unknown_0xb4: [i32; 2],
@@ -228,7 +228,8 @@ record! {
         unknown_0x2fe0: Option<Vec<String>> = if v > 23,
         unknown_0x3558: Option<Vec<String>> = if v > 26,
         unknown_0x3004: Option<Vec<String>> = if v > 19,
-        /// "Any" in every shipped class.
+        /// The weapon category combo: "Any" in most shipped classes, "Only
+        /// from list below" in a few.
         unknown_0x3000: Option<String> = if v > 19,
         unknown_0x3018: Vec<String>,
         unknown_0x302c: Vec<String>,

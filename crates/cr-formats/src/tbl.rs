@@ -10,7 +10,8 @@
 //! <lo> <hi> <v3> <v4> <v5> <v6>
 //! ```
 //!
-//! Record 0 is a header whose name is a title the program never shows.
+//! Record 0 is a header whose name is the table's title, which the Roll
+//! Results dialog shows for follow-up rolls (see `cr_store::tables`).
 //! The originals (0x5376ab) read a fixed number of records per table (a
 //! count compiled into the program, see `cr_store::tables`) and never look
 //! for the end of the file, so this reader does the same when given a

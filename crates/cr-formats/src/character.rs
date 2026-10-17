@@ -334,8 +334,8 @@ record! {
         subrace: String,
         /// "None" when the character has no kit.
         kit: String,
-        /// Skills & Powers weapon of choice and weapon expertise, then a
-        /// third name empty in every file seen.
+        /// Skills & Powers weapon of choice and weapon expertise, then the
+        /// weapon of mastery (empty in the fixtures).
         unknown_0x124: [String; 3],
         /// Compared with 1990, 1991 and 1992 after loading.
         unknown_0x130: u32,
@@ -390,8 +390,8 @@ record! {
         unknown_0x1878: Vec<String>,
         /// Thief and bard skills, named as the class abilities that grant
         /// them ("Thief, Pick pockets* (10)"), with the discretionary
-        /// points added in `values[0]`, for Core Rules and Skills & Powers
-        /// characters alike.
+        /// points added at each level in `values[level - 1]`, for Core
+        /// Rules and Skills & Powers characters alike.
         rogue_skills: RogueSkills,
         unknown_0xc60: [[u32; 100]; 5],
         unknown_0x1430: [u32; 100],

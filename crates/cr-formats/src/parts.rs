@@ -263,8 +263,9 @@ record! {
         unknown_0x42c: i32,
         /// Class flags of records older than version 1, in the order Bard,
         /// Cleric, Druid, Fighter, Mage, Paladin, Ranger, (not converted;
-        /// Psionicist?), Thief. On load the program turns them into names in
-        /// `allowed_classes` and clears them.
+        /// the Restrict Class "Any Specialist" check), Thief. On load the
+        /// program turns them into names in `allowed_classes` and clears
+        /// them.
         old_class_flags: [i32; 9],
         unknown_0x4c8: i32,
         unknown_0x510: [i32; 7],
@@ -383,7 +384,8 @@ record! {
 
         /// `CSpellsOb`s; empty in every shipped part.
         unknown_0x748: Vec<Object>,
-        /// Classes allowed to take the part ("Cleric", "Druid", "Mage").
+        /// Classes that may NOT take the part ("Cleric", "Druid", "Mage"):
+        /// the editor's "Classes which CANNOT use" list, despite the name.
         allowed_classes: Option<Vec<String>> = if v > 0,
     }
 }

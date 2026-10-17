@@ -77,7 +77,7 @@ pt-BR translation yet.
 - [x] Full character files (`TSRP V27` to `TSRP3 V54`, both programs), round-trip tested
 - [x] Races and classes, round-trip tested against a real installation
 - [x] Survey of the rules databases (`cr survey`)
-- [x] Field layouts documented in docs/formats
+- [x] Every file format specified in docs/formats
 - [x] Monsters and encounters
 - [x] Every shipped database in Rust, round-trip tested
 - [x] Core Rules 2.0 (without the Expansion) databases, round-trip tested
@@ -231,7 +231,8 @@ cargo run -p cr-gtk                                # the Wine prefix
 cargo run -p cr-gtk -- "/media/cdrom"               # or any folder with Database/
 ```
 
-Format notes live in [`docs/formats`](docs/formats).
+The specification of every file the app reads or writes is in
+[`docs/formats`](docs/formats/README.md).
 
 ## License
 
