@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/cr-formats", "crates/cr-store", "crates/cr-cli", "crates/cr-gtk"]
+members = ["crates/cr-i18n", "crates/cr-formats", "crates/cr-store", "crates/cr-cli", "crates/cr-gtk"]
 
 [workspace.package]
 version = "0.6.0"
@@ -12,5 +12,6 @@ rust-version = "1.88"
 [workspace.dependencies]
 cr-formats = { path = "crates/cr-formats" }
 cr-store = { path = "crates/cr-store" }
+cr-i18n = { path = "crates/cr-i18n" }
 encoding_rs = "0.8"
 thiserror = "2"
