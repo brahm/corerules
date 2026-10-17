@@ -4,6 +4,7 @@
 
 use cr_formats::Object;
 use cr_formats::spells::{Spell, SpellsFile};
+use cr_i18n::{tr, tr_noop};
 
 use super::{
     FieldDesc, FieldKind, Flavor, NameError, NewContext, Options, UserKind, Value, default_reason,
@@ -14,7 +15,7 @@ use crate::{Error, Installation, Result};
 pub struct Spells;
 
 /// The spell types, the list's radio buttons, by scope.
-pub const SPELL_TYPES: [&str; 2] = ["Wizard", "Priest"];
+pub const SPELL_TYPES: [&str; 2] = [tr_noop!("Wizard"), tr_noop!("Priest")];
 
 /// The Components combo (ctl 1333).
 pub const COMPONENTS: &[&str] = &["V", "S", "M", "V, S, M", "V, S", "V, M", "S, M"];
@@ -25,7 +26,7 @@ fn is_priest(s: &Spell) -> bool {
 
 impl UserKind for Spells {
     type Rec = Spell;
-    const NOUN: &'static str = "Spell";
+    const NOUN: &'static str = tr_noop!("Spell");
     const FILE: &'static str = "UserDbas/SpellsU.dat";
 
     fn name(r: &Spell) -> &str {
@@ -104,59 +105,80 @@ impl UserKind for Spells {
 
     fn fields(_flavor: Flavor) -> Vec<FieldDesc<Spell>> {
         type Rec = Spell;
-        const MAIN: &str = "Spell";
+        const MAIN: &str = tr_noop!("Spell");
         vec![
-            udb_text!(MAIN, "Name", 50, name),
+            udb_text!(MAIN, tr_noop!("Name"), 50, name),
             FieldDesc::new(
                 MAIN,
-                "Level",
+                tr_noop!("Level"),
                 FieldKind::Int { min: 0, max: 9 },
                 |r: &Spell, _| Value::Int(r.level.into()),
                 |r, _, v, _| r.level = v.int() as i32,
             ),
-            udb_text!(MAIN, "Range", 0, range).group("Statistics"),
-            udb_text!(MAIN, "Duration", 0, duration).group("Statistics"),
-            udb_text!(MAIN, "Area of Effect", 0, area_of_effect).group("Statistics"),
+            udb_text!(MAIN, tr_noop!("Range"), 0, range).group(tr_noop!("Statistics")),
+            udb_text!(MAIN, tr_noop!("Duration"), 0, duration).group(tr_noop!("Statistics")),
+            udb_text!(MAIN, tr_noop!("Area of Effect"), 0, area_of_effect)
+                .group(tr_noop!("Statistics")),
             udb_combo!(
                 MAIN,
-                "Components",
+                tr_noop!("Components"),
                 Options::Fixed(COMPONENTS),
                 true,
                 components
             )
-            .group("Statistics"),
-            udb_text!(MAIN, "Casting Time", 0, casting_time).group("Statistics"),
-            udb_text!(MAIN, "Saving Throw", 0, saving_throw).group("Statistics"),
-            udb_text!(MAIN, "Subtlety", 0, unknown_0x5c).group("Combat & Tactics"),
-            udb_text!(MAIN, "Sensory", 0, unknown_0x58).group("Combat & Tactics"),
-            udb_text!(MAIN, "Knockdown", 0, unknown_0x4c).group("Combat & Tactics"),
-            udb_text!(MAIN, "Critical", 0, unknown_0x44).group("Combat & Tactics"),
-            udb_check!(MAIN, "Reversible", unknown_0x64).group("Options"),
-            udb_check!(MAIN, "Never Ban Cantrip", unknown_0x60)
-                .group("Options")
+            .group(tr_noop!("Statistics")),
+            udb_text!(MAIN, tr_noop!("Casting Time"), 0, casting_time)
+                .group(tr_noop!("Statistics")),
+            udb_text!(MAIN, tr_noop!("Saving Throw"), 0, saving_throw)
+                .group(tr_noop!("Statistics")),
+            udb_text!(MAIN, tr_noop!("Subtlety"), 0, unknown_0x5c)
+                .group(tr_noop!("Combat & Tactics")),
+            udb_text!(MAIN, tr_noop!("Sensory"), 0, unknown_0x58)
+                .group(tr_noop!("Combat & Tactics")),
+            udb_text!(MAIN, tr_noop!("Knockdown"), 0, unknown_0x4c)
+                .group(tr_noop!("Combat & Tactics")),
+            udb_text!(MAIN, tr_noop!("Critical"), 0, unknown_0x44)
+                .group(tr_noop!("Combat & Tactics")),
+            udb_check!(MAIN, tr_noop!("Reversible"), unknown_0x64).group(tr_noop!("Options")),
+            udb_check!(MAIN, tr_noop!("Never Ban Cantrip"), unknown_0x60)
+                .group(tr_noop!("Options"))
                 .enabled(|r| r.level == 0 && !is_priest(r)),
             udb_list!(
-                "Schools",
-                "Schools",
+                tr_noop!("Schools"),
+                tr_noop!("Schools"),
                 Options::Source("Schools Of Magic"),
                 schools
             ),
-            udb_list!("Spheres", "Spheres", Options::Source("Spheres"), spheres).visible(is_priest),
-            udb_multiline!("Description", "Description", unknown_0xc),
+            udb_list!(
+                tr_noop!("Spheres"),
+                tr_noop!("Spheres"),
+                Options::Source("Spheres"),
+                spheres
+            )
+            .visible(is_priest),
+            udb_multiline!(
+                tr_noop!("Description"),
+                tr_noop!("Description"),
+                unknown_0xc
+            ),
         ]
     }
 
     fn name_message(error: &NameError, _r: &Spell, adding: bool) -> String {
-        let prefix = if adding {
-            "Spell not added: Error. "
+        let reason = default_reason(error);
+        if adding {
+            tr!("Spell not added: Error. {reason}", reason)
         } else {
-            "Spell not Modified. Error. "
-        };
-        format!("{prefix}{}", default_reason(error))
+            tr!("Spell not Modified. Error. {reason}", reason)
+        }
     }
 
     fn summary(r: &Spell) -> String {
-        format!("{} level {}", SPELL_TYPES[Self::scope(r)], r.level)
+        if Self::scope(r) == 1 {
+            tr!("Priest level {level}", level = r.level)
+        } else {
+            tr!("Wizard level {level}", level = r.level)
+        }
     }
 }
 

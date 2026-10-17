@@ -25,6 +25,7 @@
 //! options, the fighting styles each class group may learn, the rogue
 //! skill tables) follows the books, as in the original.
 
+use cr_i18n::{tr, tr_noop};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
@@ -45,12 +46,12 @@ use crate::settings::Setting;
 use crate::{Error, Installation, Result};
 
 pub const ABILITIES: [&str; 6] = [
-    "Strength",
-    "Dexterity",
-    "Constitution",
-    "Intelligence",
-    "Wisdom",
-    "Charisma",
+    tr_noop!("Strength"),
+    tr_noop!("Dexterity"),
+    tr_noop!("Constitution"),
+    tr_noop!("Intelligence"),
+    tr_noop!("Wisdom"),
+    tr_noop!("Charisma"),
 ];
 
 /// `inventory` indexes of the readied and worn items.
@@ -201,35 +202,37 @@ impl RollMethod {
 
     pub fn name(self) -> &'static str {
         match self {
-            Self::InOrder => "Method I",
-            Self::BestOfTwo => "Method II",
-            Self::Arrange => "Method III",
-            Self::BestSixOfTwelve => "Method IV",
-            Self::FourDice => "Method V",
-            Self::Enter => "Enter Scores",
-            Self::Points => "Method VII",
-            Self::DicePool => "Method VIII",
-            Self::RolledPoints => "Method IX",
-            Self::SevenDice => "Method VI",
-            Self::PointsAndStrength => "Method X",
-            Self::PlayersChoice => "Player's Choice",
+            Self::InOrder => tr("Method I"),
+            Self::BestOfTwo => tr("Method II"),
+            Self::Arrange => tr("Method III"),
+            Self::BestSixOfTwelve => tr("Method IV"),
+            Self::FourDice => tr("Method V"),
+            Self::Enter => tr("Enter Scores"),
+            Self::Points => tr("Method VII"),
+            Self::DicePool => tr("Method VIII"),
+            Self::RolledPoints => tr("Method IX"),
+            Self::SevenDice => tr("Method VI"),
+            Self::PointsAndStrength => tr("Method X"),
+            Self::PlayersChoice => tr("Player's Choice"),
         }
     }
 
     pub fn description(self) -> &'static str {
         match self {
-            Self::InOrder => "3d6 for each ability, in order",
-            Self::BestOfTwo => "3d6 twice for each ability, the better in order",
-            Self::Arrange => "3d6 six times, arranged as you like",
-            Self::BestSixOfTwelve => "3d6 twelve times, the best six arranged as you like",
-            Self::FourDice => "4d6 six times dropping the lowest die, arranged as you like",
-            Self::Enter => "Type in scores rolled elsewhere",
-            Self::Points => "75 points divided among the abilities, 3 to 18 each",
-            Self::DicePool => "24d6 shared out, 3 to 6 dice an ability, the best three kept",
-            Self::RolledPoints => "2d6 on a table give the points to divide and the highest score",
-            Self::SevenDice => "Scores start at 8; 7d6 added, a die an ability",
-            Self::PointsAndStrength => "75 points; a warrior may buy exceptional Strength",
-            Self::PlayersChoice => "Race and class first; 3d6 then fitted to them",
+            Self::InOrder => tr("3d6 for each ability, in order"),
+            Self::BestOfTwo => tr("3d6 twice for each ability, the better in order"),
+            Self::Arrange => tr("3d6 six times, arranged as you like"),
+            Self::BestSixOfTwelve => tr("3d6 twelve times, the best six arranged as you like"),
+            Self::FourDice => tr("4d6 six times dropping the lowest die, arranged as you like"),
+            Self::Enter => tr("Type in scores rolled elsewhere"),
+            Self::Points => tr("75 points divided among the abilities, 3 to 18 each"),
+            Self::DicePool => tr("24d6 shared out, 3 to 6 dice an ability, the best three kept"),
+            Self::RolledPoints => {
+                tr("2d6 on a table give the points to divide and the highest score")
+            }
+            Self::SevenDice => tr("Scores start at 8; 7d6 added, a die an ability"),
+            Self::PointsAndStrength => tr("75 points; a warrior may buy exceptional Strength"),
+            Self::PlayersChoice => tr("Race and class first; 3d6 then fitted to them"),
         }
     }
 
@@ -345,12 +348,12 @@ pub fn point_table(roll: u32) -> (u32, u32) {
 /// The two Skills & Powers subabilities of each ability, in the order the
 /// character file keeps them.
 pub const SUBABILITIES: [[&str; 2]; 6] = [
-    ["Stamina", "Muscle"],
-    ["Aim", "Balance"],
-    ["Health", "Fitness"],
-    ["Reason", "Knowledge"],
-    ["Intuition", "Willpower"],
-    ["Leadership", "Appearance"],
+    [tr_noop!("Stamina"), tr_noop!("Muscle")],
+    [tr_noop!("Aim"), tr_noop!("Balance")],
+    [tr_noop!("Health"), tr_noop!("Fitness")],
+    [tr_noop!("Reason"), tr_noop!("Knowledge")],
+    [tr_noop!("Intuition"), tr_noop!("Willpower")],
+    [tr_noop!("Leadership"), tr_noop!("Appearance")],
 ];
 
 /// How far a subability may be from its ability score.
@@ -405,14 +408,14 @@ pub const MOST_FIGHTING_STYLES: usize = 10;
 /// scores and what wearing no armor adds (Player's Handbook, Tables 26
 /// and 29).
 pub const ROGUE_SKILLS: [(&str, i32, i32); 8] = [
-    ("Pick pockets", 15, 5),
-    ("Open locks", 10, 0),
-    ("Find/remove traps", 5, 0),
-    ("Move silently", 10, 10),
-    ("Hide in shadows", 5, 5),
-    ("Detect noise", 15, 0),
-    ("Climb walls", 60, 10),
-    ("Read languages", 0, 0),
+    (tr_noop!("Pick pockets"), 15, 5),
+    (tr_noop!("Open locks"), 10, 0),
+    (tr_noop!("Find/remove traps"), 5, 0),
+    (tr_noop!("Move silently"), 10, 10),
+    (tr_noop!("Hide in shadows"), 5, 5),
+    (tr_noop!("Detect noise"), 15, 0),
+    (tr_noop!("Climb walls"), 60, 10),
+    (tr_noop!("Read languages"), 0, 0),
 ];
 
 /// Discretionary rogue skill points at 1st level and the most one skill
@@ -2197,20 +2200,26 @@ impl CreationRules {
                 continue;
             }
             if !skills.iter().any(|s| s.1 == skill) {
-                return Some(format!(
-                    "The character has no {} skill",
-                    ROGUE_SKILLS[skill].0
+                return Some(tr!(
+                    "The character has no {skill} skill",
+                    skill = tr(ROGUE_SKILLS[skill].0)
                 ));
             }
             if added > most {
-                return Some(format!(
-                    "{} may get at most {most} points",
-                    ROGUE_SKILLS[skill].0
+                return Some(tr!(
+                    "{skill} may get at most {most} points",
+                    skill = tr(ROGUE_SKILLS[skill].0),
+                    most
                 ));
             }
         }
         let left = self.rogue_points_left(draft);
-        (left < 0).then(|| format!("The rogue skills get {} points too many", -left))
+        (left < 0).then(|| {
+            tr!(
+                "The rogue skills get {count} points too many",
+                count = -left
+            )
+        })
     }
 
     /// Skills & Powers: the combat options are open to the character.
@@ -2221,22 +2230,24 @@ impl CreationRules {
             .flatten()
         {
             if !draft.weapon_proficiencies.contains(weapon) {
-                return Some(format!("{weapon} needs its weapon proficiency"));
+                return Some(tr!("{weapon} needs its weapon proficiency", weapon));
             }
         }
         if !draft.unarmed.is_empty() {
             if self.unarmed_cost(classes).is_none() {
-                return Some("Only fighters may specialize in unarmed combat".into());
+                return Some(tr("Only fighters may specialize in unarmed combat").into());
             }
             if !draft.specializations.is_empty() {
-                return Some("Unarmed combat and weapon specialization do not go together".into());
+                return Some(
+                    tr("Unarmed combat and weapon specialization do not go together").into(),
+                );
             }
             if let Some(u) = draft
                 .unarmed
                 .iter()
                 .find(|u| !UNARMED.contains(&u.as_str()))
             {
-                return Some(format!("{u} is not an unarmed style"));
+                return Some(tr!("{u} is not an unarmed style", u));
             }
         }
         let armors = self.armors();
@@ -2245,20 +2256,25 @@ impl CreationRules {
             .iter()
             .find(|a| !armors.contains(a))
         {
-            return Some(format!("{a} is not armor"));
+            return Some(tr!("{a} is not armor", a));
         }
         if draft.fighting_styles.len() > MOST_FIGHTING_STYLES {
-            return Some(format!(
-                "A character may know at most {MOST_FIGHTING_STYLES} fighting styles"
+            return Some(tr!(
+                "A character may know at most {count} fighting styles",
+                count = MOST_FIGHTING_STYLES
             ));
         }
         let mut seen = HashSet::new();
         for style in &draft.fighting_styles {
             if self.style_cost(classes, style).is_none() {
-                return Some(format!("A {} cannot learn {style}", draft.class_title()));
+                return Some(tr!(
+                    "A {class} cannot learn {style}",
+                    class = draft.class_title(),
+                    style
+                ));
             }
             if !seen.insert(style) {
-                return Some(format!("{style} is taken twice"));
+                return Some(tr!("{style} is taken twice", style));
             }
         }
         None

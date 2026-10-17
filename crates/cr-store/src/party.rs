@@ -16,6 +16,7 @@
 //! every member. Here the file is kept as `<file>.bak` until
 //! [`Installation::forget_deleted`], so a deletion can be undone.
 
+use cr_i18n::tr;
 use std::fs;
 use std::path::PathBuf;
 
@@ -76,14 +77,15 @@ impl Installation {
     pub fn party_name_problem(&self, name: &str, others: &[String]) -> Result<Option<String>> {
         let name = name.trim();
         if name.is_empty() {
-            return Ok(Some("A name must be supplied for the new party".into()));
+            return Ok(Some(tr("A name must be supplied for the new party").into()));
         }
         if name.eq_ignore_ascii_case(ALL) {
-            return Ok(Some(format!("{ALL} is not a party name")));
+            return Ok(Some(tr!("{all} is not a party name", all = ALL)));
         }
         if name.chars().count() > MAX_NAME {
-            return Ok(Some(format!(
-                "A party name has at most {MAX_NAME} characters"
+            return Ok(Some(tr!(
+                "A party name has at most {max} characters",
+                max = MAX_NAME
             )));
         }
         let parties = self.parties()?;
@@ -92,7 +94,7 @@ impl Installation {
             .chain(others)
             .any(|p| p.eq_ignore_ascii_case(name))
         {
-            return Ok(Some(format!("The party name {name} already exists")));
+            return Ok(Some(tr!("The party name {name} already exists", name)));
         }
         Ok(None)
     }

@@ -23,6 +23,7 @@ use cr_formats::inventory::{InventoryBundle, InventoryExtra, InventoryItem};
 use cr_formats::parts::{PART_TYPE_COUNT, PartsFile};
 use cr_formats::spells::SpellsFile;
 use cr_formats::treasure::{Treasure, TreasureTableEntry};
+use cr_i18n::{tr, tr_noop};
 
 pub use crate::sheet::Flavor;
 pub use edit::{
@@ -424,27 +425,27 @@ impl Prices {
 
 /// Part type names as Calculate writes them (0x468c52).
 pub const SUMMARY_TYPE_NAMES: [&str; PART_TYPE_COUNT] = [
-    "Weapons",
-    "Armor",
-    "Wizard Spells",
-    "Weapon Proficiencies",
-    "Non-Weapon Proficiencies",
-    "Racial Abilities",
-    "Languages",
-    "Equipment",
-    "Magical Items",
-    "Schools of Magic",
-    "Priest Spells",
-    "Traits",
-    "Disadvantages",
-    "Gems and Art",
-    "Class Abilities",
-    "Character Kits",
-    "Money",
-    "Count",
-    "Spheres",
-    "Unknown",
-    "Unknown",
+    tr_noop!("Weapons"),
+    tr_noop!("Armor"),
+    tr_noop!("Wizard Spells"),
+    tr_noop!("Weapon Proficiencies"),
+    tr_noop!("Non-Weapon Proficiencies"),
+    tr_noop!("Racial Abilities"),
+    tr_noop!("Languages"),
+    tr_noop!("Equipment"),
+    tr_noop!("Magical Items"),
+    tr_noop!("Schools of Magic"),
+    tr_noop!("Priest Spells"),
+    tr_noop!("Traits"),
+    tr_noop!("Disadvantages"),
+    tr_noop!("Gems and Art"),
+    tr_noop!("Class Abilities"),
+    tr_noop!("Character Kits"),
+    tr_noop!("Money"),
+    tr_noop!("Count"),
+    tr_noop!("Spheres"),
+    tr_noop!("Unknown"),
+    tr_noop!("Unknown"),
 ];
 
 /// The order 0x468356 tries the part types in to find a name's type.
@@ -476,19 +477,32 @@ impl Summary {
     /// gold value is floored on its own, so the parts need not add up.
     pub fn lines(&self) -> Vec<String> {
         let mut lines = vec![
-            format!("GP Value: {}", thousands(self.value_cp / 100)),
-            format!("XP Value: {}", thousands(self.xp)),
-            format!("Magical Items: {}", thousands(self.magical_items)),
+            tr!("GP Value: {value}", value = thousands(self.value_cp / 100)),
+            tr!("XP Value: {value}", value = thousands(self.xp)),
+            tr!(
+                "Magical Items: {count}",
+                count = thousands(self.magical_items)
+            ),
         ];
         for (name, t) in SUMMARY_TYPE_NAMES.iter().zip(&self.by_type) {
             if t.value_cp == 0 && t.xp == 0 && t.count == 0 {
                 continue;
             }
-            lines.push(format!("Number of {name}: {}", thousands(t.count)));
-            lines.push(format!("XP Value of {name}: {}", thousands(t.xp)));
-            lines.push(format!(
-                "GP Value of {name}: {}",
-                thousands(t.value_cp / 100)
+            let name = tr(name);
+            lines.push(tr!(
+                "Number of {name}: {count}",
+                name,
+                count = thousands(t.count)
+            ));
+            lines.push(tr!(
+                "XP Value of {name}: {value}",
+                name,
+                value = thousands(t.xp)
+            ));
+            lines.push(tr!(
+                "GP Value of {name}: {value}",
+                name,
+                value = thousands(t.value_cp / 100)
             ));
         }
         lines

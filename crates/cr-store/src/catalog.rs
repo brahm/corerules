@@ -9,6 +9,7 @@ use cr_formats::database::ObjectList;
 use cr_formats::inventory::InventoryBundle;
 use cr_formats::parts::PartsFile;
 use cr_formats::spells::SpellsFile;
+use cr_i18n::{tr, tr_noop, trn};
 
 use crate::encounter::{Encounter, EncounterRules, hit_point_text, npc_line};
 use crate::treasure::thousands;
@@ -90,19 +91,19 @@ impl Installation {
         let mut sections = vec![
             section(
                 "characters",
-                "Characters",
+                tr("Characters"),
                 "avatar-default-symbolic",
                 self.character_entries(),
             ),
             section(
                 "races",
-                "Races",
+                tr("Races"),
                 "system-users-symbolic",
                 self.udb_entries("Race", "races", race_entry),
             ),
             section(
                 "classes",
-                "Classes",
+                tr("Classes"),
                 "emblem-system-symbolic",
                 self.udb_entries("Class", "classes", class_entry),
             ),
@@ -110,32 +111,32 @@ impl Installation {
         for (id, title, icon, part_type) in [
             (
                 "kits",
-                "Kits",
+                tr("Kits"),
                 "emblem-documents-symbolic",
                 "Character Kits",
             ),
             (
                 "weapons",
-                "Weapons",
+                tr("Weapons"),
                 "applications-games-symbolic",
                 "Weapons",
             ),
-            ("armor", "Armor", "security-high-symbolic", "Armor"),
+            ("armor", tr("Armor"), "security-high-symbolic", "Armor"),
             (
                 "equipment",
-                "Equipment",
+                tr("Equipment"),
                 "package-x-generic-symbolic",
                 "Equipment",
             ),
             (
                 "magic-items",
-                "Magical Items",
+                tr("Magical Items"),
                 "starred-symbolic",
                 "Magical Items",
             ),
             (
                 "nonweapon",
-                "Proficiencies",
+                tr("Proficiencies"),
                 "view-list-symbolic",
                 "Non-Weapon Proficiencies",
             ),
@@ -162,8 +163,8 @@ impl Installation {
             sections.push(section(id, title, icon, entries));
         }
         for (id, title, wizard) in [
-            ("wizard-spells", "Wizard Spells", true),
-            ("priest-spells", "Priest Spells", false),
+            ("wizard-spells", tr("Wizard Spells"), true),
+            ("priest-spells", tr("Priest Spells"), false),
         ] {
             let entries = match (&spells, &user_spells) {
                 (Ok(spells), Ok(user)) => Ok(sorted(
@@ -187,62 +188,62 @@ impl Installation {
         }
         sections.push(section(
             "psionics",
-            "Psionic Powers",
+            tr("Psionic Powers"),
             "display-brightness-symbolic",
             self.udb_entries("Psionic", "psionics", psionic_entry),
         ));
         sections.push(section(
             "monsters",
-            "Monsters",
+            tr("Monsters"),
             "face-devilish-symbolic",
             self.udb_entries("Monster", "monsters", monster_entry),
         ));
         sections.push(section(
             "monster-types",
-            "Monster Types",
+            tr("Monster Types"),
             "view-list-symbolic",
             self.udb_entries("MonType", "monster-types", monster_type_entry),
         ));
         sections.push(section(
             "traps",
-            "Traps",
+            tr("Traps"),
             "dialog-warning-symbolic",
             self.udb_entries("Traps", "traps", trap_entry),
         ));
         let rules = self.encounter_rules().map_err(|e| e.to_string());
         sections.push(section(
             "encounters",
-            "Encounters",
+            tr("Encounters"),
             "mark-location-symbolic",
             self.encounter_entries(rules.as_ref().ok()),
         ));
         sections.push(section(
             "templates",
-            "Encounter Templates",
+            tr("Encounter Templates"),
             "view-list-bullet-symbolic",
             rules.as_ref().map(template_entries).map_err(Clone::clone),
         ));
         sections.push(section(
             "tables",
-            "Encounter Tables",
+            tr("Encounter Tables"),
             "view-grid-symbolic",
             self.table_entries(),
         ));
         sections.push(section(
             "treasure",
-            "Saved Treasure",
+            tr("Saved Treasure"),
             "user-bookmarks-symbolic",
             self.treasure_entries(),
         ));
         sections.push(section(
             "treasure-tables",
-            "Treasure Tables",
+            tr("Treasure Tables"),
             "view-grid-symbolic",
             self.treasure_table_entries(),
         ));
         sections.push(section(
             "books",
-            "Books",
+            tr("Books"),
             "accessories-dictionary-symbolic",
             Ok(self.book_entries()),
         ));
@@ -290,9 +291,9 @@ impl Installation {
                     let ranges = tables::ranges(t);
                     let entry = Entry {
                         title: t.name.clone(),
-                        subtitle: format!("{} entries", rows.len()),
+                        subtitle: trn!("{n} entry", "{n} entries", rows.len()),
                         groups: groups([Group {
-                            title: "Entries".into(),
+                            title: tr("Entries").into(),
                             rows: rows
                                 .iter()
                                 .zip(&ranges)
@@ -353,12 +354,12 @@ impl Installation {
                     party: String::new(),
                     key: format!("{TABLE_KEY}{}", t.name),
                     title: t.name.clone(),
-                    subtitle: format!(
-                        "{} of 19 rolls filled",
-                        t.slots.iter().filter(|s| !s.is_empty()).count()
+                    subtitle: tr!(
+                        "{filled} of 19 rolls filled",
+                        filled = t.slots.iter().filter(|s| !s.is_empty()).count()
                     ),
                     groups: vec![Group {
-                        title: "Rolls".into(),
+                        title: tr("Rolls").into(),
                         rows: (2..=20)
                             .map(|roll| (roll.to_string(), t.slot(roll).unwrap_or("").to_owned()))
                             .collect(),
@@ -386,7 +387,12 @@ impl Installation {
                         title: t.name.clone(),
                         subtitle: summary
                             .as_ref()
-                            .map(|s| format!("{} gp", crate::treasure::thousands(s.value_cp / 100)))
+                            .map(|s| {
+                                tr!(
+                                    "{value} gp",
+                                    value = crate::treasure::thousands(s.value_cp / 100)
+                                )
+                            })
                             .unwrap_or_default(),
                         groups: treasure_groups(&t.bundle, summary.as_ref()),
                         text: String::new(),
@@ -417,15 +423,17 @@ impl Installation {
                             ..character_entry(&c)
                         };
                         if entry.npc {
-                            entry.subtitle = format!("NPC · {}", entry.subtitle);
+                            entry.subtitle = tr!("NPC · {subtitle}", subtitle = entry.subtitle);
                         }
                         if !entry.party.is_empty() {
                             entry.subtitle = format!("{} · {}", entry.subtitle, entry.party);
                             if let Some(group) = entry.groups.first_mut() {
                                 let at = usize::from(
-                                    group.rows.first().is_some_and(|r| r.0 == "Player"),
+                                    group.rows.first().is_some_and(|r| r.0 == tr("Player")),
                                 );
-                                group.rows.insert(at, ("Party".into(), entry.party.clone()));
+                                group
+                                    .rows
+                                    .insert(at, (tr("Party").into(), entry.party.clone()));
                             }
                         }
                         entry
@@ -433,7 +441,7 @@ impl Installation {
                     Err(err) => Entry {
                         title: e.name.clone(),
                         subtitle: e.race.clone(),
-                        text: format!("This character file could not be read: {err}"),
+                        text: tr!("This character file could not be read: {err}", err),
                         ..Default::default()
                     },
                 }
@@ -482,23 +490,23 @@ fn encounter_entry(e: &Encounter, rules: Option<&EncounterRules>) -> Entry {
     if let Some(rules) = rules {
         let t = rules.totals(e);
         groups.push(Group {
-            title: "Encounter Totals".into(),
+            title: tr("Encounter Totals").into(),
             rows: vec![
-                ("Gold Value".into(), thousands(t.gold_value)),
-                ("Monster XP".into(), thousands(t.monster_xp)),
-                ("Treasure XP".into(), thousands(t.treasure_xp)),
+                (tr("Gold Value").into(), thousands(t.gold_value)),
+                (tr("Monster XP").into(), thousands(t.monster_xp)),
+                (tr("Treasure XP").into(), thousands(t.treasure_xp)),
             ],
         });
     }
     groups.push(Group {
-        title: "Monsters and Nonplayer Characters".into(),
+        title: tr("Monsters and Nonplayer Characters").into(),
         rows: e
             .monsters
             .iter()
             .map(|p| {
                 (
                     format!("{} - {}", p.count, p.monster.name),
-                    format!("hp {}", hit_point_text(&p.hit_points)),
+                    tr!("hp {hp}", hp = hit_point_text(&p.hit_points)),
                 )
             })
             .chain(e.npcs.iter().map(|p| match rules {
@@ -515,7 +523,7 @@ fn encounter_entry(e: &Encounter, rules: Option<&EncounterRules>) -> Entry {
     });
     groups.extend(treasure_groups(&e.treasure, None));
     groups.push(Group {
-        title: "Items".into(),
+        title: tr("Items").into(),
         rows: e
             .items
             .items
@@ -524,7 +532,7 @@ fn encounter_entry(e: &Encounter, rules: Option<&EncounterRules>) -> Entry {
             .collect(),
     });
     groups.push(Group {
-        title: "Traps".into(),
+        title: tr("Traps").into(),
         rows: e
             .traps
             .iter()
@@ -554,16 +562,16 @@ fn template_entries(rules: &EncounterRules) -> Vec<Entry> {
             .iter()
             .map(|t| {
                 let frequency = match t.frequency {
-                    65.. => "Common",
-                    20.. => "Uncommon",
-                    11.. => "Rare",
-                    4.. => "Very Rare",
-                    _ => "Exempt from tables",
+                    65.. => tr("Common"),
+                    20.. => tr("Uncommon"),
+                    11.. => tr("Rare"),
+                    4.. => tr("Very Rare"),
+                    _ => tr("Exempt from tables"),
                 };
                 let placement = match t.placement {
-                    [_, true, _] => "Lair only",
-                    [_, _, true] => "Wandering only",
-                    _ => "Lair and wandering",
+                    [_, true, _] => tr("Lair only"),
+                    [_, _, true] => tr("Wandering only"),
+                    _ => tr("Lair and wandering"),
                 };
                 let lair: Vec<String> = t
                     .lair_treasure
@@ -573,15 +581,15 @@ fn template_entries(rules: &EncounterRules) -> Vec<Entry> {
                     .map(|(n, c)| format!("{n}x{c}"))
                     .collect();
                 let rows = [
-                    ("Monster Type", t.monster_type.clone()),
-                    ("Climate/Terrain", t.climate_terrain.clone()),
-                    ("Frequency", frequency.to_owned()),
-                    ("Hit Dice", t.hit_dice.to_string()),
-                    ("Encountered", placement.to_owned()),
-                    ("Lair Treasure", lair.join(", ")),
+                    (tr("Monster Type"), t.monster_type.clone()),
+                    (tr("Climate/Terrain"), t.climate_terrain.clone()),
+                    (tr("Frequency"), frequency.to_owned()),
+                    (tr("Hit Dice"), t.hit_dice.to_string()),
+                    (tr("Encountered"), placement.to_owned()),
+                    (tr("Lair Treasure"), lair.join(", ")),
                     (
-                        "Database",
-                        if t.user { "Custom" } else { "Standard" }.to_owned(),
+                        tr("Database"),
+                        tr(if t.user { "Custom" } else { "Standard" }).to_owned(),
                     ),
                 ];
                 let text = rules.template_text(t);
@@ -594,7 +602,7 @@ fn template_entries(rules: &EncounterRules) -> Vec<Entry> {
                     title: t.name.clone(),
                     subtitle: t.monster_type.clone(),
                     groups: vec![Group {
-                        title: "Template".into(),
+                        title: tr("Template").into(),
                         rows: rows
                             .into_iter()
                             .filter(|(_, v)| !v.is_empty())
@@ -638,7 +646,7 @@ pub fn treasure_groups(
             .collect()
     };
     let mut groups = vec![Group {
-        title: "Treasure".into(),
+        title: tr("Treasure").into(),
         rows: rows(bundle),
     }];
     for item in &bundle.items {
@@ -651,7 +659,7 @@ pub fn treasure_groups(
     }
     if let Some(summary) = summary {
         groups.push(Group {
-            title: "Summary".into(),
+            title: tr("Summary").into(),
             rows: summary
                 .lines()
                 .iter()
@@ -696,24 +704,24 @@ fn sorted(mut entries: Vec<Entry>) -> Vec<Entry> {
 }
 
 const ABILITIES: [&str; 6] = [
-    "Strength",
-    "Dexterity",
-    "Constitution",
-    "Intelligence",
-    "Wisdom",
-    "Charisma",
+    tr_noop!("Strength"),
+    tr_noop!("Dexterity"),
+    tr_noop!("Constitution"),
+    tr_noop!("Intelligence"),
+    tr_noop!("Wisdom"),
+    tr_noop!("Charisma"),
 ];
 
 fn character_entry(c: &Character) -> Entry {
     let d = &c.data;
-    let mut abilities = Group::new("Abilities");
+    let mut abilities = Group::new(tr("Abilities"));
     let strength = match d.exceptional_strength {
         0 => d.strength[0].to_string(),
         e => format!("{}/{:02}", d.strength[0], e % 100),
     };
-    abilities = abilities.row(ABILITIES[0], strength);
+    abilities = abilities.row(tr(ABILITIES[0]), strength);
     for (name, scores) in ABILITIES[1..].iter().zip(&d.abilities) {
-        abilities = abilities.row(name, scores[0]);
+        abilities = abilities.row(tr(name), scores[0]);
     }
     let race = match d.subrace.as_str() {
         "" => d.race.clone(),
@@ -726,37 +734,37 @@ fn character_entry(c: &Character) -> Entry {
         title: d.name.clone(),
         subtitle: format!("{race} {}", d.class_title),
         groups: groups([
-            Group::new("Character")
-                .row("Player", &d.player)
-                .row("Race", race)
-                .row("Class", &d.class_title)
-                .row("Kit", if d.kit == "None" { "" } else { &d.kit })
-                .row("Alignment", &d.alignment)
-                .row("Social Class", &d.social_class)
+            Group::new(tr("Character"))
+                .row(tr("Player"), &d.player)
+                .row(tr("Race"), race)
+                .row(tr("Class"), &d.class_title)
+                .row(tr("Kit"), if d.kit == "None" { "" } else { &d.kit })
+                .row(tr("Alignment"), &d.alignment)
+                .row(tr("Social Class"), &d.social_class)
                 .row(
-                    "Rules",
+                    tr("Rules"),
                     if c.skills_and_powers() {
-                        "Skills & Powers"
+                        tr("Skills & Powers")
                     } else {
-                        "Core Rules"
+                        tr("Core Rules")
                     },
                 ),
             abilities,
-            Group::new("Appearance")
-                .row("Age", format!("{} years", d.age))
-                .row("Height", feet_and_inches(d.height))
-                .row("Weight", format!("{} lb", d.weight)),
-            Group::new("Proficiencies")
-                .list("Weapons", &d.weapon_proficiencies)
-                .list("Nonweapon", &d.nonweapon_proficiencies)
-                .list("Languages", &d.languages),
-            Group::new("Abilities and Spells")
-                .list("Racial", &d.racial_abilities)
-                .list("Class", &d.class_slots[0].abilities)
-                .list("Spells", &d.spells),
-            Group::new("Equipment")
-                .list("Armor", &d.armor)
-                .list("Carried", &inventory_names(&d.inventory[2])),
+            Group::new(tr("Appearance"))
+                .row(tr("Age"), tr!("{age} years", age = d.age))
+                .row(tr("Height"), feet_and_inches(d.height))
+                .row(tr("Weight"), tr!("{weight} lb", weight = d.weight)),
+            Group::new(tr("Proficiencies"))
+                .list(tr("Weapons"), &d.weapon_proficiencies)
+                .list(tr("Nonweapon"), &d.nonweapon_proficiencies)
+                .list(tr("Languages"), &d.languages),
+            Group::new(tr("Abilities and Spells"))
+                .list(tr("Racial"), &d.racial_abilities)
+                .list(tr("Class"), &d.class_slots[0].abilities)
+                .list(tr("Spells"), &d.spells),
+            Group::new(tr("Equipment"))
+                .list(tr("Armor"), &d.armor)
+                .list(tr("Carried"), &inventory_names(&d.inventory[2])),
         ]),
         text: String::new(),
     }
@@ -787,19 +795,26 @@ fn inventory_names(bundle: &InventoryBundle) -> Vec<String> {
         .collect()
 }
 
-const ABILITY_SHORT: [&str; 6] = ["Str", "Dex", "Con", "Int", "Wis", "Cha"];
+const ABILITY_SHORT: [&str; 6] = [
+    tr_noop!("Str"),
+    tr_noop!("Dex"),
+    tr_noop!("Con"),
+    tr_noop!("Int"),
+    tr_noop!("Wis"),
+    tr_noop!("Cha"),
+];
 
 fn race_entry(object: &Object) -> Option<Entry> {
     let Object::Race(r) = object else { return None };
-    let mut limits = Group::new("Ability Limits");
+    let mut limits = Group::new(tr("Ability Limits"));
     for (name, [min, max]) in ABILITY_SHORT.iter().zip(r.ability_limits) {
-        limits = limits.row(name, format!("{min}–{max}"));
+        limits = limits.row(tr(name), format!("{min}–{max}"));
     }
     let adjustments: Vec<String> = ABILITY_SHORT
         .iter()
         .zip(r.ability_adjustments)
         .filter(|(_, a)| *a != 0)
-        .map(|(name, a)| format!("{name} {a:+}"))
+        .map(|(name, a)| format!("{} {a:+}", tr(name)))
         .collect();
     Some(Entry {
         npc: false,
@@ -808,12 +823,12 @@ fn race_entry(object: &Object) -> Option<Entry> {
         title: r.name.clone(),
         subtitle: adjustments.join(", "),
         groups: groups([
-            Group::new("Race")
-                .list("Adjustments", &adjustments)
-                .row("Movement", r.movement)
-                .list("Languages", &r.languages),
+            Group::new(tr("Race"))
+                .list(tr("Adjustments"), &adjustments)
+                .row(tr("Movement"), r.movement)
+                .list(tr("Languages"), &r.languages),
             limits,
-            Group::new("Racial Abilities").list("Abilities", &r.abilities),
+            Group::new(tr("Racial Abilities")).list(tr("Abilities"), &r.abilities),
         ]),
         text: r.description.clone(),
     })
@@ -851,23 +866,23 @@ fn class_entry(object: &Object) -> Option<Entry> {
                 )
             }
         };
-    let mut minimums = Group::new("Ability Requirements");
+    let mut minimums = Group::new(tr("Ability Requirements"));
     for (name, min) in ABILITY_SHORT.iter().zip(requirements) {
         if min > 0 {
-            minimums = minimums.row(name, min);
+            minimums = minimums.row(tr(name), min);
         }
     }
     let group = crate::userdb::classes::class_group(class)
-        .map_or("Other", |g| crate::userdb::classes::GROUPS[g]);
+        .map_or(tr("Other"), |g| tr(crate::userdb::classes::GROUPS[g]));
     entry.subtitle = group.to_owned();
     entry.groups = groups([
-        Group::new("Class")
-            .row("Group", group)
-            .list("Alignments", alignments)
-            .row("Level 2", format!("{} XP", experience[2]))
-            .row("Level 10", format!("{} XP", experience[10])),
+        Group::new(tr("Class"))
+            .row(tr("Group"), group)
+            .list(tr("Alignments"), alignments)
+            .row(tr("Level 2"), tr!("{xp} XP", xp = experience[2]))
+            .row(tr("Level 10"), tr!("{xp} XP", xp = experience[10])),
         minimums,
-        Group::new("Class Abilities").list("Abilities", abilities),
+        Group::new(tr("Class Abilities")).list(tr("Abilities"), abilities),
     ]);
     Some(entry)
 }
@@ -892,23 +907,26 @@ fn spell_entry(object: &Object) -> Option<Entry> {
     let Object::Spell(s) = object else {
         return None;
     };
-    let kind = if s.priest != 0 { "Priest" } else { "Wizard" };
     Some(Entry {
         npc: false,
         party: String::new(),
         key: String::new(),
         title: s.name.clone(),
-        subtitle: format!("{kind} level {}", s.level),
-        groups: groups([Group::new("Spell")
-            .row("Level", s.level)
-            .list("Schools", &s.schools)
-            .list("Spheres", &s.spheres)
-            .row("Range", &s.range)
-            .row("Components", &s.components)
-            .row("Duration", &s.duration)
-            .row("Casting Time", &s.casting_time)
-            .row("Area of Effect", &s.area_of_effect)
-            .row("Saving Throw", &s.saving_throw)]),
+        subtitle: if s.priest != 0 {
+            tr!("Priest level {level}", level = s.level)
+        } else {
+            tr!("Wizard level {level}", level = s.level)
+        },
+        groups: groups([Group::new(tr("Spell"))
+            .row(tr("Level"), s.level)
+            .list(tr("Schools"), &s.schools)
+            .list(tr("Spheres"), &s.spheres)
+            .row(tr("Range"), &s.range)
+            .row(tr("Components"), &s.components)
+            .row(tr("Duration"), &s.duration)
+            .row(tr("Casting Time"), &s.casting_time)
+            .row(tr("Area of Effect"), &s.area_of_effect)
+            .row(tr("Saving Throw"), &s.saving_throw)]),
         text: String::new(),
     })
 }
@@ -923,11 +941,11 @@ fn psionic_entry(object: &Object) -> Option<Entry> {
         key: String::new(),
         title: p.name.clone(),
         subtitle: p.cost.clone(),
-        groups: groups([Group::new("Power")
-            .row("Cost", &p.cost)
-            .row("Range", &p.range)
-            .row("Area", &p.area)
-            .list("Prerequisites", &p.prerequisites)]),
+        groups: groups([Group::new(tr("Power"))
+            .row(tr("Cost"), &p.cost)
+            .row(tr("Range"), &p.range)
+            .row(tr("Area"), &p.area)
+            .list(tr("Prerequisites"), &p.prerequisites)]),
         text: p.description.clone(),
     })
 }
@@ -938,9 +956,9 @@ fn monster_entry(object: &Object) -> Option<Entry> {
     };
     let movement = [
         (m.movement, ""),
-        (m.fly_rate, "fly"),
-        (m.swim_rate, "swim"),
-        (m.burrow_rate, "burrow"),
+        (m.fly_rate, tr_noop!("fly {rate}")),
+        (m.swim_rate, tr_noop!("swim {rate}")),
+        (m.burrow_rate, tr_noop!("burrow {rate}")),
     ]
     .iter()
     .filter(|(rate, _)| *rate > 0)
@@ -948,7 +966,7 @@ fn monster_entry(object: &Object) -> Option<Entry> {
         if how.is_empty() {
             rate.to_string()
         } else {
-            format!("{how} {rate}")
+            cr_i18n::fill(tr(how), &[("rate", rate as &dyn std::fmt::Display)])
         }
     })
     .collect::<Vec<_>>()
@@ -960,32 +978,32 @@ fn monster_entry(object: &Object) -> Option<Entry> {
         title: m.name.clone(),
         subtitle: m.climate_terrain.clone(),
         groups: groups([
-            Group::new("Ecology")
-                .row("Climate/Terrain", &m.climate_terrain)
-                .row("Organization", &m.organization)
-                .row("Activity Cycle", &m.activity_cycle)
-                .row("Diet", &m.diet)
-                .row("Intelligence", &m.intelligence)
-                .row("Alignment", &m.alignment),
-            Group::new("Combat")
-                .row("Armor Class", m.armor_class)
-                .row("Movement", movement)
-                .row("Hit Dice", m.hit_dice)
-                .row("THAC0", m.thac0)
-                .row("Attacks", &m.arsenal.attacks)
-                .row("Damage", &m.arsenal.damage)
-                .row("Special Attacks", &m.arsenal.special_attacks)
-                .row("Special Defenses", &m.arsenal.special_defenses)
+            Group::new(tr("Ecology"))
+                .row(tr("Climate/Terrain"), &m.climate_terrain)
+                .row(tr("Organization"), &m.organization)
+                .row(tr("Activity Cycle"), &m.activity_cycle)
+                .row(tr("Diet"), &m.diet)
+                .row(tr("Intelligence"), &m.intelligence)
+                .row(tr("Alignment"), &m.alignment),
+            Group::new(tr("Combat"))
+                .row(tr("Armor Class"), m.armor_class)
+                .row(tr("Movement"), movement)
+                .row(tr("Hit Dice"), m.hit_dice)
+                .row(tr("THAC0"), m.thac0)
+                .row(tr("Attacks"), &m.arsenal.attacks)
+                .row(tr("Damage"), &m.arsenal.damage)
+                .row(tr("Special Attacks"), &m.arsenal.special_attacks)
+                .row(tr("Special Defenses"), &m.arsenal.special_defenses)
                 .row(
-                    "Magic Resistance",
+                    tr("Magic Resistance"),
                     if m.magic_resistance > 0 {
                         format!("{}%", m.magic_resistance)
                     } else {
                         String::new()
                     },
                 )
-                .row("Morale", m.morale)
-                .row("XP Value", m.experience),
+                .row(tr("Morale"), m.morale)
+                .row(tr("XP Value"), m.experience),
         ]),
         text: m.description.clone(),
     })
@@ -995,7 +1013,7 @@ fn monster_entry(object: &Object) -> Option<Entry> {
 /// from in its subtitle.
 fn udb_mark(mut entry: Entry, section: &str, origin: Origin) -> Entry {
     entry.key = crate::userdb::key(section, origin, &entry.title);
-    let label = origin_label(origin);
+    let label = tr(origin_label(origin));
     entry.subtitle = if entry.subtitle.is_empty() {
         label.to_owned()
     } else {
@@ -1010,7 +1028,7 @@ fn monster_type_entry(object: &Object) -> Option<Entry> {
     };
     Some(Entry {
         title: t.name.clone(),
-        groups: groups([Group::new("Monster Type").row("Bitmap", &t.picture)]),
+        groups: groups([Group::new(tr("Monster Type")).row(tr("Bitmap"), &t.picture)]),
         ..Default::default()
     })
 }
@@ -1022,13 +1040,13 @@ fn trap_entry(object: &Object) -> Option<Entry> {
     Some(Entry {
         title: t.name.clone(),
         subtitle: t.unknown_0x4.clone(),
-        groups: groups([Group::new("Trap")
-            .row("Location", &t.unknown_0x4)
-            .row("Damage", &t.damage)
-            .row("Detection Modifier", &t.unknown_0x14)
-            .row("Characters Trapped", &t.unknown_0x10)
-            .row("Saving Throw", &t.unknown_0xc)
-            .row("Special Effects", &t.unknown_0x8)]),
+        groups: groups([Group::new(tr("Trap"))
+            .row(tr("Location"), &t.unknown_0x4)
+            .row(tr("Damage"), &t.damage)
+            .row(tr("Detection Modifier"), &t.unknown_0x14)
+            .row(tr("Characters Trapped"), &t.unknown_0x10)
+            .row(tr("Saving Throw"), &t.unknown_0xc)
+            .row(tr("Special Effects"), &t.unknown_0x8)]),
         ..Default::default()
     })
 }
@@ -1039,7 +1057,7 @@ fn table_entry_text(e: &cr_formats::treasure::TreasureTableEntry) -> String {
     let [n, s, m] = e.quantity_dice;
     let count = crate::userdb::dice_text(n.into(), s.into(), m.into());
     let item = if e.is_table != 0 {
-        format!("Table: {}", e.item.name)
+        tr!("Table: {name}", name = e.item.name)
     } else {
         e.item.name.clone()
     };

@@ -3,6 +3,7 @@
 
 use cr_formats::Object;
 use cr_formats::traps::Trap;
+use cr_i18n::tr_noop;
 
 use super::{FieldDesc, Flavor, NewContext, UserKind, udb_text};
 use crate::{Installation, Result};
@@ -11,7 +12,7 @@ pub struct Traps;
 
 impl UserKind for Traps {
     type Rec = Trap;
-    const NOUN: &'static str = "Trap";
+    const NOUN: &'static str = tr_noop!("Trap");
     const FILE: &'static str = "UserDbas/TrapsU.dat";
 
     fn name(r: &Trap) -> &str {
@@ -55,15 +56,20 @@ impl UserKind for Traps {
     /// golden `TrapsU_01_udbpit.dat`).
     fn fields(_flavor: Flavor) -> Vec<FieldDesc<Trap>> {
         type Rec = Trap;
-        const PAGE: &str = "Trap";
+        const PAGE: &str = tr_noop!("Trap");
         vec![
-            udb_text!(PAGE, "Trap Name", 50, name),
-            udb_text!(PAGE, "Location", 50, unknown_0x4),
-            udb_text!(PAGE, "Damage", 50, damage),
-            udb_text!(PAGE, "Detection Modifier", 50, unknown_0x14),
-            udb_text!(PAGE, "Number of Characters Trapped", 50, unknown_0x10),
-            udb_text!(PAGE, "Saving Throw", 50, unknown_0xc),
-            udb_text!(PAGE, "Special Effects", 50, unknown_0x8),
+            udb_text!(PAGE, tr_noop!("Trap Name"), 50, name),
+            udb_text!(PAGE, tr_noop!("Location"), 50, unknown_0x4),
+            udb_text!(PAGE, tr_noop!("Damage"), 50, damage),
+            udb_text!(PAGE, tr_noop!("Detection Modifier"), 50, unknown_0x14),
+            udb_text!(
+                PAGE,
+                tr_noop!("Number of Characters Trapped"),
+                50,
+                unknown_0x10
+            ),
+            udb_text!(PAGE, tr_noop!("Saving Throw"), 50, unknown_0xc),
+            udb_text!(PAGE, tr_noop!("Special Effects"), 50, unknown_0x8),
         ]
     }
 
