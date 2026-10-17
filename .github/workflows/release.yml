@@ -60,18 +60,24 @@ jobs:
           name: deb
           path: dist/*.deb
 
-  # The AppImage is built on Ubuntu 24.04, so it runs on systems with that
-  # glibc or newer.
-  ubuntu:
+  # The AppImage is built inside the GNOME 51 SDK and bundles its GTK,
+  # libadwaita and the rest of the GNOME 51 libraries, like the Flatpak.
+  appimage:
     needs: version
     runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libadwaita-1-dev file
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release --locked
-      - run: packaging/appimage/build.sh ${{ needs.version.outputs.version }}
+      # The checkout belongs to the runner's user; root inside the SDK
+      # sandbox has no capabilities to write there.
+      - run: chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"
+      - run: packaging/appimage/build-in-sdk.sh ${{ needs.version.outputs.version }}
+      - run: |
+          # The newest glibc symbol it needs, which the release notes name.
+          cd target/AppDir && find . -type f \( -name '*.so*' -o -path '*/bin/*' \) -exec objdump -T {} + 2>/dev/null |
+            grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1
       - uses: actions/upload-artifact@v4
         with:
           name: appimage
@@ -95,7 +101,7 @@ jobs:
     needs: version
     runs-on: ubuntu-24.04
     container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
     steps:
       - uses: actions/checkout@v4
@@ -154,11 +160,11 @@ jobs:
   # (linuxdeploy's excludelist: X, OpenGL, Wayland, fonts and text shaping).
   # FUSE is skipped by extract-and-run.
   test-appimage:
-    needs: ubuntu
+    needs: appimage
     strategy:
       fail-fast: false
       matrix:
-        image: ['fedora:44', 'ubuntu:24.04']
+        image: ['fedora:44', 'ubuntu:26.04', 'fedora:latest', 'ubuntu:latest']
     runs-on: ubuntu-24.04
     container: ${{ matrix.image }}
     env:
@@ -186,7 +192,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y flatpak xvfb dbus
       - run: |
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          flatpak install --user -y --noninteractive flathub org.gnome.Platform//50
+          flatpak install --user -y --noninteractive flathub org.gnome.Platform//51
           flatpak install --user -y --noninteractive --bundle CoreRules-*.flatpak
       - run: packaging/smoke-test.sh flatpak run io.github.brahm.CoreRules
 

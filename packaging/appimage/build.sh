@@ -1,8 +1,9 @@
 #!/bin/sh
 # Builds dist/CoreRules-VERSION-ARCH.AppImage from target/release with
 # linuxdeploy and its GTK plugin, which bundle GTK 4, libadwaita and their
-# data. Build on the oldest distribution supported (Ubuntu 24.04): the
-# AppImage runs on systems with the same glibc or newer.
+# data from the system it runs on. Releases run it inside the GNOME 51 SDK
+# (build-in-sdk.sh), so the AppImage carries that platform's libraries and
+# runs on systems with the SDK's glibc or newer.
 set -eu
 version=$1
 arch=$(uname -m)
@@ -15,6 +16,13 @@ fetch() {
 fetch linuxdeploy "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-$arch.AppImage"
 fetch linuxdeploy-plugin-gtk.sh "https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh"
 fetch appimagetool "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$arch.AppImage"
+# Newer GNOME platforms decode images with glycin and ship gdk-pixbuf
+# without a loaders directory; the plugin then has nothing to copy there.
+# GTK 4 reads PNG, JPEG and TIFF itself.
+plugin=$tools/linuxdeploy-plugin-gtk.sh
+grep -q 'pixbuf loaders, if any' "$plugin" || sed -i \
+    -e 's|^echo "Installing GDK PixBufs"$|if [ -d "$(pkg-config --variable=gdk_pixbuf_binarydir gdk-pixbuf-2.0)" ]; then # pixbuf loaders, if any\n&|' \
+    -e 's|^echo "Copying more libraries"$|fi\n&|' "$plugin"
 
 rm -rf "$appdir"
 packaging/install.sh "$appdir" /usr
