@@ -69,7 +69,7 @@ CORERULES_DIR="$HOME/.wine/drive_c/Program Files/AD&D Core Rules 2.0" cargo test
 
 The Character Generator, the DM Toolkit's generators, packages and editors,
 the books and Table Rolls work against a real installation. Map Maker II,
-the Campaign Mapper and the dice roller are not planned. The interface is
+the Campaign Mapper and the dice roller are out of scope. The interface is
 in American English, Brazilian Portuguese, Spanish, Italian, French and
 German (see [Languages](#languages)).
 
