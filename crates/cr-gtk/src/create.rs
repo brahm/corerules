@@ -406,24 +406,24 @@ impl Wizard {
         let mut arrows = Vec::new();
         let entered: Vec<adw::SpinRow> = ABILITIES
             .iter()
-            .map(|a| spin_row(a, "", 10, 3, 18))
+            .map(|a| spin_row(tr(a), "", 10, 3, 18))
             .collect();
         let dice_rows: Vec<adw::SpinRow> = ABILITIES
             .iter()
-            .map(|a| spin_row(a, &trn!("{n} die", "{n} dice", 4u32), 4, 3, 6))
+            .map(|a| spin_row(tr(a), &trn!("{n} die", "{n} dice", 4u32), 4, 3, 6))
             .collect();
         let pool_labels: Vec<gtk::Label> = (0..6)
             .map(|_| gtk::Label::builder().css_classes(["title-4"]).build())
             .collect();
         // Method VI: the seven dice, each given to an ability.
         let seven: Rc<RefCell<[u32; METHOD_VI_DICE]>> = Rc::default();
-        let ability_names: Vec<String> = ABILITIES.iter().map(|a| a.to_string()).collect();
+        let ability_names: Vec<String> = ABILITIES.iter().map(|a| tr(a).to_string()).collect();
         let seven_rows: Vec<adw::ComboRow> = (0..METHOD_VI_DICE)
             .map(|d| {
                 combo_row(
                     &tr!("Die {number}", number = d + 1),
                     &ability_names,
-                    ABILITIES[d % 6],
+                    tr(ABILITIES[d % 6]),
                 )
             })
             .collect();
@@ -458,7 +458,7 @@ impl Wizard {
                 .css_classes(["flat"])
                 .sensitive(a < 5)
                 .build();
-            let row = adw::ActionRow::builder().title(*name).build();
+            let row = adw::ActionRow::builder().title(tr(name)).build();
             row.add_suffix(&label);
             row.add_suffix(&up);
             row.add_suffix(&down);
@@ -1316,10 +1316,13 @@ impl Wizard {
                 probe.subabilities = spreads();
                 let scores = this.rules().subability_scores(&probe);
                 for (a, row) in spread_rows.iter().enumerate() {
-                    row.set_title(&format!("{} {}", ABILITIES[a], scores[a][0]));
+                    row.set_title(&format!("{} {}", tr(ABILITIES[a]), scores[a][0]));
                     row.set_subtitle(&format!(
                         "{} {} · {} {}",
-                        SUBABILITIES[a][0], scores[a][1], SUBABILITIES[a][1], scores[a][2]
+                        tr(SUBABILITIES[a][0]),
+                        scores[a][1],
+                        tr(SUBABILITIES[a][1]),
+                        scores[a][2]
                     ));
                 }
             }
@@ -2146,7 +2149,13 @@ impl Wizard {
         let rows: Vec<(usize, adw::SpinRow)> = skills
             .iter()
             .map(|&(_, skill)| {
-                let row = spin_row(ROGUE_SKILLS[skill].0, "", d.rogue_points[skill], 0, most);
+                let row = spin_row(
+                    tr(ROGUE_SKILLS[skill].0),
+                    "",
+                    d.rogue_points[skill],
+                    0,
+                    most,
+                );
                 group.add(&row);
                 (skill, row)
             })

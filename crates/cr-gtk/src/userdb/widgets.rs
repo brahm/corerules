@@ -145,7 +145,7 @@ pub fn two_list(
                         ))
                         .numeric(true)
                         .valign(gtk::Align::Center)
-                        .tooltip_text(number.label)
+                        .tooltip_text(tr(number.label))
                         .width_chars(4)
                         .build();
                     let (selected, on_change) = (selected.clone(), on_change.clone());

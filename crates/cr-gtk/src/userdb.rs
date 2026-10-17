@@ -20,7 +20,8 @@ use cr_store::userdb::spells::Spells;
 use cr_store::userdb::tables::{self, TableDb};
 use cr_store::userdb::traps::Traps;
 use cr_store::userdb::{
-    self as udb, FieldDesc, FieldKind, Filter, Flavor, Origin, Sources, UserDb, UserKind, Value,
+    self as udb, FieldDesc, FieldKind, Filter, Flavor, Options, Origin, Sources, UserDb, UserKind,
+    Value,
 };
 use cr_store::{Installation, Result};
 use gtk::{gio, glib};
@@ -729,7 +730,7 @@ fn finish<K: UserKind, H: Host + 'static>(
                 }
                 Some(Err((error, r))) => {
                     let heading = if error == udb::NameError::Slash {
-                        classes::SLASH_TITLE
+                        tr(classes::SLASH_TITLE)
                     } else {
                         tr("Not Saved")
                     };
@@ -852,11 +853,16 @@ fn control<R: Clone + 'static, H: Host + 'static>(
                 }
             }
             let choices = Rc::new(choices);
+            // Fixed choices are interface words, shown translated; the
+            // value is still taken from `choices` by position.
+            let translate = matches!(field.kind, FieldKind::Choice(Options::Fixed(_)));
+            let shown: Vec<&str> = choices
+                .iter()
+                .map(|c| if translate { tr(c) } else { c.as_str() })
+                .collect();
             let row = adw::ComboRow::builder()
                 .title(glib::markup_escape_text(label).as_str())
-                .model(&gtk::StringList::new(
-                    &choices.iter().map(String::as_str).collect::<Vec<_>>(),
-                ))
+                .model(&gtk::StringList::new(&shown))
                 .enable_search(choices.len() > 12)
                 .build();
             {
@@ -1085,7 +1091,7 @@ fn table_action<H: Host + 'static>(host: &Shared<H>, target: &Target, action: Ac
             }
             let alert = adw::AlertDialog::builder()
                 .heading(tr("Are you sure?"))
-                .body(tables::DELETE_WARNING)
+                .body(tr(tables::DELETE_WARNING))
                 .default_response("cancel")
                 .close_response("cancel")
                 .build();
@@ -1113,7 +1119,7 @@ fn table_action<H: Host + 'static>(host: &Shared<H>, target: &Target, action: Ac
 fn restore_table<H: Host + 'static>(host: &Shared<H>, name: &str) {
     let alert = adw::AlertDialog::builder()
         .heading(tr("Restore Table?"))
-        .body(tables::RESTORE_WARNING)
+        .body(tr(tables::RESTORE_WARNING))
         .default_response("cancel")
         .close_response("cancel")
         .build();
@@ -1549,7 +1555,11 @@ fn allowed_classes<H: Host + 'static>(host: &Shared<H>, race: &str) {
         );
         move |_| {
             if dual {
-                return message(&host.parent(), tr("Multi-Classes"), allowed::DUAL_AND_MULTI);
+                return message(
+                    &host.parent(),
+                    tr("Multi-Classes"),
+                    tr(allowed::DUAL_AND_MULTI),
+                );
             }
             let taken: Vec<String> = entries.borrow().iter().map(|a| a.name.clone()).collect();
             let choices: Vec<String> = classes::multiclass_names(&class_list)
