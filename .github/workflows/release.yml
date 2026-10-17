@@ -70,6 +70,9 @@ jobs:
       options: --privileged
     steps:
       - uses: actions/checkout@v4
+      # The checkout belongs to the runner's user; root inside the SDK
+      # sandbox has no capabilities to write there.
+      - run: chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"
       - run: packaging/appimage/build-in-sdk.sh ${{ needs.version.outputs.version }}
       - run: |
           # The newest glibc symbol it needs, which the release notes name.
