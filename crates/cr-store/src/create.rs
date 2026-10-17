@@ -1213,7 +1213,15 @@ impl CreationRules {
         (0..6).find_map(|a| {
             let [low, high] = r.limits[a];
             let s = scores[a] as i32;
-            (s < low || s > high).then(|| format!("{race} needs {} {low} to {high}", ABILITIES[a]))
+            (s < low || s > high).then(|| {
+                tr!(
+                    "{race} needs {ability} {low} to {high}",
+                    race,
+                    ability = tr(ABILITIES[a]),
+                    low,
+                    high
+                )
+            })
         })
     }
 
@@ -2097,10 +2105,10 @@ impl CreationRules {
     /// Why the character cannot be made as drafted, if it cannot.
     pub fn problem(&self, draft: &Draft) -> Option<String> {
         if draft.name.trim().is_empty() {
-            return Some("A character needs a name".into());
+            return Some(tr("A character needs a name").into());
         }
         if self.race(&draft.race).is_none() {
-            return Some("Choose a race".into());
+            return Some(tr("Choose a race").into());
         }
         if !self
             .races(draft.setting, &draft.scores, false)
@@ -2109,7 +2117,11 @@ impl CreationRules {
             return Some(
                 self.race_problem(&draft.race, &draft.scores)
                     .unwrap_or_else(|| {
-                        format!("{} is not a race of {}", draft.race, draft.setting.name)
+                        tr!(
+                            "{race} is not a race of {setting}",
+                            race = draft.race,
+                            setting = draft.setting.name
+                        )
                     }),
             );
         }
@@ -2118,17 +2130,17 @@ impl CreationRules {
             .class_options(draft.setting, &draft.race, &adjusted)
             .contains(&draft.classes)
         {
-            return Some(format!(
-                "A {} cannot be a {} here",
-                draft.race,
-                draft.class_title()
+            return Some(tr!(
+                "A {race} cannot be a {class} here",
+                race = draft.race,
+                class = draft.class_title()
             ));
         }
         if !self.alignments(&draft.classes).contains(&draft.alignment) {
-            return Some(format!(
-                "A {} cannot be {}",
-                draft.class_title(),
-                draft.alignment
+            return Some(tr!(
+                "A {class} cannot be {alignment}",
+                class = draft.class_title(),
+                alignment = tr(&draft.alignment)
             ));
         }
         if draft.kit != "None"
@@ -2136,7 +2148,10 @@ impl CreationRules {
                 .kits(&draft.race, &draft.subrace, &draft.classes)
                 .contains(&draft.kit)
         {
-            return Some(format!("The {} kit is not for this character", draft.kit));
+            return Some(tr!(
+                "The {kit} kit is not for this character",
+                kit = draft.kit
+            ));
         }
         if let Some(problem) = if draft.skills_and_powers {
             self.points_problem(draft)
@@ -2153,18 +2168,19 @@ impl CreationRules {
         }
         let most = max_spells_per_level(adjusted[3]);
         if draft.spells.len() > most {
-            return Some(format!(
-                "Intelligence {} allows {most} spells of a level",
-                adjusted[3]
+            return Some(tr!(
+                "Intelligence {score} allows {most} spells of a level",
+                score = adjusted[3],
+                most
             ));
         }
         if let Some((name, _)) = draft.purchases.iter().find(|(n, _)| self.ware(n).is_none()) {
-            return Some(format!("{name} is not for sale"));
+            return Some(tr!("{name} is not for sale", name));
         }
         if self.spent(draft) > draft.gold * 100 {
-            return Some(format!(
-                "The equipment costs more than the {} gold pieces there are",
-                draft.gold
+            return Some(tr!(
+                "The equipment costs more than the {gold} gold pieces there are",
+                gold = draft.gold
             ));
         }
         None
@@ -2174,18 +2190,19 @@ impl CreationRules {
     fn languages_problem(&self, draft: &Draft) -> Option<String> {
         let slots = self.language_slots(draft);
         if draft.learned_languages.len() > slots {
-            return Some(format!(
-                "{} languages are learned; the proficiencies teach {slots}",
-                draft.learned_languages.len()
+            return Some(tr!(
+                "{count} languages are learned; the proficiencies teach {slots}",
+                count = draft.learned_languages.len(),
+                slots
             ));
         }
         let mut seen = HashSet::new();
         for language in &draft.learned_languages {
             if !self.languages.contains(language) {
-                return Some(format!("{language} is not a language"));
+                return Some(tr!("{language} is not a language", language));
             }
             if draft.languages.contains(language) || !seen.insert(language) {
-                return Some(format!("{language} is known already"));
+                return Some(tr!("{language} is known already", language));
             }
         }
         None
@@ -2285,13 +2302,15 @@ impl CreationRules {
         let slots = self.nonweapon_slots(&draft.classes, intelligence);
         let spent = self.nonweapon_spent(draft);
         if spent > slots {
-            return Some(format!(
-                "The nonweapon proficiencies take {spent} slots; there are {slots}"
+            return Some(tr!(
+                "The nonweapon proficiencies take {spent} slots; there are {slots}",
+                spent,
+                slots
             ));
         }
         let slots = self.weapon_slots(&draft.classes);
         if draft.weapon_proficiencies.len() as u32 > slots {
-            return Some(format!("There are {slots} weapon proficiency slots"));
+            return Some(tr!("There are {slots} weapon proficiency slots", slots));
         }
         None
     }
@@ -2299,16 +2318,17 @@ impl CreationRules {
     /// Skills & Powers: every choice is on offer and the points cover it.
     fn points_problem(&self, draft: &Draft) -> Option<String> {
         if !self.expansion {
-            return Some("Player's Option characters need the Expansion".into());
+            return Some(tr("Player's Option characters need the Expansion").into());
         }
         if let Some(a) = draft
             .subabilities
             .iter()
             .find(|a| a.abs() > SUBABILITY_SPREAD)
         {
-            return Some(format!(
-                "A subability may be at most {SUBABILITY_SPREAD} from its score, not {}",
-                a.abs()
+            return Some(tr!(
+                "A subability may be at most {most} from its score, not {spread}",
+                most = SUBABILITY_SPREAD,
+                spread = a.abs()
             ));
         }
         let choices = self.racial_ability_choices(&draft.race, &draft.subrace);
@@ -2317,16 +2337,17 @@ impl CreationRules {
             .iter()
             .find(|a| !choices.iter().any(|c| &c.0 == *a))
         {
-            return Some(format!(
-                "{a} is not a racial ability of the {}",
-                draft.subrace
+            return Some(tr!(
+                "{ability} is not a racial ability of the {race}",
+                ability = a,
+                race = draft.subrace
             ));
         }
         let left = self.racial_points_left(draft);
         if left < 0 {
-            return Some(format!(
-                "The racial abilities cost {} points more than the race has",
-                -left
+            return Some(tr!(
+                "The racial abilities cost {count} points more than the race has",
+                count = -left
             ));
         }
         for (slot, class) in draft.classes.iter().enumerate() {
@@ -2338,19 +2359,25 @@ impl CreationRules {
                 .flatten()
                 .find(|a| !choices.iter().any(|c| &c.0 == *a))
             {
-                return Some(format!("{a} is not a {class} ability"));
+                return Some(tr!(
+                    "{ability} is not a {class} ability",
+                    ability = a,
+                    class
+                ));
             }
             let left = self.class_points_left(draft, slot);
             if left < 0 {
-                return Some(format!(
-                    "The {class} abilities cost {} points more than the class has",
-                    -left
+                return Some(tr!(
+                    "The {class} abilities cost {count} points more than the class has",
+                    class,
+                    count = -left
                 ));
             }
         }
         if draft.disadvantages.len() > MOST_DISADVANTAGES {
-            return Some(format!(
-                "A character may have at most {MOST_DISADVANTAGES} disadvantages"
+            return Some(tr!(
+                "A character may have at most {count} disadvantages",
+                count = MOST_DISADVANTAGES
             ));
         }
         if let Some(t) = draft
@@ -2358,35 +2385,38 @@ impl CreationRules {
             .iter()
             .find(|t| !self.traits.iter().any(|k| &k.0 == *t))
         {
-            return Some(format!("{t} is not a trait"));
+            return Some(tr!("{name} is not a trait", name = t));
         }
         if let Some(t) = draft
             .disadvantages
             .iter()
             .find(|t| !self.disadvantages.iter().any(|k| &k.0 == *t))
         {
-            return Some(format!("{t} is not a disadvantage"));
+            return Some(tr!("{name} is not a disadvantage", name = t));
         }
         let left = self.proficiency_points_left(draft);
         if left < 0 {
-            return Some(format!(
-                "The nonweapon proficiencies and traits cost {} points more than there are",
-                -left
+            return Some(tr!(
+                "The nonweapon proficiencies and traits cost {count} points more than there are",
+                count = -left
             ));
         }
         if !draft.specializations.is_empty() {
             if self.specialization_cost(draft).is_none() {
-                return Some(
-                    "Only a single-classed fighter with Weapon specialization may specialize"
-                        .into(),
-                );
+                return Some(tr!(
+                    "Only a single-classed fighter with {ability} may specialize",
+                    ability = "Weapon specialization"
+                ));
             }
             if let Some(w) = draft
                 .specializations
                 .iter()
                 .find(|w| !draft.weapon_proficiencies.contains(w))
             {
-                return Some(format!("Specializing in {w} needs its proficiency"));
+                return Some(tr!(
+                    "Specializing in {weapon} needs its proficiency",
+                    weapon = w
+                ));
             }
             let multiple = draft
                 .class_abilities
@@ -2394,9 +2424,10 @@ impl CreationRules {
                 .flatten()
                 .any(|a| a.contains("Multiple specialization"));
             if draft.specializations.len() > 1 && !multiple {
-                return Some(
-                    "Specializing in more than one weapon needs Multiple specialization".into(),
-                );
+                return Some(tr!(
+                    "Specializing in more than one weapon needs {ability}",
+                    ability = "Multiple specialization"
+                ));
             }
         }
         if let Some(problem) = self.combat_problem(draft) {
@@ -2404,9 +2435,9 @@ impl CreationRules {
         }
         let left = self.points_left(draft);
         if left < 0 {
-            return Some(format!(
-                "The weapon proficiencies and combat options cost {} points more than there are",
-                -left
+            return Some(tr!(
+                "The weapon proficiencies and combat options cost {count} points more than there are",
+                count = -left
             ));
         }
         None

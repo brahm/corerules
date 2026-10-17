@@ -103,12 +103,13 @@ impl Installation {
     /// returns the character's new file name.
     pub fn set_party(&self, file: &str, party: &str) -> Result<String> {
         if !self.has_parties() {
-            return Err(Error::Invalid("Core Rules 2.0 has no parties".into()));
+            return Err(Error::Invalid(tr("Core Rules 2.0 has no parties").into()));
         }
         let party = party.trim();
         if party.eq_ignore_ascii_case(ALL) {
-            return Err(Error::Invalid(format!(
-                "You may not add to the {ALL} category"
+            return Err(Error::Invalid(tr!(
+                "You may not add to the {category} category",
+                category = ALL
             )));
         }
         let format = |path: &str| {
@@ -205,13 +206,19 @@ impl Installation {
                 .iter()
                 .any(|e| e.file.eq_ignore_ascii_case(&d.file))
             {
-                return Err(Error::Invalid(format!("{} is in the list already", d.file)));
+                return Err(Error::Invalid(tr!(
+                    "{file} is in the list already",
+                    file = d.file
+                )));
             }
             let at = d.position.min(index.entries.len());
             index.entries.insert(at, d.entry.clone());
         }
         if let Some(d) = deleted.iter().find(|d| chars.join(&d.file).exists()) {
-            return Err(Error::Invalid(format!("Chars/{} exists already", d.file)));
+            return Err(Error::Invalid(tr!(
+                "{file} exists already",
+                file = format!("Chars/{}", d.file)
+            )));
         }
         let index_bytes = self.index_bytes(&index)?;
         for d in deleted {
@@ -237,7 +244,7 @@ impl Installation {
 
     fn chars_folder(&self) -> Result<PathBuf> {
         self.path("Chars")
-            .ok_or_else(|| Error::Invalid("The installation has no Chars folder".into()))
+            .ok_or_else(|| Error::Invalid(tr("The installation has no Chars folder").into()))
     }
 
     fn index_bytes(&self, index: &CharacterIndex) -> Result<Vec<u8>> {
@@ -263,5 +270,5 @@ fn position(index: &CharacterIndex, file: &str) -> Result<usize> {
         .entries
         .iter()
         .position(|e| e.file.eq_ignore_ascii_case(file))
-        .ok_or_else(|| Error::Invalid(format!("{file} is not in the character list")))
+        .ok_or_else(|| Error::Invalid(tr!("{file} is not in the character list", file)))
 }

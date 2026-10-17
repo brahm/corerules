@@ -622,7 +622,7 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
             }
             for line in lines.iter() {
                 let row = adw::ActionRow::builder()
-                    .title(glib::markup_escape_text(&line.label()))
+                    .title(glib::markup_escape_text(&line.display_label()))
                     .build();
                 lines_group.add(&row);
                 line_rows.borrow_mut().push(row);

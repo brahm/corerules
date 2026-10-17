@@ -14,6 +14,8 @@ use std::path::{Path, PathBuf};
 
 use cr_formats::character::{Character, CharacterIndex};
 
+use cr_i18n::tr;
+
 use crate::lists::CharacterLists;
 use crate::{Error, Installation, Result};
 
@@ -70,7 +72,7 @@ impl CharacterDetails {
     /// Why the original would not accept these details, if it would not.
     pub fn problem(&self) -> Option<String> {
         if self.name.trim().is_empty() {
-            return Some("A character needs a name".into());
+            return Some(tr("A character needs a name").into());
         }
         if self
             .abilities
@@ -78,10 +80,10 @@ impl CharacterDetails {
             .flatten()
             .any(|v| !ABILITY_RANGE.contains(v))
         {
-            return Some("Ability scores go from 1 to 25".into());
+            return Some(tr("Ability scores go from 1 to 25").into());
         }
         if self.exceptional_strength > 100 {
-            return Some("Exceptional strength goes up to 100".into());
+            return Some(tr("Exceptional strength goes up to 100").into());
         }
         None
     }
@@ -162,13 +164,13 @@ impl Installation {
 
         let index_path = self
             .path("Chars/index.chr")
-            .ok_or_else(|| Error::Invalid("The character list is missing".into()))?;
+            .ok_or_else(|| Error::Invalid(tr("The character list is missing").into()))?;
         let mut index = self.characters()?;
         let entry = index
             .entries
             .iter_mut()
             .find(|e| e.file.eq_ignore_ascii_case(file))
-            .ok_or_else(|| Error::Invalid(format!("{file} is not in the character list")))?;
+            .ok_or_else(|| Error::Invalid(tr!("{file} is not in the character list", file)))?;
         entry.name.clone_from(&details.name);
         let added = lists.is_some_and(|l| !l.new_classes.is_empty());
         for line in &mut entry.details {
@@ -187,7 +189,7 @@ impl Installation {
 
         let path = self
             .path(&character_path(file)?)
-            .ok_or_else(|| Error::Invalid(format!("{file} not found")))?;
+            .ok_or_else(|| Error::Invalid(tr!("{file} not found", file)))?;
         replace(&path, &bytes)?;
         replace(&index_path, &index_bytes)
     }
@@ -203,8 +205,9 @@ pub(crate) const LEVEL_LINE: &str = "Level: ";
 /// `Chars/<file>`, refusing names that would leave the folder.
 fn character_path(file: &str) -> Result<String> {
     if file.is_empty() || file.contains(['/', '\\']) || file.starts_with('.') {
-        return Err(Error::Invalid(format!(
-            "{file} is not a character file name"
+        return Err(Error::Invalid(tr!(
+            "{file} is not a character file name",
+            file
         )));
     }
     Ok(format!("Chars/{file}"))

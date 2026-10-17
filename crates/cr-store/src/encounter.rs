@@ -49,6 +49,8 @@ pub use tables::{
 };
 pub use text::{dice_text, hit_dice_text, hit_point_text, npc_line, stat_line};
 
+use cr_i18n::tr;
+
 use crate::npc::NpcRules;
 use crate::sheet::SheetRules;
 use crate::treasure::TreasureRules;
@@ -358,9 +360,9 @@ pub fn remove_trap(traps: &mut Vec<Trap>, name: &str) -> std::result::Result<(),
 /// Why an encounter could not be saved, with the original's messages.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum NameError {
-    #[error("A name must be supplied.")]
+    #[error("{}", tr("A name must be supplied."))]
     NoName,
-    #[error("Name already used.")]
+    #[error("{}", tr("Name already used."))]
     NameUsed,
 }
 
@@ -687,9 +689,11 @@ fn check_flavor(list: &[Encounter], flavor: Flavor) -> Result<()> {
     for e in list {
         for npc in &e.npcs {
             if npc.character.version != CORE20_VERSION {
-                return Err(Error::Invalid(format!(
-                    "{}: the NPC {} is a {} character, which Core Rules 2.0 cannot read",
-                    e.name, npc.character.data.name, npc.character.version
+                return Err(Error::Invalid(tr!(
+                    "{encounter}: the NPC {name} is a {version} character, which Core Rules 2.0 cannot read",
+                    encounter = e.name,
+                    name = npc.character.data.name,
+                    version = npc.character.version
                 )));
             }
         }
@@ -708,7 +712,7 @@ pub(crate) fn replace_or_create(
     }
     let folder = install
         .path("UserDbas")
-        .ok_or_else(|| Error::Invalid("the installation has no UserDbas folder".into()))?;
+        .ok_or_else(|| Error::Invalid(tr("the installation has no UserDbas folder").into()))?;
     crate::create::write_new(&folder.join(file), bytes)
 }
 
@@ -960,9 +964,11 @@ impl Encounter {
     /// its own characters (`TSRP2 V29`).
     pub fn add_npc(&mut self, character: Character, flavor: Flavor) -> Result<()> {
         if flavor == Flavor::Core20 && character.version != CORE20_VERSION {
-            return Err(Error::Invalid(format!(
-                "{} is a {} character; Core Rules 2.0 reads only {CORE20_VERSION}",
-                character.data.name, character.version
+            return Err(Error::Invalid(tr!(
+                "{name} is a {version} character; Core Rules 2.0 reads only {core20}",
+                name = character.data.name,
+                version = character.version,
+                core20 = CORE20_VERSION
             )));
         }
         self.npcs.push(NpcPackage::of_character(character));

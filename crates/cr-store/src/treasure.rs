@@ -542,7 +542,7 @@ impl Installation {
         let relative = ["UserDbas/Treasure.dat", "Database/Treasure.dat"]
             .into_iter()
             .find(|r| self.path(r).is_some())
-            .ok_or_else(|| Error::Invalid("no Treasure.dat in the installation".into()))?;
+            .ok_or_else(|| Error::Invalid(tr("no Treasure.dat in the installation").into()))?;
         let list = ObjectList::parse(&self.read(relative)?).map_err(|source| Error::Format {
             path: relative.into(),
             source,
@@ -1193,9 +1193,9 @@ pub struct SavedTreasure {
 /// Why a bundle could not be saved, with the original's messages.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum SaveError {
-    #[error("A name must be supplied.")]
+    #[error("{}", tr("A name must be supplied."))]
     NoName,
-    #[error("Name already used.")]
+    #[error("{}", tr("Name already used."))]
     NameUsed,
 }
 
@@ -1279,7 +1279,7 @@ impl Installation {
         }
         let folder = self
             .path("UserDbas")
-            .ok_or_else(|| Error::Invalid("the installation has no UserDbas folder".into()))?;
+            .ok_or_else(|| Error::Invalid(tr("the installation has no UserDbas folder").into()))?;
         crate::create::write_new(&folder.join("TreaBunU.dat"), &bytes)
     }
 

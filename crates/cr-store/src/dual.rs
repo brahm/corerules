@@ -15,6 +15,8 @@ use cr_formats::Object;
 use cr_formats::character::Character;
 use cr_formats::classes::Class;
 
+use cr_i18n::{tr, tr_noop};
+
 use crate::{Error, Installation, Result};
 
 /// What adding a class needs to know about one class of the databases.
@@ -182,12 +184,12 @@ fn scores(character: &Character) -> [i32; 6] {
 }
 
 const ABILITIES: [&str; 6] = [
-    "Strength",
-    "Dexterity",
-    "Constitution",
-    "Intelligence",
-    "Wisdom",
-    "Charisma",
+    tr_noop!("Strength"),
+    tr_noop!("Dexterity"),
+    tr_noop!("Constitution"),
+    tr_noop!("Intelligence"),
+    tr_noop!("Wisdom"),
+    tr_noop!("Charisma"),
 ];
 
 impl ClassTable {
@@ -204,15 +206,15 @@ impl ClassTable {
     pub fn choices(&self, character: &Character) -> ClassChoice {
         let d = &character.data;
         if !self.dual_races.contains(&d.race) {
-            return ClassChoice::Refused(format!(
-                "{} characters cannot take another class: only races that may \
+            return ClassChoice::Refused(tr!(
+                "{race} characters cannot take another class: only races that may \
                  dual-class can, and multi-class combinations are chosen at \
                  creation",
-                d.race
+                race = d.race
             ));
         }
         if d.classes.names.len() >= MAX_CLASSES {
-            return ClassChoice::Refused("A character has room for five classes".into());
+            return ClassChoice::Refused(tr("A character has room for five classes").into());
         }
         let current: Vec<_> = d
             .classes
@@ -222,16 +224,17 @@ impl ClassTable {
             .collect();
         if current.len() != d.classes.names.len() {
             return ClassChoice::Refused(
-                "One of the character's classes is not in the databases".into(),
+                tr("One of the character's classes is not in the databases").into(),
             );
         }
         let scores = scores(character);
         if let Some(first) = current.first()
             && let Some(a) = (0..6).find(|&a| first.prime[a] && scores[a] < 15)
         {
-            return ClassChoice::Refused(format!(
-                "Dual-classing needs {} 15 or more for the first class, {}",
-                ABILITIES[a], first.name
+            return ClassChoice::Refused(tr!(
+                "Dual-classing needs {ability} 15 or more for the first class, {class}",
+                ability = tr(ABILITIES[a]),
+                class = first.name
             ));
         }
         let allowed = self
@@ -257,7 +260,7 @@ impl ClassTable {
     fn why_not(&self, character: &Character, name: &str) -> String {
         let who = &character.data.name;
         let Some(class) = self.class(name) else {
-            return format!("{name} is not a class in the databases");
+            return tr!("{name} is not a class in the databases", name);
         };
         let scores = scores(character);
         if let Some(held) = character
@@ -267,21 +270,33 @@ impl ClassTable {
             .iter()
             .find(|n| self.class(n).is_some_and(|c| c.group == class.group))
         {
-            return format!("{who} already has {held}, a class of the same group as {name}");
+            return tr!(
+                "{who} already has {held}, a class of the same group as {name}",
+                who,
+                held,
+                name
+            );
         }
         if let Some(a) = (0..6).find(|&a| scores[a] < class.requirements[a]) {
-            return format!(
-                "{name} needs {} {} or more",
-                ABILITIES[a], class.requirements[a]
+            return tr!(
+                "{name} needs {ability} {score} or more",
+                name,
+                ability = tr(ABILITIES[a]),
+                score = class.requirements[a]
             );
         }
         if let Some(a) = (0..6).find(|&a| class.prime[a] && scores[a] < 17) {
-            return format!(
-                "Dual-classing into {name} needs {} 17 or more",
-                ABILITIES[a]
+            return tr!(
+                "Dual-classing into {name} needs {ability} 17 or more",
+                name,
+                ability = tr(ABILITIES[a])
             );
         }
-        format!("{} characters cannot be {name}", character.data.race)
+        tr!(
+            "{race} characters cannot be {name}",
+            race = character.data.race,
+            name
+        )
     }
 
     /// Adds `name` to `character` as the dual-class dialog does, after

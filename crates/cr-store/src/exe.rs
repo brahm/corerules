@@ -7,6 +7,8 @@
 
 use std::collections::HashMap;
 
+use cr_i18n::tr;
+
 use crate::treasure::Flavor;
 use crate::{Error, Installation, Result};
 
@@ -67,8 +69,9 @@ impl Image {
             .find(|p| p.0 == flavor)
             .expect("both flavors have a program");
         let Some(path) = install.path(relative) else {
-            return Err(Error::Invalid(format!(
-                "{relative} is missing: some texts are read from the program"
+            return Err(Error::Invalid(tr!(
+                "{file} is missing: some texts are read from the program",
+                file = relative
             )));
         };
         let bytes = std::fs::read(&path).map_err(|source| Error::Io {
@@ -76,14 +79,15 @@ impl Image {
             source,
         })?;
         if bytes.len() != size || fnv1a(&bytes) != hash {
-            return Err(Error::Invalid(format!(
-                "{}: not the program version whose texts this app knows ({} bytes)",
-                path.display(),
-                bytes.len()
+            return Err(Error::Invalid(tr!(
+                "{file}: not the program version whose texts this app knows ({size} bytes)",
+                file = path.display(),
+                size = bytes.len()
             )));
         }
-        Self::parse(bytes)
-            .ok_or_else(|| Error::Invalid(format!("{}: not a Windows program", path.display())))
+        Self::parse(bytes).ok_or_else(|| {
+            Error::Invalid(tr!("{file}: not a Windows program", file = path.display()))
+        })
     }
 
     fn parse(bytes: Vec<u8>) -> Option<Self> {
