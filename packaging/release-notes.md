@@ -3,14 +3,9 @@ checked against the original programs, but the app has had little use
 outside those checks. Keep a copy of your `Chars` and `UserDbas` folders,
 and report anything that differs from the original.
 
-What's new in 0.7.0:
+What's new in 0.7.1:
 
-- The interface speaks Brazilian Portuguese, Spanish, Italian, French and
-  German besides English. It follows the system's language, and
-  Preferences (Ctrl+,) chooses another one. Names and texts from the
-  original files, the `cr` command and the character sheets stay as they
-  are
-- Every file the app reads or writes is specified in `docs/formats`
+- The Weapons section has a sword icon in the sidebar
 
 What the app does: it opens a Core Rules 2.0 Expansion installation (or its
 CD, or a data package), creates and edits characters with the Core Rules or

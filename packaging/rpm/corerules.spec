@@ -4,7 +4,7 @@
 %global debug_package %{nil}
 
 Name:           corerules
-Version:        %{?version_override}%{!?version_override:0.7.0}
+Version:        %{?version_override}%{!?version_override:0.7.1}
 Release:        1%{?dist}
 Summary:        Browse and edit AD&D Core Rules 2.0 characters and rules
 License:        MIT
@@ -50,6 +50,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/io.github.brah
 %{_metainfodir}/io.github.brahm.CoreRules.metainfo.xml
 
 %changelog
+* Sat Oct 17 2026 Brahm - 0.7.1-1
+- Beta: the Weapons section has a sword icon
+
 * Sat Oct 17 2026 Brahm - 0.7.0-1
 - Beta: interface in Brazilian Portuguese, Spanish, Italian, French and
   German, with a language choice in Preferences
