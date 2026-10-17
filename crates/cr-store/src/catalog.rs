@@ -739,8 +739,8 @@ fn character_entry(c: &Character) -> Entry {
                 .row(tr("Race"), race)
                 .row(tr("Class"), &d.class_title)
                 .row(tr("Kit"), if d.kit == "None" { "" } else { &d.kit })
-                .row(tr("Alignment"), &d.alignment)
-                .row(tr("Social Class"), &d.social_class)
+                .row(tr("Alignment"), tr(&d.alignment))
+                .row(tr("Social Class"), tr(&d.social_class))
                 .row(
                     tr("Rules"),
                     if c.skills_and_powers() {
