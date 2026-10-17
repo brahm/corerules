@@ -41,23 +41,37 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
-  # The .deb and the AppImage are built on Ubuntu 24.04, the oldest system
-  # they support.
+  # The .deb is built on Ubuntu 26.04, the release it targets.
+  deb:
+    needs: version
+    runs-on: ubuntu-24.04
+    container: ubuntu:26.04
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - run: apt-get update && apt-get install -y build-essential curl ca-certificates git pkg-config libgtk-4-dev libadwaita-1-dev dpkg-dev file
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --locked
+      - run: packaging/deb/build.sh ${{ needs.version.outputs.version }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb
+          path: dist/*.deb
+
+  # The AppImage is built on Ubuntu 24.04, so it runs on systems with that
+  # glibc or newer.
   ubuntu:
     needs: version
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libadwaita-1-dev dpkg-dev file
+      - run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libadwaita-1-dev file
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release --locked
-      - run: packaging/deb/build.sh ${{ needs.version.outputs.version }}
       - run: packaging/appimage/build.sh ${{ needs.version.outputs.version }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: deb
-          path: dist/*.deb
       - uses: actions/upload-artifact@v4
         with:
           name: appimage
@@ -100,11 +114,11 @@ jobs:
   # supported release, and the app has to start and keep running. Minimal
   # containers lack the Mesa drivers every desktop has, so the tests add them.
   test-deb:
-    needs: ubuntu
+    needs: deb
     strategy:
       fail-fast: false
       matrix:
-        image: ['ubuntu:24.04', 'ubuntu:latest']
+        image: ['ubuntu:26.04', 'ubuntu:latest']
     runs-on: ubuntu-24.04
     container: ${{ matrix.image }}
     env:

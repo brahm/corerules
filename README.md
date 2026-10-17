@@ -22,7 +22,7 @@ packages for x86-64 Linux:
 | System | Package | Install |
 | --- | --- | --- |
 | Fedora 44 or newer | `.rpm` | `sudo dnf install ./corerules-*.rpm` |
-| Ubuntu 24.04 or newer | `.deb` | `sudo apt install ./corerules_*_amd64.deb` |
+| Ubuntu 26.04 or newer | `.deb` | `sudo apt install ./corerules_*_amd64.deb` |
 | Any distribution | `.flatpak` | `flatpak install --user CoreRules-*.flatpak` |
 | Any distribution (glibc 2.39+) | `.AppImage` | `chmod +x CoreRules-*.AppImage`, then run it |
 
@@ -122,8 +122,13 @@ Early work (phase 0 of the plan): the file formats are being mapped.
       treasure, the Encounter dialog's editing and totals, saved
       encounters (`UserDbas/EncountU.dat`) and the 2-20 tables
       (`UserDbas/EncTabU.dat`); with the same seed it makes the same
-      encounters as both original programs. NPC lines of a template wait
-      for the NPC generator
+      encounters as both original programs, NPC lines included
+- [x] NPC generator (New NPC, New NPC Group and `cr npc`): the Expansion's
+      NPC Generation for Core Rules and Player's Option NPCs, with kits,
+      proficiencies, equipment, spells, psionics and rogue skills; with
+      the same seed it saves the same NPCs as the original program
+- [x] The Core Rules books in a reader, Table Rolls, and editors for every
+      user database (`UserDbas/*U.dat`, also `cr userdb`)
 
 ## Layout
 
@@ -168,7 +173,7 @@ as root after `cargo build --release`.
 the others package `target/release`):
 
 ```sh
-packaging/deb/build.sh 0.1.0        # dist/corerules_0.1.0_amd64.deb (on Ubuntu 24.04)
+packaging/deb/build.sh 0.1.0        # dist/corerules_0.1.0_amd64.deb (on Ubuntu 26.04)
 packaging/rpm/build.sh 0.1.0        # dist/corerules-0.1.0-1.fc44.x86_64.rpm (on Fedora 44, needs rpm-build)
 packaging/appimage/build.sh 0.1.0   # dist/CoreRules-0.1.0-x86_64.AppImage (on Ubuntu 24.04)
 flatpak-builder --user --install-deps-from=flathub --install build \
@@ -176,7 +181,8 @@ flatpak-builder --user --install-deps-from=flathub --install build \
 ```
 
 The Packages workflow in GitHub Actions builds all four, installs each one
-on clean Ubuntu 24.04, Ubuntu latest, Fedora 44 and Fedora latest
+on clean Ubuntu 24.04 (AppImage), Ubuntu 26.04, Ubuntu latest, Fedora 44
+and Fedora latest
 containers and starts the app. Pushing a `v*` tag publishes them as a
 release; `packaging/release-notes.md` is its description.
 

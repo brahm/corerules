@@ -1,6 +1,6 @@
 #!/bin/sh
 # Builds dist/corerules_VERSION_ARCH.deb from target/release.
-# Build on the oldest Ubuntu supported (24.04) so the package installs there
+# Build on the Ubuntu release it targets (26.04) so the package installs there
 # and on every newer release.
 set -eu
 version=$1

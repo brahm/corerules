@@ -1,13 +1,18 @@
-What's new in 0.3.0:
+What's new in 0.4.0:
 
-- Add experience to a character, to one class, to all or split between
-  them, with the prime requisite bonus
-- Levels go up with hit point rolls, psionic strength points, Skills &
-  Powers character points and the Expansion's racial level limits
-- Memorizing spells shows the slots per spell level, as the original
-  counts them
-- Character sheet: view it, print it, save it as PDF, or export it as HTML
-  (both programs) or text (Expansion), matching the original's exports
+- Treasure generator: treasure types A to Z, table rolls, intelligent
+  weapons, spell scrolls and saved treasure bundles
+- Encounter generator: encounters from templates, saved encounters and the
+  2-20 tables, NPC lines included
+- NPC generator: New NPC and New NPC Group, for Core Rules and Player's
+  Option (Skills & Powers) NPCs, with kits, proficiencies, equipment, spells,
+  psionics and rogue skills, and Convert to Character
+- The Core Rules books in a reader, Table Rolls, and editors for every user
+  database
+- Run without Wine: `packaging/extract-data.sh` makes a data package from
+  your own installation (keep it for yourself, do not share it)
+- The `.deb` now targets Ubuntu 26.04; on Ubuntu 24.04 use the AppImage or
+  the Flatpak
 
 Every change was checked against both original programs.
 
@@ -19,7 +24,7 @@ It contains no rules content; you need your own copy of Core Rules.
 
 | System | File | Install |
 | --- | --- | --- |
-| Ubuntu 24.04 or newer | `corerules_*_amd64.deb` | `sudo apt install ./corerules_*_amd64.deb` |
+| Ubuntu 26.04 or newer | `corerules_*_amd64.deb` | `sudo apt install ./corerules_*_amd64.deb` |
 | Fedora 44 or newer | `corerules-*.fc44.x86_64.rpm` | `sudo dnf install ./corerules-*.rpm` |
 | Any distribution with Flatpak | `CoreRules-*.flatpak` | `flatpak install --user CoreRules-*.flatpak` |
 | Any distribution (glibc 2.39+) | `CoreRules-*-x86_64.AppImage` | `chmod +x CoreRules-*.AppImage` and run it |

@@ -52,6 +52,17 @@
     <color type="primary" scheme_preference="dark">#77101b</color>
   </branding>
   <releases>
+    <release version="0.4.0" date="2026-10-17" type="development">
+      <description>
+        <p>Treasure, encounters and NPCs can now be generated.</p>
+        <ul>
+          <li>Treasure and encounter generators, with saved bundles, encounters and 2-20 tables</li>
+          <li>NPC generator for Core Rules and Player's Option NPCs, alone or in groups</li>
+          <li>Book reader, Table Rolls and editors for every user database</li>
+          <li>Run without Wine from a data package made from an installation</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-10-11" type="development">
       <description>
         <p>Characters can now gain experience, and their sheet can be printed.</p>

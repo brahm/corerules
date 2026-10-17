@@ -4,7 +4,7 @@
 %global debug_package %{nil}
 
 Name:           corerules
-Version:        %{?version_override}%{!?version_override:0.3.0}
+Version:        %{?version_override}%{!?version_override:0.4.0}
 Release:        1%{?dist}
 Summary:        Browse and edit AD&D Core Rules 2.0 characters and rules
 License:        MIT
@@ -50,6 +50,13 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/io.github.brah
 %{_metainfodir}/io.github.brahm.CoreRules.metainfo.xml
 
 %changelog
+* Sat Oct 17 2026 Brahm - 0.4.0-1
+- Treasure and encounter generators with saved bundles, encounters and 2-20
+  tables
+- NPC generator: New NPC and New NPC Group, Core Rules and Player's Option
+- Book reader, Table Rolls and editors for every user database
+- Run without Wine from a data package made from an installation
+
 * Sun Oct 11 2026 Brahm - 0.3.0-1
 - Character advancement: add experience (prime requisite bonus, split
   between classes), level up with hit point rolls, Skills & Powers points
