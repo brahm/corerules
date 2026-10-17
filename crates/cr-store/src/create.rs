@@ -25,6 +25,7 @@
 //! options, the fighting styles each class group may learn, the rogue
 //! skill tables) follows the books, as in the original.
 
+use cr_i18n::{tr, tr_noop};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
@@ -45,12 +46,12 @@ use crate::settings::Setting;
 use crate::{Error, Installation, Result};
 
 pub const ABILITIES: [&str; 6] = [
-    "Strength",
-    "Dexterity",
-    "Constitution",
-    "Intelligence",
-    "Wisdom",
-    "Charisma",
+    tr_noop!("Strength"),
+    tr_noop!("Dexterity"),
+    tr_noop!("Constitution"),
+    tr_noop!("Intelligence"),
+    tr_noop!("Wisdom"),
+    tr_noop!("Charisma"),
 ];
 
 /// `inventory` indexes of the readied and worn items.
@@ -201,35 +202,37 @@ impl RollMethod {
 
     pub fn name(self) -> &'static str {
         match self {
-            Self::InOrder => "Method I",
-            Self::BestOfTwo => "Method II",
-            Self::Arrange => "Method III",
-            Self::BestSixOfTwelve => "Method IV",
-            Self::FourDice => "Method V",
-            Self::Enter => "Enter Scores",
-            Self::Points => "Method VII",
-            Self::DicePool => "Method VIII",
-            Self::RolledPoints => "Method IX",
-            Self::SevenDice => "Method VI",
-            Self::PointsAndStrength => "Method X",
-            Self::PlayersChoice => "Player's Choice",
+            Self::InOrder => tr("Method I"),
+            Self::BestOfTwo => tr("Method II"),
+            Self::Arrange => tr("Method III"),
+            Self::BestSixOfTwelve => tr("Method IV"),
+            Self::FourDice => tr("Method V"),
+            Self::Enter => tr("Enter Scores"),
+            Self::Points => tr("Method VII"),
+            Self::DicePool => tr("Method VIII"),
+            Self::RolledPoints => tr("Method IX"),
+            Self::SevenDice => tr("Method VI"),
+            Self::PointsAndStrength => tr("Method X"),
+            Self::PlayersChoice => tr("Player's Choice"),
         }
     }
 
     pub fn description(self) -> &'static str {
         match self {
-            Self::InOrder => "3d6 for each ability, in order",
-            Self::BestOfTwo => "3d6 twice for each ability, the better in order",
-            Self::Arrange => "3d6 six times, arranged as you like",
-            Self::BestSixOfTwelve => "3d6 twelve times, the best six arranged as you like",
-            Self::FourDice => "4d6 six times dropping the lowest die, arranged as you like",
-            Self::Enter => "Type in scores rolled elsewhere",
-            Self::Points => "75 points divided among the abilities, 3 to 18 each",
-            Self::DicePool => "24d6 shared out, 3 to 6 dice an ability, the best three kept",
-            Self::RolledPoints => "2d6 on a table give the points to divide and the highest score",
-            Self::SevenDice => "Scores start at 8; 7d6 added, a die an ability",
-            Self::PointsAndStrength => "75 points; a warrior may buy exceptional Strength",
-            Self::PlayersChoice => "Race and class first; 3d6 then fitted to them",
+            Self::InOrder => tr("3d6 for each ability, in order"),
+            Self::BestOfTwo => tr("3d6 twice for each ability, the better in order"),
+            Self::Arrange => tr("3d6 six times, arranged as you like"),
+            Self::BestSixOfTwelve => tr("3d6 twelve times, the best six arranged as you like"),
+            Self::FourDice => tr("4d6 six times dropping the lowest die, arranged as you like"),
+            Self::Enter => tr("Type in scores rolled elsewhere"),
+            Self::Points => tr("75 points divided among the abilities, 3 to 18 each"),
+            Self::DicePool => tr("24d6 shared out, 3 to 6 dice an ability, the best three kept"),
+            Self::RolledPoints => {
+                tr("2d6 on a table give the points to divide and the highest score")
+            }
+            Self::SevenDice => tr("Scores start at 8; 7d6 added, a die an ability"),
+            Self::PointsAndStrength => tr("75 points; a warrior may buy exceptional Strength"),
+            Self::PlayersChoice => tr("Race and class first; 3d6 then fitted to them"),
         }
     }
 
@@ -345,12 +348,12 @@ pub fn point_table(roll: u32) -> (u32, u32) {
 /// The two Skills & Powers subabilities of each ability, in the order the
 /// character file keeps them.
 pub const SUBABILITIES: [[&str; 2]; 6] = [
-    ["Stamina", "Muscle"],
-    ["Aim", "Balance"],
-    ["Health", "Fitness"],
-    ["Reason", "Knowledge"],
-    ["Intuition", "Willpower"],
-    ["Leadership", "Appearance"],
+    [tr_noop!("Stamina"), tr_noop!("Muscle")],
+    [tr_noop!("Aim"), tr_noop!("Balance")],
+    [tr_noop!("Health"), tr_noop!("Fitness")],
+    [tr_noop!("Reason"), tr_noop!("Knowledge")],
+    [tr_noop!("Intuition"), tr_noop!("Willpower")],
+    [tr_noop!("Leadership"), tr_noop!("Appearance")],
 ];
 
 /// How far a subability may be from its ability score.
@@ -405,14 +408,14 @@ pub const MOST_FIGHTING_STYLES: usize = 10;
 /// scores and what wearing no armor adds (Player's Handbook, Tables 26
 /// and 29).
 pub const ROGUE_SKILLS: [(&str, i32, i32); 8] = [
-    ("Pick pockets", 15, 5),
-    ("Open locks", 10, 0),
-    ("Find/remove traps", 5, 0),
-    ("Move silently", 10, 10),
-    ("Hide in shadows", 5, 5),
-    ("Detect noise", 15, 0),
-    ("Climb walls", 60, 10),
-    ("Read languages", 0, 0),
+    (tr_noop!("Pick pockets"), 15, 5),
+    (tr_noop!("Open locks"), 10, 0),
+    (tr_noop!("Find/remove traps"), 5, 0),
+    (tr_noop!("Move silently"), 10, 10),
+    (tr_noop!("Hide in shadows"), 5, 5),
+    (tr_noop!("Detect noise"), 15, 0),
+    (tr_noop!("Climb walls"), 60, 10),
+    (tr_noop!("Read languages"), 0, 0),
 ];
 
 /// Discretionary rogue skill points at 1st level and the most one skill
@@ -1210,7 +1213,15 @@ impl CreationRules {
         (0..6).find_map(|a| {
             let [low, high] = r.limits[a];
             let s = scores[a] as i32;
-            (s < low || s > high).then(|| format!("{race} needs {} {low} to {high}", ABILITIES[a]))
+            (s < low || s > high).then(|| {
+                tr!(
+                    "{race} needs {ability} {low} to {high}",
+                    race,
+                    ability = tr(ABILITIES[a]),
+                    low,
+                    high
+                )
+            })
         })
     }
 
@@ -2094,10 +2105,10 @@ impl CreationRules {
     /// Why the character cannot be made as drafted, if it cannot.
     pub fn problem(&self, draft: &Draft) -> Option<String> {
         if draft.name.trim().is_empty() {
-            return Some("A character needs a name".into());
+            return Some(tr("A character needs a name").into());
         }
         if self.race(&draft.race).is_none() {
-            return Some("Choose a race".into());
+            return Some(tr("Choose a race").into());
         }
         if !self
             .races(draft.setting, &draft.scores, false)
@@ -2106,7 +2117,11 @@ impl CreationRules {
             return Some(
                 self.race_problem(&draft.race, &draft.scores)
                     .unwrap_or_else(|| {
-                        format!("{} is not a race of {}", draft.race, draft.setting.name)
+                        tr!(
+                            "{race} is not a race of {setting}",
+                            race = draft.race,
+                            setting = draft.setting.name
+                        )
                     }),
             );
         }
@@ -2115,17 +2130,17 @@ impl CreationRules {
             .class_options(draft.setting, &draft.race, &adjusted)
             .contains(&draft.classes)
         {
-            return Some(format!(
-                "A {} cannot be a {} here",
-                draft.race,
-                draft.class_title()
+            return Some(tr!(
+                "A {race} cannot be a {class} here",
+                race = draft.race,
+                class = draft.class_title()
             ));
         }
         if !self.alignments(&draft.classes).contains(&draft.alignment) {
-            return Some(format!(
-                "A {} cannot be {}",
-                draft.class_title(),
-                draft.alignment
+            return Some(tr!(
+                "A {class} cannot be {alignment}",
+                class = draft.class_title(),
+                alignment = tr(&draft.alignment)
             ));
         }
         if draft.kit != "None"
@@ -2133,7 +2148,10 @@ impl CreationRules {
                 .kits(&draft.race, &draft.subrace, &draft.classes)
                 .contains(&draft.kit)
         {
-            return Some(format!("The {} kit is not for this character", draft.kit));
+            return Some(tr!(
+                "The {kit} kit is not for this character",
+                kit = draft.kit
+            ));
         }
         if let Some(problem) = if draft.skills_and_powers {
             self.points_problem(draft)
@@ -2150,18 +2168,19 @@ impl CreationRules {
         }
         let most = max_spells_per_level(adjusted[3]);
         if draft.spells.len() > most {
-            return Some(format!(
-                "Intelligence {} allows {most} spells of a level",
-                adjusted[3]
+            return Some(tr!(
+                "Intelligence {score} allows {most} spells of a level",
+                score = adjusted[3],
+                most
             ));
         }
         if let Some((name, _)) = draft.purchases.iter().find(|(n, _)| self.ware(n).is_none()) {
-            return Some(format!("{name} is not for sale"));
+            return Some(tr!("{name} is not for sale", name));
         }
         if self.spent(draft) > draft.gold * 100 {
-            return Some(format!(
-                "The equipment costs more than the {} gold pieces there are",
-                draft.gold
+            return Some(tr!(
+                "The equipment costs more than the {gold} gold pieces there are",
+                gold = draft.gold
             ));
         }
         None
@@ -2171,18 +2190,19 @@ impl CreationRules {
     fn languages_problem(&self, draft: &Draft) -> Option<String> {
         let slots = self.language_slots(draft);
         if draft.learned_languages.len() > slots {
-            return Some(format!(
-                "{} languages are learned; the proficiencies teach {slots}",
-                draft.learned_languages.len()
+            return Some(tr!(
+                "{count} languages are learned; the proficiencies teach {slots}",
+                count = draft.learned_languages.len(),
+                slots
             ));
         }
         let mut seen = HashSet::new();
         for language in &draft.learned_languages {
             if !self.languages.contains(language) {
-                return Some(format!("{language} is not a language"));
+                return Some(tr!("{language} is not a language", language));
             }
             if draft.languages.contains(language) || !seen.insert(language) {
-                return Some(format!("{language} is known already"));
+                return Some(tr!("{language} is known already", language));
             }
         }
         None
@@ -2197,20 +2217,26 @@ impl CreationRules {
                 continue;
             }
             if !skills.iter().any(|s| s.1 == skill) {
-                return Some(format!(
-                    "The character has no {} skill",
-                    ROGUE_SKILLS[skill].0
+                return Some(tr!(
+                    "The character has no {skill} skill",
+                    skill = tr(ROGUE_SKILLS[skill].0)
                 ));
             }
             if added > most {
-                return Some(format!(
-                    "{} may get at most {most} points",
-                    ROGUE_SKILLS[skill].0
+                return Some(tr!(
+                    "{skill} may get at most {most} points",
+                    skill = tr(ROGUE_SKILLS[skill].0),
+                    most
                 ));
             }
         }
         let left = self.rogue_points_left(draft);
-        (left < 0).then(|| format!("The rogue skills get {} points too many", -left))
+        (left < 0).then(|| {
+            tr!(
+                "The rogue skills get {count} points too many",
+                count = -left
+            )
+        })
     }
 
     /// Skills & Powers: the combat options are open to the character.
@@ -2221,22 +2247,24 @@ impl CreationRules {
             .flatten()
         {
             if !draft.weapon_proficiencies.contains(weapon) {
-                return Some(format!("{weapon} needs its weapon proficiency"));
+                return Some(tr!("{weapon} needs its weapon proficiency", weapon));
             }
         }
         if !draft.unarmed.is_empty() {
             if self.unarmed_cost(classes).is_none() {
-                return Some("Only fighters may specialize in unarmed combat".into());
+                return Some(tr("Only fighters may specialize in unarmed combat").into());
             }
             if !draft.specializations.is_empty() {
-                return Some("Unarmed combat and weapon specialization do not go together".into());
+                return Some(
+                    tr("Unarmed combat and weapon specialization do not go together").into(),
+                );
             }
             if let Some(u) = draft
                 .unarmed
                 .iter()
                 .find(|u| !UNARMED.contains(&u.as_str()))
             {
-                return Some(format!("{u} is not an unarmed style"));
+                return Some(tr!("{u} is not an unarmed style", u));
             }
         }
         let armors = self.armors();
@@ -2245,20 +2273,25 @@ impl CreationRules {
             .iter()
             .find(|a| !armors.contains(a))
         {
-            return Some(format!("{a} is not armor"));
+            return Some(tr!("{a} is not armor", a));
         }
         if draft.fighting_styles.len() > MOST_FIGHTING_STYLES {
-            return Some(format!(
-                "A character may know at most {MOST_FIGHTING_STYLES} fighting styles"
+            return Some(tr!(
+                "A character may know at most {count} fighting styles",
+                count = MOST_FIGHTING_STYLES
             ));
         }
         let mut seen = HashSet::new();
         for style in &draft.fighting_styles {
             if self.style_cost(classes, style).is_none() {
-                return Some(format!("A {} cannot learn {style}", draft.class_title()));
+                return Some(tr!(
+                    "A {class} cannot learn {style}",
+                    class = draft.class_title(),
+                    style
+                ));
             }
             if !seen.insert(style) {
-                return Some(format!("{style} is taken twice"));
+                return Some(tr!("{style} is taken twice", style));
             }
         }
         None
@@ -2269,13 +2302,15 @@ impl CreationRules {
         let slots = self.nonweapon_slots(&draft.classes, intelligence);
         let spent = self.nonweapon_spent(draft);
         if spent > slots {
-            return Some(format!(
-                "The nonweapon proficiencies take {spent} slots; there are {slots}"
+            return Some(tr!(
+                "The nonweapon proficiencies take {spent} slots; there are {slots}",
+                spent,
+                slots
             ));
         }
         let slots = self.weapon_slots(&draft.classes);
         if draft.weapon_proficiencies.len() as u32 > slots {
-            return Some(format!("There are {slots} weapon proficiency slots"));
+            return Some(tr!("There are {slots} weapon proficiency slots", slots));
         }
         None
     }
@@ -2283,16 +2318,17 @@ impl CreationRules {
     /// Skills & Powers: every choice is on offer and the points cover it.
     fn points_problem(&self, draft: &Draft) -> Option<String> {
         if !self.expansion {
-            return Some("Player's Option characters need the Expansion".into());
+            return Some(tr("Player's Option characters need the Expansion").into());
         }
         if let Some(a) = draft
             .subabilities
             .iter()
             .find(|a| a.abs() > SUBABILITY_SPREAD)
         {
-            return Some(format!(
-                "A subability may be at most {SUBABILITY_SPREAD} from its score, not {}",
-                a.abs()
+            return Some(tr!(
+                "A subability may be at most {most} from its score, not {spread}",
+                most = SUBABILITY_SPREAD,
+                spread = a.abs()
             ));
         }
         let choices = self.racial_ability_choices(&draft.race, &draft.subrace);
@@ -2301,16 +2337,17 @@ impl CreationRules {
             .iter()
             .find(|a| !choices.iter().any(|c| &c.0 == *a))
         {
-            return Some(format!(
-                "{a} is not a racial ability of the {}",
-                draft.subrace
+            return Some(tr!(
+                "{ability} is not a racial ability of the {race}",
+                ability = a,
+                race = draft.subrace
             ));
         }
         let left = self.racial_points_left(draft);
         if left < 0 {
-            return Some(format!(
-                "The racial abilities cost {} points more than the race has",
-                -left
+            return Some(tr!(
+                "The racial abilities cost {count} points more than the race has",
+                count = -left
             ));
         }
         for (slot, class) in draft.classes.iter().enumerate() {
@@ -2322,19 +2359,25 @@ impl CreationRules {
                 .flatten()
                 .find(|a| !choices.iter().any(|c| &c.0 == *a))
             {
-                return Some(format!("{a} is not a {class} ability"));
+                return Some(tr!(
+                    "{ability} is not a {class} ability",
+                    ability = a,
+                    class
+                ));
             }
             let left = self.class_points_left(draft, slot);
             if left < 0 {
-                return Some(format!(
-                    "The {class} abilities cost {} points more than the class has",
-                    -left
+                return Some(tr!(
+                    "The {class} abilities cost {count} points more than the class has",
+                    class,
+                    count = -left
                 ));
             }
         }
         if draft.disadvantages.len() > MOST_DISADVANTAGES {
-            return Some(format!(
-                "A character may have at most {MOST_DISADVANTAGES} disadvantages"
+            return Some(tr!(
+                "A character may have at most {count} disadvantages",
+                count = MOST_DISADVANTAGES
             ));
         }
         if let Some(t) = draft
@@ -2342,35 +2385,38 @@ impl CreationRules {
             .iter()
             .find(|t| !self.traits.iter().any(|k| &k.0 == *t))
         {
-            return Some(format!("{t} is not a trait"));
+            return Some(tr!("{name} is not a trait", name = t));
         }
         if let Some(t) = draft
             .disadvantages
             .iter()
             .find(|t| !self.disadvantages.iter().any(|k| &k.0 == *t))
         {
-            return Some(format!("{t} is not a disadvantage"));
+            return Some(tr!("{name} is not a disadvantage", name = t));
         }
         let left = self.proficiency_points_left(draft);
         if left < 0 {
-            return Some(format!(
-                "The nonweapon proficiencies and traits cost {} points more than there are",
-                -left
+            return Some(tr!(
+                "The nonweapon proficiencies and traits cost {count} points more than there are",
+                count = -left
             ));
         }
         if !draft.specializations.is_empty() {
             if self.specialization_cost(draft).is_none() {
-                return Some(
-                    "Only a single-classed fighter with Weapon specialization may specialize"
-                        .into(),
-                );
+                return Some(tr!(
+                    "Only a single-classed fighter with {ability} may specialize",
+                    ability = "Weapon specialization"
+                ));
             }
             if let Some(w) = draft
                 .specializations
                 .iter()
                 .find(|w| !draft.weapon_proficiencies.contains(w))
             {
-                return Some(format!("Specializing in {w} needs its proficiency"));
+                return Some(tr!(
+                    "Specializing in {weapon} needs its proficiency",
+                    weapon = w
+                ));
             }
             let multiple = draft
                 .class_abilities
@@ -2378,9 +2424,10 @@ impl CreationRules {
                 .flatten()
                 .any(|a| a.contains("Multiple specialization"));
             if draft.specializations.len() > 1 && !multiple {
-                return Some(
-                    "Specializing in more than one weapon needs Multiple specialization".into(),
-                );
+                return Some(tr!(
+                    "Specializing in more than one weapon needs {ability}",
+                    ability = "Multiple specialization"
+                ));
             }
         }
         if let Some(problem) = self.combat_problem(draft) {
@@ -2388,9 +2435,9 @@ impl CreationRules {
         }
         let left = self.points_left(draft);
         if left < 0 {
-            return Some(format!(
-                "The weapon proficiencies and combat options cost {} points more than there are",
-                -left
+            return Some(tr!(
+                "The weapon proficiencies and combat options cost {count} points more than there are",
+                count = -left
             ));
         }
         None

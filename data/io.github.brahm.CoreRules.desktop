@@ -1,7 +1,17 @@
 [Desktop Entry]
 Name=Core Rules
 GenericName=AD&D 2nd Edition Character Manager
+GenericName[pt_BR]=Gerenciador de personagens de AD&D 2ª edição
+GenericName[es]=Gestor de personajes de AD&D 2.ª edición
+GenericName[it]=Gestore di personaggi di AD&D 2ª edizione
+GenericName[fr]=Gestionnaire de personnages AD&D 2e édition
+GenericName[de]=Charakterverwaltung für AD&D 2. Edition
 Comment=Browse and edit AD&D Core Rules 2.0 characters, rules and monsters
+Comment[pt_BR]=Consulte e edite personagens, regras e monstros do AD&D Core Rules 2.0
+Comment[es]=Consulta y edita personajes, reglas y monstruos de AD&D Core Rules 2.0
+Comment[it]=Consulta e modifica personaggi, regole e mostri di AD&D Core Rules 2.0
+Comment[fr]=Consultez et modifiez les personnages, règles et monstres d'AD&D Core Rules 2.0
+Comment[de]=Charaktere, Regeln und Monster von AD&D Core Rules 2.0 ansehen und bearbeiten
 Exec=corerules %f
 Icon=io.github.brahm.CoreRules
 Terminal=false

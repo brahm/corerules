@@ -4,6 +4,8 @@
 
 use cr_formats::parts::Part;
 
+use cr_i18n::tr;
+
 use super::Gen;
 use super::data::{ARMOR, Data, EQUIPMENT, MAGIC_ITEMS, PartExt, WEAPONS};
 use super::prof::{name0, pierce_slash};
@@ -829,8 +831,9 @@ impl Gen<'_> {
                         // returns and reads its category (+0x240): the
                         // original faults there. The NPC goes on without
                         // the item.
-                        self.warn(format!(
-                            "The kit's item {nm} is not in the item database, so the NPC does not carry it."
+                        self.warn(tr!(
+                            "The kit's item {item} is not in the item database, so the NPC does not carry it.",
+                            item = nm
                         ));
                     }
                 }

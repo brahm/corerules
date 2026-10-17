@@ -11,6 +11,7 @@ use cr_formats::Object;
 use cr_formats::database::ObjectList;
 use cr_formats::inventory::InventoryItem;
 use cr_formats::treasure::{TreasureTable, TreasureTableEntry};
+use cr_i18n::{tr, tr_noop};
 
 use super::{Origin, parts};
 use crate::{Error, Installation, Result};
@@ -19,12 +20,14 @@ pub const USER_FILE: &str = "UserDbas/Treasure.dat";
 pub const STANDARD_FILE: &str = "Database/Treasure.dat";
 
 /// The message for an empty name.
-pub const EMPTY_NAME: &str = "You must specify a name for the table.";
+pub const EMPTY_NAME: &str = tr_noop!("You must specify a name for the table.");
 /// The name a new table starts with.
 pub const NEW_TABLE: &str = "New Table";
 pub const DELETE_WARNING: &str =
-    "This will delete the selected table.  You will lose any customizations.";
-pub const RESTORE_WARNING: &str = "This will revert the selected table to match the Dungeon Master's Guide. You will lose any customizations.";
+    tr_noop!("This will delete the selected table.  You will lose any customizations.");
+pub const RESTORE_WARNING: &str = tr_noop!(
+    "This will revert the selected table to match the Dungeon Master's Guide. You will lose any customizations."
+);
 
 /// All treasure tables, as the treasure-table list holds them.
 #[derive(Debug, Clone, PartialEq)]
@@ -103,7 +106,7 @@ impl TableDb {
     pub fn check(table: &mut TreasureTable) -> std::result::Result<(), String> {
         table.name = table.name.trim().to_owned();
         if table.name.is_empty() {
-            return Err(EMPTY_NAME.into());
+            return Err(tr(EMPTY_NAME).into());
         }
         Ok(())
     }
@@ -130,7 +133,7 @@ impl TableDb {
     /// Deletes a user table; standard tables can only be restored.
     pub fn delete(&mut self, index: usize) -> std::result::Result<TreasureTable, String> {
         if is_standard(&self.tables[index]) {
-            return Err("Standard tables cannot be deleted; restore them instead.".into());
+            return Err(tr("Standard tables cannot be deleted; restore them instead.").into());
         }
         Ok(self.tables.remove(index))
     }
@@ -143,7 +146,7 @@ impl TableDb {
             .shipped
             .iter()
             .find(|t| &t.name == name)
-            .ok_or_else(|| format!("{name} is not in the Dungeon Master's Guide tables."))?;
+            .ok_or_else(|| tr!("{name} is not in the Dungeon Master's Guide tables.", name))?;
         self.tables[index] = shipped.clone();
         Ok(())
     }

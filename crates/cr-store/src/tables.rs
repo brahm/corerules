@@ -81,6 +81,8 @@ pub use data::{LIST, TABLE_BOOKS};
 use program::Program;
 pub use program::Txt;
 
+use cr_i18n::{tr, trn};
+
 use crate::books::{BOOKS, table_captions};
 use crate::encounter::flavor_of;
 use crate::sheet::Flavor;
@@ -840,8 +842,8 @@ impl TableRolls {
 
     fn table_title(&self, book: TableBook, number: u16) -> String {
         match self.caption(book, number) {
-            Some(c) => format!("Table {number}: {c}"),
-            None => format!("Table {number}"),
+            Some(c) => tr!("Table {number}: {caption}", number, caption = c),
+            None => tr!("Table {number}", number),
         }
     }
 
@@ -862,7 +864,7 @@ impl TableRolls {
             .params
             .iter()
             .map(|p| Param {
-                label: p.label.to_owned(),
+                label: tr(p.label).to_owned(),
                 options: self.options(entry, p.options, chosen),
             })
             .collect()
@@ -945,10 +947,10 @@ impl TableRolls {
             run.out.book_table = Some((entry.book, number));
             run.out.blocks.push(Block {
                 title: Some(self.entry_title(entry)),
-                notes: vec![format!(
+                notes: vec![tr!(
                     "The original program works this table out in its own code, \
-                     not from the Tables folder. See it in {}.",
-                    entry.book.title()
+                     not from the Tables folder. See it in {book}.",
+                    book = entry.book.title()
                 )],
                 ..Default::default()
             });
@@ -998,15 +1000,20 @@ impl Run<'_> {
     /// The result, with a note when text of the program was missing.
     fn finish(mut self) -> RollResult {
         if self.missing_text {
-            let problem = self
-                .rolls
-                .text_problem()
-                .map_or_else(|| "has no such text".to_owned(), str::to_owned);
-            self.out.blocks.push(Block {
-                notes: vec![format!(
+            let note = match self.rolls.text_problem() {
+                Some(problem) => tr!(
                     "Some text of this result is read from the original program, \
-                     and {problem}; it is left blank."
-                )],
+                     and {problem}; it is left blank.",
+                    problem
+                ),
+                None => tr(
+                    "Some text of this result is read from the original program, \
+                     and has no such text; it is left blank.",
+                )
+                .to_owned(),
+            };
+            self.out.blocks.push(Block {
+                notes: vec![note],
                 ..Default::default()
             });
         }
@@ -1190,8 +1197,9 @@ impl Run<'_> {
         let title = self.title(title, None);
         self.out.blocks.push(Block {
             title,
-            notes: vec![format!(
-                "The table for id {id} is not in the Tables folder."
+            notes: vec![tr!(
+                "The table for id {id} is not in the Tables folder.",
+                id
             )],
             ..Default::default()
         });
@@ -1225,7 +1233,9 @@ impl Run<'_> {
         self.out.blocks.push(block);
         let index = self.out.blocks.len() - 1;
         if spec.rolls.is_some() {
-            self.out.blocks[index].notes.push(format!("{times} rolls"));
+            self.out.blocks[index]
+                .notes
+                .push(trn!("{n} roll", "{n} rolls", times));
         }
         let notes = self.notes(spec.notes);
         self.out.blocks[index].notes.extend(notes);

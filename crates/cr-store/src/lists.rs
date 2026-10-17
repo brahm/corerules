@@ -39,6 +39,7 @@ use cr_formats::Object;
 use cr_formats::character::Character;
 use cr_formats::inventory::{InventoryBundle, InventoryExtra, InventoryItem};
 use cr_formats::parts::PartsFile;
+use cr_i18n::{tr, tr_noop};
 
 use crate::{Error, Installation, Result};
 
@@ -57,15 +58,15 @@ pub const ITEM_TYPES: [&str; 6] = [
 
 /// Names of the nine equipment bundles, in `inventory` order.
 pub const BUNDLE_NAMES: [&str; 9] = [
-    "Animals",
-    "Daily Food and Lodging",
-    "Items Carried",
-    "Items Readied",
-    "Items Stored",
-    "Items Worn",
-    "Spending Money",
-    "Services",
-    "Transport",
+    tr_noop!("Animals"),
+    tr_noop!("Daily Food and Lodging"),
+    tr_noop!("Items Carried"),
+    tr_noop!("Items Readied"),
+    tr_noop!("Items Stored"),
+    tr_noop!("Items Worn"),
+    tr_noop!("Spending Money"),
+    tr_noop!("Services"),
+    tr_noop!("Transport"),
 ];
 
 /// `inventory` index of the items carried.
@@ -278,10 +279,11 @@ impl CharacterLists {
             let refunded: i64 = kept.iter().flatten().map(|k| i64::from(k.0)).sum();
             let points = i64::from(d.unknown_0x1778[0]) + refunded - spent;
             if points < 0 {
-                return Err(Error::Invalid(format!(
+                return Err(Error::Invalid(tr!(
                     "Not enough character points: the new proficiencies cost {spent}, \
-                     and {} are left",
-                    i64::from(d.unknown_0x1778[0]) + refunded
+                     and {left} are left",
+                    spent,
+                    left = i64::from(d.unknown_0x1778[0]) + refunded
                 )));
             }
             d.unknown_0x1778[0] = points as u32;
@@ -301,9 +303,11 @@ impl CharacterLists {
         for book in &self.spellbooks {
             let used = book.pages_used();
             if used > book.capacity {
-                return Err(Error::Invalid(format!(
-                    "{} has {} pages; these spells take {used}",
-                    book.name, book.capacity
+                return Err(Error::Invalid(tr!(
+                    "{book} has {pages} pages; these spells take {used}",
+                    book = book.name,
+                    pages = book.capacity,
+                    used
                 )));
             }
             let Some(extra) = d

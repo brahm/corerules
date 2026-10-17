@@ -11,19 +11,21 @@
 
 use cr_formats::Object;
 use cr_formats::allowed::{ClassesAllowed, ClassesAllowedHelper, ClassesAllowedHelperData};
+use cr_i18n::tr_noop;
 
 use super::{list_bytes, parse_list};
 use crate::{Error, Installation, Result};
 
 pub const FILE: &str = "UserDbas/AllowedU.dat";
 
-pub const NO_SELECTION: &str = "You must first make a selection from the list on the right.";
-pub const NO_AVAILABLE_TITLE: &str = "No \"Available\" Class Highlighted";
+pub const NO_SELECTION: &str =
+    tr_noop!("You must first make a selection from the list on the right.");
+pub const NO_AVAILABLE_TITLE: &str = tr_noop!("No \"Available\" Class Highlighted");
 pub const NO_AVAILABLE: &str =
-    "First click on an \"Available\" Class and then click the right arrow button.";
+    tr_noop!("First click on an \"Available\" Class and then click the right arrow button.");
 pub const DUAL_AND_MULTI: &str =
-    "This Race is set to allow dual-class.\nA Race may not dual-class and multi-class.";
-pub const NO_RACE: &str = "You must select a Race from the list";
+    tr_noop!("This Race is set to allow dual-class.\nA Race may not dual-class and multi-class.");
+pub const NO_RACE: &str = tr_noop!("You must select a Race from the list");
 
 /// The fewest class names a combination the original refuses holds
 /// (`47cf69`: the count must be at most 5).

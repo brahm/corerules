@@ -7,6 +7,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_i18n::{tr, trn};
 use cr_store::treasure::{
     ADD_CATEGORIES, Bundle, Item, MoveError, SCROLL_SPELL_LIMIT, SpellCopy, TreasureRules, list_cmp,
 };
@@ -44,7 +45,7 @@ impl Editing {
 /// The "Add Item…" button of a group header.
 pub fn add_button(edit: &Edit) -> gtk::Button {
     let button = gtk::Button::builder()
-        .label("_Add Item…")
+        .label(tr("_Add Item…"))
         .use_underline(true)
         .css_classes(["flat"])
         .build();
@@ -69,11 +70,11 @@ pub fn rows(edit: &Edit, bundle: &Bundle) -> Vec<gtk::Widget> {
 fn item_row(edit: &Edit, item: &Item, path: &[usize]) -> gtk::Widget {
     let title = glib::markup_escape_text(&item.label()).to_string();
     let mut entries: Vec<Entry> = Vec::new();
-    entries.push(("_Remove…", {
+    entries.push((tr("_Remove…"), {
         let (edit, path) = (edit.clone(), path.to_vec());
         Box::new(move || remove(&edit, &path))
     }));
-    entries.push(("_Move Into…", {
+    entries.push((tr("_Move Into…"), {
         let (edit, path) = (edit.clone(), path.to_vec());
         Box::new(move || move_dialog(&edit, &path))
     }));
@@ -83,7 +84,7 @@ fn item_row(edit: &Edit, item: &Item, path: &[usize]) -> gtk::Widget {
         || item.name == "Spell Scroll, Wizard"
         || item.name == "Spell Scroll, Priest"
     {
-        entries.push(("Edit _Spells…", {
+        entries.push((tr("Edit _Spells…"), {
             let (edit, path) = (edit.clone(), path.to_vec());
             Box::new(move || edit_spells(&edit, &path))
         }));
@@ -101,7 +102,7 @@ fn item_row(edit: &Edit, item: &Item, path: &[usize]) -> gtk::Widget {
     let pages = item.extra.as_ref().map(|e| e.unknown_0x4);
     let subtitle = match pages {
         Some([capacity, used, _]) if !spells.is_empty() || capacity > 0 => {
-            format!("{used} of {capacity} pages used")
+            tr!("{used} of {capacity} pages used", used, capacity)
         }
         _ => String::new(),
     };
@@ -113,21 +114,17 @@ fn item_row(edit: &Edit, item: &Item, path: &[usize]) -> gtk::Widget {
     for (i, spell) in spells.iter().enumerate() {
         let spell_row = adw::ActionRow::builder()
             .title(glib::markup_escape_text(&spell.name).as_str())
-            .subtitle(format!(
-                "{} page{}",
-                spell.pages,
-                if spell.pages == 1 { "" } else { "s" }
-            ))
+            .subtitle(trn!("{n} page", "{n} pages", spell.pages))
             .build();
         spell_row.add_prefix(&gtk::Image::from_icon_name(
             "accessories-text-editor-symbolic",
         ));
         let entries: Vec<Entry> = vec![
-            ("_Remove", {
+            (tr("_Remove"), {
                 let (edit, path) = (edit.clone(), path.to_vec());
                 Box::new(move || edit.change(|b| _ = b.remove_spell(&path, i)))
             }),
-            ("_Copy To…", {
+            (tr("_Copy To…"), {
                 let (edit, path) = (edit.clone(), path.to_vec());
                 Box::new(move || copy_spell_dialog(&edit, &path, i))
             }),
@@ -162,7 +159,7 @@ fn row_menu(entries: Vec<Entry>) -> gtk::MenuButton {
         .menu_model(&menu)
         .css_classes(["flat"])
         .build();
-    button.update_property(&[gtk::accessible::Property::Label("Edit")]);
+    button.update_property(&[gtk::accessible::Property::Label(tr("Edit"))]);
     button.insert_action_group("row", Some(&actions));
     button
 }
@@ -174,7 +171,7 @@ fn message(parent: &impl IsA<gtk::Widget>, heading: &str, body: &str) {
         .default_response("ok")
         .close_response("ok")
         .build();
-    alert.add_response("ok", "_OK");
+    alert.add_response("ok", tr("_OK"));
     alert.present(Some(parent));
 }
 
@@ -186,7 +183,7 @@ fn ask(parent: &impl IsA<gtk::Widget>, heading: &str, body: &str, yes: impl Fn()
         .default_response("no")
         .close_response("no")
         .build();
-    alert.add_responses(&[("no", "_No"), ("yes", "_Yes")]);
+    alert.add_responses(&[("no", tr("_No")), ("yes", tr("_Yes"))]);
     alert.connect_response(Some("yes"), move |_, _| yes());
     alert.present(Some(parent));
 }
@@ -200,7 +197,7 @@ fn how_many(
     then: impl Fn(u32) + 'static,
 ) {
     let spin = adw::SpinRow::builder()
-        .title("How many?")
+        .title(tr("How many?"))
         .adjustment(&gtk::Adjustment::new(
             default as f64,
             min as f64,
@@ -222,7 +219,7 @@ fn how_many(
         .default_response("ok")
         .close_response("cancel")
         .build();
-    alert.add_responses(&[("cancel", "_Cancel"), ("ok", action)]);
+    alert.add_responses(&[("cancel", tr("_Cancel")), ("ok", action)]);
     alert.set_response_appearance("ok", adw::ResponseAppearance::Suggested);
     alert.connect_response(Some("ok"), move |_, _| {
         then(spin.value().round().max(0.0) as u32)
@@ -233,11 +230,13 @@ fn how_many(
 /// Add (0x543a6b): a part of a category, at the top of the bundle; Money
 /// asks how many.
 fn add_dialog(edit: &Edit) {
+    // The categories in English, for the lookups, shown translated.
     let mut categories: Vec<&str> = ADD_CATEGORIES.iter().map(|c| c.0).collect();
-    categories.sort_by(|a, b| list_cmp(a, b));
+    categories.sort_by(|a, b| list_cmp(tr(a), tr(b)));
+    let shown: Vec<&str> = categories.iter().map(|c| tr(c)).collect();
     let category = gtk::DropDown::builder()
-        .model(&gtk::StringList::new(&categories))
-        .tooltip_text("Category")
+        .model(&gtk::StringList::new(&shown))
+        .tooltip_text(tr("Category"))
         .build();
     let model = gtk::StringList::new(&[]);
     let fill = {
@@ -253,7 +252,7 @@ fn add_dialog(edit: &Edit) {
     category.connect_selected_notify(move |d| fill(d.selected()));
 
     let search = gtk::SearchEntry::builder()
-        .placeholder_text("Search")
+        .placeholder_text(tr("Search"))
         .hexpand(true)
         .build();
     let filter = gtk::StringFilter::builder()
@@ -312,13 +311,18 @@ fn add_dialog(edit: &Edit) {
     );
     view.set_content(Some(&scroll));
     let dialog = adw::Dialog::builder()
-        .title("Add Item")
+        .title(tr("Add Item"))
         .content_width(420)
         .content_height(560)
         .child(&view)
         .build();
     list.connect_activate({
-        let (dialog, edit, category) = (dialog.clone(), edit.clone(), category.clone());
+        let (dialog, edit, category, categories) = (
+            dialog.clone(),
+            edit.clone(),
+            category.clone(),
+            categories.clone(),
+        );
         move |list, position| {
             let Some(text) = list
                 .model()
@@ -328,17 +332,14 @@ fn add_dialog(edit: &Edit) {
                 return;
             };
             let name = text.string().to_string();
-            let money = category
-                .selected_item()
-                .and_downcast::<gtk::StringObject>()
-                .is_some_and(|s| s.string() == "Money");
+            let money = categories.get(category.selected() as usize) == Some(&"Money");
             dialog.close();
             if money {
                 let edit2 = edit.clone();
                 how_many(
                     &edit.parent,
-                    "How many to add?",
-                    "_Add",
+                    tr("How many to add?"),
+                    tr("_Add"),
                     (0, 10000, 1),
                     move |n| edit2.change(|b| b.add_part(&name, n)),
                 );
@@ -370,8 +371,8 @@ fn remove(edit: &Edit, path: &[usize]) {
         let edit2 = edit.clone();
         how_many(
             &edit.parent,
-            "How many to delete?",
-            "_Remove",
+            tr("How many to delete?"),
+            tr("_Remove"),
             (0, item.quantity, item.quantity),
             move |n| edit2.change(|b| b.remove_count(&path, n)),
         );
@@ -400,7 +401,7 @@ fn destinations(bundle: &Bundle) -> Vec<(Vec<usize>, String)> {
             path.pop();
         }
     }
-    let mut out = vec![(Vec::new(), "Treasure".to_string())];
+    let mut out = vec![(Vec::new(), tr("Treasure").to_string())];
     walk(bundle, &mut Vec::new(), 1, &mut out);
     out
 }
@@ -469,11 +470,11 @@ fn move_dialog(edit: &Edit, from: &[usize]) {
         .filter(|(p, _)| *p != from && *p != from[..from.len() - 1])
         .collect();
     let edit2 = edit.clone();
-    choose_node(&edit.parent, "Move Into", nodes, move |to| {
+    choose_node(&edit.parent, tr("Move Into"), nodes, move |to| {
         let mut bundle = edit2.bundle();
         match bundle.begin_move(&from, &to) {
             Err(e @ MoveError::IntoItself) | Err(e @ MoveError::IntoSpell) => {
-                message(&edit2.parent, "Cannot Move", &e.to_string())
+                message(&edit2.parent, tr("Cannot Move"), &e.to_string())
             }
             Ok(None) => {}
             Ok(Some(pending)) => {
@@ -482,8 +483,8 @@ fn move_dialog(edit: &Edit, from: &[usize]) {
                     let edit3 = edit2.clone();
                     how_many(
                         &edit2.parent,
-                        "How many to move?",
-                        "_Move",
+                        tr("How many to move?"),
+                        tr("_Move"),
                         (0, pending.quantity, pending.quantity),
                         move |n| edit3.change(|b| b.finish_move(&pending, n)),
                     );
@@ -504,7 +505,7 @@ fn copy_spell_dialog(edit: &Edit, from: &[usize], index: usize) {
         .filter(|(p, _)| !p.is_empty() && *p != from)
         .collect();
     let edit2 = edit.clone();
-    choose_node(&edit.parent, "Copy Spell To", nodes, move |to| {
+    choose_node(&edit.parent, tr("Copy Spell To"), nodes, move |to| {
         copy_spell(&edit2, from.clone(), index, to, false, false)
     });
 }
@@ -532,14 +533,14 @@ fn copy_spell(
     match outcome {
         SpellCopy::NotHolding => ask(
             &edit.parent,
-            "Cannot Hold Spells",
-            "The destination is not marked as being able to hold spells. Override?",
+            tr("Cannot Hold Spells"),
+            tr("The destination is not marked as being able to hold spells. Override?"),
             again(true, false),
         ),
         SpellCopy::NoPages => ask(
             &edit.parent,
-            "No Pages Left",
-            "The target doesn't have pages left to copy the spell to.  Add needed pages?",
+            tr("No Pages Left"),
+            tr("The target doesn't have pages left to copy the spell to.  Add needed pages?"),
             again(true, true),
         ),
         SpellCopy::Nothing | SpellCopy::Copied => {}
@@ -572,8 +573,8 @@ fn edit_spells(edit: &Edit, path: &[usize]) {
         .css_classes(["boxed-list"])
         .build();
     let group = adw::PreferencesGroup::builder()
-        .title("Selected Spells")
-        .description("Select Spells that will be in the scroll.")
+        .title(tr("Selected Spells"))
+        .description(tr("Select Spells that will be in the scroll."))
         .build();
     group.add(&list);
     let page = adw::PreferencesPage::new();
@@ -593,14 +594,14 @@ fn edit_spells(edit: &Edit, path: &[usize]) {
                     list.remove(&child);
                 }
                 let left = SCROLL_SPELL_LIMIT as i64 - selected.borrow().len() as i64;
-                group.set_title(&format!("Selected Spells (Spells Left: {left})"));
+                group.set_title(&tr!("Selected Spells (Spells Left: {left})", left));
                 for (i, name) in selected.borrow().iter().enumerate() {
                     let row = adw::ActionRow::builder()
                         .title(glib::markup_escape_text(name).as_str())
                         .build();
                     let remove = gtk::Button::builder()
                         .icon_name("list-remove-symbolic")
-                        .tooltip_text("Remove")
+                        .tooltip_text(tr("Remove"))
                         .valign(gtk::Align::Center)
                         .css_classes(["flat"])
                         .build();
@@ -615,7 +616,7 @@ fn edit_spells(edit: &Edit, path: &[usize]) {
                     list.append(&row);
                 }
                 let add = adw::ActionRow::builder()
-                    .title("Add Spell…")
+                    .title(tr("Add Spell…"))
                     .activatable(true)
                     .build();
                 add.add_prefix(&gtk::Image::from_icon_name("list-add-symbolic"));
@@ -631,7 +632,7 @@ fn edit_spells(edit: &Edit, path: &[usize]) {
                         (selected.clone(), draw.clone(), list2.clone(), choices.clone());
                     move || {
                         let (selected, draw) = (selected.clone(), draw.clone());
-                        crate::lists::pick(&list2, "Scroll", choices.clone(), move |name| {
+                        crate::lists::pick(&list2, tr("Scroll"), choices.clone(), move |name| {
                             let mut s = selected.borrow_mut();
                             s.push(name);
                             s.sort_by(|a, b| list_cmp(a, b));
@@ -645,9 +646,9 @@ fn edit_spells(edit: &Edit, path: &[usize]) {
                 if selected.borrow().len() >= SCROLL_SPELL_LIMIT {
                     ask(
                         &list2,
-                        "Warning",
-                        "Scrolls should contain a maximum of 6 spells.  Do you want to ignore this \
-                         limit?",
+                        tr("Warning"),
+                        tr("Scrolls should contain a maximum of 6 spells.  Do you want to ignore \
+                            this limit?"),
                         pick,
                     );
                 } else {
@@ -661,11 +662,11 @@ fn edit_spells(edit: &Edit, path: &[usize]) {
     render();
 
     let cancel = gtk::Button::builder()
-        .label("_Cancel")
+        .label(tr("_Cancel"))
         .use_underline(true)
         .build();
     let ok = gtk::Button::builder()
-        .label("_Done")
+        .label(tr("_Done"))
         .use_underline(true)
         .css_classes(["suggested-action"])
         .build();

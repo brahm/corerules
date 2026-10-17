@@ -13,6 +13,7 @@ use super::{
     Branch, Code, Col, Critical, Dice, DiceList, Extra, ListEntry, Options, ParamSpec, RollSpec,
     Step, TableBook, Title, Txt, d,
 };
+use cr_i18n::tr_noop;
 
 /// Table id, file name (without `.tbl`) and the number of records the
 /// program reads (header included), as 0x534d15 maps them. Core Rules 2.0
@@ -390,27 +391,27 @@ const fn items_dice(id: i32, number: u16) -> Step {
 }
 
 const RANK: ParamSpec = ParamSpec {
-    label: "Rank",
+    label: tr_noop!("Rank"),
     options: Options::Text(s::RANKS),
 };
 const RARITY: ParamSpec = ParamSpec {
-    label: "Availability",
+    label: tr_noop!("Availability"),
     options: Options::Text(s::RARITY),
 };
 /// The turning dialog: class, then level (0x5126f8, 0x51c01b); a paladin
 /// turns as a priest two levels lower.
 const TURNING: &[ParamSpec] = &[
     ParamSpec {
-        label: "Class",
+        label: tr_noop!("Class"),
         options: Options::Text(s::TURNING_CLASSES),
     },
     ParamSpec {
-        label: "Level",
+        label: tr_noop!("Level"),
         options: Options::ByParam(0, &[s::PRIEST_LEVELS, s::PALADIN_LEVELS]),
     },
 ];
 const SCROLL_LEVEL: ParamSpec = ParamSpec {
-    label: "Level",
+    label: tr_noop!("Level"),
     options: Options::Text(s::SCROLL_LEVELS),
 };
 
@@ -780,7 +781,7 @@ const WINTER: &[Step] = &[on(23079, d(2, 6), 79, s::SEASON_HEADS[2], NAME)];
 // rows (Dwarf, Elf, Gnome, Half-elf, Halfling, Human); the dice of the
 // code (0x50c88e), including its 4d10 for a halfling's weight.
 const RACE: ParamSpec = ParamSpec {
-    label: "Race",
+    label: tr_noop!("Race"),
     options: Options::Rows(11010),
 };
 const HEIGHT_DICE: &[Dice] = &[d(1, 10), d(1, 10), d(1, 6), d(2, 6), d(2, 8), d(2, 10)];
@@ -835,7 +836,7 @@ const AGE: &[Step] = &[
 // The critical hit dialogs: location, then severity on the effect table
 // (location code + weapon or spell type + target offset).
 const CALLED_SHOT: ParamSpec = ParamSpec {
-    label: "Location",
+    label: tr_noop!("Location"),
     options: Options::CalledShot,
 };
 const LOCATION_DICE: &[Dice] = &[d(1, 10), d(1, 6), d(1, 6).plus(4)];
@@ -861,7 +862,7 @@ const SPELL_CRITICAL: Critical = Critical {
     effect_head: s::SPELL_SEVERITY_HEAD,
 };
 const SPELL_LEVEL: ParamSpec = ParamSpec {
-    label: "Spell Level",
+    label: tr_noop!("Spell Level"),
     options: Options::Rows(40023),
 };
 
@@ -932,7 +933,7 @@ pub const LIST: &[ListEntry] = &[
         Some(79),
         None,
         &[ParamSpec {
-            label: "Season",
+            label: tr_noop!("Season"),
             options: Options::Text(s::SEASONS),
         }],
         &[Step::ByParam {
@@ -977,7 +978,7 @@ pub const LIST: &[ListEntry] = &[
         Some(112),
         None,
         &[ParamSpec {
-            label: "Caster Level",
+            label: tr_noop!("Caster Level"),
             options: Options::Text(s::CASTER_LEVELS),
         }],
         code(Code::SpellFailure),
@@ -1010,7 +1011,7 @@ pub const LIST: &[ListEntry] = &[
         &[
             RACE,
             ParamSpec {
-                label: "Sex",
+                label: tr_noop!("Sex"),
                 options: Options::Text(s::SEXES),
             },
         ],
@@ -1021,7 +1022,7 @@ pub const LIST: &[ListEntry] = &[
         Some(11),
         None,
         &[ParamSpec {
-            label: "Race",
+            label: tr_noop!("Race"),
             options: Options::Rows(10011),
         }],
         AGE,
@@ -1063,7 +1064,7 @@ pub const LIST: &[ListEntry] = &[
         Some(43),
         None,
         &[ParamSpec {
-            label: "Class Group",
+            label: tr_noop!("Class Group"),
             options: Options::Text(s::CLASS_GROUPS),
         }],
         code(Code::Funds),
@@ -1077,19 +1078,19 @@ pub const LIST: &[ListEntry] = &[
         Some(s::CRITICAL_LIST),
         &[
             ParamSpec {
-                label: "Target Type",
+                label: tr_noop!("Target Type"),
                 options: Options::Text(s::WEAPON_TARGETS),
             },
             ParamSpec {
-                label: "Weapon Type",
+                label: tr_noop!("Weapon Type"),
                 options: Options::Text(s::WEAPON_TYPES),
             },
             ParamSpec {
-                label: "Size Advantage",
+                label: tr_noop!("Size Advantage"),
                 options: Options::Text(s::WEAPON_SIZE_ADVANTAGE),
             },
             ParamSpec {
-                label: "Weapon Size",
+                label: tr_noop!("Weapon Size"),
                 options: Options::Text(s::WEAPON_SIZES),
             },
             CALLED_SHOT,
@@ -1172,7 +1173,7 @@ pub const LIST: &[ListEntry] = &[
         Some(46),
         None,
         &[ParamSpec {
-            label: "Target Type",
+            label: tr_noop!("Target Type"),
             options: Options::Text(s::LOCATION_TARGETS),
         }],
         &[Step::ByParam {
@@ -1185,7 +1186,7 @@ pub const LIST: &[ListEntry] = &[
         Some(47),
         None,
         &[ParamSpec {
-            label: "Targets Affected",
+            label: tr_noop!("Targets Affected"),
             options: Options::Text(s::TARGETS_AFFECTED),
         }],
         code(Code::WholeBody),
@@ -1195,7 +1196,7 @@ pub const LIST: &[ListEntry] = &[
         Some(48),
         None,
         &[ParamSpec {
-            label: "Maximum Damage",
+            label: tr_noop!("Maximum Damage"),
             options: Options::Text(s::MAX_DAMAGE),
         }],
         code(Code::Severity),
@@ -1206,11 +1207,11 @@ pub const LIST: &[ListEntry] = &[
         Some(s::SPELL_CRITICAL_LIST),
         &[
             ParamSpec {
-                label: "Target Type",
+                label: tr_noop!("Target Type"),
                 options: Options::Text(s::SPELL_TARGETS),
             },
             ParamSpec {
-                label: "Spell Type",
+                label: tr_noop!("Spell Type"),
                 options: Options::Headers(
                     &[
                         41100, 41101, 41102, 41103, 41104, 41105, 41106, 41107, 41108, 41109,
@@ -1219,11 +1220,11 @@ pub const LIST: &[ListEntry] = &[
                 ),
             },
             ParamSpec {
-                label: "Size Advantage",
+                label: tr_noop!("Size Advantage"),
                 options: Options::Text(s::SPELL_SIZE_ADVANTAGE),
             },
             ParamSpec {
-                label: "Maximum Damage",
+                label: tr_noop!("Maximum Damage"),
                 options: Options::Text(s::SPELL_MAX_DAMAGE),
             },
             CALLED_SHOT,

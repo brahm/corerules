@@ -9,6 +9,8 @@ use super::{
     Dice, Encounter, EncounterRules, ItemLine, MonsterLine, MonsterPackage, NpcDescription,
     NpcLine, NpcPackage, Reference, Template, coin_name,
 };
+use cr_i18n::tr;
+
 use crate::treasure::{Bundle, Coin, Item, Rand};
 use crate::{Error, Result};
 
@@ -62,7 +64,7 @@ impl EncounterRules {
     pub fn generate(&self, name: &str, rand: &mut Rand) -> Result<Generated> {
         let template = self
             .template(name)
-            .ok_or_else(|| Error::Invalid(format!("no encounter template named {name}")))?;
+            .ok_or_else(|| Error::Invalid(tr!("no encounter template named {name}", name)))?;
         Ok(self.generate_from(template, rand))
     }
 
@@ -154,8 +156,9 @@ impl Run<'_> {
     fn lookup(&mut self, name: &str) -> Option<Monster> {
         let found = self.rules.monsters.standard_first(name).cloned();
         if found.is_none() {
-            self.messages.push(format!(
-                "Unable to find the Monster in the Database: {name}"
+            self.messages.push(tr!(
+                "Unable to find the Monster in the Database: {name}",
+                name
             ));
         }
         found
@@ -485,7 +488,7 @@ impl Run<'_> {
                 .encounter_npc(self.rand, &npc.race, &npc.classes, count)
                 .map_err(|e| (e.to_string(), None)),
             Err(e) => Err((
-                format!("The NPC generator is not available: {e}"),
+                tr!("The NPC generator is not available: {error}", error = e),
                 Some(count),
             )),
         };

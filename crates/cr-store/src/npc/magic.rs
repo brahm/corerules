@@ -5,6 +5,8 @@ use std::collections::HashMap;
 
 use cr_formats::Object;
 
+use cr_i18n::tr;
+
 use super::Gen;
 use super::data::{EQUIPMENT, PartExt, SCHOOLS, SPHERES, Spell};
 use super::program::Tx;
@@ -382,7 +384,10 @@ impl<'a> Gen<'a> {
                     // the empty array (0x736cf0), whose memmove of -4
                     // bytes faults: the original stops here. The NPC
                     // keeps the spells drawn so far.
-                    self.warn(format!("There are fewer level {sl} priest spells in the NPC's spheres than spell slots, so the other slots stay empty."));
+                    self.warn(tr!(
+                        "There are fewer level {level} priest spells in the NPC's spheres than spell slots, so the other slots stay empty.",
+                        level = sl
+                    ));
                     break;
                 }
                 let k = self.between(0, list.len() as i32 - 1) as usize;
@@ -571,7 +576,7 @@ impl<'a> Gen<'a> {
     fn spellbooks(&mut self) {
         let d = self.d;
         let Some(i) = d.part_exact(EQUIPMENT, self.t(SPELLBOOK)) else {
-            self.warn("There is no Spellbook part; no spellbook was made.");
+            self.warn(tr("There is no Spellbook part; no spellbook was made."));
             return;
         };
         let cap = d.parts[EQUIPMENT][i].n(0x7e4);
@@ -592,7 +597,10 @@ impl<'a> Gen<'a> {
             };
             for nm in names {
                 let Some(s) = find_spell(db, &nm) else {
-                    self.warn(format!("The spell {nm} is not in the spell database and was left out of the spellbook."));
+                    self.warn(tr!(
+                        "The spell {spell} is not in the spell database and was left out of the spellbook.",
+                        spell = nm
+                    ));
                     continue;
                 };
                 let pages = self.between(0, 5) + s.level;

@@ -47,6 +47,8 @@ use cr_formats::character::{
     CORE20_VERSION, Character, CharacterEntry, CharacterIndex, EXPANSION_VERSION, EntryExtra,
 };
 
+use cr_i18n::{tr, tr_noop};
+
 use crate::create::{INDEX_SCHEMA, new_file_name, write_new};
 use crate::edit::{CLASS_LINE, LEVEL_LINE, PLAYER_LINE, replace};
 use crate::encounter::flavor_of;
@@ -197,7 +199,13 @@ impl Default for GroupOptions {
 }
 
 /// The class groups' names in the order of [`GroupOptions::classes`].
-const GROUP_NAMES: [&str; 5] = ["Warrior", "Rogue", "Priest", "Wizard", "Psionicist"];
+const GROUP_NAMES: [&str; 5] = [
+    tr_noop!("Warrior"),
+    tr_noop!("Rogue"),
+    tr_noop!("Priest"),
+    tr_noop!("Wizard"),
+    tr_noop!("Psionicist"),
+];
 
 impl GroupOptions {
     /// Sorts lines as the dialog's list holds them (by [`Self::label`]).
@@ -235,6 +243,47 @@ impl GroupOptions {
         s += &format!("Alignment: {}   ", self.alignment.label());
         s
     }
+
+    /// [`Self::label`] in the interface language, for showing the line;
+    /// the list stays sorted by the untranslated label.
+    pub fn display_label(&self) -> String {
+        let random = tr("~Random");
+        let (lo, hi) = self.number;
+        let number = if lo == hi {
+            hi.to_string()
+        } else {
+            tr!("{low} to {high}", low = lo, high = hi)
+        };
+        let class = if self.allowed_combination {
+            random.to_owned()
+        } else {
+            [0, 3, 1, 2, 4]
+                .into_iter()
+                .filter_map(|g| match &self.classes[g] {
+                    None => None,
+                    Some(Choice::Random) => {
+                        Some(tr!("~Random {group}", group = tr(GROUP_NAMES[g])))
+                    }
+                    Some(Choice::Name(n)) if n.is_empty() => None,
+                    Some(Choice::Name(n)) => Some(n.clone()),
+                })
+                .collect::<Vec<_>>()
+                .join("/")
+        };
+        let shown = |c: &Choice, translate: bool| match c {
+            Choice::Random => random.to_owned(),
+            Choice::Name(n) if translate => tr(n).to_owned(),
+            Choice::Name(n) => n.clone(),
+        };
+        tr!(
+            "{number} Race: {race}   Class: {class}   Kit: {kit}   Alignment: {alignment}",
+            number,
+            race = self.race.as_deref().unwrap_or(random),
+            class,
+            kit = shown(&self.kit, false),
+            alignment = shown(&self.alignment, true)
+        )
+    }
 }
 
 /// Everything the NPC generator reads, and its session state.
@@ -253,7 +302,8 @@ impl Installation {
         let flavor = flavor_of(self);
         if flavor == Flavor::Core20 {
             return Err(Error::Invalid(
-                "Core Rules 2.0 installations are read-only: NPCs are made in the Expansion".into(),
+                tr("Core Rules 2.0 installations are read-only: NPCs are made in the Expansion")
+                    .into(),
             ));
         }
         Ok(NpcRules {
@@ -322,20 +372,20 @@ impl Installation {
         let bytes = character.to_bytes().map_err(format)?;
         let index_path = self
             .path("Chars/index.chr")
-            .ok_or_else(|| Error::Invalid("The character list is missing".into()))?;
+            .ok_or_else(|| Error::Invalid(tr("The character list is missing").into()))?;
         let mut index = self.characters()?;
         let entry = index
             .entries
             .iter_mut()
             .find(|e| e.file.eq_ignore_ascii_case(file))
-            .ok_or_else(|| Error::Invalid(format!("{file} is not in the character list")))?;
+            .ok_or_else(|| Error::Invalid(tr!("{file} is not in the character list", file)))?;
         entry.unknown_0x24 = 0;
         let index_bytes = index.to_bytes().map_err(format)?;
         Character::parse(&bytes).map_err(format)?;
         CharacterIndex::parse(&index_bytes).map_err(format)?;
         let path = self
             .path(&format!("Chars/{file}"))
-            .ok_or_else(|| Error::Invalid(format!("{file} not found")))?;
+            .ok_or_else(|| Error::Invalid(tr!("{file} not found", file)))?;
         replace(&path, &bytes)?;
         replace(&index_path, &index_bytes)
     }
@@ -660,7 +710,7 @@ impl NpcRules {
         let d = &self.data;
         if d.races.is_empty() || d.classes.is_empty() {
             return Err(Error::Invalid(
-                "the databases have no races or classes".into(),
+                tr("the databases have no races or classes").into(),
             ));
         }
         // 0x4d1f99: "~Random" draws over every race and subrace.
@@ -671,7 +721,7 @@ impl NpcRules {
             Some(name) => d
                 .race(name)
                 .map(|i| &d.races[i])
-                .ok_or_else(|| Error::Invalid(format!("no race named {name}")))?,
+                .ok_or_else(|| Error::Invalid(tr!("no race named {name}", name)))?,
         };
         if options.allowed_combination || options.classes.iter().all(Option::is_none) {
             // The combination branch takes a subrace's parent race.
@@ -738,9 +788,9 @@ impl NpcRules {
             return (
                 r.name.clone(),
                 vec![(d.classes[0].name.clone(), 1)],
-                Some(format!(
-                    "Race/Class combination information unavailable for race: {}",
-                    r.name
+                Some(tr!(
+                    "Race/Class combination information unavailable for race: {race}",
+                    race = r.name
                 )),
             );
         };

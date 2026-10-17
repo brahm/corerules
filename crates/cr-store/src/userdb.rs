@@ -40,6 +40,7 @@ use std::marker::PhantomData;
 
 use cr_formats::Object;
 use cr_formats::database::ObjectList;
+use cr_i18n::{tr, tr_noop};
 
 pub use crate::sheet::Flavor;
 use crate::{Error, Installation, Result};
@@ -64,7 +65,7 @@ pub enum Filter {
 
 impl Filter {
     /// The combo's entries, in its order.
-    pub const NAMES: [&str; 3] = ["All", "Standard", "Custom"];
+    pub const NAMES: [&str; 3] = [tr_noop!("All"), tr_noop!("Standard"), tr_noop!("Custom")];
 
     pub fn of(index: u32) -> Self {
         match index {
@@ -111,8 +112,8 @@ pub fn parse_key(key: &str) -> Option<(&str, Origin, &str)> {
 /// What lists show for where a record comes from.
 pub fn origin_label(origin: Origin) -> &'static str {
     match origin {
-        Origin::Standard => "Standard",
-        Origin::Custom => "Custom",
+        Origin::Standard => tr_noop!("Standard"),
+        Origin::Custom => tr_noop!("Custom"),
     }
 }
 
@@ -586,7 +587,11 @@ pub trait UserKind: 'static {
     /// an existing record is being changed.
     fn name_message(error: &NameError, record: &Self::Rec, adding: bool) -> String {
         let _ = (record, adding);
-        format!("{} not added: Error. {}", Self::NOUN, default_reason(error))
+        tr!(
+            "{noun} not added: Error. {reason}",
+            noun = tr(Self::NOUN),
+            reason = default_reason(error)
+        )
     }
 
     /// The warning shown before a delete, when the original asks.
@@ -603,16 +608,18 @@ pub trait UserKind: 'static {
 /// The reasons the original gives (§1.3 of the spec).
 pub fn default_reason(error: &NameError) -> String {
     match error {
-        NameError::Empty => "A name must be supplied.".into(),
-        NameError::UsedByStandard | NameError::Used => "Name already used.".into(),
-        NameError::TooLong(max) => format!("The name can have at most {max} characters."),
-        NameError::Slash => "The slash character is not allowed as a part of the class name.  \
-             Please choose a different character."
-            .into(),
-        NameError::Reserved => {
-            "Monster Type names beginning with '~' are reserved.\n Please enter a different name"
-                .into()
-        }
+        NameError::Empty => tr("A name must be supplied.").into(),
+        NameError::UsedByStandard | NameError::Used => tr("Name already used.").into(),
+        NameError::TooLong(max) => tr!("The name can have at most {max} characters.", max),
+        NameError::Slash => tr(
+            "The slash character is not allowed as a part of the class name.  \
+             Please choose a different character.",
+        )
+        .into(),
+        NameError::Reserved => tr(
+            "Monster Type names beginning with '~' are reserved.\n Please enter a different name",
+        )
+        .into(),
     }
 }
 

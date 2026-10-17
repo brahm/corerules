@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_i18n::tr;
 use cr_store::sheet::{self as crsheet, Block, Cell, ListItem, Sheet, SheetBox, Table};
 use cr_store::treasure::{Bundle, Coin, Counts, LETTERS, Rand, TreasureRules};
 use gtk::{gio, glib};
@@ -102,9 +103,9 @@ pub fn roller(
             let cell = gtk::Box::builder().spacing(6).build();
             cell.append(&label);
             cell.append(&spins[i]);
-            spins[i].update_property(&[gtk::accessible::Property::Label(&format!(
-                "Treasure type {}",
-                LETTERS[i]
+            spins[i].update_property(&[gtk::accessible::Property::Label(&tr!(
+                "Treasure type {letter}",
+                letter = LETTERS[i]
             ))]);
             flow.append(&cell);
         }
@@ -115,17 +116,17 @@ pub fn roller(
         group.add(&flow);
         group
     };
-    let lair = letters_group("Lair", "Treasure types A to I", 0..9);
-    let individual = letters_group("Individual", "Treasure types J to Z", 9..26);
+    let lair = letters_group(tr("Lair"), tr("Treasure types A to I"), 0..9);
+    let individual = letters_group(tr("Individual"), tr("Treasure types J to Z"), 9..26);
 
     let accumulate = adw::SwitchRow::builder()
-        .title("Accumulate Rolls")
-        .subtitle("Add new rolls to the treasure instead of replacing it")
+        .title(tr("Accumulate Rolls"))
+        .subtitle(tr("Add new rolls to the treasure instead of replacing it"))
         .build();
     let coin = adw::ComboRow::builder()
-        .title("Coin")
-        .subtitle("The coin of the treasure types' platinum line")
-        .model(&gtk::StringList::new(&["Platinum", "Electrum"]))
+        .title(tr("Coin"))
+        .subtitle(tr("The coin of the treasure types' platinum line"))
+        .model(&gtk::StringList::new(&[tr("Platinum"), tr("Electrum")]))
         .build();
     let options = adw::PreferencesGroup::new();
     options.add(&accumulate);
@@ -141,14 +142,18 @@ pub fn roller(
     left.append(&options);
 
     // Results.
-    let items = adw::PreferencesGroup::builder().title("Treasure").build();
-    let summary = adw::PreferencesGroup::builder().title("Summary").build();
+    let items = adw::PreferencesGroup::builder()
+        .title(tr("Treasure"))
+        .build();
+    let summary = adw::PreferencesGroup::builder()
+        .title(tr("Summary"))
+        .build();
     let empty = adw::StatusPage::builder()
         .icon_name("media-playlist-shuffle-symbolic")
-        .title("No Treasure")
-        .description(
+        .title(tr("No Treasure"))
+        .description(tr(
             "Choose how many of each treasure type to roll, then press Roll, or add items yourself",
-        )
+        ))
         .css_classes(["compact"])
         .vexpand(true)
         .build();
@@ -187,29 +192,29 @@ pub fn roller(
 
     // Header.
     let roll = gtk::Button::builder()
-        .label("_Roll")
+        .label(tr("_Roll"))
         .use_underline(true)
         .css_classes(["suggested-action"])
         .build();
     let reset = gtk::Button::builder()
-        .label("Re_set")
+        .label(tr("Re_set"))
         .use_underline(true)
-        .tooltip_text("Clear the treasure types and the treasure")
+        .tooltip_text(tr("Clear the treasure types and the treasure"))
         .build();
     let menu = gio::Menu::new();
     let save_section = gio::Menu::new();
-    save_section.append(Some("_Save…"), Some("treasure.save"));
+    save_section.append(Some(tr("_Save…")), Some("treasure.save"));
     menu.append_section(None, &save_section);
     let print_section = gio::Menu::new();
-    print_section.append(Some("_Print…"), Some("treasure.print"));
-    print_section.append(Some("Save as P_DF…"), Some("treasure.pdf"));
+    print_section.append(Some(tr("_Print…")), Some("treasure.print"));
+    print_section.append(Some(tr("Save as P_DF…")), Some("treasure.pdf"));
     menu.append_section(None, &print_section);
     let delete_section = gio::Menu::new();
-    delete_section.append(Some("_Delete Saved Treasure"), Some("treasure.delete"));
+    delete_section.append(Some(tr("_Delete Saved Treasure")), Some("treasure.delete"));
     menu.append_section(None, &delete_section);
     let menu_button = gtk::MenuButton::builder()
         .icon_name("view-more-symbolic")
-        .tooltip_text("Treasure Menu")
+        .tooltip_text(tr("Treasure Menu"))
         .menu_model(&menu)
         .build();
     let header = adw::HeaderBar::new();
@@ -217,7 +222,7 @@ pub fn roller(
     header.pack_end(&menu_button);
     header.pack_end(&roll);
     let use_button = gtk::Button::builder()
-        .label("_Use Treasure")
+        .label(tr("_Use Treasure"))
         .use_underline(true)
         .css_classes(["suggested-action"])
         .build();
@@ -234,7 +239,7 @@ pub fn roller(
         Mode::Pick { .. } => None,
     };
     let dialog = adw::Dialog::builder()
-        .title(saved_name.as_deref().unwrap_or("Roll Treasure"))
+        .title(saved_name.as_deref().unwrap_or(tr("Roll Treasure")))
         .content_width(960)
         .content_height(720)
         .width_request(360)
@@ -345,7 +350,7 @@ pub fn roller(
             let sheet = Rc::new(state.sheet());
             let (dialog2, toast) = (dialog.clone(), toast.clone());
             let title = sheet.title.clone();
-            crate::sheet::save_file(&dialog, &title, "pdf", "PDF documents", move |path| {
+            crate::sheet::save_file(&dialog, &title, "pdf", tr("PDF documents"), move |path| {
                 crate::sheet::print_sheet(&dialog2, &sheet, Some(path), &*toast)
             });
         })
@@ -497,7 +502,7 @@ impl State {
 /// Bundle").
 fn ask_name(dialog: &adw::Dialog, state: &Rc<State>, store: &Rc<Store>, toast: &Rc<dyn Fn(&str)>) {
     let entry = adw::EntryRow::builder()
-        .title("Name")
+        .title(tr("Name"))
         .activates_default(true)
         .build();
     if let Some(name) = &*state.saved.borrow() {
@@ -509,13 +514,15 @@ fn ask_name(dialog: &adw::Dialog, state: &Rc<State>, store: &Rc<Store>, toast: &
         .build();
     list.append(&entry);
     let alert = adw::AlertDialog::builder()
-        .heading("Save Treasure")
-        .body("Saved treasure appears under Saved Treasure, also in the original programs")
+        .heading(tr("Save Treasure"))
+        .body(tr(
+            "Saved treasure appears under Saved Treasure, also in the original programs",
+        ))
         .extra_child(&list)
         .default_response("save")
         .close_response("cancel")
         .build();
-    alert.add_responses(&[("cancel", "_Cancel"), ("save", "_Save")]);
+    alert.add_responses(&[("cancel", tr("_Cancel")), ("save", tr("_Save"))]);
     alert.set_response_appearance("save", adw::ResponseAppearance::Suggested);
     let (state, store, toast, dialog2, field) = (
         state.clone(),
@@ -534,7 +541,7 @@ fn ask_name(dialog: &adw::Dialog, state: &Rc<State>, store: &Rc<Store>, toast: &
                 if let Some(delete) = state.delete.get() {
                     delete.set_enabled(true);
                 }
-                toast("Treasure saved");
+                toast(tr("Treasure saved"));
             }
             Err(e) => toast(&e),
         }
@@ -553,17 +560,17 @@ fn confirm_delete(
         return;
     };
     let alert = adw::AlertDialog::builder()
-        .heading("Delete Saved Treasure?")
-        .body(format!("“{name}” will be removed from Saved Treasure"))
+        .heading(tr("Delete Saved Treasure?"))
+        .body(tr!("“{name}” will be removed from Saved Treasure", name))
         .default_response("cancel")
         .close_response("cancel")
         .build();
-    alert.add_responses(&[("cancel", "_Cancel"), ("delete", "_Delete")]);
+    alert.add_responses(&[("cancel", tr("_Cancel")), ("delete", tr("_Delete"))]);
     alert.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
     let (store, toast, dialog2) = (store.clone(), toast.clone(), dialog.clone());
     alert.connect_response(Some("delete"), move |_, _| match (store.delete)(&name) {
         Ok(()) => {
-            toast("Saved treasure deleted");
+            toast(tr("Saved treasure deleted"));
             dialog2.close();
         }
         Err(e) => toast(&e),

@@ -14,6 +14,7 @@ use std::time::{Duration, Instant};
 
 use adw::prelude::*;
 use cr_formats::rtf::{Align, Document, Format, Inline, Paragraph, Picture, Rgb, Script, TabKind};
+use cr_i18n::tr;
 use cr_store::Installation;
 use cr_store::books::{BOOK_KEY, Book, Heading, fold_char, outline};
 use gtk::{gdk, gio, glib, pango};
@@ -35,7 +36,7 @@ const MARGIN: i32 = 24;
 pub fn detail_group(key: &str) -> Option<adw::PreferencesGroup> {
     let name = key.strip_prefix(BOOK_KEY)?;
     let button = gtk::Button::builder()
-        .label("_Read Book")
+        .label(tr("_Read Book"))
         .use_underline(true)
         .halign(gtk::Align::Start)
         .action_name("win.open-book")
@@ -58,7 +59,7 @@ pub fn open(
 ) -> Result<(), String> {
     let book = install
         .book(name)
-        .ok_or_else(|| format!("{name} is not in this installation"))?;
+        .ok_or_else(|| tr!("{name} is not in this installation", name))?;
     let key = format!("{}|{}", install.root().display(), book.info.short_name());
     let existing = OPEN.with_borrow(|open| open.get(&key).and_then(Weak::upgrade));
     let reader = match existing {
@@ -66,7 +67,7 @@ pub fn open(
         None => {
             let app = parent
                 .application()
-                .ok_or("The application is shutting down")?;
+                .ok_or(tr("The application is shutting down"))?;
             let reader = Reader::new(&app, book, key.clone());
             OPEN.with_borrow_mut(|open| {
                 open.retain(|_, r| r.strong_count() > 0);
@@ -235,7 +236,7 @@ impl Reader {
         );
         loading.append(
             &gtk::Label::builder()
-                .label("Opening Book…")
+                .label(tr("Opening Book…"))
                 .css_classes(["title-3"])
                 .build(),
         );
@@ -262,7 +263,7 @@ impl Reader {
         sidebar.add_top_bar(
             &adw::HeaderBar::builder()
                 .show_end_title_buttons(false)
-                .title_widget(&adw::WindowTitle::new("Contents", ""))
+                .title_widget(&adw::WindowTitle::new(tr("Contents"), ""))
                 .build(),
         );
         sidebar.set_content(Some(
@@ -274,7 +275,7 @@ impl Reader {
 
         // Find bar.
         let search_entry = gtk::SearchEntry::builder()
-            .placeholder_text("Find in Book")
+            .placeholder_text(tr("Find in Book"))
             .hexpand(true)
             .build();
         let match_label = gtk::Label::builder()
@@ -283,11 +284,11 @@ impl Reader {
             .build();
         let previous = gtk::Button::builder()
             .icon_name("go-up-symbolic")
-            .tooltip_text("Previous Match")
+            .tooltip_text(tr("Previous Match"))
             .build();
         let next = gtk::Button::builder()
             .icon_name("go-down-symbolic")
-            .tooltip_text("Next Match")
+            .tooltip_text(tr("Next Match"))
             .build();
         let find_box = gtk::Box::builder().spacing(6).build();
         find_box.append(&search_entry);
@@ -311,35 +312,35 @@ impl Reader {
         let header = adw::HeaderBar::builder()
             .title_widget(&adw::WindowTitle::new(
                 book.info.title,
-                book.info.category.title(),
+                tr(book.info.category.title()),
             ))
             .build();
         let sidebar_button = gtk::ToggleButton::builder()
             .icon_name("sidebar-show-symbolic")
-            .tooltip_text("Contents")
+            .tooltip_text(tr("Contents"))
             .active(true)
             .build();
         header.pack_start(&sidebar_button);
         let menu = gio::Menu::new();
         let find_section = gio::Menu::new();
-        find_section.append(Some("_Find…"), Some("win.find"));
+        find_section.append(Some(tr("_Find…")), Some("win.find"));
         menu.append_section(None, &find_section);
         let zoom_section = gio::Menu::new();
-        zoom_section.append(Some("Zoom _In"), Some("win.zoom-in"));
-        zoom_section.append(Some("Zoom _Out"), Some("win.zoom-out"));
-        zoom_section.append(Some("_Reset Zoom"), Some("win.zoom-reset"));
+        zoom_section.append(Some(tr("Zoom _In")), Some("win.zoom-in"));
+        zoom_section.append(Some(tr("Zoom _Out")), Some("win.zoom-out"));
+        zoom_section.append(Some(tr("_Reset Zoom")), Some("win.zoom-reset"));
         menu.append_section(None, &zoom_section);
         header.pack_end(
             &gtk::MenuButton::builder()
                 .icon_name("open-menu-symbolic")
-                .tooltip_text("Main Menu")
+                .tooltip_text(tr("Main Menu"))
                 .menu_model(&menu)
                 .primary(true)
                 .build(),
         );
         let find_button = gtk::ToggleButton::builder()
             .icon_name("edit-find-symbolic")
-            .tooltip_text("Find")
+            .tooltip_text(tr("Find"))
             .build();
         find_button
             .bind_property("active", &search_bar, "search-mode-enabled")
@@ -565,7 +566,7 @@ impl Reader {
             match parsed {
                 Ok(Ok((doc, headings))) => reader.fill(doc, headings),
                 Ok(Err(e)) => reader.show_error(&e.to_string()),
-                Err(_) => reader.show_error("The book could not be read"),
+                Err(_) => reader.show_error(tr("The book could not be read")),
             }
         });
     }
@@ -573,7 +574,7 @@ impl Reader {
     fn show_error(&self, message: &str) {
         let page = adw::StatusPage::builder()
             .icon_name("dialog-error-symbolic")
-            .title("Could Not Open Book")
+            .title(tr("Could Not Open Book"))
             .description(glib::markup_escape_text(message).as_str())
             .build();
         self.stack.add_named(&page, Some("error"));
@@ -966,7 +967,7 @@ impl Reader {
         let count = matches.len();
         *self.matches.borrow_mut() = matches;
         if count == 0 {
-            self.match_label.set_label("No Results");
+            self.match_label.set_label(tr("No Results"));
             return;
         }
         if self.skip_first_match.take() {
@@ -1004,8 +1005,11 @@ impl Reader {
         self.buffer.move_mark(&self.jump, &start);
         self.view.scroll_to_mark(&self.jump, 0.0, true, 0.0, 0.3);
         self.current.set(Some(index));
-        self.match_label
-            .set_label(&format!("{} of {}", index + 1, self.matches.borrow().len()));
+        self.match_label.set_label(&tr!(
+            "{current} of {total}",
+            current = index + 1,
+            total = self.matches.borrow().len()
+        ));
     }
 }
 

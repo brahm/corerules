@@ -5,6 +5,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_i18n::tr;
 use gtk::glib;
 
 /// A group of names the user can add to and remove from.
@@ -22,7 +23,7 @@ impl ListEditor {
     pub fn new(title: &str, items: &[String], choices: Rc<Vec<String>>) -> Self {
         let add = gtk::Button::builder()
             .icon_name("list-add-symbolic")
-            .tooltip_text(format!("Add to {title}"))
+            .tooltip_text(tr!("Add to {list}", list = title))
             .valign(gtk::Align::Center)
             .css_classes(["flat"])
             .build();
@@ -31,7 +32,7 @@ impl ListEditor {
             .header_suffix(&add)
             .build();
         let empty = adw::ActionRow::builder()
-            .title("None")
+            .title(tr("None"))
             .css_classes(["dim-label"])
             .build();
         group.add(&empty);
@@ -73,7 +74,7 @@ impl ListEditor {
     fn push(&self, name: String) {
         let remove = gtk::Button::builder()
             .icon_name("list-remove-symbolic")
-            .tooltip_text("Remove")
+            .tooltip_text(tr("Remove"))
             .valign(gtk::Align::Center)
             .css_classes(["flat"])
             .build();
@@ -113,7 +114,7 @@ pub fn pick(
 ) {
     let model = gtk::StringList::new(&choices.iter().map(String::as_str).collect::<Vec<_>>());
     let search = gtk::SearchEntry::builder()
-        .placeholder_text("Search")
+        .placeholder_text(tr("Search"))
         .hexpand(true)
         .build();
     let filter = gtk::StringFilter::builder()
@@ -187,7 +188,7 @@ pub fn pick(
     view.add_top_bar(&search_bar);
     view.set_content(Some(&scroll));
     let dialog = adw::Dialog::builder()
-        .title(format!("Add to {title}"))
+        .title(tr!("Add to {list}", list = title))
         .content_width(360)
         .content_height(480)
         .child(&view)
@@ -264,7 +265,7 @@ impl<T: Clone + 'static> RowList<T> {
     ) -> Self {
         let add = gtk::Button::builder()
             .icon_name("list-add-symbolic")
-            .tooltip_text(format!("Add to {title}"))
+            .tooltip_text(tr!("Add to {list}", list = title))
             .valign(gtk::Align::Center)
             .css_classes(["flat"])
             .build();
@@ -273,7 +274,7 @@ impl<T: Clone + 'static> RowList<T> {
             .header_suffix(&add)
             .build();
         let empty = adw::ActionRow::builder()
-            .title("None")
+            .title(tr("None"))
             .css_classes(["dim-label"])
             .build();
         group.add(&empty);
@@ -307,7 +308,7 @@ impl<T: Clone + 'static> RowList<T> {
     pub fn push(&self, spec: RowSpec<T>) {
         let remove = gtk::Button::builder()
             .icon_name("list-remove-symbolic")
-            .tooltip_text("Remove")
+            .tooltip_text(tr("Remove"))
             .valign(gtk::Align::Center)
             .css_classes(["flat"])
             .build();

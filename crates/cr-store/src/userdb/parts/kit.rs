@@ -10,6 +10,7 @@
 
 use cr_formats::Object;
 use cr_formats::parts::{ListOfListsOfOptions, NumList, PartId, PartKitData, PartKitLevel};
+use cr_i18n::tr_noop;
 
 use super::super::allowed::Allowed;
 use super::super::slots::{self, Slot};
@@ -341,28 +342,47 @@ fn armor_value(index: i64) -> i64 {
 }
 
 const ARMOR_LIMITS: &[&str] = &[
-    "Any", "None", "9", "8", "7", "6", "5", "4", "3", "2", "1", "0", "-1", "-2", "-3", "-4", "-5",
-    "-6", "-7", "-8", "-9",
+    tr_noop!("Any"),
+    tr_noop!("None"),
+    "9",
+    "8",
+    "7",
+    "6",
+    "5",
+    "4",
+    "3",
+    "2",
+    "1",
+    "0",
+    "-1",
+    "-2",
+    "-3",
+    "-4",
+    "-5",
+    "-6",
+    "-7",
+    "-8",
+    "-9",
 ];
 
 // Pages.
-const KIT: &str = "Kit";
-const REQ: &str = "Kit Requirements";
-const ALIGN: &str = "Kit Alignment/Gender";
-const COMBAT: &str = "Kit Combat";
-const ROGUE: &str = "Kit Rogue Skills";
-const MONEY: &str = "Kit Money";
-const LANG: &str = "Kit Languages";
-const ARMOR: &str = "Kit Armor";
-const NWPS: &str = "Kit NWPs";
-const WPS: &str = "Kit WPs";
-const SPEC: &str = "Kit Specialization";
-const FOCUS: &str = "Kit Weapon Focus";
-const RESTR: &str = "Kit WP Restrictions";
-const CLASS: &str = "Kit Class Abilities";
-const SPELLS: &str = "Kit Spells";
-const EQUIP: &str = "Kit Equipment";
-const OTHER: &str = "Kit Other";
+const KIT: &str = tr_noop!("Kit");
+const REQ: &str = tr_noop!("Kit Requirements");
+const ALIGN: &str = tr_noop!("Kit Alignment/Gender");
+const COMBAT: &str = tr_noop!("Kit Combat");
+const ROGUE: &str = tr_noop!("Kit Rogue Skills");
+const MONEY: &str = tr_noop!("Kit Money");
+const LANG: &str = tr_noop!("Kit Languages");
+const ARMOR: &str = tr_noop!("Kit Armor");
+const NWPS: &str = tr_noop!("Kit NWPs");
+const WPS: &str = tr_noop!("Kit WPs");
+const SPEC: &str = tr_noop!("Kit Specialization");
+const FOCUS: &str = tr_noop!("Kit Weapon Focus");
+const RESTR: &str = tr_noop!("Kit WP Restrictions");
+const CLASS: &str = tr_noop!("Kit Class Abilities");
+const SPELLS: &str = tr_noop!("Kit Spells");
+const EQUIP: &str = tr_noop!("Kit Equipment");
+const OTHER: &str = tr_noop!("Kit Other");
 
 const NWP: &str = "Non-Weapon Proficiencies";
 const WP: &str = "weapon-proficiencies";
@@ -371,107 +391,160 @@ const WP: &str = "weapon-proficiencies";
 pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
     let mut f = vec![
         // IDD 194.
-        check!(KIT, "Available to Core Rules Characters", 0x73).group("Availability"),
-        check!(KIT, "Available to Skills & Powers Characters", 0x74).group("Availability"),
-        list!(KIT, "No races except these", "races", 0x10)
+        check!(KIT, tr_noop!("Available to Core Rules Characters"), 0x73)
+            .group(tr_noop!("Availability")),
+        check!(
+            KIT,
+            tr_noop!("Available to Skills & Powers Characters"),
+            0x74
+        )
+        .group(tr_noop!("Availability")),
+        list!(KIT, tr_noop!("No races except these"), "races", 0x10)
             .enabled(|r| value(r, 0xa8).list().is_empty()),
-        list!(KIT, "All races except these", "races", 0xa8)
+        list!(KIT, tr_noop!("All races except these"), "races", 0xa8)
             .enabled(|r| value(r, 0x10).list().is_empty()),
-        checked!(KIT, "Allow only these classes", "class-combinations", 0x65c),
-        list!(KIT, "Recommended Traits", "Traits", 0xe4),
-        list!(KIT, "Weapon (THAC0 Bonus)", WP, 0xf8),
-        kat!(KIT, "Display on Selection", FieldKind::MultiLine, 0x9c),
-        kat!(KIT, "Display on Equip", FieldKind::MultiLine, 0xa0),
+        checked!(
+            KIT,
+            tr_noop!("Allow only these classes"),
+            "class-combinations",
+            0x65c
+        ),
+        list!(KIT, tr_noop!("Recommended Traits"), "Traits", 0xe4),
+        list!(KIT, tr_noop!("Weapon (THAC0 Bonus)"), WP, 0xf8),
+        kat!(
+            KIT,
+            tr_noop!("Display on Selection"),
+            FieldKind::MultiLine,
+            0x9c
+        ),
+        kat!(
+            KIT,
+            tr_noop!("Display on Equip"),
+            FieldKind::MultiLine,
+            0xa0
+        ),
     ];
 
     // IDD 195 Kit Requirements: min and max of each score.
     for (label, off) in [
-        ("Strength", 0x4c),
-        ("Stamina", 0x4e),
-        ("Muscle", 0x50),
-        ("Dexterity", 0x52),
-        ("Aim", 0x54),
-        ("Balance", 0x56),
-        ("Constitution", 0x58),
-        ("Health", 0x5a),
-        ("Fitness", 0x5c),
-        ("Intelligence", 0x5e),
-        ("Reason", 0x60),
-        ("Knowledge", 0x62),
-        ("Wisdom", 0x64),
-        ("Intuition", 0x66),
-        ("Willpower", 0x68),
-        ("Charisma", 0x6a),
-        ("Leadership", 0x6c),
-        ("Appearance", 0x6e),
+        (tr_noop!("Strength"), 0x4c),
+        (tr_noop!("Stamina"), 0x4e),
+        (tr_noop!("Muscle"), 0x50),
+        (tr_noop!("Dexterity"), 0x52),
+        (tr_noop!("Aim"), 0x54),
+        (tr_noop!("Balance"), 0x56),
+        (tr_noop!("Constitution"), 0x58),
+        (tr_noop!("Health"), 0x5a),
+        (tr_noop!("Fitness"), 0x5c),
+        (tr_noop!("Intelligence"), 0x5e),
+        (tr_noop!("Reason"), 0x60),
+        (tr_noop!("Knowledge"), 0x62),
+        (tr_noop!("Wisdom"), 0x64),
+        (tr_noop!("Intuition"), 0x66),
+        (tr_noop!("Willpower"), 0x68),
+        (tr_noop!("Charisma"), 0x6a),
+        (tr_noop!("Leadership"), 0x6c),
+        (tr_noop!("Appearance"), 0x6e),
     ] {
-        f.push(int!(REQ, "Min", 0, 25, off).group(label));
-        f.push(int!(REQ, "Max", 0, 25, off + 1).group(label));
+        f.push(int!(REQ, tr_noop!("Min"), 0, 25, off).group(label));
+        f.push(int!(REQ, tr_noop!("Max"), 0, 25, off + 1).group(label));
     }
     f.extend([
         int!(
             REQ,
-            "Must have a minimum score in their class' prime requisite",
+            tr_noop!("Must have a minimum score in their class' prime requisite"),
             0,
             25,
             0x70
         ),
-        check!(REQ, "Add % to XP requirements", 0x5de),
-        int!(REQ, "% to XP requirements", -1000, 1000, 0x5ec).enabled(|r| int(r, 0x5de) != 0),
-        check!(REQ, "Maximum % XP bonus for high stats", 0x5dd),
-        int!(REQ, "% XP bonus for high stats", -1000, 1000, 0x5e4).enabled(|r| int(r, 0x5dd) != 0),
+        check!(REQ, tr_noop!("Add % to XP requirements"), 0x5de),
+        int!(REQ, tr_noop!("% to XP requirements"), -1000, 1000, 0x5ec)
+            .enabled(|r| int(r, 0x5de) != 0),
+        check!(REQ, tr_noop!("Maximum % XP bonus for high stats"), 0x5dd),
+        int!(
+            REQ,
+            tr_noop!("% XP bonus for high stats"),
+            -1000,
+            1000,
+            0x5e4
+        )
+        .enabled(|r| int(r, 0x5dd) != 0),
     ]);
 
     // IDD 181 Alignment and Gender.
     for (label, off) in [
-        ("Lawful Good", 0x6),
-        ("Lawful Neutral", 0x7),
-        ("Lawful Evil", 0x8),
-        ("Neutral Good", 0x9),
-        ("True Neutral", 0xa),
-        ("Neutral Evil", 0xb),
-        ("Chaotic Good", 0xc),
-        ("Chaotic Neutral", 0xd),
-        ("Chaotic Evil", 0xe),
+        (tr_noop!("Lawful Good"), 0x6),
+        (tr_noop!("Lawful Neutral"), 0x7),
+        (tr_noop!("Lawful Evil"), 0x8),
+        (tr_noop!("Neutral Good"), 0x9),
+        (tr_noop!("True Neutral"), 0xa),
+        (tr_noop!("Neutral Evil"), 0xb),
+        (tr_noop!("Chaotic Good"), 0xc),
+        (tr_noop!("Chaotic Neutral"), 0xd),
+        (tr_noop!("Chaotic Evil"), 0xe),
     ] {
-        f.push(check!(ALIGN, label, off).group("Alignments available to this kit"));
+        f.push(check!(ALIGN, label, off).group(tr_noop!("Alignments available to this kit")));
     }
-    f.push(check!(ALIGN, "Male", 0x4).group("Genders available to this kit"));
-    f.push(check!(ALIGN, "Female", 0x5).group("Genders available to this kit"));
+    f.push(check!(ALIGN, tr_noop!("Male"), 0x4).group(tr_noop!("Genders available to this kit")));
+    f.push(check!(ALIGN, tr_noop!("Female"), 0x5).group(tr_noop!("Genders available to this kit")));
 
     // IDD 231 Combat.
     f.extend([
         int!(
             COMBAT,
-            "THAC0 Mod (negative values better your THAC0)",
+            tr_noop!("THAC0 Mod (negative values better your THAC0)"),
             -100,
             100,
             0x34c
         ),
-        int!(COMBAT, "THAC0 Mod to this list", -100, 100, 0x350).group("THAC0 List"),
-        list!(COMBAT, "Weapons with the THAC0 modifier", WP, 0x354).group("THAC0 List"),
-        int!(COMBAT, "Damage mod to this list", -100, 100, 0x368).group("Damage List"),
-        list!(COMBAT, "Weapons with the damage modifier", WP, 0x36c).group("Damage List"),
-        check!(COMBAT, "Gains two weapon style specialist bonus", 0x348),
-        check!(COMBAT, "Cavalier to hit bonus", 0x380),
+        int!(COMBAT, tr_noop!("THAC0 Mod to this list"), -100, 100, 0x350)
+            .group(tr_noop!("THAC0 List")),
+        list!(
+            COMBAT,
+            tr_noop!("Weapons with the THAC0 modifier"),
+            WP,
+            0x354
+        )
+        .group(tr_noop!("THAC0 List")),
+        int!(
+            COMBAT,
+            tr_noop!("Damage mod to this list"),
+            -100,
+            100,
+            0x368
+        )
+        .group(tr_noop!("Damage List")),
+        list!(
+            COMBAT,
+            tr_noop!("Weapons with the damage modifier"),
+            WP,
+            0x36c
+        )
+        .group(tr_noop!("Damage List")),
         check!(
             COMBAT,
-            "Negate all penalties for fighting with 2 weapons",
+            tr_noop!("Gains two weapon style specialist bonus"),
+            0x348
+        ),
+        check!(COMBAT, tr_noop!("Cavalier to hit bonus"), 0x380),
+        check!(
+            COMBAT,
+            tr_noop!("Negate all penalties for fighting with 2 weapons"),
             0x5d8
         ),
         check!(
             COMBAT,
-            "Use Sharpshooter Attacks Table (Applies only to crossbows)",
+            tr_noop!("Use Sharpshooter Attacks Table (Applies only to crossbows)"),
             0x5df
         ),
     ]);
 
     // IDD 201 Rogue Skills.
     f.extend([
-        check!(ROGUE, "Move Silently as Ranger", 0x5d5),
+        check!(ROGUE, tr_noop!("Move Silently as Ranger"), 0x5d5),
         sentinel!(
             ROGUE,
-            "Starts with non-standard number of skill points",
+            tr_noop!("Starts with non-standard number of skill points"),
             0,
             1000,
             -1,
@@ -480,7 +553,7 @@ pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
         ),
         sentinel!(
             ROGUE,
-            "Gains non-standard number of skill points per level",
+            tr_noop!("Gains non-standard number of skill points per level"),
             0,
             1000,
             -1,
@@ -489,29 +562,48 @@ pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
         ),
         checked!(
             ROGUE,
-            "Starting skill points may only be spent on these abilities",
+            tr_noop!("Starting skill points may only be spent on these abilities"),
             "rogue-skills",
             0x128
         ),
-        int!(ROGUE, "Add to one skill at level 1", 0, 500, 0x13c).group("At level 1"),
-        list!(ROGUE, "from these abilities", "rogue-skills", 0x140).group("At level 1"),
         int!(
             ROGUE,
-            "Add to one skill at levels beyond 1st",
+            tr_noop!("Add to one skill at level 1"),
+            0,
+            500,
+            0x13c
+        )
+        .group(tr_noop!("At level 1")),
+        list!(
+            ROGUE,
+            tr_noop!("from these abilities"),
+            "rogue-skills",
+            0x140
+        )
+        .group(tr_noop!("At level 1")),
+        int!(
+            ROGUE,
+            tr_noop!("Add to one skill at levels beyond 1st"),
             0,
             500,
             0x154
         )
-        .group("At levels beyond 1st"),
-        list!(ROGUE, "from these abilities", "rogue-skills", 0x158).group("At levels beyond 1st"),
-        int!(ROGUE, "Choose abilities", 0, 50, 0x16c).group("Bonus"),
-        int!(ROGUE, "for a bonus of", 0, 500, 0x170).group("Bonus"),
+        .group(tr_noop!("At levels beyond 1st")),
+        list!(
+            ROGUE,
+            tr_noop!("from these abilities"),
+            "rogue-skills",
+            0x158
+        )
+        .group(tr_noop!("At levels beyond 1st")),
+        int!(ROGUE, tr_noop!("Choose abilities"), 0, 50, 0x16c).group(tr_noop!("Bonus")),
+        int!(ROGUE, tr_noop!("for a bonus of"), 0, 500, 0x170).group(tr_noop!("Bonus")),
         kat!(
             ROGUE,
-            "Modifiers to Rogue Skill Scores",
+            tr_noop!("Modifiers to Rogue Skill Scores"),
             FieldKind::Pairs {
                 options: Options::Source("rogue-skills"),
-                number: "Modifier",
+                number: tr_noop!("Modifier"),
                 min: -100,
                 max: 100
             },
@@ -524,112 +616,131 @@ pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
     f.extend([
         check!(
             MONEY,
-            "Maximum retained funds during character generation",
+            tr_noop!("Maximum retained funds during character generation"),
             0x5dc
         ),
-        int!(MONEY, "Maximum retained funds", 0, 1_000_000, 0x5e0).enabled(|r| int(r, 0x5dc) != 0),
-        check!(MONEY, "Starting money = dice * multiplier + add", 0x618).group("Starting Money"),
-        int!(MONEY, "# of dice", 0, 1000, 0x608)
-            .group("Starting Money")
+        int!(
+            MONEY,
+            tr_noop!("Maximum retained funds"),
+            0,
+            1_000_000,
+            0x5e0
+        )
+        .enabled(|r| int(r, 0x5dc) != 0),
+        check!(
+            MONEY,
+            tr_noop!("Starting money = dice * multiplier + add"),
+            0x618
+        )
+        .group(tr_noop!("Starting Money")),
+        int!(MONEY, tr_noop!("# of dice"), 0, 1000, 0x608)
+            .group(tr_noop!("Starting Money"))
             .enabled(dice),
-        int!(MONEY, "# of sides", 0, 1000, 0x60c)
-            .group("Starting Money")
+        int!(MONEY, tr_noop!("# of sides"), 0, 1000, 0x60c)
+            .group(tr_noop!("Starting Money"))
             .enabled(dice),
-        int!(MONEY, "Multiplier", 0, 1_000_000, 0x610)
-            .group("Starting Money")
+        int!(MONEY, tr_noop!("Multiplier"), 0, 1_000_000, 0x610)
+            .group(tr_noop!("Starting Money"))
             .enabled(dice),
-        int!(MONEY, "Add", 0, 1_000_000, 0x614)
-            .group("Starting Money")
+        int!(MONEY, tr_noop!("Add"), 0, 1_000_000, 0x614)
+            .group(tr_noop!("Starting Money"))
             .enabled(dice),
         check!(
             MONEY,
-            "Assign maximum starting funds allowed for class",
+            tr_noop!("Assign maximum starting funds allowed for class"),
             0x84
         )
-        .group("Wealth"),
+        .group(tr_noop!("Wealth")),
         int!(
             MONEY,
-            "Percent of class starting funds assigned",
+            tr_noop!("Percent of class starting funds assigned"),
             0,
             1000,
             0x8c
         )
-        .group("Wealth"),
+        .group(tr_noop!("Wealth")),
         int!(
             MONEY,
-            "Percent added to normal starting funds",
+            tr_noop!("Percent added to normal starting funds"),
             0,
             1000,
             0x88
         )
-        .group("Wealth"),
+        .group(tr_noop!("Wealth")),
         int!(
             MONEY,
-            "Percent of actual price paid for equipment",
+            tr_noop!("Percent of actual price paid for equipment"),
             0,
             1000,
             0x90
         )
-        .group("Wealth"),
+        .group(tr_noop!("Wealth")),
     ]);
 
     // IDD 240 Languages.
     f.extend([
-        check!(LANG, "Languages cost half", 0x5d6),
-        int!(LANG, "Gain 1 language for each (levels)", 0, 100, 0x5fc),
-        int!(LANG, "starting at level", 0, 100, 0x600),
+        check!(LANG, tr_noop!("Languages cost half"), 0x5d6),
+        int!(
+            LANG,
+            tr_noop!("Gain 1 language for each (levels)"),
+            0,
+            100,
+            0x5fc
+        ),
+        int!(LANG, tr_noop!("starting at level"), 0, 100, 0x600),
     ]);
 
     // IDD 219 Armor.
     f.extend([
         check!(
             ARMOR,
-            "No armor restrictions (overriding class restrictions)",
+            tr_noop!("No armor restrictions (overriding class restrictions)"),
             0x188
         ),
         check!(
             ARMOR,
-            "Can wear out of class armor with +1 AC penalty",
+            tr_noop!("Can wear out of class armor with +1 AC penalty"),
             0x189
         ),
-        check!(ARMOR, "Light armor -2 AC Bonus", 0x7c),
-        checked!(ARMOR, "Limited to armor from", "Armor", 0x1a0),
+        check!(ARMOR, tr_noop!("Light armor -2 AC Bonus"), 0x7c),
+        checked!(ARMOR, tr_noop!("Limited to armor from"), "Armor", 0x1a0),
         checked!(
             ARMOR,
-            "Limited to armor from (during generation)",
+            tr_noop!("Limited to armor from (during generation)"),
             "Armor",
             0x1b4
         ),
-        int!(ARMOR, "Add to AC", -20, 20, 0x19c),
-        int!(ARMOR, "At level", 1, 101, 0x18c).group("Base armor class"),
-        int!(ARMOR, "base armor class becomes", -20, 20, 0x190).group("Base armor class"),
-        int!(ARMOR, "improving by", -20, 20, 0x194).group("Base armor class"),
+        int!(ARMOR, tr_noop!("Add to AC"), -20, 20, 0x19c),
+        int!(ARMOR, tr_noop!("At level"), 1, 101, 0x18c).group(tr_noop!("Base armor class")),
+        int!(ARMOR, tr_noop!("base armor class becomes"), -20, 20, 0x190)
+            .group(tr_noop!("Base armor class")),
+        int!(ARMOR, tr_noop!("improving by"), -20, 20, 0x194).group(tr_noop!("Base armor class")),
         int!(
             ARMOR,
-            "each level until reaching a minimum of",
+            tr_noop!("each level until reaching a minimum of"),
             -20,
             20,
             0x198
         )
-        .group("Base armor class"),
+        .group(tr_noop!("Base armor class")),
     ]);
 
     // IDD 212 Non-Weapon Proficiencies.
     f.extend([
-        list!(NWPS, "Required NWPs", NWP, 0x280),
-        list!(NWPS, "Recommended NWPs", NWP, 0x258),
+        list!(NWPS, tr_noop!("Required NWPs"), NWP, 0x280),
+        list!(NWPS, tr_noop!("Recommended NWPs"), NWP, 0x258),
         kat!(
             NWPS,
-            "Bonus NWPs",
+            tr_noop!("Bonus NWPs"),
             FieldKind::Groups(Options::Source(NWP)),
             0x330
         ),
         kat!(
             NWPS,
-            "Gain bonus NWPs at specific levels",
+            tr_noop!("Gain bonus NWPs at specific levels"),
             FieldKind::Pairs {
                 options: Options::Source(NWP),
-                number: "Level",
+                number: tr_noop!("Level"),
                 min: 0,
                 max: 100
             },
@@ -637,47 +748,63 @@ pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
         ),
         kat!(
             NWPS,
-            "NWP Modifiers",
+            tr_noop!("NWP Modifiers"),
             FieldKind::Pairs {
                 options: Options::Source(NWP),
-                number: "Modifier",
+                number: tr_noop!("Modifier"),
                 min: -100,
                 max: 100
             },
             0x244
         ),
-        list!(NWPS, "Pick NWP from list for +2 bonus", NWP, 0x2a8),
-        list!(NWPS, "Barred during creation", NWP, 0x26c),
+        list!(
+            NWPS,
+            tr_noop!("Pick NWP from list for +2 bonus"),
+            NWP,
+            0x2a8
+        ),
+        list!(NWPS, tr_noop!("Barred during creation"), NWP, 0x26c),
         checked!(
             NWPS,
-            "Can pick secondary skill from",
+            tr_noop!("Can pick secondary skill from"),
             "secondary-skills",
             0x2d0
         ),
-        check!(NWPS, "No secondary skills", 0x314).group("Secondary Skills"),
-        list!(NWPS, "Required secondary skills", "secondary-skills", 0x2e4),
+        check!(NWPS, tr_noop!("No secondary skills"), 0x314).group(tr_noop!("Secondary Skills")),
+        list!(
+            NWPS,
+            tr_noop!("Required secondary skills"),
+            "secondary-skills",
+            0x2e4
+        ),
     ]);
     for (label, off) in [
-        ("Warrior", 0x30f),
-        ("Priest", 0x310),
-        ("Rogue", 0x312),
-        ("Wizard", 0x311),
-        ("Psionicist", 0x313),
+        (tr_noop!("Warrior"), 0x30f),
+        (tr_noop!("Priest"), 0x310),
+        (tr_noop!("Rogue"), 0x312),
+        (tr_noop!("Wizard"), 0x311),
+        (tr_noop!("Psionicist"), 0x313),
     ] {
-        f.push(check!(NWPS, label, off).group("No out of group penalty"));
+        f.push(check!(NWPS, label, off).group(tr_noop!("No out of group penalty")));
     }
     f.extend([
-        list!(NWPS, "No out of class penalty", NWP, 0x2bc),
+        list!(NWPS, tr_noop!("No out of class penalty"), NWP, 0x2bc),
         check!(
             NWPS,
-            "Replace NWP advancement with 1 NWP at levels 1, 3, and 6",
+            tr_noop!("Replace NWP advancement with 1 NWP at levels 1, 3, and 6"),
             0x30c
         ),
-        kat!(NWPS, "May use WPs as NWPs", FieldKind::Check, 0x30e).enabled(|r| int(r, 0x44d) == 0),
-        check!(NWPS, "Might receive bonus NWP each level", 0x30d),
+        kat!(
+            NWPS,
+            tr_noop!("May use WPs as NWPs"),
+            FieldKind::Check,
+            0x30e
+        )
+        .enabled(|r| int(r, 0x44d) == 0),
+        check!(NWPS, tr_noop!("Might receive bonus NWP each level"), 0x30d),
         sentinel!(
             NWPS,
-            "Start with non-standard number of NWP slots in Core Rules",
+            tr_noop!("Start with non-standard number of NWP slots in Core Rules"),
             0,
             100,
             -1,
@@ -686,60 +813,60 @@ pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
         ),
         kat!(
             NWPS,
-            "Must learn NWP",
+            tr_noop!("Must learn NWP"),
             FieldKind::Combo {
                 options: Options::Source(NWP),
                 free: true
             },
             0x31c
         )
-        .group("Must learn"),
-        int!(NWPS, "by level", 0, 100, 0x320).group("Must learn"),
+        .group(tr_noop!("Must learn")),
+        int!(NWPS, tr_noop!("by level"), 0, 100, 0x320).group(tr_noop!("Must learn")),
         kat!(
             NWPS,
-            "If has NWP",
+            tr_noop!("If has NWP"),
             FieldKind::Combo {
                 options: Options::Source(NWP),
                 free: true
             },
             0x324
         )
-        .group("Rating bonus"),
+        .group(tr_noop!("Rating bonus")),
         kat!(
             NWPS,
-            "then NWP",
+            tr_noop!("then NWP"),
             FieldKind::Combo {
                 options: Options::Source(NWP),
                 free: true
             },
             0x328
         )
-        .group("Rating bonus"),
-        int!(NWPS, "receives bonus of", -100, 100, 0x32c).group("Rating bonus"),
+        .group(tr_noop!("Rating bonus")),
+        int!(NWPS, tr_noop!("receives bonus of"), -100, 100, 0x32c).group(tr_noop!("Rating bonus")),
     ]);
 
     // IDD 230 Weapon Proficiencies.
     f.extend([
         int!(
             WPS,
-            "Bonus WP Slots (CPs for Skills & Powers)",
+            tr_noop!("Bonus WP Slots (CPs for Skills & Powers)"),
             -100,
             100,
             0x448
         ),
         check!(
             WPS,
-            "Replace WP advancement with 1 WP at levels 1, 3, and 6",
+            tr_noop!("Replace WP advancement with 1 WP at levels 1, 3, and 6"),
             0x44c
         ),
         check!(
             WPS,
-            "Consider all class allowed weapons to be recommended",
+            tr_noop!("Consider all class allowed weapons to be recommended"),
             0x444
         ),
         FieldDesc::new(
             WPS,
-            "May spend NWP slots as WPs",
+            tr_noop!("May spend NWP slots as WPs"),
             FieldKind::Check,
             |r: &PartRec, _| Value::Bool(int(r, 0x44d) != 0),
             |r, _, v, s| {
@@ -756,30 +883,46 @@ pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
         .visible(has_kit),
         check!(
             WPS,
-            "Must spend at least half of NWP slots in this way",
+            tr_noop!("Must spend at least half of NWP slots in this way"),
             0x44e
         )
         .enabled(|r| int(r, 0x44d) != 0),
         check!(
             WPS,
-            "Limited to recommended and required WPs at start",
+            tr_noop!("Limited to recommended and required WPs at start"),
             0x76
         ),
-        check!(WPS, "Must take one wooden WP", 0x465),
+        check!(WPS, tr_noop!("Must take one wooden WP"), 0x465),
         sentinel!(
             WPS,
-            "Different penalty for non-proficiency",
+            tr_noop!("Different penalty for non-proficiency"),
             -100,
             100,
             99,
             0,
             0x450
         ),
-        sentinel!(WPS, "Start with nonstandard WP slots", 0, 100, -1, 0, 0x454),
-        sentinel!(WPS, "Gain WP slots every X levels", 0, 100, -1, 0, 0x458),
         sentinel!(
             WPS,
-            "Future WPs gained starting at level",
+            tr_noop!("Start with nonstandard WP slots"),
+            0,
+            100,
+            -1,
+            0,
+            0x454
+        ),
+        sentinel!(
+            WPS,
+            tr_noop!("Gain WP slots every X levels"),
+            0,
+            100,
+            -1,
+            0,
+            0x458
+        ),
+        sentinel!(
+            WPS,
+            tr_noop!("Future WPs gained starting at level"),
             0,
             100,
             -1,
@@ -788,34 +931,35 @@ pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
         ),
         sentinel!(
             WPS,
-            "Can learn out of class WPs by paying this many more slots",
+            tr_noop!("Can learn out of class WPs by paying this many more slots"),
             0,
             100,
             -1,
             0,
             0x460
         ),
-        int!(WPS, "Bonus WP slots", 0, 100, 0x468).group("Bonus WP slots at level"),
-        int!(WPS, "at level", 0, 100, 0x46c).group("Bonus WP slots at level"),
-        list!(WPS, "Recommended WPs", WP, 0x384),
+        int!(WPS, tr_noop!("Bonus WP slots"), 0, 100, 0x468)
+            .group(tr_noop!("Bonus WP slots at level")),
+        int!(WPS, tr_noop!("at level"), 0, 100, 0x46c).group(tr_noop!("Bonus WP slots at level")),
+        list!(WPS, tr_noop!("Recommended WPs"), WP, 0x384),
         kat!(
             WPS,
-            "Required WPs",
+            tr_noop!("Required WPs"),
             FieldKind::Groups(Options::Source(WP)),
             0x568
         ),
         kat!(
             WPS,
-            "Bonus WPs at given levels",
+            tr_noop!("Bonus WPs at given levels"),
             FieldKind::Pairs {
                 options: Options::Source(WP),
-                number: "Level",
+                number: tr_noop!("Level"),
                 min: 0,
                 max: 100
             },
             0x470
         ),
-        list!(WPS, "These WPs are never out of class", WP, 0x484),
+        list!(WPS, tr_noop!("These WPs are never out of class"), WP, 0x484),
     ]);
 
     // IDD 232 Specialization.
@@ -823,137 +967,185 @@ pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
     f.extend([
         check!(
             SPEC,
-            "May specialize (even if normally not allowed by class)",
+            tr_noop!("May specialize (even if normally not allowed by class)"),
             0x518
         ),
         check!(
             SPEC,
-            "May select Unarmed Combat (even if normally not allowed by class)",
+            tr_noop!("May select Unarmed Combat (even if normally not allowed by class)"),
             0x4b4
         ),
-        sentinel!(SPEC, "Must specialize by level", 1, 100, 101, 1, 0x51c),
+        sentinel!(
+            SPEC,
+            tr_noop!("Must specialize by level"),
+            1,
+            100,
+            101,
+            1,
+            0x51c
+        ),
         radio(
             SPEC,
-            "Specialize",
+            tr_noop!("Specialize"),
             &[
-                "in any weapon proficiency",
-                "in a melee weapon",
-                "in a missile weapon",
+                tr_noop!("in any weapon proficiency"),
+                tr_noop!("in a melee weapon"),
+                tr_noop!("in a missile weapon"),
             ],
             0,
         )
         .enabled(by_level),
-        checked!(SPEC, "May only specialize in WPs from", WP, 0x524),
-        checked!(SPEC, "Must specialize in 1 WP from", WP, 0x3e8),
+        checked!(SPEC, tr_noop!("May only specialize in WPs from"), WP, 0x524),
+        checked!(SPEC, tr_noop!("Must specialize in 1 WP from"), WP, 0x3e8),
         check!(
             SPEC,
-            "May not specialize in a melee weapon at first level",
+            tr_noop!("May not specialize in a melee weapon at first level"),
             0x538
         ),
-        check!(SPEC, "Bow specialization costs -1 slots", 0x5d4),
-        list!(SPEC, "Free to specialize in all of these", WP, 0x53c).group("Free specialization"),
+        check!(SPEC, tr_noop!("Bow specialization costs -1 slots"), 0x5d4),
         list!(
             SPEC,
-            "Allowed to pick as many as indicated below",
+            tr_noop!("Free to specialize in all of these"),
+            WP,
+            0x53c
+        )
+        .group(tr_noop!("Free specialization")),
+        list!(
+            SPEC,
+            tr_noop!("Allowed to pick as many as indicated below"),
             WP,
             0x550
         )
-        .group("Free specialization"),
-        int!(SPEC, "Number to pick", 0, 1000, 0x564).group("Free specialization"),
+        .group(tr_noop!("Free specialization")),
+        int!(SPEC, tr_noop!("Number to pick"), 0, 1000, 0x564)
+            .group(tr_noop!("Free specialization")),
     ]);
 
     // IDD 233 Weapon Focus.
     let focus = |r: &PartRec| int(r, 0x4ac) != 0;
     f.push(check!(
         FOCUS,
-        "This kit chooses a weapon to focus on",
+        tr_noop!("This kit chooses a weapon to focus on"),
         0x4ac
     ));
-    f.push(radio(FOCUS, "Weapon", &["Any", "Melee", "Missile", "Hurled"], 1).enabled(focus));
+    f.push(
+        radio(
+            FOCUS,
+            tr_noop!("Weapon"),
+            &[
+                tr_noop!("Any"),
+                tr_noop!("Melee"),
+                tr_noop!("Missile"),
+                tr_noop!("Hurled"),
+            ],
+            1,
+        )
+        .enabled(focus),
+    );
     for (label, off) in [
-        ("Use fighter THAC0 with this weapon", 0x4b0),
-        ("Additional -1 THAC0 penalty for other weapons", 0x4b1),
-        ("May only use magical weapons of this type", 0x4b2),
+        (tr_noop!("Use fighter THAC0 with this weapon"), 0x4b0),
         (
-            "May specialize in this weapon (even if class normally does not allow)",
+            tr_noop!("Additional -1 THAC0 penalty for other weapons"),
+            0x4b1,
+        ),
+        (tr_noop!("May only use magical weapons of this type"), 0x4b2),
+        (
+            tr_noop!("May specialize in this weapon (even if class normally does not allow)"),
             0x4b3,
         ),
     ] {
         f.push(check!(FOCUS, label, off).enabled(focus));
     }
     f.extend([
-        check!(FOCUS, "+1 THAC0 to chosen melee weapon", 0x7a),
-        check!(FOCUS, "+1 THAC0 and damage to chosen missile weapon", 0x7b),
+        check!(FOCUS, tr_noop!("+1 THAC0 to chosen melee weapon"), 0x7a),
+        check!(
+            FOCUS,
+            tr_noop!("+1 THAC0 and damage to chosen missile weapon"),
+            0x7b
+        ),
     ]);
 
     // IDD 234 WP Restrictions.
     f.extend([
         check!(
             RESTR,
-            "Odd WPs (1, 3, 5 ...) must be missile or thrown",
+            tr_noop!("Odd WPs (1, 3, 5 ...) must be missile or thrown"),
             0x438
         ),
         check!(
             RESTR,
-            "No ranged weapons during character generation",
+            tr_noop!("No ranged weapons during character generation"),
             0x508
         ),
-        list!(RESTR, "Barred WPs during creation", WP, 0xbc),
-        list!(RESTR, "Not recommended WPs", WP, 0xd0),
-        checked!(RESTR, "Must always take WPs from list", WP, 0x4e0),
+        list!(RESTR, tr_noop!("Barred WPs during creation"), WP, 0xbc),
+        list!(RESTR, tr_noop!("Not recommended WPs"), WP, 0xd0),
+        checked!(RESTR, tr_noop!("Must always take WPs from list"), WP, 0x4e0),
         checked!(
             RESTR,
-            "During generation, limited to WPs from list",
+            tr_noop!("During generation, limited to WPs from list"),
             WP,
             0x4b8
         ),
-        checked!(RESTR, "Half of all WPs must come from list", WP, 0x4f4),
         checked!(
             RESTR,
-            "At least every second WP must come from list",
+            tr_noop!("Half of all WPs must come from list"),
+            WP,
+            0x4f4
+        ),
+        checked!(
+            RESTR,
+            tr_noop!("At least every second WP must come from list"),
             WP,
             0x410
         ),
-        checked!(RESTR, "Forever barred from list", WP, 0x3ac),
+        checked!(RESTR, tr_noop!("Forever barred from list"), WP, 0x3ac),
         checked!(
             RESTR,
-            "Always restricted to WP from list and all thrown/hurled weapons",
+            tr_noop!("Always restricted to WP from list and all thrown/hurled weapons"),
             WP,
             0x3fc
         ),
-        checked!(RESTR, "First sword must be from list", "Weapons", 0x398),
         checked!(
             RESTR,
-            "Forever barred from broad groups in list",
+            tr_noop!("First sword must be from list"),
+            "Weapons",
+            0x398
+        ),
+        checked!(
+            RESTR,
+            tr_noop!("Forever barred from broad groups in list"),
             "broad-weapon-groups",
             0x3c0
         ),
         checked!(
             RESTR,
-            "Forever barred from tight groups in list",
+            tr_noop!("Forever barred from tight groups in list"),
             "tight-weapon-groups",
             0x3d4
         ),
-        int!(RESTR, "Must fill", 0, 100, 0x43c).group("Must fill X of first Y WPs from list"),
-        int!(RESTR, "of first", 0, 100, 0x440).group("Must fill X of first Y WPs from list"),
-        list!(RESTR, "WPs from", WP, 0x424).group("Must fill X of first Y WPs from list"),
+        int!(RESTR, tr_noop!("Must fill"), 0, 100, 0x43c)
+            .group(tr_noop!("Must fill X of first Y WPs from list")),
+        int!(RESTR, tr_noop!("of first"), 0, 100, 0x440)
+            .group(tr_noop!("Must fill X of first Y WPs from list")),
+        list!(RESTR, tr_noop!("WPs from"), WP, 0x424)
+            .group(tr_noop!("Must fill X of first Y WPs from list")),
         int!(
             RESTR,
-            "Required slots of missile WPs at start",
+            tr_noop!("Required slots of missile WPs at start"),
             0,
             100,
             0x50c
         ),
         int!(
             RESTR,
-            "Required different melee WPs at start",
+            tr_noop!("Required different melee WPs at start"),
             0,
             100,
             0x514
         ),
         int!(
             RESTR,
-            "Required different missile WPs at start",
+            tr_noop!("Required different missile WPs at start"),
             0,
             100,
             0x510
@@ -962,52 +1154,93 @@ pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
 
     // IDD 218 Class Abilities.
     f.extend([
-        check!(CLASS, "Never uses spells", 0x5d7),
+        check!(CLASS, tr_noop!("Never uses spells"), 0x5d7),
         int!(
             CLASS,
-            "Add to my level when calculating turning undead",
+            tr_noop!("Add to my level when calculating turning undead"),
             -100,
             100,
             0x5e8
         ),
-        list!(CLASS, "Barred class abilities", "Class Abilities", 0x1c8),
-        int!(CLASS, "Maximum level of spell", 0, 10, 0x1f4).group("Wizards"),
-        list!(CLASS, "Barred schools of magic", "Schools Of Magic", 0x1dc),
-        check!(CLASS, "Is limited to 5 schools", 0x1fc).group("Militant Wizard"),
-        check!(CLASS, "Different oppositional schools", 0x1f0).group("Militant Wizard"),
+        list!(
+            CLASS,
+            tr_noop!("Barred class abilities"),
+            "Class Abilities",
+            0x1c8
+        ),
+        int!(CLASS, tr_noop!("Maximum level of spell"), 0, 10, 0x1f4).group(tr_noop!("Wizards")),
+        list!(
+            CLASS,
+            tr_noop!("Barred schools of magic"),
+            "Schools Of Magic",
+            0x1dc
+        ),
+        check!(CLASS, tr_noop!("Is limited to 5 schools"), 0x1fc)
+            .group(tr_noop!("Militant Wizard")),
+        check!(CLASS, tr_noop!("Different oppositional schools"), 0x1f0)
+            .group(tr_noop!("Militant Wizard")),
         int!(
             CLASS,
-            "Intelligence is modified by X in regards to wizard spell casting",
+            tr_noop!("Intelligence is modified by X in regards to wizard spell casting"),
             -25,
             25,
             0x1f8
         )
-        .group("Militant Wizard"),
-        int!(CLASS, "Maximum number of Minor Spheres", 0, 50, 0x200).group("Priests"),
-        int!(CLASS, "Maximum number of Major Spheres", 0, 50, 0x204).group("Priests"),
-        list!(CLASS, "Limited to these spheres", "spheres", 0x21c),
-        list!(CLASS, "Choose 1 free major sphere", "spheres", 0x208),
-        list!(CLASS, "Receive free minor spheres", "spheres", 0x230),
+        .group(tr_noop!("Militant Wizard")),
+        int!(
+            CLASS,
+            tr_noop!("Maximum number of Minor Spheres"),
+            0,
+            50,
+            0x200
+        )
+        .group(tr_noop!("Priests")),
+        int!(
+            CLASS,
+            tr_noop!("Maximum number of Major Spheres"),
+            0,
+            50,
+            0x204
+        )
+        .group(tr_noop!("Priests")),
+        list!(
+            CLASS,
+            tr_noop!("Limited to these spheres"),
+            "spheres",
+            0x21c
+        ),
+        list!(
+            CLASS,
+            tr_noop!("Choose 1 free major sphere"),
+            "spheres",
+            0x208
+        ),
+        list!(
+            CLASS,
+            tr_noop!("Receive free minor spheres"),
+            "spheres",
+            0x230
+        ),
     ]);
 
     // IDD 239 Spells.
     f.extend([
         list!(
             SPELLS,
-            "Automatically knows spells from this list",
+            tr_noop!("Automatically knows spells from this list"),
             "spells",
             0x634
         ),
         int!(
             SPELLS,
-            "Add % to learn spells up to a max. of 95%",
+            tr_noop!("Add % to learn spells up to a max. of 95%"),
             -100,
             95,
             0x5f0
         ),
         FieldDesc::new(
             SPELLS,
-            "Use custom spell progression",
+            tr_noop!("Use custom spell progression"),
             FieldKind::Check,
             |r: &PartRec, _| Value::Bool(int(r, 0x5da) != 0),
             |r, _, v, s| {
@@ -1024,7 +1257,7 @@ pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
         .visible(has_kit),
         kat!(
             SPELLS,
-            "Spells per spell level",
+            tr_noop!("Spells per spell level"),
             FieldKind::Grid {
                 columns: &["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
                 first: 1,
@@ -1040,17 +1273,17 @@ pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
     f.extend([
         checked!(
             EQUIP,
-            "Must purchase equipment during character generation",
+            tr_noop!("Must purchase equipment during character generation"),
             "Equipment",
             0x584
         ),
-        checked!(EQUIP, "Free Equipment", "Equipment", 0x598),
-        checked!(EQUIP, "Free Weapons", "Weapons", 0x5ac),
-        checked!(EQUIP, "Free Magic Items", "Magical Items", 0x5c0),
-        checked!(EQUIP, "Forbidden Weapons", "Weapons", 0x620),
+        checked!(EQUIP, tr_noop!("Free Equipment"), "Equipment", 0x598),
+        checked!(EQUIP, tr_noop!("Free Weapons"), "Weapons", 0x5ac),
+        checked!(EQUIP, tr_noop!("Free Magic Items"), "Magical Items", 0x5c0),
+        checked!(EQUIP, tr_noop!("Forbidden Weapons"), "Weapons", 0x620),
         check!(
             EQUIP,
-            "Must purchase chosen weapon during character generation",
+            tr_noop!("Must purchase chosen weapon during character generation"),
             0x580
         ),
     ]);
@@ -1082,14 +1315,14 @@ pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
                 },
             )
             .arg(roll)
-            .group("Social Rank (2d6 roll)")
+            .group(tr_noop!("Social Rank (2d6 roll)"))
             .visible(has_kit),
         );
     }
     f.extend([
         kat!(
             OTHER,
-            "Free NWP (selected from the recommended list)",
+            tr_noop!("Free NWP (selected from the recommended list)"),
             FieldKind::Combo {
                 options: Options::Source(NWP),
                 free: true
@@ -1099,7 +1332,7 @@ pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
         ),
         FieldDesc::new(
             OTHER,
-            "Allow one free non-weapon proficiency",
+            tr_noop!("Allow one free non-weapon proficiency"),
             FieldKind::Check,
             |r: &PartRec, _| Value::Bool(int(r, 0x72) != 0),
             |r, _, v, s| {
@@ -1109,24 +1342,30 @@ pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
             },
         )
         .visible(has_kit),
-        check!(OTHER, "Acquire one weapon at no cost", 0x71, opened_other),
         check!(
             OTHER,
-            "No metal armor or weapons at start",
+            tr_noop!("Acquire one weapon at no cost"),
+            0x71,
+            opened_other
+        ),
+        check!(
+            OTHER,
+            tr_noop!("No metal armor or weapons at start"),
             0x75,
             opened_other
         ),
-        check!(OTHER, "No fired WPs at start", 0x79, opened_other),
+        check!(OTHER, tr_noop!("No fired WPs at start"), 0x79, opened_other),
         check!(
             OTHER,
-            "Apply Acrobatic skill penalties for heavy armor",
+            tr_noop!("Apply Acrobatic skill penalties for heavy armor"),
             0x77,
             opened_other
         ),
-        int!(OTHER, "Bonus", 0, 100, 0x670, opened_other).group("Bonus to Level Limits"),
+        int!(OTHER, tr_noop!("Bonus"), 0, 100, 0x670, opened_other)
+            .group(tr_noop!("Bonus to Level Limits")),
         kat!(
             OTHER,
-            "to class",
+            tr_noop!("to class"),
             FieldKind::Combo {
                 options: Options::Source("classes"),
                 free: true
@@ -1134,11 +1373,18 @@ pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
             0x674,
             opened_other
         )
-        .group("Bonus to Level Limits"),
-        int!(OTHER, "Add to all damage", -100, 100, 0x80, opened_other),
+        .group(tr_noop!("Bonus to Level Limits")),
         int!(
             OTHER,
-            "Player picks this many NWPs for +1 score",
+            tr_noop!("Add to all damage"),
+            -100,
+            100,
+            0x80,
+            opened_other
+        ),
+        int!(
+            OTHER,
+            tr_noop!("Player picks this many NWPs for +1 score"),
             0,
             100,
             0x94,
@@ -1146,7 +1392,7 @@ pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
         ),
         int!(
             OTHER,
-            "Additional HP per level",
+            tr_noop!("Additional HP per level"),
             -100,
             100,
             0x604,
@@ -1154,7 +1400,7 @@ pub(crate) fn fields() -> Vec<FieldDesc<PartRec>> {
         ),
         FieldDesc::new(
             OTHER,
-            "Heaviest starting armor",
+            tr_noop!("Heaviest starting armor"),
             FieldKind::Choice(Options::Fixed(ARMOR_LIMITS)),
             |r: &PartRec, _| Value::Int(armor_index(int(r, 0x98))),
             |r, _, v, s| {

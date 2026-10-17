@@ -10,6 +10,7 @@
 
 use cr_formats::race::{MultiClass, Race};
 use cr_formats::{ArchiveReader, Field, Object};
+use cr_i18n::{tr, tr_noop};
 
 use super::classes::ClassEntry;
 use super::{
@@ -25,43 +26,43 @@ pub const PORTRAIT_FOLDER: &str = "C:\\Program Files\\AD&D Core Rules 2.0\\Bitma
 
 /// The Alignment page's checks, by index of `unknown_0x190`.
 pub const ALIGNMENTS: [&str; 10] = [
-    "Any",
-    "Chaotic Good",
-    "Chaotic Evil",
-    "Chaotic Neutral",
-    "Lawful Evil",
-    "Lawful Good",
-    "Lawful Neutral",
-    "Neutral Evil",
-    "Neutral Good",
-    "True Neutral",
+    tr_noop!("Any"),
+    tr_noop!("Chaotic Good"),
+    tr_noop!("Chaotic Evil"),
+    tr_noop!("Chaotic Neutral"),
+    tr_noop!("Lawful Evil"),
+    tr_noop!("Lawful Good"),
+    tr_noop!("Lawful Neutral"),
+    tr_noop!("Neutral Evil"),
+    tr_noop!("Neutral Good"),
+    tr_noop!("True Neutral"),
 ];
 
 pub const ABILITIES: [&str; 6] = [
-    "Strength",
-    "Dexterity",
-    "Constitution",
-    "Intelligence",
-    "Wisdom",
-    "Charisma",
+    tr_noop!("Strength"),
+    tr_noop!("Dexterity"),
+    tr_noop!("Constitution"),
+    tr_noop!("Intelligence"),
+    tr_noop!("Wisdom"),
+    tr_noop!("Charisma"),
 ];
 
 /// The thieving skills of the Special page: `thief_adjustments`, then
 /// `unknown_0x158`.
 pub const THIEF_SKILLS: [&str; 13] = [
-    "Pick Pockets",
-    "Open Locks",
-    "Find/Remove Traps",
-    "Move Silently",
-    "Hide in Shadows",
-    "Detect Noise",
-    "Climb Walls",
-    "Read Languages",
-    "Detect Magic",
-    "Detect Illusion",
-    "Bribe",
-    "Tunneling",
-    "Escape Bonds",
+    tr_noop!("Pick Pockets"),
+    tr_noop!("Open Locks"),
+    tr_noop!("Find/Remove Traps"),
+    tr_noop!("Move Silently"),
+    tr_noop!("Hide in Shadows"),
+    tr_noop!("Detect Noise"),
+    tr_noop!("Climb Walls"),
+    tr_noop!("Read Languages"),
+    tr_noop!("Detect Magic"),
+    tr_noop!("Detect Illusion"),
+    tr_noop!("Bribe"),
+    tr_noop!("Tunneling"),
+    tr_noop!("Escape Bonds"),
 ];
 
 /// `level_limits` slots, in file (group) order.
@@ -183,7 +184,7 @@ const CHECK: FieldKind = FieldKind::Check;
 
 impl UserKind for Races {
     type Rec = Race;
-    const NOUN: &'static str = "Race";
+    const NOUN: &'static str = tr_noop!("Race");
     const FILE: &'static str = "UserDbas/RaceU.dat";
 
     fn name(r: &Race) -> &str {
@@ -222,12 +223,12 @@ impl UserKind for Races {
 
     fn fields(flavor: Flavor) -> Vec<FieldDesc<Race>> {
         type Rec = Race;
-        const MAIN: &str = "Race";
+        const MAIN: &str = tr_noop!("Race");
         let mut f = vec![
-            udb_text!(MAIN, "Name", 50, name),
+            udb_text!(MAIN, tr_noop!("Name"), 50, name),
             FieldDesc::new(
                 MAIN,
-                "Parent Race",
+                tr_noop!("Parent Race"),
                 FieldKind::Choice(Options::Source("main-races")),
                 |r: &Race, _| Value::Text(r.unknown_0x188.clone()),
                 |r, _, v, _| r.unknown_0x188 = v.text(),
@@ -236,7 +237,7 @@ impl UserKind for Races {
             .enabled(|_| false),
             indexed(
                 MAIN,
-                "Core Rules Race",
+                tr_noop!("Core Rules Race"),
                 CHECK,
                 |r: &Race, i| Value::Bool(r.unknown_0x1e0[i] != 0),
                 |r, i, v, _| r.unknown_0x1e0[i] = i32::from(v.bool()),
@@ -247,7 +248,7 @@ impl UserKind for Races {
             f.push(
                 indexed(
                     MAIN,
-                    "Dual-Class",
+                    tr_noop!("Dual-Class"),
                     CHECK,
                     |r: &Race, i| Value::Bool(r.unknown_0x1e0[i] != 0),
                     |r, i, v, _| r.unknown_0x1e0[i] = i32::from(v.bool()),
@@ -257,25 +258,25 @@ impl UserKind for Races {
             );
         }
         f.extend([
-            udb_int!(MAIN, "Starting", 0, 100_000, unknown_0xa8)
-                .group("Character Points")
+            udb_int!(MAIN, tr_noop!("Starting"), 0, 100_000, unknown_0xa8)
+                .group(tr_noop!("Character Points"))
                 .enabled(is_race),
-            udb_int!(MAIN, "Retained", 0, 100_000, unknown_0xac)
-                .group("Character Points")
+            udb_int!(MAIN, tr_noop!("Retained"), 0, 100_000, unknown_0xac)
+                .group(tr_noop!("Character Points"))
                 .enabled(is_race),
         ]);
         for (i, label, group) in [
-            (0, "Male", "Height (inches)"),
-            (1, "Female", "Height (inches)"),
-            (2, "Dice", "Height (inches)"),
-            (3, "Sides", "Height (inches)"),
-            (4, "Male", "Weight (lbs.)"),
-            (5, "Female", "Weight (lbs.)"),
-            (6, "Dice", "Weight (lbs.)"),
-            (7, "Sides", "Weight (lbs.)"),
-            (8, "Base", "Starting Age (years)"),
-            (9, "Dice", "Starting Age (years)"),
-            (10, "Sides", "Starting Age (years)"),
+            (0, tr_noop!("Male"), tr_noop!("Height (inches)")),
+            (1, tr_noop!("Female"), tr_noop!("Height (inches)")),
+            (2, tr_noop!("Dice"), tr_noop!("Height (inches)")),
+            (3, tr_noop!("Sides"), tr_noop!("Height (inches)")),
+            (4, tr_noop!("Male"), tr_noop!("Weight (lbs.)")),
+            (5, tr_noop!("Female"), tr_noop!("Weight (lbs.)")),
+            (6, tr_noop!("Dice"), tr_noop!("Weight (lbs.)")),
+            (7, tr_noop!("Sides"), tr_noop!("Weight (lbs.)")),
+            (8, tr_noop!("Base"), tr_noop!("Starting Age (years)")),
+            (9, tr_noop!("Dice"), tr_noop!("Starting Age (years)")),
+            (10, tr_noop!("Sides"), tr_noop!("Starting Age (years)")),
         ] {
             f.push(
                 indexed(
@@ -289,22 +290,28 @@ impl UserKind for Races {
                 .group(group),
             );
         }
-        f.push(udb_int!(MAIN, "Number of Hands", 0, 100, unknown_0x21c[0]));
-        f.push(udb_text!(MAIN, "Race Image", 0, portrait));
+        f.push(udb_int!(
+            MAIN,
+            tr_noop!("Number of Hands"),
+            0,
+            100,
+            unknown_0x21c[0]
+        ));
+        f.push(udb_text!(MAIN, tr_noop!("Race Image"), 0, portrait));
 
         // Evermore: Class Info and Level Limits.
         if flavor == Flavor::Core20 {
-            const CLASSES: &str = "Class Info";
+            const CLASSES: &str = tr_noop!("Class Info");
             f.push(udb_list!(
                 CLASSES,
-                "Allowed Classes",
+                tr_noop!("Allowed Classes"),
                 Options::Source("classes"),
                 unknown_0x1b8
             ));
             f.push(
                 FieldDesc::new(
                     CLASSES,
-                    "Multi-Classes",
+                    tr_noop!("Multi-Classes"),
                     FieldKind::Dual(Options::Source("multiclasses")),
                     |r: &Race, _| Value::List(multiclass_names(r, &[])),
                     |r, _, v, sources| {
@@ -320,7 +327,7 @@ impl UserKind for Races {
             );
             f.push(indexed(
                 CLASSES,
-                "Dual-Class",
+                tr_noop!("Dual-Class"),
                 CHECK,
                 |r: &Race, i| Value::Bool(r.unknown_0x1e0[i] != 0),
                 |r, i, v, _| r.unknown_0x1e0[i] = i32::from(v.bool()),
@@ -329,10 +336,10 @@ impl UserKind for Races {
             // The dialog's rows (IDD 186): its "Unlimited" checks keep
             // their flags in `unknown_0x84` in row order.
             for (row, &i) in LIMIT_ROWS.iter().enumerate() {
-                const GROUP: &str = "Racial Level Limits by Class (0: cannot choose)";
+                const GROUP: &str = tr_noop!("Racial Level Limits by Class (0: cannot choose)");
                 f.push(
                     indexed(
-                        "Level Limits",
+                        tr_noop!("Level Limits"),
                         LIMIT_CLASSES[i],
                         FieldKind::Int { min: 0, max: 100 },
                         |r: &Race, i| Value::Int(r.level_limits[i].into()),
@@ -344,8 +351,8 @@ impl UserKind for Races {
                 );
                 f.push(
                     indexed(
-                        "Level Limits",
-                        "Unlimited",
+                        tr_noop!("Level Limits"),
+                        tr_noop!("Unlimited"),
                         CHECK,
                         |r: &Race, row| Value::Bool(r.unknown_0x84[row] != 0),
                         |r, row, v, _| set_unlimited(r, row, v.bool()),
@@ -358,13 +365,13 @@ impl UserKind for Races {
 
         // Ability Scores (races only).
         let strength_check = match flavor {
-            Flavor::Expansion => "Allow Exceptional Strength",
-            Flavor::Core20 => "Allow Extra Strength",
+            Flavor::Expansion => tr_noop!("Allow Exceptional Strength"),
+            Flavor::Core20 => tr_noop!("Allow Extra Strength"),
         };
         for (i, ability) in ABILITIES.iter().enumerate() {
             for (label, get, set) in [
                 (
-                    "Minimum",
+                    tr_noop!("Minimum"),
                     (|r: &Race, i: usize| Value::Int(r.ability_limits[i][0].into()))
                         as fn(&Race, usize) -> Value,
                     (|r: &mut Race, i: usize, v: &Value, _: &Sources| {
@@ -372,19 +379,19 @@ impl UserKind for Races {
                     }) as fn(&mut Race, usize, &Value, &Sources),
                 ),
                 (
-                    "Maximum",
+                    tr_noop!("Maximum"),
                     |r: &Race, i| Value::Int(r.ability_limits[i][1].into()),
                     |r, i, v, _| r.ability_limits[i][1] = v.int() as i32,
                 ),
                 (
-                    "Adjustment",
+                    tr_noop!("Adjustment"),
                     |r: &Race, i| Value::Int(r.ability_adjustments[i].into()),
                     |r, i, v, _| r.ability_adjustments[i] = v.int() as i32,
                 ),
             ] {
                 f.push(
                     indexed(
-                        "Ability Scores",
+                        tr_noop!("Ability Scores"),
                         label,
                         FieldKind::Int { min: -25, max: 25 },
                         get,
@@ -398,29 +405,29 @@ impl UserKind for Races {
         }
         f.push(
             FieldDesc::new(
-                "Ability Scores",
+                tr_noop!("Ability Scores"),
                 strength_check,
                 CHECK,
                 |r: &Race, _| Value::Bool(r.unknown_0x40 != 0),
                 |r, _, v, _| r.unknown_0x40 = i32::from(v.bool()),
             )
-            .group("Options")
+            .group(tr_noop!("Options"))
             .visible(is_race),
         );
         f.push(
             FieldDesc::new(
-                "Ability Scores",
-                "Plus one to any score (Example: Mongrelman)",
+                tr_noop!("Ability Scores"),
+                tr_noop!("Plus one to any score (Example: Mongrelman)"),
                 CHECK,
                 |r: &Race, _| Value::Bool(r.unknown_0x5c != 0),
                 |r, _, v, _| r.unknown_0x5c = i32::from(v.bool()),
             )
-            .group("Options")
+            .group(tr_noop!("Options"))
             .visible(is_race),
         );
 
         // Special (races only).
-        const SPECIAL: &str = "Special";
+        const SPECIAL: &str = tr_noop!("Special");
         for (i, skill) in THIEF_SKILLS.iter().enumerate() {
             f.push(
                 indexed(
@@ -445,52 +452,52 @@ impl UserKind for Races {
                     },
                     i,
                 )
-                .group("Thieving Skill Racial Adjustments")
+                .group(tr_noop!("Thieving Skill Racial Adjustments"))
                 .visible(is_race),
             );
         }
         f.extend([
             udb_int!(
                 SPECIAL,
-                "Natural Armor Class (10 is standard)",
+                tr_noop!("Natural Armor Class (10 is standard)"),
                 -10,
                 10,
                 unknown_0x16c[0]
             )
-            .group("Combat")
+            .group(tr_noop!("Combat"))
             .visible(is_race),
             udb_int!(
                 SPECIAL,
-                "Bonus Hit Points at First",
+                tr_noop!("Bonus Hit Points at First"),
                 0,
                 1000,
                 unknown_0x16c[1]
             )
-            .group("Combat")
+            .group(tr_noop!("Combat"))
             .visible(is_race),
             udb_text!(
                 SPECIAL,
-                "Natural Attacks (without a weapon)",
+                tr_noop!("Natural Attacks (without a weapon)"),
                 0,
                 unknown_0x180
             )
-            .group("Combat")
+            .group(tr_noop!("Combat"))
             .visible(is_race),
         ]);
         // Special's movement for a race, the Movement page for a subrace.
         for (page, visible) in [
             (SPECIAL, is_race as fn(&Race) -> bool),
-            ("Movement", is_subrace),
+            (tr_noop!("Movement"), is_subrace),
         ] {
             f.extend([
-                udb_int!(page, "Unencumbered Movement", 0, 1000, movement)
-                    .group("Movement Rate")
+                udb_int!(page, tr_noop!("Unencumbered Movement"), 0, 1000, movement)
+                    .group(tr_noop!("Movement Rate"))
                     .visible(visible),
-                udb_int!(page, "Swimming", 0, 1000, unknown_0x178[0])
-                    .group("Movement Rate")
+                udb_int!(page, tr_noop!("Swimming"), 0, 1000, unknown_0x178[0])
+                    .group(tr_noop!("Movement Rate"))
                     .visible(visible),
-                udb_int!(page, "Flying", 0, 1000, unknown_0x178[1])
-                    .group("Movement Rate")
+                udb_int!(page, tr_noop!("Flying"), 0, 1000, unknown_0x178[1])
+                    .group(tr_noop!("Movement Rate"))
                     .visible(visible),
             ]);
         }
@@ -498,55 +505,62 @@ impl UserKind for Races {
         // Skill Package.
         f.extend([
             udb_list!(
-                "Skill Package",
-                "Selected Abilities",
+                tr_noop!("Skill Package"),
+                tr_noop!("Selected Abilities"),
                 Options::Source("Racial Abilities"),
                 abilities
             ),
             udb_int!(
-                "Skill Package",
-                "Character Point Cost",
+                tr_noop!("Skill Package"),
+                tr_noop!("Character Point Cost"),
                 0,
                 100_000,
                 unknown_0xe0
             ),
             udb_list!(
-                "Languages",
-                "Languages",
+                tr_noop!("Languages"),
+                tr_noop!("Languages"),
                 Options::Source("Languages"),
                 languages
             ),
-            udb_multiline!("Description", "Description", unknown_0x8),
-            udb_multiline!("Penalties", "Penalties", description),
+            udb_multiline!(
+                tr_noop!("Description"),
+                tr_noop!("Description"),
+                unknown_0x8
+            ),
+            udb_multiline!(tr_noop!("Penalties"), tr_noop!("Penalties"), description),
         ]);
         for (i, alignment) in ALIGNMENTS.iter().enumerate() {
             f.push(
                 indexed(
-                    "Alignment",
+                    tr_noop!("Alignment"),
                     alignment,
                     CHECK,
                     |r: &Race, i| Value::Bool(r.unknown_0x190[i] != 0),
                     |r, i, v, _| r.unknown_0x190[i] = i32::from(v.bool()),
                     i,
                 )
-                .group("Alignments Allowed"),
+                .group(tr_noop!("Alignments Allowed")),
             );
         }
         f
     }
 
     fn delete_warning(r: &Race) -> Option<String> {
-        let what = if is_subrace(r) { "Subrace" } else { "Race" };
-        Some(format!(
-            "Any character or NPC created from the deleted {what} will no longer function correctly"
-        ))
+        Some(if is_subrace(r) {
+            tr("Any character or NPC created from the deleted Subrace will no longer function correctly")
+                .into()
+        } else {
+            tr("Any character or NPC created from the deleted Race will no longer function correctly")
+                .into()
+        })
     }
 
     fn summary(r: &Race) -> String {
         if is_subrace(r) {
-            format!("Subrace of {}", r.unknown_0x188)
+            tr!("Subrace of {race}", race = r.unknown_0x188)
         } else {
-            "Race".into()
+            tr("Race").into()
         }
     }
 }

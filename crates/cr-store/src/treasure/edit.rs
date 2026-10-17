@@ -5,6 +5,7 @@
 //! path is the root ("Treasure"), which holds the bundle itself.
 
 use cr_formats::inventory::InventoryExtra;
+use cr_i18n::{tr, tr_noop};
 
 use super::{Bundle, Item, TreasureRules};
 
@@ -13,23 +14,23 @@ use super::{Bundle, Item, TreasureRules};
 /// whether standard and custom parts are in (0x544105, 0x465218). The
 /// drop-down sorts them; it starts on the first ("Armor, All").
 pub const ADD_CATEGORIES: [(&str, usize, bool, bool); 17] = [
-    ("Money", 16, true, true),
-    ("Count", 17, true, true),
-    ("Armor, All", 1, true, true),
-    ("Armor, Standard", 1, true, false),
-    ("Armor, Custom", 1, false, true),
-    ("Weapons, All", 0, true, true),
-    ("Weapons, Standard", 0, true, false),
-    ("Weapons, Custom", 0, false, true),
-    ("Equipment, All", 7, true, true),
-    ("Equipment, Standard", 7, true, false),
-    ("Equipment, Custom", 7, false, true),
-    ("Gems and Art, All", 13, true, true),
-    ("Gems and Art, Standard", 13, true, false),
-    ("Gems and Art, Custom", 13, false, true),
-    ("Magical Items, All", 8, true, true),
-    ("Magical Items, Standard", 8, true, false),
-    ("Magical Items, Custom", 8, false, true),
+    (tr_noop!("Money"), 16, true, true),
+    (tr_noop!("Count"), 17, true, true),
+    (tr_noop!("Armor, All"), 1, true, true),
+    (tr_noop!("Armor, Standard"), 1, true, false),
+    (tr_noop!("Armor, Custom"), 1, false, true),
+    (tr_noop!("Weapons, All"), 0, true, true),
+    (tr_noop!("Weapons, Standard"), 0, true, false),
+    (tr_noop!("Weapons, Custom"), 0, false, true),
+    (tr_noop!("Equipment, All"), 7, true, true),
+    (tr_noop!("Equipment, Standard"), 7, true, false),
+    (tr_noop!("Equipment, Custom"), 7, false, true),
+    (tr_noop!("Gems and Art, All"), 13, true, true),
+    (tr_noop!("Gems and Art, Standard"), 13, true, false),
+    (tr_noop!("Gems and Art, Custom"), 13, false, true),
+    (tr_noop!("Magical Items, All"), 8, true, true),
+    (tr_noop!("Magical Items, Standard"), 8, true, false),
+    (tr_noop!("Magical Items, Custom"), 8, false, true),
 ];
 
 /// Edit Scrolls' limit (AddRemoveDlg 0x401010): more spells need a Yes to
@@ -56,37 +57,50 @@ pub enum ScrollError {
 impl ScrollError {
     pub fn title(self) -> &'static str {
         match self {
-            ScrollError::NotAScroll => "Not a Scroll",
-            _ => "Not A Priest Or Wizard Scroll",
+            ScrollError::NotAScroll => tr("Not a Scroll"),
+            _ => tr("Not A Priest Or Wizard Scroll"),
         }
     }
 
     pub fn message(self) -> &'static str {
         match self {
             ScrollError::NotSelected => {
-                "You must first select a \"Spell Scroll, Priest\" or \"Spell Scroll, Wizard\"."
+                tr("You must first select a \"Spell Scroll, Priest\" or \"Spell Scroll, Wizard\".")
             }
-            ScrollError::NotDesigned => {
+            ScrollError::NotDesigned => tr(
                 "Editing the scroll's spell list is only available for spell scrolls that are \
                  designed to hold spells (i.e. \"Spell Scroll, Priest\" and \"Spell Scroll, \
-                 Wizard\"."
+                 Wizard\".",
+            ),
+            ScrollError::NotAScroll => {
+                tr("Editing of the spell list is only available for scrolls.")
             }
-            ScrollError::NotAScroll => "Editing of the spell list is only available for scrolls.",
-            ScrollError::NotPriestOrWizard => {
-                "Editing of the spell list is only available for Priest scrolls and Wizard scrolls."
-            }
+            ScrollError::NotPriestOrWizard => tr(
+                "Editing of the spell list is only available for Priest scrolls and Wizard scrolls.",
+            ),
         }
     }
 }
 
 /// Why a drop (0x4ab3c2) is refused.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MoveError {
-    #[error("You cannot place an item inside of itself.")]
     IntoItself,
-    #[error("The selected destination is a spell. Spells cannot hold other objects.")]
     IntoSpell,
 }
+
+impl std::fmt::Display for MoveError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            MoveError::IntoItself => tr("You cannot place an item inside of itself."),
+            MoveError::IntoSpell => {
+                tr("The selected destination is a spell. Spells cannot hold other objects.")
+            }
+        })
+    }
+}
+
+impl std::error::Error for MoveError {}
 
 /// A move [`Bundle::begin_move`] has prepared.
 #[derive(Debug, Clone, PartialEq, Eq)]

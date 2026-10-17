@@ -69,8 +69,9 @@ CORERULES_DIR="$HOME/.wine/drive_c/Program Files/AD&D Core Rules 2.0" cargo test
 
 The Character Generator, the DM Toolkit's generators, packages and editors,
 the books and Table Rolls work against a real installation. Map Maker II,
-the Campaign Mapper and the dice roller are not planned; there is no
-pt-BR translation yet.
+the Campaign Mapper and the dice roller are not planned. The interface is
+in American English, Brazilian Portuguese, Spanish, Italian, French and
+German (see [Languages](#languages)).
 
 - [x] MFC `CArchive` reader and writer, byte for byte
 - [x] Character list (`Chars/index.chr`), round-trip tested
@@ -171,10 +172,33 @@ pt-BR translation yet.
 | `cr-formats` | Readers and writers for the original file formats, no UI |
 | `cr-store` | Finds and opens an installation (case-insensitive paths) and builds the catalog the app shows |
 | `cr-cli` | `cr` command for inspecting data |
+| `cr-i18n` | Translations of the interface (`po/*.po`, built into the program) |
 | `cr-gtk` | The GNOME app |
 
 The backend crates have no GTK dependency so macOS and Windows front ends
 can reuse them later.
+
+## Languages
+
+The app speaks the system's language when it is one of English (US),
+Português (Brasil), Español, Italiano, Français or Deutsch, and English
+otherwise. Preferences (Ctrl+,) can choose another language; the choice is
+kept in `~/.config/corerules/settings.ini` and applies the next time the app
+starts. Only the interface is translated: spell, monster, item and class
+names and texts from the original files stay as they are, and so do the
+`cr` command, exports and character sheets.
+
+Texts are wrapped where they are written (`tr("Save")`,
+`tr!("Deleted {name}", name)`, `trn!("{n} entry", "{n} entries", count)`).
+`cargo test` fails while a wrapped text lacks a translation in any
+language; after adding or changing texts, run
+
+```sh
+cargo run -p cr-i18n --example update-po
+```
+
+to update `crates/cr-i18n/po/corerules.pot` and add the new entries to every
+catalog, then translate them in each `.po`.
 
 ## Building
 

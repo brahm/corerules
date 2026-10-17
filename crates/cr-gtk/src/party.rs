@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_i18n::{tr, trn};
 use cr_store::party::{ALL, Deleted, party_of};
 use cr_store::{Installation, Result};
 use gtk::glib;
@@ -37,7 +38,7 @@ pub fn delete_character<H: Host + 'static>(host: &Rc<H>, file: &str) {
         return;
     };
     host.reload("characters", None);
-    let message = format!("“{}” deleted", deleted.name.trim());
+    let message = tr!("“{name}” deleted", name = deleted.name.trim());
     undo_toast(host, &message, vec![deleted]);
 }
 
@@ -49,7 +50,7 @@ fn undo_toast<H: Host + 'static>(host: &Rc<H>, message: &str, deleted: Vec<Delet
         .and_then(|r| r.ok());
     let toast = adw::Toast::builder()
         .title(glib::markup_escape_text(message).as_str())
-        .button_label("_Undo")
+        .button_label(tr("_Undo"))
         .timeout(10)
         .use_markup(true)
         .build();
@@ -62,7 +63,7 @@ fn undo_toast<H: Host + 'static>(host: &Rc<H>, message: &str, deleted: Vec<Delet
             let result = host.with_install(|install| {
                 if Some(install.root()) != root.as_deref() {
                     return Err(cr_store::Error::Invalid(
-                        "Another installation is open".into(),
+                        tr("Another installation is open").into(),
                     ));
                 }
                 install.restore_characters(&deleted)
@@ -102,13 +103,13 @@ struct Manager<H: Host + 'static> {
 
 /// The Manage Parties dialog.
 pub fn manage<H: Host + 'static>(host: &Rc<H>) {
-    let party_row = adw::ComboRow::builder().title("Party").build();
+    let party_row = adw::ComboRow::builder().title(tr("Party")).build();
     let new_row = adw::EntryRow::builder()
-        .title("New Party")
+        .title(tr("New Party"))
         .show_apply_button(true)
         .build();
     let top = adw::PreferencesGroup::builder()
-        .description("Empty parties are removed when this window is closed.")
+        .description(tr("Empty parties are removed when this window is closed."))
         .build();
     top.add(&party_row);
     top.add(&new_row);
@@ -120,7 +121,7 @@ pub fn manage<H: Host + 'static>(host: &Rc<H>) {
     view.add_top_bar(&adw::HeaderBar::new());
     view.set_content(Some(&toasts));
     let dialog = adw::Dialog::builder()
-        .title("Manage Parties")
+        .title(tr("Manage Parties"))
         .content_width(480)
         .content_height(620)
         .child(&view)
@@ -237,9 +238,11 @@ impl<H: Host + 'static> Manager<H> {
             return;
         };
         let party = self.selected.borrow().clone();
-        let members = adw::PreferencesGroup::builder().title("Members").build();
+        let members = adw::PreferencesGroup::builder()
+            .title(tr("Members"))
+            .build();
         let others = adw::PreferencesGroup::builder()
-            .title("Without a Party")
+            .title(tr("Without a Party"))
             .build();
         let (mut count, mut unassigned) = (0, 0);
         for entry in &index.entries {
@@ -249,10 +252,20 @@ impl<H: Host + 'static> Manager<H> {
                     continue;
                 }
                 unassigned += 1;
-                (&others, "list-add-symbolic", "Add to Party", party.as_str())
+                (
+                    &others,
+                    "list-add-symbolic",
+                    tr("Add to Party"),
+                    party.as_str(),
+                )
             } else if in_party.eq_ignore_ascii_case(&party) {
                 count += 1;
-                (&members, "list-remove-symbolic", "Remove from Party", "")
+                (
+                    &members,
+                    "list-remove-symbolic",
+                    tr("Remove from Party"),
+                    "",
+                )
             } else {
                 continue;
             };
@@ -265,7 +278,7 @@ impl<H: Host + 'static> Manager<H> {
                     format!("{} {class}", entry.race)
                 });
             let subtitle = if entry.unknown_0x24 != 0 {
-                format!("NPC · {subtitle}")
+                tr!("NPC · {description}", description = subtitle)
             } else {
                 subtitle
             };
@@ -288,17 +301,17 @@ impl<H: Host + 'static> Manager<H> {
             group.add(&row);
         }
         if unassigned == 0 {
-            others.set_description(Some("Every character is in a party."));
+            others.set_description(Some(tr("Every character is in a party.")));
         }
         if party.is_empty() {
-            others.set_description(Some("Make a party to put characters in it."));
+            others.set_description(Some(tr("Make a party to put characters in it.")));
         } else {
             if count == 0 {
-                members.set_description(Some("Nobody is in this party yet."));
+                members.set_description(Some(tr("Nobody is in this party yet.")));
             } else {
                 let delete = gtk::Button::builder()
                     .icon_name("user-trash-symbolic")
-                    .tooltip_text("Delete Members…")
+                    .tooltip_text(tr("Delete Members…"))
                     .valign(gtk::Align::Center)
                     .css_classes(["flat"])
                     .build();
@@ -335,14 +348,15 @@ impl<H: Host + 'static> Manager<H> {
     fn confirm_delete(self: &Rc<Self>) {
         let party = self.selected.borrow().clone();
         let alert = adw::AlertDialog::builder()
-            .heading("Delete Party Members?")
-            .body(format!(
-                "Every character in “{party}” will be deleted, and the party with them."
+            .heading(tr("Delete Party Members?"))
+            .body(tr!(
+                "Every character in “{party}” will be deleted, and the party with them.",
+                party
             ))
             .default_response("cancel")
             .close_response("cancel")
             .build();
-        alert.add_responses(&[("cancel", "_Cancel"), ("delete", "_Delete")]);
+        alert.add_responses(&[("cancel", tr("_Cancel")), ("delete", tr("_Delete"))]);
         alert.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
         let manager = self.clone();
         alert.connect_response(Some("delete"), move |_, _| {
@@ -352,10 +366,12 @@ impl<H: Host + 'static> Manager<H> {
                 return;
             };
             host.reload("characters", None);
-            let message = match deleted.len() {
-                1 => format!("1 character of “{party}” deleted"),
-                n => format!("{n} characters of “{party}” deleted"),
-            };
+            let message = trn!(
+                "{n} character of “{party}” deleted",
+                "{n} characters of “{party}” deleted",
+                deleted.len(),
+                party
+            );
             undo_toast(host, &message, deleted);
             manager.dialog.close();
         });
