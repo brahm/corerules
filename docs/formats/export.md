@@ -29,13 +29,23 @@ the rest like a 2.0 file.
 | race | its `AllowedU.dat` record is replaced by the file's, or built from the race's class lists (0x47c91e) | - |
 | class | the file's combinations naming it are added per race (0x49f33c) | - |
 | character | new file in `Chars/`; the list entry has no Class/Level lines | new file; entry like a new character's |
-| drawing | Save dialog per drawing, default its file name | same |
+| drawing | Save dialog per drawing, default its file name (this app does not import drawings) | same |
 | Map Maker II maps | Map Maker's own import | same |
 
 The Expansion converts characters (to `TSRP3 V54`) and parts (version
 block `TSRP3 V7`, class flags to class names) of a 2.0 package. The list
 entry's byte at +0x28 of an imported character is never initialized by the
 Expansion (0x5a1372 copies the entry through 0x5a05db, which skips it).
+
+## Editing (this app only)
+
+Adding an item replaces the one of the same category and name, and in the
+Expansion brings the race's record or the class's combinations along, as
+Export does. Removing a race or class keeps the combinations of the races
+still in the package and, for other races, only those naming a class still
+in it. Any change leaves out the Map Maker II maps, whose bytes may refer
+to class tags of the sections before them. Campaign Mapper drawings are
+kept as they are.
 
 There is no `.mon` format: the monster dialogs' Export and Import buttons
 only point at the DM Toolkit.

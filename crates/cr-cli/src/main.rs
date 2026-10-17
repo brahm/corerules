@@ -94,18 +94,24 @@ const USAGE: &str = "usage:
                             keeping a .bak); KIND: spells, powers, traps,
                             monster-types, monsters, races, classes, parts
   cr export INSTALL_DIR --list
-  cr export INSTALL_DIR OUTPUT (--all | ITEM...) [--map FILE.FCW]...
+  cr export INSTALL_DIR OUTPUT (--all | ITEM...)
                             write a DM Toolkit package (.xpx with the
                             Expansion, .xpt with Core Rules 2.0) of the
-                            user's records, characters and Campaign Mapper
-                            drawings; ITEM is a name or CATEGORY:NAME as
-                            --list prints them
-  cr import INSTALL_DIR FILE [--list] [--maps DIR] [ITEM...]
+                            user's records and characters; ITEM is a name
+                            or CATEGORY:NAME as --list prints them
+  cr import INSTALL_DIR FILE [--list] [ITEM...]
                             list or import a package (everything unless
                             items are named): records replace the user's
-                            of the same name, characters join Chars/,
-                            drawings go into DIR; .mon files do not exist
-                            (both programs export monsters in packages)
+                            of the same name, characters join Chars/;
+                            .mon files do not exist (both programs export
+                            monsters in packages)
+  cr package INSTALL_DIR FILE [--new] [--add ITEM]... [--remove ITEM]...
+                            create (--new) or edit a package: --add puts
+                            in a record or character of the installation
+                            (as cr export --list names them), replacing
+                            the one of that name; --remove takes an item
+                            out (as cr import --list names them); with
+                            neither, lists the package
 
 Without INSTALL_DIR, the data package in ~/.local/share/corerules/data
 is used, else the installation in the Wine prefix.";
@@ -177,6 +183,7 @@ fn main() -> ExitCode {
         "userdb" => userdb::cmd(&install, rest),
         "export" => transfer::cmd_export(&install, rest),
         "import" => transfer::cmd_import(&install, rest),
+        "package" => transfer::cmd_package(&install, rest),
         _ => {
             eprintln!("{USAGE}");
             Ok(())

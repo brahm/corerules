@@ -129,14 +129,16 @@ Early work (phase 0 of the plan): the file formats are being mapped.
       the same seed it saves the same NPCs as the original program
 - [x] The Core Rules books in a reader, Table Rolls, and editors for every
       user database (`UserDbas/*U.dat`, also `cr userdb`)
-- [x] The DM Toolkit's Export and Import (main menu, `cr export` and
-      `cr import`): `.xpx` packages for the Expansion and `.xpt` for 2.0,
-      with characters, Campaign Mapper drawings and any user record;
-      both originals' exports and imports reproduced byte for byte, and a
-      2.0 package is converted on import into the Expansion like the
-      original does. There is no `.mon` file: the originals' monster
-      dialogs only point to the DM Toolkit, so monsters travel in
-      `.xpx`/`.xpt` packages
+- [x] The DM Toolkit's packages (main menu, `cr export`, `cr import` and
+      `cr package`): `.xpx` for the Expansion and `.xpt` for 2.0, with
+      characters and any user record. Export and Import reproduce both
+      originals byte for byte, and a 2.0 package is converted on import
+      into the Expansion like the original does. New Package and Edit
+      Package create a package or change one, adding the installation's
+      records and characters or taking items out. Campaign Mapper drawings
+      are not offered or imported; an edited package keeps those it has.
+      There is no `.mon` file: the originals' monster dialogs only point
+      to the DM Toolkit, so monsters travel in `.xpx`/`.xpt` packages
 
 ## Layout
 

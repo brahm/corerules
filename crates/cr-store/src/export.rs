@@ -1,11 +1,15 @@
-//! The DM Toolkit's Export and Import: packages of custom records,
-//! characters and Campaign Mapper drawings (`.xpx` from the Expansion,
-//! `.xpt` from Core Rules 2.0; the layout is in [`cr_formats::export`]).
+//! The DM Toolkit's Export and Import: packages of custom records and
+//! characters (`.xpx` from the Expansion, `.xpt` from Core Rules 2.0; the
+//! layout is in [`cr_formats::export`]).
 //!
-//! Export offers what the user made: the records of the user files, the
-//! characters of `Chars/index.chr` and Campaign Mapper drawings. In the
-//! Expansion a race takes its `AllowedU.dat` record along, and a class the
-//! combinations of every race that names it.
+//! Export offers what the user made: the records of the user files and the
+//! characters of `Chars/index.chr`. In the Expansion a race takes its
+//! `AllowedU.dat` record along, and a class the combinations of every race
+//! that names it. A package can also be edited: [`Installation::add_to`]
+//! puts more items in, [`remove`] takes items out.
+//!
+//! The Campaign Mapper drawings a package may hold are neither offered nor
+//! imported; an edited package keeps them as they are.
 //!
 //! Import does what the original's Import All does (0x49d529, 0x49d704 in
 //! TSRP3.EXE, 0x4def60 in EVERMORE.EXE), taking the items sorted by name:
@@ -26,21 +30,19 @@
 //!   Expansion leaves the class and level lines out of that entry.
 //! * The Expansion stores characters and parts from a Core Rules 2.0
 //!   package in its own layout.
-//! * Drawings are written to a folder the caller picks (the original asks
-//!   for a file name for each one), or skipped.
 //!
 //! The `.mon` files the monster editor's Export and Import buttons mention
 //! do not exist: in both programs those buttons only point at the DM
 //! Toolkit, so monsters travel in these packages.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use cr_formats::Object;
 use cr_formats::allowed::{ClassesAllowed, ClassesAllowedHelperData};
 use cr_formats::character::{Character, CharacterEntry, CharacterIndex, EntryExtra};
 use cr_formats::database::ObjectList;
-use cr_formats::export::{CampaignMap, ExportFile};
+use cr_formats::export::ExportFile;
 use cr_formats::parts::{PART_TYPE_COUNT, PART_TYPES, PartVersion, PartsFile};
 use cr_formats::spells::SpellsFile;
 
@@ -72,7 +74,6 @@ pub enum Category {
     PsionicPower,
     TreasureBundle,
     Character,
-    CampaignMap,
 }
 
 /// The user files kept as one `CObList`, by category.
@@ -110,7 +111,6 @@ impl Category {
             Self::PsionicPower => "Psionic Powers",
             Self::TreasureBundle => "Treasure Bundles",
             Self::Character => "Characters",
-            Self::CampaignMap => "Campaign Mapper Maps",
         }
     }
 
@@ -134,7 +134,6 @@ impl Category {
             Self::PsionicPower,
             Self::TreasureBundle,
             Self::Character,
-            Self::CampaignMap,
         ]);
         if flavor == Flavor::Expansion {
             all.push(Self::Class);
@@ -172,8 +171,6 @@ pub enum Source {
     Record(usize),
     /// A character file inside `Chars/`.
     Character(String),
-    /// A Campaign Mapper drawing (`.FCW`).
-    Map(PathBuf),
 }
 
 /// What [`Installation::export`] made.
@@ -221,8 +218,6 @@ pub struct ImportReport {
     pub renamed: Vec<(Content, String)>,
     /// The character files written into `Chars/`.
     pub characters: Vec<String>,
-    /// The drawings written.
-    pub maps: Vec<PathBuf>,
     pub warnings: Vec<String>,
 }
 
@@ -255,11 +250,6 @@ fn named(objects: &[Object], name: &str) -> Option<usize> {
         .position(|o| object_name(o).is_some_and(|n| same_name(n, name)))
 }
 
-/// The file name a drawing's stored path ends with (`C:\CM\Maps\x.FCW`).
-pub fn map_file_name(path: &str) -> &str {
-    path.rsplit(['\\', '/']).next().unwrap_or(path)
-}
-
 /// The section of `file` holding `category`.
 fn section(file: &ExportFile, category: Category) -> &[Object] {
     match category {
@@ -276,7 +266,7 @@ fn section(file: &ExportFile, category: Category) -> &[Object] {
         Category::Trap => &file.traps,
         Category::PsionicPower => &file.psionics,
         Category::TreasureBundle => &file.treasure,
-        Category::Character | Category::CampaignMap => &[],
+        Category::Character => &[],
     }
 }
 
@@ -295,7 +285,7 @@ fn section_mut(file: &mut ExportFile, category: Category) -> Option<&mut Vec<Obj
         Category::Trap => &mut file.traps,
         Category::PsionicPower => &mut file.psionics,
         Category::TreasureBundle => &mut file.treasure,
-        Category::Character | Category::CampaignMap => return None,
+        Category::Character => return None,
     })
 }
 
@@ -305,7 +295,7 @@ fn section_mut(file: &mut ExportFile, category: Category) -> Option<&mut Vec<Obj
 pub fn contents(file: &ExportFile) -> Vec<Content> {
     let mut items = Vec::new();
     let mut categories = Category::all(Flavor::Expansion);
-    categories.retain(|c| *c != Category::Character && *c != Category::CampaignMap);
+    categories.retain(|c| *c != Category::Character);
     for category in categories {
         for (index, object) in section(file, category).iter().enumerate() {
             if let Some(name) = object_name(object) {
@@ -327,15 +317,104 @@ pub fn contents(file: &ExportFile) -> Vec<Content> {
         });
     }
     items.sort_by_cached_key(|c| c.name.to_lowercase());
-    for (index, map) in file.campaign_maps.iter().enumerate() {
-        items.push(Content {
-            category: Category::CampaignMap,
-            name: map_file_name(&map.path).to_owned(),
-            index,
-            clash: Clash::None,
-        });
-    }
     items
+}
+
+/// Takes `items` (as [`contents`] lists them) out of `file`. In the
+/// Expansion a race takes its combinations along, unless a class the
+/// package holds is named in them, and a class the combinations of the
+/// races the package does not hold that name it. Returns the warnings.
+pub fn remove(file: &mut ExportFile, items: &[Content]) -> Vec<String> {
+    let mut warnings = Vec::new();
+    if items.is_empty() {
+        return warnings;
+    }
+    let mut items = items.to_vec();
+    // Later indexes first, so the earlier ones still point at their items.
+    items.sort_by_key(|c| std::cmp::Reverse(c.index));
+    let (mut removed, mut combinations) = (false, false);
+    for item in &items {
+        match item.category {
+            Category::Character => {
+                if file
+                    .characters
+                    .get(item.index)
+                    .is_some_and(|c| c.data.name == item.name)
+                {
+                    file.characters.remove(item.index);
+                    removed = true;
+                }
+            }
+            category => {
+                let Some(section) = section_mut(file, category) else {
+                    continue;
+                };
+                if item.index < section.len()
+                    && object_name(&section[item.index]).is_some_and(|n| n == item.name)
+                {
+                    section.remove(item.index);
+                    removed = true;
+                    combinations |= matches!(category, Category::Race | Category::Class);
+                }
+            }
+        }
+    }
+    if combinations {
+        prune_combinations(file);
+    }
+    if removed {
+        drop_map_maker(file, &mut warnings);
+    }
+    warnings
+}
+
+/// Keeps the combinations of the races `file` holds, and of the others
+/// those naming a class it holds.
+fn prune_combinations(file: &mut ExportFile) {
+    let races: Vec<String> = file
+        .races
+        .iter()
+        .filter_map(object_name)
+        .map(str::to_owned)
+        .collect();
+    let classes: Vec<String> = file
+        .classes
+        .iter()
+        .flatten()
+        .filter_map(object_name)
+        .map(str::to_owned)
+        .collect();
+    let Some(allowed) = file.allowed.as_mut() else {
+        return;
+    };
+    allowed.retain_mut(|o| {
+        let Object::ClassesAllowed(record) = o else {
+            return true;
+        };
+        if races.contains(&record.race) {
+            return true;
+        }
+        record.classes.retain(|h| {
+            helper_data(h).is_none_or(|d| {
+                helper_slots(d)
+                    .iter()
+                    .any(|s| classes.iter().any(|c| c == s))
+            })
+        });
+        !record.classes.is_empty()
+    });
+}
+
+/// The Map Maker II maps come last and may refer to what the sections
+/// before them define, so they do not survive a change to the package.
+fn drop_map_maker(file: &mut ExportFile, warnings: &mut Vec<String>) {
+    if file.map_maker.count > 0 {
+        warnings.push(format!(
+            "The package's {} Map Maker II maps were left out",
+            file.map_maker.count
+        ));
+        file.map_maker = Default::default();
+    }
 }
 
 /// The class names of a combination, in group order.
@@ -554,9 +633,8 @@ fn list_file(category: Category) -> &'static str {
 }
 
 impl Installation {
-    /// What Export offers: the user's records, characters and the
-    /// drawings in the Campaign Mapper's folder (`C:\CM\Maps` of the Wine
-    /// prefix), by category and name.
+    /// What Export offers: the user's records and characters, by category
+    /// and name.
     pub fn exportable(&self) -> Result<Vec<Exportable>> {
         let flavor = flavor_of(self);
         let stores = Stores::new(self);
@@ -607,45 +685,41 @@ impl Installation {
         for e in self.characters()?.entries {
             push(Category::Character, &e.name, Source::Character(e.file));
         }
-        for path in self.campaign_maps() {
-            let name = path.file_name().unwrap_or_default().to_string_lossy();
-            push(Category::CampaignMap, &name, Source::Map(path.clone()));
-        }
         out.sort_by_cached_key(|e| (e.category.label(), e.name.to_lowercase()));
         Ok(out)
-    }
-
-    /// The Campaign Mapper's map folder (`C:\CM\Maps`), when the
-    /// installation sits in a Wine prefix that has one.
-    pub fn campaign_mapper_folder(&self) -> Option<PathBuf> {
-        let drive = self.root().parent()?.parent()?;
-        ["CM/Maps", "CM/MAPS", "cm/maps"]
-            .iter()
-            .map(|d| drive.join(d))
-            .find(|d| d.is_dir())
-    }
-
-    /// The `.FCW` files of the Campaign Mapper's map folder.
-    fn campaign_maps(&self) -> Vec<PathBuf> {
-        let Some(folder) = self.campaign_mapper_folder() else {
-            return Vec::new();
-        };
-        let mut maps: Vec<PathBuf> = fs::read_dir(folder)
-            .into_iter()
-            .flatten()
-            .filter_map(|e| e.ok().map(|e| e.path()))
-            .filter(|p| p.extension().is_some_and(|x| x.eq_ignore_ascii_case("fcw")))
-            .collect();
-        maps.sort();
-        maps
     }
 
     /// The package holding `items`, in the layout of this installation's
     /// program, in the order given.
     pub fn export(&self, items: &[Exportable]) -> Result<Export> {
+        let mut file = ExportFile::new(flavor_of(self) == Flavor::Expansion);
+        let warnings = self.add_to(&mut file, items)?;
+        Ok(Export { file, warnings })
+    }
+
+    /// Puts `items` into `file`, a package in the layout of this
+    /// installation's program, as Export would: an item takes the place of
+    /// the one of its category and name the package holds already, and in
+    /// the Expansion a race or class brings its combinations along.
+    /// Returns the warnings.
+    pub fn add_to(&self, file: &mut ExportFile, items: &[Exportable]) -> Result<Vec<String>> {
         let flavor = flavor_of(self);
         let expansion = flavor == Flavor::Expansion;
-        let mut file = ExportFile::new(expansion);
+        if file.is_expansion() != expansion {
+            return Err(Error::Invalid(format!(
+                "This is a package for {}; items of {} cannot go into it",
+                if file.is_expansion() {
+                    "the Expansion"
+                } else {
+                    "Core Rules 2.0"
+                },
+                if expansion {
+                    "the Expansion"
+                } else {
+                    "Core Rules 2.0"
+                },
+            )));
+        }
         let mut warnings = Vec::new();
         let stores = Stores::new(self);
         let parts = stores.read(PARTS, PartsFile::parse)?;
@@ -672,19 +746,14 @@ impl Installation {
                         .ok_or_else(|| Error::Invalid(format!("{relative} not found")))?;
                     let character = Character::parse(&self.read(&relative)?)
                         .map_err(|source| Error::Format { path, source })?;
-                    file.characters.push(character);
-                    continue;
-                }
-                (Source::Map(path), _) => {
-                    let data = fs::read(path).map_err(|source| Error::Io {
-                        path: path.clone(),
-                        source,
-                    })?;
-                    let name = path.file_name().unwrap_or_default().to_string_lossy();
-                    file.campaign_maps.push(CampaignMap {
-                        path: name.into_owned(),
-                        data,
-                    });
+                    match file
+                        .characters
+                        .iter()
+                        .position(|c| same_name(&c.data.name, &character.data.name))
+                    {
+                        Some(i) => file.characters[i] = character,
+                        None => file.characters.push(character),
+                    }
                     continue;
                 }
                 (Source::Record(i), Category::Part(t)) => parts
@@ -719,17 +788,23 @@ impl Installation {
             let object = object
                 .filter(|o| object_name(o) == Some(item.name.as_str()))
                 .ok_or_else(|| missing(item))?;
-            let section = section_mut(&mut file, item.category).ok_or_else(|| missing(item))?;
-            section.push(object);
+            let section = section_mut(file, item.category).ok_or_else(|| missing(item))?;
+            match named(section, &item.name) {
+                Some(i) => section[i] = object,
+                None => section.push(object),
+            }
             if expansion {
                 match item.category {
-                    Category::Race => export_race(&mut file, &allowed, &item.name, &mut warnings),
-                    Category::Class => export_class(&mut file, &allowed, &item.name),
+                    Category::Race => export_race(file, &allowed, &item.name, &mut warnings),
+                    Category::Class => export_class(file, &allowed, &item.name),
                     _ => {}
                 }
             }
         }
-        Ok(Export { file, warnings })
+        if !items.is_empty() {
+            drop_map_maker(file, &mut warnings);
+        }
+        Ok(warnings)
     }
 
     /// The items of `file` as [`contents`] lists them, with the records
@@ -757,7 +832,7 @@ impl Installation {
                     named(&spells.wizard, &item.name).is_some()
                         || named(&spells.priest, &item.name).is_some()
                 }
-                Category::Character | Category::CampaignMap => false,
+                Category::Character => false,
                 category => named(stores.list_ref(category)?, &item.name).is_some(),
             };
             if custom {
@@ -768,14 +843,8 @@ impl Installation {
     }
 
     /// Imports the items of `file` whose indexes into [`contents`] are in
-    /// `chosen` (all with `None`), writing drawings into `maps` (skipping
-    /// them with `None`, and never replacing a file).
-    pub fn import(
-        &self,
-        file: &ExportFile,
-        chosen: Option<&[usize]>,
-        maps: Option<&Path>,
-    ) -> Result<ImportReport> {
+    /// `chosen` (all with `None`).
+    pub fn import(&self, file: &ExportFile, chosen: Option<&[usize]>) -> Result<ImportReport> {
         let flavor = flavor_of(self);
         let expansion = flavor == Flavor::Expansion;
         if file.is_expansion() && !expansion {
@@ -805,24 +874,6 @@ impl Installation {
                     } else {
                         character.clone()
                     });
-                }
-                Category::CampaignMap => {
-                    let map = &file.campaign_maps[item.index];
-                    match maps {
-                        Some(folder) => {
-                            let path = folder.join(map_file_name(&map.path));
-                            if path.exists() {
-                                report.warnings.push(format!(
-                                    "{} exists already; the drawing was not imported",
-                                    path.display()
-                                ));
-                                continue;
-                            }
-                            write_new(&path, &map.data)?;
-                            report.maps.push(path);
-                        }
-                        None => continue,
-                    }
                 }
                 Category::Class if !expansion => continue,
                 category => {
@@ -1352,15 +1403,6 @@ mod tests {
         );
         assert_eq!(Category::parse("classes"), Some(Category::Class));
         assert_eq!(Category::parse("nothing"), None);
-    }
-
-    #[test]
-    fn map_names_drop_windows_folders() {
-        assert_eq!(
-            map_file_name("C:\\CM\\Maps\\Lordstown.FCW"),
-            "Lordstown.FCW"
-        );
-        assert_eq!(map_file_name("Lordstown.FCW"), "Lordstown.FCW");
     }
 
     #[test]

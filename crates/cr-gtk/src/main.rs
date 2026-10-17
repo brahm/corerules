@@ -217,8 +217,26 @@ impl Window {
                 move |_, _, _| transfer::import(&Rc::new(this.clone()))
             })
             .build();
-        this.window
-            .add_action_entries([open_book, roll_table, export, import]);
+        let new_package = gio::ActionEntry::builder("new-package")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| transfer::new_package(&Rc::new(this.clone()))
+            })
+            .build();
+        let edit_package = gio::ActionEntry::builder("edit-package")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| transfer::edit_package(&Rc::new(this.clone()))
+            })
+            .build();
+        this.window.add_action_entries([
+            open_book,
+            roll_table,
+            export,
+            import,
+            new_package,
+            edit_package,
+        ]);
         this.window.add_action_entries([
             open,
             new_character,
@@ -327,6 +345,8 @@ impl Window {
             "roll-table",
             "export",
             "import",
+            "new-package",
+            "edit-package",
         ] {
             if let Some(action) = self
                 .window
@@ -715,6 +735,8 @@ fn open_menu() -> gtk::MenuButton {
     let packages = gio::Menu::new();
     packages.append(Some("_Import…"), Some("win.import"));
     packages.append(Some("E_xport…"), Some("win.export"));
+    packages.append(Some("New P_ackage…"), Some("win.new-package"));
+    packages.append(Some("E_dit Package…"), Some("win.edit-package"));
     menu.append_section(None, &packages);
     menu.append(Some("_Open Folder…"), Some("win.open"));
     gtk::MenuButton::builder()

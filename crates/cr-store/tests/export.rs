@@ -1,4 +1,4 @@
-//! Export and Import against the originals' own results.
+//! Export, Import and package editing against the originals' own results.
 //!
 //! With `CORERULES_DIR` pointing at an installation and `CORERULES_GOLDEN`
 //! at the `export` golden folder, the program's folder (`t3/` with
@@ -6,9 +6,9 @@
 //! (`*_all` with a Campaign Mapper drawing, `*_nomap` without) and, in
 //! `import/before` and `import/after`, the `UserDbas` and `Chars` folders
 //! the packages were exported from and what importing `*_all` into them
-//! left (with the drawing it wrote). The tests work on a temporary copy
-//! of `before` next to a link to the installation's `Database`. Without
-//! the variables they pass without checking.
+//! left. Drawings are neither exported nor imported. The tests work on a
+//! temporary copy of `before` next to a link to the installation's
+//! `Database`. Without the variables they pass without checking.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use cr_formats::character::CharacterIndex;
 use cr_formats::export::ExportFile;
 use cr_store::Installation;
-use cr_store::export::{Category, Exportable, Source, contents};
+use cr_store::export::{Category, Exportable, contents, remove};
 
 struct Scratch {
     root: PathBuf,
@@ -87,9 +87,7 @@ fn import_leaves_what_the_original_left() {
         return;
     };
     let (_, file) = s.package("all");
-    let maps = s.root.join("maps");
-    fs::create_dir_all(&maps).unwrap();
-    let report = s.install.import(&file, None, Some(&maps)).unwrap();
+    let report = s.install.import(&file, None).unwrap();
     assert_eq!(
         report.imported.len() + report.skipped.len(),
         contents(&file).len()
@@ -121,18 +119,10 @@ fn import_leaves_what_the_original_left() {
     }
     assert_eq!(ours, theirs);
     assert_eq!(report.characters.len(), file.characters.len());
-
-    let map = after.join("Lordstown.FCW");
-    if map.exists() {
-        assert_eq!(
-            fs::read(maps.join("Lordstown.FCW")).unwrap(),
-            fs::read(map).unwrap()
-        );
-    }
 }
 
 /// The items of `file`, in its order, as this installation offers them.
-fn items_of(install: &Installation, file: &ExportFile, map: &Path) -> Vec<Exportable> {
+fn items_of(install: &Installation, file: &ExportFile) -> Vec<Exportable> {
     let offered = install.exportable().unwrap();
     let find = |category: Category, name: &str| {
         offered
@@ -148,17 +138,10 @@ fn items_of(install: &Installation, file: &ExportFile, map: &Path) -> Vec<Export
         .collect();
     let mut records: Vec<_> = contents(file)
         .into_iter()
-        .filter(|c| !matches!(c.category, Category::Character | Category::CampaignMap))
+        .filter(|c| c.category != Category::Character)
         .collect();
     records.sort_by_key(|c| c.index);
     items.extend(records.iter().map(|c| find(c.category, &c.name)));
-    for m in &file.campaign_maps {
-        items.push(Exportable {
-            category: Category::CampaignMap,
-            name: m.path.clone(),
-            source: Source::Map(map.to_path_buf()),
-        });
-    }
     items
 }
 
@@ -167,26 +150,89 @@ fn export_writes_what_the_original_wrote() {
     let Some(s) = scratch("export") else {
         return;
     };
-    let map = s.golden.join("import/before/Lordstown.FCW");
-    for which in ["all", "nomap"] {
-        let (path, theirs) = s.package(which);
-        let export = s
-            .install
-            .export(&items_of(&s.install, &theirs, &map))
-            .unwrap();
-        let ours = export.file;
-        // The original writes the character it holds in memory, whose
-        // sheet options it never initialized; the rest must match.
-        let mut theirs = theirs;
-        assert_eq!(ours.characters.len(), theirs.characters.len());
-        for (o, t) in ours.characters.iter().zip(&mut theirs.characters) {
-            t.data.sheet_options.clone_from(&o.data.sheet_options);
-            assert_eq!(o, t);
-        }
-        assert!(
-            ours.to_bytes().unwrap() == theirs.to_bytes().unwrap(),
-            "the export differs from {}",
-            path.display()
-        );
+    let (path, mut theirs) = s.package("nomap");
+    let ours = s
+        .install
+        .export(&items_of(&s.install, &theirs))
+        .unwrap()
+        .file;
+    // The original writes the character it holds in memory, whose sheet
+    // options it never initialized; the rest must match.
+    assert_eq!(ours.characters.len(), theirs.characters.len());
+    for (o, t) in ours.characters.iter().zip(&mut theirs.characters) {
+        t.data.sheet_options.clone_from(&o.data.sheet_options);
+        assert_eq!(o, t);
     }
+    assert!(
+        ours.to_bytes().unwrap() == theirs.to_bytes().unwrap(),
+        "the export differs from {}",
+        path.display()
+    );
+}
+
+/// Sorted (category, name) pairs and race/class combinations.
+fn summary(file: &ExportFile) -> (Vec<(String, String)>, Vec<String>) {
+    let mut items: Vec<_> = contents(file)
+        .into_iter()
+        .map(|c| (c.category.label().to_owned(), c.name))
+        .collect();
+    items.sort();
+    let mut allowed: Vec<String> = file
+        .allowed
+        .iter()
+        .flatten()
+        .map(|o| format!("{o:?}"))
+        .collect();
+    allowed.sort();
+    (items, allowed)
+}
+
+#[test]
+fn removed_items_come_back_with_add() {
+    let Some(s) = scratch("edit") else {
+        return;
+    };
+    let (_, theirs) = s.package("nomap");
+    let mut file = theirs.clone();
+    let all = contents(&file);
+    // Every race and class, a monster and a character.
+    let mut taken: Vec<_> = all
+        .iter()
+        .filter(|c| matches!(c.category, Category::Race | Category::Class))
+        .cloned()
+        .collect();
+    taken.extend(
+        all.iter()
+            .find(|c| c.category == Category::Monster)
+            .cloned(),
+    );
+    taken.extend(
+        all.iter()
+            .find(|c| c.category == Category::Character)
+            .cloned(),
+    );
+    assert!(!taken.is_empty());
+    remove(&mut file, &taken);
+    assert_eq!(contents(&file).len(), all.len() - taken.len());
+    if let Some(allowed) = &file.allowed {
+        assert!(allowed.is_empty(), "combinations left: {allowed:?}");
+    }
+    // Putting them back gives the same items and combinations.
+    let offered = s.install.exportable().unwrap();
+    let back: Vec<Exportable> = taken
+        .iter()
+        .map(|c| {
+            offered
+                .iter()
+                .find(|e| e.category == c.category && e.name == c.name)
+                .unwrap()
+                .clone()
+        })
+        .collect();
+    s.install.add_to(&mut file, &back).unwrap();
+    assert_eq!(summary(&file), summary(&theirs));
+    // Adding what the package holds replaces it in place.
+    let again = file.clone();
+    s.install.add_to(&mut file, &back).unwrap();
+    assert!(file.to_bytes().unwrap() == again.to_bytes().unwrap());
 }

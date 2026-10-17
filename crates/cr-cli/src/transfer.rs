@@ -2,8 +2,10 @@
 
 use std::path::{Path, PathBuf};
 
+use cr_store::export::remove;
+
 use cr_formats::export::ExportFile;
-use cr_store::export::{Category, Clash, Content, Exportable, Source};
+use cr_store::export::{Category, Clash, Content, Exportable};
 use cr_store::{Error, Installation, Result};
 
 /// Picks the items an argument names: `CATEGORY:NAME` or a bare name.
@@ -47,23 +49,13 @@ pub fn cmd_export(install: &Installation, args: &[String]) -> Result<()> {
     }
     let Some(output) = args.first() else {
         return Err(invalid(
-            "usage: cr export INSTALL_DIR OUTPUT (--all | ITEM...) [--map FILE]...",
+            "usage: cr export INSTALL_DIR OUTPUT (--all | ITEM...)",
         ));
     };
     let mut chosen: Vec<Exportable> = Vec::new();
-    let mut rest = args[1..].iter();
-    while let Some(arg) = rest.next() {
+    for arg in &args[1..] {
         match arg.as_str() {
             "--all" => chosen.extend(all.iter().cloned()),
-            "--map" => {
-                let path = PathBuf::from(rest.next().ok_or_else(|| invalid("--map needs a file"))?);
-                let name = path.file_name().unwrap_or_default().to_string_lossy();
-                chosen.push(Exportable {
-                    category: Category::CampaignMap,
-                    name: name.into_owned(),
-                    source: Source::Map(path.clone()),
-                });
-            }
             item => chosen.push(pick(&all, item, |e| e.category, |e| &e.name)?.clone()),
         }
     }
@@ -79,19 +71,23 @@ pub fn cmd_export(install: &Installation, args: &[String]) -> Result<()> {
             "xpt"
         });
     }
-    let bytes = export.file.to_bytes().map_err(|source| Error::Format {
-        path: path.clone(),
-        source,
-    })?;
-    std::fs::write(&path, bytes).map_err(|source| Error::Io {
-        path: path.clone(),
-        source,
-    })?;
+    write_package(&path, &export.file)?;
     for warning in &export.warnings {
         eprintln!("cr: {warning}");
     }
     println!("{}: {} items", path.display(), chosen.len());
     Ok(())
+}
+
+fn write_package(path: &Path, file: &ExportFile) -> Result<()> {
+    let bytes = file.to_bytes().map_err(|source| Error::Format {
+        path: path.to_path_buf(),
+        source,
+    })?;
+    std::fs::write(path, bytes).map_err(|source| Error::Io {
+        path: path.to_path_buf(),
+        source,
+    })
 }
 
 pub fn read_package(path: &Path) -> Result<ExportFile> {
@@ -109,24 +105,16 @@ pub fn cmd_import(install: &Installation, args: &[String]) -> Result<()> {
     let invalid = |m: &str| Error::Invalid(m.into());
     let Some(input) = args.first() else {
         return Err(invalid(
-            "usage: cr import INSTALL_DIR FILE [--list] [--maps DIR] [ITEM...]",
+            "usage: cr import INSTALL_DIR FILE [--list] [ITEM...]",
         ));
     };
     let file = read_package(Path::new(input))?;
     let preview = install.import_preview(&file)?;
     let mut chosen: Vec<usize> = Vec::new();
-    let mut maps = None;
     let mut list = false;
-    let mut rest = args[1..].iter();
-    while let Some(arg) = rest.next() {
+    for arg in &args[1..] {
         match arg.as_str() {
             "--list" => list = true,
-            "--maps" => {
-                maps = Some(PathBuf::from(
-                    rest.next()
-                        .ok_or_else(|| invalid("--maps needs a folder"))?,
-                ))
-            }
             item => {
                 let found = pick(&preview, item, |c| c.category, |c| &c.name)?;
                 let n = preview.iter().position(|c| c == found).unwrap_or_default();
@@ -150,7 +138,7 @@ pub fn cmd_import(install: &Installation, args: &[String]) -> Result<()> {
         return Ok(());
     }
     let chosen = (!chosen.is_empty()).then_some(chosen);
-    let report = install.import(&file, chosen.as_deref(), maps.as_deref())?;
+    let report = install.import(&file, chosen.as_deref())?;
     let label = |c: &Content| format!("{}: {}", c.category.label(), c.name);
     for c in &report.imported {
         println!("imported {}", label(c));
@@ -167,13 +155,65 @@ pub fn cmd_import(install: &Installation, args: &[String]) -> Result<()> {
     for file in &report.characters {
         println!("wrote Chars/{file}");
     }
-    for map in &report.maps {
-        println!("wrote {}", map.display());
-    }
-    if maps.is_none() && !file.campaign_maps.is_empty() {
-        println!("drawings skipped; --maps DIR writes them");
-    }
     for warning in &report.warnings {
+        eprintln!("cr: {warning}");
+    }
+    Ok(())
+}
+
+pub fn cmd_package(install: &Installation, args: &[String]) -> Result<()> {
+    let invalid = |m: &str| Error::Invalid(m.into());
+    let usage = "usage: cr package INSTALL_DIR FILE [--new] [--add ITEM]... [--remove ITEM]...";
+    let Some(output) = args.first() else {
+        return Err(invalid(usage));
+    };
+    let (mut new, mut add, mut take) = (false, Vec::new(), Vec::new());
+    let mut rest = args[1..].iter();
+    while let Some(arg) = rest.next() {
+        match arg.as_str() {
+            "--new" => new = true,
+            "--add" => add.push(rest.next().ok_or_else(|| invalid("--add needs an item"))?),
+            "--remove" => take.push(
+                rest.next()
+                    .ok_or_else(|| invalid("--remove needs an item"))?,
+            ),
+            _ => return Err(invalid(usage)),
+        }
+    }
+    let mut path = PathBuf::from(output);
+    let mut file = if new {
+        let expansion = install.path("UserDbas/AllowedU.dat").is_some();
+        if path.extension().is_none() {
+            path.set_extension(if expansion { "xpx" } else { "xpt" });
+        }
+        ExportFile::new(expansion)
+    } else {
+        read_package(&path)?
+    };
+    let mut warnings = Vec::new();
+    if !take.is_empty() {
+        let items = cr_store::export::contents(&file);
+        let chosen = take
+            .iter()
+            .map(|t| pick(&items, t, |c| c.category, |c| &c.name).cloned())
+            .collect::<Result<Vec<Content>>>()?;
+        warnings.extend(remove(&mut file, &chosen));
+    }
+    if !add.is_empty() {
+        let offered = install.exportable()?;
+        let chosen = add
+            .iter()
+            .map(|a| pick(&offered, a, |e| e.category, |e| &e.name).cloned())
+            .collect::<Result<Vec<Exportable>>>()?;
+        warnings.extend(install.add_to(&mut file, &chosen)?);
+    }
+    if new || !add.is_empty() || !take.is_empty() {
+        write_package(&path, &file)?;
+    }
+    for c in cr_store::export::contents(&file) {
+        println!("{}\t{}", c.category.label(), c.name);
+    }
+    for warning in &warnings {
         eprintln!("cr: {warning}");
     }
     Ok(())

@@ -21,6 +21,9 @@ fn golden_exports_round_trip() {
     for program in ["t3", "ev"] {
         for entry in std::fs::read_dir(dir.join(program)).unwrap() {
             let path = entry.unwrap().path();
+            if !path.is_file() {
+                continue;
+            }
             let data = std::fs::read(&path).unwrap();
             let file =
                 ExportFile::parse(&data).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
