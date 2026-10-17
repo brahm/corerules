@@ -147,7 +147,9 @@ impl Category {
     pub fn parse(text: &str) -> Option<Self> {
         let wanted = text.trim().to_lowercase().replace(['-', '_'], " ");
         Self::all(Flavor::Expansion).into_iter().find(|c| {
-            let label = c.label().to_lowercase();
+            // The same spelling rules for the label: "Non-Weapon
+            // Proficiencies" as `cr import --list` prints it.
+            let label = c.label().to_lowercase().replace('-', " ");
             label == wanted
                 || label.strip_suffix('s') == Some(wanted.as_str())
                 || label.strip_suffix("es") == Some(wanted.as_str())
@@ -1444,6 +1446,9 @@ mod tests {
     fn categories_parse_from_words() {
         assert_eq!(Category::parse("race"), Some(Category::Race));
         assert_eq!(Category::parse("Wizard-Spell"), Some(Category::WizardSpell));
+        for category in Category::all(Flavor::Expansion) {
+            assert_eq!(Category::parse(category.label()), Some(category));
+        }
         assert_eq!(Category::parse("weapons"), Some(Category::Part(0)));
         assert_eq!(
             Category::parse("character kits"),
