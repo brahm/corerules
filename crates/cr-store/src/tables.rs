@@ -53,14 +53,14 @@
 //!   Spells.dat (a, in file order), then in UserDbas/SpellsU.dat (b, in
 //!   file order); Infinite Spells pages without a spell are not listed.
 //!   Replayed against Tsrp3.exe for the same seed, user spells included.
+//! * Double-clicking a result only selects its line, as in both
+//!   programs: the Roll Results list opens nothing.
 //!
 //! Where this differs (the code was not followed far enough):
 //!
 //! * The first roll of a dialog: the original compares with an
 //!   uninitialised previous result (stack memory); here the first roll is
 //!   free.
-//! * Double-clicking a result to open the item in the database is not
-//!   offered.
 //! * Column layout: the original pads to fixed character columns in a
 //!   proportional font, so its columns do not line up; here they do.
 
