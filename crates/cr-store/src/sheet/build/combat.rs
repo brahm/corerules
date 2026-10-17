@@ -1354,21 +1354,54 @@ const TURNING: [[&str; 12]; 13] = [
     ],
 ];
 
-const UNDEAD: [&str; 13] = [
-    "Skeleton or 1 HD:",
-    "Zombie:",
-    "Ghoul or 2 HD:",
-    "Shadow or 3-4 HD:",
-    "Wight or 5 HD:",
-    "Ghast:",
-    "Wraith or 6 HD:",
-    "Mummy or 7 HD:",
-    "Spectre or 8 HD:",
-    "Vampire or 9 HD:",
-    "Ghost or 10 HD:",
-    "Lich or 11+ HD:",
-    "Special:",
+/// The undead labels' addresses in Tsrp3.exe and Evermore.exe.
+const UNDEAD: [[u32; 2]; 13] = [
+    [0x83a1e8, 0x6c3878],
+    [0x83a22c, 0x6c3840],
+    [0x83a260, 0x6c3804],
+    [0x83a2a0, 0x6c37c0],
+    [0x83a1fc, 0x6c3868],
+    [0x83a234, 0x6c3838],
+    [0x83a270, 0x6c37f4],
+    [0x83a20c, 0x6c3858],
+    [0x83a23c, 0x6c3824],
+    [0x83a280, 0x6c37e0],
+    [0x83a21c, 0x6c3848],
+    [0x83a250, 0x6c3814],
+    [0x83a294, 0x6c37d4],
 ];
+
+/// The legend lines, in the order the sheet places them: the roll line,
+/// then T, D and D* (each flavor words the roll line its own way).
+const LEGEND: [[u32; 2]; 4] = [
+    [0x83a2b4, 0x6c3768],
+    [0x83a310, 0x6c379c],
+    [0x83a2e8, 0x6c3714],
+    [0x83a334, 0x6c373c],
+];
+
+/// The 13 undead labels, then the legend lines, read from the program
+/// (Tsrp3.exe 0x83a1e8.., Evermore.exe 0x6c3714..). Without it the labels
+/// are numbered and the legend says the program is missing.
+pub(in crate::sheet) fn turning_texts(
+    install: &crate::Installation,
+    flavor: Flavor,
+) -> Vec<String> {
+    let image = crate::exe::Image::open(install, flavor).ok();
+    let column = usize::from(flavor == Flavor::Core20);
+    let text = |a: [u32; 2]| image.as_ref().and_then(|i| i.text(a[column]));
+    let mut texts: Vec<String> = UNDEAD
+        .iter()
+        .enumerate()
+        .map(|(n, &a)| text(a).unwrap_or_else(|| format!("Undead {}:", n + 1)))
+        .collect();
+    texts.extend(
+        LEGEND.iter().map(|&a| {
+            text(a).unwrap_or_else(|| "(legend text: the program file is missing)".into())
+        }),
+    );
+    texts
+}
 
 /// Turning Undead (0x5a819e), absent when the character cannot turn.
 pub(in crate::sheet) fn turning(ctx: &Ctx) -> Option<Section> {
@@ -1385,41 +1418,30 @@ pub(in crate::sheet) fn turning(ctx: &Ctx) -> Option<Section> {
     };
     // 2.0 right-aligns the results and words the legend differently,
     // beside the last undead.
+    let texts = &ctx.rules.turning;
+    let undead = |t: usize| Cell::new(texts[t].as_str());
+    let legend = |n: usize| Cell::new(texts[UNDEAD.len() + n].as_str());
     let result = |t: usize| {
         let cell = Cell::new(column.map_or("-", |c| TURNING[t][c as usize]));
         if ctx.expansion() { cell } else { cell.right() }
     };
     let mut rows: Vec<Vec<Cell>> = [[0, 4, 7, 10], [1, 5, 8, 11], [2, 6, 9, 12]]
         .iter()
-        .map(|types| {
-            types
-                .iter()
-                .flat_map(|&t| [Cell::new(UNDEAD[t]), result(t)])
-                .collect()
-        })
+        .map(|types| types.iter().flat_map(|&t| [undead(t), result(t)]).collect())
         .collect();
     if !ctx.expansion() {
         rows.push(vec![
-            Cell::new(UNDEAD[3]),
+            undead(3),
             result(3),
-            Cell::new("# = Roll less than # on a 1d20 to turn 2d6 undead.").span(3),
-            Cell::new("T = Automatically turns 2d6 undead.").span(3),
+            legend(0).span(3),
+            legend(1).span(3),
         ]);
-        rows.push(vec![
-            Cell::new("D = Automatically destroys 2d6 undead.").span(4),
-            Cell::new("D* = Automatically destroys 2d6+2d4 undead.").span(4),
-        ]);
+        rows.push(vec![legend(2).span(4), legend(3).span(4)]);
         return Some(single(ids::TURNING, "Turning Undead", vec![table(8, rows)]));
     }
-    rows.push(vec![Cell::new(UNDEAD[3]), result(3).span(7)]);
-    rows.push(vec![
-        Cell::new("# = Roll # or greater on a 1d20 to turn 2d6 undead.").span(4),
-        Cell::new("D = Automatically destroys 2d6 undead.").span(4),
-    ]);
-    rows.push(vec![
-        Cell::new("T = Automatically turns 2d6 undead.").span(4),
-        Cell::new("D* = Automatically destroys 2d6+2d4 undead.").span(4),
-    ]);
+    rows.push(vec![undead(3), result(3).span(7)]);
+    rows.push(vec![legend(0).span(4), legend(2).span(4)]);
+    rows.push(vec![legend(1).span(4), legend(3).span(4)]);
     Some(single(ids::TURNING, "Turning Undead", vec![table(8, rows)]))
 }
 

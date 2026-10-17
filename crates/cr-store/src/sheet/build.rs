@@ -14,7 +14,7 @@ use super::{
 use crate::Result;
 use crate::lists::BUNDLE_NAMES;
 
-mod combat;
+pub(super) mod combat;
 mod nwp;
 mod rogue;
 mod spells;

@@ -14,8 +14,8 @@ use cr_formats::parts::{Part, PartKitData, PartsFile};
 use cr_formats::race::Race;
 use cr_formats::spells::SpellsFile;
 
-use super::exe::Image;
 use super::program::{Program, Tx};
+use crate::exe::Image;
 use crate::treasure::Flavor;
 use crate::{Error, Installation, Result};
 

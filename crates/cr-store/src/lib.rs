@@ -12,6 +12,7 @@ pub mod create;
 pub mod dual;
 pub mod edit;
 pub mod encounter;
+mod exe;
 pub mod lists;
 pub mod npc;
 pub mod settings;

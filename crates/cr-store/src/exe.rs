@@ -1,8 +1,9 @@
 //! The program image (`Program/Tsrp3.exe` or `Program/Evermore.exe`) the
-//! NPC generator reads its texts from at run time: name tables built on
-//! the stack, strings the code pushes, and the weapon group tables of the
-//! part document's constructor. Nothing of the program's text is kept in
-//! this crate; only addresses.
+//! NPC generator and the treasure roller read their texts from at run
+//! time: name tables built on the stack, strings the code pushes, the
+//! weapon group tables of the part document's constructor and plain
+//! strings. Nothing of the program's text is kept in this crate; only
+//! addresses.
 
 use std::collections::HashMap;
 
@@ -67,7 +68,7 @@ impl Image {
             .expect("both flavors have a program");
         let Some(path) = install.path(relative) else {
             return Err(Error::Invalid(format!(
-                "{relative} is missing: the NPC generator reads its names and other texts from the program"
+                "{relative} is missing: some texts are read from the program"
             )));
         };
         let bytes = std::fs::read(&path).map_err(|source| Error::Io {
@@ -76,7 +77,7 @@ impl Image {
         })?;
         if bytes.len() != size || fnv1a(&bytes) != hash {
             return Err(Error::Invalid(format!(
-                "{}: not the program version the NPC generator knows ({} bytes)",
+                "{}: not the program version whose texts this app knows ({} bytes)",
                 path.display(),
                 bytes.len()
             )));

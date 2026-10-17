@@ -29,7 +29,6 @@
 mod build;
 pub(crate) mod data;
 mod equip;
-mod exe;
 mod magic;
 mod names;
 mod prof;

@@ -274,6 +274,8 @@ pub struct SheetRules {
     /// The installation folder as the original sees it, for the default
     /// portrait path.
     windows_root: String,
+    /// The Turning Undead labels and legend, read from the program.
+    turning: Vec<String>,
 }
 
 impl SheetRules {
@@ -312,7 +314,9 @@ impl Installation {
             priest_spells: Vec::new(),
             powers: Vec::new(),
             windows_root: "C:\\Program Files\\AD&D Core Rules 2.0".into(),
+            turning: Vec::new(),
         };
+        rules.turning = build::combat::turning_texts(self, rules.flavor);
         for object in self.list_objects("Class")? {
             if let Object::Class(class) = object {
                 rules

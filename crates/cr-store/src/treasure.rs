@@ -511,6 +511,8 @@ pub struct TreasureRules {
     /// Part names by type as the files have them, in file order, user
     /// parts first then standard ones.
     part_names: [[Vec<String>; PART_TYPE_COUNT]; 2],
+    /// The intelligent weapon lines of the installation's program.
+    intelligent: intelligent::Texts,
 }
 
 impl Installation {
@@ -555,6 +557,7 @@ impl Installation {
             spells: Default::default(),
             parts: Default::default(),
             part_names: Default::default(),
+            intelligent: intelligent::Texts::read(self, flavor),
         };
         for (i, t) in rules.tables.iter().enumerate() {
             rules.by_name.entry(t.name.clone()).or_insert(i);
@@ -961,7 +964,7 @@ impl TreasureRules {
         }
         // rand() % 100 + 1 <= chance.
         if entry.intelligent != 0 && rand.rand() % 100 < i32::from(entry.intelligent) {
-            intelligent::make_intelligent(rand, &mut item);
+            intelligent::make_intelligent(&self.intelligent, rand, &mut item);
         }
         if entry.spell_count != 0 {
             self.write_spells(rand, entry, &mut item);

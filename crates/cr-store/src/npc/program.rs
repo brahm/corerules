@@ -7,8 +7,8 @@
 
 use std::collections::HashMap;
 
-use super::exe::Image;
 use super::texts;
+use crate::exe::Image;
 use crate::treasure::Flavor;
 use crate::{Error, Result};
 
