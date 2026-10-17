@@ -43,6 +43,22 @@
       <image>https://raw.githubusercontent.com/brahm/corerules/main/docs/screenshots/character.png</image>
       <caption>A character made in the original program</caption>
     </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/brahm/corerules/main/docs/screenshots/new-character.png</image>
+      <caption>The New Character wizard</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/brahm/corerules/main/docs/screenshots/sheet.png</image>
+      <caption>A character sheet</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/brahm/corerules/main/docs/screenshots/npc.png</image>
+      <caption>The NPC generator</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/brahm/corerules/main/docs/screenshots/treasure.png</image>
+      <caption>The treasure generator</caption>
+    </screenshot>
   </screenshots>
   <provides>
     <binary>corerules</binary>

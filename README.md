@@ -18,7 +18,7 @@ open in the other.
 > This project contains no TSR or Wizards of the Coast content. It reads the
 > rules data from a Core Rules installation you already own.
 
-![The app showing a character made in the original program](docs/screenshots/character.png)
+![The character list with a character made in the original program](docs/screenshots/character.png)
 
 ## Features
 
@@ -61,6 +61,11 @@ the original programs wrote.
   or deletes every member; a character can be deleted, with Undo; the list
   filters by party
 
+<p>
+  <img src="docs/screenshots/new-character.png" width="49%" alt="The New Character wizard rolling ability scores">
+  <img src="docs/screenshots/sheet.png" width="49%" alt="The character sheet of a character">
+</p>
+
 ### DM Toolkit
 
 - **NPC generator** (New NPC, New NPC Group): Core Rules and Player's
@@ -83,6 +88,20 @@ the original programs wrote.
   Expansion writes them; Core Rules 2.0 `.xpt` packages are imported and
   converted. Monsters travel in these packages (there is no `.mon` file)
 
+<p>
+  <img src="docs/screenshots/npc.png" width="49%" alt="The New NPC dialog">
+  <img src="docs/screenshots/encounter.png" width="49%" alt="An encounter generated from a template">
+</p>
+
+<p>
+  <img src="docs/screenshots/treasure.png" width="49%" alt="Treasure rolled for treasure type A">
+  <img src="docs/screenshots/editor.png" width="49%" alt="The editor for a new wizard spell">
+</p>
+
+<p>
+  <img src="docs/screenshots/package.png" width="49%" alt="A new package with two characters and an encounter">
+</p>
+
 ### Core Rules 2.0 and the Expansion
 
 Everything new follows the Expansion (AD&D Core Rules 2.0 Expansion). A Core
@@ -103,6 +122,10 @@ Expansion converts a 2.0 package, and leaves the 2.0 folder untouched.
   `cr survey`
 - Every file the app reads or writes is specified in
   [`docs/formats`](docs/formats/README.md)
+
+<p>
+  <img src="docs/screenshots/portuguese.png" width="49%" alt="The app in Brazilian Portuguese">
+</p>
 
 ### Not included
 
