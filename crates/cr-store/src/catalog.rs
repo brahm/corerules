@@ -118,7 +118,8 @@ impl Installation {
             (
                 "weapons",
                 tr("Weapons"),
-                "applications-games-symbolic",
+                // Drawn by the app (cr-gtk adds it to the icon theme).
+                "corerules-sword-symbolic",
                 "Weapons",
             ),
             ("armor", tr("Armor"), "security-high-symbolic", "Armor"),

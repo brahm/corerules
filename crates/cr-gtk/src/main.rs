@@ -65,6 +65,7 @@ const WRITE_ACTIONS: [&str; 19] = [
 fn main() -> glib::ExitCode {
     prefs::apply_language();
     let app = adw::Application::builder().application_id(APP_ID).build();
+    app.connect_startup(|_| add_icons());
     app.connect_activate(|app| {
         // The icon is installed under the application id; X11 window
         // managers read it from the window.
@@ -82,6 +83,30 @@ fn main() -> glib::ExitCode {
     });
     // The optional folder argument is handled above, not by GApplication.
     app.run_with_args(&std::env::args().take(1).collect::<Vec<_>>())
+}
+
+/// Symbolic icons the icon theme lacks, by name.
+const ICONS: [(&str, &str); 1] = [(
+    "corerules-sword-symbolic",
+    include_str!("../../../data/icons/symbolic/corerules-sword-symbolic.svg"),
+)];
+
+/// Makes [`ICONS`] available to the icon theme. GTK finds an unthemed icon
+/// in a search path folder by its file name, so they are written to the
+/// cache folder once and that folder is added; nothing has to be installed.
+fn add_icons() {
+    let Some(display) = gtk::gdk::Display::default() else {
+        return;
+    };
+    let dir = glib::user_cache_dir().join("corerules").join("icons");
+    let written = ICONS.iter().all(|(name, svg)| {
+        let path = dir.join(format!("{name}.svg"));
+        std::fs::read_to_string(&path).is_ok_and(|s| s == *svg)
+            || (std::fs::create_dir_all(&dir).is_ok() && std::fs::write(&path, svg).is_ok())
+    });
+    if written {
+        gtk::IconTheme::for_display(&display).add_search_path(&dir);
+    }
 }
 
 /// The window and the widgets that change while it is open.
