@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_i18n::{tr, tr_noop, trn};
 use cr_store::encounter::{
     Encounter, EncounterRules, FrequencyTable, LairMode, NameError, Package, PendingNpc, Source,
     add_trap, check_name, hit_point_text, remove_trap, roll_2_to_20, roll_and_pick,
@@ -60,7 +61,7 @@ pub fn create_from_template<H: Host + 'static>(host: &Shared<H>, name: &str) {
         }
         Err(e) => {
             // As the original: "Creating an Empty Encounter".
-            host.toast(&format!("{e}. Creating an empty encounter."));
+            host.toast(&tr!("{error}. Creating an empty encounter.", error = e));
             editor(host, Rc::new(rules), Encounter::default(), None, Vec::new());
         }
     }
@@ -80,10 +81,14 @@ pub fn roll_and_generate<H: Host + 'static>(host: &Shared<H>, table: &str) {
     let pick = roll_and_pick(&rules, table, &mut host.rand().borrow_mut());
     match pick {
         Some(i) => {
-            host.toast(&format!("Rolled {}: {}", i + 2, table.slots[i]));
+            host.toast(&tr!(
+                "Rolled {roll}: {template}",
+                roll = i + 2,
+                template = table.slots[i]
+            ));
             create_from_template(host, &table.slots[i].clone());
         }
-        None => host.toast("The table has no templates; fill it first"),
+        None => host.toast(tr("The table has no templates; fill it first")),
     }
 }
 
@@ -120,7 +125,7 @@ pub fn choose_template<H: Host + 'static>(host: &Shared<H>) {
         .collect();
     names.sort_by_cached_key(|(n, _)| cr_store::collate::sort_key(n));
     let search = gtk::SearchEntry::builder()
-        .placeholder_text("Search Templates")
+        .placeholder_text(tr("Search Templates"))
         .hexpand(true)
         .build();
     let list = gtk::ListBox::builder()
@@ -128,8 +133,8 @@ pub fn choose_template<H: Host + 'static>(host: &Shared<H>) {
         .selection_mode(gtk::SelectionMode::None)
         .build();
     let empty = adw::ActionRow::builder()
-        .title("Empty Encounter")
-        .subtitle("Add monsters and characters yourself")
+        .title(tr("Empty Encounter"))
+        .subtitle(tr("Add monsters and characters yourself"))
         .activatable(true)
         .build();
     list.append(&empty);
@@ -179,7 +184,7 @@ pub fn choose_template<H: Host + 'static>(host: &Shared<H>) {
     view.add_top_bar(&bar);
     view.set_content(Some(&scroll));
     let dialog = adw::Dialog::builder()
-        .title("New Encounter")
+        .title(tr("New Encounter"))
         .content_width(560)
         .content_height(640)
         .width_request(360)
@@ -231,23 +236,25 @@ pub fn editor<H: Host + 'static>(
     pending: Vec<PendingNpc>,
 ) {
     let name = adw::EntryRow::builder()
-        .title("Name")
+        .title(tr("Name"))
         .text(&encounter.name)
         .build();
     let template = adw::ActionRow::builder()
-        .title("Template")
+        .title(tr("Template"))
         .subtitle(if encounter.template.is_empty() {
-            "None".to_owned()
+            tr("None").to_owned()
         } else {
             glib::markup_escape_text(&encounter.template).to_string()
         })
         .css_classes(["property"])
         .build();
     let kind = adw::EntryRow::builder()
-        .title("Monster Type")
+        .title(tr("Monster Type"))
         .text(&encounter.monster_type)
         .build();
-    let about = adw::PreferencesGroup::builder().title("Encounter").build();
+    let about = adw::PreferencesGroup::builder()
+        .title(tr("Encounter"))
+        .build();
     about.add(&name);
     about.add(&template);
     about.add(&kind);
@@ -262,14 +269,14 @@ pub fn editor<H: Host + 'static>(
         .build();
     description.buffer().set_text(&encounter.description);
     let notes = adw::PreferencesGroup::builder()
-        .title("Description")
+        .title(tr("Description"))
         .build();
     notes.add(&description);
 
     let totals_group = adw::PreferencesGroup::builder()
-        .title("Encounter Totals")
+        .title(tr("Encounter Totals"))
         .build();
-    let totals: Vec<gtk::Label> = ["Gold Value", "Monster XP", "Treasure XP"]
+    let totals: Vec<gtk::Label> = [tr("Gold Value"), tr("Monster XP"), tr("Treasure XP")]
         .iter()
         .map(|title| {
             let row = adw::ActionRow::builder().title(*title).build();
@@ -286,23 +293,23 @@ pub fn editor<H: Host + 'static>(
     page.add(&totals_group);
 
     let save = gtk::Button::builder()
-        .label("_Save")
+        .label(tr("_Save"))
         .use_underline(true)
         .css_classes(["suggested-action"])
         .build();
     let menu = gio::Menu::new();
     let print_section = gio::Menu::new();
-    print_section.append(Some("_Print…"), Some("encounter.print"));
-    print_section.append(Some("Save as P_DF…"), Some("encounter.pdf"));
+    print_section.append(Some(tr("_Print…")), Some("encounter.print"));
+    print_section.append(Some(tr("Save as P_DF…")), Some("encounter.pdf"));
     menu.append_section(None, &print_section);
     let delete_section = gio::Menu::new();
-    delete_section.append(Some("_Delete Encounter"), Some("encounter.delete"));
+    delete_section.append(Some(tr("_Delete Encounter")), Some("encounter.delete"));
     menu.append_section(None, &delete_section);
     let header = adw::HeaderBar::new();
     header.pack_end(
         &gtk::MenuButton::builder()
             .icon_name("view-more-symbolic")
-            .tooltip_text("Encounter Menu")
+            .tooltip_text(tr("Encounter Menu"))
             .menu_model(&menu)
             .build(),
     );
@@ -311,7 +318,7 @@ pub fn editor<H: Host + 'static>(
     view.add_top_bar(&header);
     view.set_content(Some(&page));
     let dialog = adw::Dialog::builder()
-        .title(saved.as_deref().unwrap_or("New Encounter"))
+        .title(saved.as_deref().unwrap_or(tr("New Encounter")))
         .content_width(760)
         .content_height(760)
         .width_request(360)
@@ -398,9 +405,13 @@ pub fn editor<H: Host + 'static>(
             let sheet = Rc::new(state.sheet());
             let (dialog, toast) = (state.dialog.clone(), toast.clone());
             let title = sheet.title.clone();
-            crate::sheet::save_file(&state.dialog, &title, "pdf", "PDF documents", move |path| {
-                crate::sheet::print_sheet(&dialog, &sheet, Some(path), &toast)
-            });
+            crate::sheet::save_file(
+                &state.dialog,
+                &title,
+                "pdf",
+                tr("PDF documents"),
+                move |path| crate::sheet::print_sheet(&dialog, &sheet, Some(path), &toast),
+            );
         })
     });
     let delete = add("delete", {
@@ -466,12 +477,12 @@ impl<H: Host + 'static> State<H> {
 
     fn packages_group(self: &Rc<Self>) -> Option<adw::PreferencesGroup> {
         let add_monster = gtk::Button::builder()
-            .label("Add _Monster…")
+            .label(tr("Add _Monster…"))
             .use_underline(true)
             .css_classes(["flat"])
             .build();
         let add_npc = gtk::Button::builder()
-            .label("Add _NPC…")
+            .label(tr("Add _NPC…"))
             .use_underline(true)
             .css_classes(["flat"])
             .build();
@@ -487,14 +498,14 @@ impl<H: Host + 'static> State<H> {
             move |_| state.choose_npc()
         });
         let group = adw::PreferencesGroup::builder()
-            .title("Monsters and Nonplayer Characters")
+            .title(tr("Monsters and Nonplayer Characters"))
             .header_suffix(&buttons)
             .build();
         let encounter = self.encounter.borrow();
         if encounter.monsters.is_empty() && encounter.npcs.is_empty() {
             group.add(
                 &adw::ActionRow::builder()
-                    .title("No monsters or characters")
+                    .title(tr("No monsters or characters"))
                     .css_classes(["dim-label"])
                     .build(),
             );
@@ -505,7 +516,10 @@ impl<H: Host + 'static> State<H> {
                     let p = &encounter.monsters[i];
                     (
                         format!("{} × {}", p.count, p.monster.name),
-                        format!("Hit points {}", hit_point_text(&p.hit_points)),
+                        tr!(
+                            "Hit points {hit_points}",
+                            hit_points = hit_point_text(&p.hit_points)
+                        ),
                         self.rules.stat_line(p),
                         p.count,
                     )
@@ -514,7 +528,7 @@ impl<H: Host + 'static> State<H> {
                     let p = &encounter.npcs[i];
                     (
                         format!("{} × {}", p.count, self.rules.npc_name(p).trim()),
-                        "Nonplayer character".to_owned(),
+                        tr("Nonplayer character").to_owned(),
                         self.rules.npc_line(p),
                         p.count,
                     )
@@ -526,7 +540,7 @@ impl<H: Host + 'static> State<H> {
                 .build();
             let remove = gtk::Button::builder()
                 .icon_name("user-trash-symbolic")
-                .tooltip_text("Remove")
+                .tooltip_text(tr("Remove"))
                 .valign(gtk::Align::Center)
                 .css_classes(["flat"])
                 .build();
@@ -539,9 +553,9 @@ impl<H: Host + 'static> State<H> {
             });
             row.add_suffix(&remove);
             let number = adw::SpinRow::builder()
-                .title("Number")
+                .title(tr("Number"))
                 .subtitle(if matches!(package, Package::Monster(_)) {
-                    "Changing it rolls the hit points again"
+                    tr("Changing it rolls the hit points again")
                 } else {
                     ""
                 })
@@ -583,9 +597,9 @@ impl<H: Host + 'static> State<H> {
                             "{} × {}",
                             p.count, p.monster.name
                         )));
-                        row.set_subtitle(&glib::markup_escape_text(&format!(
-                            "Hit points {}",
-                            hit_point_text(&p.hit_points)
+                        row.set_subtitle(&glib::markup_escape_text(&tr!(
+                            "Hit points {hit_points}",
+                            hit_points = hit_point_text(&p.hit_points)
                         )));
                         stat.set_label(&state.rules.stat_line(p));
                     }
@@ -604,12 +618,12 @@ impl<H: Host + 'static> State<H> {
             return None;
         }
         let group = adw::PreferencesGroup::builder()
-            .title("Characters Not Generated")
-            .description(
+            .title(tr("Characters Not Generated"))
+            .description(tr(
                 "The template also calls for these nonplayer characters. Generating \
                  them needs the NPC generator, which is not available yet; add saved \
                  characters with Add NPC instead.",
-            )
+            ))
             .build();
         for p in &self.pending {
             let classes: Vec<String> = p
@@ -629,7 +643,7 @@ impl<H: Host + 'static> State<H> {
 
     fn treasure_group(self: &Rc<Self>) -> Option<adw::PreferencesGroup> {
         let roll = gtk::Button::builder()
-            .label("_Roll Treasure…")
+            .label(tr("_Roll Treasure…"))
             .use_underline(true)
             .css_classes(["flat"])
             .build();
@@ -643,17 +657,17 @@ impl<H: Host + 'static> State<H> {
             .treasure_rules()
             .summary_with(&encounter.treasure, encounter.prices());
         let group = adw::PreferencesGroup::builder()
-            .title("Treasure")
+            .title(tr("Treasure"))
             .header_suffix(&roll)
             .build();
         if encounter.treasure.is_empty() {
-            group.set_description(Some(
+            group.set_description(Some(tr(
                 "Roll the treasure of the monsters' treasure types and the lair",
-            ));
+            )));
         } else {
-            group.set_description(Some(&format!(
-                "{} gp",
-                cr_store::treasure::thousands(summary.value_cp / 100)
+            group.set_description(Some(&tr!(
+                "{value} gp",
+                value = cr_store::treasure::thousands(summary.value_cp / 100)
             )));
         }
         bundle_rows(&group, &encounter.treasure);
@@ -664,11 +678,11 @@ impl<H: Host + 'static> State<H> {
         let edit = self.items.get()?;
         let encounter = self.encounter.borrow();
         let group = adw::PreferencesGroup::builder()
-            .title("Items")
+            .title(tr("Items"))
             .header_suffix(&crate::bundle::add_button(edit))
             .build();
         if encounter.items.is_empty() {
-            group.set_description(Some("Items found with the encounter"));
+            group.set_description(Some(tr("Items found with the encounter")));
         }
         for row in crate::bundle::rows(edit, &encounter.items) {
             group.add(&row);
@@ -680,7 +694,7 @@ impl<H: Host + 'static> State<H> {
     /// `Database` and `UserDbas/TrapsU.dat`.
     fn traps_group(self: &Rc<Self>) -> Option<adw::PreferencesGroup> {
         let add = gtk::Button::builder()
-            .label("_Add Trap…")
+            .label(tr("_Add Trap…"))
             .use_underline(true)
             .css_classes(["flat"])
             .build();
@@ -690,11 +704,11 @@ impl<H: Host + 'static> State<H> {
         });
         let encounter = self.encounter.borrow();
         let group = adw::PreferencesGroup::builder()
-            .title("Traps")
+            .title(tr("Traps"))
             .header_suffix(&add)
             .build();
         if encounter.traps.is_empty() {
-            group.set_description(Some("No traps"));
+            group.set_description(Some(tr("No traps")));
         }
         for trap in &encounter.traps {
             let row = adw::ActionRow::builder()
@@ -703,7 +717,7 @@ impl<H: Host + 'static> State<H> {
                 .build();
             let remove = gtk::Button::builder()
                 .icon_name("list-remove-symbolic")
-                .tooltip_text("Remove Trap")
+                .tooltip_text(tr("Remove Trap"))
                 .valign(gtk::Align::Center)
                 .css_classes(["flat"])
                 .build();
@@ -731,12 +745,12 @@ impl<H: Host + 'static> State<H> {
         };
         let db = Rc::new(db);
         let filter = gtk::DropDown::builder()
-            .model(&gtk::StringList::new(&Filter::NAMES))
-            .tooltip_text("Show Standard or Custom Traps")
+            .model(&gtk::StringList::new(&Filter::NAMES.map(tr)))
+            .tooltip_text(tr("Show Standard or Custom Traps"))
             .build();
         let new = gtk::Button::builder()
             .icon_name("list-add-symbolic")
-            .tooltip_text("New Trap")
+            .tooltip_text(tr("New Trap"))
             .build();
         let list = gtk::ListBox::builder()
             .css_classes(["boxed-list"])
@@ -763,7 +777,7 @@ impl<H: Host + 'static> State<H> {
                 .build(),
         ));
         let dialog = adw::Dialog::builder()
-            .title("Add Trap")
+            .title(tr("Add Trap"))
             .content_width(480)
             .content_height(600)
             .width_request(360)
@@ -804,10 +818,10 @@ impl<H: Host + 'static> State<H> {
                     }
                     let menu = gio::Menu::new();
                     let actions = gio::SimpleActionGroup::new();
-                    let mut entries = vec![("copy", "_Copy…")];
+                    let mut entries = vec![("copy", tr("_Copy…"))];
                     if origin == Origin::Custom {
-                        entries.insert(0, ("edit", "_Edit…"));
-                        entries.push(("delete", "_Delete"));
+                        entries.insert(0, ("edit", tr("_Edit…")));
+                        entries.push(("delete", tr("_Delete")));
                     }
                     for (action, label) in entries {
                         let a = gio::SimpleAction::new(action, None);
@@ -822,7 +836,7 @@ impl<H: Host + 'static> State<H> {
                         .menu_model(&menu)
                         .css_classes(["flat"])
                         .build();
-                    button.update_property(&[gtk::accessible::Property::Label("Trap Menu")]);
+                    button.update_property(&[gtk::accessible::Property::Label(tr("Trap Menu"))]);
                     button.insert_action_group("trap", Some(&actions));
                     row.add_suffix(&button);
                     row.connect_activated({
@@ -838,12 +852,12 @@ impl<H: Host + 'static> State<H> {
                                 }
                                 Err(e) => {
                                     let alert = adw::AlertDialog::builder()
-                                        .heading("Unable to Add Trap")
+                                        .heading(tr("Unable to Add Trap"))
                                         .body(e.to_string())
                                         .default_response("ok")
                                         .close_response("ok")
                                         .build();
-                                    alert.add_response("ok", "_OK");
+                                    alert.add_response("ok", tr("_OK"));
                                     alert.present(Some(&dialog));
                                 }
                             }
@@ -900,8 +914,8 @@ impl<H: Host + 'static> State<H> {
         let state = self.clone();
         pick_from(
             &self.dialog,
-            "Add Monster",
-            "Search Monsters",
+            tr("Add Monster"),
+            tr("Search Monsters"),
             names,
             move |name| {
                 let rand = state.host.rand();
@@ -929,8 +943,8 @@ impl<H: Host + 'static> State<H> {
         let state = self.clone();
         pick_from(
             &self.dialog,
-            "Add NPC",
-            "Search Characters",
+            tr("Add NPC"),
+            tr("Search Characters"),
             files.iter().map(|(n, _)| n.clone()).collect(),
             move |name| {
                 let Some((_, file)) = files.iter().find(|(n, _)| *n == name) else {
@@ -972,7 +986,7 @@ impl<H: Host + 'static> State<H> {
             if let Some(delete) = self.delete.get() {
                 delete.set_enabled(true);
             }
-            self.host.toast("Encounter saved");
+            self.host.toast(tr("Encounter saved"));
             self.host.reload(
                 "encounters",
                 Some(format!("{}{name}", cr_store::catalog::ENCOUNTER_KEY)),
@@ -985,14 +999,15 @@ impl<H: Host + 'static> State<H> {
             return;
         };
         let alert = adw::AlertDialog::builder()
-            .heading("Delete Encounter?")
-            .body(format!(
-                "“{name}” will be removed from the saved encounters"
+            .heading(tr("Delete Encounter?"))
+            .body(tr!(
+                "“{name}” will be removed from the saved encounters",
+                name
             ))
             .default_response("cancel")
             .close_response("cancel")
             .build();
-        alert.add_responses(&[("cancel", "_Cancel"), ("delete", "_Delete")]);
+        alert.add_responses(&[("cancel", tr("_Cancel")), ("delete", tr("_Delete"))]);
         alert.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
         let state = self.clone();
         alert.connect_response(Some("delete"), move |_, _| {
@@ -1002,7 +1017,7 @@ impl<H: Host + 'static> State<H> {
                 install.write_saved_encounters(&list)
             });
             if errors(&*state.host, result).is_some() {
-                state.host.toast("Encounter deleted");
+                state.host.toast(tr("Encounter deleted"));
                 state.host.reload("encounters", None);
                 state.dialog.close();
             }
@@ -1193,13 +1208,13 @@ fn pick_from(
         })
         .collect();
     let empty = adw::StatusPage::builder()
-        .title("No Results")
+        .title(tr("No Results"))
         .icon_name("edit-find-symbolic")
         .css_classes(["compact"])
         .visible(names.is_empty())
         .build();
     if names.is_empty() {
-        empty.set_title("Nothing to Add");
+        empty.set_title(tr("Nothing to Add"));
     }
     search.connect_search_changed({
         let (rows, empty, list) = (rows.clone(), empty.clone(), list.clone());
@@ -1275,7 +1290,7 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
     let table = Rc::new(RefCell::new(table));
 
     let name = adw::EntryRow::builder()
-        .title("Name")
+        .title(tr("Name"))
         .text(&table.borrow().name)
         .build();
     let about = adw::PreferencesGroup::new();
@@ -1284,22 +1299,26 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
     // Filter.
     let filter = table.borrow().filter.clone();
     let database = adw::ComboRow::builder()
-        .title("Database")
-        .model(&gtk::StringList::new(&["All", "Standard", "Custom"]))
+        .title(tr("Database"))
+        .model(&gtk::StringList::new(&[
+            tr("All"),
+            tr("Standard"),
+            tr("Custom"),
+        ]))
         .selected(filter.source.clamp(0, 2) as u32)
         .build();
     let lair = adw::ComboRow::builder()
-        .title("Lair and/or Wandering")
+        .title(tr("Lair and/or Wandering"))
         .model(&gtk::StringList::new(&[
-            "Lair and Wandering",
-            "Lair or Wandering",
-            "Wandering",
-            "Lair",
+            tr("Lair and Wandering"),
+            tr("Lair or Wandering"),
+            tr("Wandering"),
+            tr("Lair"),
         ]))
         .selected(filter.lair.clamp(0, 3) as u32)
         .build();
     let min = adw::SpinRow::builder()
-        .title("Fewest Hit Dice")
+        .title(tr("Fewest Hit Dice"))
         .adjustment(&gtk::Adjustment::new(
             filter.hit_dice.0 as f64,
             0.0,
@@ -1310,7 +1329,7 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
         ))
         .build();
     let max = adw::SpinRow::builder()
-        .title("Most Hit Dice")
+        .title(tr("Most Hit Dice"))
         .adjustment(&gtk::Adjustment::new(
             filter.hit_dice.1 as f64,
             0.0,
@@ -1321,8 +1340,8 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
         ))
         .build();
     let climates = adw::ExpanderRow::builder()
-        .title("Climate and Terrain")
-        .subtitle("Where the templates may be encountered")
+        .title(tr("Climate and Terrain"))
+        .subtitle(tr("Where the templates may be encountered"))
         .build();
     let mut checks = Vec::new();
     for (i, place) in CLIMATES.iter().chain(TERRAINS.iter()).enumerate() {
@@ -1331,7 +1350,7 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
             .valign(gtk::Align::Center)
             .build();
         let row = adw::ActionRow::builder()
-            .title(*place)
+            .title(tr(place))
             .activatable_widget(&check)
             .build();
         row.add_prefix(&check);
@@ -1339,8 +1358,10 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
         checks.push(check);
     }
     let filter_group = adw::PreferencesGroup::builder()
-        .title("Filter")
-        .description("Fill picks templates that pass the filter, by frequency")
+        .title(tr("Filter"))
+        .description(tr(
+            "Fill picks templates that pass the filter, by frequency",
+        ))
         .build();
     filter_group.add(&database);
     filter_group.add(&min);
@@ -1371,27 +1392,27 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
     let mut names: Vec<String> = rules.templates().iter().map(|t| t.name.clone()).collect();
     names.sort_by_cached_key(|n| cr_store::collate::sort_key(n));
     names.dedup();
-    let mut choices = vec!["(None)".to_owned()];
+    let mut choices = vec![tr("(None)").to_owned()];
     choices.extend(names);
     let choices = Rc::new(choices);
     let model = gtk::StringList::new(&choices.iter().map(String::as_str).collect::<Vec<_>>());
     let fill = gtk::Button::builder()
-        .label("_Fill")
+        .label(tr("_Fill"))
         .use_underline(true)
-        .tooltip_text("Pick a template for every roll")
+        .tooltip_text(tr("Pick a template for every roll"))
         .css_classes(["flat"])
         .build();
     let roll = gtk::Button::builder()
-        .label("_Roll")
+        .label(tr("_Roll"))
         .use_underline(true)
-        .tooltip_text("Roll 1d8+1d12 and create its encounter")
+        .tooltip_text(tr("Roll 1d8+1d12 and create its encounter"))
         .css_classes(["flat"])
         .build();
     let buttons = gtk::Box::builder().spacing(6).build();
     buttons.append(&fill);
     buttons.append(&roll);
     let slots_group = adw::PreferencesGroup::builder()
-        .title("Rolls")
+        .title(tr("Rolls"))
         .header_suffix(&buttons)
         .build();
     let slot_rows: Vec<adw::ComboRow> = (0..19)
@@ -1448,7 +1469,11 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
                 .borrow_mut()
                 .fill(&candidates, &mut host.rand().borrow_mut());
             show_slots();
-            host.toast(&format!("{count} templates pass the filter"));
+            host.toast(&trn!(
+                "{n} template passes the filter",
+                "{n} templates pass the filter",
+                count
+            ));
         }
     });
 
@@ -1457,13 +1482,13 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
     page.add(&filter_group);
     page.add(&slots_group);
     let save = gtk::Button::builder()
-        .label("_Save")
+        .label(tr("_Save"))
         .use_underline(true)
         .css_classes(["suggested-action"])
         .build();
     let delete = gtk::Button::builder()
         .icon_name("user-trash-symbolic")
-        .tooltip_text("Delete Table")
+        .tooltip_text(tr("Delete Table"))
         .visible(saved.is_some())
         .build();
     let header = adw::HeaderBar::new();
@@ -1473,7 +1498,7 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
     view.add_top_bar(&header);
     view.set_content(Some(&page));
     let dialog = adw::Dialog::builder()
-        .title(saved.unwrap_or("New Encounter Table"))
+        .title(saved.unwrap_or(tr("New Encounter Table")))
         .content_width(640)
         .content_height(760)
         .width_request(360)
@@ -1489,11 +1514,11 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
             let slot = table.borrow().slot(r).map(str::to_owned);
             match slot {
                 Some(name) if !name.is_empty() => {
-                    host.toast(&format!("Rolled {r}: {name}"));
+                    host.toast(&tr!("Rolled {roll}: {template}", roll = r, template = name));
                     dialog.close();
                     create_from_template(&host, &name);
                 }
-                _ => host.toast(&format!("Rolled {r}, which has no template")),
+                _ => host.toast(&tr!("Rolled {roll}, which has no template", roll = r)),
             }
         }
     });
@@ -1505,7 +1530,7 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
             let mut t = table.borrow().clone();
             t.name = name.text().trim().to_owned();
             if t.name.is_empty() {
-                return host.toast("A name must be supplied.");
+                return host.toast(tr("A name must be supplied."));
             }
             let result = host.with_install(|install| {
                 let mut tables = install.frequency_tables()?;
@@ -1514,7 +1539,7 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
                     .iter()
                     .any(|x| x.name.eq_ignore_ascii_case(&t.name) && Some(&x.name) != old.as_ref());
                 if clash {
-                    return Err(cr_store::Error::Invalid("Name already used.".into()));
+                    return Err(cr_store::Error::Invalid(tr("Name already used.").into()));
                 }
                 match old
                     .as_ref()
@@ -1526,7 +1551,7 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
                 install.write_frequency_tables(&tables)
             });
             if errors(&*host, result).is_some() {
-                host.toast("Table saved");
+                host.toast(tr("Table saved"));
                 host.reload(
                     "tables",
                     Some(format!("{}{}", cr_store::catalog::TABLE_KEY, t.name)),
@@ -1540,12 +1565,12 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
         move |_| {
             let Some(old) = old.clone() else { return };
             let alert = adw::AlertDialog::builder()
-                .heading("Delete Encounter Table?")
-                .body(format!("“{old}” will be removed"))
+                .heading(tr("Delete Encounter Table?"))
+                .body(tr!("“{name}” will be removed", name = old))
                 .default_response("cancel")
                 .close_response("cancel")
                 .build();
-            alert.add_responses(&[("cancel", "_Cancel"), ("delete", "_Delete")]);
+            alert.add_responses(&[("cancel", tr("_Cancel")), ("delete", tr("_Delete"))]);
             alert.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
             let (host, dialog2) = (host.clone(), dialog.clone());
             alert.connect_response(Some("delete"), move |_, _| {
@@ -1555,7 +1580,7 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
                     install.write_frequency_tables(&tables)
                 });
                 if errors(&*host, result).is_some() {
-                    host.toast("Table deleted");
+                    host.toast(tr("Table deleted"));
                     host.reload("tables", None);
                     dialog2.close();
                 }
@@ -1568,45 +1593,45 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
 
 /// Climate flags 0-4 of templates and tables.
 const CLIMATES: [&str; 5] = [
-    "Arctic",
-    "Sub-Arctic",
-    "Temperate",
-    "Sub-Tropical",
-    "Tropical",
+    tr_noop!("Arctic"),
+    tr_noop!("Sub-Arctic"),
+    tr_noop!("Temperate"),
+    tr_noop!("Sub-Tropical"),
+    tr_noop!("Tropical"),
 ];
 
 /// Terrain flags 5-36 (table 0x67f3cc).
 const TERRAINS: [&str; 32] = [
-    "Aerial",
-    "Bush",
-    "Caves",
-    "Coastal",
-    "Deserts",
-    "Farmland",
-    "Forests",
-    "Glaciers",
-    "Grasslands",
-    "Jungles",
-    "Fresh-Water Lakes",
-    "Salt-Water Lakes",
-    "High Mountains",
-    "High Mountain Forests",
-    "High Mountain Lakes",
-    "Low Mountains",
-    "Low Mountain Forests",
-    "Low Mountain Lakes",
-    "Deep Oceans",
-    "Shallow Oceans",
-    "Parkland",
-    "Scrub Plains",
-    "Rain Forests",
-    "Fresh-Water Rivers",
-    "Salt-Water Rivers",
-    "Rough/Hills",
-    "Salt Marshes",
-    "Steppes",
-    "Subterranean",
-    "Fresh-Water Swamps",
-    "Salt-Water Swamps",
-    "Tundras",
+    tr_noop!("Aerial"),
+    tr_noop!("Bush"),
+    tr_noop!("Caves"),
+    tr_noop!("Coastal"),
+    tr_noop!("Deserts"),
+    tr_noop!("Farmland"),
+    tr_noop!("Forests"),
+    tr_noop!("Glaciers"),
+    tr_noop!("Grasslands"),
+    tr_noop!("Jungles"),
+    tr_noop!("Fresh-Water Lakes"),
+    tr_noop!("Salt-Water Lakes"),
+    tr_noop!("High Mountains"),
+    tr_noop!("High Mountain Forests"),
+    tr_noop!("High Mountain Lakes"),
+    tr_noop!("Low Mountains"),
+    tr_noop!("Low Mountain Forests"),
+    tr_noop!("Low Mountain Lakes"),
+    tr_noop!("Deep Oceans"),
+    tr_noop!("Shallow Oceans"),
+    tr_noop!("Parkland"),
+    tr_noop!("Scrub Plains"),
+    tr_noop!("Rain Forests"),
+    tr_noop!("Fresh-Water Rivers"),
+    tr_noop!("Salt-Water Rivers"),
+    tr_noop!("Rough/Hills"),
+    tr_noop!("Salt Marshes"),
+    tr_noop!("Steppes"),
+    tr_noop!("Subterranean"),
+    tr_noop!("Fresh-Water Swamps"),
+    tr_noop!("Salt-Water Swamps"),
+    tr_noop!("Tundras"),
 ];

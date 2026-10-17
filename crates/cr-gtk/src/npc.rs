@@ -5,6 +5,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_i18n::{tr, tr_noop, trn};
 use cr_store::npc::{Abilities, Choice, GroupOptions, Npc, NpcOptions, NpcRules};
 use cr_store::treasure::{Flavor, Rand};
 use cr_store::{Installation, Result};
@@ -24,16 +25,22 @@ pub trait Host {
 }
 
 const ABILITIES: [&str; 6] = [
-    "Strength",
-    "Dexterity",
-    "Constitution",
-    "Intelligence",
-    "Wisdom",
-    "Charisma",
+    tr_noop!("Strength"),
+    tr_noop!("Dexterity"),
+    tr_noop!("Constitution"),
+    tr_noop!("Intelligence"),
+    tr_noop!("Wisdom"),
+    tr_noop!("Charisma"),
 ];
 
 /// The class groups of Create Multiple NPCs, in combination order.
-const GROUPS: [&str; 5] = ["Warrior", "Rogue", "Priest", "Wizard", "Psionicist"];
+const GROUPS: [&str; 5] = [
+    tr_noop!("Warrior"),
+    tr_noop!("Rogue"),
+    tr_noop!("Priest"),
+    tr_noop!("Wizard"),
+    tr_noop!("Psionicist"),
+];
 
 fn spin_row(title: &str, value: i32, min: i32, max: i32) -> adw::SpinRow {
     adw::SpinRow::builder()
@@ -79,8 +86,11 @@ fn combo_row(title: &str, items: &[String]) -> adw::ComboRow {
 
 fn rules_row() -> adw::ComboRow {
     adw::ComboRow::builder()
-        .title("Rules")
-        .model(&gtk::StringList::new(&["Core Rules", "Player's Option"]))
+        .title(tr("Rules"))
+        .model(&gtk::StringList::new(&[
+            tr("Core Rules"),
+            "Player's Option",
+        ]))
         .build()
 }
 
@@ -127,17 +137,22 @@ pub fn new_npc<H: Host + 'static>(host: &Rc<H>) {
 
     // Race and class.
     let all_races = adw::SwitchRow::builder()
-        .title("All Races")
-        .subtitle("Include races that are not standard")
+        .title(tr("All Races"))
+        .subtitle(tr("Include races that are not standard"))
         .build();
-    let race = combo_row("Race", if standard.is_empty() { &all } else { &standard });
+    let race = combo_row(
+        tr("Race"),
+        if standard.is_empty() { &all } else { &standard },
+    );
     let all_classes = adw::SwitchRow::builder()
-        .title("All Classes")
-        .subtitle("Include classes the race may not take")
+        .title(tr("All Classes"))
+        .subtitle(tr("Include classes the race may not take"))
         .build();
-    let class = adw::ComboRow::builder().title("Class").build();
+    let class = adw::ComboRow::builder().title(tr("Class")).build();
     let rules_choice = rules_row();
-    let character = adw::PreferencesGroup::builder().title("Character").build();
+    let character = adw::PreferencesGroup::builder()
+        .title(tr("Character"))
+        .build();
     character.add(&race);
     character.add(&all_races);
     character.add(&class);
@@ -145,19 +160,19 @@ pub fn new_npc<H: Host + 'static>(host: &Rc<H>) {
     character.add(&rules_choice);
 
     // Levels, one per class of the chosen combination.
-    let levels_group = adw::PreferencesGroup::builder().title("Levels").build();
+    let levels_group = adw::PreferencesGroup::builder().title(tr("Levels")).build();
     let level_rows: Rc<RefCell<Vec<adw::SpinRow>>> = Rc::default();
     let options: Rc<RefCell<Vec<Vec<String>>>> = Rc::default();
 
     // Ability scores.
     let roll = gtk::Button::builder()
-        .label("_Roll")
+        .label(tr("_Roll"))
         .use_underline(true)
         .valign(gtk::Align::Center)
         .css_classes(["flat"])
         .build();
     let clear = gtk::Button::builder()
-        .label("_Clear")
+        .label(tr("_Clear"))
         .use_underline(true)
         .valign(gtk::Align::Center)
         .css_classes(["flat"])
@@ -167,26 +182,26 @@ pub fn new_npc<H: Host + 'static>(host: &Rc<H>) {
     ability_buttons.append(&clear);
     ability_buttons.append(&roll);
     let abilities_group = adw::PreferencesGroup::builder()
-        .title("Ability Scores")
-        .description("Rolled with the NPC unless you roll them now")
+        .title(tr("Ability Scores"))
+        .description(tr("Rolled with the NPC unless you roll them now"))
         .header_suffix(&ability_buttons)
         .build();
     let ability_rows: Vec<adw::SpinRow> = ABILITIES
         .iter()
         .map(|name| {
-            let row = spin_row(name, 10, 1, 25);
+            let row = spin_row(tr(name), 10, 1, 25);
             row.set_visible(false);
             abilities_group.add(&row);
             row
         })
         .collect();
-    let exceptional = spin_row("Exceptional Strength", 0, 0, 100);
-    exceptional.set_subtitle("1 to 100 for 18/01 to 18/00");
+    let exceptional = spin_row(tr("Exceptional Strength"), 0, 0, 100);
+    exceptional.set_subtitle(tr("1 to 100 for 18/01 to 18/00"));
     exceptional.set_visible(false);
     abilities_group.add(&exceptional);
     let rolled: Rc<RefCell<Option<Abilities>>> = Rc::default();
 
-    let party = adw::EntryRow::builder().title("Party").build();
+    let party = adw::EntryRow::builder().title(tr("Party")).build();
     let save_group = adw::PreferencesGroup::new();
     save_group.add(&party);
     save_group.set_visible(expansion);
@@ -196,8 +211,8 @@ pub fn new_npc<H: Host + 'static>(host: &Rc<H>) {
     page.add(&levels_group);
     page.add(&abilities_group);
     page.add(&save_group);
-    let create = create_button("_Create");
-    let dialog = dialog("New NPC", &page, &create);
+    let create = create_button(tr("_Create"));
+    let dialog = dialog(tr("New NPC"), &page, &create);
 
     let selected_race = {
         let race = race.clone();
@@ -317,9 +332,9 @@ pub fn new_npc<H: Host + 'static>(host: &Rc<H>) {
         );
         move |a: Option<&Abilities>| {
             abilities_group.set_description(Some(if a.is_some() {
-                "The NPC keeps these scores"
+                tr("The NPC keeps these scores")
             } else {
-                "Rolled with the NPC unless you roll them now"
+                tr("Rolled with the NPC unless you roll them now")
             }));
             for (i, row) in ability_rows.iter().enumerate() {
                 row.set_visible(a.is_some());
@@ -411,9 +426,9 @@ pub fn new_npc<H: Host + 'static>(host: &Rc<H>) {
                 Some(Ok(file)) => {
                     dialog.close();
                     host.reload("characters", Some(file));
-                    host.toast(&format!(
-                        "{} was created",
-                        glib::markup_escape_text(&npc.character.data.name)
+                    host.toast(&tr!(
+                        "{name} was created",
+                        name = glib::markup_escape_text(&npc.character.data.name)
                     ));
                 }
                 Some(Err(e)) => host.toast(&e.to_string()),
@@ -425,11 +440,28 @@ pub fn new_npc<H: Host + 'static>(host: &Rc<H>) {
 }
 
 /// "~Random" in the dialog's choices.
-const RANDOM: &str = "~Random";
+const RANDOM: &str = tr_noop!("~Random");
 /// The class choice that takes no class of a group.
-const NO_CLASS: &str = "None";
+const NO_CLASS: &str = tr_noop!("None");
 /// The kit choice that takes no kit.
 const NO_KIT: &str = "NONE";
+
+/// The texts a choice row shows for `items`: the first `fixed` are the
+/// dialog's own choices ("~Random", "None"), translated; the rest are
+/// names from the data. The row's selection is read back from `items`.
+fn shown(items: &[String], fixed: usize) -> Vec<String> {
+    items
+        .iter()
+        .enumerate()
+        .map(|(i, s)| {
+            if i < fixed {
+                tr(s).to_owned()
+            } else {
+                s.clone()
+            }
+        })
+        .collect()
+}
 
 /// A choice row's selection: `items[0]` is "~Random".
 fn choice(row: &adw::ComboRow, items: &[String]) -> Choice {
@@ -450,12 +482,12 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
     };
     let mut races = vec![RANDOM.to_owned()];
     races.extend(rules.races());
-    let race = combo_row("Race", &races);
-    let fewest = spin_row("Fewest", 1, 1, 100);
-    let most = spin_row("Most", 1, 1, 100);
+    let race = combo_row(tr("Race"), &shown(&races, 1));
+    let fewest = spin_row(tr("Fewest"), 1, 1, 100);
+    let most = spin_row(tr("Most"), 1, 1, 100);
     let rules_choice = rules_row();
-    let party = adw::EntryRow::builder().title("Group Name").build();
-    let group = adw::PreferencesGroup::builder().title("Group").build();
+    let party = adw::EntryRow::builder().title(tr("Group Name")).build();
+    let group = adw::PreferencesGroup::builder().title(tr("Group")).build();
     group.add(&party);
     group.add(&race);
     group.add(&fewest);
@@ -463,13 +495,13 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
     group.add(&rules_choice);
 
     let allowed = adw::SwitchRow::builder()
-        .title("Allowed Combination")
-        .subtitle("Each NPC takes a class combination its race allows")
+        .title(tr("Allowed Combination"))
+        .subtitle(tr("Each NPC takes a class combination its race allows"))
         .active(true)
         .build();
     let classes_group = adw::PreferencesGroup::builder()
-        .title("Classes")
-        .description("A class of each group, or none")
+        .title(tr("Classes"))
+        .description(tr("A class of each group, or none"))
         .build();
     classes_group.add(&allowed);
     let class_rows: Vec<(adw::ComboRow, Vec<String>)> = GROUPS
@@ -478,7 +510,7 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
         .map(|(g, name)| {
             let mut items = vec![RANDOM.to_owned(), NO_CLASS.to_owned()];
             items.extend(rules.group_classes(g));
-            let row = combo_row(name, &items);
+            let row = combo_row(tr(name), &shown(&items, 2));
             // Without a choice only the warrior group takes a class.
             row.set_selected(if g == 0 { 0 } else { 1 });
             row.set_sensitive(false);
@@ -496,31 +528,34 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
     });
     let mut kits = vec![RANDOM.to_owned(), NO_KIT.to_owned()];
     kits.extend(rules.kits());
-    let kit = combo_row("Kit", &kits);
+    let kit = combo_row(tr("Kit"), &shown(&kits, 1));
     let mut alignments = vec![RANDOM.to_owned()];
     alignments.extend(rules.alignments());
-    let alignment = combo_row("Alignment", &alignments);
+    let alignment = combo_row(tr("Alignment"), &shown(&alignments, 1));
     classes_group.add(&kit);
     classes_group.add(&alignment);
 
     let levels_group = adw::PreferencesGroup::builder()
-        .title("Levels")
-        .description("Lowest and highest level for each class group")
+        .title(tr("Levels"))
+        .description(tr("Lowest and highest level for each class group"))
         .build();
     let levels: Vec<(gtk::SpinButton, gtk::SpinButton)> = GROUPS
         .iter()
         .map(|name| {
             let low = spin_button(1, 1, 30);
             let high = spin_button(1, 1, 30);
-            low.update_property(&[gtk::accessible::Property::Label(&format!(
-                "Lowest {name} Level"
+            let name = tr(name);
+            low.update_property(&[gtk::accessible::Property::Label(&tr!(
+                "Lowest {name} Level",
+                name
             ))]);
-            high.update_property(&[gtk::accessible::Property::Label(&format!(
-                "Highest {name} Level"
+            high.update_property(&[gtk::accessible::Property::Label(&tr!(
+                "Highest {name} Level",
+                name
             ))]);
-            let to = gtk::Label::new(Some("to"));
+            let to = gtk::Label::new(Some(tr("to")));
             to.add_css_class("dim-label");
-            let row = adw::ActionRow::builder().title(*name).build();
+            let row = adw::ActionRow::builder().title(name).build();
             row.add_suffix(&low);
             row.add_suffix(&to);
             row.add_suffix(&high);
@@ -532,11 +567,11 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
     // The lines added so far, shown sorted as the original's list.
     let lines: Rc<RefCell<Vec<GroupOptions>>> = Rc::default();
     let lines_group = adw::PreferencesGroup::builder()
-        .title("Lines")
-        .description("Without lines, Create makes the line above")
+        .title(tr("Lines"))
+        .description(tr("Without lines, Create makes the line above"))
         .build();
     let add = gtk::Button::builder()
-        .label("_Add Line")
+        .label(tr("_Add Line"))
         .use_underline(true)
         .valign(gtk::Align::Center)
         .build();
@@ -600,8 +635,8 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
     page.add(&classes_group);
     page.add(&levels_group);
     page.add(&lines_group);
-    let create = create_button("_Create");
-    let dialog = dialog("New NPC Group", &page, &create);
+    let create = create_button(tr("_Create"));
+    let dialog = dialog(tr("New NPC Group"), &page, &create);
     fewest.connect_value_notify({
         let most = most.clone();
         move |row| {
@@ -624,7 +659,7 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
         move |_| {
             let name = party.text().trim().to_owned();
             if name.is_empty() {
-                return host.toast("A group name must be supplied.");
+                return host.toast(tr("A group name must be supplied."));
             }
             let mut lines = lines.borrow().clone();
             if lines.is_empty() {
@@ -647,10 +682,11 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
                 Some(Ok(last)) => {
                     dialog.close();
                     host.reload("characters", last);
-                    host.toast(&match npcs.len() {
-                        1 => "1 NPC was created".to_owned(),
-                        n => format!("{n} NPCs were created"),
-                    });
+                    host.toast(&trn!(
+                        "{n} NPC was created",
+                        "{n} NPCs were created",
+                        npcs.len()
+                    ));
                 }
                 Some(Err(e)) => host.toast(&e.to_string()),
                 None => {}
