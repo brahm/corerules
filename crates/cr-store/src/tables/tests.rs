@@ -63,6 +63,7 @@ fn a_table_roll_avoids_the_previous_result_and_its_neighbours() {
     // The comparison is with the sum before the modifier, as in 0x538d84.
     let mut session = Session {
         previous: Some(105),
+        ..Session::default()
     };
     let mut rand = Rand::seeded(2);
     let r = session.roll(&mut rand, d(1, 100).plus(100));
@@ -81,7 +82,10 @@ fn a_roll_draws_like_the_original() {
 
 #[test]
 fn a_hopeless_reroll_gives_up() {
-    let mut session = Session { previous: Some(1) };
+    let mut session = Session {
+        previous: Some(1),
+        ..Session::default()
+    };
     let r = session.roll(&mut Rand::seeded(3), d(1, 2));
     assert!((1..=2).contains(&r));
 }
@@ -919,4 +923,70 @@ fn spell_picks_match_the_original() {
             .collect();
         assert_eq!(spell_picks(&out), want, "seed {seed}, Table {table}");
     }
+}
+
+fn dmg_entry(number: u16) -> &'static ListEntry {
+    LIST.iter()
+        .find(|e| e.book == TableBook::Dmg && e.number == Some(number))
+        .unwrap()
+}
+
+#[test]
+fn every_dialog_but_the_treasure_one_has_a_place() {
+    let homeless: Vec<_> = LIST
+        .iter()
+        .filter(|e| super::data::frame(e).is_none())
+        .map(|e| (e.book, e.number))
+        .collect();
+    assert_eq!(homeless, [(TableBook::Dmg, Some(84))]);
+    assert_eq!(super::data::frame(dmg_entry(26)), Some(0));
+    assert_eq!(super::data::frame(dmg_entry(43)), Some(-12));
+    assert_eq!(super::data::frame(dmg_entry(54)), Some(-8));
+    assert_eq!(super::data::frame(dmg_entry(110)), Some(-12));
+}
+
+/// A session traced under Wine (DMG 86, 86, 86, 86, 26, 86, 43, 86, 54,
+/// 26, each in a new Roll Results dialog): the rand() state before the
+/// first roll, and each dialog's result and number of draws.
+#[test]
+fn a_new_dialog_starts_from_what_an_earlier_one_left() {
+    let mut rand = Rand::seeded(0x13b);
+    let mut stack = Leftovers::default();
+    let steps: [(u16, Dice, i32, u32); 10] = [
+        (86, d(1, 6), 6, 1),
+        // The previous dialog's 6 carries over.
+        (86, d(1, 6), 4, 1),
+        // A 3 is within 1 of the 4 left behind: rolled again.
+        (86, d(1, 6), 1, 2),
+        (86, d(1, 6), 6, 2),
+        // Table 26's place holds a pointer: free.
+        (26, d(1, 10), 8, 1),
+        // Table 26's dialog put its vtable at 86's place.
+        (86, d(1, 6), 3, 1),
+        (43, d(1, 20), 10, 1),
+        // Table 43's dialog left a 0 there; a 2 is not within 1 of it.
+        (86, d(1, 6), 2, 1),
+        // Table 54 shares 86's place: compared with the 2.
+        (54, d(2, 10), 18, 2),
+        (26, d(1, 10), 3, 1),
+    ];
+    for (i, (table, dice, result, draws)) in steps.into_iter().enumerate() {
+        let mut session = stack.open(dmg_entry(table));
+        let before = rand.calls();
+        assert_eq!(session.roll(&mut rand, dice), result, "dialog {i}");
+        assert_eq!(rand.calls() - before, u64::from(draws), "dialog {i}");
+        stack.close(&session);
+    }
+    // Table 54's dialog put its name over 43's place, and a critical hit
+    // dialog leaves a 1 there.
+    let session = stack.open(dmg_entry(43));
+    assert_eq!(session.previous, None);
+    stack.close(&session);
+    let critical = LIST
+        .iter()
+        .find(|e| e.book == TableBook::CombatTactics)
+        .unwrap();
+    let session = stack.open(critical);
+    stack.close(&session);
+    assert_eq!(stack.open(dmg_entry(43)).previous, Some(1));
 }

@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use cr_store::Installation;
-use cr_store::tables::{Block, ListEntry, RollResult, Session, TableBook, TableRolls};
+use cr_store::tables::{Block, Leftovers, ListEntry, RollResult, Session, TableBook, TableRolls};
 use cr_store::treasure::Rand;
 use gtk::{gio, glib};
 
@@ -18,6 +18,9 @@ thread_local! {
     static CACHE: RefCell<Option<(PathBuf, Rc<TableRolls>)>> = const { RefCell::new(None) };
     /// The book and table chosen last.
     static LAST: Cell<Option<(TableBook, usize)>> = const { Cell::new(None) };
+    /// What the closed Roll Results dialogs left for the next one; it
+    /// outlives the dialog, as the original's stack does.
+    static LEFTOVERS: RefCell<Leftovers> = RefCell::new(Leftovers::default());
 }
 
 /// Opens the dialog over `parent`. `open_book` opens a book (by file name)
@@ -344,7 +347,9 @@ impl Ui {
         // The dialog keeps its roller alive.
         let keep = RefCell::new(Some(roller));
         self.dialog.connect_closed(move |_| {
-            keep.borrow_mut().take();
+            if let Some(roller) = keep.borrow_mut().take() {
+                roller.close_session();
+            }
         });
     }
 }
@@ -393,7 +398,7 @@ impl Roller {
         for row in self.param_rows.borrow_mut().drain(..) {
             self.options.remove(&row);
         }
-        self.session.replace(Session::default());
+        self.close_session();
         self.again.set_sensitive(false);
         let Some(entry) = self.entry() else { return };
         LAST.set(Some((self.book(), self.table_row.selected() as usize)));
@@ -437,10 +442,19 @@ impl Roller {
         self.filling.set(false);
     }
 
+    /// Ends the Roll Results session, as closing the original's dialog
+    /// does.
+    fn close_session(&self) {
+        let session = self.session.take();
+        LEFTOVERS.with_borrow_mut(|l| l.close(&session));
+    }
+
     fn roll(&self, again: bool) {
         let Some(entry) = self.entry() else { return };
         if !again {
-            self.session.replace(Session::default());
+            self.close_session();
+            let session = LEFTOVERS.with_borrow_mut(|l| l.open(entry));
+            self.session.replace(session);
         }
         let result = self.rolls.roll(
             entry,

@@ -19,7 +19,9 @@
 //!   (0x538d84) sums the dice and rolls again while the sum is within 1 of
 //!   the previous result of the dialog, then adds the modifier; that
 //!   previous result carries over to Roll Again and to chained tables
-//!   ([`Session`]). Subtable choices ("D6") use a plain `1 + rand() % n`
+//!   ([`Session`]). A new dialog starts from what its place on the stack
+//!   holds, often the last result of an earlier dialog ([`Leftovers`]).
+//!   Subtable choices ("D6") use a plain `1 + rand() % n`
 //!   (0x554d44) with no such rule.
 //! * The entry chosen is the first record whose high roll reaches the
 //!   roll; `/nK` lines print under the first.
@@ -56,11 +58,10 @@
 //! * Double-clicking a result only selects its line, as in both
 //!   programs: the Roll Results list opens nothing.
 //!
-//! Where this differs (the code was not followed far enough):
+//! Where this differs:
 //!
-//! * The first roll of a dialog: the original compares with an
-//!   uninitialised previous result (stack memory); here the first roll is
-//!   free.
+//! * What the stack holds before the first dialog at a place is unknown
+//!   (under Wine it is what Wine left), so that first roll is free.
 //! * Column layout: the original pads to fixed character columns in a
 //!   proportional font, so its columns do not line up; here they do.
 
@@ -546,10 +547,93 @@ impl Block {
 }
 
 /// The state a Roll Results dialog keeps between rolls: the previous
-/// result of its table object.
+/// result of its table object. `None` when it holds nothing a roll can
+/// come within 1 of (a pointer the stack held before).
 #[derive(Debug, Clone, Default)]
 pub struct Session {
     previous: Option<i32>,
+    /// Where the dialog's table object sits, from [`Leftovers::open`].
+    place: Option<Place>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Place {
+    offset: i32,
+    /// The critical hit dialogs (ids 100..109, 200..400) set the plain
+    /// dialog's `+0x9d4` (offset −4) to 1.
+    critical: bool,
+    /// The program rolls this table in code the port does not follow.
+    computed: bool,
+}
+
+/// What the Roll Results dialogs leave on the stack for the next one.
+///
+/// The table object's previous result (`+8`) is never initialised: a new
+/// dialog compares its first roll with whatever its place on the stack
+/// holds. That is the last result of an earlier dialog whose object sat
+/// at the same place, until another dialog writes there, even after the
+/// Table Rolls list is closed and opened again (traced under Wine). The
+/// words from −12 to +8 are kept here; what the stack held before the
+/// first dialog is unknown (under Wine, values Wine itself left), so the
+/// first roll at each place is free.
+#[derive(Debug, Clone, Default)]
+pub struct Leftovers {
+    words: [Option<i32>; 6],
+}
+
+impl Leftovers {
+    fn word(&mut self, offset: i32) -> Option<&mut Option<i32>> {
+        let i = usize::try_from(offset + 12).ok()? / 4;
+        self.words.get_mut(i)
+    }
+
+    fn set(&mut self, offset: i32, value: Option<i32>) {
+        if let Some(w) = self.word(offset) {
+            *w = value;
+        }
+    }
+
+    /// Opens the Roll Results dialog of `entry`: its first roll compares
+    /// with what its place holds.
+    pub fn open(&mut self, entry: &ListEntry) -> Session {
+        let Some(offset) = data::frame(entry) else {
+            self.words = Default::default();
+            return Session::default();
+        };
+        let previous = self.word(offset + 8).and_then(|w| *w);
+        // The object's vtable and name (+0, +4), the record array's vtable
+        // and data pointer (+0x10, +0x14, filled when the table is read),
+        // and +0xc, which 0x5125d0 / 0x526519 set to 0 before a roll.
+        for at in [0, 4, 0x10, 0x14] {
+            self.set(offset + at, None);
+        }
+        self.set(offset + 0xc, Some(0));
+        Session {
+            previous,
+            place: Some(Place {
+                offset,
+                critical: entry.steps.iter().any(|s| matches!(s, Step::Critical(_))),
+                computed: entry.steps.is_empty(),
+            }),
+        }
+    }
+
+    /// Closes the dialog of `session`, leaving its last result at its
+    /// place.
+    pub fn close(&mut self, session: &Session) {
+        let Some(place) = session.place else {
+            return;
+        };
+        let last = if place.computed {
+            None
+        } else {
+            session.previous
+        };
+        self.set(place.offset + 8, last);
+        if place.critical {
+            self.set(-4, Some(1));
+        }
+    }
 }
 
 impl Session {

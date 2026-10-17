@@ -867,6 +867,47 @@ const SPELL_LEVEL: ParamSpec = ParamSpec {
 
 use TableBook::{CombatTactics, Dmg, HighLevel, Phb, SkillsPowers, SpellsMagic};
 
+/// Where the Roll Results dialog of each list entry keeps its table
+/// object (0x5381b0), in bytes from where the plain dialog keeps it, by
+/// book in list order. Every launcher of 0x52f620 builds its dialog on
+/// its own stack frame at the same depth: the plain dialog (0x50c3a0 at
+/// `ebp - 0x1ac8`, object at `+0x9d8`) is at 0, the one of 0x51d2b0
+/// (object at `+0x708`) at −8 from `ebp - 0x1800` and at −12 from
+/// `ebp - 0x1804`, and the plain one at −12 when an intermediate function
+/// (0x530b24, 0x530a3f, 0x5332dd) calls its launcher. `None`: Table 84's
+/// treasure dialog (0x530ee9), which has no table object and covers the
+/// place with its own members.
+const FRAMES: &[(TableBook, &[Option<i32>])] = {
+    const P: Option<i32> = Some(0);
+    const B: Option<i32> = Some(-8);
+    const C: Option<i32> = Some(-12);
+    &[
+        (HighLevel, &[P, P, P]),
+        (
+            Dmg,
+            &[
+                P, C, P, B, B, P, None, B, B, B, B, B, C, B, B, B, B, B, C, B, B, B, B, B, B, B, C,
+                B, B, B, B, P, C, B, P, B, B, B, B, B, B,
+            ],
+        ),
+        (Phb, &[P, P, B, B, B, B, P, P, C]),
+        (CombatTactics, &[P]),
+        (SkillsPowers, &[B, P, P, C, B, B, B, B]),
+        (SpellsMagic, &[P, P, P, P, B, P, P, P, P]),
+    ]
+};
+
+/// The place of `entry`'s table object (see [`FRAMES`]); `None` for an
+/// entry that is not in [`LIST`].
+pub fn frame(entry: &ListEntry) -> Option<i32> {
+    let index = LIST
+        .iter()
+        .filter(|e| e.book == entry.book)
+        .position(|e| e == entry)?;
+    let (_, frames) = FRAMES.iter().find(|(b, _)| *b == entry.book)?;
+    frames.get(index).copied().flatten()
+}
+
 /// The Tables list of each book, in the original's order.
 pub const LIST: &[ListEntry] = &[
     // DM Option: High-Level Campaigns.
