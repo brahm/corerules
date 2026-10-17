@@ -70,7 +70,14 @@ fn every_list_entry_rolls() {
                         .collect();
                     let result = rolls.roll(entry, &chosen, &mut session, &mut rand);
                     assert!(!result.blocks.is_empty(), "{}", rolls.entry_title(entry));
-                    assert!(!result.to_text().is_empty());
+                    let text = result.to_text();
+                    assert!(!text.is_empty());
+                    // The program's own text is all there.
+                    assert!(
+                        !text.contains("read from the original program"),
+                        "{}: {text}",
+                        rolls.entry_title(entry)
+                    );
                 }
             }
         }

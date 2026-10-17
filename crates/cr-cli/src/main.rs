@@ -1008,18 +1008,10 @@ fn cmd_table(install: &Installation, args: &[String]) -> cr_store::Result<()> {
         TableBook::SkillsPowers => "posp",
         TableBook::SpellsMagic => "posm",
     };
-    let entry_key = |e: &cr_store::tables::ListEntry| match (e.number, e.label) {
-        (Some(n), _) => format!("{}:{n}", key(e.book)),
-        (None, label) => format!(
-            "{}:{}",
-            key(e.book),
-            label
-                .unwrap_or("")
-                .split_whitespace()
-                .next()
-                .unwrap_or("")
-                .to_lowercase()
-        ),
+    // The unnumbered entries are the critical hit dialogs, one a book.
+    let entry_key = |e: &cr_store::tables::ListEntry| match e.number {
+        Some(n) => format!("{}:{n}", key(e.book)),
+        None => format!("{}:critical", key(e.book)),
     };
     let rolls = install.table_rolls()?;
     let mut id = None;
