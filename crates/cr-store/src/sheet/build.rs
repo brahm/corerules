@@ -15,6 +15,7 @@ use crate::Result;
 use crate::lists::BUNDLE_NAMES;
 
 mod combat;
+mod nwp;
 mod rogue;
 mod spells;
 
@@ -120,6 +121,9 @@ pub(super) struct Ctx<'a> {
     /// Parts of the top-level items readied and worn.
     pub readied: Vec<&'a Part>,
     pub worn: Vec<&'a Part>,
+    /// The kit's data, when the kit part has it.
+    pub kit_data: Option<&'a cr_formats::parts::PartKitData>,
+    pub kit: Option<crate::npc::data::Kit>,
 }
 
 impl<'a> Ctx<'a> {
@@ -145,7 +149,7 @@ impl<'a> Ctx<'a> {
             ch.data.inventory[b]
                 .items
                 .iter()
-                .filter_map(|i| rules.parts.get(&i.name))
+                .filter_map(|i| rules.part(&i.name))
                 .collect()
         };
         let mut ctx = Self {
@@ -157,7 +161,18 @@ impl<'a> Ctx<'a> {
             scores: Scores::default(),
             readied: top(READIED),
             worn: top(WORN),
+            kit_data: None,
+            kit: None,
         };
+        ctx.kit_data = ctx
+            .part(&ch.data.kit)
+            .and_then(|p| p.data.kit.as_ref())
+            .and_then(|k| k.as_deref())
+            .and_then(|o| match o {
+                Object::PartKit(k) => k.data.as_ref(),
+                _ => None,
+            });
+        ctx.kit = ctx.kit_data.map(crate::npc::data::Kit::of);
         ctx.scores = ctx.compute_scores();
         Ok(ctx)
     }
@@ -173,7 +188,7 @@ impl<'a> Ctx<'a> {
     }
 
     pub fn part(&self, name: &str) -> Option<&'a Part> {
-        self.rules.parts.get(name)
+        self.rules.part(name)
     }
 
     /// The readied and worn top-level item parts, readied first.
@@ -634,11 +649,8 @@ fn personal(ctx: &Ctx) -> Section {
 
 /// The kit, when the character has one the databases know.
 fn kit_name<'a>(ctx: &Ctx<'a>) -> Option<&'a str> {
-    let kit = &ctx.ch.data.kit;
-    ctx.rules
-        .parts
-        .get_key_value(kit)
-        .map(|(name, _)| name.as_str())
+    let kit = ctx.ch.data.kit.as_str();
+    ctx.part(kit).map(|_| kit)
 }
 
 /// Ability Scores (0x5a29bf).
@@ -952,9 +964,30 @@ fn proficiencies(ctx: &Ctx) -> Section {
             Flavor::Core20 => Block::Lines(names),
         }],
     };
-    let nonweapon = SheetBox {
-        title: "Non-Weapon Proficiencies".into(),
-        body: vec![table(3, nonweapon_rows(ctx))],
+    let nonweapon = match ctx.flavor {
+        Flavor::Expansion => {
+            let (list, secondary) = nwp::rows(ctx);
+            let mut rows = Vec::new();
+            for r in list {
+                rows.push(vec![Cell::new(r.name).span(2), Cell::new(r.score).right()]);
+                if !r.extra.is_empty() {
+                    rows.push(vec![Cell::new(""), Cell::new(r.extra).span(2)]);
+                }
+            }
+            SheetBox {
+                title: if secondary {
+                    "Secondary Skills"
+                } else {
+                    "Non-Weapon Proficiencies"
+                }
+                .into(),
+                body: vec![table(3, rows)],
+            }
+        }
+        Flavor::Core20 => SheetBox {
+            title: "Non-Weapon Proficiencies".into(),
+            body: vec![table(3, nonweapon_rows(ctx))],
+        },
     };
     Section {
         id: ids::PROFICIENCIES,
@@ -970,48 +1003,21 @@ fn weapon_proficiency_name(ctx: &Ctx, name: &str) -> String {
     }
 }
 
-/// The nonweapon proficiencies with their scores (0x438ca1), then the
-/// native languages.
+/// 2.0's nonweapon proficiencies with their scores, in the order of the
+/// file.
 fn nonweapon_rows(ctx: &Ctx) -> Vec<Vec<Cell>> {
     let d = &ctx.ch.data;
-    let mut list: Vec<(&String, i32)> = d
-        .nonweapon_proficiencies
+    d.nonweapon_proficiencies
         .iter()
         .enumerate()
-        .map(|(i, name)| (name, rogue::nonweapon_score(ctx, i, name)))
-        .collect();
-    // 2.0 keeps the order of the file.
-    if ctx.flavor == Flavor::Expansion {
-        list.sort_by(|a, b| a.0.cmp(b.0));
-    }
-    let mut rows = Vec::new();
-    for (name, score) in list {
-        rows.push(vec![
-            Cell::new(name.clone()).span(2),
-            ctx.value(score.to_string()),
-        ]);
-    }
-    let languages: Vec<String> = d.languages.iter().map(|l| language_name(l)).collect();
-    if ctx.flavor == Flavor::Expansion {
-        rows.push(vec![
-            Cell::new("Native Languages").span(2),
-            Cell::new("").right(),
-        ]);
-        if ctx.sp {
-            rows.push(vec![Cell::new(""), Cell::new(languages.join(", ")).span(2)]);
-        } else {
-            for language in languages {
-                rows.push(vec![Cell::new(""), Cell::new(language).span(2)]);
-            }
-        }
-    }
-    rows
-}
-
-/// A language as the sheet shows it: "Elf, high dialect" becomes "Elf -
-/// high dialect".
-fn language_name(name: &str) -> String {
-    name.replacen(", ", " - ", 1)
+        .map(|(i, name)| {
+            let score = rogue::nonweapon_score(ctx, i, name);
+            vec![
+                Cell::new(name.clone()).span(2),
+                ctx.value(score.to_string()),
+            ]
+        })
+        .collect()
 }
 
 /// A part's name as the ability boxes show it: without the "Race, " or
@@ -1101,13 +1107,18 @@ fn inventory(ctx: &Ctx, id: u32, with_spells: bool) -> Section {
     single(id, "Inventory", vec![Block::List(bundles)])
 }
 
-/// The items of a bundle. A book's spells, "name (pages)" each, are one
-/// list entry in the Expansion and one entry each in 2.0.
+/// The items of a bundle, a book's spells "name (pages)" one entry each.
+/// The Expansion writes quantities with thousands separators.
 fn items(ctx: &Ctx, list: &[InventoryItem], with_spells: bool) -> Vec<ListItem> {
     list.iter()
         .map(|item| {
             let text = if item.quantity > 1 {
-                format!("{} x{}", item.name, item.quantity)
+                let n = if ctx.expansion() {
+                    thousands(i64::from(item.quantity))
+                } else {
+                    item.quantity.to_string()
+                };
+                format!("{} x{n}", item.name)
             } else {
                 item.name.clone()
             };
@@ -1121,23 +1132,13 @@ fn items(ctx: &Ctx, list: &[InventoryItem], with_spells: bool) -> Vec<ListItem> 
                 && let Some(extra) = &item.extra
                 && !extra.unknown_0x10.is_empty()
             {
-                let lines = extra.unknown_0x10.iter().enumerate().map(|(s, name)| {
+                let entries = extra.unknown_0x10.iter().enumerate().map(|(s, name)| {
                     let pages = extra.unknown_0x24.get(s).copied().unwrap_or(0);
-                    format!("{name} ({pages})\n")
-                });
-                let entries: Vec<ListItem> = if ctx.expansion() {
-                    vec![ListItem {
-                        text: lines.collect(),
+                    ListItem {
+                        text: format!("{name} ({pages})\n"),
                         children: None,
-                    }]
-                } else {
-                    lines
-                        .map(|text| ListItem {
-                            text,
-                            children: None,
-                        })
-                        .collect()
-                };
+                    }
+                });
                 children.get_or_insert_with(Vec::new).extend(entries);
             }
             ListItem { text, children }

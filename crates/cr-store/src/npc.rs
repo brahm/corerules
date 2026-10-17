@@ -27,7 +27,7 @@
 //! ```
 
 mod build;
-mod data;
+pub(crate) mod data;
 mod equip;
 mod magic;
 mod names;

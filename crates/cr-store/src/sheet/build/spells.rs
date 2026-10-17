@@ -344,6 +344,95 @@ pub(in crate::sheet) fn psionics(ctx: &Ctx) -> Section {
             .map(|h| Cell::header(*h))
             .collect(),
     );
-    rows.push(vec![Cell::header("Wild Talent").span(5)]);
+    rows.extend(power_rows(ctx));
     single(ids::PSIONICS, "Psionics", vec![table(5, rows)])
+}
+
+/// The discipline a power belongs to (0x4ed938), by `unknown_0x28`;
+/// metapsionic powers (5) have none.
+fn discipline(p: &cr_formats::psionic::PsionicPower) -> &'static str {
+    match p.unknown_0x28 {
+        0 => "Clairsentient",
+        1 => "Psychokinetic",
+        2 => "Psychometabolic",
+        3 => "Psychoportive",
+        4 => "Telepathic",
+        _ => "",
+    }
+}
+
+/// A range or area as the sheet shows it: the first letter in capitals.
+fn capitalized(text: &str) -> String {
+    let mut c = text.chars();
+    match c.next() {
+        Some(f) => f.to_uppercase().chain(c).collect(),
+        None => String::new(),
+    }
+}
+
+/// The discipline rows (0x5ffbd2): per discipline, primary ones marked,
+/// its sciences then its devotions (0x5a92dd); without disciplines, one
+/// "Wild Talent" with every power.
+fn power_rows(ctx: &Ctx) -> Vec<Vec<Cell>> {
+    let d = &ctx.ch.data;
+    let [disciplines, sciences, devotions] = &d.unknown_0x196c;
+    let primary = &d.unknown_0x1980;
+    let known = |names: &[String], disc: Option<&str>| -> Vec<String> {
+        names
+            .iter()
+            .filter(|n| {
+                ctx.rules
+                    .power(n)
+                    .is_some_and(|p| disc.is_none_or(|d| discipline(p) == d))
+            })
+            .cloned()
+            .collect()
+    };
+    let mut groups: Vec<(String, Vec<String>, Vec<String>)> = Vec::new();
+    if disciplines.is_empty() {
+        groups.push((
+            "Wild Talent".into(),
+            known(sciences, None),
+            known(devotions, None),
+        ));
+    } else {
+        for disc in disciplines {
+            let title = if primary.iter().any(|p| p == disc) {
+                format!("{disc} (Primary)")
+            } else {
+                disc.clone()
+            };
+            groups.push((
+                title,
+                known(sciences, Some(disc)),
+                known(devotions, Some(disc)),
+            ));
+        }
+    }
+    let mut rows = Vec::new();
+    for (title, sciences, devotions) in groups {
+        rows.push(vec![Cell::header(title).span(5)]);
+        for (label, list) in [("Sciences", sciences), ("Devotions", devotions)] {
+            if list.is_empty() {
+                continue;
+            }
+            rows.push(vec![Cell::header(label).span(5)]);
+            for name in list {
+                let p = ctx.rules.power(&name).expect("known power");
+                let score = if p.unknown_0x38 != 0 {
+                    format!("{} (base)", p.unknown_0x30)
+                } else {
+                    p.unknown_0x30.to_string()
+                };
+                rows.push(vec![
+                    Cell::new(name.clone()),
+                    Cell::new(p.cost.clone()),
+                    Cell::new(capitalized(&p.range)),
+                    Cell::new(capitalized(&p.area)),
+                    Cell::new(score),
+                ]);
+            }
+        }
+    }
+    rows
 }

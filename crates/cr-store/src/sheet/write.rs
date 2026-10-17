@@ -81,6 +81,17 @@ fn crlf(text: String) -> String {
 }
 
 impl Sheet {
+    /// The export file as the original writes it: the HTML or TXT text in
+    /// Windows-1252.
+    pub fn export(&self, html: bool, date: &str) -> Vec<u8> {
+        let text = if html {
+            self.to_html(date)
+        } else {
+            self.to_txt(date)
+        };
+        cr_formats::archive::ansi_bytes(&text)
+    }
+
     /// The TXT export (Expansion only), with `date` in the footer as
     /// [`Timestamp::format`] gives it. Paragraphs and images write nothing
     /// in TXT, so ability descriptions, kit text and history are empty

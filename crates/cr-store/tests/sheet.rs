@@ -116,11 +116,7 @@ fn sheets_match_the_originals() {
             };
             let expected = String::from_utf8_lossy(&expected).into_owned();
             let date = export_date(&expected);
-            let ours = if html {
-                sheet.to_html(&date)
-            } else {
-                sheet.to_txt(&date)
-            };
+            let ours = String::from_utf8_lossy(&sheet.export(html, &date)).into_owned();
             total += 1;
             let (found, allowances) = compare(&file, &expected, &ours);
             if found.is_empty() && allowances == 0 {

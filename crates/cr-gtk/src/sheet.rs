@@ -100,12 +100,8 @@ pub fn show(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) +
                     kind,
                     move |path| {
                         let date = Timestamp::now_utc().format(sheet.flavor);
-                        let text = if extension == "html" {
-                            sheet.to_html(&date)
-                        } else {
-                            sheet.to_txt(&date)
-                        };
-                        match std::fs::write(&path, text) {
+                        let bytes = sheet.export(extension == "html", &date);
+                        match std::fs::write(&path, bytes) {
                             Ok(()) => toast("Sheet exported"),
                             Err(e) => toast(&format!("Could not save {}: {e}", path.display())),
                         }

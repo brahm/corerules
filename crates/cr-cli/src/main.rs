@@ -214,11 +214,18 @@ fn cmd_chars(install: &Installation) -> cr_store::Result<()> {
             .as_ref()
             .map(|c| c.version.as_str())
             .unwrap_or("unreadable");
+        // The lines after "Race: ...": the Expansion stores system,
+        // player, party and race before them, 2.0 only system and race.
+        let start = entry
+            .details
+            .iter()
+            .position(|d| d.starts_with("Race:"))
+            .map_or(4, |i| i + 1);
         outln!(
             "{:<24} {:<10} {}  [{}, {}]",
             entry.name,
             entry.race,
-            entry.details.get(4..).unwrap_or_default().join(", "),
+            entry.details.get(start..).unwrap_or_default().join(", "),
             entry.file,
             version
         );
@@ -261,12 +268,10 @@ fn cmd_sheet(install: &Installation, args: &[String]) -> cr_store::Result<()> {
         return Err(invalid("Core Rules 2.0 exports HTML only".into()));
     }
     let date = Timestamp::now_utc().format(sheet.flavor);
-    let text = if html {
-        sheet.to_html(&date)
-    } else {
-        sheet.to_txt(&date)
-    };
-    out!("{text}");
+    let bytes = sheet.export(html, &date);
+    if let Err(e) = std::io::stdout().lock().write_all(&bytes) {
+        stdout_failed(e);
+    }
     Ok(())
 }
 
