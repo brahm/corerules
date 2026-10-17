@@ -126,8 +126,8 @@ impl Gen<'_> {
         if let Some((table, score)) = dexterity_table(id) {
             let v = match (score, self.po) {
                 (Score::Dexterity, _) | (_, false) => self.ab[DEX],
-                (Score::Aim, true) => self.subs[DEX][0],
-                (Score::Balance, true) => self.subs[DEX][1],
+                (Score::Aim, true) => self.abil_get(DEX, Some(0)),
+                (Score::Balance, true) => self.abil_get(DEX, Some(1)),
             };
             total += tables::at(table, v);
         }

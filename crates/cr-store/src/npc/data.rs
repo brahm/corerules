@@ -53,10 +53,11 @@ pub trait PartExt {
     fn n(&self, off: u32) -> i32;
     fn s(&self, off: u32) -> &str;
     fn sa(&self, off: u32) -> &[String];
-    /// Weight (0x66118a): +0x1f0 when it is above 0.0, else +0x1ec.
-    fn weight(&self) -> f32 {
+    /// Weight (0x66118a): +0x1f0 in Core Rules (the global 0x85f478) when
+    /// it is above 0.0, else +0x1ec.
+    fn weight(&self, core: bool) -> f32 {
         let a = f32::from_bits(self.n(0x1f0) as u32);
-        if a > 0.0 {
+        if core && a > 0.0 {
             a
         } else {
             f32::from_bits(self.n(0x1ec) as u32)
@@ -597,6 +598,9 @@ pub struct Klass {
     /// Casts priest spells, wizard spells (+0x2774, +0x2778).
     pub priest_caster: bool,
     pub wizard_caster: bool,
+    /// +0x2774..+0x2784: the two above, then a priestly wizard (+0x277c), a
+    /// wizardly priest (+0x2780) and no spheres (+0x2784).
+    pub i2774: [i32; 5],
     pub s3000: Option<String>,
     lists: HashMap<u32, Vec<String>>,
     /// The proficiencies the class gains by level (+0x3514,
@@ -753,6 +757,7 @@ impl Klass {
                     school: d.unknown_0x2788.clone(),
                     priest_caster: d.unknown_0x2774[0] != 0,
                     wizard_caster: d.unknown_0x2774[1] != 0,
+                    i2774: d.unknown_0x2774,
                     s3000: d.unknown_0x3000.clone(),
                     lists,
                     level_profs: d

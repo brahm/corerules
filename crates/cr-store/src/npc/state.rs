@@ -152,8 +152,8 @@ pub struct Gen<'a> {
 
     /// Player's Option was chosen (sub-abilities, kit flag +0x74).
     pub po: bool,
-    /// The stages after the kit follow the Core Rules paths. Always true:
-    /// the Player's Option paths are not decoded (see `messages`).
+    /// The Core Rules paths (0x446a70: char +0x7c == 0), not Player's
+    /// Option.
     pub core: bool,
     pub classes: Vec<&'a Klass>,
     pub levels: Vec<i32>,
@@ -168,7 +168,7 @@ pub struct Gen<'a> {
     pub name: String,
     pub ab: [i32; 6],
     pub exc: i32,
-    /// Sub-abilities per ability: (value + d, value - d) = muscle/stamina,
+    /// Sub-abilities per ability: (value + d, value - d) = stamina/muscle,
     /// aim/balance, health/fitness, reason/knowledge, intuition/willpower,
     /// leadership/appearance.
     pub subs: [[i32; 2]; 6],
@@ -250,7 +250,7 @@ impl<'a> Gen<'a> {
                 .ok_or_else(|| Error::Invalid(format!("no class named {name}")))?;
             ks.push(&d.classes[k]);
         }
-        let (race, subrace) = resolve_race(d, race)?;
+        let (race, subrace) = resolve_race(d, race, po)?;
         let levels: Vec<i32> = classes.iter().map(|c| c.1).collect();
         Ok(Self {
             d,
@@ -258,7 +258,7 @@ impl<'a> Gen<'a> {
             session,
             messages: Vec::new(),
             po,
-            core: true,
+            core: !po,
             xp: ks.iter().zip(&levels).map(|(k, &l)| k.xp_for(l)).collect(),
             title: classes
                 .iter()
@@ -383,19 +383,19 @@ impl<'a> Gen<'a> {
     }
 
     pub fn fitness(&self) -> i32 {
-        self.subs[CON][1]
+        self.abil_get(CON, Some(1))
     }
 
     pub fn knowledge(&self) -> i32 {
-        self.subs[INT][1]
+        self.abil_get(INT, Some(1))
     }
 
     pub fn reason(&self) -> i32 {
-        self.subs[INT][0]
+        self.abil_get(INT, Some(0))
     }
 
     pub fn intuition(&self) -> i32 {
-        self.subs[WIS][0]
+        self.abil_get(WIS, Some(0))
     }
 
     pub fn male(&self) -> bool {
@@ -603,10 +603,11 @@ impl<'a> Gen<'a> {
     }
 
     /// An ability or sub-ability as the vtable getters read it: a
-    /// sub-ability reads its score outside Player's Option.
-    fn abil_get(&self, i: usize, sub: Option<usize>) -> i32 {
+    /// sub-ability reads its score outside Player's Option, and is held
+    /// within 1..25 in it (0x43c870 -> 0x4b00ba).
+    pub(super) fn abil_get(&self, i: usize, sub: Option<usize>) -> i32 {
         match sub {
-            Some(j) if self.po => self.subs[i][j],
+            Some(j) if self.po => clamp125(self.subs[i][j]),
             _ => self.ab[i],
         }
     }
@@ -675,28 +676,7 @@ impl<'a> Gen<'a> {
             }
         }
         // (offset of the minimum byte, value tested), in 0x4c2a75's order.
-        let s = &self.subs;
-        let a = &self.ab;
-        let tests: [(u32, i32); 18] = [
-            (0x4c, a[0]),
-            (0x50, s[0][1]),
-            (0x4e, s[0][0]),
-            (0x52, a[1]),
-            (0x54, s[1][0]),
-            (0x56, s[1][1]),
-            (0x58, a[2]),
-            (0x5a, s[2][0]),
-            (0x5c, s[2][1]),
-            (0x5e, a[3]),
-            (0x62, s[3][0]),
-            (0x60, s[3][1]),
-            (0x64, a[4]),
-            (0x66, s[4][0]),
-            (0x68, s[4][1]),
-            (0x6a, a[5]),
-            (0x6e, s[5][0]),
-            (0x6c, s[5][1]),
-        ];
+        let tests = KIT_TESTS.map(|(i, sub, off)| (off, self.abil_get(i, sub)));
         // 0x670ed3: b6..be; any other alignment reads +0x63.
         let align_flag = align_flag(self.d, &self.alignment).unwrap_or(99);
         let mut cand = Vec::new();
@@ -753,14 +733,17 @@ impl<'a> Gen<'a> {
         }
     }
 
-    /// The class abilities (0x442cac) and their flags (0x4c7cb2).
+    /// The class abilities (0x442cac; 0x4d5e28 leaves out the kit's
+    /// +0x1c8 names) and their flags (0x4c7cb2).
     fn class_abilities_of(&mut self) {
+        let skip = self.kit().map_or(&[][..], |k| k.sa(0x1c8));
         self.class_abilities = self
             .classes
             .iter()
             .map(|k| {
                 k.sa(0x2724)
                     .iter()
+                    .filter(|n| !skip.contains(n))
                     .filter_map(|n| self.d.find_in(CLASS_ABILITIES, n))
                     .collect()
             })
@@ -1078,8 +1061,16 @@ const CON_HP_WARRIOR: [i32; 26] = [
 ];
 
 /// 0x4c76b8: the race (+0x200) and subrace (+0x204). A base race takes
-/// its first subrace with +0x1e0; a subrace takes its parent as race.
-fn resolve_race<'a>(d: &'a Data, name: &str) -> Result<(&'a Race, &'a Race)> {
+/// its first subrace with +0x1e0; a subrace takes its parent as race. In
+/// Player's Option "Half-ogre" and "Half-orc" are their "Standard ..."
+/// subraces.
+fn resolve_race<'a>(d: &'a Data, name: &str, po: bool) -> Result<(&'a Race, &'a Race)> {
+    let t = |tx| d.program.text(tx);
+    let name = match name {
+        n if po && n == t(HALF_OGRE) => t(STANDARD_HALF_OGRE),
+        n if po && n == t(HALF_ORC) => t(STANDARD_HALF_ORC),
+        n => n,
+    };
     let r = d
         .race(name)
         .map(|i| &d.races[i])

@@ -1,11 +1,13 @@
-//! Proficiencies and languages: nonweapon proficiencies (0x4d4a42),
-//! weapon proficiencies (0x4c48a8) and the languages (0x4c3f4d), Core
-//! Rules paths.
+//! Proficiencies and languages: nonweapon proficiencies (0x4d4a42), the
+//! Player's Option traits (0x4c5dc9), weapon proficiencies (0x4c48a8) and
+//! the languages (0x4c3f4d).
 
 use cr_formats::parts::Part;
 
 use super::Gen;
-use super::data::{LANGUAGES, NONWEAPON, PartExt, RACIAL_ABILITIES, WEAPONS};
+use super::data::{
+    DISADVANTAGES, Klass, LANGUAGES, NONWEAPON, PartExt, RACIAL_ABILITIES, SPHERES, TRAITS, WEAPONS,
+};
 use super::program::Tx;
 use super::program::{Level, NameRule};
 use super::texts::*;
@@ -24,6 +26,49 @@ const GROUP_NWP_CORE: [&[Tx]; 5] = [
     &[RELIGION, SPELLCRAFT, HERBALISM],
     &[SPELLCRAFT, READING_WRITING, ANCIENT_HISTORY],
 ];
+
+/// The same in Player's Option.
+const GROUP_NWP_PO: [&[Tx]; 5] = [
+    &[BLIND_FIGHTING, ENDURANCE],
+    &[TUMBLING, TIGHTROPE_WALKING],
+    &[ENGINEERING],
+    &[SPELLCRAFT, HERBALISM, RELIGION],
+    &[SPELLCRAFT, READING_WRITING, ANCIENT_HISTORY],
+];
+
+/// 0x4388ba's sub-ability names, as (ability, sub-ability).
+const SUB_NAMES: [(Tx, usize, usize); 12] = [
+    (STRENGTH_STAMINA, 0, 0),
+    (STRENGTH_MUSCLE, 0, 1),
+    (DEXTERITY_AIM, 1, 0),
+    (DEXTERITY_BALANCE, 1, 1),
+    (CONSTITUTION_HEALTH, 2, 0),
+    (CONSTITUTION_FITNESS, 2, 1),
+    (INTELLIGENCE_REASON, 3, 0),
+    (INTELLIGENCE_KNOWLEDGE, 3, 1),
+    (WISDOM_INTUITION, 4, 0),
+    (WISDOM_WILLPOWER, 4, 1),
+    (CHARISMA_LEADERSHIP, 5, 0),
+    (CHARISMA_APPEARANCE, 5, 1),
+];
+
+/// 0x43d163: the Player's Option class abilities found by name (the char
+/// flags +0x1ec4..+0x1ee0).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct AbilityNames {
+    pub armored_wizard: bool,
+    pub no_magical_weapons_or_armor: bool,
+    pub no_miscellaneous_magical_items: bool,
+    pub no_potions_oils_or_scrolls: bool,
+    pub no_magical_armor: bool,
+    pub limited_armor_5: bool,
+    pub limited_armor_10: bool,
+    pub limited_armor_15: bool,
+}
+
+/// A Player's Option kit option group that offers a proficiency the
+/// character knows already.
+const PO_LANGUAGE_CHOICE: &str = "A Player's Option kit offers a language proficiency the NPC already has; it was added again as in the Core Rules (0x4d3e6c's language choice is not decoded).";
 
 /// The weapon proficiency stage's state (members of `CNPCGeneration`).
 #[derive(Debug, Clone, Default)]
@@ -118,10 +163,18 @@ impl Gen<'_> {
         self.nwp.iter().position(|n| n.0 == name)
     }
 
-    /// 0x442516 (Skills & Powers only).
+    /// 0x442516 (Skills & Powers only): no cost, no +0x480 and no
+    /// sub-ability.
     fn nwp_forbidden(&self, p: Option<&Part>) -> bool {
-        !self.core
-            && p.is_some_and(|p| p.n(0x478) == 0 && p.n(0x480) == 0 && !p.s(0x458).is_empty())
+        !self.core && p.is_some_and(|p| p.n(0x478) == 0 && p.n(0x480) == 0 && p.s(0x458).is_empty())
+    }
+
+    /// 0x4388ba: a sub-ability by its name (0 for any other text).
+    fn sub_by_name(&self, name: &str) -> i32 {
+        SUB_NAMES
+            .iter()
+            .find(|e| name == self.t(e.0))
+            .map_or(0, |&(_, i, j)| self.abil_get(i, Some(j)))
     }
 
     /// 0x43776b
@@ -165,6 +218,22 @@ impl Gen<'_> {
         }
         if !ing {
             cost += if core { 1 } else { 2 };
+        }
+        if !core {
+            // One less when the kit recommends it (+0x258); each relevant
+            // sub-ability (+0x458, +0x45c) below 9 adds the difference.
+            if kit.is_some_and(|k| k.sa(0x258).iter().any(|n| n == name)) {
+                cost -= 1;
+            }
+            for off in [0x458, 0x45c] {
+                let v = match self.sub_by_name(p.s(off)) {
+                    0 => 9,
+                    v => v,
+                };
+                if v < 9 {
+                    cost += 9 - v;
+                }
+            }
         }
         if self.class_ability_any(|ca| ca.s(0x718) == name) {
             cost = 0;
@@ -325,20 +394,35 @@ impl Gen<'_> {
         extra + init + lvl.div_euclid(per) * inc + self.int_languages()
     }
 
-    /// 0x4d4a42 (Core Rules).
+    /// 0x4d4a42: the slots (Core Rules) or the character points left and
+    /// the class's +0xbc slots (Player's Option, with the language pool),
+    /// then the proficiencies.
     pub fn st_nwp(&mut self) {
         self.m784 = 0;
-        let s34 = self.nwp_slots_core();
+        let s34 = if self.core {
+            self.nwp_slots_core()
+        } else {
+            self.classes.iter().map(|k| k.v(0xbc)).max().unwrap_or(0)
+        };
         if self.kit().is_some_and(|k| k.flag(0x44e)) {
             self.m784 = s34 / 2;
         }
         self.slots = s34 - self.m784;
-        self.lang_pool = 0;
+        if self.core {
+            self.lang_pool = 0;
+        } else {
+            self.slots += self.po_cp_left();
+            self.lang_pool = self.int_languages();
+        }
         self.nwp_class_free();
         self.nwp_auto_zero();
         self.nwp_class_lists();
         self.nwp_kit_lists();
         let mut spent = self.nwp_bonus_lists();
+        if !self.core {
+            let always = self.slots < 2;
+            self.slots += self.po_disadvantage(always);
+        }
         if !self.languages.iter().any(|l| l == self.t(COMMON)) {
             let r = self.nwp_learn(self.t(MODERN_LANGUAGES));
             if r > -1 {
@@ -350,6 +434,94 @@ impl Gen<'_> {
             self.nwp_group_defaults();
         }
         self.nwp_random();
+    }
+
+    /// The character points before the proficiencies in Player's Option
+    /// (generator +0x6ec): the race's (+0xa8) less the subrace's package
+    /// (+0xe0) (0x4c7b37), plus each class's (+0x54) less its class
+    /// abilities (+0x308, back +0x220) and schools and spheres (0x4c7cb2).
+    fn po_cp_left(&self) -> i32 {
+        let mut left = self.race.unknown_0xa8 - self.subrace.unknown_0xe0;
+        for (k, abilities) in self.classes.iter().zip(&self.class_abilities) {
+            let spent: i32 = abilities.iter().map(|p| p.n(0x308) - p.n(0x220)).sum();
+            left += k.v(0x54) - spent - self.school_sphere_cp(k);
+        }
+        left
+    }
+
+    /// 0x59d3c7: char +0x21f8 (schools, +0x2760: 15 each for a wizardly
+    /// priest, else 5) plus +0x21e4 (spheres, none with +0x2784: 15 each
+    /// for a priestly wizard, else the sphere part's +0x308 for a major one
+    /// (+0x2738) and +0x218 for a minor one (+0x274c)).
+    fn school_sphere_cp(&self, k: &Klass) -> i32 {
+        let [_, _, priestly, wizardly, no_spheres] = k.i2774.map(|v| v != 0);
+        let mut cp = k.sa(0x2760).len() as i32 * if wizardly { 15 } else { 5 };
+        if !no_spheres {
+            for (off, member) in [(0x2738, 0x308), (0x274c, 0x218)] {
+                for n in k.sa(off) {
+                    cp += if priestly {
+                        15
+                    } else {
+                        self.d.find_in(SPHERES, n).map_or(0, |p| p.n(member))
+                    };
+                }
+            }
+        }
+        cp
+    }
+
+    /// 0x4c5ca5 (Player's Option): unless `always`, 1 in 4 none; else a
+    /// random disadvantage (char +0x1844), whose points (+0x220) it
+    /// returns.
+    fn po_disadvantage(&mut self, always: bool) -> i32 {
+        if !always && self.between(1, 4) == 1 {
+            return 0;
+        }
+        let d = self.d;
+        let list = &d.parts[DISADVANTAGES];
+        if list.is_empty() {
+            return 0;
+        }
+        let p = &list[(self.between(1, list.len() as i32) - 1) as usize];
+        self.disadvantages.push(p.name().to_owned());
+        p.n(0x220)
+    }
+
+    /// 0x4c5dc9 (Player's Option): up to 3 of the kit's traits (+0xe4) at
+    /// random while points remain, then, with fewer than 2, 1d4 of all the
+    /// traits while more than 2 points remain; each costs its +0x308.
+    pub fn st_traits(&mut self) {
+        if self.core {
+            return;
+        }
+        let d = self.d;
+        let list = self.kit().map_or(&[][..], |k| k.sa(0xe4));
+        let n = list.len() as i32;
+        let want = n.min(3);
+        let (mut got, mut tries) = (0, 0);
+        while got < want && self.slots > 0 && tries < n + 50 {
+            let name = &list[self.between(0, n - 1) as usize];
+            if !self.traits.contains(name) {
+                self.traits.push(name.clone());
+                let Some(p) = d.find(name) else { return };
+                self.slots -= p.n(0x308);
+                got += 1;
+            }
+            tries += 1;
+        }
+        if got < 2 && self.slots > 0 {
+            let all = &d.parts[TRAITS];
+            let k = self.between(1, 4).min(all.len() as i32);
+            let mut got = 0;
+            while got < k && self.slots > 2 {
+                let p = &all[self.between(0, all.len() as i32 - 1) as usize];
+                if !self.traits.iter().any(|t| t == p.name()) {
+                    self.traits.push(p.name().to_owned());
+                    self.slots -= p.n(0x308);
+                    got += 1;
+                }
+            }
+        }
     }
 
     /// 0x4420f1: every class's +0x2fa0 list, then every class's level
@@ -470,7 +642,11 @@ impl Gen<'_> {
                     for name in opts {
                         if self.nwp_take_free(name, true) == -2 {
                             // A known language-teaching proficiency: Core
-                            // Rules adds it again at cost 0.
+                            // Rules adds it again at cost 0; Player's
+                            // Option would pick a language instead.
+                            if !self.core {
+                                self.warn(PO_LANGUAGE_CHOICE);
+                            }
                             self.nwp_add(name, 0);
                         }
                     }
@@ -488,25 +664,36 @@ impl Gen<'_> {
         }
     }
 
-    /// 0x4d45df: class +0x2fcc, kit +0x280 and the kit's level
-    /// proficiency +0x31c.
+    /// 0x4d45df: class +0x2fcc and kit +0x280 (learned at their cost in
+    /// Core Rules, taken and paid from the points in Player's Option), and
+    /// the kit's level proficiency +0x31c.
     fn nwp_bonus_lists(&mut self) -> i32 {
         let mut spent = 0;
-        for k in self.classes.clone() {
-            for n in k.sa(0x2fcc) {
-                let r = self.nwp_learn(n);
-                if r > -1 {
-                    spent += r;
-                }
-            }
+        let mut names: Vec<String> = Vec::new();
+        for k in &self.classes {
+            names.extend(k.sa(0x2fcc).iter().cloned());
         }
-        let Some(kit) = self.kit() else { return spent };
-        for n in kit.sa(0x280) {
-            let r = self.nwp_learn(n);
+        let kit = self.kit();
+        names.extend(kit.map_or(&[][..], |k| k.sa(0x280)).iter().cloned());
+        for n in &names {
+            let r = if self.core {
+                self.nwp_learn(n)
+            } else {
+                let p = self.d.find_in(NONWEAPON, n);
+                if p.is_none() || self.nwp_forbidden(p) {
+                    continue;
+                }
+                let r = self.nwp_take_free(n, false);
+                if r > -1 && !self.nwp_from_int_pool(n) {
+                    self.slots -= r;
+                }
+                r
+            };
             if r > -1 {
                 spent += r;
             }
         }
+        let Some(kit) = kit else { return spent };
         let s = kit.s(0x31c);
         if kit.i(0x320) <= self.m738 && !s.is_empty() {
             let r = self.nwp_take_free(s, false);
@@ -563,7 +750,12 @@ impl Gen<'_> {
                 k = rank;
             }
         }
-        for &n in GROUP_NWP_CORE[k as usize] {
+        let lists = if self.core {
+            GROUP_NWP_CORE
+        } else {
+            GROUP_NWP_PO
+        };
+        for &n in lists[k as usize] {
             self.nwp_learn(self.t(n));
         }
     }
@@ -800,6 +992,43 @@ impl Gen<'_> {
         !(f44 || f20 || a38 || ok_some)
     }
 
+    /// 0x43d163: the class abilities' names (CString::Find) that set the
+    /// char flags +0x1ec4..+0x1ee0 (Player's Option).
+    pub(super) fn ability_names(&self) -> AbilityNames {
+        let mut f = AbilityNames::default();
+        for ca in self.class_abilities.iter().flatten() {
+            let n = ca.name();
+            let has = |tx| n.contains(self.t(tx));
+            f.armored_wizard |= has(ARMORED_WIZARD);
+            f.no_magical_weapons_or_armor |= has(NO_MAGICAL_WEAPONS_OR_ARMOR);
+            f.no_miscellaneous_magical_items |= has(NO_MISCELLANEOUS_MAGICAL_ITEMS);
+            f.no_potions_oils_or_scrolls |= has(NO_POTIONS_OILS_OR_SCROLLS);
+            f.no_magical_armor |= has(NO_MAGICAL_ARMOR);
+            f.limited_armor_5 |= has(WARRIOR_LIMITED_ARMOR_5);
+            f.limited_armor_15 |= has(WARRIOR_LIMITED_ARMOR_15);
+            f.limited_armor_10 |= has(WARRIOR_LIMITED_ARMOR_10);
+        }
+        f
+    }
+
+    /// The Player's Option class abilities that bar weapons (0x43d163
+    /// sets char +0x1eb0/4/8 from +0x7c0/4/8, the +0x6f5..+0x6f7 of
+    /// 0x4c7cb2): 0x20 unless +0x3b8, 0x21 for piercing or slashing, 0x22
+    /// unless +0x448; never for a weapon in the WP list (0x4321ac, `known`).
+    pub(super) fn po_ability_bar(&self, w: &Part, known: bool) -> i32 {
+        if known {
+            0
+        } else if self.m6f[1] && w.n(0x3b8) == 0 {
+            0x20
+        } else if self.m6f[2] && pierce_slash(w, false) {
+            0x21
+        } else if self.m6f[3] && w.n(0x448) == 0 {
+            0x22
+        } else {
+            0
+        }
+    }
+
     /// 0x4400fa(char, w): 0 = usable.
     fn usable_0x4400fa(&self, w: &Part) -> i32 {
         if self.barred(w, 0, false) {
@@ -807,6 +1036,12 @@ impl Gen<'_> {
         }
         if self.cflag(0x27a0) && pierce_slash(w, self.core) {
             return 0x1e;
+        }
+        if !self.core {
+            let r = self.po_ability_bar(w, false);
+            if r != 0 {
+                return r;
+            }
         }
         if w.s(0x1e0) == self.race.name {
             return 0x1f;
@@ -851,13 +1086,20 @@ impl Gen<'_> {
         if self.barred(w, 0, true) || (self.cflag(0x27a0) && pierce_slash(w, self.core)) {
             return 0x1e;
         }
+        if !self.core {
+            let r = self.po_ability_bar(w, false);
+            if r != 0 {
+                return r;
+            }
+        }
         if kit.is_some_and(|k| k.sa(0xbc).iter().any(|x| x == n)) {
             return 0x29;
         }
         0
     }
 
-    /// 0x4d0217 (Core Rules: 0, 1 or 999).
+    /// 0x4d0217 (Core Rules: 0, 1 or 999; in Player's Option a weapon no
+    /// class may use costs 1 more, 2 for a rogue, 3 with +0x4d0).
     pub(super) fn wp_cost(&mut self, name: &str) -> i32 {
         let d = self.d;
         for n in &self.racial_abilities {
@@ -892,7 +1134,16 @@ impl Gen<'_> {
         let f24 = self.m6f[4] && w.n(0x4c8) == 0;
         let f4c = self.m6f[4] && w.n(0x4cc) == 0;
         if !(some || f24 || f4c) {
-            return 999;
+            if self.core {
+                return 999;
+            }
+            cost += if !self.has_group(3) {
+                1
+            } else if w.n(0x4d0) != 0 {
+                3
+            } else {
+                2
+            };
         }
         if self.core && cost > 0 {
             cost = 1;
@@ -946,6 +1197,29 @@ impl Gen<'_> {
             return 2;
         }
         1
+    }
+
+    /// 0x43a072: specialization cost, Player's Option.
+    fn spec_cost_po(&self) -> i32 {
+        if self.cflag(0x2791) {
+            return if self.classes.len() == 1 { 2 } else { 4 };
+        }
+        [(0, 4), (2, 6), (1, 8), (4, 8), (3, 10)]
+            .iter()
+            .find(|&&(g, _)| self.has_group(g))
+            .map_or(i32::MAX, |&(_, c)| c)
+    }
+
+    /// 0x59e778 in Player's Option: the weapon proficiency pool (char
+    /// +0x2220), the kit's +0x454 when set, else the classes' highest
+    /// +0xcc; plus the kit's +0x448.
+    fn wp_pool_po(&self) -> i32 {
+        let kit = self.kit();
+        let mut v = kit.map_or(-1, |k| k.i_or(0x454, -1));
+        if v <= -1 {
+            v = self.classes.iter().map(|k| k.v(0xcc)).fold(0, i32::max);
+        }
+        v + kit.map_or(0, |k| k.i_or(0x448, 0))
     }
 
     /// 0x4397d1 with an empty weapon list.
@@ -1007,7 +1281,7 @@ impl Gen<'_> {
         s
     }
 
-    /// 0x4c48a8 (Core Rules).
+    /// 0x4c48a8
     pub fn st_wp(&mut self) {
         let d = self.d;
         let kit = self.kit();
@@ -1020,7 +1294,11 @@ impl Gen<'_> {
             m7c4: ksa(0x53c).len(),
             ..Default::default()
         };
-        self.wp.slots = self.wp_slots_core() + self.m784;
+        self.wp.slots = if self.core {
+            self.wp_slots_core()
+        } else {
+            self.wp_pool_po()
+        } + self.m784;
         self.wp.m6fc = self.classes.iter().map(|k| k.v(0xd0)).min().unwrap_or(0);
         let (sa4b8, sa3fc, sa4e0, sa3e8) = (ksa(0x4b8), ksa(0x3fc), ksa(0x4e0), ksa(0x3e8));
         let has = |l: &[String], n: &str| l.iter().any(|x| x == n);
@@ -1328,7 +1606,11 @@ impl Gen<'_> {
                 if b520 && w.n(0x3b8) == 0 {
                     ok = false;
                 }
-                let sc = self.spec_cost_core(&name);
+                let sc = if self.core {
+                    self.spec_cost_core(&name)
+                } else {
+                    self.spec_cost_po()
+                };
                 if !ok || self.wp.slots < sc || sc == -1 {
                     self.wp.plain.push(name);
                 } else {
@@ -1358,8 +1640,34 @@ impl Gen<'_> {
         self.languages.clear();
         // The +0x768 / +0x754 lists are filled only by 0x4d5a07, which
         // returns at once in Core Rules: a Stout or Hairfoot halfling gets
-        // no racial language here.
-        if !(sn.contains(self.t(STOUT_HALFLING)) || sn.contains(self.t(HAIRFOOT_HALFLING))) {
+        // no racial language here. In Player's Option they hold the
+        // languages naming Halfling, Dwarf or Human (+0x768) or Halfling,
+        // Elf or Human (+0x754); a Stout halfling draws 6, a Hairfoot 4.
+        let stout = sn.contains(self.t(STOUT_HALFLING));
+        if stout || sn.contains(self.t(HAIRFOOT_HALFLING)) {
+            if !self.core {
+                let keys = if stout {
+                    [HALFLING_COMMA, DWARF_COMMA, HUMAN_COMMA]
+                } else {
+                    [HALFLING_COMMA, ELF_COMMA, HUMAN_COMMA]
+                };
+                let d = self.d;
+                let list: Vec<&str> = d.parts[LANGUAGES]
+                    .iter()
+                    .map(|p| p.name())
+                    .filter(|n| keys.iter().any(|&k| n.contains(self.t(k))))
+                    .collect();
+                let want = if stout { 6 } else { 4 };
+                let mut got = 0;
+                while got < want && !list.is_empty() {
+                    let n = list[self.between(0, list.len() as i32 - 1) as usize];
+                    if !self.languages.iter().any(|l| l == n) {
+                        self.languages.push(n.to_owned());
+                        got += 1;
+                    }
+                }
+            }
+        } else {
             self.languages.extend(sub.languages.iter().cloned());
         }
         if self.d.is(

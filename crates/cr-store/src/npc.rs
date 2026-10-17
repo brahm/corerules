@@ -95,7 +95,7 @@ pub struct Abilities {
     /// 1 to 100 for 18/01 to 18/00, else 0.
     pub exceptional: i32,
     /// Player's Option subabilities per ability: (score + d, score - d),
-    /// that is muscle/stamina, aim/balance, health/fitness,
+    /// that is stamina/muscle, aim/balance, health/fitness,
     /// reason/knowledge, intuition/willpower, leadership/appearance.
     pub subabilities: [[i32; 2]; 6],
 }
@@ -267,7 +267,6 @@ pub struct NpcRules {
     session: Session,
 }
 
-const PO_FALLBACK: &str = "Player's Option proficiencies, equipment and later stages are not decoded (0x4d4a42 and on); the Core Rules paths were used.";
 const EV_FALLBACK: &str = "Core Rules 2.0 generator: the name and abilities follow its own code (0x53a700); the later stages are the Expansion's.";
 
 impl Installation {
@@ -536,9 +535,6 @@ impl NpcRules {
     }
 
     fn stages(g: &mut Gen) {
-        if g.po {
-            g.warn(PO_FALLBACK);
-        }
         g.st_alignment();
         g.st_kit();
         g.st_social();
@@ -546,6 +542,7 @@ impl NpcRules {
         g.st_physical();
         g.st_money();
         g.st_nwp();
+        g.st_traits();
         g.st_wp();
         g.st_lang2();
         g.st_hp();
@@ -983,10 +980,11 @@ mod tests {
             players_option: true,
             abilities: None,
         };
+        // Player's Option has its own paths now.
         let npc = rules
             .generate(&mut Rand::seeded(1), "Human", &fighter(2), &po)
             .unwrap();
-        assert!(npc.messages.iter().any(|m| m.contains("Player's Option")));
+        assert!(!npc.messages.iter().any(|m| m.contains("Player's Option")));
     }
 
     #[test]

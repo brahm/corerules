@@ -5,8 +5,9 @@
 //! recorded generation is replayed from the `rand()` state its trace shows
 //! and compared field by field with what the program saved; the stream
 //! must also end where the next traced call starts. An Expansion
-//! installation replays `t3/`, a Core Rules 2.0 one `ev/`. Without them
-//! (or with another golden folder) the tests pass without checking.
+//! installation replays `t3/` and the Player's Option recordings of `po/`
+//! (when present), a Core Rules 2.0 one `ev/`. Without them (or with
+//! another golden folder) the tests pass without checking.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -114,6 +115,7 @@ fn fields(c: &Character) -> Vec<(&'static str, String)> {
         ("abilities", format!("{abilities:?}")),
         ("hwa", format!("{:?}", [d.height, d.weight, d.age])),
         ("nwp", format!("{:?}", d.nonweapon_proficiencies)),
+        ("traits", format!("{:?}", &d.unknown_0x1830[..2])),
         ("wp", format!("{:?}", d.weapon_proficiencies)),
         ("wp_spec", format!("{:?}", d.unknown_0xac[3])),
         ("hp", format!("{hp:?}")),
@@ -232,8 +234,17 @@ fn golden_single_npcs() {
     }
 }
 
+/// Trace, file, first trace line, race, classes (Player's Option).
+type PoCase = (
+    &'static str,
+    &'static str,
+    usize,
+    &'static str,
+    &'static [(&'static str, i32)],
+);
+
 #[test]
-fn golden_players_option_falls_back() {
+fn golden_players_option() {
     let Some((dir, install)) = golden() else {
         return;
     };
@@ -241,21 +252,125 @@ fn golden_players_option_falls_back() {
     if rules.flavor() != Flavor::Expansion {
         return;
     }
-    let t = trace(&dir.join("t3/trace_session1.log"));
-    let mut rand = at(&t, 1300);
+    let (s1, s2) = ("po/trace_session1.log", "po/trace_session2.log");
+    let mut cases: Vec<PoCase> = vec![(
+        "t3/trace_session1.log",
+        "t3/07_dwarf_fighter4_PO.dat",
+        1300,
+        "Dwarf",
+        &[("Fighter", 4)],
+    )];
+    if dir.join(s2).exists() {
+        cases.extend::<[PoCase; 14]>([
+            (
+                s1,
+                "po/g01_dwarf_fighter4_po.dat",
+                5,
+                "Dwarf",
+                &[("Fighter", 4)],
+            ),
+            (
+                s2,
+                "po/g02_dwarf_cleric3.dat",
+                210,
+                "Dwarf",
+                &[("Cleric", 3)],
+            ),
+            (
+                s2,
+                "po/g03_dwarf_psi3.dat",
+                499,
+                "Dwarf",
+                &[("Psionicist", 3)],
+            ),
+            (s2, "po/g04_dwarf_thief4.dat", 705, "Dwarf", &[("Thief", 4)]),
+            (
+                s2,
+                "po/g05_dwarf_ft_3_3.dat",
+                959,
+                "Dwarf",
+                &[("Fighter", 3), ("Thief", 3)],
+            ),
+            (
+                s2,
+                "po/g06_human_abjurer5.dat",
+                1224,
+                "Human",
+                &[("Abjurer", 5)],
+            ),
+            (
+                s2,
+                "po/g07_human_druid4.dat",
+                1539,
+                "Human",
+                &[("Druid", 4)],
+            ),
+            (
+                s2,
+                "po/g08_halfling_cleric1.dat",
+                1859,
+                "Halfling",
+                &[("Cleric", 1)],
+            ),
+            (
+                s2,
+                "po/g09_halfling_thief4.dat",
+                2093,
+                "Halfling",
+                &[("Thief", 4)],
+            ),
+            (s2, "po/g10_human_bard3.dat", 2244, "Human", &[("Bard", 3)]),
+            (
+                s2,
+                "po/g11_elf_ftm_3_3_3.dat",
+                2397,
+                "Elf",
+                &[("Fighter", 3), ("Thief", 3), ("Mage", 3)],
+            ),
+            (
+                s2,
+                "po/g12_gnome.dat",
+                2804,
+                "Gnome",
+                &[("Bard", 5), ("Illusionist", 1)],
+            ),
+            (
+                s2,
+                "po/g13_halfelf.dat",
+                3128,
+                "Half-elf",
+                &[("Bard", 5), ("Cleric", 1)],
+            ),
+            (
+                s2,
+                "po/g14_halforc.dat",
+                3354,
+                "Half-orc",
+                &[("Fighter", 5)],
+            ),
+        ]);
+    }
     let options = NpcOptions {
         players_option: true,
         abilities: None,
     };
-    let npc = rules
-        .generate(&mut rand, "Dwarf", &classes(&[("Fighter", 4)]), &options)
-        .unwrap();
-    let golden = saved(&dir, "t3/07_dwarf_fighter4_PO.dat");
-    // The constructor, name and abilities (with subabilities) are decoded.
-    assert_eq!(npc.character.data.name, golden.data.name);
-    assert_eq!(npc.character.data.strength, golden.data.strength);
-    assert_eq!(npc.character.data.abilities, golden.data.abilities);
-    assert!(npc.messages.iter().any(|m| m.contains("Player's Option")));
+    for (log, file, line, race, cl) in cases {
+        let t = trace(&dir.join(log));
+        let mut rand = at(&t, line);
+        let npc = rules
+            .generate(&mut rand, race, &classes(cl), &options)
+            .unwrap();
+        check_stream(file, &t, line, &rand);
+        let golden = saved(&dir, file);
+        compare(file, &npc.character, &golden);
+        // The subabilities too.
+        assert_eq!(npc.character.data.strength, golden.data.strength, "{file}");
+        assert_eq!(
+            npc.character.data.abilities, golden.data.abilities,
+            "{file}"
+        );
+        assert!(npc.messages.is_empty(), "{file}: {:?}", npc.messages);
+    }
 }
 
 #[test]

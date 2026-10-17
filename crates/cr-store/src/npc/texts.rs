@@ -8,6 +8,7 @@ pub const AARAKOCRA: Tx = Tx(0x820924, 0x6c451c);
 pub const ANCIENT_HISTORY: Tx = Tx(0x816edc, 0x6c2abc);
 pub const ANIMAL: Tx = Tx(0x821b48, 0x6c43a8);
 pub const ANIMAL_TRAINING: Tx = Tx(0x816d74, 0x6cd29c);
+pub const ARMORED_WIZARD: Tx = Tx(0x811660, 0x6c2a44);
 pub const BACKPACK: Tx = Tx(0x81fb3c, 0x6c5034);
 pub const BARD: Tx = Tx(0x821368, 0x0);
 pub const BELT_POUCH_LARGE: Tx = Tx(0x8208e0, 0x6d6a6c);
@@ -32,6 +33,8 @@ pub const CHAOTIC_EVIL: Tx = Tx(0x80ea68, 0x6c1710);
 pub const CHAOTIC_GOOD: Tx = Tx(0x80ea3c, 0x6c16f0);
 pub const CHAOTIC_NEUTRAL: Tx = Tx(0x80eab0, 0x6c174c);
 pub const CHARISMA: Tx = Tx(0x811160, 0x6c2768);
+pub const CHARISMA_APPEARANCE: Tx = Tx(0x811268, 0x6c2678);
+pub const CHARISMA_LEADERSHIP: Tx = Tx(0x811254, 0x6c268c);
 pub const CLAIRSENTIENT: Tx = Tx(0x81e274, 0x6c6034);
 pub const CLIMB_WALLS: Tx = Tx(0x839574, 0x6c32c8);
 pub const CLOAK_OF_PROTECTION_1: Tx = Tx(0x820e18, 0x0);
@@ -41,6 +44,8 @@ pub const COMMON: Tx = Tx(0x8170d8, 0x6cd2f0);
 pub const COMMON_GOWN: Tx = Tx(0x8207c8, 0x6d6a60);
 pub const COMMON_ROBE: Tx = Tx(0x820868, 0x6d6a38);
 pub const CONSTITUTION: Tx = Tx(0x811138, 0x6c278c);
+pub const CONSTITUTION_FITNESS: Tx = Tx(0x8111e8, 0x6c26f4);
+pub const CONSTITUTION_HEALTH: Tx = Tx(0x8111d4, 0x6c270c);
 pub const COPPER_PIECES: Tx = Tx(0x8177b8, 0x6c48b4);
 pub const CRAMPONS: Tx = Tx(0x820c1c, 0x6d6b4c);
 pub const DART: Tx = Tx(0x821448, 0x0);
@@ -50,6 +55,8 @@ pub const DETECT_ILLUSION: Tx = Tx(0x8395a0, 0x6c3298);
 pub const DETECT_MAGIC: Tx = Tx(0x839590, 0x6c32a8);
 pub const DETECT_NOISE: Tx = Tx(0x839564, 0x6c32d4);
 pub const DEXTERITY: Tx = Tx(0x81112c, 0x6c279c);
+pub const DEXTERITY_AIM: Tx = Tx(0x8111b0, 0x6c2734);
+pub const DEXTERITY_BALANCE: Tx = Tx(0x8111c0, 0x6c2720);
 pub const DISGUISE: Tx = Tx(0x816b54, 0x6cbf28);
 pub const DOG_GUARD: Tx = Tx(0x820c38, 0x0);
 pub const DOG_HUNTING: Tx = Tx(0x820c50, 0x0);
@@ -57,11 +64,14 @@ pub const DOG_WAR: Tx = Tx(0x820c44, 0x0);
 pub const DROW: Tx = Tx(0x820964, 0x0);
 pub const DRY_RATIONS_1_WEEK: Tx = Tx(0x820660, 0x6c5010);
 pub const DWARF: Tx = Tx(0x810904, 0x6c215c);
+pub const DWARF_COMMA: Tx = Tx(0x8218d0, 0x0);
 pub const DWARVEN: Tx = Tx(0x820974, 0x0);
 pub const DWARVEN_EQUIPMENT: Tx = Tx(0x820594, 0x6d68ec);
 pub const ELF: Tx = Tx(0x816d4c, 0x6ccfe0);
+pub const ELF_COMMA: Tx = Tx(0x8218b4, 0x0);
 pub const ELVEN_EQUIPMENT: Tx = Tx(0x8205d0, 0x6d68c8);
 pub const EMBROIDERED_ROBE: Tx = Tx(0x820748, 0x6d69ec);
+pub const ENDURANCE: Tx = Tx(0x821820, 0x6c2acc);
 pub const ENGINEERING: Tx = Tx(0x816f60, 0x6c2b0c);
 pub const ESCAPING_BONDS: Tx = Tx(0x8395c4, 0x6c3274);
 pub const EXPLORER: Tx = Tx(0x820cb0, 0x6d6b30);
@@ -90,6 +100,7 @@ pub const GRAPPLING_HOOK: Tx = Tx(0x820a68, 0x6d6abc);
 pub const GRINKA: Tx = Tx(0x81f2a8, 0x6d62f4);
 pub const HAIRFOOT_HALFLING: Tx = Tx(0x820118, 0x0);
 pub const HALFLING: Tx = Tx(0x816d40, 0x6ccfe4);
+pub const HALFLING_COMMA: Tx = Tx(0x8218a8, 0x0);
 pub const HALFLING_EQUIPMENT: Tx = Tx(0x8205b0, 0x6d68d8);
 pub const HALF_ELF: Tx = Tx(0x82014c, 0x6c232c);
 pub const HALF_OGRE: Tx = Tx(0x820140, 0x6c2338);
@@ -109,8 +120,11 @@ pub const HORSE_MEDIUM_WAR: Tx = Tx(0x821394, 0x0);
 pub const HORSE_RIDING: Tx = Tx(0x820ca0, 0x0);
 pub const HOUSEHOLD: Tx = Tx(0x821b2c, 0x6c4384);
 pub const HUMAN: Tx = Tx(0x811578, 0x6c2350);
+pub const HUMAN_COMMA: Tx = Tx(0x8218bc, 0x0);
 pub const HUMAN_REGIONAL_DIALECT: Tx = Tx(0x82016c, 0x0);
 pub const INTELLIGENCE: Tx = Tx(0x811150, 0x6c2774);
+pub const INTELLIGENCE_KNOWLEDGE: Tx = Tx(0x811214, 0x6c26c8);
+pub const INTELLIGENCE_REASON: Tx = Tx(0x811200, 0x6c26e0);
 pub const JESTER: Tx = Tx(0x820cc8, 0x6d6b1c);
 pub const KNIFE_SHEATH: Tx = Tx(0x821900, 0x0);
 pub const KOBOLD: Tx = Tx(0x81711c, 0x6cd2cc);
@@ -137,6 +151,10 @@ pub const NAVIGATION: Tx = Tx(0x817000, 0x6cd05c);
 pub const NEUTRAL_EVIL: Tx = Tx(0x80ea58, 0x6c1720);
 pub const NEUTRAL_GOOD: Tx = Tx(0x80ea2c, 0x6c1700);
 pub const NORMA: Tx = Tx(0x81f290, 0x6d62e4);
+pub const NO_MAGICAL_ARMOR: Tx = Tx(0x811704, 0x6c299c);
+pub const NO_MAGICAL_WEAPONS_OR_ARMOR: Tx = Tx(0x8116a8, 0x6c29f0);
+pub const NO_MISCELLANEOUS_MAGICAL_ITEMS: Tx = Tx(0x8116c4, 0x6c29d0);
+pub const NO_POTIONS_OILS_OR_SCROLLS: Tx = Tx(0x8116e4, 0x6c29b0);
 pub const OF_BLENDING: Tx = Tx(0x820a34, 0x0);
 pub const OIL_GREEK_FIRE_FLASK: Tx = Tx(0x8206ec, 0x0);
 pub const OIL_LAMP_PER_FLASK: Tx = Tx(0x8206a4, 0x6d6928);
@@ -190,8 +208,12 @@ pub const SPELLBOOK: Tx = Tx(0x822160, 0x6c7094);
 pub const SPELLCRAFT: Tx = Tx(0x81704c, 0x6c2af4);
 pub const SPYGLASS: Tx = Tx(0x820cbc, 0x6d6b24);
 pub const STANDARD_HALF_ELF: Tx = Tx(0x820158, 0x0);
+pub const STANDARD_HALF_OGRE: Tx = Tx(0x820528, 0x0);
+pub const STANDARD_HALF_ORC: Tx = Tx(0x820548, 0x0);
 pub const STOUT_HALFLING: Tx = Tx(0x820108, 0x0);
 pub const STRENGTH: Tx = Tx(0x811120, 0x6c27a8);
+pub const STRENGTH_MUSCLE: Tx = Tx(0x8111a0, 0x6c2744);
+pub const STRENGTH_STAMINA: Tx = Tx(0x81118c, 0x6c2754);
 pub const SWANMAY: Tx = Tx(0x81f268, 0x6d61cc);
 pub const TACK: Tx = Tx(0x821b38, 0x6c437c);
 pub const TAILOR: Tx = Tx(0x820b0c, 0x6d6c18);
@@ -208,6 +230,9 @@ pub const TRUE_NEUTRAL: Tx = Tx(0x817388, 0x6c52fc);
 pub const TUMBLING: Tx = Tx(0x80edb4, 0x6c2b2c);
 pub const TUNNELING: Tx = Tx(0x8395b8, 0x6c3284);
 pub const UPPER_CLASS: Tx = Tx(0x81fb24, 0x6c52b0);
+pub const WARRIOR_LIMITED_ARMOR_10: Tx = Tx(0x811754, 0x6c2940);
+pub const WARRIOR_LIMITED_ARMOR_15: Tx = Tx(0x811734, 0x6c2960);
+pub const WARRIOR_LIMITED_ARMOR_5: Tx = Tx(0x811718, 0x6c2980);
 pub const WEAPON: Tx = Tx(0x821b18, 0x6c36c8);
 pub const WEAPONBLACK: Tx = Tx(0x820ad4, 0x6d6af4);
 pub const WEMIC: Tx = Tx(0x821994, 0x0);
@@ -215,6 +240,8 @@ pub const WHETSTONE: Tx = Tx(0x820a54, 0x6d6ad4);
 pub const WINESKIN: Tx = Tx(0x820600, 0x6c5028);
 pub const WINTER_BLANKET: Tx = Tx(0x8206dc, 0x6d6900);
 pub const WISDOM: Tx = Tx(0x811148, 0x6c2784);
+pub const WISDOM_INTUITION: Tx = Tx(0x81122c, 0x6c26b4);
+pub const WISDOM_WILLPOWER: Tx = Tx(0x811240, 0x6c26a0);
 pub const WRITING_INK_PER_VIAL: Tx = Tx(0x820b84, 0x6d6bac);
 
 /// Every text above, read when the program is loaded.
@@ -223,6 +250,7 @@ pub const ALL: &[Tx] = &[
     ANCIENT_HISTORY,
     ANIMAL,
     ANIMAL_TRAINING,
+    ARMORED_WIZARD,
     BACKPACK,
     BARD,
     BELT_POUCH_LARGE,
@@ -247,6 +275,8 @@ pub const ALL: &[Tx] = &[
     CHAOTIC_GOOD,
     CHAOTIC_NEUTRAL,
     CHARISMA,
+    CHARISMA_APPEARANCE,
+    CHARISMA_LEADERSHIP,
     CLAIRSENTIENT,
     CLIMB_WALLS,
     CLOAK_OF_PROTECTION_1,
@@ -256,6 +286,8 @@ pub const ALL: &[Tx] = &[
     COMMON_GOWN,
     COMMON_ROBE,
     CONSTITUTION,
+    CONSTITUTION_FITNESS,
+    CONSTITUTION_HEALTH,
     COPPER_PIECES,
     CRAMPONS,
     DART,
@@ -265,6 +297,8 @@ pub const ALL: &[Tx] = &[
     DETECT_MAGIC,
     DETECT_NOISE,
     DEXTERITY,
+    DEXTERITY_AIM,
+    DEXTERITY_BALANCE,
     DISGUISE,
     DOG_GUARD,
     DOG_HUNTING,
@@ -272,11 +306,14 @@ pub const ALL: &[Tx] = &[
     DROW,
     DRY_RATIONS_1_WEEK,
     DWARF,
+    DWARF_COMMA,
     DWARVEN,
     DWARVEN_EQUIPMENT,
     ELF,
+    ELF_COMMA,
     ELVEN_EQUIPMENT,
     EMBROIDERED_ROBE,
+    ENDURANCE,
     ENGINEERING,
     ESCAPING_BONDS,
     EXPLORER,
@@ -305,6 +342,7 @@ pub const ALL: &[Tx] = &[
     GRINKA,
     HAIRFOOT_HALFLING,
     HALFLING,
+    HALFLING_COMMA,
     HALFLING_EQUIPMENT,
     HALF_ELF,
     HALF_OGRE,
@@ -324,8 +362,11 @@ pub const ALL: &[Tx] = &[
     HORSE_RIDING,
     HOUSEHOLD,
     HUMAN,
+    HUMAN_COMMA,
     HUMAN_REGIONAL_DIALECT,
     INTELLIGENCE,
+    INTELLIGENCE_KNOWLEDGE,
+    INTELLIGENCE_REASON,
     JESTER,
     KNIFE_SHEATH,
     KOBOLD,
@@ -352,6 +393,10 @@ pub const ALL: &[Tx] = &[
     NEUTRAL_EVIL,
     NEUTRAL_GOOD,
     NORMA,
+    NO_MAGICAL_ARMOR,
+    NO_MAGICAL_WEAPONS_OR_ARMOR,
+    NO_MISCELLANEOUS_MAGICAL_ITEMS,
+    NO_POTIONS_OILS_OR_SCROLLS,
     OF_BLENDING,
     OIL_GREEK_FIRE_FLASK,
     OIL_LAMP_PER_FLASK,
@@ -403,8 +448,12 @@ pub const ALL: &[Tx] = &[
     SPELLCRAFT,
     SPYGLASS,
     STANDARD_HALF_ELF,
+    STANDARD_HALF_OGRE,
+    STANDARD_HALF_ORC,
     STOUT_HALFLING,
     STRENGTH,
+    STRENGTH_MUSCLE,
+    STRENGTH_STAMINA,
     SWANMAY,
     TACK,
     TAILOR,
@@ -421,6 +470,9 @@ pub const ALL: &[Tx] = &[
     TUMBLING,
     TUNNELING,
     UPPER_CLASS,
+    WARRIOR_LIMITED_ARMOR_10,
+    WARRIOR_LIMITED_ARMOR_15,
+    WARRIOR_LIMITED_ARMOR_5,
     WEAPON,
     WEAPONBLACK,
     WEMIC,
@@ -428,5 +480,7 @@ pub const ALL: &[Tx] = &[
     WINESKIN,
     WINTER_BLANKET,
     WISDOM,
+    WISDOM_INTUITION,
+    WISDOM_WILLPOWER,
     WRITING_INK_PER_VIAL,
 ];

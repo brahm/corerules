@@ -185,6 +185,59 @@ impl Gen<'_> {
     }
 
     /// 0x43d7bc(char, part, 0x377): 0 = the character may own the part.
+    /// 0x43d7bc's Player's Option tests after the class tests: `None`
+    /// goes on with the common tail. `known`: the weapon is in the WP list
+    /// (0x4321ac).
+    fn po_restricted(&self, p: &Part, t: i32, known: bool) -> Option<i32> {
+        if self.barred(p, t, true) {
+            return match t {
+                0 if !known => Some(0x1e),
+                1 => Some(0x1e),
+                _ => None,
+            };
+        }
+        if t == 0 {
+            if self.cflag(0x27a0) && pierce_slash(p, false) && !known {
+                return Some(0x1e);
+            }
+            return Some(self.po_ability_bar(p, known)).filter(|&r| r != 0);
+        }
+        let f = self.ability_names();
+        if t == 1 {
+            let a279d = self.cflag(0x279d);
+            if self.cflag(0x27a2) {
+                if !f.armored_wizard && self.cflag(0x27a3) {
+                    return Some(0x1e);
+                }
+            } else if a279d && p.n(0x4c0) != 0 && !f.armored_wizard {
+                return Some(0x1e);
+            }
+            let magical = p.n(0x224) != 0;
+            let (kind, base_ac) = (p.n(0x248), p.n(0x270));
+            if f.no_magical_armor && magical {
+                return Some(0x27);
+            }
+            if f.no_magical_weapons_or_armor && magical {
+                return Some(0x26);
+            }
+            if (f.limited_armor_5 && kind == 1 && base_ac < 5)
+                || (f.limited_armor_10 && kind == 1 && base_ac < 7)
+                || (f.limited_armor_15 && kind != 3)
+            {
+                return Some(0x28);
+            }
+        } else if t == 8 {
+            let cat = p.n(0x584);
+            if f.no_miscellaneous_magical_items && (7..=16).contains(&cat) {
+                return Some(0x24);
+            }
+            if f.no_potions_oils_or_scrolls && (cat == 1 || cat == 2) {
+                return Some(0x25);
+            }
+        }
+        None
+    }
+
     fn restricted(&mut self, p: &Part) -> i32 {
         if p.s(0x1e0) == self.race.name {
             return 0x1f;
@@ -223,13 +276,13 @@ impl Gen<'_> {
                 return 0x29;
             }
         }
-        if self.barred(p, t, true) {
-            return 0x1e;
-        }
-        if self.cflag(0x27a0)
-            && pierce_slash(p, self.core)
-            && t == 0
-            && !self.weapon_list.iter().any(|w| w == name0(p))
+        let known = self.weapon_list.iter().any(|w| w == name0(p));
+        if !self.core {
+            if let Some(r) = self.po_restricted(p, t, known) {
+                return r;
+            }
+        } else if self.barred(p, t, true)
+            || (self.cflag(0x27a0) && pierce_slash(p, true) && t == 0 && !known)
         {
             return 0x1e;
         }
@@ -265,7 +318,7 @@ impl Gen<'_> {
         if let Some(l) = list
             && WEIGHED.contains(&l)
         {
-            let x = f32_of(f64::from(p.weight()) * f64::from(qty));
+            let x = f32_of(f64::from(p.weight(self.core)) * f64::from(qty));
             if f64::from(self.capacity()) < f64::from(x) + f64::from(self.eq.w) {
                 return false;
             }
@@ -760,7 +813,7 @@ impl Gen<'_> {
         if cost < self.eq.budget {
             self.eq.budget -= cost;
         }
-        self.eq.w = f32_of(f64::from(p.weight()) + f64::from(self.eq.w));
+        self.eq.w = f32_of(f64::from(p.weight(self.core)) + f64::from(self.eq.w));
         Some(It::new(self.t(BACKPACK), 1))
     }
 
@@ -799,7 +852,7 @@ impl Gen<'_> {
         let file = |g: &mut Self, list| g.buy_to(nm, Dest::List(list), 1, free, chk);
         let d = self.d;
         if d.is(cat, &[CLOTHING, HOUSEHOLD, TACK, MISC]) {
-            if !(p.weight() <= 20.0 && file(self, L380)) {
+            if !(p.weight(self.core) <= 20.0 && file(self, L380)) {
                 file(self, L530);
             }
         } else if d.is(cat, &[ANIMAL, TRANSPORTATION_ANIMALS]) {
@@ -818,7 +871,7 @@ impl Gen<'_> {
         ) {
             file(self, L674);
         } else if t == 0 {
-            if !(p.weight() <= 5.0 && file(self, L380)) {
+            if !(p.weight(self.core) <= 5.0 && file(self, L380)) {
                 file(self, L530);
             }
         } else {
@@ -1088,7 +1141,7 @@ impl Gen<'_> {
                     0 => p.n(0x1fc),
                     x => x,
                 };
-                if p.weight() < 15.0 && price < 250 {
+                if p.weight(self.core) < 15.0 && price < 250 {
                     ok = self.buy(nm, L380, 1, false);
                 }
             }

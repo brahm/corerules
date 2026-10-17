@@ -15,6 +15,38 @@ use super::texts::*;
 const INT_MAX_SPELL_LEVEL: [i32; 26] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9,
 ];
+/// 0x422638: bonus priest spells by Wisdom (Intuition) 0..25 and spell
+/// level 1..7.
+const WIS_BONUS: [[i32; 8]; 26] = [
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 1, 0, 0, 0, 0, 0, 0],
+    [0, 2, 0, 0, 0, 0, 0, 0],
+    [0, 2, 1, 0, 0, 0, 0, 0],
+    [0, 2, 2, 0, 0, 0, 0, 0],
+    [0, 2, 2, 1, 0, 0, 0, 0],
+    [0, 2, 2, 1, 1, 0, 0, 0],
+    [0, 3, 2, 2, 1, 0, 0, 0],
+    [0, 3, 3, 2, 2, 0, 0, 0],
+    [0, 3, 3, 3, 2, 1, 0, 0],
+    [0, 3, 3, 3, 3, 2, 0, 0],
+    [0, 4, 3, 3, 3, 2, 1, 0],
+    [0, 4, 3, 3, 3, 3, 2, 0],
+    [0, 4, 3, 3, 3, 3, 3, 0],
+];
+/// A Player's Option priest with spells above level 7.
+const WIS_BONUS_ABOVE_7: &str = "Player's Option bonus priest spells above level 7 are not decoded (0x422638); none were added.";
 /// 0x42205e: the most spells per level by Intelligence.
 const INT_MAX_SPELLS: [i32; 26] = [
     0,
@@ -141,7 +173,8 @@ impl<'a> Gen<'a> {
     }
 
     /// 0x431639: the kit's spell table (+0x648) with kit +0x5da, else the
-    /// class table +0x414 (+0x159c with a class ability +0x784).
+    /// class table +0x414 (+0x159c with a class ability +0x784), with the
+    /// Wisdom bonus of a Player's Option priest.
     fn spell_slots(&mut self, g: usize, sl: i32) -> i32 {
         let k = self.classes[g];
         let lv = self.levels[g];
@@ -156,11 +189,31 @@ impl<'a> Gen<'a> {
         }
         let alt = self.class_abilities[g].iter().any(|p| p.n(0x784) != 0);
         let table = if alt { &k.alt_slots } else { &k.slots };
-        table
+        let v = table
             .get(lv.max(0) as usize)
             .and_then(|row| row.get(sl as usize))
             .copied()
-            .unwrap_or(0)
+            .unwrap_or(0);
+        if self.core || k.group != 2 || v == 0 {
+            return v;
+        }
+        v + self.wis_bonus_spells(sl) * if k.flag(0x2790) { 2 } else { 1 }
+    }
+
+    /// 0x422638(sl): bonus priest spells by Wisdom (Intuition), doubled
+    /// when the first priest class has +0x2790.
+    fn wis_bonus_spells(&mut self, sl: i32) -> i32 {
+        if !(1..=7).contains(&sl) {
+            self.warn(WIS_BONUS_ABOVE_7);
+            return 0;
+        }
+        let v = WIS_BONUS[self.intuition().clamp(0, 25) as usize][sl as usize];
+        let first = self.classes.iter().find(|k| k.group == 2);
+        if first.is_some_and(|k| k.flag(0x2790)) {
+            v << 1
+        } else {
+            v
+        }
     }
 
     /// 0x431862: one more spell of the specialist's school.
@@ -351,8 +404,11 @@ impl<'a> Gen<'a> {
         }
     }
 
-    /// 0x4ddbfa: the spellbook, level by level.
+    /// 0x4ddbfa: the spellbook lists emptied (0x4023d0), then filled level
+    /// by level.
     fn wizard_learn(&mut self, g: usize) {
+        self.book_w.clear();
+        self.book_p.clear();
         let spec = self.classes[g].school.clone();
         let maxl = self.max_spell_level();
         self.kit_spell_edits(g);

@@ -55,12 +55,13 @@ impl Gen<'_> {
         d.weight = u(self.weight);
         d.age = u(self.age);
         d.unknown_0x163c = u32::from(self.male());
-        let s = &self.subs;
-        d.strength = [u(self.ab[STR]), u(s[STR][0]), u(s[STR][1])];
+        // A subability may be below 0 (Cha 1 with -2 is -1), saved as is.
+        let s = self.subs.map(|p| p.map(|v| v as u32));
+        d.strength = [u(self.ab[STR]), s[STR][0], s[STR][1]];
         d.exceptional_strength = u(self.exc);
         for (i, a) in d.abilities.iter_mut().enumerate() {
             let k = i + 1;
-            *a = [u(self.ab[k]), u(s[k][0]), u(s[k][1])];
+            *a = [u(self.ab[k]), s[k][0], s[k][1]];
         }
         d.race.clone_from(&self.race.name);
         d.subrace.clone_from(&self.subrace.name);
@@ -94,6 +95,8 @@ impl Gen<'_> {
         if d.nonweapon_bonuses.is_some() {
             d.nonweapon_bonuses = Some(self.nwp.iter().map(|n| u(n.2)).collect());
         }
+        d.unknown_0x1830[0].clone_from(&self.traits);
+        d.unknown_0x1830[1].clone_from(&self.disadvantages);
         d.nonweapon_details = (0..self.nwp.len())
             .map(|i| Object::StringArray(self.nwp_langs.get(&i).cloned().unwrap_or_default()))
             .collect();
