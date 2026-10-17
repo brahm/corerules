@@ -62,6 +62,12 @@ Expansion package.
 | drawing | Save dialog per drawing, default its file name (this app does not import drawings) | same |
 | Map Maker II maps | Map Maker's own import (this app does not import them and says so) | same |
 
+Packages made with the Expansion after its later patches (3 to 5) hold what the CD's
+`TSRP3.EXE` cannot read: `CSpellPointsOb` objects in classes ([classes.md](classes.md#cspellpointsob-schema-94))
+and kits of version 31 ([parts.md](parts.md)). The original rejects such a package as a whole
+("Unexpected file format."); this app imports it, leaving the spell points out (with a warning
+naming the class) and writing the kits as version 30.
+
 The Expansion converts the characters and parts of a 2.0 package to its own layout: characters
 to `TSRP3 V54`; parts get the `TSRP3 V7` version block, the members the newer layouts add get
 their defaults (`unknown_0x52c` 100, `unknown_0x4` zeros, `flag_0x724`, `flag_0x4d0`,

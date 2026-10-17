@@ -159,7 +159,7 @@ as ported in `classes/pages.rs`.
 | 82 | `unknown_0x302c` | CStringArray | | +0x302c | armor always allowed, with armor choice 2 |
 | 83 | `unknown_0x4898` | CStringArray | | +0x4898 | wizard: schools the class may not cast spells from (one school for each specialist and each elementalist; none for the wild mage) |
 | 84 | `unknown_0x48b0` | CStringArray | v > 38 | +0x48b0 | standard kits a character of the class may not select |
-| 85 | `unknown_0x2f8c` | CObArray | | +0x2f8c | empty in every shipped class; element class unknown |
+| 85 | `unknown_0x2f8c` | CObArray<[CClassFreeSpellsOb](#cclassfreespellsob-schema-96-serialize-0x6b70aa)> | | +0x2f8c | spell-like abilities by level; empty in every shipped class, used by community specialty priests |
 | 86 | `unknown_0x3514` | CObArray<[CPartKitBonusOb](#cpartkitbonusob-versionable-schema-1)> | | +0x3514 | nonweapon proficiencies by level (IDD 172): `name`, `unknown_0x8` the level, `unknown_0xc` 0 for one granted free. Below v 36 the program converts the stored objects after loading; same bytes |
 | 87 | `kit_bonuses` | CObArray<[CPartKitBonusOb](#cpartkitbonusob-versionable-schema-1)> | | +0x3528 | proficiency score bonuses by level: `name`, `unknown_0x8` the level from which `unknown_0xc` is added to the proficiency's score (Ranger: Tracking). Below v 37 converted after loading; same bytes |
 | 88 | `unknown_0x4884` | CObArray<[CPartKitBonusOb](#cpartkitbonusob-versionable-schema-1)> | | +0x4884 | wizard: non-standard bonuses and penalties to learn spells (IDD 244): `name` a school, `unknown_0xc` the % adjustment (-100 to 100), `unknown_0x8` 0 (22 entries for the wild mage and each elementalist) |
@@ -229,6 +229,38 @@ Skills & Powers values (class ability points, proficiency points) count as 0
 for a 2.0 class, and the flags as unset. The class editor edits Expansion
 classes only: on a 2.0 class every field but the name reads as 0 and changes
 to it are dropped.
+
+## CClassFreeSpellsOb (schema 96, Serialize 0x6b70aa)
+
+Rust `ClassFreeSpells`. A spell-like ability a class gets at a level ("Detect
+Evil", 1 "per day"), in the class's `unknown_0x2f8c`. Self-versioned; the
+Expansion writes version 4.
+
+| # | field | type | when | member | meaning |
+|---|---|---|---|---|---|
+| 1 | `version` | i32 | | | 4 when the Expansion writes it |
+| 2 | `unknown_0x2c` | i32 | | +0x2c | level the ability comes at |
+| 3 | `unknown_0x30` | i32 | | +0x30 | how many uses ("1" in "1 per day"); 1 for a new object |
+| 4 | `unknown_0x34` | CString | v > 2 | +0x34 | frequency ("per day") |
+| 5 | `flag_0x38` | u8 | | +0x38 | |
+| 6 | `unknown_0x4` | CStringArray | | +0x4 | |
+| 7 | `unknown_0x18` | CObArray<[CPartKitBonusOb](#cpartkitbonusob-versionable-schema-1)> | v > 1 | +0x18 | the spells, `name` the spell; below version 4 converted after loading, same bytes |
+
+## CSpellPointsOb (schema 94)
+
+Rust `SpellPoints`. Spell points per level, found in community classes made
+with the Expansion after its later patches (3 to 5). The `TSRP3.EXE` of the
+Expansion CD does not have the class: it stops at the first one and rejects
+the whole package ("Unexpected file format."). The layout comes from those
+files, 41 bytes each:
+
+| # | field | type | meaning |
+|---|---|---|---|
+| 1 | `version` | u32 | 1 in every file |
+| 2 | `values` | i32[9] | level, spell points, highest spell level (Druid of Chauntea at level 1: 4 points, 3rd level), then values that are mostly 0 |
+| 3 | `flag` | u8 | |
+
+Import leaves them out of the class (see [export.md](export.md#import)).
 
 ## CPartKitBonusOb (versionable schema 1)
 
@@ -365,7 +397,8 @@ app alike:
 * The reader writes an older class back in its own version's layout, while
   the Expansion would save it as `TSRP3 V39`; no shipped or user file has an
   older version, so this has never been exercised.
-* The element classes of `unknown_0x2f8c`, `unknown_0x4acc` and the 2.0
-  `unknown_0x26bc`, and the members marked unknown, are open. How the
+* The element classes of `unknown_0x4acc` and the 2.0 `unknown_0x26bc`, and
+  the members marked unknown, are open; community classes made with the
+  patched Expansion hold `CSpellPointsOb` in them. How the
   Expansion itself reacts to a 2.0 `Class.dat` is not known; the reader's
   `TSRP` test is this app's own.

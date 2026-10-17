@@ -43,6 +43,8 @@ objects! {
     MultiClass(crate::race::MultiClass) = "CClassMultiClassOb", 94;
     Class(Box<crate::classes::Class>) = "CClassOb", 88;
     KitBonus(crate::classes::KitBonus) = "CPartKitBonusOb", 1;
+    ClassFreeSpells(crate::classes::ClassFreeSpells) = "CClassFreeSpellsOb", 96;
+    SpellPoints(crate::classes::SpellPoints) = "CSpellPointsOb", 94;
     InventoryBundle(crate::inventory::InventoryBundle) = "CInventoryBundle", 1;
     Part(Box<crate::parts::Part>) = "CPart", 93;
     PartId(crate::parts::PartId) = "CPartIDOb", 94;

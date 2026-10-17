@@ -403,6 +403,10 @@ maxima 25, `unknown_0x88` [0, 0, 100, 0, 0x80000000], `flags_0x73` [1, 1], `unkn
 | 124 | `flag_0x5df` | bool | v >= 28 | "Use Sharpshooter Attacks Table (Applies only to crossbows)" |
 | 125 | `unknown_0x5ac` | CStringArray | v >= 29 | "Free Weapons" |
 | 126 | `unknown_0x5c0` | CStringArray | v >= 29 | "Free Magic Items" |
+| 127 | `flag_v31` | u8 | v >= 31 | written by the Expansion after its later patches (3 to 5), not by the CD's program; 0 in every kit seen |
+
+The CD's program reads a version 31 kit with the version 30 layout and loses its place in the
+file; import turns such kits into version 30 (`PartKit::downgrade`, [export.md](export.md#import)).
 
 Post-load (no read): if +0x30e (`flags_0x30c[2]`) and +0x44d (`flags_0x44c[1]`) are both set,
 +0x30e is cleared; the editor keeps the two exclusive ("Character Kits do not support both NWP

@@ -50,6 +50,30 @@ impl Class {
             Self::Core20(data) => &data.name,
         }
     }
+
+    /// Removes the [`SpellPoints`] objects, which the Expansion cannot
+    /// read; returns how many there were.
+    pub fn drop_spell_points(&mut self) -> usize {
+        let arrays: Vec<&mut Vec<Object>> = match self {
+            Self::Expansion { data, .. } => [
+                &mut data.unknown_0x2f8c,
+                &mut data.unknown_0x3514,
+                &mut data.kit_bonuses,
+                &mut data.unknown_0x4884,
+            ]
+            .into_iter()
+            .chain(data.unknown_0x4acc.iter_mut())
+            .collect(),
+            Self::Core20(data) => data.unknown_0x26bc.iter_mut().collect(),
+        };
+        let mut dropped = 0;
+        for array in arrays {
+            let before = array.len();
+            array.retain(|o| !matches!(o, Object::SpellPoints(_)));
+            dropped += before - array.len();
+        }
+        dropped
+    }
 }
 
 /// Both programs store `CClassOb` under schema 88, so the layout is told
@@ -258,6 +282,93 @@ record! {
     }
 }
 
+/// A spell-like ability a class gets at a level (`CClassFreeSpellsOb`,
+/// schema 96, `Serialize` at 0x6b70aa), in the class's `unknown_0x2f8c`.
+/// The shipped classes have none; community specialty priests use them
+/// ("Detect Evil", 1 "per day").
+#[derive(Debug, Clone, PartialEq)]
+pub struct ClassFreeSpells {
+    /// 4 when the Expansion writes it.
+    pub version: i32,
+    /// Level the ability comes at.
+    pub unknown_0x2c: i32,
+    /// How many uses ("1" in "1 per day"); 1 for a new object.
+    pub unknown_0x30: i32,
+    /// The frequency text ("per day"); from version 3.
+    pub unknown_0x34: Option<String>,
+    pub flag_0x38: u8,
+    pub unknown_0x4: Vec<String>,
+    /// From version 2: the spells (`CPartKitBonusOb`, `name` the spell).
+    /// Below version 4 the program converts the stored objects after
+    /// loading; the file layout is the same.
+    pub unknown_0x18: Option<Vec<Object>>,
+}
+
+impl Field for ClassFreeSpells {
+    fn read(r: &mut ArchiveReader) -> Result<Self> {
+        let version = i32::read(r)?;
+        Ok(Self {
+            version,
+            unknown_0x2c: Field::read(r)?,
+            unknown_0x30: Field::read(r)?,
+            unknown_0x34: (version > 2).then(|| r.read_string()).transpose()?,
+            flag_0x38: Field::read(r)?,
+            unknown_0x4: Field::read(r)?,
+            unknown_0x18: (version > 1).then(|| Field::read(r)).transpose()?,
+        })
+    }
+
+    fn write(&self, w: &mut ArchiveWriter) -> Result<()> {
+        // The program writes version 4 and every member; an object read
+        // from an older version is written back in its own layout.
+        let gated = |present: bool, expected: bool, field| {
+            if present == expected {
+                Ok(())
+            } else {
+                Err(crate::Error::FieldMismatch { field, expected })
+            }
+        };
+        gated(
+            self.unknown_0x34.is_some(),
+            self.version > 2,
+            "unknown_0x34",
+        )?;
+        gated(
+            self.unknown_0x18.is_some(),
+            self.version > 1,
+            "unknown_0x18",
+        )?;
+        self.version.write(w)?;
+        self.unknown_0x2c.write(w)?;
+        self.unknown_0x30.write(w)?;
+        if let Some(text) = &self.unknown_0x34 {
+            w.write_string(text)?;
+        }
+        self.flag_0x38.write(w)?;
+        self.unknown_0x4.write(w)?;
+        if let Some(objects) = &self.unknown_0x18 {
+            objects.write(w)?;
+        }
+        Ok(())
+    }
+}
+
+record! {
+    /// Spell points per level (`CSpellPointsOb`, schema 94), found in
+    /// community classes made with a later build of the Expansion: the
+    /// `TSRP3.EXE` of the Expansion CD does not have the class and stops
+    /// reading a file that holds one. The layout comes from those files
+    /// (41 bytes each); importing drops them, see `cr_store::export`.
+    pub struct SpellPoints {
+        /// 1 in every file.
+        version: u32,
+        /// Level, spell points, highest spell level (Druid of Chauntea at
+        /// level 1: 4 points, 3rd level), then values that are mostly 0.
+        values: [i32; 9],
+        flag: u8,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -267,5 +378,48 @@ mod tests {
         assert_eq!(version_of("TSRP3 V39"), 39);
         assert_eq!(version_of("TSRP3 V21"), 21);
         assert_eq!(version_of("Fighter"), 38);
+    }
+
+    fn round_trip<T: Field + PartialEq + std::fmt::Debug>(value: &T) -> Vec<u8> {
+        let mut w = ArchiveWriter::new();
+        value.write(&mut w).unwrap();
+        let bytes = w.into_bytes();
+        let mut r = ArchiveReader::new(&bytes);
+        assert_eq!(&T::read(&mut r).unwrap(), value);
+        assert!(r.is_at_end());
+        bytes
+    }
+
+    #[test]
+    fn free_spells_members_follow_the_version() {
+        let mut free = ClassFreeSpells {
+            version: 4,
+            unknown_0x2c: 1,
+            unknown_0x30: 1,
+            unknown_0x34: Some("per day".into()),
+            flag_0x38: 0,
+            unknown_0x4: vec![],
+            unknown_0x18: Some(vec![]),
+        };
+        let v4 = round_trip(&free);
+        // Version, level, uses, "per day", flag, two empty arrays (a count
+        // each).
+        assert_eq!(v4.len(), 4 + 4 + 4 + 8 + 1 + 2 + 2);
+
+        free.version = 1;
+        assert!(free.write(&mut ArchiveWriter::new()).is_err());
+        free.unknown_0x34 = None;
+        free.unknown_0x18 = None;
+        assert_eq!(round_trip(&free).len(), 4 + 4 + 4 + 1 + 2);
+    }
+
+    #[test]
+    fn spell_points_are_41_bytes() {
+        let points = SpellPoints {
+            version: 1,
+            values: [1, 4, 3, 0, 0, 0, 0, 0, 0],
+            flag: 0,
+        };
+        assert_eq!(round_trip(&points).len(), 41);
     }
 }
