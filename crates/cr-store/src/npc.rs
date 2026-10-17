@@ -12,7 +12,9 @@
 //! a deterministic fallback and say so in the result's `messages`.
 //!
 //! Core Rules 2.0 installations (Evermore) roll the name and abilities
-//! with their own code and the other stages with the Expansion's.
+//! with their own code and the other stages with the Expansion's. The app
+//! and `cr` make NPCs in the Expansion only: 2.0 installations are opened
+//! read-only and their content is imported into the Expansion.
 //!
 //! ```no_run
 //! # fn main() -> cr_store::Result<()> {

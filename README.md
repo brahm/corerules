@@ -9,6 +9,12 @@ written in Rust with GTK4 and libadwaita. It reads and writes the data files
 of the original Windows 95 program, so characters made in either program
 open in the other.
 
+Everything new follows the Expansion (AD&D Core Rules 2.0 Expansion). A Core
+Rules 2.0 installation without the Expansion opens read-only: Import Core
+Rules 2.0… (or `cr import EXPANSION_DIR CORE_RULES_2.0_DIR`) copies its
+characters and records into an Expansion installation, converted the way the
+Expansion converts a 2.0 package, and leaves the 2.0 folder untouched.
+
 > This project contains no TSR or Wizards of the Coast content. It reads the
 > rules data from a Core Rules installation you already own.
 
@@ -145,6 +151,9 @@ Early work (phase 0 of the plan): the file formats are being mapped.
       character or every member of a party, with Undo in the app; the
       list filters by party. Each step leaves `Chars/` as the original
       leaves it (checked in both programs; 2.0 has no parties)
+- [x] Core Rules 2.0 as an import source: its installations open
+      read-only, and Import Core Rules 2.0… brings their characters and
+      records into the Expansion
 
 ## Layout
 

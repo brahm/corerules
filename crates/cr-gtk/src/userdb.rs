@@ -190,17 +190,6 @@ pub fn add_actions<H: Host + 'static>(window: &adw::ApplicationWindow, host: Sha
     ]);
 }
 
-/// Enables the actions the installation supports (Allowed Classes is the
-/// Expansion's).
-pub fn set_flavor(window: &adw::ApplicationWindow, expansion: bool) {
-    if let Some(action) = window
-        .lookup_action("udb-allowed")
-        .and_downcast::<gio::SimpleAction>()
-    {
-        action.set_enabled(expansion);
-    }
-}
-
 fn on_key<H: Host + 'static>(host: &Shared<H>, action: Action) {
     let key = host.current_key();
     if let Some((section, origin, name)) = udb::parse_key(&key) {

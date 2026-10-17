@@ -101,9 +101,13 @@ const USAGE: &str = "usage:
                             user's records and characters; ITEM is a name
                             or CATEGORY:NAME as --list prints them
   cr import INSTALL_DIR FILE [--list] [ITEM...]
-                            list or import a package (everything unless
-                            items are named): records replace the user's
-                            of the same name, characters join Chars/;
+  cr import INSTALL_DIR CORE_RULES_2.0_DIR [--list] [ITEM...]
+                            list or import a package, or the characters
+                            and records of a Core Rules 2.0 installation
+                            (converted as the Expansion converts a 2.0
+                            package; everything unless items are named):
+                            records replace the user's of the same name,
+                            characters join Chars/;
                             .mon files do not exist (both programs export
                             monsters in packages)
   cr package INSTALL_DIR FILE [--new] [--add ITEM]... [--remove ITEM]...
@@ -125,6 +129,9 @@ const USAGE: &str = "usage:
                             one, or a file in Chars/
   cr delete INSTALL_DIR CHARACTER...
                             delete characters from Chars/ (no undo)
+
+Core Rules 2.0 installations are read-only: new content follows the
+Expansion, and 2.0 content is brought over with cr import.
 
 Without INSTALL_DIR, the data package in ~/.local/share/corerules/data
 is used, else the installation in the Wine prefix.";
@@ -182,7 +189,28 @@ fn main() -> ExitCode {
             &args[1..],
         ),
     };
-    let result = install.and_then(|install| match command.as_str() {
+    let result = install.and_then(|install| {
+        // Core Rules 2.0 content is only read and imported into the
+        // Expansion; nothing is made or changed in a 2.0 installation.
+        let writes = match command.as_str() {
+            "edit" | "userdb" | "import" | "package" | "party" | "delete" => {
+                !(command == "userdb" && rest.get(1).is_some_and(|a| a == "list"))
+            }
+            "npc" => rest.iter().any(|a| a == "--save"),
+            "encounter" => rest.iter().any(|a| a == "--save"),
+            "export" => !rest.iter().any(|a| a == "--list"),
+            _ => false,
+        };
+        if writes && install.is_core20() {
+            return Err(cr_store::Error::Invalid(
+                "Core Rules 2.0 installations are read-only: import their content into an \
+                 Expansion installation with cr import EXPANSION_DIR CORE_RULES_2.0_DIR"
+                    .into(),
+            ));
+        }
+        Ok(install)
+    });
+    let result = result.and_then(|install| match command.as_str() {
         "survey" => cmd_survey(&install),
         "chars" => cmd_chars(&install),
         "edit" => cmd_edit(&install, rest),

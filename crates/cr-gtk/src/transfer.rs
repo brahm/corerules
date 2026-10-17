@@ -1,6 +1,7 @@
 //! Import…, Export…, New Package… and Edit Package… of the main menu: the
 //! DM Toolkit's packages (`.xpx` from the Expansion, `.xpt` from Core
-//! Rules 2.0).
+//! Rules 2.0), and Import Core Rules 2.0…, which brings a 2.0
+//! installation's content into the Expansion as a 2.0 package would.
 
 use std::cell::RefCell;
 use std::path::PathBuf;
@@ -325,6 +326,35 @@ pub fn import<H: Host + 'static>(host: &Rc<H>) {
             choose_imports(host, file, expansion);
         }
     });
+}
+
+/// Import Core Rules 2.0…: choose a 2.0 installation, then which of its
+/// characters and records to bring into the open Expansion installation.
+pub fn import_core20<H: Host + 'static>(host: &Rc<H>) {
+    let picker = gtk::FileDialog::builder()
+        .title("Import Core Rules 2.0 Installation")
+        .modal(true)
+        .build();
+    let host = host.clone();
+    picker.select_folder(
+        window_of(&*host).as_ref(),
+        gio::Cancellable::NONE,
+        move |r| {
+            let Ok(Some(path)) = r.map(|f| f.path()) else {
+                return;
+            };
+            let package = Installation::open(&path).and_then(|i| i.core20_package());
+            match package {
+                Ok(export) if contents(&export.file).is_empty() => alert(
+                    &*host,
+                    "Nothing to Import",
+                    "This Core Rules 2.0 installation has no characters or records of its own.",
+                ),
+                Ok(export) => choose_imports(&host, export.file, true),
+                Err(e) => alert(&*host, "Cannot Import", &e.to_string()),
+            }
+        },
+    );
 }
 
 fn choose_imports<H: Host + 'static>(host: &Rc<H>, file: ExportFile, expansion: bool) {

@@ -236,3 +236,22 @@ fn removed_items_come_back_with_add() {
     s.install.add_to(&mut file, &back).unwrap();
     assert!(file.to_bytes().unwrap() == again.to_bytes().unwrap());
 }
+
+#[test]
+fn core20_installations_hand_over_everything() {
+    let Some(s) = scratch("core20") else {
+        return;
+    };
+    if !s.install.is_core20() {
+        assert!(s.install.core20_package().is_err());
+        return;
+    }
+    // Every item Export offers, the original's package among them.
+    let (_, theirs) = s.package("nomap");
+    let ours = s.install.core20_package().unwrap().file;
+    assert_eq!(contents(&ours).len(), s.install.exportable().unwrap().len());
+    let (ours, _) = summary(&ours);
+    for item in summary(&theirs).0 {
+        assert!(ours.contains(&item), "{item:?} missing");
+    }
+}

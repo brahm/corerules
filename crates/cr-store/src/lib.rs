@@ -91,6 +91,13 @@ impl Installation {
         &self.root
     }
 
+    /// Whether this is Core Rules 2.0 (Evermore), whose content is only
+    /// imported into the Expansion: everything new is made in the
+    /// Expansion's layout, so 2.0 installations are opened read-only.
+    pub fn is_core20(&self) -> bool {
+        self.path("UserDbas/AllowedU.dat").is_none()
+    }
+
     /// Resolves a relative path such as `Chars/index.chr`, matching each
     /// component without regard to case.
     pub fn path(&self, relative: &str) -> Option<PathBuf> {

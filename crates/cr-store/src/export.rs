@@ -689,6 +689,19 @@ impl Installation {
         Ok(out)
     }
 
+    /// Everything a Core Rules 2.0 installation can hand over: its
+    /// characters and the user's records, in a 2.0 package. Importing it
+    /// into the Expansion converts each item the way the Expansion converts
+    /// a `.xpt` package. New content is made in the Expansion only.
+    pub fn core20_package(&self) -> Result<Export> {
+        if flavor_of(self) == Flavor::Expansion {
+            return Err(Error::Invalid(
+                "This is an Expansion installation, not a Core Rules 2.0 one".into(),
+            ));
+        }
+        self.export(&self.exportable()?)
+    }
+
     /// The package holding `items`, in the layout of this installation's
     /// program, in the order given.
     pub fn export(&self, items: &[Exportable]) -> Result<Export> {

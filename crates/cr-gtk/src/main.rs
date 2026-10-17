@@ -37,6 +37,29 @@ use lists::{ListEditor, RowList, RowSpec, pick};
 
 const APP_ID: &str = "io.github.brahm.CoreRules";
 
+/// The actions that make or change content, off for Core Rules 2.0.
+const WRITE_ACTIONS: [&str; 19] = [
+    "new-character",
+    "new-npc",
+    "new-npc-group",
+    "roll-treasure",
+    "new-encounter",
+    "new-table",
+    "export",
+    "import",
+    "import-core20",
+    "new-package",
+    "edit-package",
+    "manage-parties",
+    "udb-new",
+    "udb-copy",
+    "udb-edit",
+    "udb-delete",
+    "udb-subrace",
+    "udb-allowed",
+    "udb-restore",
+];
+
 fn main() -> glib::ExitCode {
     let app = adw::Application::builder().application_id(APP_ID).build();
     app.connect_activate(|app| {
@@ -232,6 +255,12 @@ impl Window {
                 move |_, _, _| transfer::import(&Rc::new(this.clone()))
             })
             .build();
+        let import_core20 = gio::ActionEntry::builder("import-core20")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| transfer::import_core20(&Rc::new(this.clone()))
+            })
+            .build();
         let new_package = gio::ActionEntry::builder("new-package")
             .activate({
                 let this = this.clone();
@@ -252,6 +281,7 @@ impl Window {
             new_package,
             edit_package,
             manage_parties,
+            import_core20,
         ]);
         this.window.add_action_entries([
             open,
@@ -333,28 +363,22 @@ impl Window {
                 .unwrap_or_default()
         )));
         self.stack.set_visible_child_name("browser");
-        // Create Multiple NPCs draws from the race/class combinations of
-        // AllowedU.dat, which only the Expansion has.
-        let groups = install.path("UserDbas/AllowedU.dat").is_some();
+        // Core Rules 2.0 content is only imported into the Expansion:
+        // a 2.0 installation is browsed, never changed.
+        let read_only = install.is_core20();
         *self.install.borrow_mut() = Some(install);
         self.npc_rules.borrow_mut().take();
         self.set_can_create(true);
-        userdb::set_flavor(&self.window, groups);
-        if let Some(action) = self
-            .window
-            .lookup_action("new-npc-group")
-            .and_downcast::<gio::SimpleAction>()
-        {
-            action.set_enabled(groups);
+        for name in WRITE_ACTIONS {
+            if let Some(action) = self
+                .window
+                .lookup_action(name)
+                .and_downcast::<gio::SimpleAction>()
+            {
+                action.set_enabled(!read_only);
+            }
         }
-        // Core Rules 2.0 has no parties.
-        if let Some(action) = self
-            .window
-            .lookup_action("manage-parties")
-            .and_downcast::<gio::SimpleAction>()
-        {
-            action.set_enabled(groups);
-        }
+        self.browser.set_read_only(read_only);
     }
 
     fn set_can_create(&self, enabled: bool) {
@@ -372,6 +396,7 @@ impl Window {
             "new-package",
             "edit-package",
             "manage-parties",
+            "import-core20",
         ] {
             if let Some(action) = self
                 .window
@@ -791,6 +816,9 @@ fn open_menu() -> gtk::MenuButton {
     menu.append(Some("Roll on a _Table…"), Some("win.roll-table"));
     let packages = gio::Menu::new();
     packages.append(Some("_Import…"), Some("win.import"));
+    let item = gio::MenuItem::new(Some("Import Core _Rules 2.0…"), Some("win.import-core20"));
+    item.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
+    packages.append_item(&item);
     packages.append(Some("E_xport…"), Some("win.export"));
     packages.append(Some("New P_ackage…"), Some("win.new-package"));
     packages.append(Some("E_dit Package…"), Some("win.edit-package"));
@@ -828,6 +856,8 @@ struct Browser {
     /// everyone (`None`), no party (empty) or a party.
     party_filter: gtk::DropDown,
     party_choices: Rc<RefCell<Vec<Option<String>>>>,
+    /// Says that a Core Rules 2.0 installation is only read.
+    read_only_banner: adw::Banner,
 }
 
 /// The right-hand pane.
@@ -843,6 +873,8 @@ struct DetailPane {
     current_key: Rc<RefCell<String>>,
     /// Copy, New and Delete for standard and custom records.
     udb_actions: userdb::DetailActions,
+    /// Core Rules 2.0: entries are shown, not edited.
+    read_only: Rc<std::cell::Cell<bool>>,
 }
 
 impl DetailPane {
@@ -851,19 +883,22 @@ impl DetailPane {
         self.view.set_content(Some(&detail(entry)));
         let key = &entry.key;
         let character = !key.is_empty() && !key.contains(':');
+        let writable = !self.read_only.get();
         self.edit_button.set_visible(
-            character
-                || userdb::editable(key)
-                || [TREASURE_KEY, ENCOUNTER_KEY, TABLE_KEY]
-                    .iter()
-                    .any(|p| key.starts_with(p)),
+            writable
+                && (character
+                    || userdb::editable(key)
+                    || [TREASURE_KEY, ENCOUNTER_KEY, TABLE_KEY]
+                        .iter()
+                        .any(|p| key.starts_with(p))),
         );
-        self.udb_actions.update(key);
+        self.udb_actions.update(if writable { key } else { "" });
         self.sheet_button.set_visible(character);
-        self.convert_button.set_visible(character && entry.npc);
-        self.delete_button.set_visible(character);
+        self.convert_button
+            .set_visible(writable && character && entry.npc);
+        self.delete_button.set_visible(writable && character);
         self.generate_button
-            .set_visible(key.starts_with(TEMPLATE_KEY) || key.starts_with(TABLE_KEY));
+            .set_visible(writable && (key.starts_with(TEMPLATE_KEY) || key.starts_with(TABLE_KEY)));
         self.generate_button
             .set_tooltip_text(Some(if key.starts_with(TABLE_KEY) {
                 "Roll and Create Encounter"
@@ -952,6 +987,7 @@ impl Browser {
             generate_button: generate_button.clone(),
             current_key: current_key.clone(),
             udb_actions,
+            read_only: Rc::default(),
         };
 
         // Entries.
@@ -1068,8 +1104,15 @@ impl Browser {
         entries_header.pack_start(&new_button);
         entries_header.pack_end(&origin_filter);
         entries_header.pack_end(&party_filter);
+        let read_only_banner = adw::Banner::builder()
+            .title("Core Rules 2.0 is read-only")
+            .tooltip_text("Open an Expansion installation and import this content with Import Core Rules 2.0…")
+            .revealed(true)
+            .visible(false)
+            .build();
         let entries_view = adw::ToolbarView::new();
         entries_view.add_top_bar(&entries_header);
+        entries_view.add_top_bar(&read_only_banner);
         entries_view.add_top_bar(&search_bar);
         entries_view.set_content(Some(&entries_stack));
         let entries_page = adw::NavigationPage::builder()
@@ -1207,7 +1250,16 @@ impl Browser {
             current_key,
             party_filter,
             party_choices,
+            read_only_banner,
         }
+    }
+
+    /// Shows a Core Rules 2.0 installation without the ways to change it.
+    fn set_read_only(&self, read_only: bool) {
+        self.detail.read_only.set(read_only);
+        // Shown without the reveal animation, which leaves the list
+        // under the search bar until the next relayout.
+        self.read_only_banner.set_visible(read_only);
     }
 
     /// Shows the sections of an installation. With `key`, the installation

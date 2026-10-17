@@ -105,10 +105,15 @@ pub fn cmd_import(install: &Installation, args: &[String]) -> Result<()> {
     let invalid = |m: &str| Error::Invalid(m.into());
     let Some(input) = args.first() else {
         return Err(invalid(
-            "usage: cr import INSTALL_DIR FILE [--list] [ITEM...]",
+            "usage: cr import INSTALL_DIR (FILE | CORE_RULES_2.0_DIR) [--list] [ITEM...]",
         ));
     };
-    let file = read_package(Path::new(input))?;
+    // A folder is a Core Rules 2.0 installation to bring over.
+    let file = if Path::new(input).is_dir() {
+        Installation::open(input)?.core20_package()?.file
+    } else {
+        read_package(Path::new(input))?
+    };
     let preview = install.import_preview(&file)?;
     let mut chosen: Vec<usize> = Vec::new();
     let mut list = false;
