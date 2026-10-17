@@ -720,3 +720,73 @@ fn golden_encounter_dependent_npc_lines() {
         }
     }
 }
+
+/// An installation like `install` whose `UserDbas/PartsU.dat` is `parts`
+/// (removed when dropped).
+struct WithParts {
+    root: PathBuf,
+    install: Installation,
+}
+
+impl Drop for WithParts {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.root);
+    }
+}
+
+fn with_parts(install: &Installation, parts: &Path, test: &str) -> WithParts {
+    let root = std::env::temp_dir().join(format!("cr-npc-{test}-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&root);
+    fs::create_dir_all(root.join("UserDbas")).unwrap();
+    for entry in fs::read_dir(install.root()).unwrap() {
+        let entry = entry.unwrap();
+        if entry.file_name() != "UserDbas" {
+            std::os::unix::fs::symlink(entry.path(), root.join(entry.file_name())).unwrap();
+        }
+    }
+    let user = install.path("UserDbas").unwrap();
+    for entry in fs::read_dir(&user).unwrap() {
+        let entry = entry.unwrap();
+        if entry.file_type().unwrap().is_file() {
+            fs::copy(entry.path(), root.join("UserDbas").join(entry.file_name())).unwrap();
+        }
+    }
+    fs::copy(parts, root.join("UserDbas/PartsU.dat")).unwrap();
+    let install = Installation::open(&root).unwrap();
+    WithParts { root, install }
+}
+
+/// Player's Option: a kit (a user copy of "Diplomat, Dwarf (CRE)" made
+/// available to Skills & Powers characters) offers Modern Languages four
+/// times; each offer after the first teaches one more language (0x4d411a).
+#[test]
+fn golden_players_option_kit_languages() {
+    let Some((dir, install)) = golden() else {
+        return;
+    };
+    if rules(&install).flavor() != Flavor::Expansion || !dir.join("po/trace_session3.log").exists()
+    {
+        return;
+    }
+    let scratch = with_parts(&install, &dir.join("po/PartsU_session3.dat"), "kitlang");
+    let rules = rules(&scratch.install);
+    let t = trace(&dir.join("po/trace_session3.log"));
+    let file = "po/g15_dwarf_thief3_envoy.dat";
+    let g = saved(&dir, file);
+    let mut options = line(
+        (1, 1),
+        Some(g.data.race.clone()),
+        &[(1, Choice::Name("Thief".into()))],
+        &[(1, (3, 3))],
+        Choice::Name(g.data.kit.clone()),
+        Choice::Random,
+    );
+    options.players_option = true;
+    let mut rand = at(&t, 2);
+    let npcs = rules.generate_groups(&mut rand, &[options]).unwrap();
+    check_stream("15", &t, 2, &rand);
+    compare_all("15", &npcs, &dir, &[file.into()]);
+    let npc = &npcs[0].character.data;
+    assert_eq!(npc.strength, g.data.strength, "{file}");
+    assert_eq!(npc.abilities, g.data.abilities, "{file}");
+}

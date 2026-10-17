@@ -63,8 +63,10 @@ pub trait PartExt {
             f32::from_bits(self.n(0x1ec) as u32)
         }
     }
-    /// Price in copper (0x4c887d), the alternate prices first.
-    fn price(&self, qty: i32) -> i32 {
+    /// Price in copper (0x4c887d). Core Rules takes the alternate prices
+    /// where they are set (0x6610a6: the mode 0x446a40 sets with the
+    /// character's rule system), Player's Option the base ones.
+    fn price(&self, qty: i32, core: bool) -> i32 {
         let mut v = 0i32;
         for (base, alt, mul) in [
             (0x1f8, 0x208, 500),
@@ -73,8 +75,8 @@ pub trait PartExt {
             (0x204, 0x214, 1),
         ] {
             let x = match self.n(alt) {
-                0 => self.n(base),
-                x => x,
+                x if core && x != 0 => x,
+                _ => self.n(base),
             };
             v = v.wrapping_add(x.wrapping_mul(mul));
         }

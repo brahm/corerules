@@ -16,7 +16,7 @@ const INT_MAX_SPELL_LEVEL: [i32; 26] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9,
 ];
 /// 0x422638: bonus priest spells by Wisdom (Intuition) 0..25 and spell
-/// level 1..7.
+/// level 1..7; there are none above level 7.
 const WIS_BONUS: [[i32; 8]; 26] = [
     [0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0],
@@ -43,10 +43,8 @@ const WIS_BONUS: [[i32; 8]; 26] = [
     [0, 3, 3, 3, 3, 2, 0, 0],
     [0, 4, 3, 3, 3, 2, 1, 0],
     [0, 4, 3, 3, 3, 3, 2, 0],
-    [0, 4, 3, 3, 3, 3, 3, 0],
+    [0, 4, 3, 3, 3, 3, 3, 1],
 ];
-/// A Player's Option priest with spells above level 7.
-const WIS_BONUS_ABOVE_7: &str = "Player's Option bonus priest spells above level 7 are not decoded (0x422638); none were added.";
 /// 0x42205e: the most spells per level by Intelligence.
 const INT_MAX_SPELLS: [i32; 26] = [
     0,
@@ -203,8 +201,8 @@ impl<'a> Gen<'a> {
     /// 0x422638(sl): bonus priest spells by Wisdom (Intuition), doubled
     /// when the first priest class has +0x2790.
     fn wis_bonus_spells(&mut self, sl: i32) -> i32 {
+        // Levels 8 and 9 (and anything outside the table) give none.
         if !(1..=7).contains(&sl) {
-            self.warn(WIS_BONUS_ABOVE_7);
             return 0;
         }
         let v = WIS_BONUS[self.intuition().clamp(0, 25) as usize][sl as usize];

@@ -66,10 +66,6 @@ pub struct AbilityNames {
     pub limited_armor_15: bool,
 }
 
-/// A Player's Option kit option group that offers a proficiency the
-/// character knows already.
-const PO_LANGUAGE_CHOICE: &str = "A Player's Option kit offers a language proficiency the NPC already has; it was added again as in the Core Rules (0x4d3e6c's language choice is not decoded).";
-
 /// The weapon proficiency stage's state (members of `CNPCGeneration`).
 #[derive(Debug, Clone, Default)]
 pub struct Weapons {
@@ -643,11 +639,12 @@ impl Gen<'_> {
                         if self.nwp_take_free(name, true) == -2 {
                             // A known language-teaching proficiency: Core
                             // Rules adds it again at cost 0; Player's
-                            // Option would pick a language instead.
-                            if !self.core {
-                                self.warn(PO_LANGUAGE_CHOICE);
+                            // Option teaches one more language instead.
+                            if self.core {
+                                self.nwp_add(name, 0);
+                            } else {
+                                self.nwp_kit_language(name);
                             }
-                            self.nwp_add(name, 0);
                         }
                     }
                 } else {
@@ -1681,6 +1678,29 @@ impl Gen<'_> {
             self.languages.push(self.t(HUMAN_REGIONAL_DIALECT).into());
         }
         self.lang_nwp();
+    }
+
+    /// 0x4d411a: in Player's Option, each known proficiency named `name`
+    /// learns the first of ten drawn languages it does not teach yet.
+    fn nwp_kit_language(&mut self, name: &str) {
+        let pool: Vec<&str> = self.d.parts[LANGUAGES].iter().map(|p| p.name()).collect();
+        for i in 0..self.nwp.len() {
+            if self.nwp[i].0 != name {
+                continue;
+            }
+            let mut list = self.nwp_langs.remove(&i).unwrap_or_default();
+            for _ in 0..10 {
+                let k = self.between(0, pool.len() as i32 - 1) as usize;
+                let Some(&lang) = pool.get(k) else {
+                    break;
+                };
+                if !lang.is_empty() && !list.iter().any(|l| l == lang) {
+                    list.push(lang.to_owned());
+                    break;
+                }
+            }
+            self.nwp_langs.insert(i, list);
+        }
     }
 
     /// 0x4c44ba: the languages of each language-teaching proficiency.

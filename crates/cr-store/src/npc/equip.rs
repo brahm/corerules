@@ -325,7 +325,7 @@ impl Gen<'_> {
             w = Some(x);
         }
         if !free {
-            let cost = p.price(qty);
+            let cost = p.price(qty, self.core);
             if self.eq.budget <= cost {
                 return false;
             }
@@ -809,7 +809,7 @@ impl Gen<'_> {
     /// 0x4c167c("Backpack"): paid when affordable, else free.
     fn eq_backpack(&mut self) -> Option<It> {
         let p = self.d.find(self.t(BACKPACK))?;
-        let cost = p.price(1);
+        let cost = p.price(1, self.core);
         if cost < self.eq.budget {
             self.eq.budget -= cost;
         }

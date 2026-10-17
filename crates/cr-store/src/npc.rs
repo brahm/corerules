@@ -7,9 +7,10 @@
 //! (document constructor, name, abilities, alignment, kit, social class,
 //! background, height/weight/age, money, nonweapon and weapon
 //! proficiencies, languages, hit points, equipment, spells, psionics).
-//! Paths the specification leaves undecoded (Player's Option proficiencies
-//! and equipment, some kit and class objects, dual-class hit points) take
-//! a deterministic fallback and say so in the result's `messages`.
+//! Core Rules and Player's Option follow the original. Where the original
+//! itself fails (a kit item missing from the database, a priest spell list
+//! that runs out) or the data lacks a part, generation skips the step and
+//! says so in the result's `messages`.
 //!
 //! Core Rules 2.0 installations (Evermore) roll the name and abilities
 //! with their own code and the other stages with the Expansion's. The app
