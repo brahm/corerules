@@ -66,7 +66,10 @@ CORERULES_DIR="$HOME/.wine/drive_c/Program Files/AD&D Core Rules 2.0" cargo test
 
 ## Status
 
-Early work (phase 0 of the plan): the file formats are being mapped.
+The Character Generator, the DM Toolkit's generators, packages and editors,
+the books and Table Rolls work against a real installation. Map Maker II,
+the Campaign Mapper and the dice roller are not planned; there is no
+pt-BR translation yet.
 
 - [x] MFC `CArchive` reader and writer, byte for byte
 - [x] Character list (`Chars/index.chr`), round-trip tested
