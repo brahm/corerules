@@ -1,18 +1,16 @@
-What's new in 0.4.0:
+What's new in 0.5.0:
 
-- Treasure generator: treasure types A to Z, table rolls, intelligent
-  weapons, spell scrolls and saved treasure bundles
-- Encounter generator: encounters from templates, saved encounters and the
-  2-20 tables, NPC lines included
-- NPC generator: New NPC and New NPC Group, for Core Rules and Player's
-  Option (Skills & Powers) NPCs, with kits, proficiencies, equipment, spells,
-  psionics and rogue skills, and Convert to Character
-- The Core Rules books in a reader, Table Rolls, and editors for every user
-  database
-- Run without Wine: `packaging/extract-data.sh` makes a data package from
-  your own installation (keep it for yourself, do not share it)
-- The `.deb` now targets Ubuntu 26.04; on Ubuntu 24.04 use the AppImage or
-  the Flatpak
+- DM Toolkit packages: Import… and Export… in the main menu read and write
+  the `.xpx` packages of the Expansion and the `.xpt` packages of Core
+  Rules 2.0, with characters and any record you made (races, classes,
+  items, spells, monsters, encounters, traps, psionic powers, treasure
+  bundles), exactly as the original programs do; a 2.0 package imported
+  into the Expansion is converted like the original converts it
+- New Package… and Edit Package… create a package or change one, adding
+  your records and characters or taking items out
+- `cr export`, `cr import` and `cr package` do the same from the command
+  line
+- There is no `.mon` file: both originals export monsters in packages
 
 Every change was checked against both original programs.
 

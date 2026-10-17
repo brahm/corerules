@@ -52,6 +52,15 @@
     <color type="primary" scheme_preference="dark">#77101b</color>
   </branding>
   <releases>
+    <release version="0.5.0" date="2026-10-17" type="development">
+      <description>
+        <p>Records and characters can now travel in DM Toolkit packages.</p>
+        <ul>
+          <li>Import and export .xpx (Expansion) and .xpt (Core Rules 2.0) packages, as the originals do</li>
+          <li>Create a package and edit one, adding or removing records and characters</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-10-17" type="development">
       <description>
         <p>Treasure, encounters and NPCs can now be generated.</p>
