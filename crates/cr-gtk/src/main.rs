@@ -9,6 +9,7 @@ mod lists;
 mod npc;
 mod sheet;
 mod tables;
+mod transfer;
 mod treasure;
 mod userdb;
 
@@ -204,7 +205,20 @@ impl Window {
                 move |_, _, _| this.roll_table()
             })
             .build();
-        this.window.add_action_entries([open_book, roll_table]);
+        let export = gio::ActionEntry::builder("export")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| transfer::export(&Rc::new(this.clone()))
+            })
+            .build();
+        let import = gio::ActionEntry::builder("import")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| transfer::import(&Rc::new(this.clone()))
+            })
+            .build();
+        this.window
+            .add_action_entries([open_book, roll_table, export, import]);
         this.window.add_action_entries([
             open,
             new_character,
@@ -311,6 +325,8 @@ impl Window {
             "new-table",
             "open-book",
             "roll-table",
+            "export",
+            "import",
         ] {
             if let Some(action) = self
                 .window
@@ -598,6 +614,28 @@ impl npc::Host for Window {
     }
 }
 
+impl transfer::Host for Window {
+    fn installation(&self) -> std::cell::Ref<'_, Option<Installation>> {
+        self.install.borrow()
+    }
+
+    fn toast(&self, message: &str) {
+        Window::toast(self, message)
+    }
+
+    fn reloaded(&self) {
+        // Imported races and classes change what the NPC generator offers.
+        self.npc_rules.borrow_mut().take();
+        if let Some(install) = self.install.borrow().as_ref() {
+            self.browser.load(install.catalog(), None);
+        }
+    }
+
+    fn parent(&self) -> gtk::Widget {
+        self.window.clone().upcast()
+    }
+}
+
 impl userdb::Host for Window {
     fn with_install<T>(
         &self,
@@ -674,6 +712,10 @@ fn open_menu() -> gtk::MenuButton {
     menu.append(Some("New Encounter _Table…"), Some("win.new-table"));
     menu.append(Some("_Roll Treasure…"), Some("win.roll-treasure"));
     menu.append(Some("Roll on a _Table…"), Some("win.roll-table"));
+    let packages = gio::Menu::new();
+    packages.append(Some("_Import…"), Some("win.import"));
+    packages.append(Some("E_xport…"), Some("win.export"));
+    menu.append_section(None, &packages);
     menu.append(Some("_Open Folder…"), Some("win.open"));
     gtk::MenuButton::builder()
         .icon_name("open-menu-symbolic")

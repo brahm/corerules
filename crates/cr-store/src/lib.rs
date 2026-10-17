@@ -13,6 +13,7 @@ pub mod dual;
 pub mod edit;
 pub mod encounter;
 mod exe;
+pub mod export;
 pub mod lists;
 pub mod npc;
 pub mod settings;

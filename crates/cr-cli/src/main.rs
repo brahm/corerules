@@ -9,6 +9,7 @@ use cr_store::Installation;
 use cr_store::edit::CharacterDetails;
 use cr_store::lists::{CharacterLists, Item};
 
+mod transfer;
 mod userdb;
 
 const USAGE: &str = "usage:
@@ -92,6 +93,19 @@ const USAGE: &str = "usage:
                             or delete a custom one (UserDbas/ is rewritten,
                             keeping a .bak); KIND: spells, powers, traps,
                             monster-types, monsters, races, classes, parts
+  cr export INSTALL_DIR --list
+  cr export INSTALL_DIR OUTPUT (--all | ITEM...) [--map FILE.FCW]...
+                            write a DM Toolkit package (.xpx with the
+                            Expansion, .xpt with Core Rules 2.0) of the
+                            user's records, characters and Campaign Mapper
+                            drawings; ITEM is a name or CATEGORY:NAME as
+                            --list prints them
+  cr import INSTALL_DIR FILE [--list] [--maps DIR] [ITEM...]
+                            list or import a package (everything unless
+                            items are named): records replace the user's
+                            of the same name, characters join Chars/,
+                            drawings go into DIR; .mon files do not exist
+                            (both programs export monsters in packages)
 
 Without INSTALL_DIR, the data package in ~/.local/share/corerules/data
 is used, else the installation in the Wine prefix.";
@@ -161,6 +175,8 @@ fn main() -> ExitCode {
         "book" => cmd_book(&install, rest),
         "table" => cmd_table(&install, rest),
         "userdb" => userdb::cmd(&install, rest),
+        "export" => transfer::cmd_export(&install, rest),
+        "import" => transfer::cmd_import(&install, rest),
         _ => {
             eprintln!("{USAGE}");
             Ok(())

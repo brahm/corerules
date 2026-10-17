@@ -223,6 +223,55 @@ impl Character {
         })
     }
 
+    /// The character in the Expansion's layout, as the Expansion saves a
+    /// Core Rules 2.0 character it loaded (an import): the members older
+    /// files lack keep the values the constructor gives them, zeros and
+    /// empty lists but for `flags_0x1ddc`, `[1, 0]`.
+    pub fn upgraded(&self) -> Result<Self> {
+        let blank = Self::blank(EXPANSION_VERSION)?.data;
+        let mut d = self.data.clone();
+        macro_rules! fill {
+            ($($field:ident),* $(,)?) => {
+                $( if d.$field.is_none() { d.$field = blank.$field.clone(); } )*
+            };
+        }
+        if d.flags_0x1ddc.is_none() {
+            d.flags_0x1ddc = Some([1, 0]);
+        }
+        fill!(
+            flag_0x1dde,
+            flags_0x1ddf,
+            flag_0x1de1,
+            flags_0x1de6,
+            flags_0x1de8,
+            flags_0x1dea,
+            unknown_0x1df0,
+            unknown_0x1df8,
+            unknown_0x1dfc,
+            unknown_0x39c,
+            flags_0x1e54,
+            unknown_0x1e68,
+            sheet_options,
+            nonweapon_bonuses,
+            unknown_0x1930,
+            unknown_0x1dc8,
+            unknown_0x1958,
+            unknown_0x1ea4,
+            flag_0x1610,
+            unknown_0x160c,
+            unknown_0x15e4,
+            unknown_0x1e28,
+            unknown_0x1e3c,
+            flag_0x1ea8,
+            unknown_0x1e00,
+            unknown_0x2174,
+        );
+        Ok(Self {
+            version: EXPANSION_VERSION.into(),
+            data: d,
+        })
+    }
+
     /// Whether the character was built with Skills & Powers rather than
     /// the Core Rules.
     pub fn skills_and_powers(&self) -> bool {
