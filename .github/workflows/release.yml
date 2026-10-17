@@ -213,7 +213,7 @@ jobs:
         with:
           tag_name: ${{ needs.version.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: Core Rules ${{ needs.version.outputs.version }}
+          name: Core Rules ${{ needs.version.outputs.version }}${{ startsWith(needs.version.outputs.version, '0.') && ' beta' || '' }}
           body_path: packaging/release-notes.md
           prerelease: ${{ startsWith(needs.version.outputs.version, '0.') }}
           files: dist/*

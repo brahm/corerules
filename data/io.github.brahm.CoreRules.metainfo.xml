@@ -22,13 +22,17 @@
     </p>
     <p>
       The app contains no rules content. It opens a Core Rules 2.0 (or
-      Expansion) installation you already own, or its CD, and shows:
+      Expansion) installation you already own, or its CD. It offers:
     </p>
     <ul>
-      <li>Characters, with editing of abilities, proficiencies, languages, spells, equipment and money</li>
-      <li>Races, classes, items, spells and psionic powers</li>
-      <li>Monsters</li>
+      <li>The Character Generator: new characters with the Core Rules or Player's Option, editing, experience and levels, parties and the character sheet</li>
+      <li>NPC, treasure and encounter generators and Table Rolls</li>
+      <li>Editors for races, classes, items, kits, spells, psionic powers, monsters and traps</li>
+      <li>Import and export of DM Toolkit packages</li>
+      <li>The rule books in a reader, and the races, classes, items, spells, psionic powers and monsters of the installation</li>
+      <li>An interface in English, Brazilian Portuguese, Spanish, Italian, French and German</li>
     </ul>
+    <p>This is a beta release.</p>
   </description>
   <launchable type="desktop-id">io.github.brahm.CoreRules.desktop</launchable>
   <url type="homepage">https://github.com/brahm/corerules</url>
@@ -57,6 +61,15 @@
     <color type="primary" scheme_preference="dark">#77101b</color>
   </branding>
   <releases>
+    <release version="0.7.0" date="2026-10-17" type="development">
+      <description>
+        <p>Beta: the interface speaks six languages.</p>
+        <ul>
+          <li>Interface in Brazilian Portuguese, Spanish, Italian, French and German besides English</li>
+          <li>Preferences chooses the language; the system's language is the default</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.0" date="2026-10-17" type="development">
       <description>
         <p>Parties, the Expansion as the place for new content, and Windows' list order.</p>

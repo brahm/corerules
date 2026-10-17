@@ -1,27 +1,25 @@
-What's new in 0.6.0:
+**Beta release.** Every feature works against real installations and was
+checked against the original programs, but the app has had little use
+outside those checks. Keep a copy of your `Chars` and `UserDbas` folders,
+and report anything that differs from the original.
 
-- Parties: Manage Parties… puts characters in a party, takes them out or
-  deletes every member, and a character page can delete its character,
-  with Undo (`cr party` and `cr delete` from the command line)
-- New content follows the Expansion: a Core Rules 2.0 installation opens
-  read-only, and Import Core Rules 2.0… brings its characters and records
-  into an Expansion installation, converted as the Expansion converts a
-  2.0 package; `.xpt` packages are only imported
-- Lists sort exactly as Windows sorts them
-- Player's Option NPCs choose the languages their kit offers and pay the
-  base prices, as the original does
-- Table Rolls: the first roll of each dialog compares with what the last
-  one left, as in the original
-- The class editor offers the original's weapon categories
-- The Flatpak uses the GNOME 51 runtime, and the AppImage carries the
-  GNOME 51 libraries
+What's new in 0.7.0:
 
-Every change was checked against both original programs.
+- The interface speaks Brazilian Portuguese, Spanish, Italian, French and
+  German besides English. It follows the system's language, and
+  Preferences (Ctrl+,) chooses another one. Names and texts from the
+  original files, the `cr` command and the character sheets stay as they
+  are
+- Every file the app reads or writes is specified in `docs/formats`
 
-Preview release: the app opens a Core Rules 2.0 (or Expansion) installation
-or its CD, browses characters, races, classes, items, spells, psionics and
-monsters, and creates and edits characters in files the original programs
-still open.
+What the app does: it opens a Core Rules 2.0 Expansion installation (or its
+CD, or a data package), creates and edits characters with the Core Rules or
+Player's Option, levels them up, manages parties and prints character
+sheets; it generates NPCs, treasure and encounters, rolls on the books'
+tables, edits every user database and imports and exports DM Toolkit
+packages, all in files the original programs still open. A Core Rules 2.0
+installation opens read-only and is imported into the Expansion. The README
+lists every feature.
 It contains no rules content; you need your own copy of Core Rules.
 
 | System | File | Install |

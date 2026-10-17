@@ -9,20 +9,111 @@ written in Rust with GTK4 and libadwaita. It reads and writes the data files
 of the original Windows 95 program, so characters made in either program
 open in the other.
 
-Everything new follows the Expansion (AD&D Core Rules 2.0 Expansion). A Core
-Rules 2.0 installation without the Expansion opens read-only: Import Core
-Rules 2.0… (or `cr import EXPANSION_DIR CORE_RULES_2.0_DIR`) copies its
-characters and records into an Expansion installation, converted the way the
-Expansion converts a 2.0 package, and leaves the 2.0 folder untouched.
+> **Beta.** Version 0.7.0 is a beta: every feature below works against real
+> installations and was checked against the original programs, but it has
+> had little use outside those checks. Keep a copy of your `Chars` and
+> `UserDbas` folders, and [report](https://github.com/brahm/corerules/issues)
+> anything that differs from the original.
 
 > This project contains no TSR or Wizards of the Coast content. It reads the
 > rules data from a Core Rules installation you already own.
 
 ![The app showing a character made in the original program](docs/screenshots/character.png)
 
+## Features
+
+Everything the app saves opens in the original programs. Where a feature
+says it works as the original does, its results were compared with files
+the original programs wrote.
+
+### Library
+
+- Browse the characters, races, classes, items, spells, psionic powers and
+  monsters of an installation, of its CD, or of a data package
+- The Core Rules books in a reader with contents and search
+- Lists sort exactly as Windows sorts them (`CompareStringW`, checked under
+  Wine)
+
+### Character Generator
+
+- **New Character** (Ctrl+N), following the original wizard: campaign
+  setting, ability rolls (Methods I to VI, entered scores or Player's
+  Choice), race and subrace, class, details, proficiencies and languages,
+  rogue skill points, spells and starting equipment. The original has no
+  campaign settings, so each setting only narrows what the installed
+  databases offer, following its campaign book
+- **Player's Option** (Skills & Powers) creation, as the Expansion's
+  Player's Option button: Methods VII to X, racial and class abilities
+  bought with character points, subabilities, traits and disadvantages,
+  proficiencies with ranks, weapon of choice, expertise and specialization,
+  unarmed combat, shield and armor proficiencies, fighting styles
+- **Editing** a character: name, player, social class, age, height, weight,
+  ability scores, weapon and nonweapon proficiencies, languages, spells
+  known, spellbooks and memorized spells, the nine equipment groups with
+  quantities, and Spending Money
+- **Experience and levels** per class, all classes or split, with the prime
+  requisite bonus, hit point rolls, PSPs, character points and the
+  Expansion's racial level limits; **dual-classing** for humans
+- **Character sheet**: every section the originals export, shown in the
+  app, printed, saved as PDF, or exported as the originals' TXT and HTML,
+  matching their exports line for line
+- **Parties**: Manage Parties… puts characters in a party, takes them out
+  or deletes every member; a character can be deleted, with Undo; the list
+  filters by party
+
+### DM Toolkit
+
+- **NPC generator** (New NPC, New NPC Group): Core Rules and Player's
+  Option NPCs with kits, proficiencies, equipment, spells, psionics and
+  rogue skills; with the same seed it saves the same NPCs as the Expansion
+- **Treasure generator**: treasure types A to Z, table rolls, intelligent
+  weapons, spell scrolls, Calculate and saved bundles; with the same seed
+  it saves the same bundles as both originals, byte for byte
+- **Encounter generator**: encounters from templates with the originals'
+  dice, dependents, items and treasure, the Encounter dialog's editing and
+  totals, saved encounters and the 2-20 tables
+- **Table Rolls** on every table of the books, with the originals' dice
+  and follow-up rolls
+- **Editors for every user database**: races, classes and allowed
+  combinations, parts (weapons, armor, kits, proficiencies and the rest),
+  spells, psionic powers, monsters, monster types, traps and treasure
+  tables
+- **Packages**: Export, Import, New Package and Edit Package for `.xpx`
+  packages with characters and any user record, byte for byte as the
+  Expansion writes them; Core Rules 2.0 `.xpt` packages are imported and
+  converted. Monsters travel in these packages (there is no `.mon` file)
+
+### Core Rules 2.0 and the Expansion
+
+Everything new follows the Expansion (AD&D Core Rules 2.0 Expansion). A Core
+Rules 2.0 installation without the Expansion opens read-only: Import Core
+Rules 2.0… (or `cr import EXPANSION_DIR CORE_RULES_2.0_DIR`) copies its
+characters and records into an Expansion installation, converted the way the
+Expansion converts a 2.0 package, and leaves the 2.0 folder untouched.
+
+### Everywhere
+
+- Interface in English (US), Português (Brasil), Español, Italiano,
+  Français and Deutsch (see [Languages](#languages))
+- Runs without Wine from a data package (see
+  [Running without Wine](#running-without-wine))
+- The `cr` command does the same from a terminal: `cr chars`, `cr sheet`,
+  `cr npc`, `cr treasure`, `cr encounter`, `cr table`, `cr userdb`,
+  `cr export`, `cr import`, `cr package`, `cr party`, `cr delete`,
+  `cr survey`
+- Every file the app reads or writes is specified in
+  [`docs/formats`](docs/formats/README.md)
+
+### Not included
+
+Map Maker II, the Campaign Mapper and the dice roller are out of scope.
+Campaign Mapper drawings inside a package are kept but not offered or
+imported. Core Rules 1.0 files are not supported. Only Linux is supported
+for now; macOS and Windows are postponed.
+
 ## Installing
 
-Every [release](https://github.com/brahm/corerules/releases/latest) has
+Every [release](https://github.com/brahm/corerules/releases) has
 packages for x86-64 Linux:
 
 | System | Package | Install |
@@ -64,106 +155,6 @@ copy (the folder that holds `Database/`):
 ```sh
 CORERULES_DIR="$HOME/.wine/drive_c/Program Files/AD&D Core Rules 2.0" cargo test
 ```
-
-## Status
-
-The Character Generator, the DM Toolkit's generators, packages and editors,
-the books and Table Rolls work against a real installation. Map Maker II,
-the Campaign Mapper and the dice roller are out of scope. The interface is
-in American English, Brazilian Portuguese, Spanish, Italian, French and
-German (see [Languages](#languages)).
-
-- [x] MFC `CArchive` reader and writer, byte for byte
-- [x] Character list (`Chars/index.chr`), round-trip tested
-- [x] Full character files (`TSRP V27` to `TSRP3 V54`, both programs), round-trip tested
-- [x] Races and classes, round-trip tested against a real installation
-- [x] Survey of the rules databases (`cr survey`)
-- [x] Every file format specified in docs/formats
-- [x] Monsters and encounters
-- [x] Every shipped database in Rust, round-trip tested
-- [x] Core Rules 2.0 (without the Expansion) databases, round-trip tested
-- [x] GNOME app: browse characters, races, classes, items, spells, psionics
-      and monsters of an installation or the CD
-- [x] 2.0 character files checked against files the 2.0 program wrote
-- [x] Character editing: name, player, social class, age, height, weight
-      and ability scores, checked by opening the edited files in both
-      original programs (close the original program while editing; it
-      keeps the character list in memory)
-- [x] Editing weapon and nonweapon proficiencies, native languages,
-      spells known and items carried, checked in both original programs
-- [x] Spellbooks and memorized spells, all nine equipment groups with
-      quantities, and Spending Money, checked in both original programs
-- [x] Adding a class where the race may dual-class (humans), with the
-      Player's Handbook requirements, checked in both original programs;
-      race and the classes chosen at creation never change
-- [x] Creating characters (New Character, Ctrl+N), following the original
-      wizard: campaign setting, ability rolls (Methods I to VI, entered
-      scores or Player's Choice), race and subrace, class, details,
-      proficiencies and learned languages, rogue skill points, spells and
-      starting equipment; checked by opening the new files in both
-      original programs. The original has no notion of campaign settings,
-      so what each setting allows comes from its campaign book and only
-      narrows what the installed databases offer (`crates/cr-store/src/settings.rs`).
-- [x] Player's Option (Skills & Powers) creation, as the Expansion's
-      Player's Option button: Methods VII to X, racial and class
-      abilities bought with character points, subabilities, traits,
-      disadvantages, proficiencies paid in points with ranks, weapon of
-      choice, expertise and specialization, unarmed combat, shield and
-      armor proficiencies, fighting styles and rogue skill points; checked
-      against characters the Expansion made and by opening the new files
-      in it
-- [x] Experience and levels: give or take away experience per class, to
-      all classes or split, with the prime requisite bonus, hit point
-      rolls for each level gained, PSPs, Skills & Powers character points
-      and the Expansion's racial level limits; spell slots per level
-      checked against memorized spells; checked against characters the
-      originals levelled up
-- [x] Character sheet: every section the originals export (abilities and
-      their tables, saving throws, THAC0, armor class, weapons, rogue
-      skills, turning undead, spells, psionics, inventory, encumbrance),
-      shown in the app, printed, saved as PDF, or exported as the
-      originals' TXT and HTML files, matching their exports line for line
-      (`cr sheet` does the same from the command line)
-- [x] Treasure generator (backend and `cr treasure`): treasure types A to
-      Z, table rolls, intelligent weapons, spell scrolls, Calculate and the
-      saved bundles of `UserDbas/TreaBunU.dat`; with the same seed it
-      saves the same bundles as both original programs, byte for byte
-- [x] Encounter generator (backend and `cr encounter`): encounters from
-      templates with the originals' dice, lists, dependents, items and
-      treasure, the Encounter dialog's editing and totals, saved
-      encounters (`UserDbas/EncountU.dat`) and the 2-20 tables
-      (`UserDbas/EncTabU.dat`); with the same seed it makes the same
-      encounters as both original programs, NPC lines included
-- [x] NPC generator (New NPC, New NPC Group and `cr npc`): the Expansion's
-      NPC Generation for Core Rules and Player's Option NPCs, with kits,
-      proficiencies, equipment, spells, psionics and rogue skills; with
-      the same seed it saves the same NPCs as the original program
-- [x] The Core Rules books in a reader, Table Rolls, and editors for every
-      user database (`UserDbas/*U.dat`, also `cr userdb`)
-- [x] The DM Toolkit's packages (main menu, `cr export`, `cr import` and
-      `cr package`): `.xpx` packages with characters and any user record.
-      Export and Import reproduce the Expansion byte for byte, and a 2.0
-      `.xpt` package is converted on import into the Expansion like the
-      original does; `.xpt` packages are only imported. New Package and
-      Edit Package create an `.xpx` package or change one, adding the installation's
-      records and characters or taking items out. Campaign Mapper drawings
-      are not offered or imported; an edited package keeps those it has.
-      There is no `.mon` file: the originals' monster dialogs only point
-      to the DM Toolkit, so monsters travel in `.xpx`/`.xpt` packages
-- [x] Parties and deleting characters (Manage Parties… in the main menu,
-      the character page's Delete, `cr party` and `cr delete`): put
-      characters in a new or existing party, take them out, delete a
-      character or every member of a party, with Undo in the app; the
-      list filters by party. Each step leaves `Chars/` as the original
-      leaves it (checked in both programs; 2.0 has no parties)
-- [x] Core Rules 2.0 as an import source: its installations open
-      read-only (no generators, editors or packages there), and Import
-      Core Rules 2.0… brings their characters and records into the
-      Expansion
-- [x] Lists sort as Windows sorts them (`CompareStringW`, checked under
-      Wine), the class editor's weapon categories are the program's, and
-      Table Rolls' first roll after start-up compares with what the
-      program's start-up leaves, as under Wine
 
 ## Layout
 
@@ -240,8 +231,9 @@ flatpak-builder --user --install-deps-from=flathub --install build \
 
 The Packages workflow in GitHub Actions builds all four, installs each one
 on clean Ubuntu 26.04, Ubuntu latest, Fedora 44 and Fedora latest
-containers and starts the app. Pushing a `v*` tag publishes them as a
-release; `packaging/release-notes.md` is its description.
+containers and starts the app. Pushing a `v*` tag, or running the workflow
+with a tag, publishes them as a release; `packaging/release-notes.md` is its
+description. Releases before 1.0 are published as betas.
 
 ## Using an original installation
 
@@ -254,9 +246,6 @@ cargo run -p cr-cli -- survey "/path/to/AD&D Core Rules 2.0"
 cargo run -p cr-gtk                                # the Wine prefix
 cargo run -p cr-gtk -- "/media/cdrom"               # or any folder with Database/
 ```
-
-The specification of every file the app reads or writes is in
-[`docs/formats`](docs/formats/README.md).
 
 ## License
 

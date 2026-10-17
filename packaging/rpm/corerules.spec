@@ -4,7 +4,7 @@
 %global debug_package %{nil}
 
 Name:           corerules
-Version:        %{?version_override}%{!?version_override:0.6.0}
+Version:        %{?version_override}%{!?version_override:0.7.0}
 Release:        1%{?dist}
 Summary:        Browse and edit AD&D Core Rules 2.0 characters and rules
 License:        MIT
@@ -50,6 +50,11 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/io.github.brah
 %{_metainfodir}/io.github.brahm.CoreRules.metainfo.xml
 
 %changelog
+* Sat Oct 17 2026 Brahm - 0.7.0-1
+- Beta: interface in Brazilian Portuguese, Spanish, Italian, French and
+  German, with a language choice in Preferences
+- Every file format specified in docs/formats
+
 * Sat Oct 17 2026 Brahm - 0.6.0-1
 - Party management and character deletion; Core Rules 2.0 installations
   are read-only and imported into the Expansion
