@@ -25,6 +25,10 @@ pub const DUAL_AND_MULTI: &str =
     "This Race is set to allow dual-class.\nA Race may not dual-class and multi-class.";
 pub const NO_RACE: &str = "You must select a Race from the list";
 
+/// The fewest class names a combination the original refuses holds
+/// (`47cf69`: the count must be at most 5).
+pub const MAX_COMBINED: usize = 6;
+
 /// One allowed class or combination as the dialog shows it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Allowed {
@@ -54,11 +58,44 @@ impl Allowed {
         }
     }
 
+    /// The entry the original's add (`47cf69`, then `689761`) makes of a
+    /// combination of class names: it refuses six names or more (a
+    /// `CClassesAllowedHelperOb` holds one class per group, five in all);
+    /// otherwise each name fills the slot of its class's group, the first
+    /// name of a group winning and unknown names being skipped. `None`
+    /// when refused or when no name is a known class.
+    pub fn from_names(
+        names: &[&str],
+        classes: &[super::classes::ClassEntry],
+        level_limit: i32,
+    ) -> Option<Self> {
+        if names.len() >= MAX_COMBINED {
+            return None;
+        }
+        let mut slots: [String; 5] = Default::default();
+        for name in names {
+            let Some(group) = classes
+                .iter()
+                .find(|c| c.name == *name)
+                .and_then(|c| c.group)
+            else {
+                continue;
+            };
+            if slots[group].is_empty() {
+                (*name).clone_into(&mut slots[group]);
+            }
+        }
+        slots
+            .iter()
+            .any(|s| !s.is_empty())
+            .then(|| Self::new(slots, level_limit))
+    }
+
     pub fn is_multiclass(&self) -> bool {
         self.classes.iter().filter(|c| !c.is_empty()).count() > 1
     }
 
-    fn of(data: &ClassesAllowedHelperData) -> Self {
+    pub(crate) fn of(data: &ClassesAllowedHelperData) -> Self {
         let mut a = Self::new(
             [
                 data.warrior.clone(),
@@ -73,7 +110,7 @@ impl Allowed {
         a
     }
 
-    fn helper(&self) -> Object {
+    pub(crate) fn helper(&self) -> Object {
         let [warrior, rogue, priest, wizard, psionicist] = self.classes.clone();
         Object::ClassesAllowedHelper(Box::new(ClassesAllowedHelper {
             version: 1,
@@ -261,5 +298,42 @@ mod tests {
             },
             db
         );
+    }
+
+    #[test]
+    fn combinations_fill_one_slot_per_group() {
+        use crate::userdb::classes::{ClassEntry, group_of};
+        let classes = [
+            ("Fighter", 1000),
+            ("Paladin", 1001),
+            ("Thief", 2000),
+            ("Cleric", 3000),
+            ("Mage", 4000),
+            ("Psionicist", 5000),
+        ]
+        .map(|(n, id)| ClassEntry {
+            name: n.into(),
+            id,
+            group: group_of(id),
+        });
+        // The first name of a group wins and unknown names are skipped.
+        let a = Allowed::from_names(&["Thief", "Fighter", "Nobody", "Paladin"], &classes, 7);
+        assert_eq!(
+            a.map(|a| (a.name, a.level_limit)),
+            Some(("Fighter/Thief".to_owned(), 7))
+        );
+        let five = ["Fighter", "Thief", "Cleric", "Mage", "Psionicist"];
+        assert!(Allowed::from_names(&five, &classes, 0).is_some());
+        // Six names are refused even when one would be dropped.
+        let six = [
+            "Fighter",
+            "Paladin",
+            "Thief",
+            "Cleric",
+            "Mage",
+            "Psionicist",
+        ];
+        assert_eq!(Allowed::from_names(&six, &classes, 0), None);
+        assert_eq!(Allowed::from_names(&["Nobody"], &classes, 0), None);
     }
 }

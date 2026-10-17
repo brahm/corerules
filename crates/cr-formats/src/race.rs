@@ -67,6 +67,9 @@ record! {
         portrait_folder: String,
         unknown_0x280: [String; 11],
         unknown_0x2b0: [i32; 9],
+        /// Evermore's "Unlimited" level-limit checks, in the Level Limits
+        /// dialog's row order: Bard, Cleric, Druid, Fighter, Specialist,
+        /// Mage, Paladin, Ranger, Thief.
         unknown_0x84: [i32; 9],
         unknown_0x184: i32,
         unknown_0x190: [i32; 10],

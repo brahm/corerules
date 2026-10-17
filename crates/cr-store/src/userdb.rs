@@ -28,7 +28,9 @@ pub mod classes;
 pub mod monsters;
 pub mod parts;
 pub mod powers;
+pub mod program;
 pub mod races;
+pub mod slots;
 pub mod spells;
 pub mod tables;
 pub mod traps;
@@ -140,6 +142,16 @@ pub enum Value {
     List(Vec<String>),
     /// Count, sides and bonus.
     Dice([i64; 3]),
+    /// A real number (a container's capacity in pounds).
+    Real(f64),
+    /// Names, each with a number (`CPartIDOb` lists: a skill and its
+    /// bonus, a weapon and the level it becomes free at).
+    Pairs(Vec<(String, i64)>),
+    /// Choose-N-of groups (`CListOfListsOfOptions`): how many to pick and
+    /// out of which names.
+    Groups(Vec<(i64, Vec<String>)>),
+    /// A table of numbers, one row per level.
+    Grid(Vec<Vec<i64>>),
 }
 
 impl Value {
@@ -150,6 +162,22 @@ impl Value {
             Self::Bool(b) => b.to_string(),
             Self::List(l) => l.join(", "),
             Self::Dice([n, s, m]) => dice_text(*n, *s, *m),
+            Self::Real(x) => x.to_string(),
+            Self::Pairs(p) => p
+                .iter()
+                .map(|(n, v)| format!("{n} ({v})"))
+                .collect::<Vec<_>>()
+                .join(", "),
+            Self::Groups(g) => g
+                .iter()
+                .map(|(n, l)| format!("{n} of [{}]", l.join(", ")))
+                .collect::<Vec<_>>()
+                .join("; "),
+            Self::Grid(rows) => rows
+                .iter()
+                .map(|r| r.iter().map(i64::to_string).collect::<Vec<_>>().join(" "))
+                .collect::<Vec<_>>()
+                .join(" / "),
         }
     }
 
@@ -158,7 +186,37 @@ impl Value {
             Self::Int(n) => *n,
             Self::Bool(b) => i64::from(*b),
             Self::Text(s) => s.trim().parse().unwrap_or(0),
+            Self::Real(x) => *x as i64,
             _ => 0,
+        }
+    }
+
+    pub fn real(&self) -> f64 {
+        match self {
+            Self::Real(x) => *x,
+            Self::Text(s) => s.trim().parse().unwrap_or(0.0),
+            v => v.int() as f64,
+        }
+    }
+
+    pub fn pairs(&self) -> Vec<(String, i64)> {
+        match self {
+            Self::Pairs(p) => p.clone(),
+            v => v.list().into_iter().map(|n| (n, 0)).collect(),
+        }
+    }
+
+    pub fn groups(&self) -> Vec<(i64, Vec<String>)> {
+        match self {
+            Self::Groups(g) => g.clone(),
+            _ => Vec::new(),
+        }
+    }
+
+    pub fn grid(&self) -> Vec<Vec<i64>> {
+        match self {
+            Self::Grid(g) => g.clone(),
+            _ => Vec::new(),
         }
     }
 
@@ -170,6 +228,7 @@ impl Value {
         match self {
             Self::List(l) => l.clone(),
             Self::Text(s) if !s.is_empty() => vec![s.clone()],
+            Self::Pairs(p) => p.iter().map(|(n, _)| n.clone()).collect(),
             _ => Vec::new(),
         }
     }
@@ -205,7 +264,7 @@ pub enum Options {
 }
 
 /// The control a field gets.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FieldKind {
     /// One line of text, at most `max` characters (0: no limit).
     Text {
@@ -229,6 +288,50 @@ pub enum FieldKind {
     /// (Available ⇄ Selected).
     Dual(Options),
     Dice,
+    /// A check with a number: the original's "sentinel" controls, whose
+    /// check is on when the number is not `none` and whose number is
+    /// greyed while it is off (unchecking stores `none`, checking stores
+    /// `start`, the value the original's click handler puts in). The
+    /// label is the check's. With `inverted`, the check is on when the
+    /// number *is* `none` ("Not limited by weight"; a negative `none`
+    /// then stands for any negative number).
+    OptInt {
+        min: i64,
+        max: i64,
+        none: i64,
+        start: i64,
+        inverted: bool,
+    },
+    /// A real number ([`Value::Real`]); `none` as for [`Self::OptInt`]
+    /// with `inverted`, under the label `check`.
+    Real {
+        min: f64,
+        max: f64,
+        none: Option<(f64, &'static str)>,
+    },
+    /// Like [`Self::Dual`] behind a check (labelled with the field's
+    /// label): the check is on while the list has names, and unchecking
+    /// it empties the list.
+    Checked(Options),
+    /// Names with a number each ([`Value::Pairs`]): the originals'
+    /// AddRemoveNumString dialog (`402490`).
+    Pairs {
+        options: Options,
+        number: &'static str,
+        min: i64,
+        max: i64,
+    },
+    /// Choose-N-of groups ([`Value::Groups`]): the ListOfListsOfOptions
+    /// dialog (`4b2d50`).
+    Groups(Options),
+    /// One row per level ([`Value::Grid`]), the first row being level
+    /// `first`.
+    Grid {
+        columns: &'static [&'static str],
+        first: i64,
+        min: i64,
+        max: i64,
+    },
 }
 
 /// One control of an editor: where it goes, how it looks and which part
@@ -251,6 +354,8 @@ pub struct FieldDesc<R> {
     pub arg: usize,
     /// Re-evaluated whenever a value changes (XP Value needs Magic).
     pub enabled: Option<fn(&R) -> bool>,
+    /// Like `enabled`, for a rule that needs [`arg`](Self::arg).
+    pub enabled_at: Option<fn(&R, usize) -> bool>,
     /// Evaluated when the editor opens (subrace pages, priest spheres).
     pub visible: Option<fn(&R) -> bool>,
 }
@@ -273,6 +378,7 @@ impl<R> FieldDesc<R> {
             source_getter: None,
             arg: 0,
             enabled: None,
+            enabled_at: None,
             visible: None,
         }
     }
@@ -313,6 +419,11 @@ impl<R> FieldDesc<R> {
         self
     }
 
+    pub fn enabled_at(mut self, rule: fn(&R, usize) -> bool) -> Self {
+        self.enabled_at = Some(rule);
+        self
+    }
+
     pub fn visible(mut self, rule: fn(&R) -> bool) -> Self {
         self.visible = Some(rule);
         self
@@ -320,6 +431,7 @@ impl<R> FieldDesc<R> {
 
     pub fn is_enabled(&self, record: &R) -> bool {
         self.enabled.is_none_or(|rule| rule(record))
+            && self.enabled_at.is_none_or(|rule| rule(record, self.arg))
     }
 
     pub fn is_visible(&self, record: &R) -> bool {
@@ -702,6 +814,9 @@ pub struct Sources {
     pub attacks: Vec<cr_formats::monster::MonsterAttack>,
     /// Class names, identifiers and groups, for multi-classes.
     pub classes: Vec<classes::ClassEntry>,
+    /// Every spell (standard then user), for lists that keep copies of
+    /// them (a kit's bonus spells).
+    pub spells: Vec<cr_formats::spells::Spell>,
 }
 
 impl Sources {
@@ -731,7 +846,13 @@ impl Sources {
                     options: Options::Source(n),
                     ..
                 }
-                | FieldKind::Dual(Options::Source(n)) => Some(n),
+                | FieldKind::Dual(Options::Source(n))
+                | FieldKind::Checked(Options::Source(n))
+                | FieldKind::Groups(Options::Source(n))
+                | FieldKind::Pairs {
+                    options: Options::Source(n),
+                    ..
+                } => Some(n),
                 _ => None,
             })
             .collect();
@@ -775,6 +896,45 @@ impl Sources {
                     .map(|t| t.name.clone())
                     .collect(),
                 "weapon-groups" => parts::weapon_groups(install)?,
+                "standard-classes" => {
+                    sources.classes = classes::class_list(install)?;
+                    sources
+                        .classes
+                        .iter()
+                        .filter(|c| c.id != 0)
+                        .map(|c| c.name.clone())
+                        .collect()
+                }
+                "priest-spells" => {
+                    let mut names: Vec<String> = spells::all_spells(install)?
+                        .into_iter()
+                        .filter(|s| s.priest != 0)
+                        .map(|s| s.name)
+                        .collect();
+                    names.sort_by_key(|n| n.to_lowercase());
+                    names.dedup();
+                    names
+                }
+                "weapon-proficiencies" => parts::weapon_proficiencies(install)?,
+                "rogue-skills" => parts::rogue_skills(install)?,
+                "class-combinations" => {
+                    sources.classes = classes::class_list(install)?;
+                    let mut names: Vec<String> =
+                        sources.classes.iter().map(|c| c.name.clone()).collect();
+                    names.extend(classes::multiclass_names(&sources.classes));
+                    names
+                }
+                "spells" => {
+                    sources.spells = spells::all_spells(install)?;
+                    let mut names: Vec<String> =
+                        sources.spells.iter().map(|s| s.name.clone()).collect();
+                    names.sort_by_key(|n| n.to_lowercase());
+                    names.dedup();
+                    names
+                }
+                n if program::is_program_list(n) => {
+                    program::program_list(install, crate::encounter::flavor_of(install), n)?
+                }
                 n if n.starts_with("monster-") => monsters::distinct(install, n)?,
                 n => match parts::source_type(n) {
                     Some(t) => {

@@ -27,6 +27,8 @@ use gtk::{gio, glib};
 
 use crate::lists::pick;
 
+mod widgets;
+
 /// A redraw callback set once its widgets exist.
 type Redraw = Rc<RefCell<Option<Rc<dyn Fn()>>>>;
 /// Widgets shown when any of their fields is visible.
@@ -523,7 +525,15 @@ fn editor<K: UserKind, H: Host + 'static>(
             let (widget, load) = control(field, index, &record, &sources, &changed, host);
             // Lists and long text get a group of their own, titled with
             // the label.
-            let own = matches!(field.kind, FieldKind::Dual(_) | FieldKind::MultiLine);
+            let own = matches!(
+                field.kind,
+                FieldKind::Dual(_)
+                    | FieldKind::MultiLine
+                    | FieldKind::Checked(_)
+                    | FieldKind::Pairs { .. }
+                    | FieldKind::Groups(_)
+                    | FieldKind::Grid { .. }
+            );
             let group_title = if own && field.group.is_empty() {
                 field.label
             } else {
@@ -936,8 +946,57 @@ fn control<R: Clone + 'static, H: Host + 'static>(
             (scroll.upcast(), Box::new(load))
         }
         FieldKind::Dual(options) => {
-            dual_list(label, index, sources.options(options), value, changed, host)
+            widgets::names_control(sources.options(options), None, value, emit(changed, index))
         }
+        FieldKind::Pairs {
+            options,
+            number,
+            min,
+            max,
+        } => widgets::names_control(
+            sources.options(options),
+            Some(widgets::Number {
+                label: number,
+                min,
+                max,
+            }),
+            value,
+            emit(changed, index),
+        ),
+        FieldKind::Checked(options) => {
+            widgets::checked_control(label, sources.options(options), value, emit(changed, index))
+        }
+        FieldKind::OptInt {
+            min,
+            max,
+            none,
+            start,
+            inverted,
+        } => widgets::opt_int_control(
+            label,
+            (min, max, none, start, inverted),
+            value,
+            emit(changed, index),
+        ),
+        FieldKind::Real { min, max, none } => {
+            widgets::real_control(label, (min, max), none, value, emit(changed, index))
+        }
+        FieldKind::Groups(options) => {
+            let host = host.clone();
+            widgets::groups_control(
+                label,
+                sources.options(options),
+                value,
+                emit(changed, index),
+                move || host.parent(),
+            )
+        }
+        FieldKind::Grid {
+            columns,
+            first,
+            min,
+            max,
+        } => widgets::grid_control(columns, first, (min, max), value, emit(changed, index)),
         FieldKind::Dice => {
             let spins: Vec<gtk::SpinButton> = [(0.0, 1000.0), (0.0, 1000.0), (-1000.0, 100_000.0)]
                 .iter()
@@ -982,102 +1041,10 @@ fn control<R: Clone + 'static, H: Host + 'static>(
     }
 }
 
-/// The Available ⇄ Selected lists of the originals: the selected names,
-/// each with a remove button, and Add… to pick one of the others.
-fn dual_list<H: Host + 'static>(
-    label: &'static str,
-    index: usize,
-    available: Vec<String>,
-    value: impl Fn() -> Value + 'static,
-    changed: &Rc<dyn Fn(usize, Value)>,
-    host: &Shared<H>,
-) -> (gtk::Widget, Box<dyn Fn()>) {
-    let list = gtk::ListBox::builder()
-        .selection_mode(gtk::SelectionMode::None)
-        .css_classes(["boxed-list"])
-        .build();
-    let selected: Rc<RefCell<Vec<String>>> = Rc::default();
-    let shown: Rc<RefCell<Option<Vec<String>>>> = Rc::default();
-    let render: Redraw = Rc::default();
-    let add = adw::ActionRow::builder()
-        .title("Add…")
-        .activatable(true)
-        .build();
-    add.add_prefix(&gtk::Image::from_icon_name("list-add-symbolic"));
-    let draw: Rc<dyn Fn()> = Rc::new({
-        let (list, selected, shown, changed, render, add) = (
-            list.clone(),
-            selected.clone(),
-            shown.clone(),
-            changed.clone(),
-            render.clone(),
-            add.clone(),
-        );
-        move || {
-            if shown.borrow().as_ref() == Some(&*selected.borrow()) {
-                return;
-            }
-            *shown.borrow_mut() = Some(selected.borrow().clone());
-            while let Some(child) = list.first_child() {
-                list.remove(&child);
-            }
-            for (i, name) in selected.borrow().iter().enumerate() {
-                let row = adw::ActionRow::builder()
-                    .title(glib::markup_escape_text(name).as_str())
-                    .build();
-                let remove = gtk::Button::builder()
-                    .icon_name("list-remove-symbolic")
-                    .tooltip_text("Remove")
-                    .valign(gtk::Align::Center)
-                    .css_classes(["flat"])
-                    .build();
-                let (selected, changed, render) =
-                    (selected.clone(), changed.clone(), render.clone());
-                remove.connect_clicked(move |_| {
-                    selected.borrow_mut().remove(i);
-                    let list = selected.borrow().clone();
-                    changed(index, Value::List(list));
-                    if let Some(render) = render.borrow().clone() {
-                        render();
-                    }
-                });
-                row.add_suffix(&remove);
-                list.append(&row);
-            }
-            list.append(&add);
-        }
-    });
-    *render.borrow_mut() = Some(draw.clone());
-    add.connect_activated({
-        let (selected, changed, draw, host) = (
-            selected.clone(),
-            changed.clone(),
-            draw.clone(),
-            host.clone(),
-        );
-        move |_| {
-            let choices: Vec<String> = available
-                .iter()
-                .filter(|a| !selected.borrow().contains(a))
-                .cloned()
-                .collect();
-            if choices.is_empty() {
-                return host.toast("Nothing more to add");
-            }
-            let (selected, changed, draw) = (selected.clone(), changed.clone(), draw.clone());
-            pick(&host.parent(), label, choices, move |name| {
-                selected.borrow_mut().push(name);
-                let list = selected.borrow().clone();
-                changed(index, Value::List(list));
-                draw();
-            });
-        }
-    });
-    let load = move || {
-        *selected.borrow_mut() = value().list();
-        draw();
-    };
-    (list.upcast(), Box::new(load))
+/// The change callback of one field.
+fn emit(changed: &Rc<dyn Fn(usize, Value)>, index: usize) -> Rc<dyn Fn(Value)> {
+    let changed = changed.clone();
+    Rc::new(move |v| changed(index, v))
 }
 
 // ---- treasure tables ----
@@ -1522,12 +1489,8 @@ fn allowed_classes<H: Host + 'static>(host: &Shared<H>, race: &str) {
     let groups_of = {
         let class_list = class_list.clone();
         move |name: &str| -> Option<[String; 5]> {
-            let mut slots: [String; 5] = Default::default();
-            for part in name.split('/') {
-                let g = class_list.iter().find(|c| c.name == part)?.group?;
-                part.clone_into(&mut slots[g]);
-            }
-            Some(slots)
+            let names: Vec<&str> = name.split('/').collect();
+            Allowed::from_names(&names, &class_list, 0).map(|a| a.classes)
         }
     };
     let groups_of = Rc::new(groups_of);

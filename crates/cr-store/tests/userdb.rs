@@ -17,7 +17,7 @@ use cr_store::Installation;
 use cr_store::userdb::allowed::{Allowed, AllowedDb};
 use cr_store::userdb::classes::Classes;
 use cr_store::userdb::monsters::{MonsterTypes, Monsters};
-use cr_store::userdb::parts::{KITS, Parts, WEAPONS};
+use cr_store::userdb::parts::{EQUIPMENT, KITS, Parts, WEAPONS};
 use cr_store::userdb::powers::Powers;
 use cr_store::userdb::races::Races;
 use cr_store::userdb::spells::Spells;
@@ -419,8 +419,8 @@ fn parts_golden() {
     set(&f, &mut sword, phb, "Weapon Size", text("M"));
     set(&f, &mut sword, phb, "Weapon Type", text("S"));
     set(&f, &mut sword, "", "Melee Weapon", Value::Bool(true));
-    set(&f, &mut sword, "", "# of Hands Needed", Value::Int(1));
-    set(&f, &mut sword, phb, "Gold", Value::Int(15));
+    set(&f, &mut sword, "", "# of hands needed", Value::Int(1));
+    set(&f, &mut sword, phb, "Gold Pieces", Value::Int(15));
     db.add(sword).unwrap();
     if s.expansion() {
         let mut kit = db.new_record(KITS, "");
@@ -429,10 +429,11 @@ fn parts_golden() {
             &f,
             &mut kit,
             "",
-            "Starting Money = Dice × Multiplier + Add",
+            "Starting money = dice * multiplier + add",
             Value::Bool(true),
         );
-        set(&f, &mut kit, "", "Dice", Value::Dice([3, 6, 0]));
+        set(&f, &mut kit, "", "# of dice", Value::Int(3));
+        set(&f, &mut kit, "", "# of sides", Value::Int(6));
         set(&f, &mut kit, "", "Multiplier", Value::Int(10));
         db.add(kit).unwrap();
     }
@@ -445,6 +446,71 @@ fn parts_golden() {
             "PartsU_01_udbsword.dat"
         },
     );
+}
+
+/// A container (IDD 160), on a fresh copy of the installation's files.
+#[test]
+fn parts_container_golden() {
+    let Some(s) = scratch("container") else {
+        return;
+    };
+    if !s.expansion() {
+        return;
+    }
+    let mut db = UserDb::<Parts>::load(&s.install).unwrap();
+    let f = Parts::fields(db.flavor);
+    let mut chest = db.new_record(EQUIPMENT, "");
+    set(&f, &mut chest, "", "Name", text("Udb chest"));
+    set(
+        &f,
+        &mut chest,
+        "",
+        "This can be used to carry other items",
+        Value::Bool(true),
+    );
+    set(
+        &f,
+        &mut chest,
+        "",
+        "Stowage Capacity in pounds",
+        Value::Real(37.5),
+    );
+    set(
+        &f,
+        &mut chest,
+        "",
+        "Arrows: not limited by number",
+        Value::Int(20),
+    );
+    set(
+        &f,
+        &mut chest,
+        "",
+        "Quarrels: not limited by number",
+        Value::Int(10),
+    );
+    set(&f, &mut chest, "", "a Hat", Value::Bool(true));
+    set(&f, &mut chest, "", "a Pack Animal", Value::Bool(true));
+    set(
+        &f,
+        &mut chest,
+        "",
+        "Not limited by bulk",
+        Value::Bool(false),
+    );
+    set(&f, &mut chest, "", "Bulk Points", Value::Int(15));
+    set(
+        &f,
+        &mut chest,
+        "",
+        "Do Not Add to Encumbrance",
+        Value::Bool(true),
+    );
+    let phb = "Player's Handbook";
+    set(&f, &mut chest, phb, "Gold Pieces", Value::Int(2));
+    set(&f, &mut chest, phb, "Silver Pieces", Value::Int(5));
+    add_and_save(&s, &mut db, chest);
+    s.check("UserDbas/PartsU.dat", "PartsU_02_udbchest.dat");
 }
 
 #[test]

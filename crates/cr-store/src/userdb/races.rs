@@ -77,6 +77,26 @@ pub const LIMIT_CLASSES: [&str; 9] = [
     "Specialist",
 ];
 
+/// The rows of the Level Limits dialog (Evermore IDD 186), top to bottom,
+/// as `level_limits` slots: Bard, Cleric, Druid, Fighter, Specialist,
+/// Mage, Paladin, Ranger, Thief. A row's "Unlimited" check (1467 + row)
+/// keeps its flag in `unknown_0x84[row]`.
+pub const LIMIT_ROWS: [usize; 9] = [4, 5, 6, 0, 8, 7, 2, 1, 3];
+
+/// The `unknown_0x84` flag of the `level_limits` slot `slot`.
+pub fn unlimited_flag(slot: usize) -> usize {
+    LIMIT_ROWS.iter().position(|&s| s == slot).unwrap_or(0)
+}
+
+/// Clicking an "Unlimited" check sets its flag and greys the class's
+/// limit. The handler (`586d00` and its siblings) also stores 1 in the
+/// dialog's copy of the limit, but without `UpdateData(FALSE)`, so OK's
+/// `UpdateData(TRUE)` reads the greyed edit back: the limit is saved as
+/// shown.
+pub fn set_unlimited(r: &mut Race, row: usize, on: bool) {
+    r.unknown_0x84[row] = i32::from(on);
+}
+
 pub fn is_subrace(r: &Race) -> bool {
     r.unknown_0x184 != 0
 }
@@ -306,10 +326,10 @@ impl UserKind for Races {
                 |r, i, v, _| r.unknown_0x1e0[i] = i32::from(v.bool()),
                 2,
             ));
-            // The dialog lists the classes alphabetically.
-            let mut order: Vec<usize> = (0..LIMIT_CLASSES.len()).collect();
-            order.sort_by_key(|i| LIMIT_CLASSES[*i]);
-            for i in order {
+            // The dialog's rows (IDD 186): its "Unlimited" checks keep
+            // their flags in `unknown_0x84` in row order.
+            for (row, &i) in LIMIT_ROWS.iter().enumerate() {
+                const GROUP: &str = "Racial Level Limits by Class (0: cannot choose)";
                 f.push(
                     indexed(
                         "Level Limits",
@@ -319,7 +339,19 @@ impl UserKind for Races {
                         |r, i, v, _| r.level_limits[i] = v.int() as i32,
                         i,
                     )
-                    .group("Racial Level Limits by Class (0: cannot choose)"),
+                    .group(GROUP)
+                    .enabled_at(|r, i| r.unknown_0x84[unlimited_flag(i)] == 0),
+                );
+                f.push(
+                    indexed(
+                        "Level Limits",
+                        "Unlimited",
+                        CHECK,
+                        |r: &Race, row| Value::Bool(r.unknown_0x84[row] != 0),
+                        |r, row, v, _| set_unlimited(r, row, v.bool()),
+                        row,
+                    )
+                    .group(GROUP),
                 );
             }
         }
@@ -586,5 +618,38 @@ mod tests {
         assert_eq!(m.classes, [1000, 2000, 0, 0, 0]);
         assert_eq!(multiclass_name(&m, &ids), "Fighter/Thief");
         assert!(multiclass_of("Fighter/Fighter", &ids).is_none());
+    }
+
+    #[test]
+    fn unlimited_checks_follow_the_dialog_rows() {
+        let fields = Races::fields(Flavor::Core20);
+        let page: Vec<_> = fields.iter().filter(|f| f.page == "Level Limits").collect();
+        let labels: Vec<_> = page.iter().step_by(2).map(|f| f.label).collect();
+        assert_eq!(
+            labels,
+            [
+                "Bard",
+                "Cleric",
+                "Druid",
+                "Fighter",
+                "Specialist",
+                "Mage",
+                "Paladin",
+                "Ranger",
+                "Thief"
+            ]
+        );
+        let mut race = new_race("");
+        race.level_limits[0] = 12;
+        // Fighter is the fourth row: its check is flag 3, and checking it
+        // greys the limit but keeps it.
+        let (limit, unlimited) = (page[6], page[7]);
+        assert_eq!(limit.label, "Fighter");
+        assert!(limit.is_enabled(&race));
+        unlimited.set(&mut race, &Value::Bool(true), &Sources::default());
+        assert_eq!(race.unknown_0x84, [0, 0, 0, 1, 0, 0, 0, 0, 0]);
+        assert_eq!(race.level_limits[0], 12);
+        assert!(!limit.is_enabled(&race));
+        assert_eq!(unlimited_flag(8), 4);
     }
 }
