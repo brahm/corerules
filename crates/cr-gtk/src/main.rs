@@ -8,6 +8,7 @@ mod encounter;
 mod lists;
 mod npc;
 mod party;
+mod prefs;
 mod sheet;
 mod tables;
 mod transfer;
@@ -62,6 +63,7 @@ const WRITE_ACTIONS: [&str; 19] = [
 ];
 
 fn main() -> glib::ExitCode {
+    prefs::apply_language();
     let app = adw::Application::builder().application_id(APP_ID).build();
     app.connect_activate(|app| {
         // The icon is installed under the application id; X11 window
@@ -179,6 +181,15 @@ impl Window {
             }
         });
 
+        let preferences = gio::ActionEntry::builder("preferences")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| {
+                    let toasts = this.toasts.clone();
+                    prefs::show(&this.window, move |m| toasts.add_toast(adw::Toast::new(m)))
+                }
+            })
+            .build();
         let open = gio::ActionEntry::builder("open")
             .activate({
                 let this = this.clone();
@@ -285,6 +296,7 @@ impl Window {
             import_core20,
         ]);
         this.window.add_action_entries([
+            preferences,
             open,
             new_character,
             new_npc,
@@ -294,6 +306,7 @@ impl Window {
             new_table,
         ]);
         app.set_accels_for_action("win.open", &["<Control>o"]);
+        app.set_accels_for_action("win.preferences", &["<Control>comma"]);
         app.set_accels_for_action("win.new-character", &["<Control>n"]);
         app.set_accels_for_action("win.new-npc", &["<Control><Shift>n"]);
         app.set_accels_for_action("win.roll-treasure", &["<Control>t"]);
@@ -829,7 +842,10 @@ fn open_menu() -> gtk::MenuButton {
     packages.append(Some(tr("New P_ackage…")), Some("win.new-package"));
     packages.append(Some(tr("E_dit Package…")), Some("win.edit-package"));
     menu.append_section(None, &packages);
-    menu.append(Some(tr("_Open Folder…")), Some("win.open"));
+    let app = gio::Menu::new();
+    app.append(Some(tr("_Open Folder…")), Some("win.open"));
+    app.append(Some(tr("_Preferences")), Some("win.preferences"));
+    menu.append_section(None, &app);
     gtk::MenuButton::builder()
         .icon_name("open-menu-symbolic")
         .tooltip_text(tr("Main Menu"))
