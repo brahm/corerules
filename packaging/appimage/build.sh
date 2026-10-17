@@ -1,8 +1,9 @@
 #!/bin/sh
 # Builds dist/CoreRules-VERSION-ARCH.AppImage from target/release with
 # linuxdeploy and its GTK plugin, which bundle GTK 4, libadwaita and their
-# data. Build on the oldest distribution supported (Ubuntu 24.04): the
-# AppImage runs on systems with the same glibc or newer.
+# data from the system it runs on. Releases run it inside the GNOME 51 SDK
+# (build-in-sdk.sh), so the AppImage carries that platform's libraries and
+# runs on systems with the SDK's glibc or newer.
 set -eu
 version=$1
 arch=$(uname -m)
