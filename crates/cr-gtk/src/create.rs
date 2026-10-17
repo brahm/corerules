@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_i18n::{tr, tr_noop, trn};
 use cr_store::create::{
     ABILITIES, CreationRules, DISADVANTAGE_POINTS, Dice, Draft, METHOD_VI_DICE, METHOD_VII_POINTS,
     METHOD_VIII_DICE, METHOD_X_STRENGTH_STEP, MOST_DISADVANTAGES, MOST_FIGHTING_STYLES,
@@ -18,13 +19,20 @@ use gtk::glib;
 use crate::lists::{RowList, RowSpec};
 
 /// Abbreviations for the ability summaries.
-const SHORT: [&str; 6] = ["Str", "Dex", "Con", "Int", "Wis", "Cha"];
+const SHORT: [&str; 6] = [
+    tr_noop!("Str"),
+    tr_noop!("Dex"),
+    tr_noop!("Con"),
+    tr_noop!("Int"),
+    tr_noop!("Wis"),
+    tr_noop!("Cha"),
+];
 
 const SOCIAL_CLASSES: [&str; 4] = [
-    "Lower class",
-    "Lower middle class",
-    "Upper middle class",
-    "Upper class",
+    tr_noop!("Lower class"),
+    tr_noop!("Lower middle class"),
+    tr_noop!("Upper middle class"),
+    tr_noop!("Upper class"),
 ];
 
 type Create = dyn Fn(&Draft) -> Result<(), String>;
@@ -53,7 +61,7 @@ pub fn new_character(
 ) {
     let nav = adw::NavigationView::new();
     let dialog = adw::Dialog::builder()
-        .title("New Character")
+        .title(tr("New Character"))
         .content_width(520)
         .content_height(640)
         .child(&nav)
@@ -195,28 +203,25 @@ fn spin_row(title: &str, subtitle: &str, value: u32, min: u32, max: u32) -> adw:
 
 /// "34 gp 6 sp 7 cp" for an amount in copper pieces.
 fn money(copper: u32) -> String {
-    let parts: Vec<String> = [
-        (copper / 100, "gp"),
-        (copper / 10 % 10, "sp"),
-        (copper % 10, "cp"),
-    ]
-    .iter()
-    .filter(|(n, _)| *n > 0)
-    .map(|(n, unit)| format!("{n} {unit}"))
-    .collect();
+    let parts: Vec<String> = [copper / 100, copper / 10 % 10, copper % 10]
+        .into_iter()
+        .enumerate()
+        .filter(|(_, amount)| *amount > 0)
+        .map(|(unit, amount)| match unit {
+            0 => tr!("{amount} gp", amount),
+            1 => tr!("{amount} sp", amount),
+            _ => tr!("{amount} cp", amount),
+        })
+        .collect();
     if parts.is_empty() {
-        "Free".into()
+        tr("Free").into()
     } else {
         parts.join(" ")
     }
 }
 
 fn slots(n: u32) -> String {
-    if n == 1 {
-        "1 slot".into()
-    } else {
-        format!("{n} slots")
-    }
+    trn!("{n} slot", "{n} slots", n)
 }
 
 /// "Axe bonus" for "Dwarf, Axe bonus (5)": the race or class and the cost
@@ -231,12 +236,8 @@ fn ability_title(name: &str) -> String {
 }
 
 fn points(n: i64) -> String {
-    if n.abs() == 1 {
-        format!("{n} point")
-    } else {
-        format!("{n} points")
-    }
-    .replace('-', "−")
+    let count = n.to_string().replace('-', "−");
+    trn!("{count} point", "{count} points", n.unsigned_abs(), count)
 }
 
 /// One check row per ability with its cost; `changed` gets the names
@@ -269,7 +270,7 @@ fn ability_rows(
         let row = adw::ActionRow::builder()
             .title(escape(&title))
             .subtitle(if *cost < 0 {
-                format!("Gives {}", points(i64::from(-cost)))
+                tr!("Gives {points}", points = points(i64::from(-cost)))
             } else {
                 points(i64::from(*cost))
             })
@@ -297,7 +298,7 @@ fn scores_summary(scores: &[u32; 6]) -> String {
     SHORT
         .iter()
         .zip(scores)
-        .map(|(a, s)| format!("{a} {s}"))
+        .map(|(a, s)| format!("{} {s}", tr(a)))
         .collect::<Vec<_>>()
         .join(" · ")
 }
@@ -314,22 +315,24 @@ impl Wizard {
     /// The rules and the campaign setting.
     fn setting_page(&self) -> adw::NavigationPage {
         let rules_group = adw::PreferencesGroup::builder()
-            .title("Rules")
-            .description("The original's Core Rules and Player's Option buttons")
+            .title(tr("Rules"))
+            .description(tr("The original's Core Rules and Player's Option buttons"))
             .build();
         let skills_and_powers = Rc::new(RefCell::new(false));
         radio_rows(
             &rules_group,
             &[
                 (
-                    "Core Rules".into(),
-                    "Player's Handbook: proficiency slots".into(),
+                    tr("Core Rules").into(),
+                    tr("Player's Handbook: proficiency slots").into(),
                 ),
                 (
-                    "Player's Option".into(),
-                    "Skills & Powers: subabilities, and character points for racial and \
-                     class abilities, proficiencies and traits"
-                        .into(),
+                    tr("Player's Option").into(),
+                    tr(
+                        "Skills & Powers: subabilities, and character points for racial and \
+                     class abilities, proficiencies and traits",
+                    )
+                    .into(),
                 ),
             ],
             0,
@@ -342,12 +345,12 @@ impl Wizard {
         rules_group.set_visible(self.rules().expansion);
 
         let group = adw::PreferencesGroup::builder()
-            .title("Campaign Setting")
-            .description(
+            .title(tr("Campaign Setting"))
+            .description(tr(
                 "The setting limits the races and classes offered on the next pages. \
                  The original program has no settings; these follow each setting's \
                  campaign book.",
-            )
+            ))
             .build();
         let choices: Vec<(String, String)> = SETTINGS
             .iter()
@@ -358,7 +361,7 @@ impl Wizard {
             let chosen = chosen.clone();
             move |i| *chosen.borrow_mut() = &SETTINGS[i]
         });
-        let next = next_button("_Next");
+        let next = next_button(tr("_Next"));
         next.connect_clicked({
             let this = self.clone();
             move |_| {
@@ -370,20 +373,20 @@ impl Wizard {
                 this.push(this.abilities_page());
             }
         });
-        step("New Character", &[&rules_group, &group], &next, None)
+        step(tr("New Character"), &[&rules_group, &group], &next, None)
     }
 
     /// Rolling the ability scores.
     fn abilities_page(&self) -> adw::NavigationPage {
         let methods = RollMethod::offered(self.rules().expansion);
         let names: Vec<String> = methods.iter().map(|m| m.name().into()).collect();
-        let method_row = combo_row("Method", &names, RollMethod::FourDice.name());
+        let method_row = combo_row(tr("Method"), &names, RollMethod::FourDice.name());
         let method_group = adw::PreferencesGroup::new();
         method_group.add(&method_row);
 
-        let roll = roll_button("Roll Again");
+        let roll = roll_button(tr("Roll Again"));
         let scores_group = adw::PreferencesGroup::builder()
-            .title("Ability Scores")
+            .title(tr("Ability Scores"))
             .header_suffix(&roll)
             .build();
         let scores: Rc<RefCell<[u32; 6]>> = Rc::new(RefCell::new([10; 6]));
@@ -393,7 +396,7 @@ impl Wizard {
         let budget = Rc::new(RefCell::new((METHOD_VII_POINTS, 18, 0)));
         // Whether Method VIII's scores were rolled with the dice shown.
         let pool_rolled = Rc::new(RefCell::new(false));
-        let next = next_button("_Next");
+        let next = next_button(tr("_Next"));
 
         // Rolled scores show as labels, moved up and down when the method
         // lets the player arrange them; typed or divided scores use spin
@@ -407,7 +410,7 @@ impl Wizard {
             .collect();
         let dice_rows: Vec<adw::SpinRow> = ABILITIES
             .iter()
-            .map(|a| spin_row(a, "4 dice", 4, 3, 6))
+            .map(|a| spin_row(a, &trn!("{n} die", "{n} dice", 4u32), 4, 3, 6))
             .collect();
         let pool_labels: Vec<gtk::Label> = (0..6)
             .map(|_| gtk::Label::builder().css_classes(["title-4"]).build())
@@ -416,19 +419,25 @@ impl Wizard {
         let seven: Rc<RefCell<[u32; METHOD_VI_DICE]>> = Rc::default();
         let ability_names: Vec<String> = ABILITIES.iter().map(|a| a.to_string()).collect();
         let seven_rows: Vec<adw::ComboRow> = (0..METHOD_VI_DICE)
-            .map(|d| combo_row(&format!("Die {}", d + 1), &ability_names, ABILITIES[d % 6]))
+            .map(|d| {
+                combo_row(
+                    &tr!("Die {number}", number = d + 1),
+                    &ability_names,
+                    ABILITIES[d % 6],
+                )
+            })
             .collect();
         let seven_group = adw::PreferencesGroup::builder()
-            .title("Dice")
-            .description("Each die is added to the ability chosen for it")
+            .title(tr("Dice"))
+            .description(tr("Each die is added to the ability chosen for it"))
             .build();
         for row in &seven_rows {
             seven_group.add(row);
         }
         // Method X: exceptional Strength bought with the points.
         let exceptional = spin_row(
-            "Exceptional Strength",
-            "For warriors with Strength 18, 10% a point",
+            tr("Exceptional Strength"),
+            tr("For warriors with Strength 18, 10% a point"),
             0,
             0,
             100 / METHOD_X_STRENGTH_STEP,
@@ -437,14 +446,14 @@ impl Wizard {
             let label = gtk::Label::builder().css_classes(["title-4"]).build();
             let up = gtk::Button::builder()
                 .icon_name("go-up-symbolic")
-                .tooltip_text("Move Up")
+                .tooltip_text(tr("Move Up"))
                 .valign(gtk::Align::Center)
                 .css_classes(["flat"])
                 .sensitive(a > 0)
                 .build();
             let down = gtk::Button::builder()
                 .icon_name("go-down-symbolic")
-                .tooltip_text("Move Down")
+                .tooltip_text(tr("Move Down"))
                 .valign(gtk::Align::Center)
                 .css_classes(["flat"])
                 .sensitive(a < 5)
@@ -505,7 +514,7 @@ impl Wizard {
                     let assignment: [usize; METHOD_VI_DICE] =
                         std::array::from_fn(|d| seven_rows[d].selected() as usize);
                     for (d, row) in seven_rows.iter().enumerate() {
-                        row.set_subtitle(&format!("Rolled {}", seven.borrow()[d]));
+                        row.set_subtitle(&tr!("Rolled {roll}", roll = seven.borrow()[d]));
                     }
                     if let Some(rolled) = seven_dice_scores(&seven.borrow(), &assignment) {
                         *scores.borrow_mut() = rolled;
@@ -528,7 +537,7 @@ impl Wizard {
                         entered[a].adjustment().set_upper(18.0);
                     }
                     let n = dice_rows[a].value() as u32;
-                    dice_rows[a].set_subtitle(&format!("{n} dice"));
+                    dice_rows[a].set_subtitle(&trn!("{n} die", "{n} dice", n));
                     pool_labels[a].set_label(&if *pool_rolled.borrow() {
                         scores.borrow()[a].to_string()
                     } else {
@@ -542,9 +551,9 @@ impl Wizard {
                         std::array::from_fn(|d| seven_rows[d].selected() as usize);
                     let fits = seven_dice_scores(&seven.borrow(), &assignment).is_some();
                     scores_group.set_description(Some(if fits {
-                        "Every score starts at 8"
+                        tr("Every score starts at 8")
                     } else {
-                        "No score may pass 18: give a die to another ability"
+                        tr("No score may pass 18: give a die to another ability")
                     }));
                     fits
                 } else if m.divided() {
@@ -553,20 +562,31 @@ impl Wizard {
                         total += exceptional.value() as u32;
                     }
                     let left = points as i64 - total as i64;
-                    let roll = if m == RollMethod::RolledPoints {
-                        format!("2d6 rolled {rolled}: ")
+                    let description = if m == RollMethod::RolledPoints {
+                        tr!(
+                            "2d6 rolled {roll}: {left} of {points} points left · highest score {highest}",
+                            roll = rolled,
+                            left,
+                            points,
+                            highest
+                        )
                     } else {
-                        String::new()
+                        tr!(
+                            "{left} of {points} points left · highest score {highest}",
+                            left,
+                            points,
+                            highest
+                        )
                     };
-                    scores_group.set_description(Some(&format!(
-                        "{roll}{left} of {points} points left · highest score {highest}"
-                    )));
+                    scores_group.set_description(Some(&description));
                     left == 0
                 } else if pool {
                     let total: u32 = dice_rows.iter().map(|e| e.value() as u32).sum();
                     let left = METHOD_VIII_DICE as i64 - total as i64;
-                    scores_group.set_description(Some(&format!(
-                        "{left} of {METHOD_VIII_DICE} dice left · roll when all are given out"
+                    scores_group.set_description(Some(&tr!(
+                        "{left} of {total} dice left · roll when all are given out",
+                        left,
+                        total = METHOD_VIII_DICE
                     )));
                     left == 0 && *pool_rolled.borrow()
                 } else {
@@ -677,7 +697,7 @@ impl Wizard {
             }
         });
         step(
-            "Ability Scores",
+            tr("Ability Scores"),
             &[&method_group, &scores_group, &seven_group],
             &next,
             None,
@@ -696,31 +716,33 @@ impl Wizard {
             )
         };
         let standard = adw::SwitchRow::builder()
-            .title("Standard Races Only")
-            .subtitle("Leave out the monster races, as the original's switch does")
+            .title(tr("Standard Races Only"))
+            .subtitle(tr(
+                "Leave out the monster races, as the original's switch does",
+            ))
             .build();
         let options_group = adw::PreferencesGroup::new();
         options_group.add(&standard);
         let races_group = adw::PreferencesGroup::builder()
-            .title("Race")
+            .title(tr("Race"))
             .description(if choice {
-                "The scores are rolled after the class, to fit both".to_owned()
+                tr("The scores are rolled after the class, to fit both").to_owned()
             } else {
-                format!(
-                    "{} · races whose ability limits these scores meet",
-                    scores_summary(&scores)
+                tr!(
+                    "{scores} · races whose ability limits these scores meet",
+                    scores = scores_summary(&scores)
                 )
             })
             .build();
         let subrace_group = adw::PreferencesGroup::new();
-        let subrace_row = adw::ComboRow::builder().title("Subrace").build();
+        let subrace_row = adw::ComboRow::builder().title(tr("Subrace")).build();
         subrace_group.add(&subrace_row);
-        let next = next_button("_Next");
+        let next = next_button(tr("_Next"));
         let chosen: Rc<RefCell<String>> = Rc::default();
         let rows: Rc<RefCell<Vec<adw::ActionRow>>> = Rc::default();
         let empty = adw::ActionRow::builder()
-            .title("No race allows these scores")
-            .subtitle("Go back and roll again")
+            .title(tr("No race allows these scores"))
+            .subtitle(tr("Go back and roll again"))
             .css_classes(["dim-label"])
             .build();
         races_group.add(&empty);
@@ -767,10 +789,10 @@ impl Wizard {
                             .iter()
                             .enumerate()
                             .filter(|(_, v)| **v != 0)
-                            .map(|(a, v)| format!("{} {v:+}", SHORT[a]))
+                            .map(|(a, v)| format!("{} {v:+}", tr(SHORT[a])))
                             .collect();
                         let subtitle = if adjustments.is_empty() {
-                            "No ability adjustments".to_owned()
+                            tr("No ability adjustments").to_owned()
                         } else {
                             adjustments.join(" · ").replace('-', "−")
                         };
@@ -829,7 +851,7 @@ impl Wizard {
             }
         });
         step(
-            "Race",
+            tr("Race"),
             &[&options_group, &races_group, &subrace_group],
             &next,
             None,
@@ -853,13 +875,14 @@ impl Wizard {
         let adjusted = self.rules().adjusted(&race, &scores);
         let options = self.rules().class_options(setting, &race, &adjusted);
         let group = adw::PreferencesGroup::builder()
-            .title("Class")
+            .title(tr("Class"))
             .description(if choice {
                 race.clone()
             } else {
-                format!(
-                    "{race} · {} after racial adjustments",
-                    scores_summary(&adjusted)
+                tr!(
+                    "{race} · {scores} after racial adjustments",
+                    race,
+                    scores = scores_summary(&adjusted)
                 )
             })
             .build();
@@ -871,20 +894,21 @@ impl Wizard {
                     .filter_map(|c| self.rules().class(c))
                     .map(|c| format!("d{}", c.hit_die))
                     .collect();
-                let what = if classes.len() > 1 {
-                    "Multi-class"
+                let dice = dice.join("/");
+                let subtitle = if classes.len() > 1 {
+                    tr!("Multi-class · {dice}", dice)
                 } else {
-                    "Hit die"
+                    tr!("Hit die · {dice}", dice)
                 };
-                (classes.join("/"), format!("{what} · {}", dice.join("/")))
+                (classes.join("/"), subtitle)
             })
             .collect();
         let selected = options.iter().position(|o| *o == previous).unwrap_or(0);
         let chosen = Rc::new(RefCell::new(selected));
         // Player's Choice: 3d6 in order, fitted to the race and class.
-        let roll = roll_button("Roll Again");
+        let roll = roll_button(tr("Roll Again"));
         let scores_group = adw::PreferencesGroup::builder()
-            .title("Ability Scores")
+            .title(tr("Ability Scores"))
             .header_suffix(&roll)
             .visible(choice && !options.is_empty())
             .build();
@@ -908,9 +932,9 @@ impl Wizard {
                     this.rules()
                         .players_choice(&race, classes, &mut this.0.dice.borrow_mut());
                 scores_row.set_title(&scores_summary(&scores));
-                scores_row.set_subtitle(&format!(
-                    "{} after racial adjustments",
-                    scores_summary(&this.rules().adjusted(&race, &scores))
+                scores_row.set_subtitle(&tr!(
+                    "{scores} after racial adjustments",
+                    scores = scores_summary(&this.rules().adjusted(&race, &scores))
                 ));
                 *rolled.borrow_mut() = scores;
             }
@@ -931,12 +955,12 @@ impl Wizard {
         if choice {
             reroll();
         }
-        let next = next_button("_Next");
+        let next = next_button(tr("_Next"));
         if options.is_empty() {
             group.add(
                 &adw::ActionRow::builder()
-                    .title("No class allows these scores")
-                    .subtitle("Go back and choose another race or roll again")
+                    .title(tr("No class allows these scores"))
+                    .subtitle(tr("Go back and choose another race or roll again"))
                     .css_classes(["dim-label"])
                     .build(),
             );
@@ -959,7 +983,7 @@ impl Wizard {
                 }
             }
         });
-        step("Class", &[&group, &scores_group], &next, None)
+        step(tr("Class"), &[&group, &scores_group], &next, None)
     }
 
     /// Skills & Powers: racial abilities bought with the race's points,
@@ -970,9 +994,9 @@ impl Wizard {
         let (total, saved) = rules.racial_points(&d.race, &d.subrace);
         let choices = rules.racial_ability_choices(&d.race, &d.subrace);
         let group = adw::PreferencesGroup::builder()
-            .title("Racial Abilities")
+            .title(tr("Racial Abilities"))
             .build();
-        let next = next_button("_Next");
+        let next = next_button(tr("_Next"));
         let chosen = Rc::new(RefCell::new(d.racial_abilities.clone()));
         let update = Rc::new({
             let (this, group, next, chosen) =
@@ -981,9 +1005,9 @@ impl Wizard {
                 let mut probe = this.0.draft.borrow().clone();
                 probe.racial_abilities = chosen.borrow().clone();
                 let left = this.rules().racial_points_left(&probe);
-                group.set_description(Some(&format!(
-                    "{} of {} left; up to {} kept for proficiencies",
-                    points(left),
+                group.set_description(Some(&tr!(
+                    "{left} of {total} left; up to {saved} kept for proficiencies",
+                    left = points(left),
                     total,
                     saved
                 )));
@@ -992,7 +1016,7 @@ impl Wizard {
         });
         if total == 0 || choices.is_empty() {
             // Monster races come with fixed abilities.
-            group.set_description(Some("The race's abilities are fixed"));
+            group.set_description(Some(tr("The race's abilities are fixed")));
             for name in &d.racial_abilities {
                 group.add(
                     &adw::ActionRow::builder()
@@ -1003,7 +1027,7 @@ impl Wizard {
             if d.racial_abilities.is_empty() {
                 group.add(
                     &adw::ActionRow::builder()
-                        .title("None")
+                        .title(tr("None"))
                         .css_classes(["dim-label"])
                         .build(),
                 );
@@ -1025,21 +1049,26 @@ impl Wizard {
                 this.push(this.class_page());
             }
         });
-        step(&format!("{} Abilities", d.subrace), &[&group], &next, None)
+        step(
+            &tr!("{race} Abilities", race = d.subrace),
+            &[&group],
+            &next,
+            None,
+        )
     }
 
     /// Skills & Powers: class abilities bought with each class's points,
     /// starting from the class's defaults.
     fn class_abilities_page(&self) -> adw::NavigationPage {
         let d = self.0.draft.borrow().clone();
-        let next = next_button("_Next");
+        let next = next_button(tr("_Next"));
         let chosen = Rc::new(RefCell::new(d.class_abilities.clone()));
         let groups: Vec<adw::PreferencesGroup> = d
             .classes
             .iter()
             .map(|class| {
                 adw::PreferencesGroup::builder()
-                    .title(escape(&format!("{class} Abilities")))
+                    .title(escape(&tr!("{class} Abilities", class)))
                     .build()
             })
             .collect();
@@ -1058,9 +1087,10 @@ impl Wizard {
                         .map_or(0, |c| c.points.max(0));
                     let left = this.rules().class_points_left(&probe, slot);
                     fine &= left >= 0;
-                    group.set_description(Some(&format!(
-                        "{} of {total} left; what is left goes to proficiencies",
-                        points(left)
+                    group.set_description(Some(&tr!(
+                        "{left} of {total} left; what is left goes to proficiencies",
+                        left = points(left),
+                        total
                     )));
                 }
                 next.set_sensitive(fine);
@@ -1094,7 +1124,7 @@ impl Wizard {
             }
         });
         let groups: Vec<&adw::PreferencesGroup> = groups.iter().collect();
-        step("Class Abilities", &groups, &next, None)
+        step(tr("Class Abilities"), &groups, &next, None)
     }
 
     /// Rolls what the details page starts with for the chosen classes, as
@@ -1152,13 +1182,16 @@ impl Wizard {
     fn details_page(&self) -> adw::NavigationPage {
         let d = self.0.draft.borrow().clone();
         let rules = self.rules();
-        let name = adw::EntryRow::builder().title("Name").text(&d.name).build();
+        let name = adw::EntryRow::builder()
+            .title(tr("Name"))
+            .text(&d.name)
+            .build();
         let player = adw::EntryRow::builder()
-            .title("Player")
+            .title(tr("Player"))
             .text(&d.player)
             .build();
-        let genders = ["Male".to_owned(), "Female".to_owned()];
-        let gender = combo_row("Gender", &genders, if d.male { "Male" } else { "Female" });
+        let genders = [tr("Male").to_owned(), tr("Female").to_owned()];
+        let gender = combo_row(tr("Gender"), &genders, &genders[usize::from(!d.male)]);
         let who = adw::PreferencesGroup::builder()
             .title(escape(&format!("{} {}", d.race, d.class_title())))
             .build();
@@ -1166,39 +1199,47 @@ impl Wizard {
         who.add(&player);
         who.add(&gender);
 
-        let alignment = combo_row("Alignment", &rules.alignments(&d.classes), &d.alignment);
-        let kit = combo_row("Kit", &rules.kits(&d.race, &d.subrace, &d.classes), &d.kit);
-        let social: Vec<String> = SOCIAL_CLASSES.iter().map(|s| s.to_string()).collect();
-        let social_class = combo_row("Social Class", &social, &d.social_class);
-        let social_roll = roll_button("Roll Social Class");
+        let alignment = combo_row(tr("Alignment"), &rules.alignments(&d.classes), &d.alignment);
+        let kit = combo_row(
+            tr("Kit"),
+            &rules.kits(&d.race, &d.subrace, &d.classes),
+            &d.kit,
+        );
+        // The combo row shows the classes translated; the draft keeps them
+        // in English, by position.
+        let social: Vec<String> = SOCIAL_CLASSES.iter().map(|s| tr(s).to_owned()).collect();
+        let social_class = combo_row(tr("Social Class"), &social, tr(&d.social_class));
+        let social_roll = roll_button(tr("Roll Social Class"));
         social_class.add_suffix(&social_roll);
         let background = adw::PreferencesGroup::new();
         background.add(&alignment);
         background.add(&kit);
         background.add(&social_class);
 
-        let age = spin_row("Age", "Years", d.age, 1, 9999);
-        let height = spin_row("Height", "Inches", d.height, 1, 999);
-        let weight = spin_row("Weight", "Pounds", d.weight, 1, 9999);
+        let age = spin_row(tr("Age"), tr("Years"), d.age, 1, 9999);
+        let height = spin_row(tr("Height"), tr("Inches"), d.height, 1, 999);
+        let weight = spin_row(tr("Weight"), tr("Pounds"), d.weight, 1, 9999);
         let rolls = [
-            roll_button("Roll Age"),
-            roll_button("Roll Height"),
-            roll_button("Roll Weight"),
+            roll_button(tr("Roll Age")),
+            roll_button(tr("Roll Height")),
+            roll_button(tr("Roll Weight")),
         ];
         for (row, button) in [&age, &height, &weight].iter().zip(&rolls) {
             row.add_suffix(button);
         }
-        let appearance = adw::PreferencesGroup::builder().title("Appearance").build();
+        let appearance = adw::PreferencesGroup::builder()
+            .title(tr("Appearance"))
+            .build();
         appearance.add(&age);
         appearance.add(&height);
         appearance.add(&weight);
 
         let hit_dice = Rc::new(RefCell::new(d.hit_dice.clone()));
         let hit_points = adw::ActionRow::builder()
-            .title("Hit Die Roll")
+            .title(tr("Hit Die Roll"))
             .subtitle_selectable(true)
             .build();
-        let hp_roll = roll_button("Roll Hit Points");
+        let hp_roll = roll_button(tr("Roll Hit Points"));
         hit_points.add_suffix(&hp_roll);
         let show_hit_dice = Rc::new({
             let (this, hit_points, hit_dice) = (self.clone(), hit_points.clone(), hit_dice.clone());
@@ -1212,28 +1253,28 @@ impl Wizard {
                         format!("{c} {roll} (d{die})")
                     })
                     .collect();
-                hit_points.set_subtitle(&format!(
-                    "{} · Constitution adjusts it on the sheet",
-                    text.join(", ")
+                hit_points.set_subtitle(&tr!(
+                    "{rolls} · Constitution adjusts it on the sheet",
+                    rolls = text.join(", ")
                 ));
             }
         });
         show_hit_dice();
         let strength = rules.adjusted(&d.race, &d.scores)[0];
         let exceptional = spin_row(
-            "Exceptional Strength",
-            "18/01 to 18/00",
+            tr("Exceptional Strength"),
+            tr("18/01 to 18/00"),
             d.exceptional_strength.clamp(1, 100),
             1,
             100,
         );
-        let exceptional_roll = roll_button("Roll Exceptional Strength");
+        let exceptional_roll = roll_button(tr("Roll Exceptional Strength"));
         exceptional.add_suffix(&exceptional_roll);
         exceptional.set_visible(rules.has_exceptional_strength(&d.classes, strength));
         if d.roll_method == RollMethod::PointsAndStrength {
             // Bought with the ability points.
             exceptional.set_sensitive(false);
-            exceptional.set_subtitle("Bought with the ability points");
+            exceptional.set_subtitle(tr("Bought with the ability points"));
             exceptional_roll.set_visible(false);
         }
         let combat = adw::PreferencesGroup::new();
@@ -1243,8 +1284,8 @@ impl Wizard {
         // Skills & Powers splits each score in two subabilities, up to
         // two points apart either way.
         let subabilities = adw::PreferencesGroup::builder()
-            .title("Subabilities")
-            .description("Raising one subability lowers the other as much")
+            .title(tr("Subabilities"))
+            .description(tr("Raising one subability lowers the other as much"))
             .visible(d.skills_and_powers)
             .build();
         let spread_rows: Vec<adw::SpinRow> = (0..6)
@@ -1359,7 +1400,7 @@ impl Wizard {
             move |_| exceptional.set_value(this.0.dice.borrow_mut().roll(1, 100).into())
         });
 
-        let next = next_button("_Next");
+        let next = next_button(tr("_Next"));
         next.set_sensitive(!d.name.trim().is_empty());
         name.connect_changed({
             let next = next.clone();
@@ -1375,7 +1416,9 @@ impl Wizard {
                     d.male = male();
                     d.alignment = combo_value(&alignment);
                     d.kit = combo_value(&kit);
-                    d.social_class = combo_value(&social_class);
+                    if let Some(class) = SOCIAL_CLASSES.get(social_class.selected() as usize) {
+                        d.social_class = (*class).to_owned();
+                    }
                     d.age = age.value() as u32;
                     d.height = height.value() as u32;
                     d.weight = weight.value() as u32;
@@ -1391,7 +1434,7 @@ impl Wizard {
             }
         });
         step(
-            "Details",
+            tr("Details"),
             &[&who, &background, &appearance, &combat, &subabilities],
             &next,
             None,
@@ -1421,9 +1464,9 @@ impl Wizard {
                     value: name.clone(),
                     title: name,
                     subtitle: if sp {
-                        format!("{}, 1 more a further rank", points(cost.into()))
+                        tr!("{cost}, 1 more a further rank", cost = points(cost.into()))
                     } else {
-                        format!("{} each time", slots(cost))
+                        tr!("{slots} each time", slots = slots(cost))
                     },
                     number: Some((times, 1, 10)),
                 }
@@ -1431,7 +1474,7 @@ impl Wizard {
         };
         let taken_nonweapon: Rc<RefCell<Vec<String>>> = Rc::default();
         let nonweapon = RowList::new(
-            "Nonweapon Proficiencies",
+            tr("Nonweapon Proficiencies"),
             rules
                 .nonweapon_ranks(&d)
                 .into_iter()
@@ -1462,7 +1505,7 @@ impl Wizard {
         };
         let taken_traits: Rc<RefCell<Vec<String>>> = Rc::default();
         let traits = RowList::new(
-            "Traits",
+            tr("Traits"),
             d.traits.iter().cloned().map(&trait_spec).collect(),
             {
                 let (this, taken) = (self.clone(), taken_traits.clone());
@@ -1482,9 +1525,9 @@ impl Wizard {
             let this = self.clone();
             move |name: String| RowSpec {
                 value: name.clone(),
-                subtitle: format!(
-                    "Gives {}",
-                    points(this.rules().disadvantage_points(&name).into())
+                subtitle: tr!(
+                    "Gives {points}",
+                    points = points(this.rules().disadvantage_points(&name).into())
                 ),
                 title: name,
                 number: None,
@@ -1492,7 +1535,7 @@ impl Wizard {
         };
         let taken_disadvantages: Rc<RefCell<Vec<String>>> = Rc::default();
         let disadvantages = RowList::new(
-            "Disadvantages",
+            tr("Disadvantages"),
             d.disadvantages
                 .iter()
                 .cloned()
@@ -1519,10 +1562,10 @@ impl Wizard {
         // Native languages come with the race; others are learned through
         // proficiencies such as Modern Languages, as in the original.
         let languages = adw::PreferencesGroup::builder()
-            .title("Native Languages")
-            .description(
+            .title(tr("Native Languages"))
+            .description(tr(
                 "Other languages are learned through proficiencies such as Modern Languages",
-            )
+            ))
             .build();
         for language in &native {
             languages.add(&adw::ActionRow::builder().title(escape(language)).build());
@@ -1530,7 +1573,7 @@ impl Wizard {
         if native.is_empty() {
             languages.add(
                 &adw::ActionRow::builder()
-                    .title("None")
+                    .title(tr("None"))
                     .css_classes(["dim-label"])
                     .build(),
             );
@@ -1546,7 +1589,7 @@ impl Wizard {
         let taken_languages: Rc<RefCell<Vec<String>>> = Rc::default();
         let language_room = Rc::new(std::cell::Cell::new(0usize));
         let learned = RowList::new(
-            "Learned Languages",
+            tr("Learned Languages"),
             d.learned_languages
                 .iter()
                 .cloned()
@@ -1585,7 +1628,7 @@ impl Wizard {
         };
         let taken_weapons: Rc<RefCell<Vec<String>>> = Rc::default();
         let weapons = RowList::new(
-            "Weapon Proficiencies",
+            tr("Weapon Proficiencies"),
             d.weapon_proficiencies
                 .iter()
                 .cloned()
@@ -1606,8 +1649,8 @@ impl Wizard {
         );
 
         let points_row = adw::ActionRow::builder()
-            .title("Character Points Left")
-            .subtitle("Kept on the character for later levels")
+            .title(tr("Character Points Left"))
+            .subtitle(tr("Kept on the character for later levels"))
             .build();
         let points_label = gtk::Label::builder()
             .css_classes(["numeric"])
@@ -1617,7 +1660,7 @@ impl Wizard {
         let points_group = adw::PreferencesGroup::builder().visible(sp).build();
         points_group.add(&points_row);
 
-        let next = next_button("_Next");
+        let next = next_button(tr("_Next"));
         let names = |list: &RowList<String>| -> Vec<String> {
             list.values().into_iter().map(|(v, _)| v).collect()
         };
@@ -1687,22 +1730,24 @@ impl Wizard {
                 let room = rules.language_slots(&probe);
                 language_room.set(room);
                 let languages_left = room as i64 - probe.learned_languages.len() as i64;
-                learned.group.set_description(Some(&format!(
-                    "{languages_left} of {room} left: one for each slot or rank of Modern \
-                     Languages and the like"
+                learned.group.set_description(Some(&tr!(
+                    "{left} of {room} left: one for each slot or rank of Modern \
+                     Languages and the like",
+                    left = languages_left,
+                    room
                 )));
                 if !sp {
                     let spent = rules.nonweapon_spent(&probe);
                     let weapons_taken = probe.weapon_proficiencies.len() as u32;
-                    nonweapon.group.set_description(Some(&format!(
-                        "{} of {} left: the class's slots and the languages Intelligence allows",
-                        nonweapon_slots as i64 - spent as i64,
-                        slots(nonweapon_slots)
+                    nonweapon.group.set_description(Some(&tr!(
+                        "{left} of {slots} left: the class's slots and the languages Intelligence allows",
+                        left = nonweapon_slots as i64 - spent as i64,
+                        slots = slots(nonweapon_slots)
                     )));
-                    weapons.group.set_description(Some(&format!(
-                        "{} of {} left",
-                        weapon_slots as i64 - weapons_taken as i64,
-                        slots(weapon_slots)
+                    weapons.group.set_description(Some(&tr!(
+                        "{left} of {slots} left",
+                        left = weapon_slots as i64 - weapons_taken as i64,
+                        slots = slots(weapon_slots)
                     )));
                     next.set_sensitive(
                         spent <= nonweapon_slots
@@ -1712,26 +1757,27 @@ impl Wizard {
                     return;
                 }
                 let left = rules.proficiency_points_left(&probe);
-                nonweapon.group.set_description(Some(&format!(
-                    "{} of {} left for proficiencies and traits",
-                    points(left),
-                    rules.proficiency_points(&probe)
+                nonweapon.group.set_description(Some(&tr!(
+                    "{left} of {total} left for proficiencies and traits",
+                    left = points(left),
+                    total = rules.proficiency_points(&probe)
                 )));
                 let given: u32 = probe
                     .disadvantages
                     .iter()
                     .map(|d| rules.disadvantage_points(d))
                     .sum();
-                disadvantages.group.set_description(Some(&format!(
-                    "Up to {MOST_DISADVANTAGES}, giving at most {DISADVANTAGE_POINTS} points; \
-                     these give {}",
-                    given.min(DISADVANTAGE_POINTS)
+                disadvantages.group.set_description(Some(&tr!(
+                    "Up to {most}, giving at most {limit} points; these give {given}",
+                    most = MOST_DISADVANTAGES,
+                    limit = DISADVANTAGE_POINTS,
+                    given = given.min(DISADVANTAGE_POINTS)
                 )));
-                weapons.group.set_description(Some(&format!(
-                    "{} each; {} come with the class, and points left from the \
+                weapons.group.set_description(Some(&tr!(
+                    "{cost} each; {free} come with the class, and points left from the \
                      proficiencies pay for more",
-                    points(weapon_cost.into()),
-                    points(rules.weapon_points(&probe.classes).into())
+                    cost = points(weapon_cost.into()),
+                    free = points(rules.weapon_points(&probe.classes).into())
                 )));
                 let total = rules.points_left(&probe);
                 points_label.set_label(&total.to_string().replace('-', "−"));
@@ -1779,7 +1825,7 @@ impl Wizard {
             }
         });
         step(
-            "Proficiencies",
+            tr("Proficiencies"),
             &[
                 &nonweapon.group,
                 &traits.group,
@@ -1803,14 +1849,14 @@ impl Wizard {
         let rules = self.rules();
         let classes = d.classes.clone();
         let state = Rc::new(RefCell::new(d.clone()));
-        let next = next_button("_Next");
+        let next = next_button(tr("_Next"));
         let points_label = gtk::Label::builder()
             .css_classes(["numeric"])
             .valign(gtk::Align::Center)
             .build();
         let points_row = adw::ActionRow::builder()
-            .title("Character Points Left")
-            .subtitle("Kept on the character for later levels")
+            .title(tr("Character Points Left"))
+            .subtitle(tr("Kept on the character for later levels"))
             .build();
         points_row.add_suffix(&points_label);
         let points_group = adw::PreferencesGroup::new();
@@ -1836,23 +1882,28 @@ impl Wizard {
 
         // A weapon of choice, expertise and specialization among the
         // weapons taken.
-        let mut weapon_items = vec!["None".to_owned()];
+        // The first item is "None"; the others are the weapons.
+        let mut weapon_items = vec![tr("None").to_owned()];
         weapon_items.extend(d.weapon_proficiencies.iter().cloned());
         let weapon_row = |title: &str, subtitle: String, chosen: &Option<String>| {
-            let row = combo_row(title, &weapon_items, chosen.as_deref().unwrap_or("None"));
+            let row = combo_row(
+                title,
+                &weapon_items,
+                chosen.as_deref().unwrap_or(&weapon_items[0]),
+            );
             row.set_subtitle(&subtitle);
             row
         };
         let choice = weapon_row(
-            "Weapon of Choice",
+            tr("Weapon of Choice"),
             points(rules.weapon_of_choice_cost(&classes).into()),
             &d.weapon_of_choice,
         );
         let expertise = weapon_row(
-            "Weapon Expertise",
-            format!(
-                "{}, 1 less in the weapon of choice",
-                points(
+            tr("Weapon Expertise"),
+            tr!(
+                "{cost}, 1 less in the weapon of choice",
+                cost = points(
                     rules
                         .expertise_cost(&Draft {
                             expertise: None,
@@ -1865,12 +1916,12 @@ impl Wizard {
         );
         let specialization_cost = rules.specialization_cost(&d);
         let specialization = weapon_row(
-            "Weapon Specialization",
+            tr("Weapon Specialization"),
             points(specialization_cost.unwrap_or(0).into()),
             &d.specializations.first().cloned(),
         );
         specialization.set_visible(specialization_cost.is_some());
-        let picked = |row: &adw::ComboRow| Some(combo_value(row)).filter(|v| v != "None");
+        let picked = |row: &adw::ComboRow| (row.selected() > 0).then(|| combo_value(row));
         for (row, field) in [(&choice, 0), (&expertise, 1), (&specialization, 2)] {
             let (state, update) = (state.clone(), update.clone());
             row.connect_selected_notify(move |row| {
@@ -1887,11 +1938,11 @@ impl Wizard {
             });
         }
         let weapons = adw::PreferencesGroup::builder()
-            .title("Weapons")
+            .title(tr("Weapons"))
             .description(if specialization_cost.is_none() && classes.iter().any(|c| c == "Fighter") {
-                "Only a single-classed fighter with Weapon specialization may specialize at 1st level"
+                tr("Only a single-classed fighter with Weapon specialization may specialize at 1st level")
             } else {
-                "Among the weapon proficiencies taken"
+                tr("Among the weapon proficiencies taken")
             })
             .build();
         weapons.add(&choice);
@@ -1925,8 +1976,8 @@ impl Wizard {
         };
         let unarmed_cost = rules.unarmed_cost(&classes);
         let unarmed = adw::PreferencesGroup::builder()
-            .title("Unarmed Combat")
-            .description("Specialization in an unarmed style, for fighters")
+            .title(tr("Unarmed Combat"))
+            .description(tr("Specialization in an unarmed style, for fighters"))
             .visible(unarmed_cost.is_some())
             .build();
         checks(
@@ -1942,7 +1993,7 @@ impl Wizard {
             }),
         );
         let shields = adw::PreferencesGroup::builder()
-            .title("Shield Proficiencies")
+            .title(tr("Shield Proficiencies"))
             .build();
         checks(
             &shields,
@@ -1962,7 +2013,7 @@ impl Wizard {
         };
         let taken_armor: Rc<RefCell<Vec<String>>> = Rc::default();
         let armor = RowList::new(
-            "Armor Proficiencies",
+            tr("Armor Proficiencies"),
             d.armor_proficiencies
                 .iter()
                 .cloned()
@@ -1991,7 +2042,7 @@ impl Wizard {
         };
         let taken_styles: Rc<RefCell<Vec<String>>> = Rc::default();
         let styles = RowList::new(
-            "Fighting Styles",
+            tr("Fighting Styles"),
             d.fighting_styles.iter().cloned().map(&style_spec).collect(),
             {
                 let (this, taken, classes) = (self.clone(), taken_styles.clone(), classes.clone());
@@ -2008,10 +2059,10 @@ impl Wizard {
             },
             move |name| Some(style_spec(name)),
         );
-        styles.group.set_description(Some(
+        styles.group.set_description(Some(tr(
             "The styles the class groups may learn; the \u{201c}(+2)\u{201d} ones are \
              specializations in them",
-        ));
+        )));
         let names = |list: &RowList<String>| -> Vec<String> {
             list.values().into_iter().map(|(v, _)| v).collect()
         };
@@ -2048,7 +2099,7 @@ impl Wizard {
             }
         });
         step(
-            "Combat",
+            tr("Combat"),
             &[
                 &weapons,
                 &unarmed,
@@ -2089,9 +2140,9 @@ impl Wizard {
         let (total, most) = rules.rogue_points(&d);
         let skills = rules.rogue_skills(&d);
         let group = adw::PreferencesGroup::builder()
-            .title("Rogue Skills")
+            .title(tr("Rogue Skills"))
             .build();
-        let next = next_button("_Next");
+        let next = next_button(tr("_Next"));
         let rows: Vec<(usize, adw::SpinRow)> = skills
             .iter()
             .map(|&(_, skill)| {
@@ -2124,13 +2175,19 @@ impl Wizard {
                 let rules = this.rules();
                 for (skill, row) in &rows {
                     let (score, unarmored) = rules.rogue_skill_score(&probe, *skill);
-                    row.set_subtitle(&format!("{score}% · {unarmored}% without armor"));
+                    row.set_subtitle(&tr!(
+                        "{score}% · {unarmored}% without armor",
+                        score,
+                        unarmored
+                    ));
                 }
                 let left = rules.rogue_points_left(&probe);
-                group.set_description(Some(&format!(
-                    "{} of {total} left, at most {most} a skill; the race and Dexterity \
+                group.set_description(Some(&tr!(
+                    "{left} of {total} left, at most {most} a skill; the race and Dexterity \
                      adjust the scores",
-                    points(left)
+                    left = points(left),
+                    total,
+                    most
                 )));
                 next.set_sensitive(left >= 0);
             }
@@ -2148,7 +2205,7 @@ impl Wizard {
                 this.after_rogue_skills();
             }
         });
-        step("Rogue Skills", &[&group], &next, None)
+        step(tr("Rogue Skills"), &[&group], &next, None)
     }
 
     /// The wizard spells known at 1st level.
@@ -2165,7 +2222,7 @@ impl Wizard {
         };
         let taken: Rc<RefCell<Vec<String>>> = Rc::default();
         let spells = RowList::new(
-            "Spells Known",
+            tr("Spells Known"),
             d.spells.iter().cloned().map(spec).collect(),
             {
                 let (this, taken, classes) = (self.clone(), taken.clone(), d.classes.clone());
@@ -2179,19 +2236,22 @@ impl Wizard {
             },
             move |name| Some(spec(name)),
         );
-        let next = next_button("_Next");
+        let next = next_button(tr("_Next"));
         spells.connect_changed({
             let (spells, next, taken) = (spells.clone(), next.clone(), taken.clone());
             move || {
                 let names: Vec<String> = spells.values().into_iter().map(|(v, _)| v).collect();
-                let limit = if most == usize::MAX {
-                    "Intelligence allows any number".to_owned()
+                let description = if most == usize::MAX {
+                    tr("1st-level spells the character knows. Intelligence allows any number.")
+                        .to_owned()
                 } else {
-                    format!("Intelligence {intelligence} allows {most}")
+                    tr!(
+                        "1st-level spells the character knows. Intelligence {intelligence} allows {most}.",
+                        intelligence,
+                        most
+                    )
                 };
-                spells.group.set_description(Some(&format!(
-                    "1st-level spells the character knows. {limit}."
-                )));
+                spells.group.set_description(Some(&description));
                 next.set_sensitive(names.len() <= most);
                 *taken.borrow_mut() = names;
             }
@@ -2205,7 +2265,7 @@ impl Wizard {
                 this.push(this.equipment_page());
             }
         });
-        step("Spells", &[&group], &next, None)
+        step(tr("Spells"), &[&group], &next, None)
     }
 
     /// Starting money and what it buys; the last page.
@@ -2226,8 +2286,10 @@ impl Wizard {
         }
         let d = self.0.draft.borrow().clone();
         let gold = Rc::new(RefCell::new(d.gold));
-        let money_row = adw::ActionRow::builder().title("Starting Money").build();
-        let money_roll = roll_button("Roll Starting Money");
+        let money_row = adw::ActionRow::builder()
+            .title(tr("Starting Money"))
+            .build();
+        let money_roll = roll_button(tr("Roll Starting Money"));
         money_row.add_suffix(&money_roll);
         let pack_price = {
             let mut probe = d.clone();
@@ -2236,22 +2298,22 @@ impl Wizard {
             rules.spent(&probe)
         };
         let pack = adw::SwitchRow::builder()
-            .title("Standard Pack")
-            .subtitle(format!(
-                "{}: dry rations for a week, flint and steel, three torches and a wineskin · {}",
-                STANDARD_PACK.0,
-                money(pack_price)
+            .title(tr("Standard Pack"))
+            .subtitle(tr!(
+                "{pack}: dry rations for a week, flint and steel, three torches and a wineskin · {price}",
+                pack = STANDARD_PACK.0,
+                price = money(pack_price)
             ))
             .active(d.pack)
             .build();
-        let money_group = adw::PreferencesGroup::builder().title("Money").build();
+        let money_group = adw::PreferencesGroup::builder().title(tr("Money")).build();
         money_group.add(&money_row);
         money_group.add(&pack);
         if rules.is_wizard(&d.classes) {
             money_group.add(
                 &adw::ActionRow::builder()
                     .title(cr_store::create::SPELLBOOK)
-                    .subtitle("Free for wizards")
+                    .subtitle(tr("Free for wizards"))
                     .build(),
             );
         }
@@ -2271,7 +2333,7 @@ impl Wizard {
             }
         };
         let items = RowList::new(
-            "Equipment",
+            tr("Equipment"),
             d.purchases
                 .iter()
                 .map(|(name, n)| spec(name.clone(), *n))
@@ -2282,13 +2344,13 @@ impl Wizard {
             },
             move |name| Some(spec(name, 1)),
         );
-        items.group.set_description(Some(
+        items.group.set_description(Some(tr(
             "Weapons go to the items readied, armor to the items worn, the rest to the \
              items carried",
-        ));
+        )));
 
         let banner = adw::Banner::new("");
-        let create = next_button("C_reate");
+        let create = next_button(tr("C_reate"));
         let purchases = |items: &RowList<String>| -> Vec<(String, u32)> {
             items
                 .values()
@@ -2311,17 +2373,20 @@ impl Wizard {
                 probe.purchases = purchases(&items);
                 let total = *gold.borrow() * 100;
                 let spent = this.rules().spent(&probe);
+                let gold = *gold.borrow();
                 money_row.set_subtitle(&if spent <= total {
-                    format!(
-                        "{} gold pieces · {} left",
-                        gold.borrow(),
-                        money(total - spent)
+                    trn!(
+                        "{n} gold piece · {money} left",
+                        "{n} gold pieces · {money} left",
+                        gold,
+                        money = money(total - spent)
                     )
                 } else {
-                    format!(
-                        "{} gold pieces · {} short",
-                        gold.borrow(),
-                        money(spent - total)
+                    trn!(
+                        "{n} gold piece · {money} short",
+                        "{n} gold pieces · {money} short",
+                        gold,
+                        money = money(spent - total)
                     )
                 });
                 create.set_sensitive(spent <= total);
@@ -2370,7 +2435,7 @@ impl Wizard {
             }
         });
         step(
-            "Equipment",
+            tr("Equipment"),
             &[&money_group, &items_group],
             &create,
             Some(&banner),
