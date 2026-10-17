@@ -12,6 +12,7 @@
 use std::path::PathBuf;
 
 use cr_formats::rtf::{Document, Paragraph};
+use cr_i18n::{tr, tr_noop};
 
 use crate::catalog::{Entry, Group};
 use crate::encounter::flavor_of;
@@ -40,11 +41,11 @@ impl Category {
     /// The title of the List of Books dialog for this shelf.
     pub fn title(self) -> &'static str {
         match self {
-            Category::Core => "Core Books",
-            Category::Supplements => "Supplements",
-            Category::Options => "Option Books",
-            Category::Classes => "Books of Classes",
-            Category::Races => "Books of Races",
+            Category::Core => tr_noop!("Core Books"),
+            Category::Supplements => tr_noop!("Supplements"),
+            Category::Options => tr_noop!("Option Books"),
+            Category::Classes => tr_noop!("Books of Classes"),
+            Category::Races => tr_noop!("Books of Races"),
         }
     }
 }
@@ -288,13 +289,16 @@ impl Installation {
             .map(|b| Entry {
                 key: format!("{BOOK_KEY}{}", b.info.short_name()),
                 title: b.info.title.to_owned(),
-                subtitle: b.info.category.title().to_owned(),
+                subtitle: tr(b.info.category.title()).to_owned(),
                 groups: vec![Group {
-                    title: "Book".into(),
+                    title: tr("Book").into(),
                     rows: vec![
-                        ("Shelf".into(), b.info.category.title().to_owned()),
-                        ("File".into(), b.info.file.to_owned()),
-                        ("Size".into(), format!("{} KB", b.size.div_ceil(1024))),
+                        (tr("Shelf").into(), tr(b.info.category.title()).to_owned()),
+                        (tr("File").into(), b.info.file.to_owned()),
+                        (
+                            tr("Size").into(),
+                            tr!("{size} KB", size = b.size.div_ceil(1024)),
+                        ),
                     ],
                 }],
                 text: String::new(),

@@ -8,6 +8,7 @@ mod encounter;
 mod lists;
 mod npc;
 mod party;
+mod prefs;
 mod sheet;
 mod tables;
 mod transfer;
@@ -21,6 +22,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use cr_formats::character::Character;
+use cr_i18n::{tr, tr_noop};
 use cr_store::Installation;
 use cr_store::advance::{AdvanceRules, Advancement};
 use cr_store::catalog::{ENCOUNTER_KEY, Entry, Section, TABLE_KEY, TEMPLATE_KEY, TREASURE_KEY};
@@ -61,6 +63,7 @@ const WRITE_ACTIONS: [&str; 19] = [
 ];
 
 fn main() -> glib::ExitCode {
+    prefs::apply_language();
     let app = adw::Application::builder().application_id(APP_ID).build();
     app.connect_activate(|app| {
         // The icon is installed under the application id; X11 window
@@ -178,6 +181,15 @@ impl Window {
             }
         });
 
+        let preferences = gio::ActionEntry::builder("preferences")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| {
+                    let toasts = this.toasts.clone();
+                    prefs::show(&this.window, move |m| toasts.add_toast(adw::Toast::new(m)))
+                }
+            })
+            .build();
         let open = gio::ActionEntry::builder("open")
             .activate({
                 let this = this.clone();
@@ -284,6 +296,7 @@ impl Window {
             import_core20,
         ]);
         this.window.add_action_entries([
+            preferences,
             open,
             new_character,
             new_npc,
@@ -293,6 +306,7 @@ impl Window {
             new_table,
         ]);
         app.set_accels_for_action("win.open", &["<Control>o"]);
+        app.set_accels_for_action("win.preferences", &["<Control>comma"]);
         app.set_accels_for_action("win.new-character", &["<Control>n"]);
         app.set_accels_for_action("win.new-npc", &["<Control><Shift>n"]);
         app.set_accels_for_action("win.roll-treasure", &["<Control>t"]);
@@ -305,7 +319,7 @@ impl Window {
 
     fn choose_folder(&self) {
         let dialog = gtk::FileDialog::builder()
-            .title("Open Core Rules Folder")
+            .title(tr("Open Core Rules Folder"))
             .modal(true)
             .build();
         let this = self.clone();
@@ -327,7 +341,7 @@ impl Window {
 
     fn show_missing(&self, error: Option<&str>) {
         let button = gtk::Button::builder()
-            .label("_Open Folder…")
+            .label(tr("_Open Folder…"))
             .use_underline(true)
             .halign(gtk::Align::Center)
             .action_name("win.open")
@@ -335,13 +349,15 @@ impl Window {
             .build();
         let page = adw::StatusPage::builder()
             .icon_name("folder-symbolic")
-            .title("No Core Rules Installation")
+            .title(tr("No Core Rules Installation"))
             .description(match error {
                 Some(error) => glib::markup_escape_text(error).to_string(),
-                None => "Open the folder where AD&amp;D Core Rules 2.0 is installed, \
-                         a data package made with extract-data.sh, \
-                         or the root of its CD"
-                    .to_owned(),
+                None => tr(
+                    "Open the folder where AD&amp;D Core Rules 2.0 is installed, \
+                            a data package made with extract-data.sh, \
+                            or the root of its CD",
+                )
+                .to_owned(),
             })
             .child(&button)
             .build();
@@ -457,7 +473,7 @@ impl Window {
                         let install = this.install.borrow();
                         let install = install
                             .as_ref()
-                            .ok_or("The installation is no longer open")?;
+                            .ok_or(tr("The installation is no longer open"))?;
                         match old {
                             Some(old) => install.replace_saved_treasure(old, name, bundle),
                             None => install.save_treasure(name, bundle),
@@ -475,7 +491,7 @@ impl Window {
                         let install = this.install.borrow();
                         let install = install
                             .as_ref()
-                            .ok_or("The installation is no longer open")?;
+                            .ok_or(tr("The installation is no longer open"))?;
                         install
                             .delete_saved_treasure(name)
                             .map_err(|e| e.to_string())?;
@@ -514,7 +530,7 @@ impl Window {
         create::new_character(&self.window, rules, move |draft| {
             let install = this.install.borrow();
             let Some(install) = install.as_ref() else {
-                return Err("The installation is no longer open".into());
+                return Err(tr("The installation is no longer open").into());
             };
             let rules = install.creation_rules().map_err(|e| e.to_string())?;
             let file = install
@@ -522,7 +538,7 @@ impl Window {
                 .map_err(|e| e.to_string())?;
             this.browser.show_section("characters");
             this.browser.load(install.catalog(), Some(&file));
-            this.toast("Character created");
+            this.toast(tr("Character created"));
             Ok(())
         });
     }
@@ -536,7 +552,7 @@ impl Window {
         match result {
             Ok(()) => {
                 self.reload("characters", Some(file.to_owned()));
-                self.toast("Converted to a character");
+                self.toast(tr("Converted to a character"));
             }
             Err(e) => self.toast(&e.to_string()),
         }
@@ -593,13 +609,13 @@ impl Window {
             move |details, lists| {
                 let install = this.install.borrow();
                 let Some(install) = install.as_ref() else {
-                    return Err("The installation is no longer open".into());
+                    return Err(tr("The installation is no longer open").into());
                 };
                 install
                     .save_character(&file, details, Some(lists))
                     .map_err(|e| e.to_string())?;
                 this.browser.load(install.catalog(), Some(&file));
-                this.toast("Character saved");
+                this.toast(tr("Character saved"));
                 Ok(())
             },
         );
@@ -804,29 +820,35 @@ impl encounter::Host for Window {
 
 fn open_menu() -> gtk::MenuButton {
     let menu = gio::Menu::new();
-    menu.append(Some("_New Character…"), Some("win.new-character"));
-    menu.append(Some("New N_PC…"), Some("win.new-npc"));
-    menu.append(Some("New NPC _Group…"), Some("win.new-npc-group"));
-    let item = gio::MenuItem::new(Some("Manage _Parties…"), Some("win.manage-parties"));
+    menu.append(Some(tr("_New Character…")), Some("win.new-character"));
+    menu.append(Some(tr("New N_PC…")), Some("win.new-npc"));
+    menu.append(Some(tr("New NPC _Group…")), Some("win.new-npc-group"));
+    let item = gio::MenuItem::new(Some(tr("Manage _Parties…")), Some("win.manage-parties"));
     item.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
     menu.append_item(&item);
-    menu.append(Some("New _Encounter…"), Some("win.new-encounter"));
-    menu.append(Some("New Encounter _Table…"), Some("win.new-table"));
-    menu.append(Some("_Roll Treasure…"), Some("win.roll-treasure"));
-    menu.append(Some("Roll on a _Table…"), Some("win.roll-table"));
+    menu.append(Some(tr("New _Encounter…")), Some("win.new-encounter"));
+    menu.append(Some(tr("New Encounter _Table…")), Some("win.new-table"));
+    menu.append(Some(tr("_Roll Treasure…")), Some("win.roll-treasure"));
+    menu.append(Some(tr("Roll on a _Table…")), Some("win.roll-table"));
     let packages = gio::Menu::new();
-    packages.append(Some("_Import…"), Some("win.import"));
-    let item = gio::MenuItem::new(Some("Import Core _Rules 2.0…"), Some("win.import-core20"));
+    packages.append(Some(tr("_Import…")), Some("win.import"));
+    let item = gio::MenuItem::new(
+        Some(tr("Import Core _Rules 2.0…")),
+        Some("win.import-core20"),
+    );
     item.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
     packages.append_item(&item);
-    packages.append(Some("E_xport…"), Some("win.export"));
-    packages.append(Some("New P_ackage…"), Some("win.new-package"));
-    packages.append(Some("E_dit Package…"), Some("win.edit-package"));
+    packages.append(Some(tr("E_xport…")), Some("win.export"));
+    packages.append(Some(tr("New P_ackage…")), Some("win.new-package"));
+    packages.append(Some(tr("E_dit Package…")), Some("win.edit-package"));
     menu.append_section(None, &packages);
-    menu.append(Some("_Open Folder…"), Some("win.open"));
+    let app = gio::Menu::new();
+    app.append(Some(tr("_Open Folder…")), Some("win.open"));
+    app.append(Some(tr("_Preferences")), Some("win.preferences"));
+    menu.append_section(None, &app);
     gtk::MenuButton::builder()
         .icon_name("open-menu-symbolic")
-        .tooltip_text("Main Menu")
+        .tooltip_text(tr("Main Menu"))
         .menu_model(&menu)
         .primary(true)
         .build()
@@ -901,15 +923,15 @@ impl DetailPane {
             .set_visible(writable && (key.starts_with(TEMPLATE_KEY) || key.starts_with(TABLE_KEY)));
         self.generate_button
             .set_tooltip_text(Some(if key.starts_with(TABLE_KEY) {
-                "Roll and Create Encounter"
+                tr("Roll and Create Encounter")
             } else {
-                "Create Encounter"
+                tr("Create Encounter")
             }));
         self.current_key.borrow_mut().clone_from(&entry.key);
     }
 
     fn show_placeholder(&self, widget: &gtk::Widget) {
-        self.page.set_title("Details");
+        self.page.set_title(tr("Details"));
         self.view.set_content(Some(widget));
         self.edit_button.set_visible(false);
         self.sheet_button.set_visible(false);
@@ -936,33 +958,33 @@ impl Browser {
 
         // Details.
         let detail_page = adw::NavigationPage::builder()
-            .title("Details")
+            .title(tr("Details"))
             .tag("detail")
             .build();
         let detail_view = adw::ToolbarView::new();
         let edit_button = gtk::Button::builder()
             .icon_name("document-edit-symbolic")
-            .tooltip_text("Edit")
+            .tooltip_text(tr("Edit"))
             .visible(false)
             .build();
         let sheet_button = gtk::Button::builder()
             .icon_name("x-office-document-symbolic")
-            .tooltip_text("Character Sheet")
+            .tooltip_text(tr("Character Sheet"))
             .visible(false)
             .build();
         let convert_button = gtk::Button::builder()
             .icon_name("avatar-default-symbolic")
-            .tooltip_text("Convert to Character")
+            .tooltip_text(tr("Convert to Character"))
             .visible(false)
             .build();
         let delete_button = gtk::Button::builder()
             .icon_name("user-trash-symbolic")
-            .tooltip_text("Delete Character")
+            .tooltip_text(tr("Delete Character"))
             .visible(false)
             .build();
         let generate_button = gtk::Button::builder()
             .icon_name("media-playlist-shuffle-symbolic")
-            .tooltip_text("Create Encounter")
+            .tooltip_text(tr("Create Encounter"))
             .visible(false)
             .build();
         let detail_header = adw::HeaderBar::new();
@@ -974,7 +996,7 @@ impl Browser {
         let udb_actions = userdb::DetailActions::new();
         udb_actions.pack(&detail_header);
         detail_view.add_top_bar(&detail_header);
-        detail_view.set_content(Some(&placeholder("Nothing Selected", "")));
+        detail_view.set_content(Some(&placeholder(tr("Nothing Selected"), "")));
         detail_page.set_child(Some(&detail_view));
         let current_key: Rc<RefCell<String>> = Rc::default();
         let detail = DetailPane {
@@ -993,12 +1015,12 @@ impl Browser {
         // Entries.
         let model = gio::ListStore::new::<glib::BoxedAnyObject>();
         let search = gtk::SearchEntry::builder()
-            .placeholder_text("Search")
+            .placeholder_text(tr("Search"))
             .hexpand(true)
             .build();
         let origin_filter = userdb::origin_filter();
         let party_filter = gtk::DropDown::builder()
-            .tooltip_text("Show a Party")
+            .tooltip_text(tr("Show a Party"))
             .visible(false)
             .build();
         let party_choices: Rc<RefCell<Vec<Option<String>>>> = Rc::default();
@@ -1076,10 +1098,10 @@ impl Browser {
                     return;
                 }
                 if search.text().is_empty() {
-                    empty.set_title(&format!("No {}", section_title.borrow()));
+                    empty.set_title(&tr!("No {section}", section = section_title.borrow()));
                     empty.set_icon_name(Some("folder-symbolic"));
                 } else {
-                    empty.set_title("No Results");
+                    empty.set_title(tr("No Results"));
                     empty.set_icon_name(Some("edit-find-symbolic"));
                 }
                 entries_stack.set_visible_child_name("empty");
@@ -1096,7 +1118,7 @@ impl Browser {
         // Shown in the Characters section.
         let new_button = gtk::Button::builder()
             .icon_name("list-add-symbolic")
-            .tooltip_text("New Character")
+            .tooltip_text(tr("New Character"))
             .action_name("win.new-character")
             .visible(false)
             .build();
@@ -1105,8 +1127,10 @@ impl Browser {
         entries_header.pack_end(&origin_filter);
         entries_header.pack_end(&party_filter);
         let read_only_banner = adw::Banner::builder()
-            .title("Core Rules 2.0 is read-only")
-            .tooltip_text("Open an Expansion installation and import this content with Import Core Rules 2.0…")
+            .title(tr("Core Rules 2.0 is read-only"))
+            .tooltip_text(tr(
+                "Open an Expansion installation and import this content with Import Core Rules 2.0…",
+            ))
             .revealed(true)
             .visible(false)
             .build();
@@ -1116,7 +1140,7 @@ impl Browser {
         entries_view.add_top_bar(&search_bar);
         entries_view.set_content(Some(&entries_stack));
         let entries_page = adw::NavigationPage::builder()
-            .title("Entries")
+            .title(tr("Entries"))
             .tag("entries")
             .child(&entries_view)
             .build();
@@ -1124,7 +1148,7 @@ impl Browser {
         inner.set_sidebar(Some(&entries_page));
         inner.set_content(Some(&detail_page));
         let inner_page = adw::NavigationPage::builder()
-            .title("Entries")
+            .title(tr("Entries"))
             .child(&inner)
             .build();
 
@@ -1166,10 +1190,10 @@ impl Browser {
                 let section = &sections[index];
                 *current.borrow_mut() = index;
                 let new = match section.id {
-                    "characters" => Some(("win.new-character", "New Character".into())),
-                    "encounters" => Some(("win.new-encounter", "New Encounter".into())),
-                    "tables" => Some(("win.new-table", "New Encounter Table".into())),
-                    "treasure" => Some(("win.roll-treasure", "Roll Treasure".into())),
+                    "characters" => Some(("win.new-character", tr("New Character").into())),
+                    "encounters" => Some(("win.new-encounter", tr("New Encounter").into())),
+                    "tables" => Some(("win.new-table", tr("New Encounter Table").into())),
+                    "treasure" => Some(("win.roll-treasure", tr("Roll Treasure").into())),
                     id if userdb::can_create(id) => Some(("win.udb-new", userdb::new_tooltip(id))),
                     _ => None,
                 };
@@ -1203,12 +1227,12 @@ impl Browser {
                 show_empty(filtered.n_items());
                 detail.show_placeholder(&match &section.error {
                     Some(error) => {
-                        placeholder_text("Could Not Read", "dialog-error-symbolic", error)
+                        placeholder_text(tr("Could Not Read"), "dialog-error-symbolic", error)
                     }
                     None if section.entries.is_empty() => {
-                        placeholder(&format!("No {}", section.title), section.icon)
+                        placeholder(&tr!("No {section}", section = section.title), section.icon)
                     }
-                    None => placeholder("Nothing Selected", section.icon),
+                    None => placeholder(tr("Nothing Selected"), section.icon),
                 });
                 inner.set_show_content(false);
             }
@@ -1339,8 +1363,8 @@ impl Browser {
         let names: Vec<&str> = choices
             .iter()
             .map(|c| match c.as_deref() {
-                None => "All Parties",
-                Some("") => "No Party",
+                None => tr("All Parties"),
+                Some("") => tr("No Party"),
                 Some(party) => party,
             })
             .collect();
@@ -1537,7 +1561,7 @@ fn detail(entry: &Entry) -> gtk::Widget {
     let text = clean_text(&entry.text);
     if !text.is_empty() {
         let group = adw::PreferencesGroup::builder()
-            .title("Description")
+            .title(tr("Description"))
             .build();
         group.add(
             &gtk::Label::builder()
@@ -1585,31 +1609,34 @@ fn character_editor(
     let spin_row = |title: &str, subtitle: &str, value: u32, max: u32| {
         ranged_row(title, subtitle, value, 0, max)
     };
-    let name = entry_row("Name", &details.name);
-    let player = entry_row("Player", &details.player);
-    let social_class = entry_row("Social Class", &details.social_class);
-    let age = spin_row("Age", "Years", details.age, 9999);
-    let height = spin_row("Height", "Inches", details.height, 999);
-    let weight = spin_row("Weight", "Pounds", details.weight, 99999);
+    let name = entry_row(tr("Name"), &details.name);
+    let player = entry_row(tr("Player"), &details.player);
+    let social_class = entry_row(tr("Social Class"), &details.social_class);
+    let age = spin_row(tr("Age"), tr("Years"), details.age, 9999);
+    let height = spin_row(tr("Height"), tr("Inches"), details.height, 999);
+    let weight = spin_row(tr("Weight"), tr("Pounds"), details.weight, 99999);
 
     // With the Core Rules one row sets the score and both subabilities, as
     // the original does; Skills & Powers characters get all three.
     let (low, high) = (*ABILITY_RANGE.start(), *ABILITY_RANGE.end());
-    let abilities = adw::PreferencesGroup::builder().title("Abilities").build();
+    let abilities = adw::PreferencesGroup::builder()
+        .title(tr("Abilities"))
+        .build();
     let ability_rows: Vec<[adw::SpinRow; 3]> = ABILITY_NAMES
         .iter()
         .zip(details.abilities)
         .map(|(names, values)| {
-            let rows = [0, 1, 2].map(|i| ranged_row(names[i], "", values[i], low, high));
+            let rows = [0, 1, 2].map(|i| ranged_row(tr(names[i]), "", values[i], low, high));
             if details.skills_and_powers {
-                let expander = adw::ExpanderRow::builder().title(names[0]).build();
+                let expander = adw::ExpanderRow::builder().title(tr(names[0])).build();
                 let summarize = {
                     let (expander, rows) = (expander.clone(), rows.clone());
                     move || {
                         let [score, first, second] = rows.each_ref().map(|r| r.value() as u32);
                         expander.set_subtitle(&format!(
                             "{score} · {} {first}, {} {second}",
-                            names[1], names[2]
+                            tr(names[1]),
+                            tr(names[2])
                         ));
                     }
                 };
@@ -1627,8 +1654,8 @@ fn character_editor(
         })
         .collect();
     let exceptional = spin_row(
-        "Exceptional Strength",
-        "18/01 to 18/00, 0 for none",
+        tr("Exceptional Strength"),
+        tr("18/01 to 18/00, 0 for none"),
         details.exceptional_strength,
         100,
     );
@@ -1638,7 +1665,9 @@ fn character_editor(
     character.add(&name);
     character.add(&player);
     character.add(&social_class);
-    let appearance = adw::PreferencesGroup::builder().title("Appearance").build();
+    let appearance = adw::PreferencesGroup::builder()
+        .title(tr("Appearance"))
+        .build();
     appearance.add(&age);
     appearance.add(&height);
     appearance.add(&weight);
@@ -1675,30 +1704,35 @@ fn character_editor(
         level_listeners.borrow_mut().push(Box::new(show));
     }
     let stack = adw::ViewStack::new();
-    stack.add_titled_with_icon(&page, Some("details"), "Details", "avatar-default-symbolic");
+    stack.add_titled_with_icon(
+        &page,
+        Some("details"),
+        tr("Details"),
+        "avatar-default-symbolic",
+    );
     stack.add_titled_with_icon(
         &editors.proficiencies_page(),
         Some("proficiencies"),
-        "Proficiencies",
+        tr("Proficiencies"),
         "view-list-symbolic",
     );
     stack.add_titled_with_icon(
         &editors.spells_page(),
         Some("spells"),
-        "Spells",
+        tr("Spells"),
         "starred-symbolic",
     );
     stack.add_titled_with_icon(
         &editors.equipment_page(),
         Some("equipment"),
-        "Equipment",
+        tr("Equipment"),
         "package-x-generic-symbolic",
     );
     let error = adw::Banner::new("");
 
-    let cancel = gtk::Button::with_mnemonic("_Cancel");
+    let cancel = gtk::Button::with_mnemonic(tr("_Cancel"));
     let save_button = gtk::Button::builder()
-        .label("_Save")
+        .label(tr("_Save"))
         .use_underline(true)
         .css_classes(["suggested-action"])
         .build();
@@ -1718,7 +1752,7 @@ fn character_editor(
     view.set_content(Some(&stack));
     view.add_bottom_bar(&switcher);
     let dialog = adw::Dialog::builder()
-        .title("Edit Character")
+        .title(tr("Edit Character"))
         .content_width(480)
         .content_height(600)
         .child(&view)
@@ -1786,12 +1820,12 @@ fn classes_group(
 ) -> (adw::PreferencesGroup, Rc<RefCell<Vec<String>>>) {
     let add = gtk::Button::builder()
         .icon_name("list-add-symbolic")
-        .tooltip_text("Add Class")
+        .tooltip_text(tr("Add Class"))
         .valign(gtk::Align::Center)
         .css_classes(["flat"])
         .build();
     let group = adw::PreferencesGroup::builder()
-        .title("Classes")
+        .title(tr("Classes"))
         .header_suffix(&add)
         .build();
     for class in classes {
@@ -1809,46 +1843,51 @@ fn classes_group(
             return (group, added);
         }
         ClassChoice::Allowed(names) if names.is_empty() => {
-            group.set_description(Some(
+            group.set_description(Some(tr(
                 "No class meets the dual-class requirements of these abilities",
-            ));
+            )));
             add.set_sensitive(false);
             return (group, added);
         }
         ClassChoice::Allowed(names) => names.clone(),
     };
-    group.set_description(Some(
+    group.set_description(Some(tr(
         "Dual-classing: the new class starts at level 1 and the earlier class stops advancing",
-    ));
+    )));
     add.connect_clicked({
         let (group, added) = (group.clone(), added.clone());
         move |button| {
             let (group, added, button) = (group.clone(), added.clone(), button.clone());
-            pick(&button.clone(), "Classes", offered.clone(), move |name| {
-                let remove = gtk::Button::builder()
-                    .icon_name("list-remove-symbolic")
-                    .tooltip_text("Remove")
-                    .valign(gtk::Align::Center)
-                    .css_classes(["flat"])
-                    .build();
-                let row = adw::ActionRow::builder()
-                    .title(glib::markup_escape_text(&name).as_str())
-                    .subtitle("New, level 1")
-                    .build();
-                row.add_suffix(&remove);
-                group.add(&row);
-                added.borrow_mut().push(name);
-                // One class at a time: the next one depends on this one.
-                button.set_sensitive(false);
-                remove.connect_clicked({
-                    let (group, added, button) = (group.clone(), added.clone(), button.clone());
-                    move |_| {
-                        group.remove(&row);
-                        added.borrow_mut().clear();
-                        button.set_sensitive(true);
-                    }
-                });
-            });
+            pick(
+                &button.clone(),
+                tr("Classes"),
+                offered.clone(),
+                move |name| {
+                    let remove = gtk::Button::builder()
+                        .icon_name("list-remove-symbolic")
+                        .tooltip_text(tr("Remove"))
+                        .valign(gtk::Align::Center)
+                        .css_classes(["flat"])
+                        .build();
+                    let row = adw::ActionRow::builder()
+                        .title(glib::markup_escape_text(&name).as_str())
+                        .subtitle(tr("New, level 1"))
+                        .build();
+                    row.add_suffix(&remove);
+                    group.add(&row);
+                    added.borrow_mut().push(name);
+                    // One class at a time: the next one depends on this one.
+                    button.set_sensitive(false);
+                    remove.connect_clicked({
+                        let (group, added, button) = (group.clone(), added.clone(), button.clone());
+                        move |_| {
+                            group.remove(&row);
+                            added.borrow_mut().clear();
+                            button.set_sensitive(true);
+                        }
+                    });
+                },
+            );
         }
     });
     (group, added)
@@ -1864,13 +1903,13 @@ fn experience_group(
     listeners: &Listeners,
 ) -> adw::PreferencesGroup {
     let add = gtk::Button::builder()
-        .label("Add…")
-        .tooltip_text("Add or take away experience")
+        .label(tr("Add…"))
+        .tooltip_text(tr("Add or take away experience"))
         .valign(gtk::Align::Center)
         .css_classes(["flat"])
         .build();
     let group = adw::PreferencesGroup::builder()
-        .title("Experience")
+        .title(tr("Experience"))
         .header_suffix(&add)
         .build();
     let character = advanced.borrow().clone();
@@ -1891,7 +1930,7 @@ fn experience_group(
         .css_classes(["numeric"])
         .valign(gtk::Align::Center)
         .build();
-    let hp_row = adw::ActionRow::builder().title("Hit Points").build();
+    let hp_row = adw::ActionRow::builder().title(tr("Hit Points")).build();
     hp_row.add_suffix(&hit_points);
     group.add(&hp_row);
     let points = character.skills_and_powers().then(|| {
@@ -1900,8 +1939,8 @@ fn experience_group(
             .valign(gtk::Align::Center)
             .build();
         let row = adw::ActionRow::builder()
-            .title("Character Points")
-            .subtitle("Unspent")
+            .title(tr("Character Points"))
+            .subtitle(tr("Unspent"))
             .build();
         row.add_suffix(&label);
         group.add(&row);
@@ -1917,20 +1956,32 @@ fn experience_group(
             match rules.levels(&character) {
                 Ok(levels) => {
                     for (row, class) in class_rows.iter().zip(levels) {
-                        let mut text =
-                            format!("Level {} · {} XP", class.level, thousands(class.experience));
-                        match (class.next, class.limit) {
+                        let (level, xp) = (class.level, thousands(class.experience));
+                        let text = match (class.next, class.limit) {
                             (_, Some(limit)) if class.level >= limit => {
-                                text.push_str(&format!(" · level limit {limit}"))
+                                tr!(
+                                    "Level {level} · {xp} XP · level limit {limit}",
+                                    level,
+                                    xp,
+                                    limit
+                                )
                             }
-                            (Some(next), _) => {
-                                text.push_str(&format!(" · next level at {}", thousands(next)))
-                            }
+                            (Some(next), _) => tr!(
+                                "Level {level} · {xp} XP · next level at {next}",
+                                level,
+                                xp,
+                                next = thousands(next)
+                            ),
                             (None, Some(limit)) => {
-                                text.push_str(&format!(" · level limit {limit}"))
+                                tr!(
+                                    "Level {level} · {xp} XP · level limit {limit}",
+                                    level,
+                                    xp,
+                                    limit
+                                )
                             }
-                            (None, None) => {}
-                        }
+                            (None, None) => tr!("Level {level} · {xp} XP", level, xp),
+                        };
                         row.set_subtitle(&text);
                     }
                 }
@@ -1949,11 +2000,11 @@ fn experience_group(
     refresh();
     if rules.expansion() {
         let limits = adw::ComboRow::builder()
-            .title("Level Limits")
+            .title(tr("Level Limits"))
             .model(&gtk::StringList::new(&[
-                "None",
-                "Racial Limits",
-                "Racial Limits and Prime Requisite Bonus",
+                tr("None"),
+                tr("Racial Limits"),
+                tr("Racial Limits and Prime Requisite Bonus"),
             ]))
             .selected(character.data.unknown_0x1dc4.min(2))
             .build();
@@ -1990,12 +2041,16 @@ fn slots_text(slots: Option<[u32; 9]>, memorized: &[(u32, Option<u32>)]) -> Opti
             if have == 0 && used == 0 {
                 return None;
             }
-            let over = if used > have { " (too many)" } else { "" };
-            Some(format!("{}: {used} of {have}{over}", ordinal(level)))
+            let level = ordinal(level);
+            Some(if used > have {
+                tr!("{level}: {used} of {have} (too many)", level, used, have)
+            } else {
+                tr!("{level}: {used} of {have}", level, used, have)
+            })
         })
         .collect();
     Some(if parts.is_empty() {
-        "No spell slots at this level".into()
+        tr("No spell slots at this level").into()
     } else {
         parts.join(" · ")
     })
@@ -2030,8 +2085,8 @@ fn experience_dialog(
     let character = advanced.borrow().clone();
     let names = character.data.classes.names.clone();
     let amount = adw::SpinRow::builder()
-        .title("Experience")
-        .subtitle("Negative to take experience away")
+        .title(tr("Experience"))
+        .subtitle(tr("Negative to take experience away"))
         .numeric(true)
         .adjustment(&gtk::Adjustment::new(
             1000.0,
@@ -2044,11 +2099,11 @@ fn experience_dialog(
         .build();
     let mut targets: Vec<String> = names.clone();
     if names.len() > 1 {
-        targets.push("All Classes".into());
-        targets.push("Split Between Classes".into());
+        targets.push(tr("All Classes").into());
+        targets.push(tr("Split Between Classes").into());
     }
     let target = adw::ComboRow::builder()
-        .title("Give To")
+        .title(tr("Give To"))
         .model(&gtk::StringList::new(
             &targets.iter().map(String::as_str).collect::<Vec<_>>(),
         ))
@@ -2057,18 +2112,22 @@ fn experience_dialog(
         target.set_selected(names.len() as u32 + 1);
     }
     let prime = adw::SwitchRow::builder()
-        .title("Prime Requisite Bonus")
-        .subtitle("10% more for a class whose prime requisites are all 16 or more")
+        .title(tr("Prime Requisite Bonus"))
+        .subtitle(tr(
+            "10% more for a class whose prime requisites are all 16 or more",
+        ))
         .active(true)
         .build();
     let points = adw::SpinRow::builder()
-        .title("Character Points per Level")
+        .title(tr("Character Points per Level"))
         .numeric(true)
         .adjustment(&gtk::Adjustment::new(3.0, 0.0, 10.0, 1.0, 1.0, 0.0))
         .visible(character.skills_and_powers())
         .build();
     let group = adw::PreferencesGroup::builder()
-        .description("Each level gained rolls its hit points. Levels lost keep their rolls, as in the original.")
+        .description(tr(
+            "Each level gained rolls its hit points. Levels lost keep their rolls, as in the original.",
+        ))
         .build();
     group.add(&amount);
     group.add(&target);
@@ -2076,9 +2135,9 @@ fn experience_dialog(
     group.add(&points);
     let page = adw::PreferencesPage::new();
     page.add(&group);
-    let cancel = gtk::Button::with_mnemonic("_Cancel");
+    let cancel = gtk::Button::with_mnemonic(tr("_Cancel"));
     let give = gtk::Button::builder()
-        .label("_Add")
+        .label(tr("_Add"))
         .use_underline(true)
         .css_classes(["suggested-action"])
         .build();
@@ -2094,7 +2153,7 @@ fn experience_dialog(
     view.add_top_bar(&error);
     view.set_content(Some(&page));
     let dialog = adw::Dialog::builder()
-        .title("Add Experience")
+        .title(tr("Add Experience"))
         .content_width(420)
         .child(&view)
         .default_widget(&give)
@@ -2146,12 +2205,32 @@ fn experience_dialog(
 
 /// Each ability with its two Skills & Powers subabilities.
 const ABILITY_NAMES: [[&str; 3]; 6] = [
-    ["Strength", "Stamina", "Muscle"],
-    ["Dexterity", "Aim", "Balance"],
-    ["Constitution", "Health", "Fitness"],
-    ["Intelligence", "Reason", "Knowledge"],
-    ["Wisdom", "Intuition", "Willpower"],
-    ["Charisma", "Leadership", "Appearance"],
+    [
+        tr_noop!("Strength"),
+        tr_noop!("Stamina"),
+        tr_noop!("Muscle"),
+    ],
+    [tr_noop!("Dexterity"), tr_noop!("Aim"), tr_noop!("Balance")],
+    [
+        tr_noop!("Constitution"),
+        tr_noop!("Health"),
+        tr_noop!("Fitness"),
+    ],
+    [
+        tr_noop!("Intelligence"),
+        tr_noop!("Reason"),
+        tr_noop!("Knowledge"),
+    ],
+    [
+        tr_noop!("Wisdom"),
+        tr_noop!("Intuition"),
+        tr_noop!("Willpower"),
+    ],
+    [
+        tr_noop!("Charisma"),
+        tr_noop!("Leadership"),
+        tr_noop!("Appearance"),
+    ],
 ];
 
 /// Names the list editors offer, from the installation's databases.
@@ -2219,24 +2298,23 @@ struct ListEditors {
 
 /// Ordinal for a spell level ("1st").
 fn ordinal(level: u32) -> String {
-    let suffix = match (level % 10, level % 100) {
-        (1, n) if n != 11 => "st",
-        (2, n) if n != 12 => "nd",
-        (3, n) if n != 13 => "rd",
-        _ => "th",
-    };
-    format!("{level}{suffix}")
+    match (level % 10, level % 100) {
+        (1, n) if n != 11 => tr!("{level}st", level),
+        (2, n) if n != 12 => tr!("{level}nd", level),
+        (3, n) if n != 13 => tr!("{level}rd", level),
+        _ => tr!("{level}th", level),
+    }
 }
 
 impl ListEditors {
     fn new(lists: &CharacterLists, choices: &Choices, classes: &[String]) -> Self {
         let wizard_spells = ListEditor::new(
-            "Wizard Spells Known",
+            tr("Wizard Spells Known"),
             &lists.wizard_spells,
             choices.wizard_spells.clone(),
         );
         let priest_spells = ListEditor::new(
-            "Priest Spells Known",
+            tr("Priest Spells Known"),
             &lists.priest_spells,
             choices.priest_spells.clone(),
         );
@@ -2260,7 +2338,7 @@ impl ListEditors {
                     .collect();
                 let known = wizard_spells.clone();
                 let list = RowList::new(
-                    &format!("{} ({})", book.name, BUNDLE_NAMES[book.bundle]),
+                    &format!("{} ({})", book.name, tr(BUNDLE_NAMES[book.bundle])),
                     rows,
                     move || known.items(),
                     move |name| {
@@ -2278,8 +2356,11 @@ impl ListEditors {
                     let (list, total) = (list.clone(), book.capacity);
                     move || {
                         let used: u32 = list.values().iter().filter_map(|v| v.1).sum();
-                        list.group
-                            .set_description(Some(&format!("{used} of {total} pages used")));
+                        list.group.set_description(Some(&tr!(
+                            "{used} of {total} pages used",
+                            used,
+                            total
+                        )));
                     }
                 });
                 (book.clone(), list)
@@ -2303,7 +2384,7 @@ impl ListEditors {
                         .map(move |name| RowSpec {
                             value: level as u32,
                             title: name.clone(),
-                            subtitle: format!("{} level", ordinal(level as u32)),
+                            subtitle: tr!("{ordinal} level", ordinal = ordinal(level as u32)),
                             number: None,
                         })
                 })
@@ -2320,15 +2401,20 @@ impl ListEditors {
                 let all = choices.priest_spells.clone();
                 Box::new(move || all.to_vec())
             };
-            let list = RowList::new(&format!("Memorized ({class})"), rows, offer, move |name| {
-                let level = levels.get(&name).copied()?;
-                Some(RowSpec {
-                    value: level,
-                    subtitle: format!("{} level", ordinal(level)),
-                    title: name,
-                    number: None,
-                })
-            });
+            let list = RowList::new(
+                &tr!("Memorized ({class})", class),
+                rows,
+                offer,
+                move |name| {
+                    let level = levels.get(&name).copied()?;
+                    Some(RowSpec {
+                        value: level,
+                        subtitle: tr!("{ordinal} level", ordinal = ordinal(level)),
+                        title: name,
+                        number: None,
+                    })
+                },
+            );
             memorized.push((slot, wizard, list));
         }
 
@@ -2342,7 +2428,7 @@ impl ListEditors {
                         subtitle: if item.contents.is_empty() {
                             String::new()
                         } else {
-                            format!("Holds {}", item.contents.join(", "))
+                            tr!("Holds {items}", items = item.contents.join(", "))
                         },
                         number: Some((item.quantity, 1, 99_999)),
                         value: item.clone(),
@@ -2350,7 +2436,7 @@ impl ListEditors {
                     .collect();
                 let items = choices.items.clone();
                 let list = RowList::new(
-                    BUNDLE_NAMES[b],
+                    tr(BUNDLE_NAMES[b]),
                     rows,
                     move || items.to_vec(),
                     |name| {
@@ -2368,7 +2454,15 @@ impl ListEditors {
 
         let coins = std::array::from_fn(|c| {
             adw::SpinRow::builder()
-                .title(["Copper", "Silver", "Electrum", "Gold", "Platinum"][c])
+                .title(
+                    [
+                        tr("Copper"),
+                        tr("Silver"),
+                        tr("Electrum"),
+                        tr("Gold"),
+                        tr("Platinum"),
+                    ][c],
+                )
                 .numeric(true)
                 .adjustment(&gtk::Adjustment::new(
                     lists.coins[c].into(),
@@ -2383,17 +2477,17 @@ impl ListEditors {
 
         Self {
             weapon_proficiencies: ListEditor::new(
-                "Weapon Proficiencies",
+                tr("Weapon Proficiencies"),
                 &lists.weapon_proficiencies,
                 choices.weapons.clone(),
             ),
             nonweapon_proficiencies: ListEditor::new(
-                "Nonweapon Proficiencies",
+                tr("Nonweapon Proficiencies"),
                 &lists.nonweapon_proficiencies,
                 choices.nonweapon.clone(),
             ),
             languages: ListEditor::new(
-                "Native Languages",
+                tr("Native Languages"),
                 &lists.languages,
                 choices.languages.clone(),
             ),
@@ -2431,7 +2525,7 @@ impl ListEditors {
     fn equipment_page(&self) -> adw::PreferencesPage {
         let page = adw::PreferencesPage::new();
         let money = adw::PreferencesGroup::builder()
-            .title("Spending Money")
+            .title(tr("Spending Money"))
             .build();
         for row in &self.coins {
             money.add(row);

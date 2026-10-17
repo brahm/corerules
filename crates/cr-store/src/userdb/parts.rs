@@ -17,6 +17,7 @@ use cr_formats::parts::{
     PartVersion, PartsFile,
 };
 use cr_formats::{ArchiveReader, Field, Object};
+use cr_i18n::{tr, tr_noop};
 
 use super::{FieldDesc, Flavor, NameError, NewContext, Origin, UserKind, Value, default_reason};
 use crate::{Error, Installation, Result};
@@ -274,7 +275,7 @@ fn kit_mut(r: &mut PartRec) -> Option<&mut PartKitData> {
 
 impl UserKind for Parts {
     type Rec = PartRec;
-    const NOUN: &'static str = "Part";
+    const NOUN: &'static str = tr_noop!("Part");
     const FILE: &'static str = "UserDbas/PartsU.dat";
 
     fn name(r: &PartRec) -> &str {
@@ -346,11 +347,14 @@ impl UserKind for Parts {
     fn name_message(error: &NameError, r: &PartRec, _adding: bool) -> String {
         let reason = match error {
             NameError::Used | NameError::UsedByStandard => {
-                format!("Name already used in catagory {}.", type_name(r.part_type))
+                tr!(
+                    "Name already used in catagory {category}.",
+                    category = type_name(r.part_type)
+                )
             }
             e => default_reason(e),
         };
-        format!("Part not added: Error. {reason}")
+        tr!("Part not added: Error. {reason}", reason)
     }
 
     fn summary(r: &PartRec) -> String {
@@ -370,8 +374,8 @@ impl UserKind for Parts {
                     h.unknown_0x3f0.into()
                 )
             ),
-            _ if price > 0 => format!("{price} gp"),
-            _ if h.unknown_0x230 > 0 => format!("{} XP", h.unknown_0x230),
+            _ if price > 0 => tr!("{price} gp", price),
+            _ if h.unknown_0x230 > 0 => tr!("{xp} XP", xp = h.unknown_0x230),
             _ => String::new(),
         }
     }

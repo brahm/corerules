@@ -3,6 +3,7 @@
 
 use cr_formats::Object;
 use cr_formats::psionic::PsionicPower;
+use cr_i18n::{tr, tr_noop};
 
 use super::{
     FieldDesc, FieldKind, Flavor, NameError, NewContext, Options, UserKind, Value, default_reason,
@@ -14,19 +15,19 @@ pub struct Powers;
 
 /// The Discipline combo (ctl 2256), by `unknown_0x28`.
 pub const DISCIPLINES: &[&str] = &[
-    "Clairsentient",
-    "Psychokinetic",
-    "Psychometabolic",
-    "Psychoportive",
-    "Telepathic",
+    tr_noop!("Clairsentient"),
+    tr_noop!("Psychokinetic"),
+    tr_noop!("Psychometabolic"),
+    tr_noop!("Psychoportive"),
+    tr_noop!("Telepathic"),
 ];
 
 /// The Science/Devotion radio (ctl 2261), by `unknown_0x2c`.
-pub const POWER_TYPES: &[&str] = &["Science", "Devotion"];
+pub const POWER_TYPES: &[&str] = &[tr_noop!("Science"), tr_noop!("Devotion")];
 
 impl UserKind for Powers {
     type Rec = PsionicPower;
-    const NOUN: &'static str = "Power";
+    const NOUN: &'static str = tr_noop!("Power");
     const FILE: &'static str = "UserDbas/PsionicU.dat";
 
     fn name(r: &PsionicPower) -> &str {
@@ -79,54 +80,65 @@ impl UserKind for Powers {
 
     fn fields(_flavor: Flavor) -> Vec<FieldDesc<PsionicPower>> {
         type Rec = PsionicPower;
-        const MAIN: &str = "Power";
+        const MAIN: &str = tr_noop!("Power");
         vec![
-            udb_text!(MAIN, "Name", 50, name),
+            udb_text!(MAIN, tr_noop!("Name"), 50, name),
             FieldDesc::new(
                 MAIN,
-                "Discipline",
+                tr_noop!("Discipline"),
                 FieldKind::Choice(Options::Fixed(DISCIPLINES)),
                 |r: &PsionicPower, _| Value::Int(r.unknown_0x28.into()),
                 |r, _, v, _| r.unknown_0x28 = v.int() as u32,
             ),
             FieldDesc::new(
                 MAIN,
-                "Type",
+                tr_noop!("Type"),
                 FieldKind::Choice(Options::Fixed(POWER_TYPES)),
                 |r: &PsionicPower, _| Value::Int(r.unknown_0x2c.min(1).into()),
                 |r, _, v, _| r.unknown_0x2c = v.int() as u32,
             ),
-            udb_int!(MAIN, "MAC", -10, 10, unknown_0x30).group("MAC"),
-            udb_check!(MAIN, "Base", unknown_0x34).group("MAC"),
-            udb_check!(MAIN, "Varies", unknown_0x38).group("MAC"),
-            udb_text!(MAIN, "PSP Cost", 50, cost).group("Cost and Reach"),
-            udb_int!(MAIN, "Minimum PSP Cost to Use Once", 0, 10000, unknown_0x48)
-                .group("Cost and Reach"),
-            udb_text!(MAIN, "Range", 50, range).group("Cost and Reach"),
-            udb_text!(MAIN, "Area of Effect", 50, area).group("Cost and Reach"),
-            udb_int!(MAIN, "Minimum Level", 0, 10000, unknown_0x44).group("Cost and Reach"),
+            udb_int!(MAIN, tr_noop!("MAC"), -10, 10, unknown_0x30).group(tr_noop!("MAC")),
+            udb_check!(MAIN, tr_noop!("Base"), unknown_0x34).group(tr_noop!("MAC")),
+            udb_check!(MAIN, tr_noop!("Varies"), unknown_0x38).group(tr_noop!("MAC")),
+            udb_text!(MAIN, tr_noop!("PSP Cost"), 50, cost).group(tr_noop!("Cost and Reach")),
+            udb_int!(
+                MAIN,
+                tr_noop!("Minimum PSP Cost to Use Once"),
+                0,
+                10000,
+                unknown_0x48
+            )
+            .group(tr_noop!("Cost and Reach")),
+            udb_text!(MAIN, tr_noop!("Range"), 50, range).group(tr_noop!("Cost and Reach")),
+            udb_text!(MAIN, tr_noop!("Area of Effect"), 50, area).group(tr_noop!("Cost and Reach")),
+            udb_int!(MAIN, tr_noop!("Minimum Level"), 0, 10000, unknown_0x44)
+                .group(tr_noop!("Cost and Reach")),
             udb_list!(
-                "Prerequisites",
-                "Prerequisites",
+                tr_noop!("Prerequisites"),
+                tr_noop!("Prerequisites"),
                 Options::Source("powers"),
                 prerequisites
             ),
-            udb_multiline!("Description", "Description", description),
+            udb_multiline!(
+                tr_noop!("Description"),
+                tr_noop!("Description"),
+                description
+            ),
         ]
     }
 
     fn name_message(error: &NameError, r: &PsionicPower, _adding: bool) -> String {
         let reason = match error {
-            NameError::Used | NameError::UsedByStandard => format!(
-                "Name already used in catagory {}.",
-                DISCIPLINES
+            NameError::Used | NameError::UsedByStandard => tr!(
+                "Name already used in catagory {discipline}.",
+                discipline = tr(DISCIPLINES
                     .get(r.unknown_0x28 as usize)
                     .copied()
-                    .unwrap_or_default()
+                    .unwrap_or_default())
             ),
             e => default_reason(e),
         };
-        format!("Power not added: Error. {reason}")
+        tr!("Power not added: Error. {reason}", reason)
     }
 
     fn summary(r: &PsionicPower) -> String {
@@ -135,7 +147,7 @@ impl UserKind for Powers {
             .copied()
             .unwrap_or("");
         let kind = POWER_TYPES[r.unknown_0x2c.min(1) as usize];
-        format!("{discipline} {}", kind.to_lowercase())
+        format!("{} {}", tr(discipline), tr(kind).to_lowercase())
     }
 }
 

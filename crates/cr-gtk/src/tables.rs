@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_i18n::tr;
 use cr_store::Installation;
 use cr_store::tables::{Block, Leftovers, ListEntry, RollResult, Session, TableBook, TableRolls};
 use cr_store::treasure::Rand;
@@ -34,7 +35,7 @@ pub fn open(
     open_treasure: impl Fn() + 'static,
 ) {
     let dialog = adw::Dialog::builder()
-        .title("Roll on a Table")
+        .title(tr("Roll on a Table"))
         .content_width(680)
         .content_height(680)
         .build();
@@ -84,7 +85,7 @@ pub fn open(
                         ui.show(rolls);
                     }
                     Ok(Err(e)) => ui.error(&e.to_string()),
-                    Err(_) => ui.error("The tables could not be read"),
+                    Err(_) => ui.error(tr("The tables could not be read")),
                 }
             });
         }
@@ -129,7 +130,7 @@ impl Ui {
     fn error(&self, message: &str) {
         let page = adw::StatusPage::builder()
             .icon_name("dialog-error-symbolic")
-            .title("Could Not Read the Tables")
+            .title(tr("Could Not Read the Tables"))
             .description(glib::markup_escape_text(message).as_str())
             .build();
         self.stack.add_named(&page, Some("error"));
@@ -140,11 +141,11 @@ impl Ui {
         let books = rolls.books();
         let titles: Vec<&str> = books.iter().map(|b| b.title()).collect();
         let book_row = adw::ComboRow::builder()
-            .title("Book")
+            .title(tr("Book"))
             .model(&gtk::StringList::new(&titles))
             .build();
         let table_row = adw::ComboRow::builder()
-            .title("Table")
+            .title(tr("Table"))
             .enable_search(true)
             .expression(gtk::PropertyExpression::new(
                 gtk::StringObject::static_type(),
@@ -156,7 +157,7 @@ impl Ui {
         choose.add(&book_row);
         choose.add(&table_row);
         let options = adw::PreferencesGroup::builder()
-            .title("Options")
+            .title(tr("Options"))
             .visible(false)
             .build();
 
@@ -175,7 +176,7 @@ impl Ui {
         results.create_tag(Some("subtitle"), &[("style", &gtk::pango::Style::Italic)]);
         // The columns never wrap; the notes under them do.
         results.create_tag(Some("note"), &[("wrap-mode", &gtk::WrapMode::Word)]);
-        results.set_text("Choose a table and roll.");
+        results.set_text(tr("Choose a table and roll."));
         let frame = gtk::Frame::builder()
             .child(
                 &gtk::ScrolledWindow::builder()
@@ -185,7 +186,9 @@ impl Ui {
                     .build(),
             )
             .build();
-        let results_group = adw::PreferencesGroup::builder().title("Results").build();
+        let results_group = adw::PreferencesGroup::builder()
+            .title(tr("Results"))
+            .build();
         results_group.add(&frame);
 
         // The choices scroll when they are many; the results stay in
@@ -231,28 +234,30 @@ impl Ui {
 
         let copy = gtk::Button::builder()
             .icon_name("edit-copy-symbolic")
-            .tooltip_text("Copy Results")
+            .tooltip_text(tr("Copy Results"))
             .sensitive(false)
             .build();
         self.header.pack_end(&copy);
         let read = gtk::Button::builder()
-            .label("Read in _Book")
+            .label(tr("Read in _Book"))
             .use_underline(true)
             .visible(false)
             .build();
         let treasure = gtk::Button::builder()
-            .label("Open _Treasure Generator")
+            .label(tr("Open _Treasure Generator"))
             .use_underline(true)
             .visible(false)
             .build();
         let again = gtk::Button::builder()
-            .label("Roll _Again")
+            .label(tr("Roll _Again"))
             .use_underline(true)
             .sensitive(false)
-            .tooltip_text("Roll on the same table, as the original's Roll Again did")
+            .tooltip_text(tr(
+                "Roll on the same table, as the original's Roll Again did",
+            ))
             .build();
         let roll = gtk::Button::builder()
-            .label("_Roll")
+            .label(tr("_Roll"))
             .use_underline(true)
             .css_classes(["suggested-action"])
             .build();

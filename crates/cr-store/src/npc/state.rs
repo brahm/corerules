@@ -13,6 +13,8 @@ use super::equip::Equipment;
 use super::prof::Weapons;
 use super::program::Tx;
 use super::texts::*;
+use cr_i18n::tr;
+
 use crate::treasure::Rand;
 use crate::{Error, Result};
 
@@ -247,7 +249,7 @@ impl<'a> Gen<'a> {
         for (name, _) in classes {
             let k = d
                 .class(name)
-                .ok_or_else(|| Error::Invalid(format!("no class named {name}")))?;
+                .ok_or_else(|| Error::Invalid(tr!("no class named {name}", name)))?;
             ks.push(&d.classes[k]);
         }
         let (race, subrace) = resolve_race(d, race, po)?;
@@ -1044,7 +1046,7 @@ fn resolve_race<'a>(d: &'a Data, name: &str, po: bool) -> Result<(&'a Race, &'a 
     let r = d
         .race(name)
         .map(|i| &d.races[i])
-        .ok_or_else(|| Error::Invalid(format!("no race named {name}")))?;
+        .ok_or_else(|| Error::Invalid(tr!("no race named {name}", name)))?;
     if r.unknown_0x184 == 0 {
         let sub = d
             .races

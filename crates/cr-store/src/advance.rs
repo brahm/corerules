@@ -16,6 +16,8 @@ use cr_formats::character::Character;
 use cr_formats::classes::Class;
 use cr_formats::parts::PartsFile;
 
+use cr_i18n::tr;
+
 use crate::create::Dice;
 use crate::{Error, Installation, Result};
 
@@ -293,7 +295,7 @@ impl AdvanceRules {
         let name = &character.data.classes.names[g];
         self.classes
             .get(name)
-            .ok_or_else(|| Error::Invalid(format!("{name} is not a class in the databases")))
+            .ok_or_else(|| Error::Invalid(tr!("{name} is not a class in the databases", name)))
     }
 
     /// Whether the installation has the Expansion's databases.

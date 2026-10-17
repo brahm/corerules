@@ -9,6 +9,7 @@
 use cr_formats::Object;
 use cr_formats::inventory::InventoryBundle;
 use cr_formats::monster::{Arsenal, Monster, MonsterAttack, MonsterType};
+use cr_i18n::{tr, tr_noop};
 
 use super::{
     FieldDesc, FieldKind, Flavor, NameError, NewContext, Options, UserKind, Value, default_reason,
@@ -21,7 +22,7 @@ pub struct MonsterTypes;
 
 impl UserKind for MonsterTypes {
     type Rec = MonsterType;
-    const NOUN: &'static str = "Monster Type";
+    const NOUN: &'static str = tr_noop!("Monster Type");
     const FILE: &'static str = "UserDbas/MonTypeU.dat";
 
     fn name(r: &MonsterType) -> &str {
@@ -63,10 +64,10 @@ impl UserKind for MonsterTypes {
 
     fn fields(_flavor: Flavor) -> Vec<FieldDesc<MonsterType>> {
         type Rec = MonsterType;
-        const PAGE: &str = "Monster Type";
+        const PAGE: &str = tr_noop!("Monster Type");
         vec![
-            udb_text!(PAGE, "Name of Type", 50, name),
-            udb_text!(PAGE, "Bitmap", 0, picture),
+            udb_text!(PAGE, tr_noop!("Name of Type"), 50, name),
+            udb_text!(PAGE, tr_noop!("Bitmap"), 0, picture),
         ]
     }
 
@@ -77,7 +78,10 @@ impl UserKind for MonsterTypes {
     fn name_message(error: &NameError, _r: &MonsterType, _adding: bool) -> String {
         match error {
             NameError::Reserved => default_reason(error),
-            e => format!("Monster Type not added: Error. {}", default_reason(e)),
+            e => tr!(
+                "Monster Type not added: Error. {reason}",
+                reason = default_reason(e)
+            ),
         }
     }
 }
@@ -93,18 +97,18 @@ pub struct Monsters;
 
 /// The Frequency radio of IDD 263: the percentage each button sets.
 pub const FREQUENCIES: [(&str, i32); 4] = [
-    ("Very Rare (4%)", 4),
-    ("Rare (11%)", 11),
-    ("Uncommon (20%)", 20),
-    ("Common (65%)", 65),
+    (tr_noop!("Very Rare (4%)"), 4),
+    (tr_noop!("Rare (11%)"), 11),
+    (tr_noop!("Uncommon (20%)"), 20),
+    (tr_noop!("Common (65%)"), 65),
 ];
 
 const FREQUENCY_NAMES: &[&str] = &[
-    "Very Rare (4%)",
-    "Rare (11%)",
-    "Uncommon (20%)",
-    "Common (65%)",
-    "Other",
+    tr_noop!("Very Rare (4%)"),
+    tr_noop!("Rare (11%)"),
+    tr_noop!("Uncommon (20%)"),
+    tr_noop!("Common (65%)"),
+    tr_noop!("Other"),
 ];
 
 fn frequency_index(f: i32) -> usize {
@@ -115,16 +119,23 @@ fn frequency_index(f: i32) -> usize {
 }
 
 /// The Size check boxes (+0x47c to +0x490).
-const SIZES: [&str; 6] = ["Tiny", "Small", "Man-Sized", "Large", "Huge", "Gargantuan"];
+const SIZES: [&str; 6] = [
+    tr_noop!("Tiny"),
+    tr_noop!("Small"),
+    tr_noop!("Man-Sized"),
+    tr_noop!("Large"),
+    tr_noop!("Huge"),
+    tr_noop!("Gargantuan"),
+];
 
 /// The Special Defenses check boxes (+0x44c to +0x460).
 const DEFENSES: [&str; 6] = [
-    "Hit Only by Magical/Silver Weapons",
-    "Immunity to Any Spell",
-    "Immunity to Any Weapon (Including ½ Damage)",
-    "Invisible at Will",
-    "Regeneration",
-    "Special Defense Form",
+    tr_noop!("Hit Only by Magical/Silver Weapons"),
+    tr_noop!("Immunity to Any Spell"),
+    tr_noop!("Immunity to Any Weapon (Including ½ Damage)"),
+    tr_noop!("Invisible at Will"),
+    tr_noop!("Regeneration"),
+    tr_noop!("Special Defense Form"),
 ];
 
 /// The Alignment combo.
@@ -143,45 +154,45 @@ pub const ALIGNMENTS: &[&str] = &[
 /// Climates (+0x4 [0..5]) and terrains ([5..37]) of the Terrain and
 /// Climate dialog (IDD 273), in flag order.
 pub const CLIMATES: [&str; 5] = [
-    "Arctic",
-    "Sub-Arctic",
-    "Temperate",
-    "Sub-Tropical",
-    "Tropical",
+    tr_noop!("Arctic"),
+    tr_noop!("Sub-Arctic"),
+    tr_noop!("Temperate"),
+    tr_noop!("Sub-Tropical"),
+    tr_noop!("Tropical"),
 ];
 pub const TERRAINS: [&str; 32] = [
-    "Aerial",
-    "Bush",
-    "Caves",
-    "Coastal",
-    "Desert",
-    "Farmland",
-    "Forest",
-    "Glacier",
-    "Grasslands",
-    "Jungle",
-    "Lake - Fresh Water",
-    "Lake - Salt Water",
-    "Mountains, high",
-    "Mountains, high - Forest",
-    "Mountains, high - Lake",
-    "Mountains, low",
-    "Mountains, low - Forest",
-    "Mountains, low - Lake",
-    "Ocean Deep",
-    "Ocean Shallows",
-    "Parkland",
-    "Plain/Scrub",
-    "Rain Forest",
-    "River - Fresh",
-    "River - Salt",
-    "Rough/Hill",
-    "Salt Marsh",
-    "Steppe",
-    "Subterranean",
-    "Swamp - Fresh",
-    "Swamp - Salt",
-    "Tundra",
+    tr_noop!("Aerial"),
+    tr_noop!("Bush"),
+    tr_noop!("Caves"),
+    tr_noop!("Coastal"),
+    tr_noop!("Desert"),
+    tr_noop!("Farmland"),
+    tr_noop!("Forest"),
+    tr_noop!("Glacier"),
+    tr_noop!("Grasslands"),
+    tr_noop!("Jungle"),
+    tr_noop!("Lake - Fresh Water"),
+    tr_noop!("Lake - Salt Water"),
+    tr_noop!("Mountains, high"),
+    tr_noop!("Mountains, high - Forest"),
+    tr_noop!("Mountains, high - Lake"),
+    tr_noop!("Mountains, low"),
+    tr_noop!("Mountains, low - Forest"),
+    tr_noop!("Mountains, low - Lake"),
+    tr_noop!("Ocean Deep"),
+    tr_noop!("Ocean Shallows"),
+    tr_noop!("Parkland"),
+    tr_noop!("Plain/Scrub"),
+    tr_noop!("Rain Forest"),
+    tr_noop!("River - Fresh"),
+    tr_noop!("River - Salt"),
+    tr_noop!("Rough/Hill"),
+    tr_noop!("Salt Marsh"),
+    tr_noop!("Steppe"),
+    tr_noop!("Subterranean"),
+    tr_noop!("Swamp - Fresh"),
+    tr_noop!("Swamp - Salt"),
+    tr_noop!("Tundra"),
 ];
 
 /// The climate/terrain category whose flags the user picks.
@@ -193,7 +204,7 @@ fn custom_terrain(m: &Monster) -> bool {
 
 impl UserKind for Monsters {
     type Rec = Monster;
-    const NOUN: &'static str = "Monster";
+    const NOUN: &'static str = tr_noop!("Monster");
     const FILE: &'static str = "UserDbas/MonsterU.dat";
 
     fn name(r: &Monster) -> &str {
@@ -293,27 +304,27 @@ impl UserKind for Monsters {
 
     fn fields(_flavor: Flavor) -> Vec<FieldDesc<Monster>> {
         type Rec = Monster;
-        const MAIN: &str = "Monster";
-        const ECOLOGY: &str = "Ecology";
-        const COMBAT: &str = "Combat";
-        const MOVEMENT: &str = "Movement";
-        const AC: &str = "Armor Class";
-        const ATTACKS: &str = "Attacks";
-        const DEFENSES_PAGE: &str = "Special Defenses";
-        const TERRAIN: &str = "Terrain";
-        const TEXT: &str = "Text";
+        const MAIN: &str = tr_noop!("Monster");
+        const ECOLOGY: &str = tr_noop!("Ecology");
+        const COMBAT: &str = tr_noop!("Combat");
+        const MOVEMENT: &str = tr_noop!("Movement");
+        const AC: &str = tr_noop!("Armor Class");
+        const ATTACKS: &str = tr_noop!("Attacks");
+        const DEFENSES_PAGE: &str = tr_noop!("Special Defenses");
+        const TERRAIN: &str = tr_noop!("Terrain");
+        const TEXT: &str = tr_noop!("Text");
         let mut fields = vec![
-            udb_text!(MAIN, "Name", 50, name),
+            udb_text!(MAIN, tr_noop!("Name"), 50, name),
             udb_combo!(
                 MAIN,
-                "Type",
+                tr_noop!("Type"),
                 Options::Source("monster-types"),
                 false,
                 monster_type
             ),
             FieldDesc::new(
                 MAIN,
-                "Frequency",
+                tr_noop!("Frequency"),
                 FieldKind::Choice(Options::Fixed(FREQUENCY_NAMES)),
                 |r: &Monster, _| Value::Int(frequency_index(r.frequency) as i64),
                 |r, _, v, _| {
@@ -324,47 +335,71 @@ impl UserKind for Monsters {
                     }
                 },
             )
-            .group("Frequency"),
-            udb_int!(MAIN, "Percent", 0, 100, frequency)
-                .group("Frequency")
+            .group(tr_noop!("Frequency")),
+            udb_int!(MAIN, tr_noop!("Percent"), 0, 100, frequency)
+                .group(tr_noop!("Frequency"))
                 .enabled(|r| frequency_index(r.frequency) == FREQUENCIES.len()),
-            udb_int!(MAIN, "Experience Points", 0, i32::MAX as i64, experience),
+            udb_int!(
+                MAIN,
+                tr_noop!("Experience Points"),
+                0,
+                i32::MAX as i64,
+                experience
+            ),
             udb_combo!(
                 ECOLOGY,
-                "Organization",
+                tr_noop!("Organization"),
                 Options::Source("monster-organization"),
                 true,
                 organization
             ),
             udb_combo!(
                 ECOLOGY,
-                "Activity Cycle",
+                tr_noop!("Activity Cycle"),
                 Options::Source("monster-activity"),
                 true,
                 activity_cycle
             ),
-            udb_combo!(ECOLOGY, "Diet", Options::Source("monster-diet"), true, diet),
             udb_combo!(
                 ECOLOGY,
-                "Intelligence",
+                tr_noop!("Diet"),
+                Options::Source("monster-diet"),
+                true,
+                diet
+            ),
+            udb_combo!(
+                ECOLOGY,
+                tr_noop!("Intelligence"),
                 Options::Source("monster-intelligence"),
                 true,
                 intelligence
             ),
             udb_combo!(
                 ECOLOGY,
-                "Alignment",
+                tr_noop!("Alignment"),
                 Options::Fixed(ALIGNMENTS),
                 true,
                 alignment
             ),
-            udb_int!(ECOLOGY, "Fewest", 0, 10_000_000, number_appearing_min)
-                .group("Number Appearing"),
-            udb_int!(ECOLOGY, "Greatest", 0, 10_000_000, number_appearing_max)
-                .group("Number Appearing"),
+            udb_int!(
+                ECOLOGY,
+                tr_noop!("Fewest"),
+                0,
+                10_000_000,
+                number_appearing_min
+            )
+            .group(tr_noop!("Number Appearing")),
+            udb_int!(
+                ECOLOGY,
+                tr_noop!("Greatest"),
+                0,
+                10_000_000,
+                number_appearing_max
+            )
+            .group(tr_noop!("Number Appearing")),
             FieldDesc::new(
                 ECOLOGY,
-                "Lair",
+                tr_noop!("Lair"),
                 FieldKind::Text { max: 0 },
                 |r: &Monster, _| Value::Text(letters_text(&r.unknown_0x25c.map(|p| p.0))),
                 |r, _, v, _| {
@@ -374,10 +409,10 @@ impl UserKind for Monsters {
                     }
                 },
             )
-            .group("Treasure Types"),
+            .group(tr_noop!("Treasure Types")),
             FieldDesc::new(
                 ECOLOGY,
-                "Individual",
+                tr_noop!("Individual"),
                 FieldKind::Text { max: 0 },
                 |r: &Monster, _| Value::Text(letters_text(&r.unknown_0x25c.map(|p| p.1))),
                 |r, _, v, _| {
@@ -387,10 +422,10 @@ impl UserKind for Monsters {
                     }
                 },
             )
-            .group("Treasure Types"),
+            .group(tr_noop!("Treasure Types")),
             FieldDesc::new(
                 COMBAT,
-                "Hit Dice",
+                tr_noop!("Hit Dice"),
                 FieldKind::Dice,
                 |r: &Monster, _| {
                     Value::Dice([
@@ -406,51 +441,74 @@ impl UserKind for Monsters {
                     r.unknown_0x438 = m.clamp(0, 100) as i32;
                 },
             ),
-            udb_int!(COMBAT, "THAC0", 0, 20, thac0),
-            udb_int!(COMBAT, "Magic Resistance", 0, 100, magic_resistance),
-            udb_int!(COMBAT, "Highest", 2, 20, morale).group("Morale"),
-            udb_int!(COMBAT, "Lowest", 2, 20, unknown_0x470).group("Morale"),
-            udb_int!(MOVEMENT, "On Land", 0, 1000, movement),
-            udb_int!(MOVEMENT, "Flying", 0, 1000, fly_rate),
+            udb_int!(COMBAT, tr_noop!("THAC0"), 0, 20, thac0),
+            udb_int!(
+                COMBAT,
+                tr_noop!("Magic Resistance"),
+                0,
+                100,
+                magic_resistance
+            ),
+            udb_int!(COMBAT, tr_noop!("Highest"), 2, 20, morale).group(tr_noop!("Morale")),
+            udb_int!(COMBAT, tr_noop!("Lowest"), 2, 20, unknown_0x470).group(tr_noop!("Morale")),
+            udb_int!(MOVEMENT, tr_noop!("On Land"), 0, 1000, movement),
+            udb_int!(MOVEMENT, tr_noop!("Flying"), 0, 1000, fly_rate),
             udb_combo!(
                 MOVEMENT,
-                "Maneuverability Class",
+                tr_noop!("Maneuverability Class"),
                 Options::Fixed(&["", "A", "B", "C", "D", "E"]),
                 false,
                 fly_maneuverability
             )
             .enabled(|r| r.fly_rate > 0),
-            udb_int!(MOVEMENT, "Swimming", 0, 1000, swim_rate),
-            udb_int!(MOVEMENT, "Burrowing", 0, 1000, burrow_rate),
-            udb_int!(MOVEMENT, "Climbing", 0, 1000, unknown_0x428),
-            udb_int!(MOVEMENT, "Web", 0, 1000, unknown_0x430),
-            udb_int!(AC, "Armor Class", -20, 100, armor_class),
+            udb_int!(MOVEMENT, tr_noop!("Swimming"), 0, 1000, swim_rate),
+            udb_int!(MOVEMENT, tr_noop!("Burrowing"), 0, 1000, burrow_rate),
+            udb_int!(MOVEMENT, tr_noop!("Climbing"), 0, 1000, unknown_0x428),
+            udb_int!(MOVEMENT, tr_noop!("Web"), 0, 1000, unknown_0x430),
+            udb_int!(AC, tr_noop!("Armor Class"), -20, 100, armor_class),
             FieldDesc::new(
                 ATTACKS,
-                "Attacks",
+                tr_noop!("Attacks"),
                 FieldKind::Dual(Options::Source("attacks")),
                 |r, _| Value::List(attack_names(r)),
                 |r, _, v, sources| set_attacks(r, &v.list(), &sources.attacks),
             )
-            .group("Attacks"),
-            udb_text!(ATTACKS, "No. of Attacks", 0, arsenal.attacks).group("Combat Text"),
-            udb_text!(ATTACKS, "Damage/Attack", 0, arsenal.damage).group("Combat Text"),
-            udb_text!(ATTACKS, "Special Attacks", 0, arsenal.special_attacks).group("Combat Text"),
-            udb_text!(ATTACKS, "Special Defenses", 0, arsenal.special_defenses)
-                .group("Combat Text"),
-            udb_multiline!(DEFENSES_PAGE, "Defense Description", defense_notes),
+            .group(tr_noop!("Attacks")),
+            udb_text!(ATTACKS, tr_noop!("No. of Attacks"), 0, arsenal.attacks)
+                .group(tr_noop!("Combat Text")),
+            udb_text!(ATTACKS, tr_noop!("Damage/Attack"), 0, arsenal.damage)
+                .group(tr_noop!("Combat Text")),
+            udb_text!(
+                ATTACKS,
+                tr_noop!("Special Attacks"),
+                0,
+                arsenal.special_attacks
+            )
+            .group(tr_noop!("Combat Text")),
+            udb_text!(
+                ATTACKS,
+                tr_noop!("Special Defenses"),
+                0,
+                arsenal.special_defenses
+            )
+            .group(tr_noop!("Combat Text")),
+            udb_multiline!(
+                DEFENSES_PAGE,
+                tr_noop!("Defense Description"),
+                defense_notes
+            ),
             udb_combo!(
                 TERRAIN,
-                "Category",
+                tr_noop!("Category"),
                 Options::Source("monster-terrain"),
                 true,
                 climate_terrain
             ),
-            udb_multiline!(TEXT, "Appearance", description),
-            udb_multiline!(TEXT, "Habitat/Society", unknown_0x33c),
-            udb_multiline!(TEXT, "Ecology", unknown_0x340),
-            udb_multiline!(TEXT, "Variants", unknown_0x344),
-            udb_multiline!(TEXT, "Combat", notes),
+            udb_multiline!(TEXT, tr_noop!("Appearance"), description),
+            udb_multiline!(TEXT, tr_noop!("Habitat/Society"), unknown_0x33c),
+            udb_multiline!(TEXT, tr_noop!("Ecology"), unknown_0x340),
+            udb_multiline!(TEXT, tr_noop!("Variants"), unknown_0x344),
+            udb_multiline!(TEXT, tr_noop!("Combat"), notes),
         ];
         for i in 0..4 {
             fields.push(other_ac(i));
@@ -482,36 +540,36 @@ fn pick_monster(o: Object) -> Option<Monster> {
 
 fn size_check(i: usize) -> FieldDesc<Monster> {
     FieldDesc::new(
-        "Combat",
+        tr_noop!("Combat"),
         SIZES[i],
         FieldKind::Check,
         |r: &Monster, i| Value::Bool(r.unknown_0x47c[i] != 0),
         |r, i, v, _| r.unknown_0x47c[i] = v.bool().into(),
     )
     .arg(i)
-    .group("Size")
+    .group(tr_noop!("Size"))
 }
 
 fn defense_check(i: usize) -> FieldDesc<Monster> {
     FieldDesc::new(
-        "Special Defenses",
+        tr_noop!("Special Defenses"),
         DEFENSES[i],
         FieldKind::Check,
         |r: &Monster, i| Value::Bool(r.unknown_0x44c[i] != 0),
         |r, i, v, _| r.unknown_0x44c[i] = v.bool().into(),
     )
     .arg(i)
-    .group("Defenses")
+    .group(tr_noop!("Defenses"))
 }
 
 fn terrain_check(i: usize) -> FieldDesc<Monster> {
     let (label, group) = if i < 5 {
-        (CLIMATES[i], "Climates")
+        (CLIMATES[i], tr_noop!("Climates"))
     } else {
-        (TERRAINS[i - 5], "Terrain Types")
+        (TERRAINS[i - 5], tr_noop!("Terrain Types"))
     };
     FieldDesc::new(
-        "Terrain",
+        tr_noop!("Terrain"),
         label,
         FieldKind::Check,
         |r: &Monster, i| Value::Bool(r.unknown_0x4[i] != 0),
@@ -524,14 +582,14 @@ fn terrain_check(i: usize) -> FieldDesc<Monster> {
 
 fn ac_note(i: usize) -> FieldDesc<Monster> {
     const LABELS: [&str; 5] = [
-        "Description",
-        "Second Description",
-        "Third Description",
-        "Fourth Description",
-        "Fifth Description",
+        tr_noop!("Description"),
+        tr_noop!("Second Description"),
+        tr_noop!("Third Description"),
+        tr_noop!("Fourth Description"),
+        tr_noop!("Fifth Description"),
     ];
     FieldDesc::new(
-        "Armor Class",
+        tr_noop!("Armor Class"),
         LABELS[i],
         FieldKind::Text { max: 25 },
         |r: &Monster, i| Value::Text(r.armor_class_notes.get(i).cloned().unwrap_or_default()),
@@ -546,11 +604,16 @@ fn ac_note(i: usize) -> FieldDesc<Monster> {
         },
     )
     .arg(i)
-    .group("Descriptions")
+    .group(tr_noop!("Descriptions"))
 }
 
 fn other_ac(i: usize) -> FieldDesc<Monster> {
-    const LABELS: [&str; 4] = ["Second", "Third", "Fourth", "Fifth"];
+    const LABELS: [&str; 4] = [
+        tr_noop!("Second"),
+        tr_noop!("Third"),
+        tr_noop!("Fourth"),
+        tr_noop!("Fifth"),
+    ];
     fn member(r: &mut Monster, i: usize) -> &mut i32 {
         match i {
             0 => &mut r.unknown_0x3f8,
@@ -560,7 +623,7 @@ fn other_ac(i: usize) -> FieldDesc<Monster> {
         }
     }
     FieldDesc::new(
-        "Armor Class",
+        tr_noop!("Armor Class"),
         LABELS[i],
         FieldKind::Int { min: -20, max: 100 },
         |r: &Monster, i| {
@@ -577,7 +640,7 @@ fn other_ac(i: usize) -> FieldDesc<Monster> {
         |r, i, v, _| *member(r, i) = v.int() as i32,
     )
     .arg(i)
-    .group("Other Armor Classes (100 for None)")
+    .group(tr_noop!("Other Armor Classes (100 for None)"))
 }
 
 /// The names of a monster's attacks (the Attacks list of IDD 271).

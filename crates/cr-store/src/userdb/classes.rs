@@ -11,6 +11,7 @@
 
 use cr_formats::classes::{CURRENT_VERSION, Class, ClassData};
 use cr_formats::{ArchiveReader, Object};
+use cr_i18n::{tr, tr_noop};
 
 use super::{FieldDesc, Flavor, NameError, NewContext, UserKind};
 use crate::{Installation, Result};
@@ -18,45 +19,54 @@ use crate::{Installation, Result};
 mod pages;
 
 /// The class groups, by `unknown_0x14[0]` (and `id / 1000 - 1`).
-pub const GROUPS: [&str; 5] = ["Warrior", "Rogue", "Priest", "Wizard", "Psionicist"];
+pub const GROUPS: [&str; 5] = [
+    tr_noop!("Warrior"),
+    tr_noop!("Rogue"),
+    tr_noop!("Priest"),
+    tr_noop!("Wizard"),
+    tr_noop!("Psionicist"),
+];
 
 /// The alignments a class allows, in the order the files list them.
 pub const ALIGNMENTS: [&str; 9] = [
-    "Lawful Good",
-    "Lawful Neutral",
-    "Lawful Evil",
-    "Neutral Good",
-    "True Neutral",
-    "Neutral Evil",
-    "Chaotic Good",
-    "Chaotic Neutral",
-    "Chaotic Evil",
+    tr_noop!("Lawful Good"),
+    tr_noop!("Lawful Neutral"),
+    tr_noop!("Lawful Evil"),
+    tr_noop!("Neutral Good"),
+    tr_noop!("True Neutral"),
+    tr_noop!("Neutral Evil"),
+    tr_noop!("Chaotic Good"),
+    tr_noop!("Chaotic Neutral"),
+    tr_noop!("Chaotic Evil"),
 ];
 
 pub const ABILITIES: [&str; 6] = [
-    "Strength",
-    "Dexterity",
-    "Constitution",
-    "Intelligence",
-    "Wisdom",
-    "Charisma",
+    tr_noop!("Strength"),
+    tr_noop!("Dexterity"),
+    tr_noop!("Constitution"),
+    tr_noop!("Intelligence"),
+    tr_noop!("Wisdom"),
+    tr_noop!("Charisma"),
 ];
 
 /// Shown after a class is added (two spaces before the name, as in the
 /// original).
 pub fn added_message(name: &str) -> String {
-    format!(
+    tr!(
         "To access  {name} in character creation, you must go to Custom Races and assign this \
-         class to the appropriate races from the Allowed Classes screen."
+         class to the appropriate races from the Allowed Classes screen.",
+        name
     )
 }
 
 /// Asked before the group of an existing class changes.
-pub const GROUP_CHANGE_WARNING: &str = "Changing the Class group will remove all Race/Class \
-     combination information.\nDo you wish to continue anyway?";
+pub const GROUP_CHANGE_WARNING: &str = tr_noop!(
+    "Changing the Class group will remove all Race/Class \
+     combination information.\nDo you wish to continue anyway?"
+);
 
 /// The title of the message for a `/` in a class name.
-pub const SLASH_TITLE: &str = "Invalid Character In Class Name";
+pub const SLASH_TITLE: &str = tr_noop!("Invalid Character In Class Name");
 
 /// One class as the other editors see it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -195,7 +205,7 @@ pub fn new_class() -> Class {
 
 impl UserKind for Classes {
     type Rec = Class;
-    const NOUN: &'static str = "Class";
+    const NOUN: &'static str = tr_noop!("Class");
     const FILE: &'static str = "UserDbas/ClassU.dat";
     const MAX_NAME: usize = 18;
 
@@ -249,22 +259,25 @@ impl UserKind for Classes {
     fn name_message(error: &NameError, _r: &Class, _adding: bool) -> String {
         match error {
             NameError::Slash => super::default_reason(error),
-            NameError::UsedByStandard => "Class not added: Error. The name you chose for your \
-                 class is identical to a standard class name.  Please choose a unique name."
-                .into(),
-            e => format!("Class not added: Error. {}", super::default_reason(e)),
+            NameError::UsedByStandard => tr("Class not added: Error. The name you chose for your \
+                 class is identical to a standard class name.  Please choose a unique name.")
+            .into(),
+            e => tr!(
+                "Class not added: Error. {reason}",
+                reason = super::default_reason(e)
+            ),
         }
     }
 
     fn delete_warning(_r: &Class) -> Option<String> {
         Some(
-            "Any character or NPC created from the deleted Class will no longer function correctly"
+            tr("Any character or NPC created from the deleted Class will no longer function correctly")
                 .into(),
         )
     }
 
     fn summary(r: &Class) -> String {
-        GROUPS[group(r)].into()
+        tr(GROUPS[group(r)]).into()
     }
 }
 

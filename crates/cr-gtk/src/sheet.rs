@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_i18n::{tr, tr_noop};
 use cr_store::sheet::{Align, Block, CellKind, ListItem, Sheet, SheetBox, Table, Timestamp};
 use gtk::{gio, pango};
 
@@ -37,18 +38,18 @@ pub fn show(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) +
 
     let print = gtk::Button::builder()
         .icon_name("printer-symbolic")
-        .tooltip_text("Print")
+        .tooltip_text(tr("Print"))
         .action_name("sheet.print")
         .build();
     let menu = gio::Menu::new();
-    menu.append(Some("Save as _PDF…"), Some("sheet.pdf"));
-    menu.append(Some("Export as _HTML…"), Some("sheet.html"));
+    menu.append(Some(tr("Save as _PDF…")), Some("sheet.pdf"));
+    menu.append(Some(tr("Export as _HTML…")), Some("sheet.html"));
     if sheet.flavor == cr_store::sheet::Flavor::Expansion {
-        menu.append(Some("Export as _Text…"), Some("sheet.txt"));
+        menu.append(Some(tr("Export as _Text…")), Some("sheet.txt"));
     }
     let export = gtk::MenuButton::builder()
         .icon_name("document-save-symbolic")
-        .tooltip_text("Save or Export")
+        .tooltip_text(tr("Save or Export"))
         .menu_model(&menu)
         .build();
     let header = adw::HeaderBar::new();
@@ -80,14 +81,14 @@ pub fn show(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) +
         Box::new(move || {
             let (sheet, dialog2, toast) = (sheet.clone(), dialog.clone(), toast.clone());
             let title = sheet.title.clone();
-            save_file(&dialog, &title, "pdf", "PDF documents", move |path| {
+            save_file(&dialog, &title, "pdf", tr("PDF documents"), move |path| {
                 print_sheet(&dialog2, &sheet, Some(path), &*toast)
             });
         })
     });
     for (name, extension, kind) in [
-        ("html", "html", "HTML documents"),
-        ("txt", "txt", "Text files"),
+        ("html", "html", tr_noop!("HTML documents")),
+        ("txt", "txt", tr_noop!("Text files")),
     ] {
         action(name, {
             let (sheet, dialog, toast) = (sheet.clone(), dialog.clone(), toast.clone());
@@ -97,13 +98,17 @@ pub fn show(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) +
                     &dialog,
                     &sheet.title.clone(),
                     extension,
-                    kind,
+                    tr(kind),
                     move |path| {
                         let date = Timestamp::now_utc().format(sheet.flavor);
                         let bytes = sheet.export(extension == "html", &date);
                         match std::fs::write(&path, bytes) {
-                            Ok(()) => toast("Sheet exported"),
-                            Err(e) => toast(&format!("Could not save {}: {e}", path.display())),
+                            Ok(()) => toast(tr("Sheet exported")),
+                            Err(e) => toast(&tr!(
+                                "Could not save {file}: {error}",
+                                file = path.display(),
+                                error = e
+                            )),
                         }
                     },
                 );
@@ -129,7 +134,7 @@ pub(crate) fn save_file(
     let filters = gio::ListStore::new::<gtk::FileFilter>();
     filters.append(&filter);
     let dialog = gtk::FileDialog::builder()
-        .title("Save As")
+        .title(tr("Save As"))
         .initial_name(format!("{}.{extension}", title.replace(' ', "_")))
         .filters(&filters)
         .modal(true)
@@ -220,7 +225,7 @@ fn box_widget(sheet_box: &SheetBox) -> gtk::Widget {
     if empty {
         inner.append(
             &gtk::Label::builder()
-                .label("None")
+                .label(tr("None"))
                 .xalign(0.0)
                 .css_classes(["dim-label"])
                 .build(),
@@ -586,8 +591,8 @@ pub(crate) fn print_sheet(
     };
     let window = parent.root().and_downcast::<gtk::Window>();
     match operation.run(action, window.as_ref()) {
-        Ok(gtk::PrintOperationResult::Apply) if pdf.is_some() => toast("Sheet saved as PDF"),
+        Ok(gtk::PrintOperationResult::Apply) if pdf.is_some() => toast(tr("Sheet saved as PDF")),
         Ok(_) => {}
-        Err(e) => toast(&format!("Could not print: {e}")),
+        Err(e) => toast(&tr!("Could not print: {error}", error = e)),
     }
 }

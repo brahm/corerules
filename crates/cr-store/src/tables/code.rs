@@ -12,6 +12,7 @@ use super::program::{cut, layout};
 use super::strings as s;
 use super::{Block, Code, Dice, DiceList, Run, Title, Txt, d, range};
 use crate::treasure::Rand;
+use cr_i18n::tr;
 
 /// The dice patterns of the dice text, in the order they are replaced:
 /// text, count, sides, plus.
@@ -187,7 +188,8 @@ impl Run<'_> {
                 self.out.blocks.push(Block {
                     title,
                     notes: vec![
-                        "The original opens the treasure generator here (Treasure menu).".into(),
+                        tr("The original opens the treasure generator here (Treasure menu).")
+                            .into(),
                     ],
                     ..Default::default()
                 });

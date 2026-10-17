@@ -32,7 +32,7 @@ use cr_formats::character::CharacterIndex;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("{0} is not a Core Rules installation (no Database folder)")]
+    #[error("{}", not_an_installation(.0))]
     NotAnInstallation(PathBuf),
     #[error("{path}: {source}")]
     Io { path: PathBuf, source: io::Error },
@@ -43,6 +43,13 @@ pub enum Error {
         path: PathBuf,
         source: cr_formats::Error,
     },
+}
+
+fn not_an_installation(path: &Path) -> String {
+    cr_i18n::tr!(
+        "{path} is not a Core Rules installation (no Database folder)",
+        path = path.display()
+    )
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
