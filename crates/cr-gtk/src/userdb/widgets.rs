@@ -6,6 +6,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_i18n::tr;
 use cr_store::userdb::Value;
 use gtk::glib;
 
@@ -97,7 +98,7 @@ pub fn two_list(
     let left = list_box();
     let right = list_box();
     let search = gtk::SearchEntry::builder()
-        .placeholder_text("Search")
+        .placeholder_text(tr("Search"))
         .build();
     let draw: Rc<dyn Fn()> = Rc::new({
         let (available, selected, left, right, search, on_change) = (
@@ -212,11 +213,11 @@ pub fn two_list(
 
     let add = gtk::Button::builder()
         .icon_name("go-next-symbolic")
-        .tooltip_text("Add the highlighted names")
+        .tooltip_text(tr("Add the highlighted names"))
         .build();
     let remove = gtk::Button::builder()
         .icon_name("go-previous-symbolic")
-        .tooltip_text("Remove the highlighted names")
+        .tooltip_text(tr("Remove the highlighted names"))
         .build();
     add.connect_clicked({
         let (move_rows, left) = (move_rows.clone(), left.clone());
@@ -235,9 +236,9 @@ pub fn two_list(
     arrows.append(&remove);
 
     let root = gtk::Box::builder().spacing(6).build();
-    root.append(&column("Available", Some(&search), &left));
+    root.append(&column(tr("Available"), Some(&search), &left));
     root.append(&arrows);
-    root.append(&column("Selected", None, &right));
+    root.append(&column(tr("Selected"), None, &right));
     TwoList {
         widget: root.upcast(),
         selected,
@@ -426,7 +427,7 @@ pub fn real_control(
     let loading = Rc::new(Cell::new(false));
     let check = none.map(|(none, check_label)| {
         let check = gtk::CheckButton::builder()
-            .label(check_label)
+            .label(tr(check_label))
             .valign(gtk::Align::Center)
             .build();
         let (changed, loading, spin) = (changed.clone(), loading.clone(), spin.clone());
@@ -509,7 +510,7 @@ pub fn groups_control(
             *lists.selected.borrow_mut() = names.into_iter().map(|n| (n, 0)).collect();
             (lists.redraw)();
             let spin = adw::SpinRow::builder()
-                .title("Number to choose")
+                .title(tr("Number to choose"))
                 .adjustment(&gtk::Adjustment::new(
                     count as f64,
                     1.0,
@@ -536,11 +537,11 @@ pub fn groups_control(
             content.append(&top);
             content.append(&lists.widget);
             let cancel = gtk::Button::builder()
-                .label("_Cancel")
+                .label(tr("_Cancel"))
                 .use_underline(true)
                 .build();
             let ok = gtk::Button::builder()
-                .label("_OK")
+                .label(tr("_OK"))
                 .use_underline(true)
                 .css_classes(["suggested-action"])
                 .build();
@@ -610,12 +611,12 @@ pub fn groups_control(
             }
             for (i, (count, names)) in groups.borrow().iter().enumerate() {
                 let row = adw::ActionRow::builder()
-                    .title(format!("Choose {count} of"))
+                    .title(tr!("Choose {count} of", count))
                     .subtitle(glib::markup_escape_text(&names.join(", ")).as_str())
                     .build();
                 let edit_button = gtk::Button::builder()
                     .icon_name("document-edit-symbolic")
-                    .tooltip_text("Edit")
+                    .tooltip_text(tr("Edit"))
                     .valign(gtk::Align::Center)
                     .css_classes(["flat"])
                     .build();
@@ -623,7 +624,7 @@ pub fn groups_control(
                 edit_button.connect_clicked(move |_| edit(Some(i)));
                 let remove = gtk::Button::builder()
                     .icon_name("list-remove-symbolic")
-                    .tooltip_text("Remove")
+                    .tooltip_text(tr("Remove"))
                     .valign(gtk::Align::Center)
                     .css_classes(["flat"])
                     .build();
@@ -641,7 +642,7 @@ pub fn groups_control(
                 list.append(&row);
             }
             let add = adw::ActionRow::builder()
-                .title("Add a Group…")
+                .title(tr("Add a Group…"))
                 .activatable(true)
                 .build();
             add.add_prefix(&gtk::Image::from_icon_name("list-add-symbolic"));
@@ -679,7 +680,7 @@ pub fn grid_control(
         .build();
     grid.attach(
         &gtk::Label::builder()
-            .label("Level")
+            .label(tr("Level"))
             .css_classes(["heading"])
             .build(),
         0,
@@ -690,7 +691,7 @@ pub fn grid_control(
     for (c, title) in columns.iter().enumerate() {
         grid.attach(
             &gtk::Label::builder()
-                .label(*title)
+                .label(tr(title))
                 .css_classes(["heading"])
                 .wrap(true)
                 .max_width_chars(8)

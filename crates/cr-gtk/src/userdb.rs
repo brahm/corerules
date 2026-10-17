@@ -25,6 +25,8 @@ use cr_store::userdb::{
 use cr_store::{Installation, Result};
 use gtk::{gio, glib};
 
+use cr_i18n::tr;
+
 use crate::lists::pick;
 
 mod widgets;
@@ -95,24 +97,46 @@ fn kind_of(section: &str) -> Option<Kind> {
     })
 }
 
-/// What a record is called in titles and tooltips.
-fn noun(kind: Kind) -> &'static str {
+/// The title of a new record's editor and the tooltip of New.
+fn new_title(kind: Kind) -> &'static str {
     match kind {
-        Kind::Spells(0) => "Wizard Spell",
-        Kind::Spells(_) => "Priest Spell",
-        Kind::Traps => "Trap",
-        Kind::Powers => "Psionic Power",
-        Kind::MonsterTypes => "Monster Type",
-        Kind::Monsters => "Monster",
-        Kind::Races => "Race",
-        Kind::Classes => "Class",
-        Kind::Parts(parts::WEAPONS) => "Weapon",
-        Kind::Parts(parts::ARMOR) => "Armor",
-        Kind::Parts(parts::EQUIPMENT) => "Equipment",
-        Kind::Parts(parts::MAGICAL_ITEMS) => "Magical Item",
-        Kind::Parts(parts::KITS) => "Kit",
-        Kind::Parts(_) => "Proficiency",
-        Kind::Tables => "Treasure Table",
+        Kind::Spells(0) => tr("New Wizard Spell"),
+        Kind::Spells(_) => tr("New Priest Spell"),
+        Kind::Traps => tr("New Trap"),
+        Kind::Powers => tr("New Psionic Power"),
+        Kind::MonsterTypes => tr("New Monster Type"),
+        Kind::Monsters => tr("New Monster"),
+        Kind::Races => tr("New Race"),
+        Kind::Classes => tr("New Class"),
+        Kind::Parts(parts::WEAPONS) => tr("New Weapon"),
+        Kind::Parts(parts::ARMOR) => tr("New Armor"),
+        Kind::Parts(parts::EQUIPMENT) => tr("New Equipment"),
+        Kind::Parts(parts::MAGICAL_ITEMS) => tr("New Magical Item"),
+        Kind::Parts(parts::KITS) => tr("New Kit"),
+        Kind::Parts(_) => tr("New Proficiency"),
+        Kind::Tables => tr("New Treasure Table"),
+    }
+}
+
+/// The New item of the detail page's menu.
+fn new_menu_label(kind: Option<Kind>) -> &'static str {
+    match kind {
+        None => tr("_New Record…"),
+        Some(Kind::Spells(0)) => tr("_New Wizard Spell…"),
+        Some(Kind::Spells(_)) => tr("_New Priest Spell…"),
+        Some(Kind::Traps) => tr("_New Trap…"),
+        Some(Kind::Powers) => tr("_New Psionic Power…"),
+        Some(Kind::MonsterTypes) => tr("_New Monster Type…"),
+        Some(Kind::Monsters) => tr("_New Monster…"),
+        Some(Kind::Races) => tr("_New Race…"),
+        Some(Kind::Classes) => tr("_New Class…"),
+        Some(Kind::Parts(parts::WEAPONS)) => tr("_New Weapon…"),
+        Some(Kind::Parts(parts::ARMOR)) => tr("_New Armor…"),
+        Some(Kind::Parts(parts::EQUIPMENT)) => tr("_New Equipment…"),
+        Some(Kind::Parts(parts::MAGICAL_ITEMS)) => tr("_New Magical Item…"),
+        Some(Kind::Parts(parts::KITS)) => tr("_New Kit…"),
+        Some(Kind::Parts(_)) => tr("_New Proficiency…"),
+        Some(Kind::Tables) => tr("_New Treasure Table…"),
     }
 }
 
@@ -123,7 +147,7 @@ pub fn can_create(section: &str) -> bool {
 
 /// The tooltip of the section's New button.
 pub fn new_tooltip(section: &str) -> String {
-    kind_of(section).map_or_else(|| "New".into(), |k| format!("New {}", noun(k)))
+    kind_of(section).map_or_else(|| tr("New").into(), |k| new_title(k).into())
 }
 
 /// Whether a section lists standard and custom records.
@@ -304,11 +328,10 @@ fn act<K: UserKind, H: Host + 'static>(
         return;
     };
     if K::NOUN == "Class" && db.flavor == Flavor::Core20 {
-        return host.toast("Core Rules 2.0 has no custom classes");
+        return host.toast(tr("Core Rules 2.0 has no custom classes"));
     }
     let found = position(&db, target.origin, scope, &target.name);
     let record = found.and_then(|i| db.get(target.origin, i)).cloned();
-    let noun = noun(target.kind);
     match action {
         Action::New => {
             let record = db.new_record(scope, "");
@@ -317,7 +340,7 @@ fn act<K: UserKind, H: Host + 'static>(
                 target.section,
                 db.flavor,
                 None,
-                format!("New {noun}"),
+                new_title(target.kind).to_owned(),
                 record,
             );
         }
@@ -331,7 +354,7 @@ fn act<K: UserKind, H: Host + 'static>(
                 target.section,
                 db.flavor,
                 None,
-                format!("New Subrace of {parent}"),
+                tr!("New Subrace of {race}", race = parent),
                 record,
             );
         }
@@ -343,7 +366,7 @@ fn act<K: UserKind, H: Host + 'static>(
                 target.section,
                 db.flavor,
                 None,
-                format!("Copy of {}", target.name),
+                tr!("Copy of {name}", name = target.name),
                 copy,
             );
         }
@@ -352,7 +375,7 @@ fn act<K: UserKind, H: Host + 'static>(
                 return;
             };
             if target.origin == Origin::Standard {
-                return host.toast("Standard records cannot be edited; copy them instead");
+                return host.toast(tr("Standard records cannot be edited; copy them instead"));
             }
             editor::<K, H>(
                 host,
@@ -368,7 +391,7 @@ fn act<K: UserKind, H: Host + 'static>(
                 return;
             };
             if target.origin == Origin::Standard {
-                return host.toast("Standard records cannot be deleted");
+                return host.toast(tr("Standard records cannot be deleted"));
             }
             let section = target.section;
             let name = target.name.clone();
@@ -383,7 +406,7 @@ fn act<K: UserKind, H: Host + 'static>(
                         db.save(install)
                     });
                     if errors(&*host, result).is_some() {
-                        host.toast(&format!("“{name}” deleted"));
+                        host.toast(&tr!("“{name}” deleted", name));
                         host.reload(section, None);
                     }
                 }
@@ -391,12 +414,12 @@ fn act<K: UserKind, H: Host + 'static>(
             match K::delete_warning(&record) {
                 Some(warning) => {
                     let alert = adw::AlertDialog::builder()
-                        .heading(format!("Delete {}?", target.name))
+                        .heading(tr!("Delete {name}?", name = target.name))
                         .body(warning)
                         .default_response("cancel")
                         .close_response("cancel")
                         .build();
-                    alert.add_responses(&[("cancel", "_Cancel"), ("delete", "_Delete")]);
+                    alert.add_responses(&[("cancel", tr("_Cancel")), ("delete", tr("_Delete"))]);
                     alert.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
                     alert.connect_response(Some("delete"), move |_, _| delete());
                     alert.present(Some(&host.parent()));
@@ -536,7 +559,7 @@ fn editor<K: UserKind, H: Host + 'static>(
                 None => {
                     let group = adw::PreferencesGroup::new();
                     if !group_title.is_empty() && !(group_title == *page_name && own) {
-                        group.set_title(&glib::markup_escape_text(group_title));
+                        group.set_title(&glib::markup_escape_text(tr(group_title)));
                     }
                     page.add(&group);
                     page_groups.push((group_title, group, Vec::new()));
@@ -556,11 +579,11 @@ fn editor<K: UserKind, H: Host + 'static>(
         for (_, group, members) in page_groups {
             groups.borrow_mut().push((group.upcast(), members));
         }
-        stack.add_titled(&page, Some(page_name), page_name);
+        stack.add_titled(&page, Some(page_name), tr(page_name));
         let row = gtk::ListBoxRow::builder()
             .child(
                 &gtk::Label::builder()
-                    .label(*page_name)
+                    .label(tr(page_name))
                     .xalign(0.0)
                     .margin_top(6)
                     .margin_bottom(6)
@@ -576,11 +599,11 @@ fn editor<K: UserKind, H: Host + 'static>(
     refresh(None);
 
     let cancel = gtk::Button::builder()
-        .label("_Cancel")
+        .label(tr("_Cancel"))
         .use_underline(true)
         .build();
     let save = gtk::Button::builder()
-        .label("_Save")
+        .label(tr("_Save"))
         .use_underline(true)
         .css_classes(["suggested-action"])
         .build();
@@ -616,7 +639,7 @@ fn editor<K: UserKind, H: Host + 'static>(
         sidebar.select_row(sidebar.row_at_index(0).as_ref());
         let toggle = gtk::ToggleButton::builder()
             .icon_name("sidebar-show-symbolic")
-            .tooltip_text("Pages")
+            .tooltip_text(tr("Pages"))
             .active(true)
             .build();
         toggle
@@ -695,11 +718,11 @@ fn finish<K: UserKind, H: Host + 'static>(
                 Some(Ok(name)) => {
                     dialog.close();
                     host.reload(section, Some(udb::key(section, Origin::Custom, &name)));
-                    host.toast(&format!("“{name}” saved"));
+                    host.toast(&tr!("“{name}” saved", name));
                     if editing.is_none() && K::NOUN == "Class" {
                         message(
                             &host.parent(),
-                            "Class Added",
+                            tr("Class Added"),
                             &classes::added_message(&name),
                         );
                     }
@@ -708,7 +731,7 @@ fn finish<K: UserKind, H: Host + 'static>(
                     let heading = if error == udb::NameError::Slash {
                         classes::SLASH_TITLE
                     } else {
-                        "Not Saved"
+                        tr("Not Saved")
                     };
                     message(
                         &dialog,
@@ -731,7 +754,7 @@ fn message(parent: &impl IsA<gtk::Widget>, heading: &str, body: &str) {
         .default_response("ok")
         .close_response("ok")
         .build();
-    alert.add_response("ok", "_OK");
+    alert.add_response("ok", tr("_OK"));
     alert.present(Some(parent));
 }
 
@@ -744,7 +767,7 @@ fn control<R: Clone + 'static, H: Host + 'static>(
     changed: &Rc<dyn Fn(usize, Value)>,
     host: &Shared<H>,
 ) -> (gtk::Widget, Box<dyn Fn()>) {
-    let label = field.label;
+    let label = tr(field.label);
     let value = {
         let record = record.clone();
         let getter = (
@@ -878,12 +901,12 @@ fn control<R: Clone + 'static, H: Host + 'static>(
             if !choices.is_empty() {
                 let button = gtk::Button::builder()
                     .icon_name("view-list-symbolic")
-                    .tooltip_text("Choose")
+                    .tooltip_text(tr("Choose"))
                     .valign(gtk::Align::Center)
                     .css_classes(["flat"])
                     .build();
                 let (row2, host) = (row.clone(), host.clone());
-                let title = format!("Choose {label}");
+                let title = tr!("Choose {field}", field = label);
                 button.connect_clicked(move |_| {
                     let row = row2.clone();
                     pick(&host.parent(), &title, choices.clone(), move |c| {
@@ -945,7 +968,7 @@ fn control<R: Clone + 'static, H: Host + 'static>(
         } => widgets::names_control(
             sources.options(options),
             Some(widgets::Number {
-                label: number,
+                label: tr(number),
                 min,
                 max,
             }),
@@ -1058,15 +1081,15 @@ fn table_action<H: Host + 'static>(host: &Shared<H>, target: &Target, action: Ac
         Action::Delete => {
             let Some(i) = index else { return };
             if tables::is_standard(&db.tables[i]) {
-                return host.toast("Standard tables can be restored, not deleted");
+                return host.toast(tr("Standard tables can be restored, not deleted"));
             }
             let alert = adw::AlertDialog::builder()
-                .heading("Are you sure?")
+                .heading(tr("Are you sure?"))
                 .body(tables::DELETE_WARNING)
                 .default_response("cancel")
                 .close_response("cancel")
                 .build();
-            alert.add_responses(&[("cancel", "_Cancel"), ("delete", "_Delete")]);
+            alert.add_responses(&[("cancel", tr("_Cancel")), ("delete", tr("_Delete"))]);
             alert.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
             let (host2, name) = (host.clone(), target.name.clone());
             alert.connect_response(Some("delete"), move |_, _| {
@@ -1089,12 +1112,12 @@ fn table_action<H: Host + 'static>(host: &Shared<H>, target: &Target, action: Ac
 
 fn restore_table<H: Host + 'static>(host: &Shared<H>, name: &str) {
     let alert = adw::AlertDialog::builder()
-        .heading("Restore Table?")
+        .heading(tr("Restore Table?"))
         .body(tables::RESTORE_WARNING)
         .default_response("cancel")
         .close_response("cancel")
         .build();
-    alert.add_responses(&[("cancel", "_Cancel"), ("restore", "_Restore")]);
+    alert.add_responses(&[("cancel", tr("_Cancel")), ("restore", tr("_Restore"))]);
     alert.set_response_appearance("restore", adw::ResponseAppearance::Destructive);
     let (host2, name) = (host.clone(), name.to_owned());
     alert.connect_response(Some("restore"), move |_, _| {
@@ -1106,7 +1129,7 @@ fn restore_table<H: Host + 'static>(host: &Shared<H>, name: &str) {
             db.save(install)
         });
         if errors(&*host2, result).is_some() {
-            host2.toast(&format!("“{name}” restored"));
+            host2.toast(&tr!("“{name}” restored", name));
             host2.reload(
                 "treasure-tables",
                 Some(udb::key("treasure-tables", Origin::Standard, &name)),
@@ -1126,23 +1149,23 @@ fn table_editor<H: Host + 'static>(
 ) {
     let title = match editing {
         Some(_) => table.name.clone(),
-        None => "New Treasure Table".to_owned(),
+        None => tr("New Treasure Table").to_owned(),
     };
     let table = Rc::new(RefCell::new(table));
     let name = adw::EntryRow::builder()
-        .title("Name")
+        .title(tr("Name"))
         .text(&table.borrow().name)
         .build();
     let about = adw::PreferencesGroup::new();
     about.add(&name);
     let add = gtk::Button::builder()
         .icon_name("list-add-symbolic")
-        .tooltip_text("Add Entry")
+        .tooltip_text(tr("Add Entry"))
         .css_classes(["flat"])
         .build();
     let rows_group = adw::PreferencesGroup::builder()
-        .title("Entries")
-        .description("Each entry is rolled in proportion to its weight")
+        .title(tr("Entries"))
+        .description(tr("Each entry is rolled in proportion to its weight"))
         .header_suffix(&add)
         .build();
     let rows_box = gtk::ListBox::builder()
@@ -1162,23 +1185,23 @@ fn table_editor<H: Host + 'static>(
             if ranges.is_empty() {
                 rows_box.append(
                     &adw::ActionRow::builder()
-                        .title("No entries")
+                        .title(tr("No entries"))
                         .css_classes(["dim-label"])
                         .build(),
                 );
             }
             for (i, (entry, range)) in tables::entries(&t).into_iter().zip(ranges).enumerate() {
                 let item = if entry.is_table != 0 {
-                    format!("Table: {}", entry.item.name)
+                    tr!("Table: {name}", name = entry.item.name)
                 } else {
                     entry.item.name.clone()
                 };
                 let row = adw::ExpanderRow::builder()
                     .title(glib::markup_escape_text(&item).as_str())
-                    .subtitle(format!("Roll {range}"))
+                    .subtitle(tr!("Roll {range}", range))
                     .build();
                 let weight = adw::SpinRow::builder()
-                    .title("Weight")
+                    .title(tr("Weight"))
                     .adjustment(&gtk::Adjustment::new(
                         entry.weight.into(),
                         0.0,
@@ -1205,7 +1228,7 @@ fn table_editor<H: Host + 'static>(
                     });
                 });
                 row.add_row(&weight);
-                let dice = adw::ActionRow::builder().title("Quantity").build();
+                let dice = adw::ActionRow::builder().title(tr("Quantity")).build();
                 let quantity = gtk::Box::builder().spacing(6).build();
                 let spins: Vec<gtk::SpinButton> = (0..3)
                     .map(|k| {
@@ -1243,7 +1266,7 @@ fn table_editor<H: Host + 'static>(
                 row.add_row(&dice);
                 let remove = gtk::Button::builder()
                     .icon_name("user-trash-symbolic")
-                    .tooltip_text("Remove Entry")
+                    .tooltip_text(tr("Remove Entry"))
                     .valign(gtk::Align::Center)
                     .css_classes(["flat"])
                     .build();
@@ -1279,11 +1302,11 @@ fn table_editor<H: Host + 'static>(
     page.add(&about);
     page.add(&rows_group);
     let cancel = gtk::Button::builder()
-        .label("_Cancel")
+        .label(tr("_Cancel"))
         .use_underline(true)
         .build();
     let save = gtk::Button::builder()
-        .label("_Save")
+        .label(tr("_Save"))
         .use_underline(true)
         .css_classes(["suggested-action"])
         .build();
@@ -1330,9 +1353,9 @@ fn table_editor<H: Host + 'static>(
                         "treasure-tables",
                         Some(udb::key("treasure-tables", origin, &name)),
                     );
-                    host.toast(&format!("“{name}” saved"));
+                    host.toast(&tr!("“{name}” saved", name));
                 }
-                Some(Err(text)) => message(&dialog, "Not Saved", &text),
+                Some(Err(text)) => message(&dialog, tr("Not Saved"), &text),
                 None => {}
             }
         }
@@ -1358,7 +1381,7 @@ fn add_table_entry<H: Host + 'static>(
             return;
         };
         if items.is_empty() {
-            return host2.toast("Nothing in this category");
+            return host2.toast(tr("Nothing in this category"));
         }
         let (table, render) = (table.clone(), render.clone());
         pick(&host2.parent(), &source, items, move |item| {
@@ -1413,7 +1436,11 @@ fn allowed_classes<H: Host + 'static>(host: &Shared<H>, race: &str) {
             for (i, a) in shown {
                 let row = adw::ActionRow::builder()
                     .title(glib::markup_escape_text(&a.name).as_str())
-                    .subtitle(if a.standard { "Standard" } else { "Custom" })
+                    .subtitle(if a.standard {
+                        tr("Standard")
+                    } else {
+                        tr("Custom")
+                    })
                     .build();
                 let limit = gtk::SpinButton::builder()
                     .adjustment(&gtk::Adjustment::new(
@@ -1426,7 +1453,7 @@ fn allowed_classes<H: Host + 'static>(host: &Shared<H>, race: &str) {
                     ))
                     .numeric(true)
                     .valign(gtk::Align::Center)
-                    .tooltip_text("Level Limit (0: none)")
+                    .tooltip_text(tr("Level Limit (0: none)"))
                     .sensitive(!a.standard)
                     .build();
                 let entries2 = entries.clone();
@@ -1458,19 +1485,19 @@ fn allowed_classes<H: Host + 'static>(host: &Shared<H>, race: &str) {
     render();
 
     let add_class = gtk::Button::builder()
-        .label("Add _Class…")
+        .label(tr("Add _Class…"))
         .use_underline(true)
         .build();
     let add_multi = gtk::Button::builder()
-        .label("Add _Multi-Class…")
+        .label(tr("Add _Multi-Class…"))
         .use_underline(true)
         .build();
     let buttons = gtk::Box::builder().spacing(6).build();
     buttons.append(&add_class);
     buttons.append(&add_multi);
     let group = adw::PreferencesGroup::builder()
-        .title("Classes Allowed")
-        .description("Standard entries are kept as shipped")
+        .title(tr("Classes Allowed"))
+        .description(tr("Standard entries are kept as shipped"))
         .header_suffix(&buttons)
         .build();
     group.add(&list);
@@ -1499,12 +1526,17 @@ fn allowed_classes<H: Host + 'static>(host: &Shared<H>, race: &str) {
                 .filter(|n| !taken.contains(n))
                 .collect();
             let (entries, render, groups_of) = (entries.clone(), render.clone(), groups_of.clone());
-            pick(&host.parent(), "Available Classes", choices, move |name| {
-                if let Some(slots) = groups_of(&name) {
-                    entries.borrow_mut().push(Allowed::new(slots, 0));
-                    render();
-                }
-            });
+            pick(
+                &host.parent(),
+                tr("Available Classes"),
+                choices,
+                move |name| {
+                    if let Some(slots) = groups_of(&name) {
+                        entries.borrow_mut().push(Allowed::new(slots, 0));
+                        render();
+                    }
+                },
+            );
         }
     });
     add_multi.connect_clicked({
@@ -1517,7 +1549,7 @@ fn allowed_classes<H: Host + 'static>(host: &Shared<H>, race: &str) {
         );
         move |_| {
             if dual {
-                return message(&host.parent(), "Multi-Classes", allowed::DUAL_AND_MULTI);
+                return message(&host.parent(), tr("Multi-Classes"), allowed::DUAL_AND_MULTI);
             }
             let taken: Vec<String> = entries.borrow().iter().map(|a| a.name.clone()).collect();
             let choices: Vec<String> = classes::multiclass_names(&class_list)
@@ -1525,7 +1557,7 @@ fn allowed_classes<H: Host + 'static>(host: &Shared<H>, race: &str) {
                 .filter(|n| !taken.contains(n))
                 .collect();
             let (entries, render, groups_of) = (entries.clone(), render.clone(), groups_of.clone());
-            pick(&host.parent(), "Multi-Classes", choices, move |name| {
+            pick(&host.parent(), tr("Multi-Classes"), choices, move |name| {
                 if let Some(slots) = groups_of(&name) {
                     entries.borrow_mut().push(Allowed::new(slots, 0));
                     render();
@@ -1537,11 +1569,11 @@ fn allowed_classes<H: Host + 'static>(host: &Shared<H>, race: &str) {
     let page = adw::PreferencesPage::new();
     page.add(&group);
     let cancel = gtk::Button::builder()
-        .label("_Cancel")
+        .label(tr("_Cancel"))
         .use_underline(true)
         .build();
     let save = gtk::Button::builder()
-        .label("_Save")
+        .label(tr("_Save"))
         .use_underline(true)
         .css_classes(["suggested-action"])
         .build();
@@ -1554,7 +1586,7 @@ fn allowed_classes<H: Host + 'static>(host: &Shared<H>, race: &str) {
     let view = adw::ToolbarView::new();
     view.add_top_bar(&header);
     view.set_content(Some(&page));
-    let dialog = dialog_for(&format!("Allowed Classes for {race}"), &view, false);
+    let dialog = dialog_for(&tr!("Allowed Classes for {race}", race), &view, false);
     cancel.connect_clicked({
         let dialog = dialog.clone();
         move |_| {
@@ -1579,7 +1611,7 @@ fn allowed_classes<H: Host + 'static>(host: &Shared<H>, race: &str) {
                 db.save(install)
             });
             if errors(&*host, result).is_some() {
-                host.toast("Allowed classes saved");
+                host.toast(tr("Allowed classes saved"));
                 dialog.close();
             }
         }
@@ -1601,13 +1633,13 @@ impl DetailActions {
     pub fn new() -> Self {
         let copy = gtk::Button::builder()
             .icon_name("edit-copy-symbolic")
-            .tooltip_text("Copy")
+            .tooltip_text(tr("Copy"))
             .action_name("win.udb-copy")
             .visible(false)
             .build();
         let menu = gtk::MenuButton::builder()
             .icon_name("view-more-symbolic")
-            .tooltip_text("More Actions")
+            .tooltip_text(tr("More Actions"))
             .visible(false)
             .build();
         Self { copy, menu }
@@ -1628,21 +1660,20 @@ impl DetailActions {
         let kind = kind_of(section);
         self.copy.set_visible(true);
         let menu = gio::Menu::new();
-        let noun = kind.map_or("Record", noun);
-        menu.append(Some(&format!("_New {noun}…")), Some("win.udb-new"));
+        menu.append(Some(new_menu_label(kind)), Some("win.udb-new"));
         if kind == Some(Kind::Races) {
-            menu.append(Some("New _Subrace…"), Some("win.udb-subrace"));
-            let item = gio::MenuItem::new(Some("_Allowed Classes…"), Some("win.udb-allowed"));
+            menu.append(Some(tr("New _Subrace…")), Some("win.udb-subrace"));
+            let item = gio::MenuItem::new(Some(tr("_Allowed Classes…")), Some("win.udb-allowed"));
             item.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
             menu.append_item(&item);
         }
         let tables = kind == Some(Kind::Tables);
         if tables && origin == Origin::Standard {
-            menu.append(Some("_Restore"), Some("win.udb-restore"));
+            menu.append(Some(tr("_Restore")), Some("win.udb-restore"));
         }
         if origin == Origin::Custom {
             let section = gio::Menu::new();
-            section.append(Some("_Delete"), Some("win.udb-delete"));
+            section.append(Some(tr("_Delete")), Some("win.udb-delete"));
             menu.append_section(None, &section);
         }
         self.menu.set_menu_model(Some(&menu));
@@ -1653,8 +1684,8 @@ impl DetailActions {
 /// The All / Standard / Custom filter of the entry list.
 pub fn origin_filter() -> gtk::DropDown {
     gtk::DropDown::builder()
-        .model(&gtk::StringList::new(&Filter::NAMES))
-        .tooltip_text("Show Standard or Custom Records")
+        .model(&gtk::StringList::new(&Filter::NAMES.map(tr)))
+        .tooltip_text(tr("Show Standard or Custom Records"))
         .visible(false)
         .build()
 }

@@ -9,6 +9,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use cr_formats::export::ExportFile;
+use cr_i18n::{tr, trn};
 use cr_store::Installation;
 use cr_store::export::{Category, Clash, Content, Exportable, ImportReport, contents, remove};
 use gtk::{gio, glib};
@@ -44,7 +45,7 @@ fn dialog(title: &str, action: &gtk::Button, groups: &gtk::Box) -> adw::Dialog {
         .show_end_title_buttons(false)
         .show_start_title_buttons(false)
         .build();
-    let cancel = gtk::Button::with_mnemonic("_Cancel");
+    let cancel = gtk::Button::with_mnemonic(tr("_Cancel"));
     header.pack_start(&cancel);
     header.pack_end(action);
     let dialog = framed(title, &header, groups);
@@ -88,15 +89,15 @@ fn groups_box() -> gtk::Box {
 
 fn package_filter(expansion: bool) -> gio::ListStore {
     let filter = gtk::FileFilter::new();
-    filter.set_name(Some("DM Toolkit Packages"));
+    filter.set_name(Some(tr("DM Toolkit Packages")));
     filter.add_suffix("xpx");
     filter.add_suffix("xpt");
     let only = gtk::FileFilter::new();
     if expansion {
-        only.set_name(Some("Expansion Packages (*.xpx)"));
+        only.set_name(Some(tr("Expansion Packages (*.xpx)")));
         only.add_suffix("xpx");
     } else {
-        only.set_name(Some("Core Rules 2.0 Packages (*.xpt)"));
+        only.set_name(Some(tr("Core Rules 2.0 Packages (*.xpt)")));
         only.add_suffix("xpt");
     }
     let filters = gio::ListStore::new::<gtk::FileFilter>();
@@ -114,7 +115,7 @@ fn alert(host: &impl Host, heading: &str, body: &str) {
         .heading(heading)
         .body(body)
         .build();
-    alert.add_response("close", "_Close");
+    alert.add_response("close", tr("_Close"));
     alert.present(Some(&host.parent()));
 }
 
@@ -143,7 +144,7 @@ fn write_package(path: &std::path::Path, file: &ExportFile) -> cr_store::Result<
 fn ask_path(host: &impl Host, expansion: bool, done: impl FnOnce(PathBuf) + 'static) {
     let extension = if expansion { "xpx" } else { "xpt" };
     let picker = gtk::FileDialog::builder()
-        .title("Save Package")
+        .title(tr("Save Package"))
         .initial_name(format!("export.{extension}"))
         .filters(&package_filter(expansion))
         .modal(true)
@@ -195,13 +196,13 @@ fn choose_items<H: Host + 'static>(
         groups.append(
             &adw::StatusPage::builder()
                 .icon_name("document-send-symbolic")
-                .title("No Records")
-                .description("Packages take the records you made and your characters")
+                .title(tr("No Records"))
+                .description(tr("Packages take the records you made and your characters"))
                 .build(),
         );
     } else {
         let all = adw::SwitchRow::builder()
-            .title("Select _All")
+            .title(tr("Select _All"))
             .use_underline(true)
             .build();
         all.connect_active_notify({
@@ -254,7 +255,7 @@ pub fn export<H: Host + 'static>(host: &Rc<H>) {
     let Some(expansion) = is_expansion(&**host) else {
         return;
     };
-    choose_items(host, "Export", "_Export…", {
+    choose_items(host, tr("Export"), tr("_Export…"), {
         let host = host.clone();
         move |dialog, items| {
             let (host, dialog) = (host.clone(), dialog.clone());
@@ -274,12 +275,16 @@ pub fn export<H: Host + 'static>(host: &Rc<H>) {
                         dialog.close();
                         let name = path.file_name().unwrap_or_default().to_string_lossy();
                         if warnings.is_empty() {
-                            host.toast(&format!("Exported to {name}"));
+                            host.toast(&tr!("Exported to {name}", name));
                         } else {
-                            alert(&*host, &format!("Exported to {name}"), &warnings.join("\n"));
+                            alert(
+                                &*host,
+                                &tr!("Exported to {name}", name),
+                                &warnings.join("\n"),
+                            );
                         }
                     }
-                    Err(e) => alert(&*host, "Export Failed", &e.to_string()),
+                    Err(e) => alert(&*host, tr("Export Failed"), &e.to_string()),
                 }
             });
         }
@@ -313,7 +318,11 @@ fn open_package<H: Host + 'static>(
                 .and_then(|d| ExportFile::parse(&d).map_err(|e| e.to_string()));
             match file {
                 Ok(file) => done(&host, path, file),
-                Err(e) => alert(&*host, "Not a Package", &format!("{}: {e}", path.display())),
+                Err(e) => alert(
+                    &*host,
+                    tr("Not a Package"),
+                    &format!("{}: {e}", path.display()),
+                ),
             }
         },
     );
@@ -321,7 +330,7 @@ fn open_package<H: Host + 'static>(
 
 /// Import…: choose a package, then what to take from it.
 pub fn import<H: Host + 'static>(host: &Rc<H>) {
-    open_package(host, "Import Package", |host, _, file| {
+    open_package(host, tr("Import Package"), |host, _, file| {
         if let Some(expansion) = is_expansion(&**host) {
             choose_imports(host, file, expansion);
         }
@@ -332,7 +341,7 @@ pub fn import<H: Host + 'static>(host: &Rc<H>) {
 /// characters and records to bring into the open Expansion installation.
 pub fn import_core20<H: Host + 'static>(host: &Rc<H>) {
     let picker = gtk::FileDialog::builder()
-        .title("Import Core Rules 2.0 Installation")
+        .title(tr("Import Core Rules 2.0 Installation"))
         .modal(true)
         .build();
     let host = host.clone();
@@ -347,11 +356,11 @@ pub fn import_core20<H: Host + 'static>(host: &Rc<H>) {
             match package {
                 Ok(export) if contents(&export.file).is_empty() => alert(
                     &*host,
-                    "Nothing to Import",
-                    "This Core Rules 2.0 installation has no characters or records of its own.",
+                    tr("Nothing to Import"),
+                    tr("This Core Rules 2.0 installation has no characters or records of its own."),
                 ),
                 Ok(export) => choose_imports(&host, export.file, true),
-                Err(e) => alert(&*host, "Cannot Import", &e.to_string()),
+                Err(e) => alert(&*host, tr("Cannot Import"), &e.to_string()),
             }
         },
     );
@@ -371,13 +380,13 @@ fn choose_imports<H: Host + 'static>(host: &Rc<H>, file: ExportFile, expansion: 
     if file.is_expansion() && !expansion {
         return alert(
             &**host,
-            "Expansion Package",
-            "This package was made by the Expansion, which Core Rules 2.0 cannot import.",
+            tr("Expansion Package"),
+            tr("This package was made by the Expansion, which Core Rules 2.0 cannot import."),
         );
     }
     let checks: Rc<RefCell<Vec<(usize, gtk::CheckButton)>>> = Rc::default();
     let button = gtk::Button::builder()
-        .label("_Import")
+        .label(tr("_Import"))
         .use_underline(true)
         .css_classes(["suggested-action"])
         .build();
@@ -396,9 +405,9 @@ fn choose_imports<H: Host + 'static>(host: &Rc<H>, file: ExportFile, expansion: 
         {
             let note = match (item.clash, expansion) {
                 (Clash::None, _) => "",
-                (Clash::Standard, _) => "Renamed with a * as a standard part has this name",
-                (Clash::Custom, true) => "Replaces your record of this name",
-                (Clash::Custom, false) => "Not imported: you have a record of this name",
+                (Clash::Standard, _) => tr("Renamed with a * as a standard part has this name"),
+                (Clash::Custom, true) => tr("Replaces your record of this name"),
+                (Clash::Custom, false) => tr("Not imported: you have a record of this name"),
             };
             let (row, check) = row(&item.name, note, true);
             group.add(&row);
@@ -409,14 +418,15 @@ fn choose_imports<H: Host + 'static>(host: &Rc<H>, file: ExportFile, expansion: 
     if file.map_maker.count > 0 {
         groups.append(
             &adw::PreferencesGroup::builder()
-                .description(format!(
-                    "The package also holds {} Map Maker II maps, which are not imported.",
+                .description(trn!(
+                    "The package also holds {n} Map Maker II map, which is not imported.",
+                    "The package also holds {n} Map Maker II maps, which are not imported.",
                     file.map_maker.count
                 ))
                 .build(),
         );
     }
-    let dialog = dialog("Import", &button, &groups);
+    let dialog = dialog(tr("Import"), &button, &groups);
     button.connect_clicked({
         let (host, dialog) = (host.clone(), dialog.clone());
         move |_| {
@@ -439,7 +449,7 @@ fn choose_imports<H: Host + 'static>(host: &Rc<H>, file: ExportFile, expansion: 
                     host.reloaded();
                     report_alert(&*host, &report);
                 }
-                Err(e) => alert(&*host, "Import Failed", &e.to_string()),
+                Err(e) => alert(&*host, tr("Import Failed"), &e.to_string()),
             }
         }
     });
@@ -450,12 +460,12 @@ fn report_alert(host: &impl Host, report: &ImportReport) {
     let label = |c: &Content| format!("{} ({})", c.name, c.category.label());
     let mut lines = Vec::new();
     for (c, name) in &report.renamed {
-        lines.push(format!("{} was renamed {name}.", label(c)));
+        lines.push(tr!("{item} was renamed {name}.", item = label(c), name));
     }
     if !report.replaced.is_empty() {
-        lines.push(format!(
-            "Replaced your records: {}.",
-            report
+        lines.push(tr!(
+            "Replaced your records: {names}.",
+            names = report
                 .replaced
                 .iter()
                 .map(|(c, n)| format!("{n} ({})", c.label()))
@@ -464,9 +474,9 @@ fn report_alert(host: &impl Host, report: &ImportReport) {
         ));
     }
     if !report.skipped.is_empty() {
-        lines.push(format!(
-            "Not imported, as you have records of these names: {}.",
-            report
+        lines.push(tr!(
+            "Not imported, as you have records of these names: {names}.",
+            names = report
                 .skipped
                 .iter()
                 .map(label)
@@ -475,10 +485,11 @@ fn report_alert(host: &impl Host, report: &ImportReport) {
         ));
     }
     lines.extend(report.warnings.iter().cloned());
-    let heading = match report.imported.len() {
-        1 => "Imported 1 Item".to_owned(),
-        n => format!("Imported {n} Items"),
-    };
+    let heading = trn!(
+        "Imported {n} Item",
+        "Imported {n} Items",
+        report.imported.len()
+    );
     if lines.is_empty() {
         host.toast(&heading);
     } else {
@@ -495,7 +506,7 @@ pub fn new_package<H: Host + 'static>(host: &Rc<H>) {
 
 /// Edit Package…: a package the user picks, in the editor.
 pub fn edit_package<H: Host + 'static>(host: &Rc<H>) {
-    open_package(host, "Edit Package", |host, path, file| {
+    open_package(host, tr("Edit Package"), |host, path, file| {
         // 2.0 content is only imported, converted to the Expansion's
         // layout on the way in.
         if file.is_expansion() {
@@ -503,9 +514,11 @@ pub fn edit_package<H: Host + 'static>(host: &Rc<H>) {
         } else {
             alert(
                 &**host,
-                "Core Rules 2.0 Package",
-                "Packages made by Core Rules 2.0 are only imported. Use Import… to bring \
-                 their content into this installation, then make a new package from it.",
+                tr("Core Rules 2.0 Package"),
+                tr(
+                    "Packages made by Core Rules 2.0 are only imported. Use Import… to bring \
+                    their content into this installation, then make a new package from it.",
+                ),
             );
         }
     });
@@ -532,7 +545,7 @@ fn editor<H: Host + 'static>(host: &Rc<H>, file: ExportFile, path: Option<PathBu
     let title = path
         .as_ref()
         .and_then(|p| p.file_name())
-        .map_or("New Package".to_owned(), |n| {
+        .map_or(tr("New Package").to_owned(), |n| {
             n.to_string_lossy().into_owned()
         });
     let package = Rc::new(RefCell::new(Package {
@@ -544,12 +557,12 @@ fn editor<H: Host + 'static>(host: &Rc<H>, file: ExportFile, path: Option<PathBu
     let header = adw::HeaderBar::new();
     let add = gtk::Button::builder()
         .icon_name("list-add-symbolic")
-        .tooltip_text("Add Items")
+        .tooltip_text(tr("Add Items"))
         .sensitive(same_layout)
         .build();
     header.pack_start(&add);
     let save = gtk::Button::builder()
-        .label("_Save")
+        .label(tr("_Save"))
         .use_underline(true)
         .css_classes(["suggested-action"])
         .build();
@@ -561,11 +574,15 @@ fn editor<H: Host + 'static>(host: &Rc<H>, file: ExportFile, path: Option<PathBu
         .build();
     if !same_layout {
         notes.set_description(Some(if file_is_expansion(&package) {
-            "This package was made by the Expansion; items of Core Rules 2.0 cannot be added \
-             to it."
+            tr(
+                "This package was made by the Expansion; items of Core Rules 2.0 cannot be \
+                added to it.",
+            )
         } else {
-            "This package was made by Core Rules 2.0; items of the Expansion cannot be added \
-             to it."
+            tr(
+                "This package was made by Core Rules 2.0; items of the Expansion cannot be \
+                added to it.",
+            )
         }));
     }
     let list = gtk::Box::builder()
@@ -585,7 +602,7 @@ fn editor<H: Host + 'static>(host: &Rc<H>, file: ExportFile, path: Option<PathBu
         move |_| {
             let view = view.clone();
             let host2 = host.clone();
-            choose_items(&host, "Add Items", "_Add", move |chooser, items| {
+            choose_items(&host, tr("Add Items"), tr("_Add"), move |chooser, items| {
                 let added = {
                     let install = host2.installation();
                     let Some(install) = install.as_ref() else {
@@ -602,7 +619,7 @@ fn editor<H: Host + 'static>(host: &Rc<H>, file: ExportFile, path: Option<PathBu
                         drop(p);
                         view.fill();
                     }
-                    Err(e) => alert(&*host2, "Items Not Added", &e.to_string()),
+                    Err(e) => alert(&*host2, tr("Items Not Added"), &e.to_string()),
                 }
             });
         }
@@ -628,10 +645,10 @@ fn editor<H: Host + 'static>(host: &Rc<H>, file: ExportFile, path: Option<PathBu
                 return;
             }
             let alert = adw::AlertDialog::builder()
-                .heading("Discard Changes?")
-                .body("The package has changes that are not saved.")
+                .heading(tr("Discard Changes?"))
+                .body(tr("The package has changes that are not saved."))
                 .build();
-            alert.add_responses(&[("cancel", "_Cancel"), ("discard", "_Discard")]);
+            alert.add_responses(&[("cancel", tr("_Cancel")), ("discard", tr("_Discard"))]);
             alert.set_response_appearance("discard", adw::ResponseAppearance::Destructive);
             let dialog = dialog.clone();
             alert.choose(&dialog.clone(), gio::Cancellable::NONE, move |r| {
@@ -667,8 +684,8 @@ impl View {
             self.list.append(
                 &adw::StatusPage::builder()
                     .icon_name("package-x-generic-symbolic")
-                    .title("Empty Package")
-                    .description("Add records and characters with the + button")
+                    .title(tr("Empty Package"))
+                    .description(tr("Add records and characters with the + button"))
                     .build(),
             );
         }
@@ -685,7 +702,7 @@ impl View {
                     .build();
                 let delete = gtk::Button::builder()
                     .icon_name("user-trash-symbolic")
-                    .tooltip_text("Remove")
+                    .tooltip_text(tr("Remove"))
                     .valign(gtk::Align::Center)
                     .css_classes(["flat"])
                     .build();
@@ -709,9 +726,12 @@ impl View {
         if map_maker > 0 {
             self.list.append(
                 &adw::PreferencesGroup::builder()
-                    .description(format!(
-                        "The package also holds {map_maker} Map Maker II maps, which a change \
-                         to the package leaves out."
+                    .description(trn!(
+                        "The package also holds {n} Map Maker II map, which a change to the \
+                         package leaves out.",
+                        "The package also holds {n} Map Maker II maps, which a change to the \
+                         package leaves out.",
+                        map_maker
                     ))
                     .build(),
             );
@@ -731,12 +751,12 @@ impl View {
                 self.dialog.force_close();
                 let name = path.file_name().unwrap_or_default().to_string_lossy();
                 if warnings.is_empty() {
-                    host.toast(&format!("Saved {name}"));
+                    host.toast(&tr!("Saved {name}", name));
                 } else {
-                    alert(host, &format!("Saved {name}"), &warnings.join("\n"));
+                    alert(host, &tr!("Saved {name}", name), &warnings.join("\n"));
                 }
             }
-            Err(e) => alert(host, "Package Not Saved", &e.to_string()),
+            Err(e) => alert(host, tr("Package Not Saved"), &e.to_string()),
         }
     }
 }
