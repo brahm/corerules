@@ -169,6 +169,16 @@ and `cr` look first (`--install` also takes the installation folder
 directly). The package holds TSR/Wizards of the Coast content: keep it for
 your own use and do not redistribute it.
 
+## Community add-ons
+
+[`addons/`](addons/README.md) holds 686 add-ons the community made for
+Core Rules 2.0 and the Expansion (races, classes, kits, spells, monsters,
+modules and the AD&D Core Rules User Database), converted to the
+Expansion's format and consolidated into one package. It comes with an
+installer, the `cr` tool and the AppImage. The
+[guide](addons/README.md) and the [report](addons/relatorio.md) are in
+Portuguese.
+
 ## Testing against your own installation
 
 The rules databases are copyrighted and are not part of this repository.
