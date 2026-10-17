@@ -12,7 +12,7 @@ flatpak install -y --noninteractive flathub "org.gnome.Sdk//$gnome"
 # The Rust extension follows the SDK's Freedesktop base (24.08, 25.08...).
 # The metadata names it as version= or versions= (a list, newest last).
 base=$(flatpak info -m "org.gnome.Sdk//$gnome" |
-    sed -n '/^\[Extension org.freedesktop.Sdk.Extension\]/,/^\[/s/^versions\{0,1\}=//p' |
+    sed -n '/^\[Extension org.freedesktop.Sdk.Extension\]/,/^\[/s/^versions\{0,1\} *= *//p' |
     head -1 | tr ';' '\n' | grep . | tail -1)
 if [ -z "$base" ]; then
     flatpak info -m "org.gnome.Sdk//$gnome" >&2
