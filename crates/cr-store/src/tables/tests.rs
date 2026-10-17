@@ -746,3 +746,176 @@ fn text_layout_aligns_columns() {
         "T\n\nRoll  Item       XP Value\n----  ----       --------\n12    Long name  4000\n      second\n\nnote\n"
     );
 }
+
+/// FNV-1a of a name, so the expected spells need not be written out.
+fn name_hash(name: &str) -> u32 {
+    name.bytes().fold(0x811c_9dc5, |h, b| {
+        (h ^ u32::from(b)).wrapping_mul(0x0100_0193)
+    })
+}
+
+/// The spells of a result as (level, name hash): the scroll lines
+/// (level, spell) and the Infinite Spells pages (roll, page, level,
+/// spell).
+fn spell_picks(out: &RollResult) -> Vec<(String, u32)> {
+    let mut picks = Vec::new();
+    for block in &out.blocks {
+        for row in &block.rows {
+            match row.as_slice() {
+                [level, spell] | [_, _, level, spell] => {
+                    picks.push((level.clone(), name_hash(spell)));
+                }
+                _ => {}
+            }
+        }
+    }
+    picks
+}
+
+/// An installation sharing CORERULES_DIR's files, with a copy of its
+/// UserDbas holding three custom spells as the capture had them: two
+/// wizard spells of level 8 ("Zeta Test Eight", then "Alpha Test Eight")
+/// and a priest spell of level 4 ("Test Priest Four").
+struct CaptureInstall {
+    root: std::path::PathBuf,
+    install: Installation,
+}
+
+impl CaptureInstall {
+    fn new(dir: &str) -> Self {
+        use crate::userdb::{Filter, UserDb, spells::Spells};
+        let real = std::path::Path::new(dir);
+        let root = std::env::temp_dir().join(format!("cr-tables-picks-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("UserDbas")).unwrap();
+        for entry in std::fs::read_dir(real).unwrap() {
+            let entry = entry.unwrap();
+            let name = entry.file_name();
+            if name.to_string_lossy().eq_ignore_ascii_case("UserDbas") {
+                for file in std::fs::read_dir(entry.path()).unwrap() {
+                    let file = file.unwrap();
+                    std::fs::copy(file.path(), root.join("UserDbas").join(file.file_name()))
+                        .unwrap();
+                }
+            } else {
+                std::os::unix::fs::symlink(entry.path(), root.join(&name)).unwrap();
+            }
+        }
+        let install = Installation::open(&root).unwrap();
+        let mut db = UserDb::<Spells>::load(&install).unwrap();
+        let source = |priest: bool, level: i32| {
+            db.list(Filter::Standard)
+                .into_iter()
+                .find(|e| (e.record.priest != 0) == priest && e.record.level == level)
+                .unwrap()
+                .record
+                .clone()
+        };
+        let (wizard, priest) = (source(false, 8), source(true, 4));
+        for (from, name) in [
+            (&wizard, "Zeta Test Eight"),
+            (&wizard, "Alpha Test Eight"),
+            (&priest, "Test Priest Four"),
+        ] {
+            let mut copy = db.copy_of(from);
+            copy.name = name.to_owned();
+            db.add(copy).unwrap();
+        }
+        db.save(&install).unwrap();
+        CaptureInstall { root, install }
+    }
+}
+
+impl Drop for CaptureInstall {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.root);
+    }
+}
+
+/// Spell picks replayed against the Expansion. Captured from Tsrp3.exe
+/// under Wine with `srand(seed)` patched in on entry to the result
+/// dialog (0x5265eb), so the roll starts from the seed: DMG Table 90
+/// (scrolls) and Table 95 (a Book of Infinite Spells, whose blank pages
+/// are not listed), with the custom spells of [`CaptureInstall`]. Needs
+/// CORERULES_DIR to be the Expansion.
+#[test]
+fn spell_picks_match_the_original() {
+    let Ok(dir) = std::env::var("CORERULES_DIR") else {
+        return;
+    };
+    let capture = CaptureInstall::new(&dir);
+    let rolls = capture.install.table_rolls().unwrap();
+    if rolls.flavor != Flavor::Expansion {
+        return;
+    }
+    let (zeta, alpha) = (name_hash("Zeta Test Eight"), name_hash("Alpha Test Eight"));
+    let priest = name_hash("Test Priest Four");
+    let cases: [(u32, u16, Vec<(&str, u32)>); 5] = [
+        (1234, 90, vec![("3", 138688210)]),
+        (
+            123,
+            90,
+            vec![
+                ("3", 3561909245),
+                ("4", 808065049),
+                ("5", 3925164238),
+                ("5", 3533432449),
+                ("3", 3776487851),
+                ("8", alpha),
+            ],
+        ),
+        (382, 90, vec![("8", zeta), ("2", 3537697720)]),
+        (
+            1159,
+            90,
+            vec![
+                ("5", 4103635123),
+                ("3", 668552274),
+                ("4", 4245676394),
+                ("6", 3417825418),
+                ("3", 2955293232),
+                ("5", 4044849877),
+                ("4", priest),
+            ],
+        ),
+        (
+            8,
+            95,
+            vec![
+                ("5", 518329842),
+                ("6", 2759487046),
+                ("6", 4186350928),
+                ("4", 1582532553),
+                ("6", 2273372273),
+                ("1", 2473336325),
+                ("3", 1261827691),
+                ("4", 966991873),
+                ("9", 2814985591),
+                ("1", 2543884469),
+                ("4", 2431105279),
+                ("8", 3567834999),
+                ("6", 3130472315),
+                ("6", 3137696892),
+                ("6", 3295622360),
+                ("4", 3231854188),
+                ("1", 956302183),
+                ("1", 2432228854),
+                ("4", 3313310366),
+                ("1", 213907776),
+            ],
+        ),
+    ];
+    for (seed, table, expected) in cases {
+        let out = rolls.roll(
+            dmg(table),
+            &[],
+            &mut Session::default(),
+            &mut Rand::seeded(seed),
+        );
+        let want: Vec<(String, u32)> = expected
+            .iter()
+            .map(|(l, h)| ((*l).to_owned(), *h))
+            .collect();
+        assert_eq!(spell_picks(&out), want, "seed {seed}, Table {table}");
+    }
+}

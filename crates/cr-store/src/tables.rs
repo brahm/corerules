@@ -48,17 +48,17 @@
 //!   only from the builds the addresses were taken from (size and hash).
 //!   Without such a program that text is left blank and the result says
 //!   why. Fixed-width headings are cut into columns at their ruler line.
+//! * Random spells (scroll spells, Infinite Spells pages) are picked as
+//!   0x52a35e does: `rand() % (a + b)` over the spells of the level in
+//!   Spells.dat (a, in file order), then in UserDbas/SpellsU.dat (b, in
+//!   file order); Infinite Spells pages without a spell are not listed.
+//!   Replayed against Tsrp3.exe for the same seed, user spells included.
 //!
 //! Where this differs (the code was not followed far enough):
 //!
 //! * The first roll of a dialog: the original compares with an
 //!   uninitialised previous result (stack memory); here the first roll is
 //!   free.
-//! * Random spells (scrolls, Infinite Spells) pick with `rand() % n`
-//!   among the spells of the level in Spells.dat, then the user
-//!   database's, in file order; the original (0x52a35e) draws from its
-//!   own spell index, so the names differ for the same seed. Blank
-//!   Infinite Spells pages are left out.
 //! * Double-clicking a result to open the item in the database is not
 //!   offered.
 //! * Column layout: the original pads to fixed character columns in a
@@ -693,8 +693,10 @@ impl TableRolls {
         LIST.iter().filter(|e| e.book == book).collect()
     }
 
-    /// A spell of the level (0x52a35e): `rand() % n` among the spells of
-    /// the level, the database's first, then the user's, in file order.
+    /// A spell of the level (0x52a35e): `rand() % (a + b)`, the first `a`
+    /// being the database's spells of the level and the next `b` the
+    /// user's, each in file order (the per-level lists 0x4fa8ec/0x4fa9e7
+    /// filter the lists 0x4fa2da/0x4fa3f2 append to).
     fn random_spell(&self, rand: &mut Rand, wizard: bool, level: i32) -> Option<String> {
         let spells = if wizard {
             &self.wizard_spells
