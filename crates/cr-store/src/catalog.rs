@@ -40,6 +40,8 @@ pub struct Entry {
     pub text: String,
     /// A character the NPC generator made (index entry +0x24).
     pub npc: bool,
+    /// The character's party, empty for none.
+    pub party: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -348,6 +350,7 @@ impl Installation {
                 .iter()
                 .map(|t| Entry {
                     npc: false,
+                    party: String::new(),
                     key: format!("{TABLE_KEY}{}", t.name),
                     title: t.name.clone(),
                     subtitle: format!(
@@ -378,6 +381,7 @@ impl Installation {
                     let summary = rules.as_ref().map(|r| r.summary(&t.bundle));
                     Entry {
                         npc: false,
+                        party: String::new(),
                         key: format!("{TREASURE_KEY}{}", t.name),
                         title: t.name.clone(),
                         subtitle: summary
@@ -409,10 +413,20 @@ impl Installation {
                         let mut entry = Entry {
                             key: e.file.clone(),
                             npc: e.unknown_0x24 != 0,
+                            party: crate::party::party_of(e).to_owned(),
                             ..character_entry(&c)
                         };
                         if entry.npc {
                             entry.subtitle = format!("NPC · {}", entry.subtitle);
+                        }
+                        if !entry.party.is_empty() {
+                            entry.subtitle = format!("{} · {}", entry.subtitle, entry.party);
+                            if let Some(group) = entry.groups.first_mut() {
+                                let at = usize::from(
+                                    group.rows.first().is_some_and(|r| r.0 == "Player"),
+                                );
+                                group.rows.insert(at, ("Party".into(), entry.party.clone()));
+                            }
                         }
                         entry
                     }
@@ -520,6 +534,7 @@ fn encounter_entry(e: &Encounter, rules: Option<&EncounterRules>) -> Entry {
     groups.retain(|g| !g.rows.is_empty());
     Entry {
         npc: false,
+        party: String::new(),
         key: format!("{ENCOUNTER_KEY}{}", e.name),
         title: e.name.clone(),
         subtitle: if e.template.is_empty() {
@@ -574,6 +589,7 @@ fn template_entries(rules: &EncounterRules) -> Vec<Entry> {
                 let text = text.splitn(3, '\n').nth(2).unwrap_or("").trim().to_owned();
                 Entry {
                     npc: false,
+                    party: String::new(),
                     key: format!("{TEMPLATE_KEY}{}", t.name),
                     title: t.name.clone(),
                     subtitle: t.monster_type.clone(),
@@ -705,6 +721,7 @@ fn character_entry(c: &Character) -> Entry {
     };
     Entry {
         npc: false,
+        party: String::new(),
         key: String::new(),
         title: d.name.clone(),
         subtitle: format!("{race} {}", d.class_title),
@@ -786,6 +803,7 @@ fn race_entry(object: &Object) -> Option<Entry> {
         .collect();
     Some(Entry {
         npc: false,
+        party: String::new(),
         key: String::new(),
         title: r.name.clone(),
         subtitle: adjustments.join(", "),
@@ -861,6 +879,7 @@ fn part_entry(object: &Object) -> Option<Entry> {
     }
     Some(Entry {
         npc: false,
+        party: String::new(),
         key: String::new(),
         title: p.head.name.clone(),
         subtitle: String::new(),
@@ -876,6 +895,7 @@ fn spell_entry(object: &Object) -> Option<Entry> {
     let kind = if s.priest != 0 { "Priest" } else { "Wizard" };
     Some(Entry {
         npc: false,
+        party: String::new(),
         key: String::new(),
         title: s.name.clone(),
         subtitle: format!("{kind} level {}", s.level),
@@ -899,6 +919,7 @@ fn psionic_entry(object: &Object) -> Option<Entry> {
     };
     Some(Entry {
         npc: false,
+        party: String::new(),
         key: String::new(),
         title: p.name.clone(),
         subtitle: p.cost.clone(),
@@ -934,6 +955,7 @@ fn monster_entry(object: &Object) -> Option<Entry> {
     .join(", ");
     Some(Entry {
         npc: false,
+        party: String::new(),
         key: String::new(),
         title: m.name.clone(),
         subtitle: m.climate_terrain.clone(),

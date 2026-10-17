@@ -7,6 +7,7 @@ mod create;
 mod encounter;
 mod lists;
 mod npc;
+mod party;
 mod sheet;
 mod tables;
 mod transfer;
@@ -125,6 +126,14 @@ impl Window {
             }
         });
 
+        this.browser.delete_button.connect_clicked({
+            let this = this.clone();
+            move |_| {
+                let key = this.browser.current_key.borrow().clone();
+                party::delete_character(&Rc::new(this.clone()), &key);
+            }
+        });
+
         this.browser.convert_button.connect_clicked({
             let this = this.clone();
             move |_| {
@@ -205,6 +214,12 @@ impl Window {
                 move |_, _, _| this.roll_table()
             })
             .build();
+        let manage_parties = gio::ActionEntry::builder("manage-parties")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| party::manage(&Rc::new(this.clone()))
+            })
+            .build();
         let export = gio::ActionEntry::builder("export")
             .activate({
                 let this = this.clone();
@@ -236,6 +251,7 @@ impl Window {
             import,
             new_package,
             edit_package,
+            manage_parties,
         ]);
         this.window.add_action_entries([
             open,
@@ -331,6 +347,14 @@ impl Window {
         {
             action.set_enabled(groups);
         }
+        // Core Rules 2.0 has no parties.
+        if let Some(action) = self
+            .window
+            .lookup_action("manage-parties")
+            .and_downcast::<gio::SimpleAction>()
+        {
+            action.set_enabled(groups);
+        }
     }
 
     fn set_can_create(&self, enabled: bool) {
@@ -347,6 +371,7 @@ impl Window {
             "import",
             "new-package",
             "edit-package",
+            "manage-parties",
         ] {
             if let Some(action) = self
                 .window
@@ -656,6 +681,35 @@ impl transfer::Host for Window {
     }
 }
 
+impl party::Host for Window {
+    fn with_install<T>(
+        &self,
+        run: impl FnOnce(&Installation) -> cr_store::Result<T>,
+    ) -> Option<cr_store::Result<T>> {
+        self.install.borrow().as_ref().map(run)
+    }
+
+    fn toast(&self, message: &str) {
+        Window::toast(self, message)
+    }
+
+    fn add_toast(&self, toast: adw::Toast) {
+        self.toasts.add_toast(toast);
+    }
+
+    fn reload(&self, section: &str, key: Option<String>) {
+        Window::reload(self, section, key)
+    }
+
+    fn parent(&self) -> gtk::Widget {
+        self.window.clone().upcast()
+    }
+
+    fn current_key(&self) -> String {
+        self.browser.current_key.borrow().clone()
+    }
+}
+
 impl userdb::Host for Window {
     fn with_install<T>(
         &self,
@@ -728,6 +782,9 @@ fn open_menu() -> gtk::MenuButton {
     menu.append(Some("_New Character…"), Some("win.new-character"));
     menu.append(Some("New N_PC…"), Some("win.new-npc"));
     menu.append(Some("New NPC _Group…"), Some("win.new-npc-group"));
+    let item = gio::MenuItem::new(Some("Manage _Parties…"), Some("win.manage-parties"));
+    item.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
+    menu.append_item(&item);
     menu.append(Some("New _Encounter…"), Some("win.new-encounter"));
     menu.append(Some("New Encounter _Table…"), Some("win.new-table"));
     menu.append(Some("_Roll Treasure…"), Some("win.roll-treasure"));
@@ -761,10 +818,16 @@ struct Browser {
     sheet_button: gtk::Button,
     /// Clears the NPC mark of a generated character.
     convert_button: gtk::Button,
+    /// Deletes a character.
+    delete_button: gtk::Button,
     /// Creates an encounter from a template or a 2-20 table.
     generate_button: gtk::Button,
     /// The key of the entry on the detail page.
     current_key: Rc<RefCell<String>>,
+    /// The Characters section's party filter and what each choice shows:
+    /// everyone (`None`), no party (empty) or a party.
+    party_filter: gtk::DropDown,
+    party_choices: Rc<RefCell<Vec<Option<String>>>>,
 }
 
 /// The right-hand pane.
@@ -775,6 +838,7 @@ struct DetailPane {
     edit_button: gtk::Button,
     sheet_button: gtk::Button,
     convert_button: gtk::Button,
+    delete_button: gtk::Button,
     generate_button: gtk::Button,
     current_key: Rc<RefCell<String>>,
     /// Copy, New and Delete for standard and custom records.
@@ -797,6 +861,7 @@ impl DetailPane {
         self.udb_actions.update(key);
         self.sheet_button.set_visible(character);
         self.convert_button.set_visible(character && entry.npc);
+        self.delete_button.set_visible(character);
         self.generate_button
             .set_visible(key.starts_with(TEMPLATE_KEY) || key.starts_with(TABLE_KEY));
         self.generate_button
@@ -814,6 +879,7 @@ impl DetailPane {
         self.edit_button.set_visible(false);
         self.sheet_button.set_visible(false);
         self.convert_button.set_visible(false);
+        self.delete_button.set_visible(false);
         self.generate_button.set_visible(false);
         self.udb_actions.update("");
         self.current_key.borrow_mut().clear();
@@ -854,12 +920,18 @@ impl Browser {
             .tooltip_text("Convert to Character")
             .visible(false)
             .build();
+        let delete_button = gtk::Button::builder()
+            .icon_name("user-trash-symbolic")
+            .tooltip_text("Delete Character")
+            .visible(false)
+            .build();
         let generate_button = gtk::Button::builder()
             .icon_name("media-playlist-shuffle-symbolic")
             .tooltip_text("Create Encounter")
             .visible(false)
             .build();
         let detail_header = adw::HeaderBar::new();
+        detail_header.pack_start(&delete_button);
         detail_header.pack_end(&generate_button);
         detail_header.pack_end(&edit_button);
         detail_header.pack_end(&sheet_button);
@@ -876,6 +948,7 @@ impl Browser {
             edit_button: edit_button.clone(),
             sheet_button: sheet_button.clone(),
             convert_button: convert_button.clone(),
+            delete_button: delete_button.clone(),
             generate_button: generate_button.clone(),
             current_key: current_key.clone(),
             udb_actions,
@@ -888,19 +961,39 @@ impl Browser {
             .hexpand(true)
             .build();
         let origin_filter = userdb::origin_filter();
+        let party_filter = gtk::DropDown::builder()
+            .tooltip_text("Show a Party")
+            .visible(false)
+            .build();
+        let party_choices: Rc<RefCell<Vec<Option<String>>>> = Rc::default();
         let filter = gtk::CustomFilter::new({
             let (search, origin_filter) = (search.clone(), origin_filter.clone());
+            let (party_filter, party_choices) = (party_filter.clone(), party_choices.clone());
             move |item| {
                 let needle = search.text().to_lowercase();
                 let item = item.downcast_ref::<glib::BoxedAnyObject>().unwrap();
                 let row = item.borrow::<Row>();
+                let party = party_choices
+                    .borrow()
+                    .get(party_filter.selected() as usize)
+                    .cloned()
+                    .flatten();
+                let in_party = match (&row.party, party) {
+                    (Some(theirs), Some(wanted)) => theirs.eq_ignore_ascii_case(&wanted),
+                    _ => true,
+                };
                 userdb::passes(&origin_filter, row.origin)
+                    && in_party
                     && (needle.is_empty()
                         || row.title.to_lowercase().contains(&needle)
                         || row.subtitle.to_lowercase().contains(&needle))
             }
         });
         origin_filter.connect_selected_notify({
+            let filter = filter.clone();
+            move |_| filter.changed(gtk::FilterChange::Different)
+        });
+        party_filter.connect_selected_notify({
             let filter = filter.clone();
             move |_| filter.changed(gtk::FilterChange::Different)
         });
@@ -974,6 +1067,7 @@ impl Browser {
         let entries_header = adw::HeaderBar::new();
         entries_header.pack_start(&new_button);
         entries_header.pack_end(&origin_filter);
+        entries_header.pack_end(&party_filter);
         let entries_view = adw::ToolbarView::new();
         entries_view.add_top_bar(&entries_header);
         entries_view.add_top_bar(&search_bar);
@@ -1021,6 +1115,7 @@ impl Browser {
             let (entries_page, inner_page, detail) =
                 (entries_page.clone(), inner_page.clone(), detail.clone());
             let current = current.clone();
+            let (party_filter, party_choices) = (party_filter.clone(), party_choices.clone());
             move |_, row| {
                 let Some(row) = row else { return };
                 let index = row.index() as usize;
@@ -1041,6 +1136,8 @@ impl Browser {
                     new_button.set_tooltip_text(Some(&tooltip));
                 }
                 origin_filter.set_visible(userdb::has_origins(section.id));
+                party_filter
+                    .set_visible(section.id == "characters" && party_choices.borrow().len() > 1);
                 entries_page.set_title(section.title);
                 inner_page.set_title(section.title);
                 search.set_text("");
@@ -1054,6 +1151,7 @@ impl Browser {
                             title: e.title.clone(),
                             subtitle: e.subtitle.clone(),
                             origin: userdb::origin_of(&e.key),
+                            party: (section.id == "characters").then(|| e.party.clone()),
                         })
                     })
                     .collect();
@@ -1104,8 +1202,11 @@ impl Browser {
             edit_button,
             sheet_button,
             convert_button,
+            delete_button,
             generate_button,
             current_key,
+            party_filter,
+            party_choices,
         }
     }
 
@@ -1121,6 +1222,7 @@ impl Browser {
         for section in &sections {
             self.sidebar_list.append(&section_row(section));
         }
+        self.load_parties(&sections);
         *self.sections.borrow_mut() = sections;
         let selected = if key.is_some() { selected } else { 0 };
         if let Some(row) = self.sidebar_list.row_at_index(selected) {
@@ -1143,6 +1245,57 @@ impl Browser {
             self.detail.show(entry);
             self.inner.set_show_content(true);
         }
+    }
+
+    /// Fills the party filter with the characters' parties, keeping the
+    /// choice when its party is still there.
+    fn load_parties(&self, sections: &[Section]) {
+        let mut parties: Vec<String> = Vec::new();
+        let mut unassigned = false;
+        for entry in sections
+            .iter()
+            .filter(|s| s.id == "characters")
+            .flat_map(|s| &s.entries)
+        {
+            if entry.party.is_empty() {
+                unassigned = true;
+            } else if !parties.iter().any(|p| p.eq_ignore_ascii_case(&entry.party)) {
+                parties.push(entry.party.clone());
+            }
+        }
+        parties.sort_by_cached_key(|p| p.to_lowercase());
+        let mut choices = vec![None];
+        if !parties.is_empty() {
+            choices.extend(parties.into_iter().map(Some));
+            if unassigned {
+                choices.push(Some(String::new()));
+            }
+        }
+        let chosen = self
+            .party_choices
+            .borrow()
+            .get(self.party_filter.selected() as usize)
+            .cloned()
+            .flatten();
+        let position = chosen
+            .and_then(|c| {
+                choices
+                    .iter()
+                    .position(|p| p.as_ref().is_some_and(|p| p.eq_ignore_ascii_case(&c)))
+            })
+            .unwrap_or(0);
+        let names: Vec<&str> = choices
+            .iter()
+            .map(|c| match c.as_deref() {
+                None => "All Parties",
+                Some("") => "No Party",
+                Some(party) => party,
+            })
+            .collect();
+        let model = gtk::StringList::new(&names);
+        *self.party_choices.borrow_mut() = choices;
+        self.party_filter.set_model(Some(&model));
+        self.party_filter.set_selected(position as u32);
     }
 
     /// Selects the section with this id.
@@ -1180,6 +1333,8 @@ struct Row {
     subtitle: String,
     /// Standard or custom, for the records of the user databases.
     origin: Option<cr_store::userdb::Origin>,
+    /// The party of a character, empty for none.
+    party: Option<String>,
 }
 
 fn row_factory() -> gtk::SignalListItemFactory {

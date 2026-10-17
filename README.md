@@ -139,6 +139,12 @@ Early work (phase 0 of the plan): the file formats are being mapped.
       are not offered or imported; an edited package keeps those it has.
       There is no `.mon` file: the originals' monster dialogs only point
       to the DM Toolkit, so monsters travel in `.xpx`/`.xpt` packages
+- [x] Parties and deleting characters (Manage Parties… in the main menu,
+      the character page's Delete, `cr party` and `cr delete`): put
+      characters in a new or existing party, take them out, delete a
+      character or every member of a party, with Undo in the app; the
+      list filters by party. Each step leaves `Chars/` as the original
+      leaves it (checked in both programs; 2.0 has no parties)
 
 ## Layout
 

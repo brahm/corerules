@@ -9,6 +9,7 @@ use cr_store::Installation;
 use cr_store::edit::CharacterDetails;
 use cr_store::lists::{CharacterLists, Item};
 
+mod party;
 mod transfer;
 mod userdb;
 
@@ -112,6 +113,18 @@ const USAGE: &str = "usage:
                             the one of that name; --remove takes an item
                             out (as cr import --list names them); with
                             neither, lists the package
+  cr party [INSTALL_DIR]    list the parties and their members (Expansion)
+  cr party INSTALL_DIR PARTY CHARACTER...
+  cr party INSTALL_DIR --none CHARACTER...
+  cr party INSTALL_DIR --delete PARTY
+                            put characters in a party (new or existing),
+                            take them out of theirs, or delete every member
+                            of a party, as Party Management... does; each
+                            change saves the character under a new file
+                            name; CHARACTER is a name, the start of
+                            one, or a file in Chars/
+  cr delete INSTALL_DIR CHARACTER...
+                            delete characters from Chars/ (no undo)
 
 Without INSTALL_DIR, the data package in ~/.local/share/corerules/data
 is used, else the installation in the Wine prefix.";
@@ -184,6 +197,8 @@ fn main() -> ExitCode {
         "export" => transfer::cmd_export(&install, rest),
         "import" => transfer::cmd_import(&install, rest),
         "package" => transfer::cmd_package(&install, rest),
+        "party" => party::cmd_party(&install, rest),
+        "delete" => party::cmd_delete(&install, rest),
         _ => {
             eprintln!("{USAGE}");
             Ok(())

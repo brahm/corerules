@@ -960,7 +960,7 @@ impl Installation {
                 file = next_file_name(&file);
             }
             let entry = if expansion {
-                expansion_entry(character, &file, &kits)
+                expansion_entry(character, &file, &kits, None)
             } else {
                 let levels = rules
                     .as_ref()
@@ -1005,10 +1005,15 @@ fn next_file_name(file: &str) -> String {
     format!("{n:08}.dat")
 }
 
-/// The Expansion's entry for an imported character (0x5a08fc with the
-/// import flag set): no class and level lines; the kit line only for a
-/// kit the parts know.
-fn expansion_entry(c: &Character, file: &str, kits: &[String]) -> CharacterEntry {
+/// The Expansion's list entry for a character (0x5a08fc). An imported one
+/// (the import flag set, `levels` `None`) has no class and level lines;
+/// the kit line is only there for a kit the parts know.
+pub(crate) fn expansion_entry(
+    c: &Character,
+    file: &str,
+    kits: &[String],
+    levels: Option<&str>,
+) -> CharacterEntry {
     let d = &c.data;
     let party = d
         .unknown_0x1e68
@@ -1026,6 +1031,10 @@ fn expansion_entry(c: &Character, file: &str, kits: &[String]) -> CharacterEntry
         format!("Party: {party}"),
         format!("Race: {}", d.race),
     ];
+    if let Some(levels) = levels {
+        details.push(format!("{CLASS_LINE}{}", d.class_title));
+        details.push(format!("{LEVEL_LINE}{levels}"));
+    }
     if let Some(kit) = kits.iter().find(|k| k.eq_ignore_ascii_case(&d.kit)) {
         details.push(format!("Kit: {kit}"));
     }

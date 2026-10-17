@@ -16,6 +16,7 @@ mod exe;
 pub mod export;
 pub mod lists;
 pub mod npc;
+pub mod party;
 pub mod settings;
 pub mod sheet;
 pub mod tables;
