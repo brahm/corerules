@@ -213,6 +213,20 @@ pub fn edit<H: Host + 'static>(host: &Shared<H>, key: &str) {
     }
 }
 
+/// New, Copy, Edit or Delete on a trap from the Encounter dialog's Traps
+/// (IDD 295 has these buttons too); `action` is "new", "copy", "edit" or
+/// "delete".
+pub fn trap_action<H: Host + 'static>(host: &Shared<H>, action: &str, origin: Origin, name: &str) {
+    let action = match action {
+        "new" => Action::New,
+        "copy" => Action::Copy,
+        "edit" => Action::Edit,
+        "delete" => Action::Delete,
+        _ => return,
+    };
+    run(host, "traps", origin, name, action);
+}
+
 fn run<H: Host + 'static>(
     host: &Shared<H>,
     section: &str,

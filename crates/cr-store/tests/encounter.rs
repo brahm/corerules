@@ -23,7 +23,7 @@ use cr_formats::{ArchiveReader, Field, Object};
 use cr_store::Installation;
 use cr_store::encounter::{
     Dice, Encounter, EncounterRules, Flavor, FrequencyTable, FrequencyTables, LairMode, NameError,
-    NpcPackage, Package, Rand, TableFilter, check_name, dice_text, encounters_to_bytes,
+    NpcPackage, Package, Prices, Rand, TableFilter, check_name, dice_text, encounters_to_bytes,
     experience_for_hit_dice, hit_point_text, parse_encounters, roll_2_to_20, roll_and_pick,
     store_encounter,
 };
@@ -916,4 +916,63 @@ fn golden_npc_packages() {
         .collect();
     assert_eq!(xp, [15, 65, 175]);
     assert_eq!(rules.totals(&e).monster_xp, 1410);
+}
+
+/// The Gold Value of "T3 Bandits" as the dialog showed it
+/// (`screens/enc_dialog_bandit_npcs.png`): 52,870. Its NPCs do not use
+/// Skills & Powers, so the Player's Handbook prices count; with the Skills
+/// & Powers ones it would be 52,871 (sling bullets cost 5 cp, not 1).
+#[test]
+fn golden_bandits_gold_value() {
+    let (Some(dir), Some(install)) = (golden(), std::env::var_os("CORERULES_DIR")) else {
+        return;
+    };
+    let install = Installation::open(Path::new(&install)).unwrap();
+    let rules = install.encounter_rules().unwrap();
+    if rules.flavor() != Flavor::Expansion {
+        return;
+    }
+    let e = saved(
+        &dir.join("exp/EncountU_03_t3_orc_bandits.dat"),
+        "T3 Bandits",
+    );
+    assert_eq!(e.prices(), Prices::Handbook);
+    assert_eq!(rules.totals(&e).gold_value, 52870);
+    assert_eq!(
+        rules.totals_with(&e, Prices::SkillsAndPowers).gold_value,
+        52871
+    );
+}
+
+/// The Traps dialog's Add and Remove (0x53bb2e, 0x53bded).
+#[test]
+fn traps_add_and_remove() {
+    use cr_formats::traps::Trap;
+    use cr_store::encounter::{TrapError, add_trap, remove_trap};
+    use cr_store::userdb::UserDb;
+    let trap = |name: &str, damage: &str| Trap {
+        name: name.into(),
+        damage: damage.into(),
+        unknown_0x14: String::new(),
+        unknown_0x10: String::new(),
+        unknown_0xc: String::new(),
+        unknown_0x8: String::new(),
+        unknown_0x4: String::new(),
+    };
+    let db = UserDb::new(
+        Flavor::Expansion,
+        vec![trap("Pit", "1d6"), trap("Dart", "1d3")],
+        vec![trap("Pit", "2d6")],
+    );
+    let mut traps = Vec::new();
+    // The user's first.
+    add_trap(&mut traps, &db, "Pit").unwrap();
+    assert_eq!(traps[0].damage, "2d6");
+    assert_eq!(add_trap(&mut traps, &db, "Pit"), Err(TrapError::AlreadyIn));
+    assert_eq!(add_trap(&mut traps, &db, "pit"), Err(TrapError::NotFound));
+    add_trap(&mut traps, &db, "Dart").unwrap();
+    assert_eq!(traps.len(), 2);
+    assert_eq!(remove_trap(&mut traps, "dart"), Err(TrapError::NotIn));
+    remove_trap(&mut traps, "Pit").unwrap();
+    assert_eq!(traps[0].name, "Dart");
 }

@@ -41,7 +41,7 @@ use cr_formats::monster::Monster;
 use cr_formats::parts::PartId;
 use cr_formats::traps::Trap;
 
-pub use crate::treasure::{Bundle, Flavor, Item, Rand};
+pub use crate::treasure::{Bundle, Flavor, Item, Prices, Rand};
 pub use generate::{Generated, PendingNpc};
 pub use tables::{
     CATEGORY_ROLLS, FREQUENCY_VERSION_20, FREQUENCY_VERSION_EXPANSION, FrequencyTable,
@@ -311,6 +311,48 @@ pub struct Totals {
     pub monster_xp: i32,
     /// Experience of the magic items in the same bundles.
     pub treasure_xp: i32,
+}
+
+/// Why the Traps dialog (IDD 295) refused to add or remove a trap, with
+/// the original's messages.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+pub enum TrapError {
+    #[error("Only one copy of any trap my be added to an encounter")]
+    AlreadyIn,
+    #[error("Unable to add Trap.  The Trap was not found.")]
+    NotFound,
+    #[error("Unable to remove Trap.")]
+    NotIn,
+}
+
+/// "Add Trap to this encounter" (0x53bb2e): a copy of the trap named
+/// `name` (exactly), the user's first, at the end of `traps`, an
+/// encounter's or a template's. A name already there (exactly) is refused.
+pub fn add_trap(
+    traps: &mut Vec<Trap>,
+    db: &crate::userdb::UserDb<crate::userdb::traps::Traps>,
+    name: &str,
+) -> std::result::Result<(), TrapError> {
+    if traps.iter().any(|t| t.name == name) {
+        return Err(TrapError::AlreadyIn);
+    }
+    let trap = db
+        .find(0, name)
+        .and_then(|(origin, i)| db.get(origin, i))
+        .ok_or(TrapError::NotFound)?;
+    traps.push(trap.clone());
+    Ok(())
+}
+
+/// "Remove Trap from this encounter" (0x53bded): the first trap named
+/// `name` (exactly).
+pub fn remove_trap(traps: &mut Vec<Trap>, name: &str) -> std::result::Result<(), TrapError> {
+    let i = traps
+        .iter()
+        .position(|t| t.name == name)
+        .ok_or(TrapError::NotIn)?;
+    traps.remove(i);
+    Ok(())
 }
 
 /// Why an encounter could not be saved, with the original's messages.
@@ -927,6 +969,17 @@ impl Encounter {
         Ok(())
     }
 
+    /// The prices the encounter dialog totals with: opening the encounter
+    /// copies its NPCs (0x41adb5), so the last NPC package decides (see
+    /// [`Prices`]); with no NPC, the Player's Handbook ones, which is what
+    /// the program has after any character was made or read without Skills
+    /// & Powers.
+    pub fn prices(&self) -> Prices {
+        self.npcs
+            .last()
+            .map_or(Prices::Handbook, |p| Prices::after(&p.character))
+    }
+
     /// The treasure types the Treasure… button opens the roller with
     /// (0x63de14): the lair treasure plus each monster's letters times its
     /// number.
@@ -1099,23 +1152,42 @@ impl EncounterRules {
 
     /// Encounter Totals (0x647983).
     pub fn totals(&self, encounter: &Encounter) -> Totals {
+        self.totals_with(encounter, encounter.prices())
+    }
+
+    /// [`totals`](Self::totals) with the prices of `prices`. One visitor
+    /// (vtable 0x79e8e0) walks the treasure, then the items, then each
+    /// monster's inventory and each NPC's nine bundles (0x647983), reset
+    /// before each; the gold of each is its copper floored to gold, times
+    /// the package's count.
+    pub fn totals_with(&self, encounter: &Encounter, prices: Prices) -> Totals {
         let mut t = Totals::default();
-        let mut add = |bundle: &Bundle, times: i32| {
-            let s = self.treasure.summary(bundle);
+        let mut add = |bundles: &[Bundle], times: i32| {
+            let mut s = crate::treasure::Summary::default();
+            for b in bundles {
+                self.treasure.add_to_summary(b, prices, &mut s);
+            }
             t.gold_value = t
                 .gold_value
                 .wrapping_add((s.value_cp / 100).wrapping_mul(times));
             t.treasure_xp = t.treasure_xp.wrapping_add(s.xp.wrapping_mul(times));
         };
-        add(&encounter.treasure, 1);
-        add(&encounter.items, 1);
+        add(std::slice::from_ref(&encounter.treasure), 1);
+        add(std::slice::from_ref(&encounter.items), 1);
         for p in &encounter.monsters {
             if let Ok(b) = Bundle::from_inventory(&p.monster.inventory) {
-                add(&b, p.count);
+                add(&[b], p.count);
             }
         }
         for p in &encounter.npcs {
-            add(&npc_inventory(&p.character), p.count);
+            let bundles: Vec<Bundle> = p
+                .character
+                .data
+                .inventory
+                .iter()
+                .filter_map(|b| Bundle::from_inventory(b).ok())
+                .collect();
+            add(&bundles, p.count);
         }
         for p in &encounter.monsters {
             t.monster_xp = t

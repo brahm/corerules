@@ -8,10 +8,12 @@ use std::rc::Rc;
 use adw::prelude::*;
 use cr_store::encounter::{
     Encounter, EncounterRules, FrequencyTable, LairMode, NameError, Package, PendingNpc, Source,
-    check_name, hit_point_text, roll_2_to_20, roll_and_pick,
+    add_trap, check_name, hit_point_text, remove_trap, roll_2_to_20, roll_and_pick,
 };
 use cr_store::sheet::{self as crsheet, Block, Cell, ListItem, Sheet, SheetBox, Table};
 use cr_store::treasure::{Bundle, Rand};
+use cr_store::userdb::traps::Traps;
+use cr_store::userdb::{Filter, Origin, UserDb};
 use cr_store::{Installation, Result};
 use gtk::{gio, glib};
 
@@ -27,6 +29,8 @@ pub trait Host {
     /// How the treasure roller saves and deletes bundles.
     fn treasure_store(&self) -> treasure::Store;
     fn parent(&self) -> gtk::Widget;
+    /// New ("new"), Copy, Edit or Delete on a trap of the user database.
+    fn trap_record(&self, action: &str, origin: Origin, name: &str);
 }
 
 type Shared<H> = Rc<H>;
@@ -214,6 +218,8 @@ struct State<H: Host> {
     totals: Vec<gtk::Label>,
     dialog: adw::Dialog,
     delete: std::cell::OnceCell<gio::SimpleAction>,
+    /// Editing the items.
+    items: std::cell::OnceCell<crate::bundle::Edit>,
 }
 
 /// The Encounter dialog.
@@ -325,7 +331,27 @@ pub fn editor<H: Host + 'static>(
         totals,
         dialog: dialog.clone(),
         delete: std::cell::OnceCell::new(),
+        items: std::cell::OnceCell::new(),
     });
+    // Items… (0x63e1a2) edits the items in place with the Treasure Bundle
+    // Editor, then the totals are counted again.
+    let _ = state.items.set(Rc::new(crate::bundle::Editing {
+        rules: Rc::new(state.rules.treasure_rules().clone()),
+        parent: dialog.clone().upcast(),
+        get: Box::new({
+            let state = Rc::downgrade(&state);
+            move || Some(state.upgrade()?.encounter.borrow().items.clone())
+        }),
+        set: Box::new({
+            let state = Rc::downgrade(&state);
+            move |bundle| {
+                if let Some(state) = state.upgrade() {
+                    state.encounter.borrow_mut().items = bundle;
+                    state.refresh();
+                }
+            }
+        }),
+    }));
     state.refresh();
 
     name.connect_changed({
@@ -391,6 +417,15 @@ impl<H: Host + 'static> State<H> {
     /// Rebuilds the groups that show the encounter's contents, keeping
     /// the description last.
     fn refresh(self: &Rc<Self>) {
+        // Keep the place in the page: rebuilding would move the focus to
+        // the first entry and scroll there.
+        let scroll = self
+            .page
+            .first_child()
+            .and_downcast::<gtk::ScrolledWindow>()
+            .map(|s| s.vadjustment());
+        let at = scroll.as_ref().map(|a| a.value());
+        self.dialog.set_focus(None::<&gtk::Widget>);
         for group in self.groups.borrow_mut().drain(..) {
             self.page.remove(&group);
         }
@@ -413,6 +448,9 @@ impl<H: Host + 'static> State<H> {
         }
         self.page.add(&self.notes);
         *self.groups.borrow_mut() = groups;
+        if let (Some(adjustment), Some(at)) = (scroll, at) {
+            glib::idle_add_local_once(move || adjustment.set_value(at));
+        }
     }
 
     fn update_totals(&self) {
@@ -600,7 +638,10 @@ impl<H: Host + 'static> State<H> {
             move |_| state.open_roller()
         });
         let encounter = self.encounter.borrow();
-        let summary = self.rules.treasure_rules().summary(&encounter.treasure);
+        let summary = self
+            .rules
+            .treasure_rules()
+            .summary_with(&encounter.treasure, encounter.prices());
         let group = adw::PreferencesGroup::builder()
             .title("Treasure")
             .header_suffix(&roll)
@@ -620,30 +661,201 @@ impl<H: Host + 'static> State<H> {
     }
 
     fn items_group(&self) -> Option<adw::PreferencesGroup> {
+        let edit = self.items.get()?;
         let encounter = self.encounter.borrow();
+        let group = adw::PreferencesGroup::builder()
+            .title("Items")
+            .header_suffix(&crate::bundle::add_button(edit))
+            .build();
         if encounter.items.is_empty() {
-            return None;
+            group.set_description(Some("Items found with the encounter"));
         }
-        let group = adw::PreferencesGroup::builder().title("Items").build();
-        bundle_rows(&group, &encounter.items);
+        for row in crate::bundle::rows(edit, &encounter.items) {
+            group.add(&row);
+        }
         Some(group)
     }
 
-    fn traps_group(&self) -> Option<adw::PreferencesGroup> {
+    /// Traps (IDD 295): the encounter's own copies of traps from
+    /// `Database` and `UserDbas/TrapsU.dat`.
+    fn traps_group(self: &Rc<Self>) -> Option<adw::PreferencesGroup> {
+        let add = gtk::Button::builder()
+            .label("_Add Trap…")
+            .use_underline(true)
+            .css_classes(["flat"])
+            .build();
+        add.connect_clicked({
+            let state = self.clone();
+            move |_| state.choose_trap()
+        });
         let encounter = self.encounter.borrow();
+        let group = adw::PreferencesGroup::builder()
+            .title("Traps")
+            .header_suffix(&add)
+            .build();
         if encounter.traps.is_empty() {
-            return None;
+            group.set_description(Some("No traps"));
         }
-        let group = adw::PreferencesGroup::builder().title("Traps").build();
         for trap in &encounter.traps {
-            group.add(
-                &adw::ActionRow::builder()
-                    .title(glib::markup_escape_text(&trap.name).as_str())
-                    .subtitle(glib::markup_escape_text(&trap.damage).as_str())
-                    .build(),
-            );
+            let row = adw::ActionRow::builder()
+                .title(glib::markup_escape_text(&trap.name).as_str())
+                .subtitle(glib::markup_escape_text(&trap.damage).as_str())
+                .build();
+            let remove = gtk::Button::builder()
+                .icon_name("list-remove-symbolic")
+                .tooltip_text("Remove Trap")
+                .valign(gtk::Align::Center)
+                .css_classes(["flat"])
+                .build();
+            remove.connect_clicked({
+                let (state, name) = (self.clone(), trap.name.clone());
+                move |_| {
+                    let removed = remove_trap(&mut state.encounter.borrow_mut().traps, &name);
+                    match removed {
+                        Ok(()) => state.refresh(),
+                        Err(e) => state.host.toast(&e.to_string()),
+                    }
+                }
+            });
+            row.add_suffix(&remove);
+            group.add(&row);
         }
         Some(group)
+    }
+
+    /// The Traps dialog's lists: every trap, filtered by origin, to add to
+    /// the encounter; New, Edit, Copy and Delete change the user's traps.
+    fn choose_trap(self: &Rc<Self>) {
+        let Some(db) = errors(&*self.host, self.host.with_install(UserDb::<Traps>::load)) else {
+            return;
+        };
+        let db = Rc::new(db);
+        let filter = gtk::DropDown::builder()
+            .model(&gtk::StringList::new(&Filter::NAMES))
+            .tooltip_text("Show Standard or Custom Traps")
+            .build();
+        let new = gtk::Button::builder()
+            .icon_name("list-add-symbolic")
+            .tooltip_text("New Trap")
+            .build();
+        let list = gtk::ListBox::builder()
+            .css_classes(["boxed-list"])
+            .selection_mode(gtk::SelectionMode::None)
+            .build();
+        let header = adw::HeaderBar::new();
+        header.pack_start(&filter);
+        header.pack_end(&new);
+        let content = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .margin_top(12)
+            .margin_bottom(24)
+            .margin_start(12)
+            .margin_end(12)
+            .build();
+        content.append(&list);
+        let view = adw::ToolbarView::new();
+        view.add_top_bar(&header);
+        view.set_content(Some(
+            &gtk::ScrolledWindow::builder()
+                .hscrollbar_policy(gtk::PolicyType::Never)
+                .vexpand(true)
+                .child(&adw::Clamp::builder().child(&content).build())
+                .build(),
+        ));
+        let dialog = adw::Dialog::builder()
+            .title("Add Trap")
+            .content_width(480)
+            .content_height(600)
+            .width_request(360)
+            .height_request(294)
+            .child(&view)
+            .build();
+        let record = {
+            let (state, dialog) = (self.clone(), dialog.clone());
+            move |action: &'static str, origin: Origin, name: String| {
+                let (state, dialog) = (state.clone(), dialog.clone());
+                move || {
+                    dialog.close();
+                    state.host.trap_record(action, origin, &name);
+                }
+            }
+        };
+        new.connect_clicked({
+            let record = record.clone();
+            move |_| record("new", Origin::Custom, String::new())()
+        });
+        let fill = {
+            let (state, list, dialog, db) =
+                (self.clone(), list.clone(), dialog.clone(), db.clone());
+            move |filter: Filter| {
+                while let Some(child) = list.first_child() {
+                    list.remove(&child);
+                }
+                for entry in db.list(filter) {
+                    let trap = entry.record;
+                    let origin = entry.origin;
+                    let row = adw::ActionRow::builder()
+                        .title(glib::markup_escape_text(&trap.name).as_str())
+                        .subtitle(glib::markup_escape_text(&trap.damage).as_str())
+                        .activatable(true)
+                        .build();
+                    if origin == Origin::Custom {
+                        row.add_prefix(&gtk::Image::from_icon_name("document-edit-symbolic"));
+                    }
+                    let menu = gio::Menu::new();
+                    let actions = gio::SimpleActionGroup::new();
+                    let mut entries = vec![("copy", "_Copy…")];
+                    if origin == Origin::Custom {
+                        entries.insert(0, ("edit", "_Edit…"));
+                        entries.push(("delete", "_Delete"));
+                    }
+                    for (action, label) in entries {
+                        let a = gio::SimpleAction::new(action, None);
+                        let run = record(action, origin, trap.name.clone());
+                        a.connect_activate(move |_, _| run());
+                        actions.add_action(&a);
+                        menu.append(Some(label), Some(&format!("trap.{action}")));
+                    }
+                    let button = gtk::MenuButton::builder()
+                        .icon_name("view-more-symbolic")
+                        .valign(gtk::Align::Center)
+                        .menu_model(&menu)
+                        .css_classes(["flat"])
+                        .build();
+                    button.update_property(&[gtk::accessible::Property::Label("Trap Menu")]);
+                    button.insert_action_group("trap", Some(&actions));
+                    row.add_suffix(&button);
+                    row.connect_activated({
+                        let (state, dialog, db, name) =
+                            (state.clone(), dialog.clone(), db.clone(), trap.name.clone());
+                        move |_| {
+                            let added =
+                                add_trap(&mut state.encounter.borrow_mut().traps, &db, &name);
+                            match added {
+                                Ok(()) => {
+                                    dialog.close();
+                                    state.refresh();
+                                }
+                                Err(e) => {
+                                    let alert = adw::AlertDialog::builder()
+                                        .heading("Unable to Add Trap")
+                                        .body(e.to_string())
+                                        .default_response("ok")
+                                        .close_response("ok")
+                                        .build();
+                                    alert.add_response("ok", "_OK");
+                                    alert.present(Some(&dialog));
+                                }
+                            }
+                        }
+                    });
+                    list.append(&row);
+                }
+            }
+        };
+        fill(Filter::All);
+        filter.connect_selected_notify(move |d| fill(Filter::of(d.selected())));
+        dialog.present(Some(&self.dialog));
     }
 
     /// Treasure…: the roller with the encounter's treasure types; Use
