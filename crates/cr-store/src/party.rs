@@ -67,7 +67,7 @@ impl Installation {
                 parties.push(party.to_owned());
             }
         }
-        parties.sort_by_cached_key(|p| p.to_lowercase());
+        parties.sort_by_cached_key(|p| crate::collate::sort_key(p));
         Ok(parties)
     }
 

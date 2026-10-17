@@ -1409,7 +1409,7 @@ fn allowed_classes<H: Host + 'static>(host: &Shared<H>, race: &str) {
             }
             let mut shown: Vec<(usize, Allowed)> =
                 entries.borrow().iter().cloned().enumerate().collect();
-            shown.sort_by_key(|(_, a)| a.name.to_lowercase());
+            shown.sort_by_cached_key(|(_, a)| cr_store::collate::sort_key(&a.name));
             for (i, a) in shown {
                 let row = adw::ActionRow::builder()
                     .title(glib::markup_escape_text(&a.name).as_str())
@@ -1572,7 +1572,7 @@ fn allowed_classes<H: Host + 'static>(host: &Shared<H>, race: &str) {
                 .filter(|a| !a.standard)
                 .cloned()
                 .collect();
-            user.sort_by_key(|a| a.name.to_lowercase());
+            user.sort_by_cached_key(|a| cr_store::collate::sort_key(&a.name));
             let result = host.with_install(|install| {
                 let mut db = AllowedDb::load(install)?;
                 db.set_user(&race, &user);

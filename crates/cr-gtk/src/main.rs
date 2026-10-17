@@ -1315,7 +1315,7 @@ impl Browser {
                 parties.push(entry.party.clone());
             }
         }
-        parties.sort_by_cached_key(|p| p.to_lowercase());
+        parties.sort_by_cached_key(|p| cr_store::collate::sort_key(p));
         let mut choices = vec![None];
         if !parties.is_empty() {
             choices.extend(parties.into_iter().map(Some));
@@ -2180,7 +2180,7 @@ impl Choices {
         }
         // Coins are edited as money.
         items.retain(|n| !COINS.iter().any(|c| c.0 == n));
-        items.sort_by_key(|n| n.to_lowercase());
+        items.sort_by_cached_key(|n| cr_store::collate::sort_key(n));
         items.dedup();
         Ok(Self {
             weapons: Rc::new(install.weapon_proficiency_names()?),

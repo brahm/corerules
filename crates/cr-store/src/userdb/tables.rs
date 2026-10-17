@@ -276,7 +276,7 @@ pub fn source_items(
 ) -> Result<(Vec<String>, bool)> {
     if source == "Tables" {
         let mut names: Vec<String> = db.tables.iter().map(|t| t.name.clone()).collect();
-        names.sort_by_key(|n| n.to_lowercase());
+        names.sort_by_cached_key(|n| crate::collate::sort_key(n));
         names.dedup();
         return Ok((names, true));
     }
@@ -299,7 +299,7 @@ pub fn source_items(
         })
         .map(|(n, _)| n.clone())
         .collect();
-    names.sort_by_key(|n| n.to_lowercase());
+    names.sort_by_cached_key(|n| crate::collate::sort_key(n));
     names.dedup();
     Ok((names, false))
 }

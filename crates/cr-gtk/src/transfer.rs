@@ -496,7 +496,18 @@ pub fn new_package<H: Host + 'static>(host: &Rc<H>) {
 /// Edit Package…: a package the user picks, in the editor.
 pub fn edit_package<H: Host + 'static>(host: &Rc<H>) {
     open_package(host, "Edit Package", |host, path, file| {
-        editor(host, file, Some(path));
+        // 2.0 content is only imported, converted to the Expansion's
+        // layout on the way in.
+        if file.is_expansion() {
+            editor(host, file, Some(path));
+        } else {
+            alert(
+                &**host,
+                "Core Rules 2.0 Package",
+                "Packages made by Core Rules 2.0 are only imported. Use Import… to bring \
+                 their content into this installation, then make a new package from it.",
+            );
+        }
     });
 }
 

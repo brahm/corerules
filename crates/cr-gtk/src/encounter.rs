@@ -118,7 +118,7 @@ pub fn choose_template<H: Host + 'static>(host: &Shared<H>) {
         .iter()
         .map(|t| (t.name.clone(), t.monster_type.clone()))
         .collect();
-    names.sort_by_key(|(n, _)| n.to_lowercase());
+    names.sort_by_cached_key(|(n, _)| cr_store::collate::sort_key(n));
     let search = gtk::SearchEntry::builder()
         .placeholder_text("Search Templates")
         .hexpand(true)
@@ -895,7 +895,7 @@ impl<H: Host + 'static> State<H> {
             .iter()
             .map(|m| m.name.clone())
             .collect();
-        names.sort_by_key(|n| n.to_lowercase());
+        names.sort_by_cached_key(|n| cr_store::collate::sort_key(n));
         names.dedup();
         let state = self.clone();
         pick_from(
@@ -1369,7 +1369,7 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
 
     // Rolls.
     let mut names: Vec<String> = rules.templates().iter().map(|t| t.name.clone()).collect();
-    names.sort_by_key(|n| n.to_lowercase());
+    names.sort_by_cached_key(|n| cr_store::collate::sort_key(n));
     names.dedup();
     let mut choices = vec!["(None)".to_owned()];
     choices.extend(names);

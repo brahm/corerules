@@ -945,6 +945,25 @@ fn every_dialog_but_the_treasure_one_has_a_place() {
     assert_eq!(super::data::frame(dmg_entry(110)), Some(-12));
 }
 
+/// The first dialog after start-up (`first1.log`, `first3.log`: DMG 26
+/// first) compares with the 44 the start-up left at its place; the other
+/// places hold pointers.
+#[test]
+fn the_first_dialog_starts_from_what_start_up_left() {
+    assert_eq!(Leftovers::default().open(dmg_entry(26)).previous, Some(44));
+    for table in [43, 54] {
+        let previous = Leftovers::default().open(dmg_entry(table)).previous;
+        assert!(previous.is_some_and(|p| p > 1000), "{table}: {previous:?}");
+    }
+    // A 44 is never rolled first on a d100 at that place, nor 43 or 45.
+    let session = Leftovers::default().open(dmg_entry(26));
+    let mut rand = Rand::seeded(0);
+    for _ in 0..200 {
+        let r = session.clone().roll(&mut rand, d(1, 100));
+        assert!(!(43..=45).contains(&r), "{r}");
+    }
+}
+
 /// A session traced under Wine (DMG 86, 86, 86, 86, 26, 86, 43, 86, 54,
 /// 26, each in a new Roll Results dialog): the rand() state before the
 /// first roll, and each dialog's result and number of draws.

@@ -71,7 +71,7 @@ pub fn all_names(install: &Installation) -> Result<Vec<Vec<String>>> {
         .into_iter()
         .map(|names| {
             let mut names: Vec<String> = names.into_iter().map(|(n, _)| n).collect();
-            names.sort_by_key(|n| n.to_lowercase());
+            names.sort_by_cached_key(|n| crate::collate::sort_key(n));
             names.dedup();
             names
         })
@@ -129,7 +129,7 @@ fn every_part(install: &Installation) -> Result<Vec<PartRec>> {
 
 fn sorted(mut names: Vec<String>) -> Vec<String> {
     names.retain(|n| !n.is_empty());
-    names.sort_by_key(|n| n.to_lowercase());
+    names.sort_by_cached_key(|n| crate::collate::sort_key(n));
     names.dedup();
     names
 }

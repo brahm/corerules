@@ -60,8 +60,9 @@
 //!
 //! Where this differs:
 //!
-//! * What the stack holds before the first dialog at a place is unknown
-//!   (under Wine it is what Wine left), so that first roll is free.
+//! * Before the first dialog the stack holds what the program's start-up
+//!   left there, 44 at a plain dialog's place under Wine
+//!   ([`Leftovers::default`]); on Windows it may differ.
 //! * Column layout: the original pads to fixed character columns in a
 //!   proportional font, so its columns do not line up; here they do.
 
@@ -573,12 +574,31 @@ struct Place {
 /// holds. That is the last result of an earlier dialog whose object sat
 /// at the same place, until another dialog writes there, even after the
 /// Table Rolls list is closed and opened again (traced under Wine). The
-/// words from −12 to +8 are kept here; what the stack held before the
-/// first dialog is unknown (under Wine, values Wine itself left), so the
-/// first roll at each place is free.
-#[derive(Debug, Clone, Default)]
+/// words from −12 to +8 are kept here. Before the first dialog they hold
+/// what the Expansion's start-up left there under Wine (the
+/// DM Toolkit → Table Rolls sessions in `first1`..`first3`, `carry`):
+/// 44 where a plain dialog's object sits (offset 0), and pointers at the
+/// others, which no roll comes within 1 of.
+#[derive(Debug, Clone)]
 pub struct Leftovers {
     words: [Option<i32>; 6],
+}
+
+/// The words −12..=+8 before the first dialog: 0x7b68f2fb (the previous
+/// result of an object at −12), 0x00f30670 (at −8), 44 (at 0).
+const START: [Option<i32>; 6] = [
+    None,
+    None,
+    Some(0x7b68_f2fb),
+    Some(0x00f3_0670),
+    None,
+    Some(44),
+];
+
+impl Default for Leftovers {
+    fn default() -> Self {
+        Self { words: START }
+    }
 }
 
 impl Leftovers {
@@ -597,7 +617,7 @@ impl Leftovers {
     /// with what its place holds.
     pub fn open(&mut self, entry: &ListEntry) -> Session {
         let Some(offset) = data::frame(entry) else {
-            self.words = Default::default();
+            self.words = [None; 6];
             return Session::default();
         };
         let previous = self.word(offset + 8).and_then(|w| *w);

@@ -827,9 +827,10 @@ impl Gen<'_> {
                     None => {
                         // 0x4d79c6 is called with the null part 0x465f6c
                         // returns and reads its category (+0x240): the
-                        // original faults there.
+                        // original faults there. The NPC goes on without
+                        // the item.
                         self.warn(format!(
-                            "Kit item {nm} is not in the database; the original stops with a fault here (0x4d79c6 reads the missing part), so it was skipped."
+                            "The kit's item {nm} is not in the item database, so the NPC does not carry it."
                         ));
                     }
                 }

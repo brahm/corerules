@@ -12,10 +12,9 @@
 //! that runs out) or the data lacks a part, generation skips the step and
 //! says so in the result's `messages`.
 //!
-//! Core Rules 2.0 installations (Evermore) roll the name and abilities
-//! with their own code and the other stages with the Expansion's. The app
-//! and `cr` make NPCs in the Expansion only: 2.0 installations are opened
-//! read-only and their content is imported into the Expansion.
+//! NPCs are made in the Expansion only: a Core Rules 2.0 installation is
+//! opened read-only and its content is imported into the Expansion, so
+//! [`Installation::npc_rules`] refuses one.
 //!
 //! ```no_run
 //! # fn main() -> cr_store::Result<()> {
@@ -203,7 +202,7 @@ const GROUP_NAMES: [&str; 5] = ["Warrior", "Rogue", "Priest", "Wizard", "Psionic
 impl GroupOptions {
     /// Sorts lines as the dialog's list holds them (by [`Self::label`]).
     pub fn sort(lines: &mut [GroupOptions]) {
-        lines.sort_by_cached_key(|l| list_box_key(&l.label()));
+        lines.sort_by_cached_key(|l| crate::collate::sort_key(&l.label()));
     }
 
     /// The line as the dialog's list shows it (0x4e5a37); the list is
@@ -238,29 +237,6 @@ impl GroupOptions {
     }
 }
 
-/// A sort key approximating the list box's comparison
-/// (`CompareString` with `NORM_IGNORECASE`): case is ignored, hyphens and
-/// apostrophes count only to break ties, and other symbols sort before
-/// digits, digits before letters.
-fn list_box_key(s: &str) -> (Vec<(u8, char)>, String) {
-    let primary = s
-        .chars()
-        .filter(|&c| c != '-' && c != '\'')
-        .map(|c| {
-            let l = c.to_lowercase().next().unwrap_or(c);
-            let class = if l.is_alphabetic() {
-                2
-            } else if l.is_ascii_digit() {
-                1
-            } else {
-                0
-            };
-            (class, l)
-        })
-        .collect();
-    (primary, s.to_owned())
-}
-
 /// Everything the NPC generator reads, and its session state.
 #[derive(Debug)]
 pub struct NpcRules {
@@ -270,12 +246,16 @@ pub struct NpcRules {
     session: Session,
 }
 
-const EV_FALLBACK: &str = "Core Rules 2.0 generator: the name and abilities follow its own code (0x53a700); the later stages are the Expansion's.";
-
 impl Installation {
-    /// Loads the NPC generator's data.
+    /// Loads the NPC generator's data. A Core Rules 2.0 installation has
+    /// none: new NPCs follow the Expansion.
     pub fn npc_rules(&self) -> Result<NpcRules> {
         let flavor = flavor_of(self);
+        if flavor == Flavor::Core20 {
+            return Err(Error::Invalid(
+                "Core Rules 2.0 installations are read-only: NPCs are made in the Expansion".into(),
+            ));
+        }
         Ok(NpcRules {
             data: Data::load(self, flavor)?,
             parts: self.part_table()?,
@@ -508,19 +488,14 @@ impl NpcRules {
         classes: &[(String, i32)],
         options: &NpcOptions,
     ) -> Result<Gen<'a>> {
-        let mut g = Gen::new(
+        Gen::new(
             &self.data,
             rand,
             &self.session,
             race,
             classes,
             options.players_option,
-        )?;
-
-        if self.flavor == Flavor::Core20 {
-            g.warn(EV_FALLBACK);
-        }
-        Ok(g)
+        )
     }
 
     /// The constructor, name and abilities (or the kept ones).
@@ -532,7 +507,6 @@ impl NpcRules {
                 g.exc = a.exceptional;
                 g.subs = a.subabilities;
             }
-            None if self.flavor == Flavor::Core20 => g.ev_roll_abilities(),
             None => g.roll_abilities(),
         }
     }
@@ -672,7 +646,7 @@ impl NpcRules {
     /// the dialog's sorted list holds them ([`GroupOptions::label`]).
     pub fn generate_groups(&self, rand: &mut Rand, lines: &[GroupOptions]) -> Result<Vec<Npc>> {
         let mut sorted: Vec<&GroupOptions> = lines.iter().collect();
-        sorted.sort_by_cached_key(|l| list_box_key(&l.label()));
+        sorted.sort_by_cached_key(|l| crate::collate::sort_key(&l.label()));
         let mut out = Vec::new();
         for line in sorted {
             out.extend(self.generate_group(rand, line)?);

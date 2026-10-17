@@ -8,6 +8,7 @@ pub mod advance;
 pub mod books;
 pub mod catalog;
 pub mod choices;
+pub mod collate;
 pub mod create;
 pub mod dual;
 pub mod edit;

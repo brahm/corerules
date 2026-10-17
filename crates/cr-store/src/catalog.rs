@@ -691,7 +691,7 @@ fn section(
 }
 
 fn sorted(mut entries: Vec<Entry>) -> Vec<Entry> {
-    entries.sort_by_key(|e| e.title.to_lowercase());
+    entries.sort_by_cached_key(|e| crate::collate::sort_key(&e.title));
     entries
 }
 

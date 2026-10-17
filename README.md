@@ -139,11 +139,11 @@ pt-BR translation yet.
 - [x] The Core Rules books in a reader, Table Rolls, and editors for every
       user database (`UserDbas/*U.dat`, also `cr userdb`)
 - [x] The DM Toolkit's packages (main menu, `cr export`, `cr import` and
-      `cr package`): `.xpx` for the Expansion and `.xpt` for 2.0, with
-      characters and any user record. Export and Import reproduce both
-      originals byte for byte, and a 2.0 package is converted on import
-      into the Expansion like the original does. New Package and Edit
-      Package create a package or change one, adding the installation's
+      `cr package`): `.xpx` packages with characters and any user record.
+      Export and Import reproduce the Expansion byte for byte, and a 2.0
+      `.xpt` package is converted on import into the Expansion like the
+      original does; `.xpt` packages are only imported. New Package and
+      Edit Package create an `.xpx` package or change one, adding the installation's
       records and characters or taking items out. Campaign Mapper drawings
       are not offered or imported; an edited package keeps those it has.
       There is no `.mon` file: the originals' monster dialogs only point
@@ -155,8 +155,13 @@ pt-BR translation yet.
       list filters by party. Each step leaves `Chars/` as the original
       leaves it (checked in both programs; 2.0 has no parties)
 - [x] Core Rules 2.0 as an import source: its installations open
-      read-only, and Import Core Rules 2.0… brings their characters and
-      records into the Expansion
+      read-only (no generators, editors or packages there), and Import
+      Core Rules 2.0… brings their characters and records into the
+      Expansion
+- [x] Lists sort as Windows sorts them (`CompareStringW`, checked under
+      Wine), the class editor's weapon categories are the program's, and
+      Table Rolls' first roll after start-up compares with what the
+      program's start-up leaves, as under Wine
 
 ## Layout
 

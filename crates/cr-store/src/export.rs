@@ -316,7 +316,7 @@ pub fn contents(file: &ExportFile) -> Vec<Content> {
             clash: Clash::None,
         });
     }
-    items.sort_by_cached_key(|c| c.name.to_lowercase());
+    items.sort_by_cached_key(|c| crate::collate::sort_key(&c.name));
     items
 }
 
@@ -685,7 +685,7 @@ impl Installation {
         for e in self.characters()?.entries {
             push(Category::Character, &e.name, Source::Character(e.file));
         }
-        out.sort_by_cached_key(|e| (e.category.label(), e.name.to_lowercase()));
+        out.sort_by_cached_key(|e| (e.category.label(), crate::collate::sort_key(&e.name)));
         Ok(out)
     }
 

@@ -146,7 +146,7 @@ impl Installation {
 }
 
 fn sorted(mut names: Vec<String>) -> Vec<String> {
-    names.sort_by_key(|n| n.to_lowercase());
+    names.sort_by_cached_key(|n| crate::collate::sort_key(n));
     names.dedup();
     names
 }

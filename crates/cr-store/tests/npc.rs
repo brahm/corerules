@@ -6,8 +6,8 @@
 //! and compared field by field with what the program saved; the stream
 //! must also end where the next traced call starts. An Expansion
 //! installation replays `t3/` and the Player's Option recordings of `po/`
-//! (when present), a Core Rules 2.0 one `ev/`. Without them (or with
-//! another golden folder) the tests pass without checking.
+//! (when present); a Core Rules 2.0 installation makes no NPCs. Without
+//! them (or with another golden folder) the tests pass without checking.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -25,6 +25,10 @@ fn golden() -> Option<(PathBuf, Installation)> {
         return None;
     }
     let install = Installation::open(PathBuf::from(std::env::var_os("CORERULES_DIR")?)).ok()?;
+    if install.is_core20() {
+        assert!(install.npc_rules().is_err());
+        return None;
+    }
     Some((dir, install))
 }
 
@@ -454,49 +458,6 @@ fn golden_saved_npc_round_trips() {
         .unwrap();
     let bytes = npc.character.to_bytes().unwrap();
     assert_eq!(Character::parse(&bytes).unwrap(), npc.character);
-}
-
-#[test]
-fn golden_evermore_prefix() {
-    let Some((dir, install)) = golden() else {
-        return;
-    };
-    let rules = rules(&install);
-    if rules.flavor() != Flavor::Core20 {
-        return;
-    }
-    let t = trace(&dir.join("ev/trace_session1.log"));
-    for (file, line, race, cl, check_name) in [
-        (
-            "01_dwarf_ft_2_3.dat",
-            5,
-            "Dwarf",
-            &[("Fighter", 2), ("Thief", 3)][..],
-            true,
-        ),
-        // Evermore's human name table differs from the Expansion's.
-        (
-            "02_human_mage5.dat",
-            105,
-            "Human",
-            &[("Mage", 5)][..],
-            false,
-        ),
-    ] {
-        let mut rand = at(&t, line);
-        let npc = rules
-            .generate(&mut rand, race, &classes(cl), &NpcOptions::default())
-            .unwrap();
-        let golden = saved(&dir, &format!("ev/{file}"));
-        if check_name {
-            assert_eq!(npc.character.data.name, golden.data.name, "{file}");
-        }
-        assert_eq!(npc.character.data.strength[0], golden.data.strength[0]);
-        let ours: Vec<u32> = npc.character.data.abilities.iter().map(|a| a[0]).collect();
-        let theirs: Vec<u32> = golden.data.abilities.iter().map(|a| a[0]).collect();
-        assert_eq!(ours, theirs, "{file}");
-        assert!(npc.messages.iter().any(|m| m.contains("Core Rules 2.0")));
-    }
 }
 
 /// A group line with explicit classes (by group: 0 warrior, 1 rogue, 2

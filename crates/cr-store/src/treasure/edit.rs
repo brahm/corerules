@@ -4,8 +4,6 @@
 //! Nodes are addressed by paths of item indices from the top; the empty
 //! path is the root ("Treasure"), which holds the bundle itself.
 
-use std::cmp::Ordering;
-
 use cr_formats::inventory::InventoryExtra;
 
 use super::{Bundle, Item, TreasureRules};
@@ -39,31 +37,8 @@ pub const ADD_CATEGORIES: [(&str, usize, bool, bool); 17] = [
 /// this limit?".
 pub const SCROLL_SPELL_LIMIT: usize = 6;
 
-/// The order of a sorted Windows list box or combo box (`lstrcmpi`, a
-/// word sort): case is ignored and hyphens and apostrophes only break
-/// ties. Other punctuation is compared by its code, which is the
-/// approximation here.
-pub fn list_cmp(a: &str, b: &str) -> Ordering {
-    let key = |s: &str| -> Vec<u8> {
-        super::ansi_bytes(s)
-            .into_iter()
-            .filter(|&c| c != b'-' && c != b'\'')
-            .map(|c| c.to_ascii_lowercase())
-            .collect()
-    };
-    key(a)
-        .cmp(&key(b))
-        .then_with(|| {
-            let k = |s: &str| -> Vec<u8> {
-                super::ansi_bytes(s)
-                    .into_iter()
-                    .map(|c| c.to_ascii_lowercase())
-                    .collect()
-            };
-            k(a).cmp(&k(b))
-        })
-        .then_with(|| super::ansi_bytes(a).cmp(&super::ansi_bytes(b)))
-}
+/// The order of a sorted Windows list box or combo box.
+pub use crate::collate::list_cmp;
 
 /// Why Edit Scrolls (0x5452aa) refuses, with the original's message box.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

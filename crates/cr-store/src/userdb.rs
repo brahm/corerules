@@ -680,7 +680,7 @@ impl<K: UserKind> UserDb<K> {
                 })
         })
         .collect();
-        entries.sort_by_cached_key(|e| K::name(e.record).to_lowercase());
+        entries.sort_by_cached_key(|e| crate::collate::sort_key(K::name(e.record)));
         entries
     }
 
@@ -911,7 +911,7 @@ impl Sources {
                         .filter(|s| s.priest != 0)
                         .map(|s| s.name)
                         .collect();
-                    names.sort_by_key(|n| n.to_lowercase());
+                    names.sort_by_cached_key(|n| crate::collate::sort_key(n));
                     names.dedup();
                     names
                 }
@@ -928,7 +928,7 @@ impl Sources {
                     sources.spells = spells::all_spells(install)?;
                     let mut names: Vec<String> =
                         sources.spells.iter().map(|s| s.name.clone()).collect();
-                    names.sort_by_key(|n| n.to_lowercase());
+                    names.sort_by_cached_key(|n| crate::collate::sort_key(n));
                     names.dedup();
                     names
                 }
@@ -955,7 +955,7 @@ impl Sources {
 /// Sorted, deduplicated names of `objects`.
 fn names_of(objects: &[Object], name: impl Fn(&Object) -> Option<String>) -> Vec<String> {
     let mut names: Vec<String> = objects.iter().filter_map(name).collect();
-    names.sort_by_key(|n| n.to_lowercase());
+    names.sort_by_cached_key(|n| crate::collate::sort_key(n));
     names.dedup();
     names
 }

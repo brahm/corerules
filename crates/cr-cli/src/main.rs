@@ -130,8 +130,9 @@ const USAGE: &str = "usage:
   cr delete INSTALL_DIR CHARACTER...
                             delete characters from Chars/ (no undo)
 
-Core Rules 2.0 installations are read-only: new content follows the
-Expansion, and 2.0 content is brought over with cr import.
+Core Rules 2.0 installations are read-only: new content (characters,
+NPCs, treasure, encounters, records and packages) follows the Expansion,
+and 2.0 content is brought over with cr import.
 
 Without INSTALL_DIR, the data package in ~/.local/share/corerules/data
 is used, else the installation in the Wine prefix.";
@@ -196,8 +197,13 @@ fn main() -> ExitCode {
             "edit" | "userdb" | "import" | "package" | "party" | "delete" => {
                 !(command == "userdb" && rest.get(1).is_some_and(|a| a == "list"))
             }
-            "npc" => rest.iter().any(|a| a == "--save"),
-            "encounter" => rest.iter().any(|a| a == "--save"),
+            // Generators make new content, which follows the Expansion;
+            // listing what is saved only reads.
+            "npc" => true,
+            "treasure" => !rest.iter().any(|a| a == "--saved"),
+            "encounter" => rest
+                .iter()
+                .any(|a| matches!(a.as_str(), "--template" | "--roll")),
             "export" => !rest.iter().any(|a| a == "--list"),
             _ => false,
         };
@@ -1068,7 +1074,7 @@ fn cmd_book(install: &Installation, args: &[String]) -> cr_store::Result<()> {
 }
 
 fn cmd_table(install: &Installation, args: &[String]) -> cr_store::Result<()> {
-    use cr_store::tables::{LIST, Session, TableBook};
+    use cr_store::tables::{LIST, Leftovers, Session, TableBook};
     use cr_store::treasure::Rand;
 
     let invalid = |message: String| cr_store::Error::Invalid(message);
@@ -1133,6 +1139,8 @@ fn cmd_table(install: &Installation, args: &[String]) -> cr_store::Result<()> {
             .iter()
             .find(|e| entry_key(e) == wanted)
             .ok_or_else(|| invalid(format!("no table {id}; cr table INSTALL_DIR lists them")))?;
+        // The first Roll Results dialog after the program starts.
+        session = Leftovers::default().open(entry);
         rolls.roll(entry, &params, &mut session, &mut rand)
     };
     out!("{}", result.to_text());

@@ -109,7 +109,7 @@ pub fn class_list(install: &Installation) -> Result<Vec<ClassEntry>> {
             _ => None,
         })
         .collect();
-    list.sort_by_key(|c| c.name.to_lowercase());
+    list.sort_by_cached_key(|c| crate::collate::sort_key(&c.name));
     list.dedup_by(|a, b| a.name == b.name);
     Ok(list)
 }
@@ -144,7 +144,7 @@ pub fn multiclass_names(classes: &[ClassEntry]) -> Vec<String> {
             }
         }
     }
-    names.sort_by_key(|n| n.to_lowercase());
+    names.sort_by_cached_key(|n| crate::collate::sort_key(n));
     names
 }
 

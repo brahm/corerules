@@ -103,10 +103,22 @@ const ARMOR_CHOICES: [&str; 3] = [
     "Only Allow Armor From List Below",
 ];
 
-/// IDD 159's category combo (+0x3000) starts with these two; the rest
-/// comes from a list the program builds (not decoded), so any text is
-/// accepted.
-const WEAPON_CATEGORIES: [&str; 2] = ["Any", "Only from list below"];
+/// IDD 159's category combo (+0x3000, a drop-down list, unsorted): these
+/// two (0x6f925c), then the weapon damage types the program builds at
+/// start-up (0x678788, its list +0x20c). A class whose text is in none of
+/// them shows "Any", as OnInitDialog (0x6f8c5d) selects it.
+const WEAPON_CATEGORIES: [&str; 10] = [
+    "Any",
+    "Only from list below",
+    "None",
+    "P",
+    "S",
+    "B",
+    "P/B",
+    "P/S",
+    "B/S",
+    "P/S/B",
+];
 
 const GENDERS: [&str; 3] = ["Male and Female", "Male Only", "Female Only"];
 
@@ -425,7 +437,7 @@ fn equipment_pages(f: &mut Vec<FieldDesc<Class>>) {
             "Allow wepons from the selected category",
             FieldKind::Combo {
                 options: Options::Fixed(&WEAPON_CATEGORIES),
-                free: true
+                free: false
             },
             0x3000
         ),

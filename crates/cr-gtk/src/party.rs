@@ -209,7 +209,7 @@ impl<H: Host + 'static> Manager<H> {
             .borrow_mut()
             .retain(|p| !parties.iter().any(|q| q.eq_ignore_ascii_case(p)));
         parties.extend(self.new_parties.borrow().iter().cloned());
-        parties.sort_by_cached_key(|p| p.to_lowercase());
+        parties.sort_by_cached_key(|p| cr_store::collate::sort_key(p));
         let mut selected = self.selected.borrow().clone();
         let position = parties
             .iter()

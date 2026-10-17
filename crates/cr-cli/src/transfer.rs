@@ -195,6 +195,15 @@ pub fn cmd_package(install: &Installation, args: &[String]) -> Result<()> {
     } else {
         read_package(&path)?
     };
+    let changes = new || !add.is_empty() || !take.is_empty();
+    if changes && !file.is_expansion() {
+        // 2.0 content is only imported, and converted to the Expansion's
+        // layout on the way in.
+        return Err(invalid(
+            "Core Rules 2.0 packages are only imported (cr import INSTALL_DIR FILE); \
+             new and edited packages are the Expansion's",
+        ));
+    }
     let mut warnings = Vec::new();
     if !take.is_empty() {
         let items = cr_store::export::contents(&file);
@@ -212,7 +221,7 @@ pub fn cmd_package(install: &Installation, args: &[String]) -> Result<()> {
             .collect::<Result<Vec<Exportable>>>()?;
         warnings.extend(install.add_to(&mut file, &chosen)?);
     }
-    if new || !add.is_empty() || !take.is_empty() {
+    if changes {
         write_package(&path, &file)?;
     }
     for c in cr_store::export::contents(&file) {

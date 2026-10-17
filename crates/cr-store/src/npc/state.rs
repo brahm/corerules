@@ -507,36 +507,6 @@ impl<'a> Gen<'a> {
         }
     }
 
-    /// EV 0x53ae70: 3d6 straight, race limits and adjustment, class
-    /// minima; no class or level bonus.
-    pub fn ev_roll_abilities(&mut self) {
-        let mut v = [0i32; 6];
-        for a in v.iter_mut() {
-            *a = (0..3).map(|_| self.r.rand() % 6).sum::<i32>() + 3;
-        }
-        let race = self.race;
-        for (i, a) in v.iter_mut().enumerate() {
-            let [lo, hi] = race.ability_limits[i];
-            *a = (*a).max(lo).min(hi);
-            *a = clamp125(*a + race.ability_adjustments[i]);
-        }
-        for k in &self.classes {
-            for (i, a) in v.iter_mut().enumerate() {
-                *a = (*a).max(k.v(0x1c + 4 * i as u32));
-            }
-        }
-        self.exc = if race.unknown_0x40 != 0 && v[STR] == 18 {
-            self.r.rand() % 100 + 1
-        } else {
-            0
-        };
-        self.ab = v;
-        for (i, &a) in v.iter().enumerate() {
-            let d = if self.po { self.r.rand() % 5 - 2 } else { 0 };
-            self.subs[i] = [a + d, a - d];
-        }
-    }
-
     /// Sets the kit and alignment options of Create Multiple NPCs.
     pub fn set_options(&mut self, kit: Opt, alignment: Opt) {
         let norm = |o: Opt| match o {

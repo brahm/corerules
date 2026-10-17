@@ -926,14 +926,30 @@ impl Installation {
                 }
             }
         }
-        rules.nonweapon.sort_by_key(|n| n.name.to_lowercase());
-        rules.racial_abilities.sort_by_key(|n| n.0.to_lowercase());
-        rules.traits.sort_by_key(|n| n.0.to_lowercase());
-        rules.disadvantages.sort_by_key(|n| n.0.to_lowercase());
-        rules.weapons.sort_by_key(|n| n.0.to_lowercase());
-        rules.wares.sort_by_key(|n| n.name.to_lowercase());
-        rules.languages.sort_by_key(|n| n.to_lowercase());
-        rules.races.sort_by_key(|r| r.name.to_lowercase());
+        rules
+            .nonweapon
+            .sort_by_cached_key(|n| crate::collate::sort_key(&n.name));
+        rules
+            .racial_abilities
+            .sort_by_cached_key(|n| crate::collate::sort_key(&n.0));
+        rules
+            .traits
+            .sort_by_cached_key(|n| crate::collate::sort_key(&n.0));
+        rules
+            .disadvantages
+            .sort_by_cached_key(|n| crate::collate::sort_key(&n.0));
+        rules
+            .weapons
+            .sort_by_cached_key(|n| crate::collate::sort_key(&n.0));
+        rules
+            .wares
+            .sort_by_cached_key(|n| crate::collate::sort_key(&n.name));
+        rules
+            .languages
+            .sort_by_cached_key(|n| crate::collate::sort_key(n));
+        rules
+            .races
+            .sort_by_cached_key(|r| crate::collate::sort_key(&r.name));
         Ok(rules)
     }
 
@@ -1300,7 +1316,7 @@ impl CreationRules {
                 }) && !self.alignments(combination).is_empty()
             })
             .collect();
-        options.sort_by_key(|c| (c.len(), c.join("/").to_lowercase()));
+        options.sort_by_cached_key(|c| (c.len(), crate::collate::sort_key(&c.join("/"))));
         options
     }
 
@@ -1332,7 +1348,7 @@ impl CreationRules {
             .filter(|k| !k.excluded_races.iter().any(|r| r == race))
             .map(|k| k.name.clone())
             .collect();
-        kits.sort_by_key(|k| k.to_lowercase());
+        kits.sort_by_cached_key(|k| crate::collate::sort_key(k));
         kits.insert(0, "None".into());
         kits
     }
@@ -2009,7 +2025,7 @@ impl CreationRules {
             })
             .map(|s| s.0.clone())
             .collect();
-        spells.sort_by_key(|s| s.to_lowercase());
+        spells.sort_by_cached_key(|s| crate::collate::sort_key(s));
         spells
     }
 
@@ -2043,7 +2059,7 @@ impl CreationRules {
             && !languages.iter().any(|l| l == HUMAN_LANGUAGE)
         {
             languages.push(HUMAN_LANGUAGE.into());
-            languages.sort_by_key(|n| n.to_lowercase());
+            languages.sort_by_cached_key(|n| crate::collate::sort_key(n));
         }
         if languages.is_empty() {
             languages.push("Common".into());

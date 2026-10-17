@@ -380,8 +380,9 @@ impl<'a> Gen<'a> {
                     // 0x4de740 draws between(0, -1) = 0 without a draw,
                     // reads the stale slot 0 and calls RemoveAt(0, 1) on
                     // the empty array (0x736cf0), whose memmove of -4
-                    // bytes faults: the original stops here.
-                    self.warn("The priest spell list ran out while memorizing; the original stops with a fault here (0x4de740 removes from the empty list), so the rest were skipped.");
+                    // bytes faults: the original stops here. The NPC
+                    // keeps the spells drawn so far.
+                    self.warn(format!("There are fewer level {sl} priest spells in the NPC's spheres than spell slots, so the other slots stay empty."));
                     break;
                 }
                 let k = self.between(0, list.len() as i32 - 1) as usize;
