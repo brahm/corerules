@@ -57,6 +57,7 @@ Algumas regras do Import do original se aplicam aqui:
 
 * **Leitura e regravação:** os 686 pacotes, o consolidado incluído, são lidos e regravados byte a byte pelo leitor do projeto.
 * **Original da Expansion no Wine:** o diálogo Import do original abriu o `Comunidade.xpx` e listou os itens. A leitura levou cerca de 35 minutos. O Import All não foi executado no original.
+* **Edição no app Linux:** depois da instalação, cada registro dos addons foi aberto, editado e salvo pelos mesmos editores que o app usa, e relido depois. Foram 10.993 magias, 173 armadilhas, 160 poderes psiônicos, 1.874 tipos de monstro, 5.315 monstros, 515 raças, 558 classes, 16.290 partes, 59 tesouros, 299 encontros e os 105 personagens importados. Nenhum falhou. Regravar os bancos sem mudanças mantém os arquivos idênticos byte a byte. Salvar um registro pelo editor faz os mesmos ajustes do original, como tirar espaços do fim do nome. Dez registros têm o nome de um registro padrão: seis classes ("Fighter", "Cleric", "Mage", "Illusionist", "Ranger" e "Thief"), três magias e uma raça. O app recusava salvá-los e agora aceita, desde que o nome continue o mesmo.
 * **Script de instalação:** testado numa cópia limpa do pacote de dados.
   * Importou 36.716 itens e 105 personagens em cerca de 40 segundos.
   * A segunda passagem terminou sem nenhum aviso.

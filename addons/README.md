@@ -10,7 +10,7 @@ Mapas do Map Maker II e desenhos do Campaign Mapper não fazem parte do pacote, 
 
 | arquivo | para que serve |
 |---|---|
-| `CoreRules-*-x86_64.AppImage` | o aplicativo Core Rules para Linux, numa versão que lê esses addons |
+| `CoreRules-x86_64.AppImage` | o aplicativo Core Rules para Linux, numa versão que lê esses addons |
 | `Comunidade.xpx` | os addons consolidados, no formato da Expansion |
 | `instalar-addons.sh` | importa os addons no pacote de dados do app |
 | `bin/cr` | a ferramenta de linha de comando que o instalador usa (binário estático, roda em qualquer Linux x86-64) |
@@ -53,8 +53,8 @@ Use os arquivos deste pacote juntos. Até a versão 0.7.1 o app não lia parte d
 4. Abra o app:
 
    ```sh
-   chmod +x CoreRules-*-x86_64.AppImage
-   ./CoreRules-*-x86_64.AppImage
+   chmod +x CoreRules-x86_64.AppImage
+   ./CoreRules-x86_64.AppImage
    ```
 
    Os addons aparecem nos bancos de dados do usuário (Raças, Classes, Magias, Monstros e o resto) e os personagens dos módulos na lista de personagens.
