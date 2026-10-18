@@ -438,6 +438,23 @@ impl Field for PartKit {
     }
 }
 
+impl PartKit {
+    /// Turns a kit written by the patched Expansion (version 31) into the
+    /// layout of the CD's `TSRP3.EXE`, which cannot read the newer one;
+    /// returns whether it changed. The byte version 31 adds is dropped.
+    pub fn downgrade(&mut self) -> bool {
+        let Some(data) = &mut self.data else {
+            return false;
+        };
+        if self.version <= KIT_CURRENT_VERSION {
+            return false;
+        }
+        self.version = KIT_CURRENT_VERSION;
+        data.flag_v31 = None;
+        true
+    }
+}
+
 record! {
     /// The fields of a kit after its header and version. After loading, the
     /// program clears `flags_0x30c[2]` when `flags_0x44c[1]` is set.
@@ -595,6 +612,10 @@ record! {
         flag_0x5df: Option<u8> = if v >= 28,
         unknown_0x5ac: Option<Vec<String>> = if v >= 29,
         unknown_0x5c0: Option<Vec<String>> = if v >= 29,
+        /// Version 31, written by the Expansion with its later patches
+        /// (not the CD's `TSRP3.EXE`, which writes version 30): one more
+        /// byte, 0 in every kit seen.
+        flag_v31: Option<u8> = if v >= 31,
     }
 }
 
@@ -723,6 +744,23 @@ mod tests {
         let kit = PartKit::read(&mut ArchiveReader::new(&bytes)).unwrap();
         assert_eq!(kit.data, None);
         assert_eq!(round_trip(&kit), bytes);
+    }
+
+    #[test]
+    fn version_31_kit_downgrades_to_30() {
+        let mut bytes = vec![4, b'C', b'P', b'K', b'O', 31, 0, 0, 0];
+        bytes.extend_from_slice(&ZEROS);
+        let mut r = ArchiveReader::new(&bytes);
+        let mut kit = PartKit::read(&mut r).unwrap();
+        assert_eq!(kit.data.as_ref().unwrap().flag_v31, Some(0));
+        let v31 = round_trip(&kit);
+        assert_eq!(&v31[..], &bytes[..r.position()]);
+
+        assert!(kit.downgrade());
+        assert_eq!(kit.version, KIT_CURRENT_VERSION);
+        let v30 = round_trip(&kit);
+        assert_eq!(v30.len(), v31.len() - 1);
+        assert!(!kit.downgrade());
     }
 
     #[test]

@@ -22,7 +22,7 @@ fn pick<'a, T>(
     let found: Vec<&T> = items
         .iter()
         .filter(|i| wanted.is_none_or(|c| category(i) == c))
-        .filter(|i| name(i).eq_ignore_ascii_case(text.trim()))
+        .filter(|i| name(i).trim().eq_ignore_ascii_case(text.trim()))
         .collect();
     match found.as_slice() {
         [one] => Ok(one),
@@ -231,4 +231,16 @@ pub fn cmd_package(install: &Installation, args: &[String]) -> Result<()> {
         eprintln!("cr: {warning}");
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pick_ignores_spaces_around_a_name() {
+        let items = [(Category::Class, "Sword Dancer "), (Category::Race, "Drow")];
+        let found = pick(&items, "classes:sword dancer", |i| i.0, |i| i.1).unwrap();
+        assert_eq!(found.1, "Sword Dancer ");
+    }
 }

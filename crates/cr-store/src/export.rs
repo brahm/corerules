@@ -147,7 +147,9 @@ impl Category {
     pub fn parse(text: &str) -> Option<Self> {
         let wanted = text.trim().to_lowercase().replace(['-', '_'], " ");
         Self::all(Flavor::Expansion).into_iter().find(|c| {
-            let label = c.label().to_lowercase();
+            // The same spelling rules for the label: "Non-Weapon
+            // Proficiencies" as `cr import --list` prints it.
+            let label = c.label().to_lowercase().replace('-', " ");
             label == wanted
                 || label.strip_suffix('s') == Some(wanted.as_str())
                 || label.strip_suffix("es") == Some(wanted.as_str())
@@ -891,6 +893,7 @@ impl Installation {
                 Category::Class if !expansion => continue,
                 category => {
                     let mut object = section(file, category)[item.index].clone();
+                    downgrade_patched(&mut object, &item.name, &mut report.warnings);
                     if upgrade {
                         upgrade_part(&mut object, &mut image, self)?;
                     }
@@ -1086,6 +1089,31 @@ fn core20_entry(c: &Character, file: &str, levels: &str) -> CharacterEntry {
             format!("{CLASS_LINE}{}", d.class_title),
             format!("{LEVEL_LINE}{levels}"),
         ],
+    }
+}
+
+/// Turns what the patched Expansion writes (patches 3 to 5) into what the
+/// CD's `TSRP3.EXE` reads: classes lose their spell points
+/// (`CSpellPointsOb`, a class the CD's program does not have) and kits of
+/// version 31 become version 30. The program on the CD rejects such a
+/// package as a whole ("Unexpected file format.").
+fn downgrade_patched(object: &mut Object, name: &str, warnings: &mut Vec<String>) {
+    match object {
+        Object::Class(class) => {
+            if class.drop_spell_points() > 0 {
+                warnings.push(format!(
+                    "The spell points of the class {name} were left out: the Expansion cannot read them"
+                ));
+            }
+        }
+        Object::Part(part) => {
+            if let Some(Some(kit)) = &mut part.data.kit
+                && let Object::PartKit(kit) = kit.as_mut()
+            {
+                kit.downgrade();
+            }
+        }
+        _ => {}
     }
 }
 
@@ -1418,6 +1446,9 @@ mod tests {
     fn categories_parse_from_words() {
         assert_eq!(Category::parse("race"), Some(Category::Race));
         assert_eq!(Category::parse("Wizard-Spell"), Some(Category::WizardSpell));
+        for category in Category::all(Flavor::Expansion) {
+            assert_eq!(Category::parse(category.label()), Some(category));
+        }
         assert_eq!(Category::parse("weapons"), Some(Category::Part(0)));
         assert_eq!(
             Category::parse("character kits"),

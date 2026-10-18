@@ -9,7 +9,7 @@ written in Rust with GTK4 and libadwaita. It reads and writes the data files
 of the original Windows 95 program, so characters made in either program
 open in the other.
 
-> **Beta.** Version 0.7.1 is a beta: every feature below works against real
+> **Beta.** Version 0.7.2 is a beta: every feature below works against real
 > installations and was checked against the original programs, but it has
 > had little use outside those checks. Keep a copy of your `Chars` and
 > `UserDbas` folders, and [report](https://github.com/brahm/corerules/issues)
@@ -168,6 +168,16 @@ packaging/extract-data.sh --install corerules-data-expansion.tar.gz
 and `cr` look first (`--install` also takes the installation folder
 directly). The package holds TSR/Wizards of the Coast content: keep it for
 your own use and do not redistribute it.
+
+## Community add-ons
+
+[`addons/`](addons/README.md) holds 686 add-ons the community made for
+Core Rules 2.0 and the Expansion (races, classes, kits, spells, monsters,
+modules and the AD&D Core Rules User Database), converted to the
+Expansion's format and consolidated into one package. It comes with an
+installer, the `cr` tool and the AppImage. The
+[guide](addons/README.md) and the [report](addons/relatorio.md) are in
+Portuguese.
 
 ## Testing against your own installation
 
