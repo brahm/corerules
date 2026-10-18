@@ -18,7 +18,7 @@ Mapas do Map Maker II e desenhos do Campaign Mapper não fazem parte do pacote, 
 | `README.md`, `relatorio.md`, `compatibilidade.csv`, `conflitos.csv` | este guia e o relatório por addon |
 | `SHA256SUMS` | as somas de verificação |
 
-Use os arquivos deste pacote juntos. Até a versão 0.7.1 o app não lia parte destes addons: classes com habilidades por nível (`CClassFreeSpellsOb`) e o que a Expansion com patch grava. A AppImage e o `cr` daqui já leem. Depois de instalar os addons, abra-os com a AppImage do pacote ou com uma versão mais nova do app.
+Use os arquivos deste pacote juntos. Até a versão 0.7.1 o app não lia parte destes addons: classes com habilidades por nível (`CClassFreeSpellsOb`) e o que a Expansion com patch grava. A AppImage e o `cr` daqui são da versão 0.7.2, que já lê. Depois de instalar os addons, abra-os com a AppImage do pacote ou com o app 0.7.2 ou mais novo.
 
 ## O que é preciso
 
