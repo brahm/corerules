@@ -730,7 +730,13 @@ impl<K: UserKind> UserDb<K> {
         let scope = K::scope(record);
         let clash =
             |r: &K::Rec| K::scope(r) == scope && K::name(r).trim().eq_ignore_ascii_case(name);
-        if self.standard.iter().any(clash) {
+        // A user record that came in with a standard record's name (an
+        // import does not look at standard names) can still be edited as
+        // long as it keeps that name; the original would refuse it.
+        let kept = editing
+            .and_then(|i| self.user.get(i))
+            .is_some_and(|old| K::name(old).trim().eq_ignore_ascii_case(name));
+        if !kept && self.standard.iter().any(clash) {
             return Err(NameError::UsedByStandard);
         }
         if self

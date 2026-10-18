@@ -278,6 +278,19 @@ mod tests {
         assert_eq!((copy.name.as_str(), copy.id), ("", 0));
         db.delete(0);
         assert_eq!(db.user.len(), 1);
+
+        // An imported user spell with a standard spell's name can be
+        // edited if it keeps the name, but not renamed to another one.
+        let mut imported = db.new_record(0, "");
+        imported.name = "Sleep".into();
+        db.user.push(imported);
+        let mut edited = db.user[1].clone();
+        edited.level = 2;
+        assert_eq!(db.replace(1, edited.clone()), Ok(()));
+        edited.name = "Bless".into();
+        edited.wizard = 0;
+        edited.priest = 1;
+        assert_eq!(db.replace(1, edited), Err(NameError::UsedByStandard));
     }
 
     #[test]
