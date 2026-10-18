@@ -1,0 +1,62 @@
+name: Addons package
+
+# Builds the community add-ons package (packaging/addons/build.sh) and, on
+# main or by hand, publishes it on GitHub Packages as the OCI artifact
+# ghcr.io/<owner>/corerules-addons, tagged with the app version and latest.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'addons/**'
+      - 'packaging/addons/**'
+      - 'packaging/extract-data.sh'
+      - '.github/workflows/addons.yml'
+  pull_request:
+    paths:
+      - 'addons/**'
+      - 'packaging/addons/**'
+      - 'packaging/extract-data.sh'
+      - '.github/workflows/addons.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+      - uses: Swatinem/rust-cache@v2
+      - run: packaging/addons/build.sh
+      - name: Check the package
+        run: |
+          tmp=$(mktemp -d)
+          tar -xzf target/addons/addons-comunidade-expansion.tar.gz -C "$tmp"
+          cd "$tmp/addons-comunidade-expansion"
+          sha256sum -c SHA256SUMS
+          ! ls ./*.AppImage 2>/dev/null
+          ./instalar-addons.sh --help
+      - if: github.event_name != 'pull_request'
+        uses: oras-project/setup-oras@v1
+      - if: github.event_name != 'pull_request'
+        name: Publish on GitHub Packages
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/corerules-addons
+          echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+          cd target/addons
+          oras push "$image:$version,latest" \
+            --artifact-type application/vnd.corerules.addons \
+            --annotation "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            --annotation "org.opencontainers.image.description=Addons da comunidade para o Core Rules Expansion, com o instalador" \
+            --annotation "org.opencontainers.image.version=$version" \
+            addons-comunidade-expansion.tar.gz:application/gzip

@@ -4,13 +4,35 @@ Este pacote junta 686 addons feitos pela comunidade para o AD&D Core Rules 2.0 e
 
 Mapas do Map Maker II e desenhos do Campaign Mapper não fazem parte do pacote, porque o app não trata desses programas.
 
+## Onde baixar
+
+O pacote é publicado no GitHub Packages do projeto, como [`corerules-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-addons). É um artefato OCI, e não uma imagem de contêiner: o `docker pull` que a página do GitHub mostra não serve. Baixe com o [ORAS](https://oras.land):
+
+```sh
+oras pull ghcr.io/brahm/corerules-addons:latest
+```
+
+Ou só com `curl`:
+
+```sh
+repo=brahm/corerules-addons
+token=$(curl -s "https://ghcr.io/token?scope=repository:$repo:pull" | sed 's/.*"token":"\([^"]*\)".*/\1/')
+layer=$(curl -s -H "Authorization: Bearer $token" \
+    -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+    "https://ghcr.io/v2/$repo/manifests/latest" |
+    grep -o '"digest":"sha256:[0-9a-f]*"' | tail -n 1 | cut -d'"' -f4)
+curl -L -H "Authorization: Bearer $token" -o addons-comunidade-expansion.tar.gz \
+    "https://ghcr.io/v2/$repo/blobs/$layer"
+```
+
+Além de `latest`, cada versão do app tem a sua tag, como `0.7.2`.
+
 ## O que vem no pacote
 
-`addons-comunidade-expansion.tar.gz` traz tudo o que é preciso para rodar:
+`addons-comunidade-expansion.tar.gz` traz:
 
 | arquivo | para que serve |
 |---|---|
-| `CoreRules-x86_64.AppImage` | o aplicativo Core Rules para Linux, numa versão que lê esses addons |
 | `Comunidade.xpx` | os addons consolidados, no formato da Expansion |
 | `instalar-addons.sh` | importa os addons no pacote de dados do app |
 | `bin/cr` | a ferramenta de linha de comando que o instalador usa (binário estático, roda em qualquer Linux x86-64) |
@@ -18,17 +40,17 @@ Mapas do Map Maker II e desenhos do Campaign Mapper não fazem parte do pacote, 
 | `README.md`, `relatorio.md`, `compatibilidade.csv`, `conflitos.csv` | este guia e o relatório por addon |
 | `SHA256SUMS` | as somas de verificação |
 
-Use os arquivos deste pacote juntos. Até a versão 0.7.1 o app não lia parte destes addons: classes com habilidades por nível (`CClassFreeSpellsOb`) e o que a Expansion com patch grava. A AppImage e o `cr` daqui são da versão 0.7.2, que já lê. Depois de instalar os addons, abra-os com a AppImage do pacote ou com o app 0.7.2 ou mais novo.
+O aplicativo não vem no pacote. Instale o Core Rules 0.7.2 ou mais novo pela [página de releases](https://github.com/brahm/corerules/releases) (.deb, .rpm, Flatpak ou AppImage). Até a versão 0.7.1 o app não lia parte destes addons: classes com habilidades por nível (`CClassFreeSpellsOb`) e o que a Expansion com patch grava.
 
 ## O que é preciso
 
-* Linux x86-64 com glibc 2.43 ou mais nova (Fedora 44, Ubuntu 26.04 ou mais novos), por causa da AppImage.
+* Linux x86-64.
+* O app Core Rules 0.7.2 ou mais novo.
 * Uma instalação sua do AD&D Core Rules 2.0 Expansion, no Wine ou copiada do CD. Os addons não trazem as regras.
-* FUSE para abrir a AppImage. Sem FUSE, rode com `APPIMAGE_EXTRACT_AND_RUN=1`.
 
 ## Instalação
 
-1. Baixe e abra o pacote:
+1. Abra o pacote:
 
    ```sh
    tar -xzf addons-comunidade-expansion.tar.gz
@@ -50,14 +72,7 @@ Use os arquivos deste pacote juntos. Até a versão 0.7.1 o app não lia parte d
 
    Para outra instalação da Expansion, informe a pasta: `./instalar-addons.sh /caminho/da/instalacao`.
 
-4. Abra o app:
-
-   ```sh
-   chmod +x CoreRules-x86_64.AppImage
-   ./CoreRules-x86_64.AppImage
-   ```
-
-   Os addons aparecem nos bancos de dados do usuário (Raças, Classes, Magias, Monstros e o resto) e os personagens dos módulos na lista de personagens.
+4. Abra o app. Os addons aparecem nos bancos de dados do usuário (Raças, Classes, Magias, Monstros e o resto) e os personagens dos módulos na lista de personagens.
 
 ## O que o instalador faz
 
@@ -82,4 +97,4 @@ tar -xzf data-antes-dos-addons-*.tar.gz -C data
 
 ## Como o pacote é gerado
 
-`packaging/addons/build.sh COMUNIDADE.xpx CoreRules-*.AppImage` monta o pacote a partir do `Comunidade.xpx`, da AppImage e do `cr` compilado deste repositório. O instalador fica em `packaging/addons/instalar-addons.sh`.
+`packaging/addons/build.sh` monta o pacote a partir de `addons/Comunidade.xpx.xz` e do `cr` compilado deste repositório. O workflow `Addons package` (`.github/workflows/addons.yml`) roda esse script e publica o resultado no GitHub Packages a cada mudança na main. O instalador fica em `packaging/addons/instalar-addons.sh`.
