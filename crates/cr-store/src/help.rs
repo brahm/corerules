@@ -407,7 +407,8 @@ impl ItemKind {
             | topic::NPC_CREATION
             | topic::NPC_GROUP => Character,
             topic::SPELLS | topic::CHARACTER_SPELLS => Spell,
-            topic::PSIONIC_POWERS | topic::PSIONIC_POWER => Psionic,
+            // Update Character's psionics and their modes.
+            topic::PSIONIC_POWERS | topic::PSIONIC_POWER | topic::SKILLS => Psionic,
             topic::MONSTERS | topic::MONSTER_TYPE | topic::ENCOUNTER => Monster,
             _ => Part,
         };
@@ -420,43 +421,122 @@ impl ItemKind {
     }
 }
 
-/// The help of the installation's shipped records, by name. The user
-/// database's records have none: the original shows their description.
+/// What a right-click on a record opens.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ItemFound {
+    /// A shipped record's topic.
+    Topic(ItemTopic),
+    /// A record of the user database: the original's Custom Help box
+    /// (dialog 394) with what the record says.
+    Custom { title: String, text: String },
+}
+
+/// The help of the installation's records, by name: the shipped records'
+/// topics, the user database's records' descriptions, and the rows the
+/// original finds by name.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ItemHelp {
-    names: HashMap<String, Vec<(ItemKind, ItemTopic)>>,
+    /// By name, a kind's user record before its shipped one.
+    names: HashMap<String, Vec<(ItemKind, ItemFound)>>,
     classes: HashSet<String>,
+    /// Rows whose text has one of these words (0x4B40EA, 0x4B5235).
+    within: Vec<(String, ItemKind, ItemTopic)>,
 }
 
 impl ItemHelp {
-    /// The topic of the record named `name` (what a list row shows, up to
-    /// a tab), of the first kind of `order` that has one; a multi-class
-    /// (class names joined by `/`) has the topic on multi-class characters.
-    pub fn topic_of(&self, name: &str, order: &[ItemKind]) -> Option<ItemTopic> {
+    /// What the row named `name` (what a list row shows, up to a tab)
+    /// opens: the first kind of `order` that has a record of that name,
+    /// a multi-class (class names joined by `/`), or a row the original
+    /// knows by a word in it.
+    pub fn find(&self, name: &str, order: &[ItemKind]) -> Option<ItemFound> {
         let name = comparable(name.split('\t').next().unwrap_or(name));
-        if let Some(topics) = self.names.get(&name) {
-            return order.iter().find_map(|kind| {
-                topics
+        let named = self.names.get(&name).and_then(|found| {
+            order.iter().find_map(|kind| {
+                found
                     .iter()
                     .find(|(k, _)| k == kind)
-                    .map(|(_, topic)| topic.clone())
-            });
+                    .map(|(_, found)| found.clone())
+            })
+        });
+        if named.is_some() {
+            return named;
         }
         let multi = name.contains('/')
             && name
                 .split('/')
                 .all(|class| self.classes.contains(class.trim()));
-        multi.then_some(ItemTopic {
-            file: "Charactr.hlp",
-            number: 100,
-            popup: false,
+        if multi {
+            return Some(ItemFound::Topic(ItemTopic {
+                file: "Charactr.hlp",
+                number: 100,
+                popup: false,
+            }));
+        }
+        order.iter().find_map(|kind| {
+            self.within
+                .iter()
+                .find(|(word, k, _)| k == kind && name.contains(word.as_str()))
+                .map(|(_, _, topic)| ItemFound::Topic(topic.clone()))
         })
+    }
+
+    /// The topic [`ItemHelp::find`] gives, for a shipped record.
+    pub fn topic_of(&self, name: &str, order: &[ItemKind]) -> Option<ItemTopic> {
+        match self.find(name, order)? {
+            ItemFound::Topic(topic) => Some(topic),
+            ItemFound::Custom { .. } => None,
+        }
     }
 
     pub fn is_empty(&self) -> bool {
         self.names.is_empty()
     }
+
+    fn add(&mut self, kind: ItemKind, name: &str, found: ItemFound) {
+        let entries = self.names.entry(comparable(name)).or_default();
+        if !entries.iter().any(|(k, _)| *k == kind) {
+            entries.push((kind, found));
+        }
+    }
 }
+
+/// The rows of psionic attack and defense modes (the program's table at
+/// 0x47BE3A) and of fighting styles (0x4B5C29, by the styles' numbers in
+/// [`crate::create::FIGHTING_STYLES`]): popups of `Psionics.hlp` and
+/// `Prof.hlp`.
+const PSIONIC_MODES: [(&str, u32); 10] = [
+    ("Ego Whip", 8008),
+    ("Id Insinuation", 8009),
+    ("Mind Thrust", 8010),
+    ("Psionic Blast", 8011),
+    ("Psychic Crush", 8012),
+    ("Intellect Fortress", 9008),
+    ("Mental Barrier", 9009),
+    ("Mind Blank", 9010),
+    ("Thought Shield", 9011),
+    ("Tower of Iron Will", 9012),
+];
+const FIGHTING_STYLES: [(u32, u32); 9] = [
+    (1998, 8001),
+    (1997, 8002),
+    (1993, 8003),
+    (1999, 8004),
+    (1996, 8005),
+    (1995, 8006),
+    (1994, 8007),
+    (2001, 8008),
+    (2002, 8009),
+];
+
+/// The psionic disciplines a row may name, and their popups of
+/// `Psionics.hlp` (0x4B40EA).
+const DISCIPLINES: [(&str, u32); 5] = [
+    ("Clairsentient", 210),
+    ("Psychokinetic", 211),
+    ("Psychometabolic", 212),
+    ("Psychoportive", 213),
+    ("Telepathic", 214),
+];
 
 /// The help file of a part type (an index of `PART_TYPES`) and whether its
 /// topics are popups (0x4B3B22).
@@ -497,6 +577,42 @@ fn comparable(text: &str) -> String {
         text = t.trim_end().to_owned();
     }
     text
+}
+
+/// A monster's help id, with the original's fixes for three monsters
+/// (0x4B56FA) and its type's when it has none.
+fn monster_number(name: &str, id: i32, types: &HashMap<String, i64>) -> i64 {
+    let id = if name == "Drider" {
+        0x70
+    } else if name.contains("Earth Kin") && id == 0x65 {
+        0x66
+    } else if id == 0 && name.contains("Kuo-Toa") {
+        0xD7
+    } else {
+        id
+    };
+    match id {
+        0 => types.get(&comparable(name)).copied().unwrap_or(0),
+        n => n.into(),
+    }
+}
+
+/// What the Custom Help box of a user record says: its rows, then its
+/// rules text, as the main window shows them.
+fn custom_text(entry: &crate::catalog::Entry) -> String {
+    let mut lines = Vec::new();
+    for group in &entry.groups {
+        for (label, value) in &group.rows {
+            lines.push(format!("{label}: {value}"));
+        }
+    }
+    if !entry.text.is_empty() {
+        if !lines.is_empty() {
+            lines.push(String::new());
+        }
+        lines.push(entry.text.clone());
+    }
+    lines.join("\n")
 }
 
 /// The number a file name starts with (`atoi`): a monster type's help id
@@ -558,14 +674,30 @@ impl Installation {
         ScreenHelp { texts }
     }
 
-    /// The help of the shipped records (`Database/`), as the original's
-    /// right-click on a list row opens it (0x4B3B22): parts, spells,
-    /// races, classes, psionic powers, monsters and monster types whose
-    /// help id is a topic of their file.
+    /// What a right-click on a record's row opens, as the original's
+    /// list rows do (0x4B3B22): the shipped records' topics (`Database/`)
+    /// whose help id is a topic of their file, the user database's
+    /// records' descriptions, and the rows the original knows by name.
     pub fn item_help(&self) -> ItemHelp {
         let mut files: HashMap<&str, Option<HelpFile>> = HashMap::new();
         let mut help = ItemHelp::default();
-        let mut add = |kind, name: &str, file: &'static str, number: i64, popup: bool| {
+        for (kind, entry) in self.custom_records() {
+            let text = custom_text(&entry);
+            help.add(
+                kind,
+                &entry.title,
+                ItemFound::Custom {
+                    title: entry.title.clone(),
+                    text,
+                },
+            );
+        }
+        let mut add = |help: &mut ItemHelp,
+                       kind,
+                       name: &str,
+                       file: &'static str,
+                       number: i64,
+                       popup: bool| {
             let Ok(number) = u32::try_from(number) else {
                 return;
             };
@@ -574,16 +706,13 @@ impl Installation {
                 .or_insert_with(|| self.help_file(file).ok())
                 .as_ref()
                 .is_some_and(|h| number > 0 && h.topic_of_number(number).is_some());
-            let topics = help.names.entry(comparable(name)).or_default();
-            if known && !topics.iter().any(|(k, _)| *k == kind) {
-                topics.push((
-                    kind,
-                    ItemTopic {
-                        file,
-                        number,
-                        popup,
-                    },
-                ));
+            if known {
+                let topic = ItemTopic {
+                    file,
+                    number,
+                    popup,
+                };
+                help.add(kind, name, ItemFound::Topic(topic));
             }
         };
         if let Ok(parts) = self.load_parts() {
@@ -593,13 +722,8 @@ impl Installation {
                 };
                 for object in objects {
                     if let Object::Part(p) = object {
-                        add(
-                            ItemKind::Part,
-                            &p.head.name,
-                            file,
-                            p.head.unknown_0x1e4.into(),
-                            popup,
-                        );
+                        let number = p.head.unknown_0x1e4.into();
+                        add(&mut help, ItemKind::Part, &p.head.name, file, number, popup);
                     }
                 }
             }
@@ -607,7 +731,15 @@ impl Installation {
         if let Ok(spells) = self.load_spells() {
             for object in spells.wizard.iter().chain(&spells.priest) {
                 if let Object::Spell(s) = object {
-                    add(ItemKind::Spell, &s.name, "Spells.hlp", s.id.into(), false);
+                    let number = s.id.into();
+                    add(
+                        &mut help,
+                        ItemKind::Spell,
+                        &s.name,
+                        "Spells.hlp",
+                        number,
+                        false,
+                    );
                 }
             }
         }
@@ -621,52 +753,101 @@ impl Installation {
             .collect();
         for name in ["Race", "Class", "Psionic", "Monster", "MonType"] {
             for object in self.shipped(name) {
-                match &object {
-                    Object::Race(r) => add(
-                        ItemKind::Character,
-                        &r.name,
-                        "Charactr.hlp",
-                        r.id.into(),
-                        false,
-                    ),
+                let (kind, name, file, number) = match &object {
+                    Object::Race(r) => (ItemKind::Character, &r.name, "Charactr.hlp", r.id.into()),
                     Object::Class(c) => {
                         help.classes.insert(comparable(c.name()));
-                        if let cr_formats::classes::Class::Expansion { data, .. } = &**c {
-                            add(
-                                ItemKind::Character,
-                                &data.name,
-                                "Charactr.hlp",
-                                data.unknown_0xc.into(),
-                                false,
-                            );
-                        }
-                    }
-                    Object::PsionicPower(p) => add(
-                        ItemKind::Psionic,
-                        &p.name,
-                        "Psionics.hlp",
-                        p.unknown_0x24.into(),
-                        false,
-                    ),
-                    // A monster without a help id has its type's.
-                    Object::Monster(m) => {
-                        let number = match m.unknown_0x3b8 {
-                            0 => types.get(&comparable(&m.name)).copied().unwrap_or(0),
-                            n => n.into(),
+                        let cr_formats::classes::Class::Expansion { data, .. } = &**c else {
+                            continue;
                         };
-                        add(ItemKind::Monster, &m.name, "Monsters.hlp", number, false);
+                        let number = data.unknown_0xc.into();
+                        (ItemKind::Character, &data.name, "Charactr.hlp", number)
                     }
-                    Object::MonsterType(t) => add(
-                        ItemKind::Monster,
-                        &t.name,
-                        "Monsters.hlp",
-                        leading_number(&t.picture),
-                        false,
-                    ),
-                    _ => {}
+                    Object::PsionicPower(p) => {
+                        let number = p.unknown_0x24.into();
+                        (ItemKind::Psionic, &p.name, "Psionics.hlp", number)
+                    }
+                    Object::Monster(m) => {
+                        let number = monster_number(&m.name, m.unknown_0x3b8, &types);
+                        (ItemKind::Monster, &m.name, "Monsters.hlp", number)
+                    }
+                    Object::MonsterType(t) => {
+                        let number = leading_number(&t.picture);
+                        (ItemKind::Monster, &t.name, "Monsters.hlp", number)
+                    }
+                    _ => continue,
+                };
+                add(&mut help, kind, name, file, number, false);
+            }
+        }
+        // The rows the original knows by name.
+        let fixed = |file, number, popup| ItemTopic {
+            file,
+            number,
+            popup,
+        };
+        let mut known = |help: &mut ItemHelp, kind, name: &str, topic: ItemTopic| {
+            let file = topic.file;
+            add(help, kind, name, file, topic.number.into(), topic.popup);
+        };
+        // A language row "Regional" (0x4B4C45).
+        known(
+            &mut help,
+            ItemKind::Part,
+            "Regional",
+            fixed("Prof.hlp", 1046, true),
+        );
+        for (name, number) in PSIONIC_MODES {
+            known(
+                &mut help,
+                ItemKind::Psionic,
+                name,
+                fixed("Psionics.hlp", number, true),
+            );
+        }
+        for (style, number) in FIGHTING_STYLES {
+            if let Some((name, ..)) = crate::create::FIGHTING_STYLES
+                .iter()
+                .find(|(_, n, _)| *n == style)
+            {
+                known(
+                    &mut help,
+                    ItemKind::Part,
+                    name,
+                    fixed("Prof.hlp", number, true),
+                );
+            }
+        }
+        // The weapon groups' rows (0x4B42BD, 0x4B42F1): the group topics.
+        if let Ok(image) = crate::exe::Image::open(self, crate::treasure::Flavor::Expansion) {
+            let mut tables = image.id_tables(0x67_7978, 0x3800, 0x57_2030);
+            for (table, number) in [(0x248, 3017), (0x234, 3018)] {
+                for (name, _) in tables.remove(&table).unwrap_or_default() {
+                    if name == "None" {
+                        continue;
+                    }
+                    known(
+                        &mut help,
+                        ItemKind::Part,
+                        &name,
+                        fixed("Equip.hlp", number, false),
+                    );
                 }
             }
         }
+        for (word, number) in DISCIPLINES {
+            help.within.push((
+                comparable(word),
+                ItemKind::Psionic,
+                fixed("Psionics.hlp", number, true),
+            ));
+        }
+        // A spell list's spell book (0x4B5235).
+        help.within.push((
+            comparable("Book of Infinite Spells"),
+            ItemKind::Spell,
+            fixed("Magic.hlp", 149, false),
+        ));
         help
     }
 
@@ -739,6 +920,53 @@ mod tests {
             ItemKind::order(topic::MONSTERS),
             [Monster, Part, Spell, Character, Psionic]
         );
+    }
+
+    /// With `CORERULES_DIR` (an Expansion installation): every row the
+    /// original knows by name opens its fixed topic.
+    #[test]
+    fn the_rows_the_original_knows_by_name_open_their_topics() {
+        let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+            return;
+        };
+        let install = Installation::open(std::path::Path::new(&dir)).unwrap();
+        if install.path("Help").is_none() {
+            return;
+        }
+        let help = install.item_help();
+        let found = |name: &str, screen| match help.find(name, &ItemKind::order(screen)) {
+            Some(ItemFound::Topic(topic)) => Some((topic.file, topic.number, topic.popup)),
+            _ => None,
+        };
+        let number = |name: &str| found(name, topic::WEAPON_PROFICIENCIES);
+        for (name, n) in PSIONIC_MODES {
+            let mode = found(name, topic::SKILLS);
+            assert_eq!(mode, Some(("Psionics.hlp", n, true)), "{name}");
+        }
+        for (style, n) in FIGHTING_STYLES {
+            let (name, ..) = crate::create::FIGHTING_STYLES
+                .iter()
+                .find(|(_, s, _)| *s == style)
+                .unwrap();
+            assert_eq!(number(name), Some(("Prof.hlp", n, true)), "{name}");
+        }
+        for (word, n) in DISCIPLINES {
+            let row = format!("{word} Devotions");
+            assert_eq!(number(&row), Some(("Psionics.hlp", n, true)), "{row}");
+        }
+        for group in [3017, 3018] {
+            let rows = help
+                .names
+                .values()
+                .flatten()
+                .filter(|(_, found)| {
+                    matches!(found, ItemFound::Topic(t) if t.file == "Equip.hlp" && t.number == group)
+                })
+                .count();
+            assert!(rows > 1, "{group}: {rows}");
+        }
+        let book = number("Book of Infinite Spells (2 pages)");
+        assert_eq!(book, Some(("Magic.hlp", 149, false)));
     }
 
     #[test]

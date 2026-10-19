@@ -513,6 +513,50 @@ impl Installation {
         Ok(objects)
     }
 
+    /// The user database's records (`UserDbas/`) that have item help, as
+    /// the main window shows them: parts, spells, races, classes, psionic
+    /// powers and monsters.
+    pub(crate) fn custom_records(&self) -> Vec<(crate::help::ItemKind, Entry)> {
+        use crate::help::ItemKind;
+        let mut records = Vec::new();
+        if let Ok(Some(parts)) = self.load_user_parts() {
+            records.extend(
+                parts
+                    .arrays
+                    .iter()
+                    .flatten()
+                    .filter_map(part_entry)
+                    .map(|e| (ItemKind::Part, e)),
+            );
+        }
+        if let Ok(Some(spells)) = self.load_user_spells() {
+            records.extend(
+                spells
+                    .wizard
+                    .iter()
+                    .chain(&spells.priest)
+                    .filter_map(spell_entry)
+                    .map(|e| (ItemKind::Spell, e)),
+            );
+        }
+        type Read = fn(&Object) -> Option<Entry>;
+        let kinds: [(&str, ItemKind, Read); 4] = [
+            ("Race", ItemKind::Character, race_entry),
+            ("Class", ItemKind::Character, class_entry),
+            ("Psionic", ItemKind::Psionic, psionic_entry),
+            ("Monster", ItemKind::Monster, monster_entry),
+        ];
+        for (name, kind, entry) in kinds {
+            let Ok(data) = self.read(&format!("UserDbas/{name}U.dat")) else {
+                continue;
+            };
+            if let Ok(list) = ObjectList::parse(&data) {
+                records.extend(list.objects.iter().filter_map(entry).map(|e| (kind, e)));
+            }
+        }
+        records
+    }
+
     pub(crate) fn load_parts(&self) -> std::result::Result<PartsFile, String> {
         let relative = "Database/Parts.dat";
         let data = self.read(relative).map_err(|e| e.to_string())?;

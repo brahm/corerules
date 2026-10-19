@@ -13,7 +13,7 @@ use cr_formats::rtf::{Align, Format, Rgb, TabKind};
 use cr_formats::winhelp::{HelpFile, Item, Link, Macro, Paragraph, Topic};
 use cr_i18n::tr;
 use cr_store::Installation;
-use cr_store::help::{Contents, ItemHelp, ItemKind, ItemTopic, ScreenHelp};
+use cr_store::help::{Contents, ItemFound, ItemHelp, ItemKind, ItemTopic, ScreenHelp};
 use gtk::{gdk, gio, glib, pango};
 
 /// Which topic to show.
@@ -246,14 +246,23 @@ pub fn context_help(
         let control = english
             .clone()
             .find_map(|t| controls.topic_of(t))
-            .map(|number| ItemTopic {
-                file: "Program.hlp",
-                number,
-                popup: true,
+            .map(|number| {
+                ItemFound::Topic(ItemTopic {
+                    file: "Program.hlp",
+                    number,
+                    popup: true,
+                })
             });
-        control.or_else(|| items.as_ref()?.topic_of(text, &ItemKind::order(screen)))
+        control.or_else(|| items.as_ref()?.find(text, &ItemKind::order(screen)))
     });
-    let Some(found) = found else { return };
+    let found = match found {
+        Some(ItemFound::Topic(found)) => found,
+        Some(ItemFound::Custom { title, text }) => {
+            custom_dialog(&title, &text).present(Some(parent));
+            return;
+        }
+        None => return,
+    };
     if !found.popup {
         if let Err(e) = open(parent, install, found.file, Target::Number(found.number)) {
             eprintln!("{e}");
@@ -813,6 +822,42 @@ fn link_at(view: &gtk::TextView, links: &[(i32, i32, Link)], x: f64, y: f64) -> 
         .iter()
         .find(|(start, end, _)| (*start..*end).contains(&offset))
         .map(|(_, _, link)| link.clone())
+}
+
+/// The original's Custom Help box: what a record of the user database
+/// named `title` says, which it shows in place of help.
+fn custom_dialog(title: &str, text: &str) -> adw::Dialog {
+    let label = gtk::Label::builder()
+        .label(text)
+        .wrap(true)
+        .wrap_mode(gtk::pango::WrapMode::WordChar)
+        .selectable(true)
+        .xalign(0.0)
+        .yalign(0.0)
+        .margin_start(18)
+        .margin_end(18)
+        .margin_top(12)
+        .margin_bottom(18)
+        .build();
+    // The dialog focuses the label, which then selects all its text.
+    label.connect_map(|label| {
+        let label = label.clone();
+        glib::idle_add_local_once(move || label.select_region(0, 0));
+    });
+    let scroller = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .propagate_natural_height(true)
+        .max_content_height(500)
+        .child(&label)
+        .build();
+    let toolbar = adw::ToolbarView::new();
+    toolbar.add_top_bar(&adw::HeaderBar::new());
+    toolbar.set_content(Some(&scroller));
+    adw::Dialog::builder()
+        .title(title)
+        .content_width(480)
+        .child(&toolbar)
+        .build()
 }
 
 /// A dialog showing topic `topic` of `help`, as WinHelp shows a popup;
