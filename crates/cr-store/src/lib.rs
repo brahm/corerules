@@ -15,6 +15,8 @@ pub mod edit;
 pub mod encounter;
 mod exe;
 pub mod export;
+pub mod extract;
+mod iso9660;
 pub mod lists;
 pub mod npc;
 pub mod party;
@@ -54,7 +56,7 @@ fn not_an_installation(path: &Path) -> String {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// Where `packaging/extract-data.sh --install` puts the data package.
+/// Where Extract Data from CD… (`cr extract-data`) puts the data package.
 pub fn data_package_dir() -> Option<PathBuf> {
     let data = std::env::var_os("XDG_DATA_HOME")
         .filter(|d| !d.is_empty())
@@ -79,7 +81,7 @@ impl Installation {
         Ok(Self { root })
     }
 
-    /// Looks for the data package made by `extract-data.sh` in the app's
+    /// Looks for the data package made by Extract Data from CD… in the app's
     /// data folder (`$XDG_DATA_HOME/corerules/data`, else
     /// `~/.local/share/corerules/data`), then for an installation in the
     /// usual Wine prefix (`$WINEPREFIX`, else `~/.wine`).

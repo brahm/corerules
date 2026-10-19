@@ -5,6 +5,7 @@ mod books;
 mod bundle;
 mod create;
 mod encounter;
+mod extract;
 mod lists;
 mod npc;
 mod party;
@@ -221,6 +222,12 @@ impl Window {
                 move |_, _, _| this.choose_folder()
             })
             .build();
+        let extract_data = gio::ActionEntry::builder("extract-data")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| extract::choose_source(&Rc::new(this.clone()))
+            })
+            .build();
         let new_character = gio::ActionEntry::builder("new-character")
             .activate({
                 let this = this.clone();
@@ -323,6 +330,7 @@ impl Window {
         this.window.add_action_entries([
             preferences,
             open,
+            extract_data,
             new_character,
             new_npc,
             new_npc_group,
@@ -370,21 +378,33 @@ impl Window {
             .use_underline(true)
             .halign(gtk::Align::Center)
             .action_name("win.open")
+            .css_classes(["pill"])
+            .build();
+        let extract = gtk::Button::builder()
+            .label(tr("Extract Data from _CD…"))
+            .use_underline(true)
+            .halign(gtk::Align::Center)
+            .action_name("win.extract-data")
             .css_classes(["pill", "suggested-action"])
             .build();
+        let buttons = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(12)
+            .halign(gtk::Align::Center)
+            .build();
+        buttons.append(&extract);
+        buttons.append(&button);
         let page = adw::StatusPage::builder()
             .icon_name("folder-symbolic")
             .title(tr("No Core Rules Installation"))
             .description(match error {
                 Some(error) => glib::markup_escape_text(error).to_string(),
-                None => tr(
-                    "Open the folder where AD&amp;D Core Rules 2.0 is installed, \
-                            a data package made with extract-data.sh, \
-                            or the root of its CD",
-                )
+                None => tr("Extract the data from your Core Rules 2.0 or Expansion CD \
+                            (its ISO image or the mounted CD), or open the folder \
+                            where AD&amp;D Core Rules 2.0 is installed or a data package")
                 .to_owned(),
             })
-            .child(&button)
+            .child(&buttons)
             .build();
         let view = adw::ToolbarView::new();
         view.add_top_bar(&adw::HeaderBar::new());
@@ -725,6 +745,20 @@ impl npc::Host for Window {
     }
 }
 
+impl extract::Host for Window {
+    fn open(&self, dir: PathBuf) {
+        Window::open(self, dir)
+    }
+
+    fn add_toast(&self, toast: adw::Toast) {
+        self.toasts.add_toast(toast);
+    }
+
+    fn parent(&self) -> gtk::Widget {
+        self.window.clone().upcast()
+    }
+}
+
 impl transfer::Host for Window {
     fn installation(&self) -> std::cell::Ref<'_, Option<Installation>> {
         self.install.borrow()
@@ -869,6 +903,7 @@ fn open_menu() -> gtk::MenuButton {
     menu.append_section(None, &packages);
     let app = gio::Menu::new();
     app.append(Some(tr("_Open Folder…")), Some("win.open"));
+    app.append(Some(tr("Extract Data from _CD…")), Some("win.extract-data"));
     app.append(Some(tr("_Preferences")), Some("win.preferences"));
     menu.append_section(None, &app);
     gtk::MenuButton::builder()

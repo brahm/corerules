@@ -1,8 +1,8 @@
 #!/bin/sh
 # Builds target/addons/addons-comunidade-expansion.tar.gz, the community
 # add-ons package for the Expansion: the consolidated Comunidade.xpx, the
-# installer, a static cr that reads it and the data extraction script. The
-# Addons package workflow publishes it on GitHub Packages.
+# installer and a static cr that reads it (and extracts the data package
+# from the CDs). The Addons package workflow publishes it on GitHub Packages.
 #
 #   packaging/addons/build.sh [COMUNIDADE.xpx]
 #
@@ -25,7 +25,6 @@ else
     xz -dc "$root/addons/Comunidade.xpx.xz" > "$stage/Comunidade.xpx"
 fi
 install -m755 "$root/packaging/addons/instalar-addons.sh" "$stage/instalar-addons.sh"
-install -m755 "$root/packaging/extract-data.sh" "$stage/extract-data.sh"
 install -m644 "$root/addons/README.md" "$stage/README.md"
 for f in relatorio.md compatibilidade.csv conflitos.csv; do
     install -m644 "$root/addons/$f" "$stage/$f"

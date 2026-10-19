@@ -30,6 +30,9 @@ the original programs wrote.
 
 - Browse the characters, races, classes, items, spells, psionic powers and
   monsters of an installation, of its CD, or of a data package
+- **Extract Data from CD…** copies what the app uses from the Core Rules
+  2.0 or Expansion CD (its ISO image or the mounted CD) or an installation
+  into the app's data folder, so neither the CD nor Wine is needed again
 - The Core Rules books in a reader with contents and search
 - Lists sort exactly as Windows sorts them (`CompareStringW`, checked under
   Wine)
@@ -155,19 +158,26 @@ libadwaita and the rest).
 
 ## Running without Wine
 
-The app needs the rules data of a Core Rules installation you own. Instead
-of keeping Wine around, copy what the app uses into a local data package
-once:
+The app needs the rules data of a Core Rules CD you own. Instead of
+keeping the CD or Wine around, copy what the app uses into a local data
+package once with **Extract Data from CD…** in the main menu (also offered
+when the app finds no data). Choose the CD's ISO image, read directly with
+no mounting or other tools, or the folder of the mounted CD, of an
+installation or of a Wine prefix. The same from the command line:
 
 ```sh
-packaging/extract-data.sh "$HOME/.wine"            # writes corerules-data-*.tar.gz
-packaging/extract-data.sh --install corerules-data-expansion.tar.gz
+cr extract-data add_core_rules_2_expansion.iso   # the CD's ISO image
+cr extract-data /media/$USER/EVERMORE            # the mounted CD
+cr extract-data "$HOME/.wine"                    # Core Rules installed in Wine
 ```
 
-`--install` unpacks it into `~/.local/share/corerules/data`, where the app
-and `cr` look first (`--install` also takes the installation folder
-directly). The package holds TSR/Wizards of the Coast content: keep it for
-your own use and do not redistribute it.
+The data goes into `~/.local/share/corerules/data`, where the app and `cr`
+look first. If that folder is taken, the package goes next to it as
+`corerules-data-core20` or `corerules-data-expansion`; the Expansion takes
+the data folder over from Core Rules 2.0 data, which moves aside, since the
+Expansion is where the app makes and changes things (2.0 content is brought
+in with Import Core Rules 2.0…). The package holds TSR/Wizards of the Coast
+content: keep it for your own use and do not redistribute it.
 
 ## Community add-ons
 

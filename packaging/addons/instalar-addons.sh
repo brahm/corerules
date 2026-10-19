@@ -32,7 +32,7 @@ die() { echo "erro: $*" >&2; exit 1; }
 
 [ -f "$package" ] || die "não achei $package"
 [ -x "$cr" ] || die "não achei $cr"
-[ -d "$dir" ] || die "$dir não existe; crie o pacote de dados com ./extract-data.sh --install PASTA_DO_CORE_RULES (veja o README.md) ou informe a pasta"
+[ -d "$dir" ] || die "$dir não existe; crie o pacote de dados no app com Extrair dados do CD… ou com bin/cr extract-data ISO_OU_PASTA_DO_CD (veja o README.md), ou informe a pasta"
 dir=$(cd "$dir" && pwd)
 
 # Acha um caminho dentro da instalação sem ligar para maiúsculas.

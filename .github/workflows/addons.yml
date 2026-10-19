@@ -9,13 +9,11 @@ on:
     paths:
       - 'addons/**'
       - 'packaging/addons/**'
-      - 'packaging/extract-data.sh'
       - '.github/workflows/addons.yml'
   pull_request:
     paths:
       - 'addons/**'
       - 'packaging/addons/**'
-      - 'packaging/extract-data.sh'
       - '.github/workflows/addons.yml'
   workflow_dispatch:
 
