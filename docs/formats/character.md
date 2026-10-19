@@ -116,7 +116,7 @@ What each operation does, in the original and in the app:
 | Convert to NPC | Character Generator button, after "This will move the selected Player Character to the NPC List in the DM Toolkit"; `npc.rs` `convert_to_npc` | `unknown_0x1da4` = 1, saved under a new name, old file deleted (`tests/fixtures/characters/to-npc`) | stays in place with the new `file`, `unknown_0x24` = 1 and `flag_0x28` = 1; the details lines are left alone |
 | put in or take out of a party | 0x5ab684, 0x5abb05; `party.rs` `set_party` | saved under a new name in the Expansion layout (`Character::upgraded`), party in `unknown_0x1e68[3]`; old file deleted | old entry removed, new entry appended with the Class and Level lines and the party in +0x2c |
 | import from a package | 0x49d529 (2.0 0x4def60); `export.rs` `import` | one new file per character | appended per character: the Expansion without Class/Level lines; 2.0 like a new character's with the levels computed, in layout 0 or 1 by the character's NPC mark |
-| Update Character | 0x44c23f | saved under a new name, old file deleted | old entry removed, a fresh one appended. The Name page writes the sex, alignment, kit, Background… event and history and, with a new kit, a social class rolled on the kit's table (`tests/fixtures/characters/update`); the app saves these in place and writes the new kit into the entry's kit line |
+| Update Character | 0x44c23f | saved under a new name, old file deleted | old entry removed, a fresh one appended. The Name page writes the sex, alignment, kit, Background… event and history and, with a new kit, a social class rolled on the kit's table (`tests/fixtures/characters/update`); the app saves these in place and writes the new kit into the entry's kit line. The Race Abilities and Class Abilities pages (with Schools and Spheres) charge the character points in `unknown_0x1778[0]` and write the subrace, `racial_abilities` and `class_slots` sorted (`abilities.rs`) |
 | delete | 0x44b7cf, party delete 0x5abffd; `party.rs` | removed (the app keeps `<file>.bak` until the deletion is confirmed) | removed |
 | rebuild | 0x5a1671, only on the user's yes | read | every entry built again |
 
@@ -234,7 +234,7 @@ version.
 | 57 | `weapon_proficiencies` | CStringArray | always | +0xc0 | weapon proficiencies: names of Weapons parts, in the order taken |
 | 58 | `unknown_0xac` | CStringArray[7] | always | +0xac, +0xd4, +0xe8, +0xfc, +0x110, +0x1e8c, +0x19b0 | `[0]` unknown; `[1]` and `[2]` Skills & Powers broad and tight weapon groups (old notes, from code only); `[3]` weapons the character specializes in (sheet `(Specialist)`); `[4]` Skills & Powers armor proficiencies (halve that armor's weight); `[5]` nonweapon proficiencies that get +1 to their score; `[6]` psionic attack modes |
 | 59 | `unknown_0x19c4` | CStringArray | always | +0x19c4 | psionic defense modes (old notes, code only) |
-| 60 | `racial_abilities` | CStringArray | always | +0x168 | racial ability part names (with the cost suffix the part name has); new characters store them sorted in byte order |
+| 60 | `racial_abilities` | CStringArray | always | +0x168 | racial ability part names (with the cost suffix the part name has); new characters store them sorted in byte order; Update Character writes the subrace's package plus the abilities bought, sorted as its list box sorts |
 | 61 | `spells` | CStringArray | always | +0x3a0 | wizard spells known, in the order learned |
 | 62 | `priest_spells` | CStringArray | always | +0x3b4 | priest spells known |
 | 63 | `unknown_0x3c8` | ((CStringArray, CStringArray)[11])[5] | always | +0x3c8, +0x814 | memorized spells: per class slot (index into `classes.names`), per spell level 0 to 10 (0 unused), the wizard list (+0x3c8 + 0xdc * class + 0x14 * level) then the priest list (+0x814 + ...); one entry per memorized copy. A spellbook's contents belong to the spellbook item |
@@ -365,9 +365,9 @@ Inline record (Rust `ClassSlot`), five back to back. Slot g's lists are at
 | # | field | type | meaning |
 |---|---|---|---|
 | 1 | `abilities` | CStringArray | class abilities as part names (`Fighter, Followers (5)`): the class's default abilities that exist as Class Abilities parts, or those chosen with Skills & Powers. Resolved at load |
-| 2 | `unknown_0x270` | CStringArray | schools of magic of the class (from the class record) |
-| 3 | `unknown_0x2d4` | CStringArray | minor spheres (from the class record) |
-| 4 | `unknown_0x338` | CStringArray | major spheres (from the class record) |
+| 2 | `unknown_0x270` | CStringArray | schools of magic of the class (from the class record); Update Character's Schools dialog adds and removes them (5 points each, 15 for a class limited to one school) |
+| 3 | `unknown_0x2d4` | CStringArray | minor spheres (from the class record); the Spheres dialog buys them at the sphere part's `unknown_0x218` |
+| 4 | `unknown_0x338` | CStringArray | major spheres (from the class record); the Spheres dialog buys them at the part's `unknown_0x308`, or a mage's single sphere for 15 |
 
 Unused slots hold four empty arrays.
 

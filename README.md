@@ -61,8 +61,10 @@ the original programs wrote.
 - **Editing** a character: name, player, gender, alignment, kit (which
   rolls the social class again, as Update Character does), social class,
   background event and history, portrait, age, height, weight, hit points
-  (moving the rolls as the original's arrows do), ability scores, weapon and nonweapon proficiencies,
-  languages, spells known, spellbooks and memorized spells, the nine
+  (moving the rolls as the original's arrows do), ability scores, subrace,
+  racial and class abilities, schools and spheres (charging and refunding
+  character points as Update Character does), weapon and nonweapon
+  proficiencies, languages, spells known, spellbooks and memorized spells, the nine
   equipment groups with quantities, and Spending Money
 - **Experience and levels** per class, all classes or split, with the prime
   requisite bonus, hit point rolls, PSPs, character points and the

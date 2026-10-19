@@ -44,7 +44,10 @@ const USAGE: &str = "usage:
                             xp=CLASS:AMOUNT (CLASS 0-4, all or split;
                             AMOUNT may be negative; prime requisite bonus
                             applied); limits=0|1|2 (Expansion level
-                            limits: none, racial, with prime bonuses)
+                            limits: none, racial, with prime bonuses);
+                            subrace=NAME, racial+=NAME (bought on top of
+                            the package), ability+=CLASS:NAME, school+=,
+                            minor+= and major+= (spheres), each with -=
   cr sheet INSTALL_DIR FILE [--html|--txt|--md]
                             print the character sheet of Chars/FILE (or of
                             the character file at path FILE) as the export
@@ -712,8 +715,58 @@ fn cmd_edit(install: &Installation, args: &[String]) -> cr_store::Result<()> {
     let mut advanced = character.clone();
     let mut rules = None;
     let mut dice = cr_store::create::Dice::default();
+    // Subrace, racial and class abilities, schools and spheres.
+    let ability_rules = std::cell::OnceCell::new();
+    let abilities = |lists: &mut CharacterLists| -> cr_store::Result<()> {
+        if lists.abilities.is_none() {
+            let rules = match ability_rules.get() {
+                Some(r) => r,
+                None => {
+                    let _ = ability_rules.set(install.ability_rules()?);
+                    ability_rules.get().unwrap()
+                }
+            };
+            lists.abilities = Some(rules.abilities_of(&character));
+        }
+        Ok(())
+    };
     for change in changes {
         if let Some((list, value, add)) = list_change(change) {
+            if list == "racial" {
+                abilities(&mut lists)?;
+                let racial = &mut lists.abilities.as_mut().unwrap().racial;
+                if add {
+                    racial.push(value.into());
+                } else {
+                    racial.retain(|r| r != value);
+                }
+                continue;
+            }
+            if ["ability", "school", "minor", "major"].contains(&list) {
+                // ability+=CLASS:NAME, class 0 for the first class.
+                abilities(&mut lists)?;
+                let (class, name) = value
+                    .split_once(':')
+                    .ok_or_else(|| invalid(format!("{list}+= takes CLASS:NAME")))?;
+                let classes = &mut lists.abilities.as_mut().unwrap().classes;
+                let slot = class
+                    .parse::<usize>()
+                    .ok()
+                    .and_then(|c| classes.get_mut(c))
+                    .ok_or_else(|| invalid(format!("no class {class}")))?;
+                let names = match list {
+                    "ability" => &mut slot.abilities,
+                    "school" => &mut slot.schools,
+                    "minor" => &mut slot.minor_spheres,
+                    _ => &mut slot.major_spheres,
+                };
+                if add {
+                    names.push(name.into());
+                } else {
+                    names.retain(|n| n != name);
+                }
+                continue;
+            }
             const BUNDLES: [&str; 9] = [
                 "animal",
                 "food",
@@ -841,6 +894,14 @@ fn cmd_edit(install: &Installation, args: &[String]) -> cr_store::Result<()> {
             lists.advancement = Some(cr_store::advance::Advancement::between(
                 &character, &advanced,
             ));
+            continue;
+        }
+        if field == "subrace" {
+            abilities(&mut lists)?;
+            let new = lists.abilities.as_mut().unwrap();
+            new.subrace = value.into();
+            // A new subrace drops the racial abilities bought.
+            new.racial.clear();
             continue;
         }
         match field {

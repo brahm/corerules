@@ -395,6 +395,14 @@ impl<T: Clone + 'static> RowList<T> {
             .collect()
     }
 
+    /// Removes every row.
+    pub fn clear(&self) {
+        for (_, row, _) in self.rows.borrow_mut().drain(..) {
+            self.group.remove(&row);
+        }
+        self.update();
+    }
+
     /// Calls `f` after every change.
     pub fn connect_changed(&self, f: impl Fn() + 'static) {
         *self.changed.borrow_mut() = Some(Box::new(f));

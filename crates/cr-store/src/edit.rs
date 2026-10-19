@@ -160,6 +160,9 @@ impl Installation {
         let mut character = self.character(file)?;
         let before_kit = character.data.kit.clone();
         details.apply(&mut character);
+        if let Some(abilities) = lists.and_then(|l| l.abilities.as_ref()) {
+            self.ability_rules()?.apply(&mut character, abilities)?;
+        }
         if let Some(lists) = lists {
             lists.apply(&mut character, &self.part_table()?)?;
             if !lists.new_classes.is_empty() {

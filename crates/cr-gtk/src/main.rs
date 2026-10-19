@@ -1,6 +1,7 @@
 //! The GNOME app: browses the data of a Core Rules installation in three
 //! panes (sections, entries, details) that collapse on narrow windows.
 
+mod abilities;
 mod books;
 mod bundle;
 mod create;
@@ -1945,12 +1946,20 @@ fn character_editor(
         list.connect_changed(show.clone());
         level_listeners.borrow_mut().push(Box::new(show));
     }
+    let ability_editor =
+        abilities::AbilityEditor::new(choices.abilities.clone(), &choices.character);
     let stack = adw::ViewStack::new();
     stack.add_titled_with_icon(
         &page,
         Some("details"),
         tr("Details"),
         "avatar-default-symbolic",
+    );
+    stack.add_titled_with_icon(
+        &ability_editor.page,
+        Some("abilities"),
+        tr("Abilities"),
+        "emblem-system-symbolic",
     );
     stack.add_titled_with_icon(
         &editors.proficiencies_page(),
@@ -2013,6 +2022,7 @@ fn character_editor(
     });
     let skills_and_powers = details.skills_and_powers;
     let original = choices.character.clone();
+    let ability_rules = choices.abilities.clone();
     save_button.connect_clicked({
         let dialog = dialog.clone();
         move |_| {
@@ -2046,6 +2056,10 @@ fn character_editor(
             };
             let mut lists = editors.lists();
             lists.new_classes = new_classes.borrow().clone();
+            let edited = ability_editor.abilities();
+            if edited != ability_rules.abilities_of(&original) {
+                lists.abilities = Some(edited);
+            }
             let advancement = Advancement::between(&original, &advanced.borrow());
             if advancement != Advancement::of(&original) {
                 lists.advancement = Some(advancement);
@@ -2533,6 +2547,8 @@ struct Choices {
     creation: Rc<cr_store::create::CreationRules>,
     /// The Background… dialog's events, "NONE" first.
     backgrounds: Vec<String>,
+    /// Subraces, racial and class abilities, schools and spheres.
+    abilities: Rc<cr_store::abilities::AbilityRules>,
 }
 
 impl Choices {
@@ -2561,6 +2577,7 @@ impl Choices {
             character: character.clone(),
             creation: Rc::new(install.creation_rules()?),
             backgrounds: cr_store::edit::backgrounds(install)?,
+            abilities: Rc::new(install.ability_rules()?),
         })
     }
 }
@@ -2869,6 +2886,7 @@ impl ListEditors {
             coins: std::array::from_fn(|c| self.coins[c].value() as u32),
             new_classes: Vec::new(),
             advancement: None,
+            abilities: None,
             spellbooks: self
                 .spellbooks
                 .iter()
