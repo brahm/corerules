@@ -49,6 +49,9 @@ pub struct Entry {
     /// The picture of a monster, monster type, race or character, when
     /// its file is in the installation.
     pub picture: Option<std::path::PathBuf>,
+    /// The icon of an item (weapon, armor, equipment or magical item),
+    /// when its bitmap is in the installation.
+    pub icon: Option<crate::pictures::Icon>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -93,6 +96,7 @@ impl Installation {
         let parts = self.load_parts();
         let spells = self.load_spells();
         let user_parts = self.load_user_parts();
+        let mut finder = Finder::new(self.root());
         let user_spells = self.load_user_spells();
         let mut sections = vec![
             section(
@@ -148,6 +152,7 @@ impl Installation {
                 "Non-Weapon Proficiencies",
             ),
         ] {
+            let has_icon = crate::pictures::ICON_PART_TYPES.contains(&part_type);
             let entries = match (&parts, &user_parts) {
                 (Ok(parts), Ok(user)) => Ok(sorted(
                     [
@@ -160,8 +165,14 @@ impl Installation {
                         file.of_type(part_type)
                             .unwrap_or_default()
                             .iter()
-                            .filter_map(part_entry)
-                            .map(move |e| udb_mark(e, id, origin))
+                            .filter_map(|object| {
+                                let mut e = part_entry(object)?;
+                                if has_icon && let Object::Part(p) = object {
+                                    e.icon = finder.icon(&p.head.unknown_0x234);
+                                }
+                                Some(udb_mark(e, id, origin))
+                            })
+                            .collect::<Vec<_>>()
                     })
                     .collect(),
                 )),
@@ -337,7 +348,7 @@ impl Installation {
         ))
     }
 
-    fn load_user_parts(&self) -> std::result::Result<Option<PartsFile>, String> {
+    pub(crate) fn load_user_parts(&self) -> std::result::Result<Option<PartsFile>, String> {
         let relative = "UserDbas/PartsU.dat";
         if self.path(relative).is_none() {
             return Ok(None);
@@ -382,6 +393,7 @@ impl Installation {
                     npc: false,
                     party: String::new(),
                     picture: None,
+                    icon: None,
                     key: format!("{TABLE_KEY}{}", t.name),
                     title: t.name.clone(),
                     subtitle: tr!(
@@ -414,6 +426,7 @@ impl Installation {
                         npc: false,
                         party: String::new(),
                         picture: None,
+                        icon: None,
                         key: format!("{TREASURE_KEY}{}", t.name),
                         title: t.name.clone(),
                         subtitle: summary
@@ -453,6 +466,7 @@ impl Installation {
                             npc: e.unknown_0x24 != 0,
                             party: crate::party::party_of(e).to_owned(),
                             picture: finder.picture(&portrait(&c), Kind::Portrait),
+                            icon: None,
                             ..character_entry(&c)
                         };
                         if entry.npc {
@@ -499,7 +513,7 @@ impl Installation {
         Ok(objects)
     }
 
-    fn load_parts(&self) -> std::result::Result<PartsFile, String> {
+    pub(crate) fn load_parts(&self) -> std::result::Result<PartsFile, String> {
         let relative = "Database/Parts.dat";
         let data = self.read(relative).map_err(|e| e.to_string())?;
         PartsFile::parse(&data).map_err(|e| format!("{relative}: {e}"))
@@ -577,6 +591,7 @@ fn encounter_entry(e: &Encounter, rules: Option<&EncounterRules>) -> Entry {
         npc: false,
         party: String::new(),
         picture: None,
+        icon: None,
         key: format!("{ENCOUNTER_KEY}{}", e.name),
         title: e.name.clone(),
         subtitle: if e.template.is_empty() {
@@ -633,6 +648,7 @@ fn template_entries(rules: &EncounterRules) -> Vec<Entry> {
                     npc: false,
                     party: String::new(),
                     picture: None,
+                    icon: None,
                     key: format!("{TEMPLATE_KEY}{}", t.name),
                     title: t.name.clone(),
                     subtitle: t.monster_type.clone(),
@@ -766,6 +782,7 @@ fn character_entry(c: &Character) -> Entry {
         npc: false,
         party: String::new(),
         picture: None,
+        icon: None,
         key: String::new(),
         title: d.name.clone(),
         subtitle: format!("{race} {}", d.class_title),
@@ -862,6 +879,7 @@ fn race_entry(object: &Object) -> Option<Entry> {
         npc: false,
         party: String::new(),
         picture: None,
+        icon: None,
         key: String::new(),
         title: r.name.clone(),
         subtitle: adjustments.join(", "),
@@ -939,6 +957,7 @@ fn part_entry(object: &Object) -> Option<Entry> {
         npc: false,
         party: String::new(),
         picture: None,
+        icon: None,
         key: String::new(),
         title: p.head.name.clone(),
         subtitle: String::new(),
@@ -955,6 +974,7 @@ fn spell_entry(object: &Object) -> Option<Entry> {
         npc: false,
         party: String::new(),
         picture: None,
+        icon: None,
         key: String::new(),
         title: s.name.clone(),
         subtitle: if s.priest != 0 {
@@ -984,6 +1004,7 @@ fn psionic_entry(object: &Object) -> Option<Entry> {
         npc: false,
         party: String::new(),
         picture: None,
+        icon: None,
         key: String::new(),
         title: p.name.clone(),
         subtitle: p.cost.clone(),
@@ -1021,6 +1042,7 @@ fn monster_entry(object: &Object) -> Option<Entry> {
         npc: false,
         party: String::new(),
         picture: None,
+        icon: None,
         key: String::new(),
         title: m.name.clone(),
         subtitle: m.climate_terrain.clone(),

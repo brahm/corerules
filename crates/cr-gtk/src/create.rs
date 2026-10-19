@@ -14,6 +14,7 @@ use cr_store::create::{
     ROGUE_SKILLS, RollMethod, SHIELDS, STANDARD_PACK, SUBABILITIES, SUBABILITY_SPREAD, UNARMED,
     max_spells_per_level, point_table, roll_dice_pool, roll_seven_dice, seven_dice_scores,
 };
+use cr_store::pictures::ItemIcons;
 use cr_store::settings::{SETTINGS, Setting};
 use gtk::glib;
 
@@ -43,8 +44,10 @@ type SetCheck = dyn Fn(&mut Draft, usize, bool);
 
 struct Inner {
     rules: CreationRules,
-    /// The installation, for the portraits.
+    /// The installation, for the portraits and the items' icons.
     root: PathBuf,
+    /// The items' icons, read when the Equipment step first needs them.
+    icons: std::cell::OnceCell<Rc<ItemIcons>>,
     draft: RefCell<Draft>,
     dice: RefCell<Dice>,
     nav: adw::NavigationView,
@@ -73,6 +76,7 @@ pub fn new_character(
     let wizard = Wizard(Rc::new(Inner {
         rules,
         root,
+        icons: Default::default(),
         draft: RefCell::new(Draft::new(&SETTINGS[0])),
         dice: RefCell::new(Dice::default()),
         nav,
@@ -309,6 +313,17 @@ fn scores_summary(scores: &[u32; 6]) -> String {
 }
 
 impl Wizard {
+    /// The items' icons; none when they cannot be read.
+    fn icons(&self) -> Rc<ItemIcons> {
+        self.0
+            .icons
+            .get_or_init(|| {
+                let icons = cr_store::Installation::open(&self.0.root).and_then(|i| i.item_icons());
+                Rc::new(icons.unwrap_or_default())
+            })
+            .clone()
+    }
+
     fn rules(&self) -> &CreationRules {
         &self.0.rules
     }
@@ -2362,6 +2377,7 @@ impl Wizard {
             },
             move |name| Some(spec(name, 1)),
         );
+        items.show_icons(self.icons());
         items.group.set_description(Some(tr(
             "Weapons go to the items readied, armor to the items worn, the rest to the \
              items carried",

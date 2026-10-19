@@ -33,6 +33,9 @@ the original programs wrote.
 - **Extract Data from CD…** copies what the app uses from the Core Rules
   2.0 or Expansion CD (its ISO image or the mounted CD) or an installation
   into the app's data folder, so neither the CD nor Wine is needed again
+- Weapons, armor, equipment and magical items show their icons, those of
+  `Bitmaps/Equip` or the user's own in `UserBMP`, on their pages and in a
+  character's equipment
 - The Core Rules books in a reader with contents and search
 - Lists sort exactly as Windows sorts them (`CompareStringW`, checked under
   Wine)

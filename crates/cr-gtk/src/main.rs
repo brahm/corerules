@@ -35,6 +35,7 @@ use cr_store::lists::{
     BUNDLE_NAMES, COINS, CharacterLists, ITEM_TYPES, Item, MONEY, Memorized, Spellbook,
 };
 use cr_store::npc::NpcRules;
+use cr_store::pictures::{ICON_SIZE, ItemIcons};
 use cr_store::treasure::Rand;
 use gtk::{gio, glib};
 use lists::{ListEditor, RowList, RowSpec, pick};
@@ -1622,7 +1623,23 @@ fn detail(entry: &Entry) -> gtk::Widget {
                 .build(),
         );
     }
-    heading.add(&column);
+    match entry.icon.as_ref().and_then(picture::icon_texture) {
+        Some(texture) => {
+            let row = gtk::Box::builder().spacing(18).build();
+            let icon = gtk::Image::builder()
+                .paintable(&texture)
+                .pixel_size(ICON_SIZE as i32)
+                .valign(gtk::Align::Start)
+                .build();
+            icon.update_property(&[gtk::accessible::Property::Label(tr("Icon"))]);
+            row.append(&icon);
+            column.set_hexpand(true);
+            column.set_valign(gtk::Align::Center);
+            row.append(&column);
+            heading.add(&row);
+        }
+        None => heading.add(&column),
+    }
     page.add(&heading);
     if let Some(picture) = entry
         .picture
@@ -2350,6 +2367,8 @@ struct Choices {
     wizard_spells: Rc<Vec<String>>,
     priest_spells: Rc<Vec<String>>,
     items: Rc<Vec<String>>,
+    /// The items' icons, drawn on the equipment rows.
+    icons: Rc<ItemIcons>,
     wizard_levels: Rc<HashMap<String, u32>>,
     priest_levels: Rc<HashMap<String, u32>>,
     class_ids: HashMap<String, i32>,
@@ -2377,6 +2396,7 @@ impl Choices {
             wizard_spells: Rc::new(install.spell_names(true)?),
             priest_spells: Rc::new(install.spell_names(false)?),
             items: Rc::new(items),
+            icons: Rc::new(install.item_icons()?),
             wizard_levels: Rc::new(install.spell_levels(true)?),
             priest_levels: Rc::new(install.spell_levels(false)?),
             class_ids: install.class_ids()?,
@@ -2557,6 +2577,7 @@ impl ListEditors {
                         })
                     },
                 );
+                list.show_icons(choices.icons.clone());
                 (b, list)
             })
             .collect();
