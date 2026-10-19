@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use cr_i18n::{tr, trn};
+use cr_store::help::topic;
 use cr_store::party::{ALL, Deleted, party_of};
 use cr_store::{Installation, Result};
 use gtk::glib;
@@ -117,8 +118,10 @@ pub fn manage<H: Host + 'static>(host: &Rc<H>) {
     page.add(&top);
     let toasts = adw::ToastOverlay::new();
     toasts.set_child(Some(&page));
+    let header = adw::HeaderBar::new();
     let view = adw::ToolbarView::new();
-    view.add_top_bar(&adw::HeaderBar::new());
+    crate::help::add_button(&header, &view, || topic::PARTY_MANAGEMENT);
+    view.add_top_bar(&header);
     view.set_content(Some(&toasts));
     let dialog = adw::Dialog::builder()
         .title(tr("Manage Parties"))

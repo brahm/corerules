@@ -11,6 +11,7 @@ use cr_store::encounter::{
     Encounter, EncounterRules, FrequencyTable, LairMode, NameError, Package, PendingNpc, Source,
     add_trap, check_name, hit_point_text, remove_trap, roll_2_to_20, roll_and_pick,
 };
+use cr_store::help::topic;
 use cr_store::sheet::{self as crsheet, Block, Cell, ListItem, Sheet, SheetBox, Table};
 use cr_store::treasure::{Bundle, Rand};
 use cr_store::userdb::traps::Traps;
@@ -176,6 +177,7 @@ pub fn choose_template<H: Host + 'static>(host: &Shared<H>) {
         .build();
     let header = adw::HeaderBar::new();
     let view = adw::ToolbarView::new();
+    crate::help::add_button(&header, &view, || topic::ENCOUNTERS);
     view.add_top_bar(&header);
     let bar = gtk::SearchBar::builder()
         .child(&search)
@@ -315,6 +317,7 @@ pub fn editor<H: Host + 'static>(
     );
     header.pack_end(&save);
     let view = adw::ToolbarView::new();
+    crate::help::add_button(&header, &view, || topic::ENCOUNTER);
     view.add_top_bar(&header);
     view.set_content(Some(&page));
     let dialog = adw::Dialog::builder()
@@ -771,6 +774,7 @@ impl<H: Host + 'static> State<H> {
             .build();
         content.append(&list);
         let view = adw::ToolbarView::new();
+        crate::help::add_button(&header, &view, || topic::TRAPS);
         view.add_top_bar(&header);
         view.set_content(Some(
             &gtk::ScrolledWindow::builder()
@@ -1498,6 +1502,7 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
     header.pack_start(&delete);
     header.pack_end(&save);
     let view = adw::ToolbarView::new();
+    crate::help::add_button(&header, &view, || topic::ENCOUNTER_TABLE);
     view.add_top_bar(&header);
     view.set_content(Some(&page));
     let dialog = adw::Dialog::builder()

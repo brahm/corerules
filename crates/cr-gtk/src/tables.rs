@@ -10,6 +10,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use cr_i18n::tr;
 use cr_store::Installation;
+use cr_store::help::topic;
 use cr_store::tables::{Block, Leftovers, ListEntry, RollResult, Session, TableBook, TableRolls};
 use cr_store::treasure::Rand;
 use gtk::{gio, glib};
@@ -50,6 +51,7 @@ pub fn open(
     stack.add_named(&spinner, Some("loading"));
     let view = adw::ToolbarView::new();
     let header = adw::HeaderBar::new();
+    crate::help::add_button(&header, &view, || topic::TABLES);
     view.add_top_bar(&header);
     view.set_content(Some(&stack));
     dialog.set_child(Some(&view));

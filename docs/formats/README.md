@@ -22,6 +22,7 @@ field.
 | [export.md](export.md) | the DM Toolkit packages `.xpx` (Expansion) and `.xpt` (2.0), Import and Export |
 | [tables.md](tables.md) | the Table Rolls tables `Tables/*.TBL` |
 | [books.md](books.md) | the rule books `Books/*.rtf` |
+| [help.md](help.md) | the WinHelp files `Help/*.hlp` and their contents files `Help/*.cnt` |
 | [program.md](program.md) | the program images `Program/Tsrp3.exe` and `Program/Evermore.exe`, which the app reads texts from |
 
 ## Installation layout
@@ -55,7 +56,8 @@ installation and converted to the Expansion's layouts (see
 | `MapMaker/Moi*.dat`, `Mapmaker.ini`, `*.pal`, `*.mtf` | Map Maker II object sets and settings | not decoded | no | no |
 | `*.FCW` | Campaign Mapper drawings | carried inside packages as bytes; not decoded | no | inside packages |
 | `UserDbas/enctable.dat` | 0 bytes in both programs; the name does not occur in `Tsrp3.exe` | - | no | no |
-| `Help/*.hlp`, `Help/*.cnt`, `WebHelp/**` | WinHelp and HTML help | not decoded; Extract Data from CD… copies the `.cnt` files, the app does not read them | no | no |
+| `Help/*.hlp`, `Help/*.cnt` | WinHelp help: the Online Manual, the program help, the books' help versions | [help.md](help.md) | yes | no |
+| `WebHelp/**` | HTML help (the books' HTML versions) | HTML | no | no |
 | `Sounds`, `Animate`, `Wizard`, `Or`, `Userbmp`, other `Bitmaps` | program artwork and sounds (BMP, GIF, WAV) | standard formats | no | no |
 
 Map Maker II, the Campaign Mapper and the dice roller are outside the app's

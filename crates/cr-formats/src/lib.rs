@@ -26,6 +26,8 @@ pub mod spells;
 pub mod tbl;
 pub mod traps;
 pub mod treasure;
+pub mod winhelp;
+mod winhelp_bitmap;
 
 pub use archive::{ArchiveReader, ArchiveWriter, ClassInfo, ObjectTag};
 pub use field::Field;
@@ -58,6 +60,8 @@ pub enum Error {
         expected: u16,
         found: u16,
     },
+    #[error("{0}")]
+    Malformed(String),
     #[error("field {field} must be {} for this file version", if *expected { "present" } else { "absent" })]
     FieldMismatch { field: &'static str, expected: bool },
 }

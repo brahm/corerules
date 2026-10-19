@@ -165,9 +165,17 @@ groups (`Data::tight_groups`, name to id).
 
 ### Resources and message boxes
 
-None of the readers parses `.rsrc`: no string tables, dialogs, menus or version
-resources are read. The dialogs, messages and message boxes the app shows are its own
-text, with one exception: the NPC generator's error when no class is given is the
+The only resources read are two dialog templates, for the About window
+([help.md](help.md#the-about-box)). `Image::dialog_texts` takes the resource directory from
+data directory 2 of the optional header (offset `pe + 24 + 96 + 16`) and walks it type →
+name → first language: a directory has u16 named and id entry counts at 12 and 14, then
+8-byte entries (u32 name or id, u32 target; a set high bit points to a subdirectory), and the
+leaf gives the data's RVA and size. A `DLGTEMPLATE` (or `DLGTEMPLATEEX`, which starts
+`1, 0xFFFF`) gives its caption and, from each item (DWORD-aligned), the static controls'
+(class `0xFFFF 0x0082`) style, place and text, sorted top to bottom and left to right with
+`&` mnemonics removed unless `SS_NOPREFIX` (0x80) is set. No string tables, menus or version
+resources are read. Otherwise the dialogs, messages and message boxes the app shows are its
+own text, with one exception: the NPC generator's error when no class is given is the
 program's own string (`NO_CLASS` below), returned as the error text.
 
 ### Not read: kept as values
