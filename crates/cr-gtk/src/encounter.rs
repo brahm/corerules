@@ -620,9 +620,9 @@ impl<H: Host + 'static> State<H> {
         let group = adw::PreferencesGroup::builder()
             .title(tr("Characters Not Generated"))
             .description(tr(
-                "The template also calls for these nonplayer characters. Generating \
-                 them needs the NPC generator, which is not available yet; add saved \
-                 characters with Add NPC instead.",
+                "The template also calls for these nonplayer characters, but the NPC \
+                 generator could not make them, for the reason under each one. Add \
+                 saved characters with Add NPC instead.",
             ))
             .build();
         for p in &self.pending {
@@ -634,7 +634,10 @@ impl<H: Host + 'static> State<H> {
                 .collect();
             let row = adw::ActionRow::builder()
                 .title(glib::markup_escape_text(&format!("{} × {}", p.count, p.npc.race)).as_str())
-                .subtitle(glib::markup_escape_text(&classes.join(" / ")).as_str())
+                .subtitle(
+                    glib::markup_escape_text(&format!("{}\n{}", classes.join(" / "), p.reason))
+                        .as_str(),
+                )
                 .build();
             group.add(&row);
         }
