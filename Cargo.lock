@@ -64,6 +64,7 @@ name = "cr-addons"
 version = "0.8.0"
 dependencies = [
  "cr-formats",
+ "cr-i18n",
  "cr-store",
  "gtk4",
  "libadwaita",
