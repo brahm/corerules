@@ -1188,6 +1188,7 @@ impl Wizard {
         d.height = rules.roll_height(&race, d.male, &mut dice);
         d.weight = rules.roll_weight(&race, d.male, &mut dice);
         d.hit_dice = rules.roll_hit_dice(&d.classes, &mut dice);
+        d.psionic_roll = rules.roll_psionic(&d.classes, &mut dice);
         if d.roll_method != RollMethod::PointsAndStrength {
             d.exceptional_strength = dice.roll(1, 100);
         }

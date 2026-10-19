@@ -686,10 +686,17 @@ fn psionic_points(character: &Character, level: u32, dice: &mut Dice) -> u32 {
     let bonus = |a: usize, s: usize| (ability(character, a, s) - 15).max(0) as u32;
     let bonuses = bonus(WIS, 1) + bonus(INT, 1) + bonus(CON, 2);
     match level {
-        1 => 15 + dice.roll(1, 6) + bonuses,
+        1 => first_level_psionic_points(character, dice.roll(1, 6)),
         2..=8 => dice.roll(1, 6) + bonuses,
         _ => bonus(WIS, 1) + 3,
     }
+}
+
+/// PSPs of a psionicist's 1st level, with `roll` (1d6) as the die
+/// (0x42e916 with level 1).
+pub fn first_level_psionic_points(character: &Character, roll: u32) -> u32 {
+    let bonus = |a: usize, s: usize| (ability(character, a, s) - 15).max(0) as u32;
+    15 + roll + bonus(WIS, 1) + bonus(INT, 1) + bonus(CON, 2)
 }
 
 /// The highest wizard spell level Intelligence allows.
