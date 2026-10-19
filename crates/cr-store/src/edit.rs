@@ -163,6 +163,20 @@ impl Installation {
         if let Some(abilities) = lists.and_then(|l| l.abilities.as_ref()) {
             self.ability_rules()?.apply(&mut character, abilities)?;
         }
+        // Weapon proficiencies cost points too, so a changed list goes
+        // through the combat rules even with nothing else of theirs.
+        if let Some(lists) = lists
+            && (lists.combat.is_some()
+                || lists.weapon_proficiencies != character.data.weapon_proficiencies)
+        {
+            let rules = self.combat_rules()?;
+            let combat = lists.combat.clone().unwrap_or_else(|| {
+                let mut combat = rules.combat_of(&character);
+                combat.weapons.clone_from(&lists.weapon_proficiencies);
+                combat
+            });
+            rules.apply(&mut character, &combat)?;
+        }
         if let Some(lists) = lists {
             lists.apply(&mut character, &self.part_table()?)?;
             if !lists.new_classes.is_empty() {

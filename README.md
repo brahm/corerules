@@ -62,8 +62,10 @@ the original programs wrote.
   rolls the social class again, as Update Character does), social class,
   background event and history, portrait, age, height, weight, hit points
   (moving the rolls as the original's arrows do), ability scores, subrace,
-  racial and class abilities, schools and spheres (charging and refunding
-  character points as Update Character does), weapon and nonweapon
+  racial and class abilities, schools and spheres, weapon proficiencies,
+  weapon of choice, expertise, specializations, mastery, unarmed combat,
+  shields, armor, fighting styles, traits and disadvantages (charging and
+  refunding character points as Update Character does), nonweapon
   proficiencies, languages, spells known, spellbooks and memorized spells, the nine
   equipment groups with quantities, and Spending Money
 - **Experience and levels** per class, all classes or split, with the prime

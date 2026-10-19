@@ -10,6 +10,7 @@ pub mod books;
 pub mod catalog;
 pub mod choices;
 pub mod collate;
+pub mod combat;
 pub mod create;
 pub mod dual;
 pub mod edit;

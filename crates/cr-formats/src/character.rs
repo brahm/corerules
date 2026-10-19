@@ -464,8 +464,8 @@ pub struct ClassList {
     /// Skills & Powers fighting styles, in the order they were learned,
     /// 0 for none: 1993 one-handed weapon, 1994 weapon and shield, 1995
     /// two-handed weapon, 1996 two weapon, 1997 missile, 1998 horse
-    /// archer, 1999 thrown weapon/sling, 2000 two weapon (+2), 2001
-    /// one-handed weapon (+2).
+    /// archer, 1999 thrown weapon/sling, 2001 two weapon (+2), 2002
+    /// one-handed weapon (+2) (the program's style list; 2000 is unused).
     pub unknown_0x50: [u32; 10],
     pub names: Vec<String>,
 }

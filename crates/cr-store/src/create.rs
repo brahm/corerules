@@ -397,8 +397,8 @@ pub const FIGHTING_STYLES: [(&str, u32, [bool; 5]); 9] = [
     ("Missile", 1997, [true, true, false, false, false]),
     ("Horse Archer", 1998, [true, true, false, false, false]),
     ("Thrown Weapon/Sling", 1999, [true; 5]),
-    ("Two Weapon (+2)", 2000, [true, true, false, false, false]),
-    ("One-handed Weapon (+2)", 2001, [true; 5]),
+    ("Two Weapon (+2)", 2001, [true, true, false, false, false]),
+    ("One-handed Weapon (+2)", 2002, [true; 5]),
 ];
 
 /// How many fighting styles the file has room for.

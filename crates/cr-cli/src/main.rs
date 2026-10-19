@@ -47,7 +47,13 @@ const USAGE: &str = "usage:
                             limits: none, racial, with prime bonuses);
                             subrace=NAME, racial+=NAME (bought on top of
                             the package), ability+=CLASS:NAME, school+=,
-                            minor+= and major+= (spheres), each with -=
+                            minor+= and major+= (spheres), each with -=;
+                            woc=, expertise=, mastery= (WEAPON, or none),
+                            spec+=, unarmed+= (Punching, Wrestling, Martial
+                            Arts), shield+= (Buckler, Small shield, Medium
+                            shield, Body shield), armor+=, style+=
+                            (fighting styles), trait+=, disadvantage+=,
+                            each with -=
   cr sheet INSTALL_DIR FILE [--html|--txt|--md]
                             print the character sheet of Chars/FILE (or of
                             the character file at path FILE) as the export
@@ -730,8 +736,63 @@ fn cmd_edit(install: &Installation, args: &[String]) -> cr_store::Result<()> {
         }
         Ok(())
     };
+    // Weapon of choice, expertise, specializations, mastery, unarmed
+    // combat, shields, armor, fighting styles, traits and disadvantages.
+    let combat_rules = std::cell::OnceCell::new();
+    let combat = |lists: &mut CharacterLists| -> cr_store::Result<()> {
+        if lists.combat.is_none() {
+            let rules = match combat_rules.get() {
+                Some(r) => r,
+                None => {
+                    let _ = combat_rules.set(install.combat_rules()?);
+                    combat_rules.get().unwrap()
+                }
+            };
+            lists.combat = Some(rules.combat_of(&character));
+        }
+        Ok(())
+    };
     for change in changes {
         if let Some((list, value, add)) = list_change(change) {
+            const FLAGS: [(&str, &[&str]); 2] = [
+                ("unarmed", &cr_store::create::UNARMED),
+                ("shield", &cr_store::create::SHIELDS),
+            ];
+            if let Some((_, names)) = FLAGS.iter().find(|f| f.0 == list) {
+                combat(&mut lists)?;
+                let i = names
+                    .iter()
+                    .position(|n| *n == value)
+                    .ok_or_else(|| invalid(format!("{list} is one of {}", names.join(", "))))?;
+                let new = lists.combat.as_mut().unwrap();
+                if list == "unarmed" {
+                    new.unarmed[i] = add;
+                } else {
+                    new.shields[i] = add;
+                }
+                continue;
+            }
+            if ["spec", "armor", "style", "trait", "disadvantage"].contains(&list) {
+                combat(&mut lists)?;
+                let new = lists.combat.as_mut().unwrap();
+                let names = match list {
+                    "spec" => &mut new.specializations,
+                    "armor" => &mut new.armor,
+                    "style" => &mut new.styles,
+                    "trait" => &mut new.traits,
+                    _ => &mut new.disadvantages,
+                };
+                if add {
+                    names.push(value.into());
+                } else {
+                    names.retain(|n| n != value);
+                    // Unspecializing drops the mastery in the weapon.
+                    if list == "spec" && new.mastery.as_deref() == Some(value) {
+                        new.mastery = None;
+                    }
+                }
+                continue;
+            }
             if list == "racial" {
                 abilities(&mut lists)?;
                 let racial = &mut lists.abilities.as_mut().unwrap().racial;
@@ -896,6 +957,17 @@ fn cmd_edit(install: &Installation, args: &[String]) -> cr_store::Result<()> {
             ));
             continue;
         }
+        if ["woc", "expertise", "mastery"].contains(&field) {
+            combat(&mut lists)?;
+            let new = lists.combat.as_mut().unwrap();
+            let weapon = match field {
+                "woc" => &mut new.weapon_of_choice,
+                "expertise" => &mut new.expertise,
+                _ => &mut new.mastery,
+            };
+            *weapon = (!value.is_empty() && value != "none").then(|| value.into());
+            continue;
+        }
         if field == "subrace" {
             abilities(&mut lists)?;
             let new = lists.abilities.as_mut().unwrap();
@@ -928,6 +1000,10 @@ fn cmd_edit(install: &Installation, args: &[String]) -> cr_store::Result<()> {
                 None => return Err(invalid(format!("unknown field {field}"))),
             },
         }
+    }
+    // The weapon proficiencies edited go with the combat choices.
+    if let Some(combat) = lists.combat.as_mut() {
+        combat.weapons.clone_from(&lists.weapon_proficiencies);
     }
     install.save_character(file, &details, Some(&lists))
 }
