@@ -50,10 +50,15 @@ the original programs wrote.
   bought with character points, subabilities, traits and disadvantages,
   proficiencies with ranks, weapon of choice, expertise and specialization,
   unarmed combat, shield and armor proficiencies, fighting styles
-- **Editing** a character: name, player, social class, age, height, weight,
-  ability scores, weapon and nonweapon proficiencies, languages, spells
-  known, spellbooks and memorized spells, the nine equipment groups with
-  quantities, and Spending Money
+- **Portraits**, in New Character and when editing: one of the race's
+  portraits or any other in `Bitmaps/Portrait`, or a BMP, JPEG, GIF or PNG
+  picture of your own, which the app cuts to the portraits' size and saves
+  there as an 8-bit bitmap in the original's palette, so the original shows
+  it too
+- **Editing** a character: name, player, social class, portrait, age,
+  height, weight, ability scores, weapon and nonweapon proficiencies,
+  languages, spells known, spellbooks and memorized spells, the nine
+  equipment groups with quantities, and Spending Money
 - **Experience and levels** per class, all classes or split, with the prime
   requisite bonus, hit point rolls, PSPs, character points and the
   Expansion's racial level limits; **dual-classing** for humans

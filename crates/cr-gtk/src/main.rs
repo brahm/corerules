@@ -9,6 +9,7 @@ mod extract;
 mod lists;
 mod npc;
 mod party;
+mod portrait;
 mod prefs;
 mod sheet;
 mod tables;
@@ -590,8 +591,8 @@ impl Window {
 
     /// Opens the New Character dialog.
     fn new_character(&self) {
-        let rules = match &*self.install.borrow() {
-            Some(install) => install.creation_rules(),
+        let (rules, root) = match &*self.install.borrow() {
+            Some(install) => (install.creation_rules(), install.root().to_owned()),
             None => return,
         };
         let rules = match rules {
@@ -599,7 +600,7 @@ impl Window {
             Err(e) => return self.toast(&e.to_string()),
         };
         let this = self.clone();
-        create::new_character(&self.window, rules, move |draft| {
+        create::new_character(&self.window, rules, root, move |draft| {
             let install = this.install.borrow();
             let Some(install) = install.as_ref() else {
                 return Err(tr("The installation is no longer open").into());
@@ -670,10 +671,14 @@ impl Window {
         let details = CharacterDetails::of(&character);
         let lists = CharacterLists::of(&character);
         let classes = character.data.classes.names.clone();
+        let Some(root) = self.install.borrow().as_ref().map(|i| i.root().to_owned()) else {
+            return;
+        };
         let this = self.clone();
         let file = file.to_owned();
         character_editor(
             &self.window,
+            root,
             &details,
             &lists,
             &classes,
@@ -1679,6 +1684,7 @@ fn detail(entry: &Entry) -> gtk::Widget {
 /// otherwise.
 fn character_editor(
     parent: &impl IsA<gtk::Widget>,
+    root: PathBuf,
     details: &CharacterDetails,
     lists: &CharacterLists,
     classes: &[String],
@@ -1757,10 +1763,16 @@ fn character_editor(
     );
     abilities.add(&exceptional);
 
+    let (portrait_row, portrait) = portrait::row(
+        root,
+        choices.character.data.race.clone(),
+        details.portrait.clone(),
+    );
     let character = adw::PreferencesGroup::new();
     character.add(&name);
     character.add(&player);
     character.add(&social_class);
+    character.add(&portrait_row);
     let appearance = adw::PreferencesGroup::builder()
         .title(tr("Appearance"))
         .build();
@@ -1887,6 +1899,7 @@ fn character_editor(
                 }),
                 exceptional_strength: exceptional.value() as u32,
                 skills_and_powers,
+                portrait: portrait.borrow().clone(),
             };
             let mut lists = editors.lists();
             lists.new_classes = new_classes.borrow().clone();

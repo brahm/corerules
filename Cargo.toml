@@ -18,3 +18,5 @@ cr-store = { path = "crates/cr-store" }
 cr-i18n = { path = "crates/cr-i18n" }
 encoding_rs = "0.8"
 thiserror = "2"
+color_quant = "1.1"
+image = { version = "0.25", default-features = false, features = ["bmp", "gif", "jpeg", "png"] }

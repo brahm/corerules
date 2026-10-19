@@ -41,6 +41,8 @@ pub struct CharacterDetails {
     /// Read only: with the Core Rules, the program keeps both subabilities
     /// equal to the score.
     pub skills_and_powers: bool,
+    /// The portrait's folder and file name, both empty for none.
+    pub portrait: [String; 2],
 }
 
 /// Ability scores the original accepts.
@@ -66,6 +68,7 @@ impl CharacterDetails {
             ],
             exceptional_strength: d.exceptional_strength,
             skills_and_powers: character.skills_and_powers(),
+            portrait: d.unknown_0x1db8.clone(),
         }
     }
 
@@ -99,6 +102,7 @@ impl CharacterDetails {
         d.strength = self.abilities[0];
         d.abilities.copy_from_slice(&self.abilities[1..]);
         d.exceptional_strength = self.exceptional_strength;
+        d.unknown_0x1db8.clone_from(&self.portrait);
     }
 }
 

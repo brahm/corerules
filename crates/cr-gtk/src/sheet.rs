@@ -300,23 +300,28 @@ fn list_widget(items: &[ListItem], depth: i32) -> gtk::Widget {
 /// not something every system's image loaders read; `None` when it does
 /// not decode.
 pub(crate) fn picture(path: &std::path::Path, height: i32) -> Option<gtk::Widget> {
+    let texture = texture(path)?;
+    Some(
+        gtk::Picture::builder()
+            .halign(gtk::Align::Start)
+            .height_request(height.min(texture.height()))
+            .paintable(&texture)
+            .can_shrink(true)
+            .build()
+            .upcast(),
+    )
+}
+
+/// A bitmap file as a texture.
+pub(crate) fn texture(path: &std::path::Path) -> Option<gtk::gdk::MemoryTexture> {
     let image = cr_formats::bmp::decode(&std::fs::read(path).ok()?)?;
-    let texture = gtk::gdk::MemoryTexture::new(
+    Some(gtk::gdk::MemoryTexture::new(
         image.width as i32,
         image.height as i32,
         gtk::gdk::MemoryFormat::R8g8b8a8,
         &glib::Bytes::from_owned(image.rgba),
         image.width as usize * 4,
-    );
-    Some(
-        gtk::Picture::builder()
-            .paintable(&texture)
-            .halign(gtk::Align::Start)
-            .height_request(height.min(image.height as i32))
-            .can_shrink(true)
-            .build()
-            .upcast(),
-    )
+    ))
 }
 
 /// One thing drawn on a printed page.
