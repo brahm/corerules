@@ -41,6 +41,9 @@ pub struct PendingNpc {
     pub line: usize,
     pub npc: NpcDescription,
     pub count: i32,
+    /// Why the NPC generator could not make it (also in
+    /// [`Generated::messages`]).
+    pub reason: String,
 }
 
 /// The state of one generation.
@@ -514,13 +517,14 @@ impl Run<'_> {
             }
             Err((message, count)) => {
                 if !self.messages.contains(&message) {
-                    self.messages.push(message);
+                    self.messages.push(message.clone());
                 }
                 let n = count.map_or(1, |c| c(self.rand)).max(1);
                 NpcResult::Pending(PendingNpc {
                     line: index,
                     npc: npc.clone(),
                     count: n,
+                    reason: message,
                 })
             }
         }
