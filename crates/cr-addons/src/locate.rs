@@ -237,7 +237,8 @@ fn app(kind: Kind, version: Option<String>, data: &Path, wine: &Path) -> App {
 }
 
 /// `CoreRules-0.8.0-x86_64.AppImage` files, newest version first; the
-/// installer's own (`CoreRules-Addons-…`) is not one.
+/// add-ons' own (`CoreRules-Community-Addons-…`, or `CoreRules-Addons-…`
+/// before) are not.
 fn appimages(places: &Places) -> Vec<PathBuf> {
     let mut found: Vec<PathBuf> = Vec::new();
     for dir in &places.appimage_dirs {
@@ -248,7 +249,7 @@ fn appimages(places: &Places) -> Vec<PathBuf> {
             let name = entry.file_name().to_string_lossy().to_string();
             let lower = name.to_lowercase();
             if lower.starts_with("corerules")
-                && !lower.starts_with("corerules-addons")
+                && !lower.contains("addons")
                 && lower.ends_with(".appimage")
                 && entry.path().is_file()
             {
@@ -437,6 +438,10 @@ mod tests {
         fake.file("home/Downloads/CoreRules-0.7.2-x86_64.AppImage", "");
         fake.file("home/Applications/CoreRules-0.8.0-x86_64.AppImage", "");
         fake.file("home/Downloads/CoreRules-Addons-0.8.0-x86_64.AppImage", "");
+        fake.file(
+            "home/Downloads/CoreRules-Community-Addons-0.8.1-x86_64.AppImage",
+            "",
+        );
         fake.data("home/.local/share/corerules/data");
         let found = apps(&fake.places());
         let versions: Vec<_> = found.iter().map(|a| a.version.clone().unwrap()).collect();

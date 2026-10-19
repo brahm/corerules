@@ -1,9 +1,10 @@
 name: Addons package
 
-# Builds the add-ons installer, one AppImage with the add-ons inside
-# (crates/cr-addons), and, on main or by hand, publishes it on GitHub
-# Packages as the OCI artifact ghcr.io/<owner>/corerules-addons, tagged with
-# the app version and latest.
+# Builds Core Rules Community Add-ons Collection, one self-installing
+# AppImage with the add-ons inside (crates/cr-addons), and, on main or by
+# hand, publishes it on GitHub Packages as the OCI artifact
+# ghcr.io/<owner>/corerules-community-addons, tagged with the app version
+# and latest.
 on:
   push:
     branches: [main]
@@ -43,9 +44,9 @@ jobs:
       - name: Check the AppImage
         run: |
           cd target/AppDir
-          test -x usr/bin/corerules-addons
+          test -x usr/bin/corerules-community-addons
           test -f usr/share/icons/hicolor/256x256/apps/io.github.brahm.CoreRules.Addons.png
-          ls -l "$GITHUB_WORKSPACE"/dist/CoreRules-Addons-*.AppImage
+          ls -l "$GITHUB_WORKSPACE"/dist/CoreRules-Community-Addons-*.AppImage
       - if: github.event_name != 'pull_request'
         uses: oras-project/setup-oras@v1
       - if: github.event_name != 'pull_request'
@@ -55,9 +56,9 @@ jobs:
           owner=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
           echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
           cd dist
-          oras push "ghcr.io/$owner/corerules-addons:$version,latest" \
+          oras push "ghcr.io/$owner/corerules-community-addons:$version,latest" \
             --artifact-type application/vnd.corerules.addons \
             --annotation "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
-            --annotation "org.opencontainers.image.description=Instalador dos addons da comunidade para o Core Rules Expansion" \
+            --annotation "org.opencontainers.image.description=Core Rules Community Add-ons Collection: 686 community add-ons for AD&D Core Rules 2.0 Expansion, in one self-installing AppImage" \
             --annotation "org.opencontainers.image.version=$version" \
-            "CoreRules-Addons-$version-x86_64.AppImage:application/vnd.appimage"
+            "CoreRules-Community-Addons-$version-x86_64.AppImage:application/vnd.appimage"

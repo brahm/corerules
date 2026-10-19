@@ -43,8 +43,8 @@ msgstr "AppImage em {folder}"
 
 #: crates/cr-addons/src/main.rs:61
 #: crates/cr-addons/src/main.rs:113
-msgid "Community Add-ons"
-msgstr "Addons da comunidade"
+msgid "Core Rules Community Add-ons Collection"
+msgstr "Coleção de addons da comunidade do Core Rules"
 
 #: crates/cr-addons/src/main.rs:69
 msgid "Core Rules on This Computer"

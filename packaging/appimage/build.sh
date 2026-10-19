@@ -2,7 +2,8 @@
 # Builds dist/CoreRules-VERSION-ARCH.AppImage from target/release with
 # linuxdeploy and its GTK plugin, which bundle GTK 4, libadwaita and their
 # data from the system it runs on. `build.sh VERSION addons` builds the
-# add-ons installer instead, dist/CoreRules-Addons-VERSION-ARCH.AppImage.
+# Community Add-ons Collection instead,
+# dist/CoreRules-Community-Addons-VERSION-ARCH.AppImage.
 # Releases run it inside the GNOME 51 SDK (build-in-sdk.sh), so the
 # AppImage carries that platform's libraries and runs on systems with the
 # SDK's glibc or newer.
@@ -11,7 +12,7 @@ version=$1
 arch=$(uname -m)
 case ${2:-app} in
     app) app=io.github.brahm.CoreRules exe=corerules name=CoreRules ;;
-    addons) app=io.github.brahm.CoreRules.Addons exe=corerules-addons name=CoreRules-Addons ;;
+    addons) app=io.github.brahm.CoreRules.Addons exe=corerules-community-addons name=CoreRules-Community-Addons ;;
     *) echo "$0: unknown target $2" >&2; exit 2 ;;
 esac
 tools=${TOOLS_DIR:-$PWD/target/appimage-tools}

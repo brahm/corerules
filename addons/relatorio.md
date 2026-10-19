@@ -1,8 +1,8 @@
-# Addons da comunidade para o Core Rules Expansion
+# Core Rules Community Add-ons Collection: relatório
 
 O `addons.zip` (50.842.950 bytes) traz 686 pacotes: 492 `.xpx` da Expansion e 194 `.xpt` do Core Rules 2.0, contando a User Database e os dois arquivos que precisaram de conserto. Todos foram consolidados num único pacote, `Comunidade.xpx`, no formato que o `TSRP3.EXE` do CD da Expansion lê.
 
-O instalador, que leva o `Comunidade.xpx` dentro dele, e como usá-lo estão no [README.md](README.md). Junto deste relatório:
+O instalador, que leva o `Comunidade.xpx` dentro dele, e como usá-lo estão no [GUIA.md](GUIA.md). Junto deste relatório:
 
 | arquivo | conteúdo |
 |---|---|
