@@ -76,6 +76,8 @@ pub fn backup(install: &Installation, stamp: &str) -> Result<PathBuf, String> {
 pub struct Outcome {
     pub imported: usize,
     pub characters: usize,
+    /// Pictures written by [`pictures`].
+    pub pictures: usize,
     pub log: PathBuf,
 }
 
@@ -109,8 +111,38 @@ pub fn import(install: &Installation, file: &ExportFile, stamp: &str) -> Result<
     Ok(Outcome {
         imported: report.imported.len(),
         characters: report.characters.len(),
+        pictures: 0,
         log: path,
     })
+}
+
+/// Writes the add-ons' pictures into `install`, beside nothing that is
+/// there already, and adds the files to the log.
+pub fn pictures(install: &Installation, outcome: &mut Outcome) -> Result<(), String> {
+    let written = crate::extras::get()?.install_pictures(install)?;
+    let mut log = String::from("=== pictures\n");
+    for file in &written {
+        let _ = writeln!(log, "wrote {}", file.display());
+    }
+    let mut file = fs::OpenOptions::new()
+        .append(true)
+        .open(&outcome.log)
+        .map_err(|e| {
+            tr!(
+                "Could not write {file}: {e}",
+                file = outcome.log.display(),
+                e
+            )
+        })?;
+    io::Write::write_all(&mut file, log.as_bytes()).map_err(|e| {
+        tr!(
+            "Could not write {file}: {e}",
+            file = outcome.log.display(),
+            e
+        )
+    })?;
+    outcome.pictures = written.len();
+    Ok(())
 }
 
 /// The report in the words `cr import` prints.
@@ -166,9 +198,9 @@ mod tests {
         let file = package().unwrap();
         assert!(file.is_expansion());
         let items = contents(&file);
-        assert_eq!(items.len(), 36_716);
+        assert_eq!(items.len(), 36_525);
         let characters = items.iter().filter(|c| c.category == Category::Character);
-        assert_eq!(characters.count(), 105);
+        assert_eq!(characters.count(), 48);
     }
 
     #[test]

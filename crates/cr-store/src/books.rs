@@ -304,6 +304,7 @@ impl Installation {
                 text: String::new(),
                 npc: false,
                 party: String::new(),
+                picture: None,
             })
             .collect()
     }

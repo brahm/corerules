@@ -125,7 +125,7 @@ impl Sheet {
                                     }
                                 }
                                 Block::List(items) => txt_list(&mut out, items, 1),
-                                Block::Paragraph(_) | Block::Lines(_) | Block::Image(_) => {}
+                                Block::Paragraph(_) | Block::Lines(_) | Block::Image { .. } => {}
                             }
                         }
                     }
@@ -290,9 +290,9 @@ impl Html {
                     self.out.push_str("<BR>");
                 }
             }
-            Block::Image(path) => {
+            Block::Image { windows, .. } => {
                 self.out.push_str("<p><img src=\"file://");
-                self.out.push_str(path);
+                self.out.push_str(windows);
                 self.out.push_str("\" border=\"2\"></p>\n");
             }
         }

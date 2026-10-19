@@ -181,11 +181,12 @@ content: keep it for your own use and do not redistribute it.
 
 ## Community add-ons
 
-The [Core Rules Community Add-ons Collection](addons/README.md) gathers 686
+The [Core Rules Community Add-ons Collection](addons/README.md) gathers 672
 add-ons the community made for Core Rules 2.0 and the Expansion (races,
 classes, kits, spells, monsters, modules and the AD&D Core Rules User
 Database), converted to the Expansion's format and consolidated into
-36,716 items. It ships as its own self-installing AppImage
+36,525 items, with the 668 pictures that came with them. Monster types,
+monsters, races and characters show those pictures in the app. It ships as its own self-installing AppImage
 (`crates/cr-addons`, GTK 4 and libadwaita), published on GitHub Packages as
 [`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons),
 and needs the app 0.7.2 or newer. The installer finds the app on its own,

@@ -2,6 +2,8 @@
 //! each with a few groups of label/value rows. The GTK app shows this
 //! without knowing the file formats.
 
+use std::collections::HashMap;
+
 use cr_formats::Object;
 use cr_formats::character::Character;
 use cr_formats::classes::Class;
@@ -12,6 +14,7 @@ use cr_formats::spells::SpellsFile;
 use cr_i18n::{tr, tr_noop, trn};
 
 use crate::encounter::{Encounter, EncounterRules, hit_point_text, npc_line};
+use crate::pictures::{Finder, Kind, joined};
 use crate::treasure::thousands;
 use crate::userdb::tables::{self, TableDb};
 use crate::userdb::{Origin, origin_label};
@@ -43,6 +46,9 @@ pub struct Entry {
     pub npc: bool,
     /// The character's party, empty for none.
     pub party: String,
+    /// The picture of a monster, monster type, race or character, when
+    /// its file is in the installation.
+    pub picture: Option<std::path::PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -260,6 +266,20 @@ impl Installation {
         entry: fn(&Object) -> Option<Entry>,
     ) -> std::result::Result<Vec<Entry>, String> {
         let mut entries = Vec::new();
+        let mut finder = Finder::new(self.root());
+        // A monster shows its type's picture.
+        let types: HashMap<String, String> = if name == "Monster" {
+            self.list_objects("MonType")
+                .unwrap_or_default()
+                .into_iter()
+                .filter_map(|o| match o {
+                    Object::MonsterType(t) => Some((t.name.to_lowercase(), t.picture)),
+                    _ => None,
+                })
+                .collect()
+        } else {
+            HashMap::new()
+        };
         for (origin, relative) in [
             (Origin::Standard, format!("Database/{name}.dat")),
             (Origin::Custom, format!("UserDbas/{name}U.dat")),
@@ -270,12 +290,20 @@ impl Installation {
             let data = self.read(&relative).map_err(|e| e.to_string())?;
             let list = ObjectList::parse(&data)
                 .map_err(|source| Error::Format { path, source }.to_string())?;
-            entries.extend(
-                list.objects
-                    .iter()
-                    .filter_map(entry)
-                    .map(|e| udb_mark(e, id, origin)),
-            );
+            entries.extend(list.objects.iter().filter_map(|object| {
+                let mut e = entry(object)?;
+                e.picture = match object {
+                    Object::MonsterType(t) => finder.picture(&t.picture, Kind::Monster),
+                    Object::Monster(m) => types
+                        .get(&m.monster_type.to_lowercase())
+                        .and_then(|p| finder.picture(p, Kind::Monster)),
+                    Object::Race(r) => {
+                        finder.picture(&joined(&r.portrait_folder, &r.portrait), Kind::Portrait)
+                    }
+                    _ => None,
+                };
+                Some(udb_mark(e, id, origin))
+            }));
         }
         Ok(sorted(entries))
     }
@@ -353,6 +381,7 @@ impl Installation {
                 .map(|t| Entry {
                     npc: false,
                     party: String::new(),
+                    picture: None,
                     key: format!("{TABLE_KEY}{}", t.name),
                     title: t.name.clone(),
                     subtitle: tr!(
@@ -384,6 +413,7 @@ impl Installation {
                     Entry {
                         npc: false,
                         party: String::new(),
+                        picture: None,
                         key: format!("{TREASURE_KEY}{}", t.name),
                         title: t.name.clone(),
                         subtitle: summary
@@ -405,6 +435,7 @@ impl Installation {
 
     fn character_entries(&self) -> std::result::Result<Vec<Entry>, String> {
         let index = self.characters().map_err(|e| e.to_string())?;
+        let mut finder = Finder::new(self.root());
         Ok(index
             .entries
             .iter()
@@ -421,6 +452,7 @@ impl Installation {
                             key: e.file.clone(),
                             npc: e.unknown_0x24 != 0,
                             party: crate::party::party_of(e).to_owned(),
+                            picture: finder.picture(&portrait(&c), Kind::Portrait),
                             ..character_entry(&c)
                         };
                         if entry.npc {
@@ -544,6 +576,7 @@ fn encounter_entry(e: &Encounter, rules: Option<&EncounterRules>) -> Entry {
     Entry {
         npc: false,
         party: String::new(),
+        picture: None,
         key: format!("{ENCOUNTER_KEY}{}", e.name),
         title: e.name.clone(),
         subtitle: if e.template.is_empty() {
@@ -599,6 +632,7 @@ fn template_entries(rules: &EncounterRules) -> Vec<Entry> {
                 Entry {
                     npc: false,
                     party: String::new(),
+                    picture: None,
                     key: format!("{TEMPLATE_KEY}{}", t.name),
                     title: t.name.clone(),
                     subtitle: t.monster_type.clone(),
@@ -731,6 +765,7 @@ fn character_entry(c: &Character) -> Entry {
     Entry {
         npc: false,
         party: String::new(),
+        picture: None,
         key: String::new(),
         title: d.name.clone(),
         subtitle: format!("{race} {}", d.class_title),
@@ -769,6 +804,12 @@ fn character_entry(c: &Character) -> Entry {
         ]),
         text: String::new(),
     }
+}
+
+/// The portrait a character stores, folder then file name.
+pub fn portrait(c: &Character) -> String {
+    let [folder, file] = &c.data.unknown_0x1db8;
+    joined(folder, file)
 }
 
 fn feet_and_inches(inches: u32) -> String {
@@ -820,6 +861,7 @@ fn race_entry(object: &Object) -> Option<Entry> {
     Some(Entry {
         npc: false,
         party: String::new(),
+        picture: None,
         key: String::new(),
         title: r.name.clone(),
         subtitle: adjustments.join(", "),
@@ -896,6 +938,7 @@ fn part_entry(object: &Object) -> Option<Entry> {
     Some(Entry {
         npc: false,
         party: String::new(),
+        picture: None,
         key: String::new(),
         title: p.head.name.clone(),
         subtitle: String::new(),
@@ -911,6 +954,7 @@ fn spell_entry(object: &Object) -> Option<Entry> {
     Some(Entry {
         npc: false,
         party: String::new(),
+        picture: None,
         key: String::new(),
         title: s.name.clone(),
         subtitle: if s.priest != 0 {
@@ -939,6 +983,7 @@ fn psionic_entry(object: &Object) -> Option<Entry> {
     Some(Entry {
         npc: false,
         party: String::new(),
+        picture: None,
         key: String::new(),
         title: p.name.clone(),
         subtitle: p.cost.clone(),
@@ -975,6 +1020,7 @@ fn monster_entry(object: &Object) -> Option<Entry> {
     Some(Entry {
         npc: false,
         party: String::new(),
+        picture: None,
         key: String::new(),
         title: m.name.clone(),
         subtitle: m.climate_terrain.clone(),

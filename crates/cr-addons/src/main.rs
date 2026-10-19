@@ -3,6 +3,8 @@
 //! folder. The window speaks the app's languages and follows the one chosen
 //! in its Preferences; the add-ons themselves are in Portuguese.
 
+mod details;
+mod extras;
 mod install;
 mod locate;
 
@@ -96,9 +98,19 @@ impl Window {
         actions.append(&install_button);
         let other = gtk::Button::builder()
             .label(tr("Other Folder…"))
-            .halign(gtk::Align::Center)
             .css_classes(["flat"])
             .build();
+        let details = gtk::Button::builder()
+            .label(tr("Add-on Details…"))
+            .css_classes(["flat"])
+            .build();
+        details.connect_clicked(details::show);
+        let more = gtk::Box::builder()
+            .spacing(6)
+            .halign(gtk::Align::Center)
+            .build();
+        more.append(&other);
+        more.append(&details);
         let form = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(18)
@@ -106,17 +118,18 @@ impl Window {
         form.append(&group);
         form.append(&notice);
         form.append(&actions);
-        form.append(&other);
+        form.append(&more);
         let clamp = adw::Clamp::builder().maximum_size(480).child(&form).build();
 
         let start = adw::StatusPage::builder()
             .title(tr("Core Rules Community Add-ons Collection"))
             .description(tr!(
-                "The 686 add-ons the community made for AD&amp;D Core Rules 2.0 and the \
+                "The {addons} add-ons the community made for AD&amp;D Core Rules 2.0 and the \
                  Expansion, in one package: races, classes, kits, spells, monsters, \
                  equipment, encounters, the characters of the modules and the User \
-                 Database. {items} items in all.",
-                items = thousands(36_716)
+                 Database. {items} items in all, with the pictures that came with them.",
+                addons = 672,
+                items = thousands(36_525)
             ))
             .child(&clamp)
             .build();
@@ -463,7 +476,9 @@ impl Window {
                 let stamp = stamp.clone();
                 let outcome = gio::spawn_blocking(move || {
                     let file = install::package()?;
-                    install::import(&install, &file, &stamp)
+                    let mut outcome = install::import(&install, &file, &stamp)?;
+                    install::pictures(&install, &mut outcome)?;
+                    Ok::<_, String>(outcome)
                 })
                 .await
                 .map_err(|_| tr("The import stopped with an unexpected error.").to_string())??;
@@ -511,6 +526,14 @@ impl Window {
                     backup
                 ),
             });
+            if outcome.pictures > 0 {
+                text.push(' ');
+                text.push_str(&trn!(
+                    "{n} picture of the add-ons was copied there.",
+                    "{n} pictures of the add-ons were copied there.",
+                    outcome.pictures as u64
+                ));
+            }
             text.push_str("\n\n");
         }
         text.push_str(tr(

@@ -20,6 +20,7 @@ mod iso9660;
 pub mod lists;
 pub mod npc;
 pub mod party;
+pub mod pictures;
 pub mod settings;
 pub mod sheet;
 pub mod tables;

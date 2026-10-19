@@ -1,6 +1,6 @@
 # Core Rules Community Add-ons Collection: guia de instalação
 
-Este pacote junta 686 addons feitos pela comunidade para o AD&D Core Rules 2.0 e a Expansion: raças, classes, kits, magias, monstros, equipamentos, encontros, módulos com personagens e a AD&D Core Rules User Database. Todos foram testados, convertidos para o formato da Expansion e consolidados num único arquivo, `Comunidade.xpx`, com 36.716 itens. O [README](README.md) apresenta a coleção, em inglês, e o [relatorio.md](relatorio.md) conta o que foi convertido, reparado ou deixado de fora.
+Este pacote junta 672 addons feitos pela comunidade para o AD&D Core Rules 2.0 e a Expansion: raças, classes, kits, magias, monstros, equipamentos, encontros, módulos com personagens e a AD&D Core Rules User Database. Todos foram testados, convertidos para o formato da Expansion e consolidados num único arquivo, `Comunidade.xpx`, com 36.525 itens. As 668 imagens que vieram com eles também são instaladas. Os goodies mensais da Evermore Entertainment ficaram de fora. O [README](README.md) apresenta a coleção, em inglês, e o [relatorio.md](relatorio.md) conta o que foi convertido, reparado ou deixado de fora.
 
 Mapas do Map Maker II e desenhos do Campaign Mapper não fazem parte do pacote, porque o app não trata desses programas.
 
@@ -56,13 +56,15 @@ Além de `latest`, cada versão do app tem a sua tag, como `0.7.2`.
    | Pacote .deb ou .rpm | `~/.local/share/corerules/data` |
    | AppImage (em Downloads, Aplicativos, Área de Trabalho, `~/.local/bin`, `/opt` ou a pasta pessoal) | `~/.local/share/corerules/data` |
 
+   O botão **Detalhes dos addons…** mostra, quando você quiser, cada pasta de addons com o que ela trouxe para a coleção e os textos que os autores escreveram.
+
    Sem essa pasta, cada cópia usa a instalação do programa original no Wine, em `~/.wine/drive_c/Program Files/AD&D Core Rules 2.0`, como o próprio app faz. Se a cópia ainda não tem os dados do jogo, o botão **Abrir o Core Rules** a abre para você usar **Extrair dados do CD…**; depois clique em ↻ para procurar de novo. Para instalar numa pasta que o instalador não achou, use **Outra pasta…** e indique a pasta que tem `Database`.
 
 3. Clique em **Instalar**. A importação leva menos de um minuto.
 
-4. Abra o Core Rules, pelo botão **Abrir o Core Rules** ou como de costume. Os addons aparecem nos bancos de dados do usuário (Raças, Classes, Magias, Monstros e o resto) e os personagens dos módulos na lista de personagens. Se o app já estava aberto, feche e abra de novo.
+4. Abra o Core Rules, pelo botão **Abrir o Core Rules** ou como de costume. Os addons aparecem nos bancos de dados do usuário (Raças, Classes, Magias, Monstros e o resto) e os personagens dos módulos na lista de personagens. Tipos de monstro, monstros, raças e personagens mostram a imagem que veio com o addon. Se o app já estava aberto, feche e abra de novo.
 
-A janela fala os mesmos idiomas do app (português, inglês, espanhol, italiano, francês e alemão) e segue o que foi escolhido nas Preferências do Core Rules; sem escolha, segue o idioma do sistema. Os addons em si continuam em português.
+A janela fala os mesmos idiomas do app (português, inglês, espanhol, italiano, francês e alemão) e segue o que foi escolhido nas Preferências do Core Rules; sem escolha, segue o idioma do sistema. Os addons em si e os textos dos autores estão em inglês.
 
 ## O que o instalador faz
 
@@ -70,6 +72,7 @@ A janela fala os mesmos idiomas do app (português, inglês, espanhol, italiano,
 2. Copia `UserDbas/` e `Chars/` para uma pasta ao lado, por exemplo `data-before-addons-20261019-010700/`.
 3. Importa o `Comunidade.xpx`. Um registro do usuário com o mesmo nome de um addon é substituído pelo do addon, como no Import do programa original.
 4. Importa de novo só as classes. Uma combinação raça/classe que cita duas classes novas só entra quando as duas já existem.
+5. Copia as imagens para onde os registros as procuram (`Bitmaps/Monsters`, `Bitmaps/Portrait` e `UserBMP`, e no Wine também as pastas do drive C: que os registros citam). Um arquivo que já existe não é substituído.
 
 O registro da importação fica ao lado da pasta, como `data-addons-20261019-010700.log`, e o botão **Abrir o registro** o mostra no fim.
 
@@ -77,7 +80,7 @@ Instalar de novo não duplica os personagens. Se a pasta estiver dentro de um pr
 
 ## Como desfazer
 
-Troque `UserDbas/` e `Chars/` pela cópia de segurança, pondo no lugar de `DATA` a data da cópia que quer usar:
+Troque `UserDbas/` e `Chars/` pela cópia de segurança, pondo no lugar de `DATA` a data da cópia que quer usar. As imagens gravadas estão listadas no registro da instalação e podem ficar, já que nada as usa sem os addons:
 
 ```sh
 cd ~/.local/share/corerules
@@ -89,4 +92,4 @@ No Flatpak, a pasta é `~/.var/app/io.github.brahm.CoreRules/data/corerules`.
 
 ## Como o instalador é gerado
 
-O instalador é o crate `crates/cr-addons`, em Rust com GTK 4 e libadwaita. Ele embute `addons/Comunidade.xpx.xz` e importa pelo mesmo código do app (`cr-store`). `packaging/appimage/build-in-sdk.sh VERSÃO addons` gera a AppImage no SDK do GNOME 51, e o workflow `Addons package` (`.github/workflows/addons.yml`) a publica no GitHub Packages a cada mudança na main.
+O instalador é o crate `crates/cr-addons`, em Rust com GTK 4 e libadwaita. Ele embute `addons/Comunidade.xpx.xz` e `addons/Comunidade-extras.xz` (imagens e textos) e importa pelo mesmo código do app (`cr-store`). `packaging/appimage/build-in-sdk.sh VERSÃO addons` gera a AppImage no SDK do GNOME 51, e o workflow `Addons package` (`.github/workflows/addons.yml`) a publica no GitHub Packages a cada mudança na main.

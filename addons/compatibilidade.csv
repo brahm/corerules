@@ -1,10 +1,10 @@
 ordem,addon,formato,situação,itens,itens no pacote final,itens substituídos por addon mais novo,observações
-1,Official Addons/cr2goodie9809/phaser.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",10,0,10,
+1,Official Addons/cr2goodie9809/phaser.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",10,0,10,"goodie mensal da Evermore Entertainment, fora da coleção"
 2,Spells/drow/drow.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",25,0,25,
 3,Classes/drowgods/drowgods.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",8,0,8,
 4,Equipment/harpermagicitems/hrperitm.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",33,29,4,
 5,Nonweapon Proficiencies/Player's Option NWPs/ponwps.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",43,43,0,
-6,Official Addons/cr2goodie9810/newart.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",8,0,8,
+6,Official Addons/cr2goodie9810/newart.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",8,0,8,"goodie mensal da Evermore Entertainment, fora da coleção"
 7,Races/deepgnom/svirfneblin (deep gnome).xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",10,0,10,
 8,Races/dwarves/deep dwarf.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",7,0,7,
 9,Races/dwarves/duergar.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",9,0,9,
@@ -22,7 +22,7 @@ ordem,addon,formato,situação,itens,itens no pacote final,itens substituídos p
 21,From Dragon Magazine/Dragon239/eqpdr239.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",8,0,8,
 22,From Dragon Magazine/Dragon226/magic226.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",15,1,14,
 23,Equipment/droweqip/droweqip.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",4,0,4,
-24,Official Addons/cr2goodie9811/soul.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",5,0,5,
+24,Official Addons/cr2goodie9811/soul.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",5,0,5,"goodie mensal da Evermore Entertainment, fora da coleção"
 25,From Dragon Magazine/Dragon214/magic214.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",8,0,8,
 26,From Dragon Magazine/Dragon207/magic207.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",3,0,3,
 27,Races/kender/kender.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",16,1,15,
@@ -40,7 +40,7 @@ ordem,addon,formato,situação,itens,itens no pacote final,itens substituídos p
 39,Monsters/cooshee/cooshee.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",2,0,2,
 40,Equipment/Complete Ninja's Handbook Items & Others/ninjaspells.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",13,0,13,
 41,Equipment/Complete Ninja's Handbook Items & Others/ninjamiscmagicitems.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",10,0,10,
-42,Official Addons/cr2goodie9812/decimprt.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",8,0,8,5 mapa(s) do Map Maker ignorado(s)
+42,Official Addons/cr2goodie9812/decimprt.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",8,0,8,"5 mapa(s) do Map Maker ignorado(s); goodie mensal da Evermore Entertainment, fora da coleção"
 43,Traits & Disadvantages/disadvant/disads1.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",17,1,16,
 44,Nonweapon Proficiencies/nwpnetbook/misc nwp's.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",88,12,76,
 45,Races/mino/minotaur-krynn.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",15,1,14,
@@ -146,13 +146,13 @@ ordem,addon,formato,situação,itens,itens no pacote final,itens substituídos p
 145,From Dragon Magazine/Dragon259/dragon259.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",17,9,8,
 146,Races/irda/irda.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",13,1,12,
 147,Spells/pftf-umberlee/pftf-umberlee (reparado).xpt,xpt,reparado: o arquivo veio corrompido (quebras de linha convertidas por transferência em modo texto),11,7,4,o original do CD recusa o arquivo como veio e aceita o reparado
-148,Official Addons/cr2goodie9905/maygoodie.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",7,0,7,
+148,Official Addons/cr2goodie9905/maygoodie.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",7,0,7,"goodie mensal da Evermore Entertainment, fora da coleção"
 149,Demihuman Deities/Elves/Sehanine Moonbow/sehanine.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",4,4,0,
 150,Equipment/miscequip/miscequip.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",3,0,3,
 151,Kits/Lots of Kits/kits (recuperado).xpt,xpt,recuperado em parte: o zip veio truncado (671.294 de 1.045.873 bytes),103,27,76,103 kits recuperados; o resto do arquivo se perdeu
 152,From Dragon Magazine/Dragon261/dragon261.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",51,51,0,
 153,From Dragon Magazine/Dragon260/dragon260.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",39,0,39,
-154,Official Addons/CR2goodie9906/torment.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",2,0,2,
+154,Official Addons/CR2goodie9906/torment.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",2,0,2,"goodie mensal da Evermore Entertainment, fora da coleção"
 155,Equipment/miscweaps/miscweaps.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",12,1,10,1 personagem(ns)
 156,Demihuman Deities/Dwarves/Alaghar/alaghar.xpx,xpx,compatível,7,0,7,
 157,Demihuman Deities/Gnomes/Earthblood/earthblood.xpx,xpx,compatível,11,1,10,
@@ -164,8 +164,8 @@ ordem,addon,formato,situação,itens,itens no pacote final,itens substituídos p
 163,Kits/Elfcourtwarriors/elvencourtwar.xpx,xpx,compatível,1,0,1,
 164,Kits/Cormyr Kits/cormyrkits.xpx,xpx,compatível,2,0,2,
 165,From Dragon Magazine/Dragon263/magic263.xpx,xpx,compatível,6,0,6,
-166,Official Addons/CR2goodie9908/dmartheon.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",29,0,29,1 mapa(s) do Map Maker ignorado(s)
-167,Official Addons/CR2goodie9908/partheon.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",0,0,0,1 mapa(s) do Map Maker ignorado(s)
+166,Official Addons/CR2goodie9908/dmartheon.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",29,0,29,"1 mapa(s) do Map Maker ignorado(s); goodie mensal da Evermore Entertainment, fora da coleção"
+167,Official Addons/CR2goodie9908/partheon.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",0,0,0,"1 mapa(s) do Map Maker ignorado(s); goodie mensal da Evermore Entertainment, fora da coleção"
 168,Demihuman Deities/Gnomes/Hoodwinker/hoodwinker.xpx,xpx,compatível,9,0,9,
 169,Demihuman Deities/Drow/Sworddancer/sword dancer.xpx,xpx,compatível,11,2,9,
 170,Demihuman Deities/Drow/Arachne/arachne.xpx,xpx,compatível,17,2,15,
@@ -173,7 +173,7 @@ ordem,addon,formato,situação,itens,itens no pacote final,itens substituídos p
 172,Kits/Dalewarriors/dalewarriors.xpx,xpx,compatível,11,0,11,
 173,Classes/branchdruids/branchdruid.xpx,xpx,compatível,37,0,37,
 174,Nonweapon Proficiencies/survival/survival.xpx,xpx,compatível,10,0,10,
-175,Official Addons/CR2goodie9911/artheonnpc.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",60,0,4,56 personagem(ns)
+175,Official Addons/CR2goodie9911/artheonnpc.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",60,0,4,"56 personagem(ns); goodie mensal da Evermore Entertainment, fora da coleção"
 176,Demihuman Deities/Dwarves/Delvesonn/delvesonn.xpx,xpx,compatível,10,1,9,
 177,Demihuman Deities/Dwarves/Barakor/barakor.xpx,xpx,compatível,12,6,6,
 178,Demihuman Deities/Dwarves/Luckmaiden/luckmaiden.xpx,xpx,compatível,12,1,11,
@@ -208,8 +208,8 @@ ordem,addon,formato,situação,itens,itens no pacote final,itens substituídos p
 207,Classes/Forgotten Realms - Faiths & Avatars Specialty Priests/f&a.xpx,xpx,convertido: pontos de magia retirados das classes (o original do CD recusa o pacote),24,0,24,"3 classes sem pontos de magia: Holy Champion, Holy Justice, Luckbringer"
 208,faiths-and-avatars/f&a.xpx,xpx,convertido: pontos de magia retirados das classes (o original do CD recusa o pacote),24,0,24,"3 classes sem pontos de magia: Holy Champion, Holy Justice, Luckbringer"
 209,Monsters/Forgotten Realms Creatures/fr creatures/fr creatures.xpx,xpx,compatível,93,0,93,
-210,Official Addons/CR2goodie9911/robert.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",1,0,0,1 personagem(ns)
-211,Official Addons/CR2goodie9911/dmmap.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",56,0,56,1 mapa(s) do Map Maker ignorado(s)
+210,Official Addons/CR2goodie9911/robert.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",1,0,0,"1 personagem(ns); goodie mensal da Evermore Entertainment, fora da coleção"
+211,Official Addons/CR2goodie9911/dmmap.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",56,0,56,"1 mapa(s) do Map Maker ignorado(s); goodie mensal da Evermore Entertainment, fora da coleção"
 212,Monsters/Monsterous Compendium Annuals 1 through 4/mca all/mca4 items.xpx,xpx,compatível,11,1,10,
 213,Races/Improved Kender/improved kender.xpx,xpx,compatível,21,0,21,
 214,Races/Updated Drow Abilities/updated drow abilities.xpx,xpx,compatível,22,2,20,
@@ -328,8 +328,8 @@ ordem,addon,formato,situação,itens,itens no pacote final,itens substituídos p
 327,Monsters/Dragonlance/dragonlance/dragonlance.xpx,xpx,compatível,158,1,157,
 328,Monsters/Fiend Folio/fiend folio.xpx,xpx,compatível,82,0,82,
 329,"Spells/Priest's Spell Compendium, A-F/psc-c.xpx",xpx,compatível,155,51,104,
-330,Equipment/cr2-march-goodie/useful.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",3,0,3,
-331,Official Addons/CR2goodie0003/useful.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",3,0,3,
+330,Equipment/cr2-march-goodie/useful.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",3,0,3,"goodie mensal da Evermore Entertainment, fora da coleção"
+331,Official Addons/CR2goodie0003/useful.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",3,0,3,"goodie mensal da Evermore Entertainment, fora da coleção"
 332,From Monster Mythology/Kuraulyek Shaman/kuraulyek shaman.xpx,xpx,compatível,2,0,2,
 333,From Monster Mythology/Elder God Specialty Priest/elder god specialty priest.xpx,xpx,compatível,7,0,7,
 334,From Monster Mythology/Jubilex Specialty Priest/jubilex specialty priest.xpx,xpx,compatível,4,0,4,
@@ -411,7 +411,7 @@ ordem,addon,formato,situação,itens,itens no pacote final,itens substituídos p
 410,From Monster Mythology/Sess'innek Specialty Priest/shaman of sess'innek.xpx,xpx,compatível,1,0,1,
 411,From Monster Mythology/Squerrik - Specialty Priest & Wererat Priests/shaman of squerrik.xpx,xpx,compatível,2,0,2,
 412,From Monster Mythology/Skerrit Specialty Priest & Shaman/specialty priest & shaman of skerrit.xpx,xpx,convertido: pontos de magia retirados das classes (o original do CD recusa o pacote),3,0,3,1 classes sem pontos de magia: Priest of Skerrit
-413,Official Addons/CR2goodie0004/skylene.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",3,0,3,
+413,Official Addons/CR2goodie0004/skylene.xpt,xpt,"compatível: formato 2.0, convertido para a Expansion na importação",3,0,3,"goodie mensal da Evermore Entertainment, fora da coleção"
 414,Equipment/more-weapons/moreweapons.xpx,xpx,compatível,8,0,8,
 415,Miscellaneous/Artwork/artworks.xpx,xpx,compatível,98,0,98,
 416,Nonweapon Proficiencies/Hypnosis/hypnosis.xpx,xpx,compatível,1,0,1,
@@ -684,8 +684,8 @@ ordem,addon,formato,situação,itens,itens no pacote final,itens substituídos p
 683,"Modules/the_heros_tale/the hero's tale/the hero's tale, frost and thorn.xpx",xpx,compatível,11,0,10,1 mapa(s) do Map Maker ignorado(s); 1 personagem(ns)
 684,"Modules/the_heros_tale/the hero's tale/the heroes tale, the mistake.xpx",xpx,compatível,36,1,32,1 mapa(s) do Map Maker ignorado(s); 3 personagem(ns)
 685,Modules/necroguild/necromancersguild.xpx,xpx,compatível,9,0,9,6 mapa(s) do Map Maker ignorado(s)
-686,AD&D Core Rules User Database/user database.xpx,xpx,convertido: feito com a Expansion com patches 3 a 5 (o original do CD recusa),31067,30787,0,"130 classes sem pontos de magia: <Non-Adventurer>, Aerial Druid, Aetharnar, Agronomist, Alaghor, Anti-Paladin, Apothecary, Appraiser, Aquatic Druid, Archer - Ranger, Artiste, Avenger, Bard (Planar), Battlescourge, Black Knight, Blacksmith, Blue Knight, Bounty Hunter, Brotankir Knight, Caretaker, Cartographer, Celtic Bard, Chaos Crusader, Chiurgeon, Chronomancer, Circle Singer (A), Crusader, Darankir Knight, Darkbringer, Demonolog; 269 kits regravados da versão 31 para a 30"
-,Official Addons/completebookofnecromancers.exe,exe,inutilizável: instalador web da InstallShield sem o conteúdo (só baixa da internet),0,0,0,
-,Official Addons/CR2goodie9907/crbmputility.exe,exe,não é addon: utilitário de imagens para Windows,0,0,0,
+686,AD&D Core Rules User Database/user database.xpx,xpx,convertido: feito com a Expansion com patches 3 a 5 (o original do CD recusa),31067,30653,0,"130 classes sem pontos de magia: <Non-Adventurer>, Aerial Druid, Aetharnar, Agronomist, Alaghor, Anti-Paladin, Apothecary, Appraiser, Aquatic Druid, Archer - Ranger, Artiste, Avenger, Bard (Planar), Battlescourge, Black Knight, Blacksmith, Blue Knight, Bounty Hunter, Brotankir Knight, Caretaker, Cartographer, Celtic Bard, Chaos Crusader, Chiurgeon, Chronomancer, Circle Singer (A), Crusader, Darankir Knight, Darkbringer, Demonolog; 269 kits regravados da versão 31 para a 30; 134 itens e 57 personagens dos goodies da Evermore retirados da coleção"
+,Official Addons/completebookofnecromancers.exe,exe,inutilizável: instalador web da InstallShield sem o conteúdo (só baixa da internet),0,0,0,"goodie mensal da Evermore Entertainment, fora da coleção"
+,Official Addons/CR2goodie9907/crbmputility.exe,exe,não é addon: utilitário de imagens para Windows,0,0,0,"goodie mensal da Evermore Entertainment, fora da coleção"
 ,From Dragon Magazine/Dragon270.zip,zip,truncado: os pacotes vieram inteiros,0,0,0,perdidos: Dragon Magazine 270 Portraits.zip e pic12.BMP
 ,From Dragon Magazine/Dragon272.zip,zip,truncado: os pacotes vieram inteiros,0,0,0,"perdidos: dragon 272 pics.zip e Dragonet, Pavilion Dragon.BMP"

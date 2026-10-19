@@ -6,14 +6,18 @@
 
 The add-ons that the AD&D Core Rules community made for **AD&D Core Rules 2.0** and its **Expansion**, gathered into one
 package and installed with one click into [Core Rules](../README.md), the
-Linux replica of the original program. 686 add-on packages became 36,716
+Linux replica of the original program. 672 add-on packages became 36,525
 items: new races and classes, kits, thousands of spells and monsters,
 equipment, encounters, the characters of the published modules and the
-AD&D Core Rules User Database.
+AD&D Core Rules User Database. The 668 pictures that came with them are
+installed too, and the texts their authors wrote can be read in the
+installer.
 
-> This collection contains no TSR or Wizards of the Coast content. It holds
-> only what the community wrote and shared as add-ons; the rules data still
-> comes from a Core Rules installation you already own.
+> The collection holds what the community wrote and shared as add-ons. It
+> leaves out the monthly goodies that Evermore Entertainment, the company
+> that made Core Rules 2.0, published in 1998–2000, and the copies of them
+> in the User Database. The rules data still comes from a Core Rules
+> installation you already own.
 
 ![The installer finds three copies of Core Rules and the two data folders they read](screenshots/installer.png)
 
@@ -26,29 +30,36 @@ the original program alike.
 | --- | ---: |
 | Wizard spells | 7,479 |
 | Priest spells | 3,514 |
-| Monsters | 5,315 |
-| Monster types | 1,874 |
-| Magical items | 2,376 |
-| Weapons | 2,117 |
-| Equipment | 1,587 |
+| Monsters | 5,307 |
+| Monster types | 1,871 |
+| Magical items | 2,367 |
+| Weapons | 2,112 |
+| Equipment | 1,578 |
 | Armor | 752 |
-| Races | 515 |
+| Races | 512 |
 | Classes | 558 |
 | Kits | 477 |
-| Racial and class abilities | 5,456 |
+| Racial and class abilities | 5,449 |
 | Nonweapon proficiencies | 1,804 |
 | Languages | 672 |
-| Encounters and encounter templates | 674 |
+| Encounters and encounter templates | 584 |
 | Traps | 173 |
 | Psionic powers | 160 |
 | Traits and disadvantages | 253 |
 | Spheres and schools of magic | 362 |
 | Treasure bundles, gems, art and currencies | 336 |
-| Characters from the modules | 105 |
+| Characters from the modules | 48 |
 | Other parts | 157 |
 
 Once installed, the add-ons sit in the user databases next to your own
-records, and the module characters join the character list.
+records, and the module characters join the character list. Monster types,
+races and characters show the picture their author drew or scanned, in the
+app and in the original program.
+
+<p>
+  <img src="screenshots/picture.png" width="49%" alt="The Achaierai, a monster type with its picture">
+  <img src="screenshots/portrait.png" width="49%" alt="Gerard Renier, a character with his portrait">
+</p>
 
 <p>
   <img src="screenshots/class.png" width="49%" alt="The Anti-Paladin, one of the add-on classes">
@@ -94,7 +105,14 @@ with the data folder that copy reads:
 Without that folder, a copy falls back to the original program in the Wine
 prefix, as the app does. **Install** copies `UserDbas` and `Chars` to a
 backup beside each folder, then imports the add-ons, in under a minute per
-folder. **Other Folder…** is there for an installation it does not find.
+folder. It also copies the pictures to where the records look for them
+(`Bitmaps/Monsters`, `Bitmaps/Portrait` and `UserBMP` in the data folder,
+and the folders on drive C: that the records name, inside Wine), never over
+a file that is already there. **Other Folder…** is there for an
+installation it does not find, and **Add-on Details…** lists every add-on
+folder with what it brought into the collection and its authors' texts.
+
+<img src="screenshots/details.png" width="49%" alt="Add-on Details, the add-on folders with their items and texts">
 
 ![The add-ons installed in both folders](screenshots/installed.png)
 
@@ -108,7 +126,8 @@ Core Rules' Preferences, or the system's.
 
 **Testing every add-on.** The community's archive held 686 packages: 492
 Expansion `.xpx` files and 194 Core Rules 2.0 `.xpt` files, including the
-AD&D Core Rules User Database. Each one was read and written back byte for
+AD&D Core Rules User Database. 14 of them were Evermore's monthly goodies,
+which the collection leaves out. Each one was read and written back byte for
 byte by this project's reader, and the doubtful ones were imported into the
 original Expansion program under Wine.
 
@@ -136,7 +155,17 @@ failed.
 the installer, `crates/cr-addons`, a Rust program with GTK 4 and
 libadwaita that imports it through the same code as the app (`cr-store`),
 in two passes so race and class combinations that name two new classes
-come in. `packaging/appimage/build-in-sdk.sh VERSION addons` builds the
+come in.
+
+**Pictures and texts.** The 668 pictures (8-bit BMP files) and 309 texts
+that came with the add-ons, again without Evermore's, are built into the
+installer as `Comunidade-extras.xz`. Each picture goes to the place the
+records name: a record stores the Windows path the picture had on its
+author's computer (`C:\Program Files\AD&D Core Rules 2.0\Bitmaps\Monsters\
+Achaierai.BMP`, `C:\AD&D Pics\troll.bmp`), and the app maps that path into
+the data folder the same way (`cr-store`'s `pictures` module). The texts,
+readme files in plain text, HTML, RTF, Word and PDF, were converted to plain
+text. `packaging/appimage/build-in-sdk.sh VERSION addons` builds the
 AppImage in the GNOME 51 SDK, and the `Addons package` workflow
 (`.github/workflows/addons.yml`) publishes it on GitHub Packages on every
 change to `main`.
@@ -146,6 +175,8 @@ change to `main`.
 | File | Contents |
 | --- | --- |
 | `Comunidade.xpx.xz` | The consolidated add-ons, as built into the installer |
+| `Comunidade-extras.xz` | The add-ons' pictures and texts, and where each picture goes |
+| `tools/` | The scripts that chose each picture's place and built `Comunidade-extras.xz` |
 | [`relatorio.md`](relatorio.md) | The report, in Portuguese: what was converted, repaired or left out |
 | [`compatibilidade.csv`](compatibilidade.csv) | One line per add-on package, with its status and item count |
 | [`conflitos.csv`](conflitos.csv) | The names found in more than one package, and which version stayed |

@@ -1619,6 +1619,15 @@ fn detail(entry: &Entry) -> gtk::Widget {
     }
     heading.add(&column);
     page.add(&heading);
+    if let Some(picture) = entry
+        .picture
+        .as_deref()
+        .and_then(|p| sheet::picture(p, 240))
+    {
+        let group = adw::PreferencesGroup::new();
+        group.add(&picture);
+        page.add(&group);
+    }
     if let Some(group) = books::detail_group(&entry.key) {
         page.add(&group);
     }

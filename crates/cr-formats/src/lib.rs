@@ -6,6 +6,7 @@
 
 pub mod allowed;
 pub mod archive;
+pub mod bmp;
 pub mod character;
 pub mod classes;
 pub mod convert;
