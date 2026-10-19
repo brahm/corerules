@@ -108,6 +108,9 @@ pub struct CharacterLists {
     pub new_classes: Vec<String>,
     /// Experience and levels, when they changed.
     pub advancement: Option<crate::advance::Advancement>,
+    /// Subrace, racial and class abilities, schools and spheres, when they
+    /// may have changed.
+    pub abilities: Option<crate::abilities::CharacterAbilities>,
 }
 
 /// An item in a bundle.
@@ -185,6 +188,7 @@ impl CharacterLists {
             }),
             new_classes: Vec::new(),
             advancement: None,
+            abilities: None,
             spellbooks: d
                 .inventory
                 .iter()
