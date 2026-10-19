@@ -101,6 +101,34 @@ fn monster_pictures_include_the_shipped_ones() {
     }
 }
 
+/// Every shipped weapon, armor, piece of equipment, magical item, gem and
+/// coin has an icon there, and the catalog shows it.
+#[test]
+fn every_shipped_item_has_its_icon() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = cr_store::Installation::open(dir).unwrap();
+    let icons = install.item_icons().unwrap();
+    let mut items = 0;
+    for part_type in cr_store::pictures::ICON_PART_TYPES {
+        for name in install.part_names(part_type).unwrap() {
+            let icon = icons.get(&name).unwrap_or_else(|| panic!("{name}"));
+            let data = std::fs::read(&icon.path).unwrap();
+            let image = cr_formats::bmp::decode(&data).unwrap();
+            assert_eq!(image.height, 64, "{name}");
+            assert!(icon.left.unwrap() + 64 <= image.width, "{name}");
+            items += 1;
+        }
+    }
+    assert!(items > 3000, "{items}");
+    let catalog = install.catalog();
+    let weapons = catalog.iter().find(|s| s.id == "weapons").unwrap();
+    assert!(weapons.entries.iter().all(|e| e.icon.is_some()));
+    let kits = catalog.iter().find(|s| s.id == "kits").unwrap();
+    assert!(kits.entries.iter().all(|e| e.icon.is_none()));
+}
+
 /// The weight the Expansion stored in each of its test characters equals
 /// what `carried_weight` computes from its databases.
 #[test]

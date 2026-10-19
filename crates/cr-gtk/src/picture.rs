@@ -3,9 +3,11 @@
 //! JPEG, GIF or PNG). A character's portrait (New Character, Edit
 //! Character) and a race's are among those in `Bitmaps/Portrait`, the
 //! race's first; a monster type's among those in `Bitmaps/Monsters`, the
-//! user's own in `UserBMP` first.
+//! user's own in `UserBMP` first. An item's icon is a square of a strip
+//! in `Bitmaps/Equip`, or a bitmap of the user's in `UserBMP`.
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -13,9 +15,9 @@ use adw::prelude::*;
 use cr_i18n::tr;
 use cr_store::Installation;
 use cr_store::pictures::{
-    Kind, PORTRAIT_HEIGHT, PictureChoice, joined, split_stored, stored_portrait,
+    ICON_SIZE, Icon, Kind, PORTRAIT_HEIGHT, PictureChoice, joined, split_stored, stored_portrait,
 };
-use gtk::gio;
+use gtk::{gdk, gio, glib};
 
 use crate::sheet::texture;
 
@@ -131,6 +133,48 @@ pub fn row(
         }
     });
     (row, show)
+}
+
+thread_local! {
+    /// The strips of `Bitmaps/Equip` decoded so far, `None` for one that
+    /// does not decode; a list of items cuts many icons from each.
+    static STRIPS: RefCell<HashMap<PathBuf, Option<Rc<cr_formats::bmp::Image>>>> =
+        RefCell::default();
+}
+
+/// An item's icon as a texture, `None` when its bitmap does not decode.
+pub fn icon_texture(icon: &Icon) -> Option<gdk::MemoryTexture> {
+    let Some(left) = icon.left else {
+        return texture(&icon.path);
+    };
+    let strip = STRIPS.with_borrow_mut(|strips| {
+        strips
+            .entry(icon.path.clone())
+            .or_insert_with(|| {
+                std::fs::read(&icon.path)
+                    .ok()
+                    .and_then(|data| cr_formats::bmp::decode(&data))
+                    .map(Rc::new)
+            })
+            .clone()
+    })?;
+    let width = ICON_SIZE.min(strip.width.checked_sub(left)?) as usize;
+    let height = ICON_SIZE.min(strip.height) as usize;
+    if width == 0 {
+        return None;
+    }
+    let mut rgba = Vec::with_capacity(width * height * 4);
+    for y in 0..height {
+        let at = (y * strip.width as usize + left as usize) * 4;
+        rgba.extend_from_slice(&strip.rgba[at..at + width * 4]);
+    }
+    Some(gdk::MemoryTexture::new(
+        width as i32,
+        height as i32,
+        gdk::MemoryFormat::R8g8b8a8,
+        &glib::Bytes::from_owned(rgba),
+        width * 4,
+    ))
 }
 
 fn icon(kind: Kind) -> &'static str {

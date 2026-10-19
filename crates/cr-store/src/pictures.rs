@@ -365,6 +365,95 @@ fn is_strip(path: &Path) -> bool {
     width > 3 * height.max(1)
 }
 
+/// The size of an item's icon, square.
+pub const ICON_SIZE: u32 = 64;
+
+/// How many icons a strip of `Bitmaps/Equip` holds, side by side.
+const ICONS_PER_STRIP: u32 = 50;
+
+/// What an item keeps, before a file name, for an icon of the user's in
+/// `UserBMP` (`CRE_espada.bmp`).
+pub const CUSTOM_ICON: &str = "CRE_";
+
+/// The part types whose records keep an icon.
+pub const ICON_PART_TYPES: [&str; 6] = [
+    "Weapons",
+    "Armor",
+    "Equipment",
+    "Magical Items",
+    "Gems and Art",
+    "Currency Types",
+];
+
+/// An item's icon: a square of a strip in `Bitmaps/Equip`, or a bitmap of
+/// the user's in `UserBMP`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Icon {
+    pub path: PathBuf,
+    /// The square's left edge in a strip; `None` for a bitmap of its own,
+    /// drawn whole.
+    pub left: Option<u32>,
+}
+
+/// The icon number an item keeps (its member +0x234, "12"), read as the
+/// original reads it: the digits it starts with ("435a" is 435). `None`
+/// for anything else, such as an icon of the user's.
+pub fn icon_number(stored: &str) -> Option<u32> {
+    let digits = stored.trim_start();
+    let end = digits
+        .find(|c: char| !c.is_ascii_digit())
+        .unwrap_or(digits.len());
+    digits[..end].parse().ok().filter(|&n| n > 0)
+}
+
+/// The path inside an installation of the bitmap an item's icon is in,
+/// and the icon's left edge there (`None` for a bitmap of its own): the
+/// strip `Bitmaps/Equip/E051_100.bmp` holds icons 51 to 100.
+pub fn icon_relative(stored: &str) -> Option<(String, Option<u32>)> {
+    let stored = stored.trim();
+    if let Some(file) = stored
+        .get(..CUSTOM_ICON.len())
+        .filter(|p| p.eq_ignore_ascii_case(CUSTOM_ICON))
+        .map(|_| &stored[CUSTOM_ICON.len()..])
+    {
+        return (!file.is_empty()).then(|| (format!("UserBMP/{file}"), None));
+    }
+    let n = icon_number(stored)? - 1;
+    let first = n / ICONS_PER_STRIP * ICONS_PER_STRIP + 1;
+    Some((
+        format!(
+            "Bitmaps/Equip/E{first:03}_{:03}.bmp",
+            first + ICONS_PER_STRIP - 1
+        ),
+        Some(n % ICONS_PER_STRIP * ICON_SIZE),
+    ))
+}
+
+impl Finder {
+    /// The icon an item keeps, when its bitmap is there.
+    pub fn icon(&mut self, stored: &str) -> Option<Icon> {
+        let (relative, left) = icon_relative(stored)?;
+        Some(Icon {
+            path: self.find(&relative)?,
+            left,
+        })
+    }
+}
+
+/// The icons of the items in an installation, by item name.
+#[derive(Debug, Clone, Default)]
+pub struct ItemIcons {
+    /// By name in lower case.
+    icons: HashMap<String, Icon>,
+}
+
+impl ItemIcons {
+    /// The icon of the item named `name`, whatever its case.
+    pub fn get(&self, name: &str) -> Option<&Icon> {
+        self.icons.get(&name.to_lowercase())
+    }
+}
+
 impl Installation {
     /// The pictures a record of `kind` may have. Portraits are those in
     /// `Bitmaps/Portrait`, the ones `race` offers first (its default, then
@@ -520,11 +609,61 @@ impl Installation {
     pub fn portrait_path(&self, stored: &[String; 2]) -> Option<PathBuf> {
         Finder::new(&self.root).picture(&joined(&stored[0], &stored[1]), Kind::Portrait)
     }
+
+    /// The icons of the shipped items and the user's (`UserDbas/PartsU.dat`),
+    /// the user's winning when both have an item of that name. Items whose
+    /// icon is not there are left out.
+    pub fn item_icons(&self) -> Result<ItemIcons> {
+        let mut finder = Finder::new(&self.root);
+        let mut icons = HashMap::new();
+        let files = [
+            Some(self.load_parts().map_err(Error::Invalid)?),
+            self.load_user_parts().map_err(Error::Invalid)?,
+        ];
+        for file in files.iter().flatten() {
+            for part_type in ICON_PART_TYPES {
+                for object in file.of_type(part_type).unwrap_or_default() {
+                    if let Object::Part(p) = object
+                        && let Some(icon) = finder.icon(&p.head.unknown_0x234)
+                    {
+                        icons.insert(p.head.name.to_lowercase(), icon);
+                    }
+                }
+            }
+        }
+        Ok(ItemIcons { icons })
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn icons_map_into_the_strips_and_userbmp() {
+        let cases = [
+            ("1", "Bitmaps/Equip/E001_050.bmp", Some(0)),
+            ("12", "Bitmaps/Equip/E001_050.bmp", Some(11 * 64)),
+            ("50", "Bitmaps/Equip/E001_050.bmp", Some(49 * 64)),
+            ("51", "Bitmaps/Equip/E051_100.bmp", Some(0)),
+            ("435a", "Bitmaps/Equip/E401_450.bmp", Some(34 * 64)),
+            ("677", "Bitmaps/Equip/E651_700.bmp", Some(26 * 64)),
+            ("CRE_espada.bmp", "UserBMP/espada.bmp", None),
+            ("cre_Espada.BMP", "UserBMP/Espada.BMP", None),
+        ];
+        for (stored, path, left) in cases {
+            assert_eq!(
+                icon_relative(stored),
+                Some((path.to_owned(), left)),
+                "{stored}"
+            );
+        }
+        for stored in ["", "0", "CRE_", "a12"] {
+            assert_eq!(icon_relative(stored), None, "{stored}");
+        }
+        assert_eq!(icon_number("395v"), Some(395));
+        assert_eq!(icon_number("CRE_1.bmp"), None);
+    }
 
     #[test]
     fn stored_paths_map_into_the_installation() {

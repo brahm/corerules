@@ -6,6 +6,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use cr_i18n::tr;
+use cr_store::pictures::ItemIcons;
 use gtk::glib;
 
 /// A group of names the user can add to and remove from.
@@ -232,6 +233,9 @@ pub struct RowSpec<T> {
 type Rows<T> = Rc<RefCell<Vec<(T, adw::ActionRow, Option<adw::SpinRow>)>>>;
 type Callback = Rc<RefCell<Option<Box<dyn Fn()>>>>;
 
+/// How big an item's icon is drawn at the start of its row.
+const ROW_ICON_SIZE: i32 = 40;
+
 /// A group of rows, each holding a value of type `T` and maybe a number,
 /// with remove buttons and an Add button whose picker offers names that
 /// `make` turns into rows.
@@ -241,6 +245,8 @@ pub struct RowList<T: 'static> {
     empty: adw::ActionRow,
     /// Called after every change.
     changed: Callback,
+    /// The icons drawn at the start of the rows, by title (item name).
+    icons: Rc<RefCell<Option<Rc<ItemIcons>>>>,
 }
 
 impl<T: Clone + 'static> Clone for RowList<T> {
@@ -250,6 +256,7 @@ impl<T: Clone + 'static> Clone for RowList<T> {
             rows: self.rows.clone(),
             empty: self.empty.clone(),
             changed: self.changed.clone(),
+            icons: self.icons.clone(),
         }
     }
 }
@@ -283,6 +290,7 @@ impl<T: Clone + 'static> RowList<T> {
             rows: Rc::default(),
             empty,
             changed: Rc::default(),
+            icons: Rc::default(),
         };
         for row in rows {
             list.push(row);
@@ -341,6 +349,9 @@ impl<T: Clone + 'static> RowList<T> {
         if !spec.subtitle.is_empty() {
             row.set_subtitle(&glib::markup_escape_text(&spec.subtitle));
         }
+        if let Some(icons) = &*self.icons.borrow() {
+            add_icon(&row, icons);
+        }
         row.add_suffix(&remove);
         self.group.add(&row);
         self.rows.borrow_mut().push((spec.value, row.clone(), spin));
@@ -355,6 +366,15 @@ impl<T: Clone + 'static> RowList<T> {
                 }
             }
         });
+    }
+
+    /// Draws, at the start of each row, the icon of the item its title
+    /// names, the rows there now and those added later.
+    pub fn show_icons(&self, icons: Rc<ItemIcons>) {
+        for (_, row, _) in self.rows.borrow().iter() {
+            add_icon(row, &icons);
+        }
+        *self.icons.borrow_mut() = Some(icons);
     }
 
     /// The values and their numbers, in order.
@@ -387,4 +407,24 @@ impl<T: Clone + 'static> RowList<T> {
             changed();
         }
     }
+}
+
+/// The icon of the item `row` names, at its start; a dimmed stand-in when
+/// the item has none, so the titles line up.
+fn add_icon(row: &adw::ActionRow, icons: &ItemIcons) {
+    let image = gtk::Image::builder()
+        .pixel_size(ROW_ICON_SIZE)
+        .valign(gtk::Align::Center)
+        .build();
+    // The title is markup.
+    let title = row.title();
+    let name = gtk::pango::parse_markup(&title, '\0').map_or(title.to_string(), |m| m.1.into());
+    match icons.get(&name).and_then(crate::picture::icon_texture) {
+        Some(texture) => image.set_paintable(Some(&texture)),
+        None => {
+            image.set_icon_name(Some("package-x-generic-symbolic"));
+            image.add_css_class("dim-label");
+        }
+    }
+    row.add_prefix(&image);
 }
