@@ -1081,6 +1081,27 @@ fn control<R: Clone + 'static, H: Host + 'static>(
             );
             (row.upcast(), Box::new(move || show(value().text())))
         }
+        FieldKind::Icon => {
+            let root = host
+                .with_install(|i| Ok(i.root().to_owned()))
+                .and_then(|r| r.ok())
+                .unwrap_or_default();
+            let set = {
+                let changed = changed.clone();
+                move |stored: Option<String>| {
+                    let stored = stored.unwrap_or_default();
+                    changed(index, Value::Text(stored.clone()));
+                    stored
+                }
+            };
+            let (row, show) = crate::picture::icon_row(
+                root,
+                glib::markup_escape_text(label).as_str(),
+                value().text(),
+                set,
+            );
+            (row.upcast(), Box::new(move || show(value().text())))
+        }
     }
 }
 

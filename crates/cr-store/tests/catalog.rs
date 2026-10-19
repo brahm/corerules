@@ -129,6 +129,69 @@ fn every_shipped_item_has_its_icon() {
     assert!(kits.entries.iter().all(|e| e.icon.is_none()));
 }
 
+/// The icons an item may be given are the 678 of the strips, grouped by
+/// the items that have them, after the user's own; one made from a
+/// picture is a 64 × 64 bitmap in the original's palette in `UserBMP`.
+#[test]
+fn icons_to_choose_include_the_shipped_and_added_ones() {
+    use cr_store::pictures::IconGroup;
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = cr_store::Installation::open(&dir).unwrap();
+    // A copy holding what icons are made from and offered with, so adding
+    // one leaves the installation as it is.
+    let root = std::env::temp_dir().join(format!("cr-icons-{}", std::process::id()));
+    for relative in ["Database/Parts.dat", "Bitmaps/Equip", "Bitmaps/Required"] {
+        let from = install.path(relative).unwrap();
+        let to = root.join(relative);
+        std::fs::create_dir_all(to.parent().unwrap()).unwrap();
+        if from.is_dir() {
+            std::fs::create_dir_all(&to).unwrap();
+            for entry in std::fs::read_dir(&from).unwrap() {
+                let entry = entry.unwrap();
+                std::fs::copy(entry.path(), to.join(entry.file_name())).unwrap();
+            }
+        } else {
+            std::fs::copy(&from, &to).unwrap();
+        }
+    }
+    let copy = cr_store::Installation::open(&root).unwrap();
+
+    let choices = copy.icon_choices().unwrap();
+    assert_eq!(choices.len(), 678);
+    let bag = choices.iter().find(|c| c.stored == "12").unwrap();
+    assert_eq!(bag.group, IconGroup::PartType("Equipment"));
+    assert!(bag.names.iter().any(|n| n == "Bag"), "{:?}", bag.names);
+    assert_eq!(choices[0].group, IconGroup::PartType("Weapons"));
+    let icons = copy.item_icons().unwrap();
+    for part_type in cr_store::pictures::ICON_PART_TYPES {
+        for name in copy.part_names(part_type).unwrap() {
+            let icon = icons.get(&name).unwrap();
+            assert!(choices.iter().any(|c| &c.icon == icon), "{name}");
+        }
+    }
+
+    let mut png = Vec::new();
+    image::RgbaImage::from_pixel(200, 100, image::Rgba([200, 20, 20, 255]))
+        .write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
+        .unwrap();
+    std::fs::write(root.join("Espada longa.png"), &png).unwrap();
+    let stored = copy.add_icon(&root.join("Espada longa.png")).unwrap();
+    assert_eq!(stored, "CRE_Espada longa.bmp");
+    let icon = copy.icon(&stored).unwrap();
+    assert_eq!(icon.left, None);
+    let data = std::fs::read(&icon.path).unwrap();
+    let image = cr_formats::bmp::decode(&data).unwrap();
+    assert_eq!((image.width, image.height), (64, 64));
+    assert_eq!(cr_formats::bmp::palette(&data), copy.program_palette());
+    let choices = copy.icon_choices().unwrap();
+    assert_eq!(choices.len(), 679);
+    assert_eq!(choices[0].stored, stored);
+    assert_eq!(choices[0].group, IconGroup::User);
+    std::fs::remove_dir_all(&root).unwrap();
+}
+
 /// The weight the Expansion stored in each of its test characters equals
 /// what `carried_weight` computes from its databases.
 #[test]

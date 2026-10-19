@@ -33,6 +33,8 @@ pub enum Kind {
     Monster,
     /// `Bitmaps/Portrait`, the races' and characters' portraits.
     Portrait,
+    /// `Bitmaps/Equip`, the items' icons, in strips (see [`Icon`]).
+    Item,
 }
 
 impl Kind {
@@ -41,6 +43,7 @@ impl Kind {
         match self {
             Kind::Monster => "Bitmaps/Monsters",
             Kind::Portrait => "Bitmaps/Portrait",
+            Kind::Item => "Bitmaps/Equip",
         }
     }
 
@@ -49,13 +52,14 @@ impl Kind {
         match self {
             Kind::Monster => (300, 300),
             Kind::Portrait => (PORTRAIT_WIDTH, PORTRAIT_HEIGHT),
+            Kind::Item => (ICON_SIZE, ICON_SIZE),
         }
     }
 
     /// The folder pictures a user adds go to.
     fn user_folder(self) -> &'static str {
         match self {
-            Kind::Monster => "UserBMP",
+            Kind::Monster | Kind::Item => "UserBMP",
             Kind::Portrait => "Bitmaps/Portrait",
         }
     }
@@ -349,20 +353,21 @@ fn bitmaps_in(dir: &Path, deep: bool, found: &mut Vec<PathBuf>) {
     }
 }
 
+/// A bitmap's width and height, read from its header.
+fn bitmap_size(path: &Path) -> Option<(u32, u32)> {
+    let mut header = Vec::with_capacity(26);
+    fs::File::open(path)
+        .and_then(|f| f.take(26).read_to_end(&mut header))
+        .ok()?;
+    let width = i32::from_le_bytes(header.get(18..22)?.try_into().ok()?);
+    let height = i32::from_le_bytes(header.get(22..26)?.try_into().ok()?);
+    Some((width.unsigned_abs(), height.unsigned_abs()))
+}
+
 /// Whether a bitmap is a strip of pictures side by side, as the Monstrous
 /// Manual's pages are drawn from (`5to34.bmp`, 5100 × 300).
 fn is_strip(path: &Path) -> bool {
-    let mut header = Vec::with_capacity(26);
-    if fs::File::open(path)
-        .and_then(|f| f.take(26).read_to_end(&mut header))
-        .is_err()
-        || header.len() < 26
-    {
-        return false;
-    }
-    let width = i32::from_le_bytes(header[18..22].try_into().unwrap());
-    let height = i32::from_le_bytes(header[22..26].try_into().unwrap()).abs();
-    width > 3 * height.max(1)
+    bitmap_size(path).is_some_and(|(width, height)| width > 3 * height.max(1))
 }
 
 /// The size of an item's icon, square.
@@ -454,6 +459,42 @@ impl ItemIcons {
     }
 }
 
+/// What an item keeps for its icon in `UserBMP` named `file`.
+pub fn stored_icon(file: &str) -> String {
+    format!("{CUSTOM_ICON}{file}")
+}
+
+/// One icon in the strips or `UserBMP`, read the same whatever the case
+/// or the letter after the number: what [`IconChoice`]s and items are
+/// matched by.
+fn icon_key(stored: &str) -> Option<String> {
+    let (relative, left) = icon_relative(stored)?;
+    Some(format!("{}@{left:?}", relative.to_lowercase()))
+}
+
+/// Where an icon an item may have comes from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IconGroup {
+    /// A bitmap of the user's in `UserBMP`.
+    User,
+    /// A strip's icon an item of this part type (one of
+    /// [`ICON_PART_TYPES`]) has, the first type that has it.
+    PartType(&'static str),
+    /// A strip's icon no item has.
+    Unused,
+}
+
+/// An icon an item may have.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IconChoice {
+    /// What the item keeps for it: `12`, or `CRE_espada.bmp`.
+    pub stored: String,
+    pub icon: Icon,
+    /// The names of the items that have it, in order; for an icon of the
+    /// user's its file name comes first.
+    pub names: Vec<String>,
+    pub group: IconGroup,
+}
 impl Installation {
     /// The pictures a record of `kind` may have. Portraits are those in
     /// `Bitmaps/Portrait`, the ones `race` offers first (its default, then
@@ -492,6 +533,9 @@ impl Installation {
         let folders: &[(&str, bool)] = match kind {
             Kind::Portrait => &[("Bitmaps/Portrait", false)],
             Kind::Monster => &[("UserBMP", true), ("Bitmaps/Monsters", false)],
+            // The strips' icons are not pictures of their own (see
+            // `icon_choices`).
+            Kind::Item => &[("UserBMP", true)],
         };
         for &(folder, first) in folders {
             let mut found = Vec::new();
@@ -610,6 +654,118 @@ impl Installation {
         Finder::new(&self.root).picture(&joined(&stored[0], &stored[1]), Kind::Portrait)
     }
 
+    /// The icons an item may have: the bitmaps in `UserBMP` first, as the
+    /// original's Select a Custom Bitmap lists them, then those of the
+    /// strips in `Bitmaps/Equip`, grouped by the part type of the first
+    /// item that has each (in [`ICON_PART_TYPES`]' order), those no item
+    /// has last. Each group is in order of file name or number.
+    pub fn icon_choices(&self) -> Result<Vec<IconChoice>> {
+        let mut users: HashMap<String, (usize, Vec<String>)> = HashMap::new();
+        let files = [
+            Some(self.load_parts().map_err(Error::Invalid)?),
+            self.load_user_parts().map_err(Error::Invalid)?,
+        ];
+        for file in files.iter().flatten() {
+            for (at, part_type) in ICON_PART_TYPES.iter().enumerate() {
+                for object in file.of_type(part_type).unwrap_or_default() {
+                    if let Object::Part(p) = object
+                        && let Some(key) = icon_key(&p.head.unknown_0x234)
+                    {
+                        let (first, names) = users.entry(key).or_insert((at, Vec::new()));
+                        *first = (*first).min(at);
+                        if !names.contains(&p.head.name) {
+                            names.push(p.head.name.clone());
+                        }
+                    }
+                }
+            }
+        }
+        let mut choices = Vec::new();
+
+        let mut found = Vec::new();
+        if let Some(dir) = self.path(Kind::Item.user_folder()) {
+            bitmaps_in(&dir, false, &mut found);
+        }
+        found.sort_by_key(|p| p.file_name().map(|f| f.to_string_lossy().to_lowercase()));
+        for path in found {
+            let file = path.file_name().unwrap().to_string_lossy().into_owned();
+            let stored = stored_icon(&file);
+            let mut names = vec![file];
+            if let Some((_, items)) = icon_key(&stored).and_then(|k| users.get(&k)) {
+                names.extend(items.iter().cloned());
+            }
+            choices.push(IconChoice {
+                stored,
+                icon: Icon { path, left: None },
+                names,
+                group: IconGroup::User,
+            });
+        }
+
+        let mut strips: Vec<(u32, PathBuf, u32)> = Vec::new();
+        if let Some(dir) = self.path(Kind::Item.folder()) {
+            for path in fs::read_dir(dir)
+                .into_iter()
+                .flatten()
+                .flatten()
+                .map(|e| e.path())
+            {
+                let name = path.file_name().unwrap().to_string_lossy().to_lowercase();
+                let first = name
+                    .strip_prefix('e')
+                    .and_then(|n| n.strip_suffix(".bmp"))
+                    .and_then(|n| n.split_once('_'))
+                    .and_then(|(first, _)| first.parse::<u32>().ok())
+                    .filter(|&n| n % ICONS_PER_STRIP == 1);
+                if let (Some(first), Some((width, _))) = (first, bitmap_size(&path)) {
+                    strips.push((first, path, width / ICON_SIZE));
+                }
+            }
+        }
+        strips.sort();
+        let mut shipped: Vec<(usize, IconChoice)> = Vec::new();
+        for (first, path, count) in strips {
+            for i in 0..count.min(ICONS_PER_STRIP) {
+                let stored = (first + i).to_string();
+                let (at, names) = icon_key(&stored)
+                    .and_then(|k| users.get(&k))
+                    .map_or((ICON_PART_TYPES.len(), Vec::new()), |(at, names)| {
+                        (*at, names.clone())
+                    });
+                shipped.push((
+                    at,
+                    IconChoice {
+                        stored,
+                        icon: Icon {
+                            path: path.clone(),
+                            left: Some(i * ICON_SIZE),
+                        },
+                        names,
+                        group: ICON_PART_TYPES
+                            .get(at)
+                            .map_or(IconGroup::Unused, |t| IconGroup::PartType(t)),
+                    },
+                ));
+            }
+        }
+        // Stable, so each group stays in order of number.
+        shipped.sort_by_key(|(at, _)| *at);
+        choices.extend(shipped.into_iter().map(|(_, c)| c));
+        Ok(choices)
+    }
+
+    /// The icon an item keeps, when its bitmap is there.
+    pub fn icon(&self, stored: &str) -> Option<Icon> {
+        Finder::new(&self.root).icon(stored)
+    }
+
+    /// Makes an icon from a picture of the user's, as [`Self::add_picture`]
+    /// does for [`Kind::Item`], and gives what an item keeps for it.
+    pub fn add_icon(&self, source: &Path) -> Result<String> {
+        let path = self.add_picture(Kind::Item, source)?;
+        Ok(stored_icon(&path.file_name().unwrap().to_string_lossy()))
+    }
+
     /// The icons of the shipped items and the user's (`UserDbas/PartsU.dat`),
     /// the user's winning when both have an item of that name. Items whose
     /// icon is not there are left out.
@@ -647,7 +803,7 @@ mod tests {
             ("50", "Bitmaps/Equip/E001_050.bmp", Some(49 * 64)),
             ("51", "Bitmaps/Equip/E051_100.bmp", Some(0)),
             ("435a", "Bitmaps/Equip/E401_450.bmp", Some(34 * 64)),
-            ("677", "Bitmaps/Equip/E651_700.bmp", Some(26 * 64)),
+            ("678", "Bitmaps/Equip/E651_700.bmp", Some(27 * 64)),
             ("CRE_espada.bmp", "UserBMP/espada.bmp", None),
             ("cre_Espada.BMP", "UserBMP/Espada.BMP", None),
         ];

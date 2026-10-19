@@ -432,6 +432,25 @@ mod tests {
     }
 
     #[test]
+    fn items_keep_their_picture_as_the_original_writes_it() {
+        let fields = Parts::fields(Flavor::Expansion);
+        let picture = fields.iter().find(|f| f.label == "Picture").unwrap();
+        assert!(matches!(picture.kind, FieldKind::Icon));
+        let mut sword = Parts::new_record(&context(Flavor::Expansion, WEAPONS));
+        // The original's new items have none.
+        assert_eq!(sword.part.head.unknown_0x234, "");
+        assert!(picture.is_visible(&sword));
+        for stored in ["12", "CRE_espada.bmp", ""] {
+            picture.set(&mut sword, &Value::Text(stored.into()), &Sources::default());
+            assert_eq!(sword.part.head.unknown_0x234, stored);
+            assert_eq!(picture.get(&sword), Value::Text(stored.into()));
+        }
+        // Armor has no General Information page.
+        let armor = Parts::new_record(&context(Flavor::Expansion, ARMOR));
+        assert!(!picture.is_visible(&armor));
+    }
+
+    #[test]
     fn names_are_unique_per_type() {
         let mut sword = Parts::new_record(&context(Flavor::Expansion, WEAPONS));
         sword.part.head.name = "Sword".into();
