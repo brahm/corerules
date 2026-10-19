@@ -29,7 +29,9 @@ const USAGE: &str = "usage:
   cr chars [INSTALL_DIR]    list characters
   cr edit INSTALL_DIR FILE FIELD=VALUE...
                             change a character in Chars/FILE; fields: name,
-                            player, social_class, age, height, weight,
+                            player, social_class, alignment, kit,
+                            sex=male|female, background (the event),
+                            history, age, height, weight,
                             str, dex, con, int, wis, cha (score and both
                             subabilities), exceptional; LIST+=NAME and
                             LIST-=NAME for the lists weapon, nwp, language,
@@ -845,6 +847,17 @@ fn cmd_edit(install: &Installation, args: &[String]) -> cr_store::Result<()> {
             "name" => details.name = value.into(),
             "player" => details.player = value.into(),
             "social_class" => details.social_class = value.into(),
+            "alignment" => details.alignment = value.into(),
+            "kit" => details.kit = value.into(),
+            "background" => details.background = value.into(),
+            "history" => details.history = value.into(),
+            "sex" => {
+                details.male = match value {
+                    "male" => true,
+                    "female" => false,
+                    _ => return Err(invalid(format!("sex is male or female, not {value}"))),
+                }
+            }
             "age" => details.age = number()?,
             "height" => details.height = number()?,
             "weight" => details.weight = number()?,

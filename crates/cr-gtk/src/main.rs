@@ -1843,6 +1843,68 @@ fn character_editor(
     character.add(&player);
     character.add(&social_class);
     character.add(&portrait_row);
+
+    // The Name page of Update Character: sex, alignment, kit (a new kit
+    // rolls the social class again, on the kit's table) and Background….
+    let with = |mut items: Vec<String>, current: &str| {
+        if !items.iter().any(|i| i == current) {
+            items.push(current.to_owned());
+        }
+        items
+    };
+    let sexes = [tr("Male").to_owned(), tr("Female").to_owned()];
+    let sex = create::combo_row(tr("Gender"), &sexes, &sexes[usize::from(!details.male)]);
+    let alignment = create::combo_row(
+        tr("Alignment"),
+        &with(choices.creation.alignments(classes), &details.alignment),
+        &details.alignment,
+    );
+    let kit = create::combo_row(
+        tr("Kit"),
+        &with(choices.creation.all_kits(), &details.kit),
+        &details.kit,
+    );
+    kit.set_enable_search(true);
+    kit.set_expression(Some(gtk::PropertyExpression::new(
+        gtk::StringObject::static_type(),
+        None::<gtk::Expression>,
+        "string",
+    )));
+    kit.connect_selected_notify({
+        let (rules, social_class) = (choices.creation.clone(), social_class.clone());
+        move |kit| {
+            let rolled =
+                rules.roll_social_class(&create::combo_value(kit), &mut Default::default());
+            social_class.set_text(&rolled);
+        }
+    });
+    let event = create::combo_row(
+        tr("Background Event"),
+        &with(choices.backgrounds.clone(), &details.background),
+        &details.background,
+    );
+    let history = gtk::TextView::builder()
+        .wrap_mode(gtk::WrapMode::WordChar)
+        .top_margin(8)
+        .bottom_margin(8)
+        .left_margin(8)
+        .right_margin(8)
+        .accepts_tab(false)
+        .height_request(96)
+        .css_classes(["card"])
+        .build();
+    history.buffer().set_text(&details.history);
+    character.add(&sex);
+    let background = adw::PreferencesGroup::builder()
+        .title(tr("Background"))
+        .build();
+    background.add(&alignment);
+    background.add(&kit);
+    background.add(&event);
+    let history_group = adw::PreferencesGroup::builder()
+        .title(tr("History"))
+        .build();
+    history_group.add(&history);
     let appearance = adw::PreferencesGroup::builder()
         .title(tr("Appearance"))
         .build();
@@ -1855,10 +1917,12 @@ fn character_editor(
     let experience = experience_group(&choices.advance, &advanced, &level_listeners);
     let page = adw::PreferencesPage::new();
     page.add(&character);
+    page.add(&background);
     page.add(&class_group);
     page.add(&experience);
     page.add(&appearance);
     page.add(&abilities);
+    page.add(&history_group);
 
     let editors = ListEditors::new(lists, &choices, classes);
     // Memorized spells against the slots of the levels the character has
@@ -1970,6 +2034,15 @@ fn character_editor(
                 exceptional_strength: exceptional.value() as u32,
                 skills_and_powers,
                 portrait: portrait.borrow().clone(),
+                alignment: create::combo_value(&alignment),
+                male: sex.selected() == 0,
+                kit: create::combo_value(&kit),
+                background: create::combo_value(&event),
+                history: {
+                    let buffer = history.buffer();
+                    let (start, end) = buffer.bounds();
+                    buffer.text(&start, &end, false).to_string()
+                },
             };
             let mut lists = editors.lists();
             lists.new_classes = new_classes.borrow().clone();
@@ -2105,13 +2178,16 @@ fn experience_group(
             row
         })
         .collect();
-    let hit_points = gtk::Label::builder()
-        .css_classes(["numeric"])
-        .valign(gtk::Align::Center)
+    // The Name page's Hit Points arrows: a change moves the stored rolls
+    // (see AdvanceRules::adjust_hit_points), then shows the hit points
+    // they give.
+    let hit_points = adw::SpinRow::builder()
+        .title(tr("Hit Points"))
+        .numeric(true)
+        .adjustment(&gtk::Adjustment::new(0.0, 0.0, 99_999.0, 1.0, 10.0, 0.0))
         .build();
-    let hp_row = adw::ActionRow::builder().title(tr("Hit Points")).build();
-    hp_row.add_suffix(&hit_points);
-    group.add(&hp_row);
+    let showing = Rc::new(std::cell::Cell::new(false));
+    group.add(&hit_points);
     let points = character.skills_and_powers().then(|| {
         let label = gtk::Label::builder()
             .css_classes(["numeric"])
@@ -2127,6 +2203,7 @@ fn experience_group(
     });
     let refresh = Rc::new({
         let (rules, advanced, listeners) = (rules.clone(), advanced.clone(), listeners.clone());
+        let (hit_points, showing) = (hit_points.clone(), showing.clone());
         move || {
             for listener in listeners.borrow().iter() {
                 listener();
@@ -2166,17 +2243,39 @@ fn experience_group(
                 }
                 Err(e) => group_error(&class_rows, &e.to_string()),
             }
-            hit_points.set_label(
-                &rules
-                    .hit_points(&character)
-                    .map_or_else(|_| "?".into(), |hp| hp.to_string()),
-            );
+            showing.set(true);
+            match rules.hit_points(&character) {
+                Ok(hp) => {
+                    hit_points.set_sensitive(true);
+                    hit_points.set_value(f64::from(hp));
+                }
+                Err(_) => hit_points.set_sensitive(false),
+            }
+            showing.set(false);
             if let Some(points) = &points {
                 points.set_label(&character.data.unknown_0x1778[0].to_string());
             }
         }
     });
     refresh();
+    hit_points.connect_value_notify({
+        let (rules, advanced, refresh) = (rules.clone(), advanced.clone(), refresh.clone());
+        move |row| {
+            if showing.get() {
+                return;
+            }
+            let wanted = row.value() as i32;
+            let changed = {
+                let mut character = advanced.borrow_mut();
+                rules
+                    .hit_points(&character)
+                    .and_then(|hp| rules.adjust_hit_points(&mut character, wanted - hp))
+            };
+            if changed.is_ok() {
+                refresh();
+            }
+        }
+    });
     if rules.expansion() {
         let limits = adw::ComboRow::builder()
             .title(tr("Level Limits"))
@@ -2430,6 +2529,10 @@ struct Choices {
     advance: Rc<AdvanceRules>,
     /// The character as read, for experience and levels.
     character: Character,
+    /// Alignments, kits and the social class tables.
+    creation: Rc<cr_store::create::CreationRules>,
+    /// The Background… dialog's events, "NONE" first.
+    backgrounds: Vec<String>,
 }
 
 impl Choices {
@@ -2456,6 +2559,8 @@ impl Choices {
             new_classes: install.class_table()?.choices(character),
             advance: Rc::new(install.advance_rules()?),
             character: character.clone(),
+            creation: Rc::new(install.creation_rules()?),
+            backgrounds: cr_store::edit::backgrounds(install)?,
         })
     }
 }

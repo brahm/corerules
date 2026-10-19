@@ -43,6 +43,14 @@ pub struct CharacterDetails {
     pub skills_and_powers: bool,
     /// The portrait's folder and file name, both empty for none.
     pub portrait: [String; 2],
+    pub alignment: String,
+    pub male: bool,
+    /// The kit's name, `None` for none.
+    pub kit: String,
+    /// The background event (Background…), `NONE` for none.
+    pub background: String,
+    /// The character history (Background…).
+    pub history: String,
 }
 
 /// Ability scores the original accepts.
@@ -69,6 +77,11 @@ impl CharacterDetails {
             exceptional_strength: d.exceptional_strength,
             skills_and_powers: character.skills_and_powers(),
             portrait: d.unknown_0x1db8.clone(),
+            alignment: d.alignment.clone(),
+            male: d.unknown_0x163c != 0,
+            kit: d.kit.clone(),
+            background: d.unknown_0x90.clone(),
+            history: d.unknown_0x94.clone(),
         }
     }
 
@@ -103,6 +116,16 @@ impl CharacterDetails {
         d.abilities.copy_from_slice(&self.abilities[1..]);
         d.exceptional_strength = self.exceptional_strength;
         d.unknown_0x1db8.clone_from(&self.portrait);
+        d.alignment.clone_from(&self.alignment);
+        // The original writes 1 to 3 for a male; a male stays as stored.
+        if !self.male {
+            d.unknown_0x163c = 0;
+        } else if d.unknown_0x163c == 0 {
+            d.unknown_0x163c = 1;
+        }
+        d.kit.clone_from(&self.kit);
+        d.unknown_0x90.clone_from(&self.background);
+        d.unknown_0x94.clone_from(&self.history);
     }
 }
 
@@ -135,6 +158,7 @@ impl Installation {
             return Err(Error::Invalid(problem));
         }
         let mut character = self.character(file)?;
+        let before_kit = character.data.kit.clone();
         details.apply(&mut character);
         if let Some(lists) = lists {
             lists.apply(&mut character, &self.part_table()?)?;
@@ -180,11 +204,19 @@ impl Installation {
         for line in &mut entry.details {
             if line.starts_with(PLAYER_LINE) {
                 *line = format!("{PLAYER_LINE}{}", details.player);
+            } else if details.kit != before_kit && line.starts_with(KIT_LINE) {
+                *line = format!("{KIT_LINE}{}", details.kit);
             } else if added && line.starts_with(CLASS_LINE) {
                 *line = format!("{CLASS_LINE}{}", character.data.class_title);
             } else if let Some(levels) = levels.as_ref().filter(|_| line.starts_with(LEVEL_LINE)) {
                 *line = format!("{LEVEL_LINE}{levels}");
             }
+        }
+        // Update Character writes a fresh entry, whose kit line names the
+        // new kit; an entry without one gets it when the kit changes.
+        let kit_line = entry.details.iter().any(|l| l.starts_with(KIT_LINE));
+        if !kit_line && entry.version > 1 && details.kit != before_kit {
+            entry.details.push(format!("{KIT_LINE}{}", details.kit));
         }
         let index_bytes = index.to_bytes().map_err(format)?;
         // Both files are checked before either is replaced.
@@ -205,6 +237,26 @@ pub(crate) const PLAYER_LINE: &str = "Player's Name: ";
 /// joined with "/".
 pub(crate) const CLASS_LINE: &str = "Class: ";
 pub(crate) const LEVEL_LINE: &str = "Level: ";
+/// The detail line of an Expansion index entry that names the kit.
+pub(crate) const KIT_LINE: &str = "Kit: ";
+
+/// The background events of the Background… dialog, "NONE" first, as the
+/// program lists them (pushed at 0x54f66a, the list the NPC generator
+/// draws from).
+pub fn backgrounds(install: &Installation) -> Result<Vec<String>> {
+    let image = crate::exe::Image::open(install, crate::treasure::Flavor::Expansion)?;
+    let mut list = image.pushed_texts(0x54f66a, 0x800);
+    if list.len() < BACKGROUNDS || list[0] != "NONE" {
+        return Err(Error::Invalid(
+            tr("The program's background events were not found").into(),
+        ));
+    }
+    list.truncate(BACKGROUNDS);
+    Ok(list)
+}
+
+/// "NONE" and the 20 events.
+const BACKGROUNDS: usize = 21;
 
 /// `Chars/<file>`, refusing names that would leave the folder.
 fn character_path(file: &str) -> Result<String> {

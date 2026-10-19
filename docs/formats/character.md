@@ -116,7 +116,7 @@ What each operation does, in the original and in the app:
 | Convert to NPC | Character Generator button, after "This will move the selected Player Character to the NPC List in the DM Toolkit"; `npc.rs` `convert_to_npc` | `unknown_0x1da4` = 1, saved under a new name, old file deleted (`tests/fixtures/characters/to-npc`) | stays in place with the new `file`, `unknown_0x24` = 1 and `flag_0x28` = 1; the details lines are left alone |
 | put in or take out of a party | 0x5ab684, 0x5abb05; `party.rs` `set_party` | saved under a new name in the Expansion layout (`Character::upgraded`), party in `unknown_0x1e68[3]`; old file deleted | old entry removed, new entry appended with the Class and Level lines and the party in +0x2c |
 | import from a package | 0x49d529 (2.0 0x4def60); `export.rs` `import` | one new file per character | appended per character: the Expansion without Class/Level lines; 2.0 like a new character's with the levels computed, in layout 0 or 1 by the character's NPC mark |
-| Update Character | 0x44c23f | saved under a new name, old file deleted | old entry removed, a fresh one appended |
+| Update Character | 0x44c23f | saved under a new name, old file deleted | old entry removed, a fresh one appended. The Name page writes the sex, alignment, kit, Background… event and history and, with a new kit, a social class rolled on the kit's table (`tests/fixtures/characters/update`); the app saves these in place and writes the new kit into the entry's kit line |
 | delete | 0x44b7cf, party delete 0x5abffd; `party.rs` | removed (the app keeps `<file>.bak` until the deletion is confirmed) | removed |
 | rebuild | 0x5a1671, only on the user's yes | read | every entry built again |
 
@@ -180,8 +180,8 @@ version.
 | 3 | `player` | CString | always | +0x80 | player's name |
 | 4 | `name` | CString | always | +0x84 | character name |
 | 5 | `class_title` | CString | always | +0x88 | class as displayed (`Fighter/Mage`), written by the wizard and shown verbatim; a new class appends `/` + its name |
-| 6 | `unknown_0x90` | CString | always | +0x90 | `NONE` for a new character; the NPC generator writes the background here |
-| 7 | `unknown_0x94` | CString | always | +0x94 | character history, the sheet's "Character History" paragraph; the default sheet sections include it when not empty |
+| 6 | `unknown_0x90` | CString | always | +0x90 | background event of Update Character's Background… dialog (`Exiled`), one of `NONE` and the program's 20 events (pushed at 0x54f66a); `NONE` for a new character; the NPC generator draws one |
+| 7 | `unknown_0x94` | CString | always | +0x94 | character history (Background…), the sheet's "Character History" paragraph; the default sheet sections include it when not empty |
 | 8 | `social_class` | CString | always | +0x15c4 | social class |
 | 9 | `unknown_0x1618` | u32[5] | always | +0x1618 | experience per class slot; levels are computed from it (and capped by `unknown_0x1dc4`), never stored |
 | 10 | `height` | u32 | always | | inches |
@@ -240,7 +240,7 @@ version.
 | 63 | `unknown_0x3c8` | ((CStringArray, CStringArray)[11])[5] | always | +0x3c8, +0x814 | memorized spells: per class slot (index into `classes.names`), per spell level 0 to 10 (0 unused), the wizard list (+0x3c8 + 0xdc * class + 0x14 * level) then the priest list (+0x814 + ...); one entry per memorized copy. A spellbook's contents belong to the spellbook item |
 | 64 | `unknown_0x1878` | CStringArray | always | +0x1878 | unknown; only the copy constructor and Serialize touch it |
 | 65 | `rogue_skills` | [RogueSkills](#ccharacterdocrogueskillsob-serialize-0x59a8ab) | always | +0x15c8 | thief and bard skills and the points added to them |
-| 66 | `unknown_0xc60` | (u32[100])[5] | always | +0xc60 | hit point roll per class slot (400 bytes each) and level: `[g][L-1]` is the roll of level L. Losing levels keeps the rolls |
+| 66 | `unknown_0xc60` | (u32[100])[5] | always | +0xc60 | hit point roll per class slot (400 bytes each) and level: `[g][L-1]` is the roll of level L. Losing levels keeps the rolls. Update Character's Hit Points arrows change them (0x5bf569, `advance.rs` `adjust_hit_points`) |
 | 67 | `unknown_0x1430` | u32[100] | always | +0x1430 | PSPs gained at each level, `[L-1]` for level L (one array for the character); the sheet shows the sum |
 | 68 | `nonweapon_costs` | CDWordArray | always | +0x17e0 | what each nonweapon proficiency cost: slots (Core Rules) or character points (Skills & Powers); one per `nonweapon_proficiencies` entry |
 | 69 | `nonweapon_bonuses` | CDWordArray | v > 50 | +0x17f4 | bonus ranks per nonweapon proficiency, added to its score; 0 wherever the program adds one; parallel |

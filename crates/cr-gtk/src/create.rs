@@ -178,7 +178,7 @@ fn radio_rows(
     rows
 }
 
-fn combo_row(title: &str, items: &[String], selected: &str) -> adw::ComboRow {
+pub(crate) fn combo_row(title: &str, items: &[String], selected: &str) -> adw::ComboRow {
     let model = gtk::StringList::new(&items.iter().map(String::as_str).collect::<Vec<_>>());
     let row = adw::ComboRow::builder().title(title).model(&model).build();
     if let Some(i) = items.iter().position(|i| i == selected) {
@@ -187,7 +187,7 @@ fn combo_row(title: &str, items: &[String], selected: &str) -> adw::ComboRow {
     row
 }
 
-fn combo_value(row: &adw::ComboRow) -> String {
+pub(crate) fn combo_value(row: &adw::ComboRow) -> String {
     row.selected_item()
         .and_downcast::<gtk::StringObject>()
         .map(|s| s.string().to_string())
