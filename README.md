@@ -67,7 +67,8 @@ the original programs wrote.
   Expansion's racial level limits; **dual-classing** for humans
 - **Character sheet**: every section the originals export, shown in the
   app, printed, saved as PDF, or exported as the originals' TXT and HTML,
-  matching their exports line for line
+  matching their exports line for line, or as Markdown (in place of the
+  Expansion's RTF)
 - **Parties**: Manage Parties… puts characters in a party, takes them out
   or deletes every member; a character can be deleted, with Undo; the list
   filters by party

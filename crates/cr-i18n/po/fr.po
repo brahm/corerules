@@ -894,7 +894,7 @@ msgstr "Les capacités de la race sont fixes"
 #: crates/cr-gtk/src/npc.rs:445
 #: crates/cr-gtk/src/picture.rs:81
 #: crates/cr-gtk/src/picture.rs:115
-#: crates/cr-gtk/src/sheet.rs:228
+#: crates/cr-gtk/src/sheet.rs:233
 #: crates/cr-store/src/userdb/parts/kit.rs:346
 msgid "None"
 msgstr "Aucune"
@@ -1449,7 +1449,7 @@ msgid "Encounter Menu"
 msgstr "Menu de la rencontre"
 
 #: crates/cr-gtk/src/encounter.rs:412
-#: crates/cr-gtk/src/sheet.rs:84
+#: crates/cr-gtk/src/sheet.rs:85
 #: crates/cr-gtk/src/treasure.rs:353
 msgid "PDF documents"
 msgstr "Documents PDF"
@@ -2981,35 +2981,43 @@ msgstr "Exporter en _HTML…"
 msgid "Export as _Text…"
 msgstr "Exporter en _texte…"
 
-#: crates/cr-gtk/src/sheet.rs:52
+#: crates/cr-gtk/src/sheet.rs:50
+msgid "Export as _Markdown…"
+msgstr "Exporter en _Markdown…"
+
+#: crates/cr-gtk/src/sheet.rs:53
 msgid "Save or Export"
 msgstr "Enregistrer ou exporter"
 
-#: crates/cr-gtk/src/sheet.rs:90
+#: crates/cr-gtk/src/sheet.rs:91
 msgid "HTML documents"
 msgstr "Documents HTML"
 
-#: crates/cr-gtk/src/sheet.rs:91
+#: crates/cr-gtk/src/sheet.rs:92
 msgid "Text files"
 msgstr "Fichiers texte"
 
-#: crates/cr-gtk/src/sheet.rs:106
+#: crates/cr-gtk/src/sheet.rs:93
+msgid "Markdown documents"
+msgstr "Documents Markdown"
+
+#: crates/cr-gtk/src/sheet.rs:111
 msgid "Sheet exported"
 msgstr "Feuille exportée"
 
-#: crates/cr-gtk/src/sheet.rs:107
+#: crates/cr-gtk/src/sheet.rs:112
 msgid "Could not save {file}: {error}"
 msgstr "Impossible d’enregistrer {file} : {error}"
 
-#: crates/cr-gtk/src/sheet.rs:137
+#: crates/cr-gtk/src/sheet.rs:142
 msgid "Save As"
 msgstr "Enregistrer sous"
 
-#: crates/cr-gtk/src/sheet.rs:607
+#: crates/cr-gtk/src/sheet.rs:612
 msgid "Sheet saved as PDF"
 msgstr "Feuille enregistrée en PDF"
 
-#: crates/cr-gtk/src/sheet.rs:609
+#: crates/cr-gtk/src/sheet.rs:614
 msgid "Could not print: {error}"
 msgstr "Impossible d’imprimer : {error}"
 

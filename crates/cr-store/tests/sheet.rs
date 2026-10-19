@@ -141,3 +141,43 @@ fn sheets_match_the_originals() {
         );
     }
 }
+
+/// The Markdown export of every character in `CORERULES_DIR`: a section per
+/// box, and tables whose rows all have the heading row's columns.
+#[test]
+fn markdown_exports_are_well_formed() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(Path::new(&dir)).expect("installation");
+    let index = install.characters().expect("character list");
+    assert!(!index.entries.is_empty());
+    for entry in &index.entries {
+        let character = install.character(&entry.file).expect("character");
+        let sheet = install.sheet(&character).expect("sheet");
+        let text = sheet.to_markdown("10/19/2026 03:05 PM");
+        assert!(
+            text.starts_with(&format!("# {}\n", sheet.title)),
+            "{}",
+            entry.file
+        );
+        for section in &sheet.sections {
+            if let cr_store::sheet::SectionContent::Columns(columns) = &section.content {
+                for b in columns.iter().flatten() {
+                    assert!(text.contains(&format!("\n## {}\n", b.title)), "{}", b.title);
+                }
+            }
+        }
+        let cells = |line: &str| line.matches(" |").count() - line.matches("\\| |").count();
+        let mut width = None;
+        for line in text.lines() {
+            if !line.starts_with('|') {
+                width = None;
+                continue;
+            }
+            let w = *width.get_or_insert(cells(line));
+            assert_eq!(cells(line), w, "{}: {line}", entry.file);
+        }
+        assert!(text.ends_with("on 10/19/2026 03:05 PM*\n"));
+    }
+}

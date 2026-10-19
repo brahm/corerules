@@ -894,7 +894,7 @@ msgstr "Die Fähigkeiten des Volkes sind festgelegt"
 #: crates/cr-gtk/src/npc.rs:445
 #: crates/cr-gtk/src/picture.rs:81
 #: crates/cr-gtk/src/picture.rs:115
-#: crates/cr-gtk/src/sheet.rs:228
+#: crates/cr-gtk/src/sheet.rs:233
 #: crates/cr-store/src/userdb/parts/kit.rs:346
 msgid "None"
 msgstr "Keine"
@@ -1449,7 +1449,7 @@ msgid "Encounter Menu"
 msgstr "Begegnungsmenü"
 
 #: crates/cr-gtk/src/encounter.rs:412
-#: crates/cr-gtk/src/sheet.rs:84
+#: crates/cr-gtk/src/sheet.rs:85
 #: crates/cr-gtk/src/treasure.rs:353
 msgid "PDF documents"
 msgstr "PDF-Dokumente"
@@ -2981,35 +2981,43 @@ msgstr "Als _HTML exportieren…"
 msgid "Export as _Text…"
 msgstr "Als _Text exportieren…"
 
-#: crates/cr-gtk/src/sheet.rs:52
+#: crates/cr-gtk/src/sheet.rs:50
+msgid "Export as _Markdown…"
+msgstr "Als _Markdown exportieren…"
+
+#: crates/cr-gtk/src/sheet.rs:53
 msgid "Save or Export"
 msgstr "Speichern oder exportieren"
 
-#: crates/cr-gtk/src/sheet.rs:90
+#: crates/cr-gtk/src/sheet.rs:91
 msgid "HTML documents"
 msgstr "HTML-Dokumente"
 
-#: crates/cr-gtk/src/sheet.rs:91
+#: crates/cr-gtk/src/sheet.rs:92
 msgid "Text files"
 msgstr "Textdateien"
 
-#: crates/cr-gtk/src/sheet.rs:106
+#: crates/cr-gtk/src/sheet.rs:93
+msgid "Markdown documents"
+msgstr "Markdown-Dokumente"
+
+#: crates/cr-gtk/src/sheet.rs:111
 msgid "Sheet exported"
 msgstr "Bogen exportiert"
 
-#: crates/cr-gtk/src/sheet.rs:107
+#: crates/cr-gtk/src/sheet.rs:112
 msgid "Could not save {file}: {error}"
 msgstr "{file} konnte nicht gespeichert werden: {error}"
 
-#: crates/cr-gtk/src/sheet.rs:137
+#: crates/cr-gtk/src/sheet.rs:142
 msgid "Save As"
 msgstr "Speichern unter"
 
-#: crates/cr-gtk/src/sheet.rs:607
+#: crates/cr-gtk/src/sheet.rs:612
 msgid "Sheet saved as PDF"
 msgstr "Bogen als PDF gespeichert"
 
-#: crates/cr-gtk/src/sheet.rs:609
+#: crates/cr-gtk/src/sheet.rs:614
 msgid "Could not print: {error}"
 msgstr "Drucken nicht möglich: {error}"
 
