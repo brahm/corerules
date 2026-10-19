@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Core Rules Add-ons
+Name[pt_BR]=Addons do Core Rules
+Comment=Install the community add-ons into Core Rules
+Comment[pt_BR]=Instale os addons da comunidade no Core Rules
+Exec=corerules-addons
+Icon=io.github.brahm.CoreRules.Addons
+Terminal=false
+Type=Application
+Categories=Game;RolePlaying;
+StartupNotify=true
