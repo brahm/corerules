@@ -1,21 +1,24 @@
 name: Addons package
 
-# Builds the community add-ons package (packaging/addons/build.sh) and, on
-# main or by hand, publishes it on GitHub Packages as the OCI artifact
-# ghcr.io/<owner>/corerules-addons, tagged with the app version and latest.
+# Builds the add-ons installer, one AppImage with the add-ons inside
+# (crates/cr-addons), and, on main or by hand, publishes it on GitHub
+# Packages as the OCI artifact ghcr.io/<owner>/corerules-addons, tagged with
+# the app version and latest.
 on:
   push:
     branches: [main]
     paths:
       - 'addons/**'
-      - 'packaging/addons/**'
-      - 'packaging/extract-data.sh'
+      - 'crates/cr-addons/**'
+      - 'data/addons/**'
+      - 'packaging/appimage/**'
       - '.github/workflows/addons.yml'
   pull_request:
     paths:
       - 'addons/**'
-      - 'packaging/addons/**'
-      - 'packaging/extract-data.sh'
+      - 'crates/cr-addons/**'
+      - 'data/addons/**'
+      - 'packaging/appimage/**'
       - '.github/workflows/addons.yml'
   workflow_dispatch:
 
@@ -23,40 +26,38 @@ permissions:
   contents: read
   packages: write
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
   package:
     runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y musl-tools
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-unknown-linux-musl
-      - uses: Swatinem/rust-cache@v2
-      - run: packaging/addons/build.sh
-      - name: Check the package
+      # The checkout belongs to the runner's user; root inside the SDK
+      # sandbox has no capabilities to write there.
+      - run: chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"
+      - id: v
+        run: echo "version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)" >> "$GITHUB_OUTPUT"
+      - run: packaging/appimage/build-in-sdk.sh ${{ steps.v.outputs.version }} addons
+      - name: Check the AppImage
         run: |
-          tmp=$(mktemp -d)
-          tar -xzf target/addons/addons-comunidade-expansion.tar.gz -C "$tmp"
-          cd "$tmp/addons-comunidade-expansion"
-          sha256sum -c SHA256SUMS
-          ! ls ./*.AppImage 2>/dev/null
-          ./instalar-addons.sh --help
+          cd target/AppDir
+          test -x usr/bin/corerules-addons
+          test -f usr/share/icons/hicolor/256x256/apps/io.github.brahm.CoreRules.Addons.png
+          ls -l "$GITHUB_WORKSPACE"/dist/CoreRules-Addons-*.AppImage
       - if: github.event_name != 'pull_request'
         uses: oras-project/setup-oras@v1
       - if: github.event_name != 'pull_request'
         name: Publish on GitHub Packages
         run: |
-          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
-          image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/corerules-addons
+          version=${{ steps.v.outputs.version }}
+          owner=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
           echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
-          cd target/addons
-          oras push "$image:$version,latest" \
+          cd dist
+          oras push "ghcr.io/$owner/corerules-addons:$version,latest" \
             --artifact-type application/vnd.corerules.addons \
             --annotation "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
-            --annotation "org.opencontainers.image.description=Addons da comunidade para o Core Rules Expansion, com o instalador" \
+            --annotation "org.opencontainers.image.description=Instalador dos addons da comunidade para o Core Rules Expansion" \
             --annotation "org.opencontainers.image.version=$version" \
-            addons-comunidade-expansion.tar.gz:application/gzip
+            "CoreRules-Addons-$version-x86_64.AppImage:application/vnd.appimage"
