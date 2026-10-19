@@ -116,6 +116,9 @@ pub struct CharacterLists {
     /// when they may have changed. Its weapon proficiencies replace
     /// `weapon_proficiencies`.
     pub combat: Option<crate::combat::CharacterCombat>,
+    /// Rogue skill points, psionic powers, wild talents and psionic attack
+    /// and defense modes, when they may have changed.
+    pub skills: Option<crate::skills::CharacterSkills>,
 }
 
 /// An item in a bundle.
@@ -195,6 +198,7 @@ impl CharacterLists {
             advancement: None,
             abilities: None,
             combat: None,
+            skills: None,
             spellbooks: d
                 .inventory
                 .iter()

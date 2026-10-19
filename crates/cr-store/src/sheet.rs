@@ -32,6 +32,7 @@
 //! class passes the old one, and the HTML escape turns `&` into `and`.
 
 mod build;
+pub(crate) use build::ability_display_name;
 mod markdown;
 pub mod tables;
 mod write;
@@ -415,6 +416,11 @@ impl SheetRules {
     /// Computes the sheet.
     pub fn sheet(&self, character: &Character) -> Result<Sheet> {
         build::build(self, character)
+    }
+
+    /// Each rogue skill's score without armor, by its entry's name.
+    pub fn rogue_scores(&self, character: &Character) -> Result<Vec<(String, i32)>> {
+        build::rogue_scores(self, character)
     }
 
     /// Each class's abbreviation and level, joined with "/": "F1",

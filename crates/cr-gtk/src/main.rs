@@ -14,6 +14,7 @@ mod party;
 mod picture;
 mod prefs;
 mod sheet;
+mod skills;
 mod tables;
 mod transfer;
 mod treasure;
@@ -1950,6 +1951,7 @@ fn character_editor(
     let ability_editor =
         abilities::AbilityEditor::new(choices.abilities.clone(), &choices.character);
     let combat_editor = combat::CombatEditor::new(choices.combat.clone(), &choices.character);
+    let skills_editor = skills::SkillsEditor::new(choices.skills.clone(), &choices.character);
     let stack = adw::ViewStack::new();
     stack.add_titled_with_icon(
         &page,
@@ -1974,6 +1976,12 @@ fn character_editor(
         Some("proficiencies"),
         tr("Proficiencies"),
         "view-list-symbolic",
+    );
+    stack.add_titled_with_icon(
+        &skills_editor.page,
+        Some("skills"),
+        tr("Skills"),
+        "system-run-symbolic",
     );
     stack.add_titled_with_icon(
         &editors.spells_page(),
@@ -2012,7 +2020,7 @@ fn character_editor(
     view.add_bottom_bar(&switcher);
     let dialog = adw::Dialog::builder()
         .title(tr("Edit Character"))
-        .content_width(480)
+        .content_width(560)
         .content_height(600)
         .child(&view)
         .default_widget(&save_button)
@@ -2032,6 +2040,7 @@ fn character_editor(
     let original = choices.character.clone();
     let ability_rules = choices.abilities.clone();
     let combat_rules = choices.combat.clone();
+    let skill_rules = choices.skills.clone();
     save_button.connect_clicked({
         let dialog = dialog.clone();
         move |_| {
@@ -2073,6 +2082,10 @@ fn character_editor(
             if edited != combat_rules.combat_of(&original) {
                 lists.weapon_proficiencies.clone_from(&edited.weapons);
                 lists.combat = Some(edited);
+            }
+            let edited = skills_editor.skills();
+            if edited != skill_rules.skills_of(&original) {
+                lists.skills = Some(edited);
             }
             let advancement = Advancement::between(&original, &advanced.borrow());
             if advancement != Advancement::of(&original) {
@@ -2563,6 +2576,8 @@ struct Choices {
     /// Subraces, racial and class abilities, schools and spheres.
     abilities: Rc<cr_store::abilities::AbilityRules>,
     combat: Rc<cr_store::combat::CombatRules>,
+    /// Rogue skills, psionic powers, wild talents, attack and defense modes.
+    skills: Rc<cr_store::skills::SkillRules>,
 }
 
 impl Choices {
@@ -2592,6 +2607,7 @@ impl Choices {
             backgrounds: cr_store::edit::backgrounds(install)?,
             abilities: Rc::new(install.ability_rules()?),
             combat: Rc::new(install.combat_rules()?),
+            skills: Rc::new(install.skill_rules()?),
         })
     }
 }
@@ -2898,6 +2914,7 @@ impl ListEditors {
             advancement: None,
             abilities: None,
             combat: None,
+            skills: None,
             spellbooks: self
                 .spellbooks
                 .iter()

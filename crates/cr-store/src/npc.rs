@@ -31,7 +31,7 @@
 mod build;
 pub(crate) mod data;
 mod equip;
-mod magic;
+pub(crate) mod magic;
 mod names;
 mod prof;
 mod program;

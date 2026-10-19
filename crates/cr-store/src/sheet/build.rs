@@ -360,6 +360,16 @@ fn table(columns: usize, rows: Vec<Vec<Cell>>) -> Block {
     Block::Table(Table { columns, rows })
 }
 
+/// Each rogue skill entry's score as Update Character's Rogue Skills
+/// dialog shows it (0x59aa97 without armor), by entry name.
+pub(super) fn rogue_scores(rules: &SheetRules, ch: &Character) -> Result<Vec<(String, i32)>> {
+    let ctx = Ctx::new(rules, ch)?;
+    Ok(rogue::skills(&ctx)
+        .into_iter()
+        .map(|s| (s.part_name, s.total - s.armor))
+        .collect())
+}
+
 /// The Expansion's default sections (0x598347), for a character that has
 /// never been through the sheet options.
 pub(super) fn default_sections(rules: &SheetRules, ch: &Character) -> Result<Vec<u32>> {
@@ -1022,7 +1032,7 @@ fn nonweapon_rows(ctx: &Ctx) -> Vec<Vec<Cell>> {
 
 /// A part's name as the ability boxes show it: without the "Race, " or
 /// "Class, " prefix and the cost in parentheses.
-fn ability_display_name(name: &str) -> String {
+pub(crate) fn ability_display_name(name: &str) -> String {
     let name = name.split_once(", ").map_or(name, |(_, n)| n);
     let name = match name.rfind(" (") {
         Some(i) if name.ends_with(')') && name[i + 2..name.len() - 1].parse::<i32>().is_ok() => {

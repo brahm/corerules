@@ -108,7 +108,7 @@ const PSI_DISC: [[i32; 16]; 2] = [
     [0, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5],
 ];
 
-fn psi_dev(l: i32, b: bool) -> i32 {
+pub(crate) fn psi_dev(l: i32, b: bool) -> i32 {
     if l < 21 {
         PSI_DEV[usize::from(b)][l.max(0) as usize]
     } else if b {
@@ -118,7 +118,7 @@ fn psi_dev(l: i32, b: bool) -> i32 {
     }
 }
 
-fn psi_sci(l: i32, b: bool) -> i32 {
+pub(crate) fn psi_sci(l: i32, b: bool) -> i32 {
     if l < 21 {
         PSI_SCI[usize::from(b)][l.max(0) as usize]
     } else if b {
@@ -128,7 +128,7 @@ fn psi_sci(l: i32, b: bool) -> i32 {
     }
 }
 
-fn psi_disc(l: i32, b: bool) -> i32 {
+pub(crate) fn psi_disc(l: i32, b: bool) -> i32 {
     if l < 16 {
         PSI_DISC[usize::from(b)][l.max(0) as usize]
     } else {
@@ -137,7 +137,7 @@ fn psi_disc(l: i32, b: bool) -> i32 {
 }
 
 /// 0x422fe9 and friends: 16 gives 1, 25 gives 10.
-fn bonus16(v: i32) -> i32 {
+pub(crate) fn bonus16(v: i32) -> i32 {
     (v - 15).max(0)
 }
 

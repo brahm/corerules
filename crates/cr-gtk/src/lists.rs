@@ -391,7 +391,7 @@ impl<T: Clone + 'static> RowList<T> {
         self.rows
             .borrow()
             .iter()
-            .map(|(_, row, _)| row.title().to_string())
+            .map(|(_, row, _)| plain_title(row))
             .collect()
     }
 
@@ -417,6 +417,12 @@ impl<T: Clone + 'static> RowList<T> {
     }
 }
 
+/// `row`'s title without its markup.
+fn plain_title(row: &adw::ActionRow) -> String {
+    let title = row.title();
+    gtk::pango::parse_markup(&title, '\0').map_or(title.to_string(), |m| m.1.into())
+}
+
 /// The icon of the item `row` names, at its start; a dimmed stand-in when
 /// the item has none, so the titles line up.
 fn add_icon(row: &adw::ActionRow, icons: &ItemIcons) {
@@ -424,10 +430,10 @@ fn add_icon(row: &adw::ActionRow, icons: &ItemIcons) {
         .pixel_size(ROW_ICON_SIZE)
         .valign(gtk::Align::Center)
         .build();
-    // The title is markup.
-    let title = row.title();
-    let name = gtk::pango::parse_markup(&title, '\0').map_or(title.to_string(), |m| m.1.into());
-    match icons.get(&name).and_then(crate::picture::icon_texture) {
+    match icons
+        .get(&plain_title(row))
+        .and_then(crate::picture::icon_texture)
+    {
         Some(texture) => image.set_paintable(Some(&texture)),
         None => {
             image.set_icon_name(Some("package-x-generic-symbolic"));
