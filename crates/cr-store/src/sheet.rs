@@ -1,7 +1,8 @@
 //! The character sheet: every value the originals' character sheet shows,
 //! in the sections and order their export writes them (emitter 0x5a2257 in
-//! the Expansion, 0x432e30 in Core Rules 2.0), and the TXT and HTML exports
-//! made from it.
+//! the Expansion, 0x432e30 in Core Rules 2.0), the TXT and HTML exports
+//! made from it, and a Markdown export the app adds in place of the
+//! Expansion's RTF.
 //!
 //! A [`Sheet`] is a list of sections; each section is a row of columns,
 //! each column holds boxes, and each box holds tables, lists, paragraphs
@@ -31,6 +32,7 @@
 //! class passes the old one, and the HTML escape turns `&` into `and`.
 
 mod build;
+mod markdown;
 pub mod tables;
 mod write;
 

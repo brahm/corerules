@@ -43,11 +43,12 @@ const USAGE: &str = "usage:
                             AMOUNT may be negative; prime requisite bonus
                             applied); limits=0|1|2 (Expansion level
                             limits: none, racial, with prime bonuses)
-  cr sheet INSTALL_DIR FILE [--html|--txt]
+  cr sheet INSTALL_DIR FILE [--html|--txt|--md]
                             print the character sheet of Chars/FILE (or of
                             the character file at path FILE) as the export
                             writes it: TXT (default with the Expansion) or
-                            HTML (Core Rules 2.0 exports HTML only)
+                            HTML (Core Rules 2.0 exports HTML only), or as
+                            Markdown
   cr treasure INSTALL_DIR [--seed N] [--electrum] [--accumulate] LETTERS...
                             roll treasure types as the Treasure roller does
                             (A B B Q, or Bx2) and print the bundle and its
@@ -362,10 +363,12 @@ fn cmd_sheet(install: &Installation, args: &[String]) -> cr_store::Result<()> {
     let invalid = |message: String| cr_store::Error::Invalid(message);
     let mut file = None;
     let mut html = None;
+    let mut markdown = false;
     for arg in args {
         match arg.as_str() {
             "--html" => html = Some(true),
             "--txt" => html = Some(false),
+            "--md" => markdown = true,
             _ if file.is_none() => file = Some(arg),
             _ => return Err(invalid(format!("unexpected argument {arg}"))),
         }
@@ -392,7 +395,11 @@ fn cmd_sheet(install: &Installation, args: &[String]) -> cr_store::Result<()> {
         return Err(invalid("Core Rules 2.0 exports HTML only".into()));
     }
     let date = Timestamp::now_utc().format(sheet.flavor);
-    let bytes = sheet.export(html, &date);
+    let bytes = if markdown {
+        sheet.to_markdown(&date).into_bytes()
+    } else {
+        sheet.export(html, &date)
+    };
     if let Err(e) = std::io::stdout().lock().write_all(&bytes) {
         stdout_failed(e);
     }

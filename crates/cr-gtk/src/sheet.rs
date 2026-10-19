@@ -1,6 +1,6 @@
 //! The character sheet: shown in a dialog, printed or saved as PDF through
-//! GTK's print support, and exported as the original programs' TXT and
-//! HTML files.
+//! GTK's print support, exported as the original programs' TXT and HTML
+//! files, or exported as Markdown.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -47,6 +47,7 @@ pub fn show(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) +
     if sheet.flavor == cr_store::sheet::Flavor::Expansion {
         menu.append(Some(tr("Export as _Text…")), Some("sheet.txt"));
     }
+    menu.append(Some(tr("Export as _Markdown…")), Some("sheet.md"));
     let export = gtk::MenuButton::builder()
         .icon_name("document-save-symbolic")
         .tooltip_text(tr("Save or Export"))
@@ -89,6 +90,7 @@ pub fn show(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) +
     for (name, extension, kind) in [
         ("html", "html", tr_noop!("HTML documents")),
         ("txt", "txt", tr_noop!("Text files")),
+        ("md", "md", tr_noop!("Markdown documents")),
     ] {
         action(name, {
             let (sheet, dialog, toast) = (sheet.clone(), dialog.clone(), toast.clone());
@@ -101,7 +103,10 @@ pub fn show(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) +
                     tr(kind),
                     move |path| {
                         let date = Timestamp::now_utc().format(sheet.flavor);
-                        let bytes = sheet.export(extension == "html", &date);
+                        let bytes = match extension {
+                            "md" => sheet.to_markdown(&date).into_bytes(),
+                            _ => sheet.export(extension == "html", &date),
+                        };
                         match std::fs::write(&path, bytes) {
                             Ok(()) => toast(tr("Sheet exported")),
                             Err(e) => toast(&tr!(
