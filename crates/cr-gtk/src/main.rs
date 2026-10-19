@@ -8,6 +8,7 @@ mod combat;
 mod create;
 mod encounter;
 mod extract;
+mod help;
 mod lists;
 mod npc;
 mod party;
@@ -34,6 +35,7 @@ use cr_store::catalog::{ENCOUNTER_KEY, Entry, Section, TABLE_KEY, TEMPLATE_KEY, 
 use cr_store::choices::{Caster, caster};
 use cr_store::dual::ClassChoice;
 use cr_store::edit::{ABILITY_RANGE, CharacterDetails};
+use cr_store::help::topic;
 use cr_store::lists::{
     BUNDLE_NAMES, COINS, CharacterLists, ITEM_TYPES, Item, MONEY, Memorized, Spellbook,
 };
@@ -119,10 +121,16 @@ fn print_texts(widget: &gtk::Widget) {
 }
 
 /// Symbolic icons the icon theme lacks, by name.
-const ICONS: [(&str, &str); 1] = [(
-    "corerules-sword-symbolic",
-    include_str!("../../../data/icons/symbolic/corerules-sword-symbolic.svg"),
-)];
+const ICONS: [(&str, &str); 2] = [
+    (
+        "corerules-sword-symbolic",
+        include_str!("../../../data/icons/symbolic/corerules-sword-symbolic.svg"),
+    ),
+    (
+        "corerules-help-symbolic",
+        include_str!("../../../data/icons/symbolic/corerules-help-symbolic.svg"),
+    ),
+];
 
 /// Makes [`ICONS`] available to the icon theme. GTK finds an unthemed icon
 /// in a search path folder by its file name, so they are written to the
@@ -315,6 +323,55 @@ impl Window {
                 }
             })
             .build();
+        let help = gio::ActionEntry::builder("help")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate({
+                let this = this.clone();
+                move |_, _, spec| {
+                    if let Some(spec) = spec.and_then(|s| s.str()) {
+                        this.open_help(spec)
+                    }
+                }
+            })
+            .build();
+        // The original's Help > Main Menu and F1: the program help of the
+        // screen shown.
+        let help_here = gio::ActionEntry::builder("help-here")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| {
+                    let topic = topic::of_section(&userdb::Host::current_section(&this));
+                    this.open_help(&format!("Program.hlp#{topic}"))
+                }
+            })
+            .build();
+        // A right-click on a control or a row: its screen and what it
+        // reads.
+        let help_control = gio::ActionEntry::builder("help-control")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate({
+                let this = this.clone();
+                move |_, _, spec| {
+                    let Some(spec) = spec.and_then(|s| s.str()) else {
+                        return;
+                    };
+                    let mut lines = spec.lines();
+                    let Some(screen) = lines.next().and_then(|n| n.parse().ok()) else {
+                        return;
+                    };
+                    let texts: Vec<&str> = lines.collect();
+                    if let Some(install) = this.install.borrow().as_ref() {
+                        help::context_help(&this.window, install, screen, &texts);
+                    }
+                }
+            })
+            .build();
+        let about = gio::ActionEntry::builder("about")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| help::about(&this.window, this.install.borrow().as_ref())
+            })
+            .build();
         let roll_table = gio::ActionEntry::builder("roll-table")
             .activate({
                 let this = this.clone();
@@ -357,6 +414,12 @@ impl Window {
                 move |_, _, _| transfer::edit_package(&Rc::new(this.clone()))
             })
             .build();
+        this.window
+            .add_action_entries([help, help_here, help_control, about]);
+        help::add_key(&this.window, {
+            let this = this.clone();
+            move || topic::of_section(&userdb::Host::current_section(&this))
+        });
         this.window.add_action_entries([
             open_book,
             roll_table,
@@ -752,6 +815,27 @@ impl Window {
         }
     }
 
+    /// Opens a help file of `Help/` in the help window: `FILE`, at its
+    /// contents topic, or `FILE#CONTEXT` or `FILE#NUMBER` (a `[MAP]`
+    /// number).
+    fn open_help(&self, spec: &str) {
+        let (file, topic) = spec.split_once('#').unwrap_or((spec, ""));
+        let target = if topic.is_empty() {
+            help::Target::Contents
+        } else if let Ok(n) = topic.parse() {
+            help::Target::Number(n)
+        } else {
+            help::Target::Context(topic.to_owned())
+        };
+        let opened = match &*self.install.borrow() {
+            Some(install) => help::open(&self.window, install, file, target),
+            None => Err(tr("Open a Core Rules folder to read its help").to_owned()),
+        };
+        if let Err(e) = opened {
+            self.toast(&e);
+        }
+    }
+
     /// Opens the Roll on a Table dialog.
     fn roll_table(&self) {
         let Some(root) = self.install.borrow().as_ref().map(|i| i.root().to_owned()) else {
@@ -981,6 +1065,15 @@ fn open_menu() -> gtk::MenuButton {
     app.append(Some(tr("Extract Data from _CD…")), Some("win.extract-data"));
     app.append(Some(tr("_Preferences")), Some("win.preferences"));
     menu.append_section(None, &app);
+    let help = gio::Menu::new();
+    let item = gio::MenuItem::new(Some(tr("_Help")), Some("win.help-here"));
+    // F1 itself is handled by the window and by each dialog.
+    item.set_attribute_value("accel", Some(&"F1".to_variant()));
+    help.append_item(&item);
+    help.append(Some(tr("_Online Manual")), Some("win.help::Manual.hlp"));
+    help.append(Some(tr("_Tome of Help")), Some("win.help::ADandD.hlp"));
+    help.append(Some(tr("_About Core Rules")), Some("win.about"));
+    menu.append_section(None, &help);
     gtk::MenuButton::builder()
         .icon_name("open-menu-symbolic")
         .tooltip_text(tr("Main Menu"))
@@ -2009,6 +2102,19 @@ fn character_editor(
         .build();
     header.pack_start(&cancel);
     header.pack_end(&save_button);
+    // The original's Update Character pages, by the page shown.
+    help::add_button(&header, &stack, {
+        let stack = stack.clone();
+        move || match stack.visible_child_name().as_deref() {
+            Some("abilities") => topic::ABILITY_SCORES,
+            Some("combat") => topic::WEAPON_PROFICIENCIES,
+            Some("proficiencies") => topic::NONWEAPON_PROFICIENCIES,
+            Some("skills") => topic::SKILLS,
+            Some("spells") => topic::CHARACTER_SPELLS,
+            Some("equipment") => topic::EQUIPMENT,
+            _ => topic::CHARACTER_INFORMATION,
+        }
+    });
     let switcher = adw::ViewSwitcherBar::builder()
         .stack(&stack)
         .reveal(true)
@@ -2468,6 +2574,7 @@ fn experience_dialog(
     header.pack_end(&give);
     let error = adw::Banner::new("");
     let view = adw::ToolbarView::new();
+    help::add_button(&header, &view, || topic::LEVELS);
     view.add_top_bar(&header);
     view.add_top_bar(&error);
     view.set_content(Some(&page));

@@ -14,6 +14,7 @@ use cr_store::create::{
     ROGUE_SKILLS, RollMethod, SHIELDS, STANDARD_PACK, SUBABILITIES, SUBABILITY_SPREAD, UNARMED,
     max_spells_per_level, point_table, roll_dice_pool, roll_seven_dice, seven_dice_scores,
 };
+use cr_store::help::topic;
 use cr_store::pictures::ItemIcons;
 use cr_store::settings::{SETTINGS, Setting};
 use gtk::glib;
@@ -89,12 +90,14 @@ pub fn new_character(
 }
 
 /// A page of the dialog: a header bar with `button` at the end and
-/// `groups` below it.
+/// `groups` below it; Help opens the program help at the topic `help`
+/// gives.
 fn step(
     title: &str,
     groups: &[&adw::PreferencesGroup],
     button: &gtk::Button,
     banner: Option<&adw::Banner>,
+    help: impl Fn() -> u32 + 'static,
 ) -> adw::NavigationPage {
     let content = adw::PreferencesPage::new();
     for group in groups {
@@ -103,6 +106,7 @@ fn step(
     let header = adw::HeaderBar::new();
     header.pack_end(button);
     let view = adw::ToolbarView::new();
+    crate::help::add_button(&header, &view, help);
     view.add_top_bar(&header);
     if let Some(banner) = banner {
         view.add_top_bar(banner);
@@ -393,7 +397,13 @@ impl Wizard {
                 this.push(this.abilities_page());
             }
         });
-        step(tr("New Character"), &[&rules_group, &group], &next, None)
+        step(
+            tr("New Character"),
+            &[&rules_group, &group],
+            &next,
+            None,
+            || topic::CHARACTER_MANAGEMENT,
+        )
     }
 
     /// Rolling the ability scores.
@@ -693,7 +703,7 @@ impl Wizard {
         reroll();
 
         next.connect_clicked({
-            let this = self.clone();
+            let (this, method) = (self.clone(), method.clone());
             move |_| {
                 let m = *method.borrow();
                 let values = if m == RollMethod::Enter || m.divided() {
@@ -721,6 +731,10 @@ impl Wizard {
             &[&method_group, &scores_group, &seven_group],
             &next,
             None,
+            {
+                let method = method.clone();
+                move || topic::of_roll_method(*method.borrow())
+            },
         )
     }
 
@@ -875,6 +889,7 @@ impl Wizard {
             &[&options_group, &races_group, &subrace_group],
             &next,
             None,
+            || topic::RACE_AND_CLASS,
         )
     }
 
@@ -1003,7 +1018,9 @@ impl Wizard {
                 }
             }
         });
-        step(tr("Class"), &[&group, &scores_group], &next, None)
+        step(tr("Class"), &[&group, &scores_group], &next, None, || {
+            topic::RACE_AND_CLASS
+        })
     }
 
     /// Skills & Powers: racial abilities bought with the race's points,
@@ -1074,6 +1091,7 @@ impl Wizard {
             &[&group],
             &next,
             None,
+            || topic::SUBRACE,
         )
     }
 
@@ -1144,7 +1162,9 @@ impl Wizard {
             }
         });
         let groups: Vec<&adw::PreferencesGroup> = groups.iter().collect();
-        step(tr("Class Abilities"), &groups, &next, None)
+        step(tr("Class Abilities"), &groups, &next, None, || {
+            topic::CLASS_ABILITIES
+        })
     }
 
     /// Rolls what the details page starts with for the chosen classes, as
@@ -1465,6 +1485,7 @@ impl Wizard {
             &[&who, &background, &appearance, &combat, &subabilities],
             &next,
             None,
+            || topic::CHARACTER_INFORMATION,
         )
     }
 
@@ -1864,6 +1885,7 @@ impl Wizard {
             ],
             &next,
             None,
+            || topic::NONWEAPON_PROFICIENCIES,
         )
     }
 
@@ -2137,6 +2159,7 @@ impl Wizard {
             ],
             &next,
             None,
+            || topic::WEAPON_PROFICIENCIES,
         )
     }
 
@@ -2238,7 +2261,9 @@ impl Wizard {
                 this.after_rogue_skills();
             }
         });
-        step(tr("Rogue Skills"), &[&group], &next, None)
+        step(tr("Rogue Skills"), &[&group], &next, None, || {
+            topic::ROGUE_SKILLS
+        })
     }
 
     /// The wizard spells known at 1st level.
@@ -2298,7 +2323,9 @@ impl Wizard {
                 this.push(this.equipment_page());
             }
         });
-        step(tr("Spells"), &[&group], &next, None)
+        step(tr("Spells"), &[&group], &next, None, || {
+            topic::CHARACTER_SPELLS
+        })
     }
 
     /// Starting money and what it buys; the last page.
@@ -2473,6 +2500,7 @@ impl Wizard {
             &[&money_group, &items_group],
             &create,
             Some(&banner),
+            || topic::EQUIPMENT,
         )
     }
 }

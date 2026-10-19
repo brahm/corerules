@@ -49,6 +49,10 @@ struct Section {
 pub struct Image {
     bytes: Vec<u8>,
     sections: Vec<Section>,
+    /// The image base, which resource data addresses are relative to.
+    base: u32,
+    /// The address of the resource directory, if there is one.
+    resources: Option<u32>,
 }
 
 fn u16_at(b: &[u8], o: usize) -> Option<u16> {
@@ -95,6 +99,10 @@ impl Image {
         let count = u16_at(&bytes, pe + 6)? as usize;
         let optional = u16_at(&bytes, pe + 20)? as usize;
         let base = u32_at(&bytes, pe + 24 + 28)?;
+        // Data directory 2 (resources) of a PE32 optional header.
+        let resources = u32_at(&bytes, pe + 24 + 96 + 2 * 8)
+            .filter(|&rva| rva != 0 && optional >= 96 + 3 * 8)
+            .map(|rva| base.wrapping_add(rva));
         let mut sections = Vec::new();
         for i in 0..count {
             let o = pe + 24 + optional + 40 * i;
@@ -111,7 +119,12 @@ impl Image {
                 data: flags & 0x20 == 0,
             });
         }
-        Some(Self { bytes, sections })
+        Some(Self {
+            bytes,
+            sections,
+            base,
+            resources,
+        })
     }
 
     fn section(&self, va: u32) -> Option<&Section> {
@@ -130,6 +143,42 @@ impl Image {
         self.bytes
             .get(start..end.min(self.bytes.len()))
             .unwrap_or(&[])
+    }
+
+    /// The caption of dialog resource `id` and its static texts, top to
+    /// bottom and left to right (`&` mnemonics removed).
+    pub fn dialog_texts(&self, id: u16) -> Option<(String, Vec<StaticText>)> {
+        dialog_texts(self.resource(5, id)?)
+    }
+
+    /// The controls of dialog resource `id`, in template order.
+    pub fn dialog_controls(&self, id: u16) -> Option<Vec<Control>> {
+        Some(dialog(self.resource(5, id)?)?.1)
+    }
+
+    /// Resource `id` of type `kind`, in its first language.
+    fn resource(&self, kind: u16, id: u16) -> Option<&[u8]> {
+        let root = self.resources?;
+        let dir = self.at(root);
+        // The target of entry `id` (or of the first entry) of the
+        // directory at `at`.
+        let find = |at: usize, id: Option<u16>| -> Option<u32> {
+            let entries = usize::from(u16_at(dir, at + 12)?) + usize::from(u16_at(dir, at + 14)?);
+            (0..entries).find_map(|i| {
+                let e = at + 16 + 8 * i;
+                let name = u32_at(dir, e)?;
+                let wanted = id.is_none_or(|id| name == u32::from(id));
+                wanted.then(|| u32_at(dir, e + 4)).flatten()
+            })
+        };
+        let sub =
+            |target: u32| (target & 0x8000_0000 != 0).then_some((target & 0x7FFF_FFFF) as usize);
+        let names = sub(find(0, Some(kind))?)?;
+        let languages = sub(find(names, Some(id))?)?;
+        let leaf = find(languages, None)? as usize;
+        let rva = u32_at(dir, leaf)?;
+        let size = u32_at(dir, leaf + 4)? as usize;
+        self.at(self.base.wrapping_add(rva)).get(..size)
     }
 
     /// The NUL-terminated text at `va` in a data section (ANSI, read as
@@ -256,6 +305,150 @@ impl Image {
     }
 }
 
+/// A static text control of a dialog template.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StaticText {
+    pub style: u32,
+    pub text: String,
+}
+
+/// A control of a dialog template.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Control {
+    pub id: u32,
+    /// The help id a `DLGTEMPLATEEX` item gives (0 for none, and in a
+    /// `DLGTEMPLATE`).
+    pub help: u32,
+    /// The predefined class's ordinal (0x80 button, 0x82 static, …), or
+    /// `None` for a class named by string.
+    pub class: Option<u16>,
+    pub style: u32,
+    pub x: i16,
+    pub y: i16,
+    /// The text, `&` mnemonics removed unless `SS_NOPREFIX` is set on a
+    /// static control.
+    pub text: Option<String>,
+}
+
+/// A UTF-16 string or an ordinal (`0xFFFF` and a u16) of a dialog
+/// template; `None` for an ordinal or an empty string.
+fn sz_or_ord(d: &[u8], at: &mut usize) -> Option<Option<String>> {
+    if u16_at(d, *at)? == 0xFFFF {
+        *at += 4;
+        return Some(None);
+    }
+    let mut units = Vec::new();
+    loop {
+        let u = u16_at(d, *at)?;
+        *at += 2;
+        if u == 0 {
+            break;
+        }
+        units.push(u);
+    }
+    Some(Some(String::from_utf16_lossy(&units)).filter(|t| !t.is_empty()))
+}
+
+/// Removes the `&` that marks a mnemonic; `&&` is an `&`.
+fn without_mnemonics(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '&' {
+            if chars.peek() == Some(&'&') {
+                out.push('&');
+                chars.next();
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
+/// The caption and the static controls of a `DLGTEMPLATE` or
+/// `DLGTEMPLATEEX`, top to bottom and left to right.
+fn dialog_texts(d: &[u8]) -> Option<(String, Vec<StaticText>)> {
+    let (caption, controls) = dialog(d)?;
+    let mut texts: Vec<_> = controls
+        .into_iter()
+        .filter(|c| c.class == Some(0x82))
+        .filter_map(|c| {
+            let text = c.text?;
+            Some((
+                c.y,
+                c.x,
+                StaticText {
+                    style: c.style,
+                    text,
+                },
+            ))
+        })
+        .collect();
+    texts.sort_by_key(|t| (t.0, t.1));
+    Some((caption, texts.into_iter().map(|(_, _, t)| t).collect()))
+}
+
+/// The caption and the controls of a `DLGTEMPLATE` or `DLGTEMPLATEEX`.
+fn dialog(d: &[u8]) -> Option<(String, Vec<Control>)> {
+    let ex = u16_at(d, 0)? == 1 && u16_at(d, 2)? == 0xFFFF;
+    let (style, count, mut at) = if ex {
+        (u32_at(d, 12)?, u16_at(d, 16)?, 26)
+    } else {
+        (u32_at(d, 0)?, u16_at(d, 8)?, 18)
+    };
+    sz_or_ord(d, &mut at)?; // menu
+    sz_or_ord(d, &mut at)?; // class
+    let caption = sz_or_ord(d, &mut at)?.unwrap_or_default();
+    // DS_SETFONT: point size (and weight, italic, charset), face name.
+    if style & 0x40 != 0 {
+        at += if ex { 6 } else { 2 };
+        sz_or_ord(d, &mut at)?;
+    }
+    let mut controls = Vec::new();
+    for _ in 0..count {
+        at = at.next_multiple_of(4);
+        // helpID, exStyle, style, x, y, cx, cy, id (u32), or style,
+        // exStyle, x, y, cx, cy, id (u16).
+        let (help, style, place, id) = if ex {
+            (
+                u32_at(d, at)?,
+                u32_at(d, at + 8)?,
+                at + 12,
+                u32_at(d, at + 20)?,
+            )
+        } else {
+            (0, u32_at(d, at)?, at + 8, u32::from(u16_at(d, at + 16)?))
+        };
+        let x = u16_at(d, place)? as i16;
+        let y = u16_at(d, place + 2)? as i16;
+        at += if ex { 24 } else { 18 };
+        let class = if u16_at(d, at)? == 0xFFFF {
+            Some(u16_at(d, at + 2)?)
+        } else {
+            None
+        };
+        sz_or_ord(d, &mut at)?;
+        let text = sz_or_ord(d, &mut at)?;
+        at += 2 + usize::from(u16_at(d, at)?);
+        // SS_NOPREFIX keeps a static control's `&`.
+        let text = match text {
+            Some(text) if class == Some(0x82) && style & 0x80 != 0 => Some(text),
+            text => text.map(|t| without_mnemonics(&t)),
+        };
+        controls.push(Control {
+            id,
+            help,
+            class,
+            style,
+            x,
+            y,
+            text,
+        });
+    }
+    Some((without_mnemonics(&caption), controls))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -286,6 +479,40 @@ mod tests {
         b[0x200..0x200 + code.len()].copy_from_slice(code);
         b[0x300..0x300 + data.len()].copy_from_slice(data);
         Image::parse(b).unwrap()
+    }
+
+    #[test]
+    fn dialog_templates_give_their_static_texts_in_place_order() {
+        let utf16 = |t: &str| -> Vec<u8> {
+            t.encode_utf16()
+                .chain([0])
+                .flat_map(u16::to_le_bytes)
+                .collect()
+        };
+        let mut d = Vec::new();
+        d.extend(0x40u32.to_le_bytes()); // style: DS_SETFONT
+        d.extend(0u32.to_le_bytes());
+        d.extend(2u16.to_le_bytes());
+        d.extend([0; 8]);
+        d.extend([0, 0, 0, 0]); // no menu, no class
+        d.extend(utf16("About"));
+        d.extend(8u16.to_le_bytes());
+        d.extend(utf16("MS Sans Serif"));
+        for (y, text) in [(20i16, "Second"), (5, "A && B")] {
+            d.resize(d.len().next_multiple_of(4), 0);
+            d.extend(0x5002_0000u32.to_le_bytes());
+            d.extend(0u32.to_le_bytes());
+            d.extend(0i16.to_le_bytes());
+            d.extend(y.to_le_bytes());
+            d.extend([0; 6]);
+            d.extend([0xFF, 0xFF, 0x82, 0]);
+            d.extend(utf16(text));
+            d.extend(0u16.to_le_bytes());
+        }
+        let (caption, texts) = dialog_texts(&d).unwrap();
+        assert_eq!(caption, "About");
+        let texts: Vec<&str> = texts.iter().map(|t| t.text.as_str()).collect();
+        assert_eq!(texts, ["A & B", "Second"]);
     }
 
     #[test]

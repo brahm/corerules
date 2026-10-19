@@ -163,6 +163,25 @@ pub fn tr(msgid: &str) -> &str {
     }
 }
 
+/// The English texts whose translation is `text`, for matching what the
+/// interface shows against English names (the original program's).
+pub fn sources(text: &str) -> Vec<&'static str> {
+    static SOURCES: OnceLock<HashMap<&'static str, Vec<&'static str>>> = OnceLock::new();
+    SOURCES
+        .get_or_init(|| {
+            let mut sources: HashMap<&str, Vec<&str>> = HashMap::new();
+            for (key, forms) in catalog() {
+                // A text with a context: the msgid after it.
+                let msgid = key.rsplit('\u{4}').next().unwrap_or(key);
+                sources.entry(forms[0].as_str()).or_default().push(msgid);
+            }
+            sources
+        })
+        .get(text)
+        .cloned()
+        .unwrap_or_default()
+}
+
 /// The translation of a text that reads differently by context, as in
 /// gettext's `pgettext`.
 pub fn trc<'a>(context: &str, msgid: &'a str) -> &'a str {

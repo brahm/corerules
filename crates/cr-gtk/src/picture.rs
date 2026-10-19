@@ -15,6 +15,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use cr_i18n::{tr, tr_noop};
 use cr_store::Installation;
+use cr_store::help::topic;
 use cr_store::pictures::{
     CUSTOM_ICON, ICON_SIZE, Icon, IconChoice, IconGroup, Kind, PORTRAIT_HEIGHT, PictureChoice,
     icon_number, joined, split_stored, stored_icon, stored_portrait,
@@ -353,6 +354,12 @@ fn dialog(
     let header = adw::HeaderBar::new();
     header.pack_start(&from_file_button(&dialog, root, kind, pick));
     let view = adw::ToolbarView::new();
+    // The original's Character Portraits screen has no help topic.
+    match kind {
+        Kind::Portrait => {}
+        Kind::Monster => crate::help::add_button(&header, &view, || topic::SELECT_IMAGE),
+        Kind::Item => crate::help::add_button(&header, &view, || topic::EQUIPMENT_PICTURE),
+    }
     view.add_top_bar(&header);
     view.set_content(Some(&scrolled(&content)));
     dialog.set_child(Some(&view));
@@ -476,6 +483,7 @@ fn icon_dialog(parent: &impl IsA<gtk::Widget>, root: &Path, pick: Rc<dyn Fn(Stri
         }),
     ));
     let view = adw::ToolbarView::new();
+    crate::help::add_button(&header, &view, || topic::EQUIPMENT_PICTURE);
     view.add_top_bar(&header);
     let bar = gtk::Box::builder()
         .margin_top(6)

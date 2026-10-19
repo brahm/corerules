@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use cr_i18n::tr;
+use cr_store::help::topic;
 use cr_store::sheet::{self as crsheet, Block, Cell, ListItem, Sheet, SheetBox, Table};
 use cr_store::treasure::{Bundle, Coin, Counts, LETTERS, Rand, TreasureRules};
 use gtk::{gio, glib};
@@ -232,6 +233,7 @@ pub fn roller(
     }
 
     let view = adw::ToolbarView::new();
+    crate::help::add_button(&header, &view, || topic::ROLL_TREASURE);
     view.add_top_bar(&header);
     view.set_content(Some(&scroll));
     let saved_name = match &mode {

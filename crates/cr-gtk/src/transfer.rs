@@ -12,6 +12,7 @@ use cr_formats::export::ExportFile;
 use cr_i18n::{tr, trn};
 use cr_store::Installation;
 use cr_store::export::{Category, Clash, Content, Exportable, ImportReport, contents, remove};
+use cr_store::help::topic;
 use gtk::{gio, glib};
 
 /// What the dialogs need from the window.
@@ -39,8 +40,9 @@ fn row(title: &str, subtitle: &str, active: bool) -> (adw::ActionRow, gtk::Check
     (row, check)
 }
 
-/// A dialog with a list of groups under a header bar holding `action`.
-fn dialog(title: &str, action: &gtk::Button, groups: &gtk::Box) -> adw::Dialog {
+/// A dialog with a list of groups under a header bar holding `action`;
+/// Help opens program help topic `help`.
+fn dialog(title: &str, action: &gtk::Button, groups: &gtk::Box, help: u32) -> adw::Dialog {
     let header = adw::HeaderBar::builder()
         .show_end_title_buttons(false)
         .show_start_title_buttons(false)
@@ -48,7 +50,7 @@ fn dialog(title: &str, action: &gtk::Button, groups: &gtk::Box) -> adw::Dialog {
     let cancel = gtk::Button::with_mnemonic(tr("_Cancel"));
     header.pack_start(&cancel);
     header.pack_end(action);
-    let dialog = framed(title, &header, groups);
+    let dialog = framed(title, &header, groups, help);
     cancel.connect_clicked({
         let dialog = dialog.clone();
         move |_| {
@@ -58,8 +60,9 @@ fn dialog(title: &str, action: &gtk::Button, groups: &gtk::Box) -> adw::Dialog {
     dialog
 }
 
-fn framed(title: &str, header: &adw::HeaderBar, groups: &gtk::Box) -> adw::Dialog {
+fn framed(title: &str, header: &adw::HeaderBar, groups: &gtk::Box, help: u32) -> adw::Dialog {
     let view = adw::ToolbarView::new();
+    crate::help::add_button(header, &view, move || help);
     view.add_top_bar(header);
     view.set_content(Some(
         &gtk::ScrolledWindow::builder()
@@ -234,7 +237,7 @@ fn choose_items<H: Host + 'static>(
         }
         groups.append(&group);
     }
-    let dialog = dialog(title, &button, &groups);
+    let dialog = dialog(title, &button, &groups, topic::EXPORT);
     button.connect_clicked({
         let dialog = dialog.clone();
         move |_| {
@@ -426,7 +429,7 @@ fn choose_imports<H: Host + 'static>(host: &Rc<H>, file: ExportFile, expansion: 
                 .build(),
         );
     }
-    let dialog = dialog(tr("Import"), &button, &groups);
+    let dialog = dialog(tr("Import"), &button, &groups, topic::IMPORT);
     button.connect_clicked({
         let (host, dialog) = (host.clone(), dialog.clone());
         move |_| {
@@ -568,7 +571,7 @@ fn editor<H: Host + 'static>(host: &Rc<H>, file: ExportFile, path: Option<PathBu
         .build();
     header.pack_end(&save);
     let groups = groups_box();
-    let dialog = framed(&title, &header, &groups);
+    let dialog = framed(&title, &header, &groups, topic::EXPORT);
     let notes = adw::PreferencesGroup::builder()
         .visible(!same_layout)
         .build();

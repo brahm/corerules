@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use cr_i18n::{tr, tr_noop};
+use cr_store::help::topic;
 use cr_store::sheet::{Align, Block, CellKind, ListItem, Sheet, SheetBox, Table, Timestamp};
 use gtk::{gio, glib, pango};
 
@@ -57,6 +58,7 @@ pub fn show(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) +
     header.pack_end(&export);
     header.pack_end(&print);
     let view = adw::ToolbarView::new();
+    crate::help::add_button(&header, &view, || topic::CHARACTER_SHEET);
     view.add_top_bar(&header);
     view.set_content(Some(&scroll));
     let dialog = adw::Dialog::builder()

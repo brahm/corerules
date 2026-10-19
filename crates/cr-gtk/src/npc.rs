@@ -6,6 +6,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use cr_i18n::{tr, tr_noop, trn};
+use cr_store::help::topic;
 use cr_store::npc::{Abilities, Choice, GroupOptions, Npc, NpcOptions, NpcRules};
 use cr_store::treasure::{Flavor, Rand};
 use cr_store::{Installation, Result};
@@ -94,10 +95,16 @@ fn rules_row() -> adw::ComboRow {
         .build()
 }
 
-fn dialog(title: &str, page: &adw::PreferencesPage, create: &gtk::Button) -> adw::Dialog {
+fn dialog(
+    title: &str,
+    page: &adw::PreferencesPage,
+    create: &gtk::Button,
+    help: u32,
+) -> adw::Dialog {
     let header = adw::HeaderBar::new();
     header.pack_end(create);
     let view = adw::ToolbarView::new();
+    crate::help::add_button(&header, &view, move || help);
     view.add_top_bar(&header);
     view.set_content(Some(page));
     adw::Dialog::builder()
@@ -212,7 +219,7 @@ pub fn new_npc<H: Host + 'static>(host: &Rc<H>) {
     page.add(&abilities_group);
     page.add(&save_group);
     let create = create_button(tr("_Create"));
-    let dialog = dialog(tr("New NPC"), &page, &create);
+    let dialog = dialog(tr("New NPC"), &page, &create, topic::NPC_CREATION);
 
     let selected_race = {
         let race = race.clone();
@@ -636,7 +643,7 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
     page.add(&levels_group);
     page.add(&lines_group);
     let create = create_button(tr("_Create"));
-    let dialog = dialog(tr("New NPC Group"), &page, &create);
+    let dialog = dialog(tr("New NPC Group"), &page, &create, topic::NPC_GROUP);
     fewest.connect_value_notify({
         let most = most.clone();
         move |row| {

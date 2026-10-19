@@ -311,16 +311,16 @@ impl Extraction {
                 }
             }
         }
-        // Contents files of the help books (book outlines).
+        // The help window: the help files and their contents files.
         if let Some(help) = tree.entry(&self.root, "Help") {
             let to = dest.join("Help");
             mkdir(&to)?;
             for file in tree.list(&help).map_err(|e| io_error(&to, e))? {
                 let name = Tree::name(&file);
-                let is_contents = name
-                    .rsplit_once('.')
-                    .is_some_and(|(_, ext)| ext.eq_ignore_ascii_case("cnt"));
-                if is_contents && !tree.is_dir(&file) {
+                let is_help = name.rsplit_once('.').is_some_and(|(_, ext)| {
+                    ext.eq_ignore_ascii_case("hlp") || ext.eq_ignore_ascii_case("cnt")
+                });
+                if is_help && !tree.is_dir(&file) {
                     let path = to.join(name);
                     tree.copy_file(&file, &path)
                         .map_err(|e| io_error(&path, e))?;
@@ -376,6 +376,7 @@ mod tests {
             "PROGRAM/OTHER.DLL",
             "HELP/PHB.CNT",
             "HELP/PHB.HLP",
+            "HELP/ROBOEX32.DLL",
             "SOUNDS/A.WAV",
         ] {
             fs::write(cd.join(file), file).unwrap();
@@ -408,6 +409,7 @@ mod tests {
                 "Database/RACE.DAT",
                 "Help/",
                 "Help/PHB.CNT",
+                "Help/PHB.HLP",
                 "Program/",
                 "Program/TSRP3.EXE",
                 "README.txt",

@@ -10,6 +10,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_store::help::topic;
 use cr_store::userdb::allowed::{self, Allowed, AllowedDb};
 use cr_store::userdb::classes::{self, Classes};
 use cr_store::userdb::monsters::{MonsterTypes, Monsters};
@@ -615,6 +616,7 @@ fn editor<K: UserKind, H: Host + 'static>(
     header.pack_start(&cancel);
     header.pack_end(&save);
     let view = adw::ToolbarView::new();
+    crate::help::add_button(&header, &view, move || topic::of_editor(section));
     view.add_top_bar(&header);
     let many = page_names.len() > 1;
     if many {
@@ -1369,6 +1371,7 @@ fn table_editor<H: Host + 'static>(
     header.pack_start(&cancel);
     header.pack_end(&save);
     let view = adw::ToolbarView::new();
+    crate::help::add_button(&header, &view, || topic::TREASURE_TABLE);
     view.add_top_bar(&header);
     view.set_content(Some(&page));
     let dialog = dialog_for(&title, &view, false);
@@ -1640,6 +1643,7 @@ fn allowed_classes<H: Host + 'static>(host: &Shared<H>, race: &str) {
     header.pack_start(&cancel);
     header.pack_end(&save);
     let view = adw::ToolbarView::new();
+    crate::help::add_button(&header, &view, || topic::CLASSES_ALLOWED);
     view.add_top_bar(&header);
     view.set_content(Some(&page));
     let dialog = dialog_for(&tr!("Allowed Classes for {race}", race), &view, false);

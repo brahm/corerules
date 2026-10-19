@@ -8,6 +8,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use cr_i18n::{tr, trn};
+use cr_store::help::topic;
 use cr_store::treasure::{
     ADD_CATEGORIES, Bundle, Item, MoveError, SCROLL_SPELL_LIMIT, SpellCopy, TreasureRules, list_cmp,
 };
@@ -302,6 +303,7 @@ fn add_dialog(edit: &Edit) {
     let header = adw::HeaderBar::new();
     header.pack_start(&category);
     let view = adw::ToolbarView::new();
+    crate::help::add_button(&header, &view, || topic::TREASURE_BUNDLE);
     view.add_top_bar(&header);
     view.add_top_bar(
         &gtk::SearchBar::builder()
@@ -677,6 +679,7 @@ fn edit_spells(edit: &Edit, path: &[usize]) {
     header.pack_start(&cancel);
     header.pack_end(&ok);
     let view = adw::ToolbarView::new();
+    crate::help::add_button(&header, &view, || topic::TREASURE_BUNDLE);
     view.add_top_bar(&header);
     view.set_content(Some(&page));
     let dialog = adw::Dialog::builder()
