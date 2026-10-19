@@ -1,17 +1,17 @@
 [Desktop Entry]
-Name=Core Rules Add-ons
-Name[pt_BR]=Addons do Core Rules
-Name[es]=Add-ons de Core Rules
-Name[it]=Add-on di Core Rules
-Name[fr]=Add-ons de Core Rules
-Name[de]=Core-Rules-Add-ons
+Name=Core Rules Community Add-ons Collection
+Name[pt_BR]=Coleção de addons da comunidade do Core Rules
+Name[es]=Colección de add-ons de la comunidad de Core Rules
+Name[it]=Raccolta di add-on della comunità di Core Rules
+Name[fr]=Collection d’add-ons de la communauté Core Rules
+Name[de]=Community-Add-on-Sammlung für Core Rules
 Comment=Install the community add-ons into Core Rules
 Comment[pt_BR]=Instale os addons da comunidade no Core Rules
 Comment[es]=Instale los add-ons de la comunidad en Core Rules
 Comment[it]=Installa gli add-on della comunità in Core Rules
 Comment[fr]=Installez les add-ons de la communauté dans Core Rules
 Comment[de]=Installieren Sie die Add-ons der Community in Core Rules
-Exec=corerules-addons
+Exec=corerules-community-addons
 Icon=io.github.brahm.CoreRules.Addons
 Terminal=false
 Type=Application

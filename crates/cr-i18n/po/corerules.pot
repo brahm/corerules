@@ -43,7 +43,7 @@ msgstr ""
 
 #: crates/cr-addons/src/main.rs:61
 #: crates/cr-addons/src/main.rs:113
-msgid "Community Add-ons"
+msgid "Core Rules Community Add-ons Collection"
 msgstr ""
 
 #: crates/cr-addons/src/main.rs:69

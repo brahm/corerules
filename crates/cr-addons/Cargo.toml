@@ -1,6 +1,6 @@
 [package]
 name = "cr-addons"
-description = "Installer of the community add-ons for Core Rules"
+description = "Core Rules Community Add-ons Collection, the self-installing add-ons"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,7 +8,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [[bin]]
-name = "corerules-addons"
+name = "corerules-community-addons"
 path = "src/main.rs"
 
 [dependencies]

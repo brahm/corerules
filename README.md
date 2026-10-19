@@ -181,19 +181,17 @@ content: keep it for your own use and do not redistribute it.
 
 ## Community add-ons
 
-[`addons/`](addons/README.md) holds 686 add-ons the community made for
-Core Rules 2.0 and the Expansion (races, classes, kits, spells, monsters,
-modules and the AD&D Core Rules User Database), converted to the
-Expansion's format and consolidated into one file. They ship as a
-self-installing app, a single AppImage with the add-ons inside
+The [Core Rules Community Add-ons Collection](addons/README.md) gathers 686
+add-ons the community made for Core Rules 2.0 and the Expansion (races,
+classes, kits, spells, monsters, modules and the AD&D Core Rules User
+Database), converted to the Expansion's format and consolidated into
+36,716 items. It ships as its own self-installing AppImage
 (`crates/cr-addons`, GTK 4 and libadwaita), published on GitHub Packages as
-[`corerules-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-addons);
-it needs the app 0.7.2 or newer. The installer finds the app on its own,
-whether it came as the Flatpak, the .deb or .rpm package or an AppImage, and
-installs into the data folder that copy reads; it speaks the app's six
-languages and follows the one chosen in its Preferences. The [guide](addons/README.md), which says
-how to download and use it, and the [report](addons/relatorio.md) are in
-Portuguese.
+[`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons),
+and needs the app 0.7.2 or newer. The installer finds the app on its own,
+whether it came as the Flatpak, the .deb or .rpm package or an AppImage,
+and speaks the app's six languages. Its [README](addons/README.md) says
+what is inside, how it was built and how to install it.
 
 ## Testing against your own installation
 
@@ -214,7 +212,7 @@ CORERULES_DIR="$HOME/.wine/drive_c/Program Files/AD&D Core Rules 2.0" cargo test
 | `cr-cli` | `cr` command for inspecting data |
 | `cr-i18n` | Translations of the interface (`po/*.po`, built into the program) |
 | `cr-gtk` | The GNOME app |
-| `cr-addons` | The community add-ons installer, with the add-ons built in |
+| `cr-addons` | Core Rules Community Add-ons Collection, the add-ons and their installer |
 
 The backend crates have no GTK dependency so macOS and Windows front ends
 can reuse them later.

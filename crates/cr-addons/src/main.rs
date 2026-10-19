@@ -1,4 +1,4 @@
-//! The community add-ons installer: one window that imports the
+//! Core Rules Community Add-ons Collection: one window that imports the
 //! consolidated add-ons, built into the program, into the Core Rules data
 //! folder. The window speaks the app's languages and follows the one chosen
 //! in its Preferences; the add-ons themselves are in Portuguese.
@@ -58,7 +58,7 @@ impl Window {
     fn new(app: &adw::Application) -> Self {
         let window = adw::ApplicationWindow::builder()
             .application(app)
-            .title(tr("Community Add-ons"))
+            .title(tr("Core Rules Community Add-ons Collection"))
             .default_width(560)
             .default_height(680)
             .width_request(360)
@@ -110,7 +110,7 @@ impl Window {
         let clamp = adw::Clamp::builder().maximum_size(480).child(&form).build();
 
         let start = adw::StatusPage::builder()
-            .title(tr("Community Add-ons"))
+            .title(tr("Core Rules Community Add-ons Collection"))
             .description(tr!(
                 "The 686 add-ons the community made for AD&amp;D Core Rules 2.0 and the \
                  Expansion, in one package: races, classes, kits, spells, monsters, \
