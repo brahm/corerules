@@ -277,6 +277,10 @@ pub enum FieldKind {
     /// keeps), chosen among the installation's or made from one of the
     /// user's (see [`crate::pictures`]).
     Picture(crate::pictures::Kind),
+    /// An item's icon ([`Value::Text`], what the item keeps: `12`, or
+    /// `CRE_espada.bmp`), chosen among the strips' and `UserBMP`'s or made
+    /// from a picture of the user's (see [`crate::pictures::Icon`]).
+    Icon,
     Int {
         min: i64,
         max: i64,

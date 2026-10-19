@@ -1244,6 +1244,15 @@ pub(crate) fn fields(flavor: Flavor) -> Vec<FieldDesc<PartRec>> {
     // IDD 363 General Information.
     let g = |d: FieldDesc<PartRec>| d.visible(on_general);
     f.extend([
+        // Select Image...: IDD 415 (Select equipment picture) or 237
+        // (Select a Custom Bitmap).
+        g(at!(
+            GENERAL,
+            tr_noop!("Picture"),
+            FieldKind::Icon,
+            0x234,
+            opened_general
+        )),
         g(at!(
             GENERAL,
             tr_noop!("Only applies for selected race"),

@@ -96,7 +96,10 @@ the original programs wrote.
   tables. A monster type's picture is chosen among those in
   `Bitmaps/Monsters` and `UserBMP`, a race's among the portraits, or made
   from a picture of your own as portraits are (monster pictures go to
-  `UserBMP`, at 300×300)
+  `UserBMP`, at 300×300). A weapon's, piece of equipment's, magical item's,
+  gem's or coin's picture, on General Info, is one of the icons of
+  `Bitmaps/Equip`, found by the items that have it, one of yours in
+  `UserBMP`, or made from a picture of your own (64×64, in `UserBMP`)
 - **Packages**: Export, Import, New Package and Edit Package for `.xpx`
   packages with characters and any user record, byte for byte as the
   Expansion writes them; Core Rules 2.0 `.xpt` packages are imported and
