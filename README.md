@@ -9,7 +9,7 @@ written in Rust with GTK4 and libadwaita. It reads and writes the data files
 of the original Windows 95 program, so characters made in either program
 open in the other.
 
-> **Beta.** Version 0.7.2 is a beta: every feature below works against real
+> **Beta.** Version 0.8.0 is a beta: every feature below works against real
 > installations and was checked against the original programs, but it has
 > had little use outside those checks. Keep a copy of your `Chars` and
 > `UserDbas` folders, and [report](https://github.com/brahm/corerules/issues)

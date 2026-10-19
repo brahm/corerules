@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/cr-i18n", "crates/cr-formats", "crates/cr-store", "crates/cr-cli", "crates/cr-gtk"]
 
 [workspace.package]
-version = "0.7.2"
+version = "0.8.0"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/brahm/corerules"

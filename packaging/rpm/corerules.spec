@@ -4,7 +4,7 @@
 %global debug_package %{nil}
 
 Name:           corerules
-Version:        %{?version_override}%{!?version_override:0.7.2}
+Version:        %{?version_override}%{!?version_override:0.8.0}
 Release:        1%{?dist}
 Summary:        Browse and edit AD&D Core Rules 2.0 characters and rules
 License:        MIT
@@ -50,6 +50,10 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/io.github.brah
 %{_metainfodir}/io.github.brahm.CoreRules.metainfo.xml
 
 %changelog
+* Mon Oct 19 2026 Brahm - 0.8.0-1
+- Beta: Extract Data from CD... copies the rules data from the Core Rules
+  CD or its ISO image, with no script
+
 * Sun Oct 18 2026 Brahm - 0.7.2-1
 - Beta: packages made with the patched Expansion import, and the
   community add-ons come as one package
