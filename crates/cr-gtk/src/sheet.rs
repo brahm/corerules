@@ -8,7 +8,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use cr_i18n::{tr, tr_noop};
 use cr_store::sheet::{Align, Block, CellKind, ListItem, Sheet, SheetBox, Table, Timestamp};
-use gtk::{gio, pango};
+use gtk::{gio, glib, pango};
 
 /// Opens a dialog with `sheet` over `parent`; `toast` reports exports.
 pub fn show(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) + 'static) {
@@ -213,7 +213,7 @@ fn box_widget(sheet_box: &SheetBox) -> gtk::Widget {
                 text_label(text.trim_end().replace('\t', "    ").as_str(), true)
             }
             Block::Lines(lines) if !lines.is_empty() => text_label(&lines.join("\n"), true),
-            Block::Image(path) => match portrait(path) {
+            Block::Image { file, .. } => match file.as_deref().and_then(|f| picture(f, 200)) {
                 Some(picture) => picture,
                 None => continue,
             },
@@ -296,19 +296,27 @@ fn list_widget(items: &[ListItem], depth: i32) -> gtk::Widget {
     list.upcast()
 }
 
-/// The portrait, when its file is on this computer. The original stores
-/// a Windows path; only its file name is looked for next to the
-/// installation's pictures, so most portraits are not shown.
-fn portrait(path: &str) -> Option<gtk::Widget> {
-    let path = std::path::Path::new(path);
-    path.exists().then(|| {
+/// A picture file, decoded here since the bitmaps of the original are
+/// not something every system's image loaders read; `None` when it does
+/// not decode.
+pub(crate) fn picture(path: &std::path::Path, height: i32) -> Option<gtk::Widget> {
+    let image = cr_formats::bmp::decode(&std::fs::read(path).ok()?)?;
+    let texture = gtk::gdk::MemoryTexture::new(
+        image.width as i32,
+        image.height as i32,
+        gtk::gdk::MemoryFormat::R8g8b8a8,
+        &glib::Bytes::from_owned(image.rgba),
+        image.width as usize * 4,
+    );
+    Some(
         gtk::Picture::builder()
-            .file(&gio::File::for_path(path))
+            .paintable(&texture)
             .halign(gtk::Align::Start)
-            .height_request(200)
+            .height_request(height.min(image.height as i32))
+            .can_shrink(true)
             .build()
-            .upcast()
-    })
+            .upcast(),
+    )
 }
 
 /// One thing drawn on a printed page.
@@ -452,7 +460,7 @@ fn print_items(sheet: &Sheet, context: &gtk::PrintContext, width: f64) -> Vec<(P
                         let h = measure(&text, Some(width)).1;
                         items.push((Printed::Text(text, 0.0), h + 2.0));
                     }
-                    Block::Image(_) => {}
+                    Block::Image { .. } => {}
                 }
             }
             items.push((Printed::Text(String::new(), 0.0), 8.0));

@@ -103,9 +103,13 @@ pub enum Block {
     /// newlines between them (2.0's Weapon Proficiencies box). The TXT
     /// export leaves them out.
     Lines(Vec<String>),
-    /// A picture file (the portrait), as a Windows path. The TXT export
-    /// leaves images out.
-    Image(String),
+    /// A picture file (the portrait): the Windows path the exports
+    /// write, and the file in the installation when it is there. The TXT
+    /// export leaves images out.
+    Image {
+        windows: String,
+        file: Option<std::path::PathBuf>,
+    },
 }
 
 /// A table: rows of cells.
@@ -274,6 +278,8 @@ pub struct SheetRules {
     /// The installation folder as the original sees it, for the default
     /// portrait path.
     windows_root: String,
+    /// The installation folder here, where the portraits are looked for.
+    root: std::path::PathBuf,
     /// The Turning Undead labels and legend, read from the program.
     turning: Vec<String>,
 }
@@ -314,6 +320,7 @@ impl Installation {
             priest_spells: Vec::new(),
             powers: Vec::new(),
             windows_root: "C:\\Program Files\\AD&D Core Rules 2.0".into(),
+            root: self.root().to_owned(),
             turning: Vec::new(),
         };
         rules.turning = build::combat::turning_texts(self, rules.flavor);

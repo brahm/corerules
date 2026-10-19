@@ -1162,12 +1162,19 @@ fn kit(ctx: &Ctx) -> Section {
 
 /// Character Portrait (0x5aa24d).
 fn portrait(ctx: &Ctx) -> Section {
+    // The folder comes first.
     let d = &ctx.ch.data;
-    let (file, dir) = (&d.unknown_0x1db8[0], &d.unknown_0x1db8[1]);
-    let path = if file.is_empty() || dir.is_empty() {
+    let (dir, file) = (&d.unknown_0x1db8[0], &d.unknown_0x1db8[1]);
+    let windows = if file.is_empty() || dir.is_empty() {
         format!("{}\\Bitmaps\\Portrait\\NA.bmp", ctx.rules.windows_root)
     } else {
-        format!("{dir}\\{file}")
+        crate::pictures::joined(dir, file)
     };
-    single(ids::PORTRAIT, "Portrait", vec![Block::Image(path)])
+    let file = crate::pictures::Finder::new(&ctx.rules.root)
+        .picture(&windows, crate::pictures::Kind::Portrait);
+    single(
+        ids::PORTRAIT,
+        "Portrait",
+        vec![Block::Image { windows, file }],
+    )
 }
