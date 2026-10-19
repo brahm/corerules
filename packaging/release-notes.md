@@ -3,22 +3,21 @@ checked against the original programs, but the app has had little use
 outside those checks. Keep a copy of your `Chars` and `UserDbas` folders,
 and report anything that differs from the original.
 
-What's new in 0.8.0:
+What's new in 0.8.1:
 
-- **Extract Data from CD…** in the main menu (and on the start page when
-  no data is found) copies what the app uses from the Core Rules 2.0 or
-  Expansion CD into the app's data folder. It reads the CD's ISO image
-  directly, with no mounting or other tools, or takes the mounted CD, an
-  installation or a Wine prefix. `cr extract-data` does the same from the
-  command line
-- The Expansion takes the data folder over from Core Rules 2.0 data, which
-  moves next to it for Import Core Rules 2.0…
-- `extract-data.sh` is gone: the app does its job, and its copies from a
-  CD are writable
-- The community add-ons come as their own self-installing app,
-  `CoreRules-Addons-*-x86_64.AppImage`, published on GitHub Packages as
-  `corerules-addons` (see `addons/README.md`); the tarball and its shell
-  installer are gone
+- Monster types, monsters (through their type), races and characters show
+  their picture when its file is in the data folder, as the community
+  add-ons' pictures now are. The app reads the BMP files itself. The
+  character sheet finds the portrait the same way, and reads its folder
+  and file in the right order
+- An encounter's Characters Not Generated group shows, under each NPC, why
+  the generator could not make it, instead of saying it is not available
+- The app's description lists the six languages it speaks, and the package
+  tests start the app in each one
+- The Core Rules Community Add-ons Collection (`corerules-community-addons`
+  on GitHub Packages) leaves out Evermore's monthly goodies, installs the
+  668 pictures that came with the add-ons and shows their authors' texts
+  on request (see `addons/README.md`)
 
 What the app does: it opens a Core Rules 2.0 Expansion installation (or its
 CD, or a data package), creates and edits characters with the Core Rules or
