@@ -64,7 +64,7 @@ pub struct AbilityEditor {
 }
 
 /// "10 points", or "gives 5 points" for a restriction.
-fn cost_text(points: i64) -> String {
+pub(crate) fn cost_text(points: i64) -> String {
     if points < 0 {
         tr!("gives {points} points", points = -points)
     } else {
@@ -82,7 +82,7 @@ fn row(title: &str, points: Option<i64>) -> RowSpec<()> {
 }
 
 /// A list of names whose picker offers `offer()` minus the names listed.
-fn names_list(
+pub(crate) fn names_list(
     title: &str,
     names: &[String],
     cost: impl Fn(&str) -> Option<i64> + 'static,

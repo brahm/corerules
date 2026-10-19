@@ -4,6 +4,7 @@
 mod abilities;
 mod books;
 mod bundle;
+mod combat;
 mod create;
 mod encounter;
 mod extract;
@@ -1948,6 +1949,7 @@ fn character_editor(
     }
     let ability_editor =
         abilities::AbilityEditor::new(choices.abilities.clone(), &choices.character);
+    let combat_editor = combat::CombatEditor::new(choices.combat.clone(), &choices.character);
     let stack = adw::ViewStack::new();
     stack.add_titled_with_icon(
         &page,
@@ -1960,6 +1962,12 @@ fn character_editor(
         Some("abilities"),
         tr("Abilities"),
         "emblem-system-symbolic",
+    );
+    stack.add_titled_with_icon(
+        &combat_editor.page,
+        Some("combat"),
+        tr("Combat"),
+        "security-high-symbolic",
     );
     stack.add_titled_with_icon(
         &editors.proficiencies_page(),
@@ -2023,6 +2031,7 @@ fn character_editor(
     let skills_and_powers = details.skills_and_powers;
     let original = choices.character.clone();
     let ability_rules = choices.abilities.clone();
+    let combat_rules = choices.combat.clone();
     save_button.connect_clicked({
         let dialog = dialog.clone();
         move |_| {
@@ -2059,6 +2068,11 @@ fn character_editor(
             let edited = ability_editor.abilities();
             if edited != ability_rules.abilities_of(&original) {
                 lists.abilities = Some(edited);
+            }
+            let edited = combat_editor.combat();
+            if edited != combat_rules.combat_of(&original) {
+                lists.weapon_proficiencies.clone_from(&edited.weapons);
+                lists.combat = Some(edited);
             }
             let advancement = Advancement::between(&original, &advanced.borrow());
             if advancement != Advancement::of(&original) {
@@ -2527,7 +2541,6 @@ const ABILITY_NAMES: [[&str; 3]; 6] = [
 
 /// Names the list editors offer, from the installation's databases.
 struct Choices {
-    weapons: Rc<Vec<String>>,
     nonweapon: Rc<Vec<String>>,
     languages: Rc<Vec<String>>,
     wizard_spells: Rc<Vec<String>>,
@@ -2549,6 +2562,7 @@ struct Choices {
     backgrounds: Vec<String>,
     /// Subraces, racial and class abilities, schools and spheres.
     abilities: Rc<cr_store::abilities::AbilityRules>,
+    combat: Rc<cr_store::combat::CombatRules>,
 }
 
 impl Choices {
@@ -2562,7 +2576,6 @@ impl Choices {
         items.sort_by_cached_key(|n| cr_store::collate::sort_key(n));
         items.dedup();
         Ok(Self {
-            weapons: Rc::new(install.weapon_proficiency_names()?),
             nonweapon: Rc::new(install.part_names("Non-Weapon Proficiencies")?),
             languages: Rc::new(install.part_names("Languages")?),
             wizard_spells: Rc::new(install.spell_names(true)?),
@@ -2578,13 +2591,15 @@ impl Choices {
             creation: Rc::new(install.creation_rules()?),
             backgrounds: cr_store::edit::backgrounds(install)?,
             abilities: Rc::new(install.ability_rules()?),
+            combat: Rc::new(install.combat_rules()?),
         })
     }
 }
 
 /// The editors of a character's lists.
 struct ListEditors {
-    weapon_proficiencies: ListEditor,
+    /// Edited on the Combat page.
+    weapon_proficiencies: Vec<String>,
     nonweapon_proficiencies: ListEditor,
     languages: ListEditor,
     wizard_spells: ListEditor,
@@ -2781,11 +2796,7 @@ impl ListEditors {
         });
 
         Self {
-            weapon_proficiencies: ListEditor::new(
-                tr("Weapon Proficiencies"),
-                &lists.weapon_proficiencies,
-                choices.weapons.clone(),
-            ),
+            weapon_proficiencies: lists.weapon_proficiencies.clone(),
             nonweapon_proficiencies: ListEditor::new(
                 tr("Nonweapon Proficiencies"),
                 &lists.nonweapon_proficiencies,
@@ -2808,7 +2819,6 @@ impl ListEditors {
 
     fn proficiencies_page(&self) -> adw::PreferencesPage {
         let page = adw::PreferencesPage::new();
-        page.add(&self.weapon_proficiencies.group);
         page.add(&self.nonweapon_proficiencies.group);
         page.add(&self.languages.group);
         page
@@ -2876,7 +2886,7 @@ impl ListEditors {
                 .collect();
         }
         CharacterLists {
-            weapon_proficiencies: self.weapon_proficiencies.items(),
+            weapon_proficiencies: self.weapon_proficiencies.clone(),
             nonweapon_proficiencies: self.nonweapon_proficiencies.items(),
             languages: self.languages.items(),
             wizard_spells: self.wizard_spells.items(),
@@ -2887,6 +2897,7 @@ impl ListEditors {
             new_classes: Vec::new(),
             advancement: None,
             abilities: None,
+            combat: None,
             spellbooks: self
                 .spellbooks
                 .iter()

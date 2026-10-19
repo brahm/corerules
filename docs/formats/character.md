@@ -116,7 +116,7 @@ What each operation does, in the original and in the app:
 | Convert to NPC | Character Generator button, after "This will move the selected Player Character to the NPC List in the DM Toolkit"; `npc.rs` `convert_to_npc` | `unknown_0x1da4` = 1, saved under a new name, old file deleted (`tests/fixtures/characters/to-npc`) | stays in place with the new `file`, `unknown_0x24` = 1 and `flag_0x28` = 1; the details lines are left alone |
 | put in or take out of a party | 0x5ab684, 0x5abb05; `party.rs` `set_party` | saved under a new name in the Expansion layout (`Character::upgraded`), party in `unknown_0x1e68[3]`; old file deleted | old entry removed, new entry appended with the Class and Level lines and the party in +0x2c |
 | import from a package | 0x49d529 (2.0 0x4def60); `export.rs` `import` | one new file per character | appended per character: the Expansion without Class/Level lines; 2.0 like a new character's with the levels computed, in layout 0 or 1 by the character's NPC mark |
-| Update Character | 0x44c23f | saved under a new name, old file deleted | old entry removed, a fresh one appended. The Name page writes the sex, alignment, kit, Background… event and history and, with a new kit, a social class rolled on the kit's table (`tests/fixtures/characters/update`); the app saves these in place and writes the new kit into the entry's kit line. The Race Abilities and Class Abilities pages (with Schools and Spheres) charge the character points in `unknown_0x1778[0]` and write the subrace, `racial_abilities` and `class_slots` sorted (`abilities.rs`) |
+| Update Character | 0x44c23f | saved under a new name, old file deleted | old entry removed, a fresh one appended. The Name page writes the sex, alignment, kit, Background… event and history and, with a new kit, a social class rolled on the kit's table (`tests/fixtures/characters/update`); the app saves these in place and writes the new kit into the entry's kit line. The Race Abilities and Class Abilities pages (with Schools and Spheres) charge the character points in `unknown_0x1778[0]` and write the subrace, `racial_abilities` and `class_slots` sorted (`abilities.rs`). The Weapon Proficiencies page (with Specialization, Shield and Armor and Fighting Styles) and the traits and disadvantages of the Nonweapon Proficiencies page charge the same points and append new choices to the lists in the order taken (`combat.rs`) |
 | delete | 0x44b7cf, party delete 0x5abffd; `party.rs` | removed (the app keeps `<file>.bak` until the deletion is confirmed) | removed |
 | rebuild | 0x5a1671, only on the user's yes | read | every entry built again |
 
@@ -200,9 +200,9 @@ version.
 | 23 | `race` | CString | always | +0x160 | race name |
 | 24 | `subrace` | CString | always | +0x164 | subrace (`Hill dwarf`), may be empty |
 | 25 | `kit` | CString | always | +0x15c0 | kit name, `None` for none |
-| 26 | `unknown_0x124` | CString[3] | always | +0x124, +0x128, +0x12c | Skills & Powers weapon of choice, weapon expertise, and a third weapon the sheet reads as weapon mastery (empty in every fixture) |
-| 27 | `unknown_0x130` | u32 | always | +0x130 | compared with 1990, 1991 and 1992 after loading; otherwise unknown |
-| 28 | `unknown_0x134` | u32[4] | always | +0x134 to +0x140 | Skills & Powers shield proficiencies, 1 when held: buckler, small, medium, body shield |
+| 26 | `unknown_0x124` | CString[3] | always | +0x124, +0x128, +0x12c | Skills & Powers weapon of choice, weapon expertise and weapon mastery, written by Update Character's Specialization dialog (`update/specialization.dat`) |
+| 27 | `unknown_0x130` | u32 | always | +0x130 | an older single unarmed style (1990 punching, 1991 wrestling, 1992 martial arts), compared with those codes after loading; Update Character's Specialization dialog sets it to 0 whenever it closes |
+| 28 | `unknown_0x134` | u32[4] | always | +0x134 to +0x140 | Skills & Powers shield proficiencies, 1 when held: buckler, small, medium, body shield (`update/shield-style-traits.dat`) |
 | 29 | `unknown_0x144` | CString | always | +0x144 | unknown; empty in every fixture |
 | 30 | `unknown_0x148` | u32[6] | always | +0x148 to +0x15c | unknown; 0 in every fixture |
 | 31 | `unknown_0x1da4` | u32 | always | +0x1da4 | NPC mark: 1 for an NPC; copied into the entry's +0x24, set by Convert to NPC and cleared by Convert to Character |
@@ -232,7 +232,7 @@ version.
 | 55 | `sheet_options` | [SheetOptions](#ccharactersheetoptions-serialize-0x599eb8) | v > 28 | | the sheet sections the player chose |
 | 56 | `classes` | [ClassList](#classlist) | always | +0x50, +0x190, +0x194 | the classes |
 | 57 | `weapon_proficiencies` | CStringArray | always | +0xc0 | weapon proficiencies: names of Weapons parts, in the order taken |
-| 58 | `unknown_0xac` | CStringArray[7] | always | +0xac, +0xd4, +0xe8, +0xfc, +0x110, +0x1e8c, +0x19b0 | `[0]` unknown; `[1]` and `[2]` Skills & Powers broad and tight weapon groups (old notes, from code only); `[3]` weapons the character specializes in (sheet `(Specialist)`); `[4]` Skills & Powers armor proficiencies (halve that armor's weight); `[5]` nonweapon proficiencies that get +1 to their score; `[6]` psionic attack modes |
+| 58 | `unknown_0xac` | CStringArray[7] | always | +0xac, +0xd4, +0xe8, +0xfc, +0x110, +0x1e8c, +0x19b0 | `[0]` unknown; `[1]` and `[2]` Skills & Powers broad and tight weapon groups (old notes, from code only); `[3]` weapons the character specializes in (sheet `(Specialist)`); `[4]` Skills & Powers armor proficiencies (halve that armor's weight; Update Character's Shield and Armor dialog appends to it); `[5]` nonweapon proficiencies that get +1 to their score; `[6]` psionic attack modes |
 | 59 | `unknown_0x19c4` | CStringArray | always | +0x19c4 | psionic defense modes (old notes, code only) |
 | 60 | `racial_abilities` | CStringArray | always | +0x168 | racial ability part names (with the cost suffix the part name has); new characters store them sorted in byte order; Update Character writes the subrace's package plus the abilities bought, sorted as its list box sorts |
 | 61 | `spells` | CStringArray | always | +0x3a0 | wizard spells known, in the order learned |
@@ -248,7 +248,7 @@ version.
 | 71 | `armor` | CStringArray | always | +0x1790 | the Armor parts among the top-level worn items (`inventory[5]`), in bundle order. Rebuilt by the Expansion whenever it needs it; 2.0 leaves it empty |
 | 72 | `unknown_0x17a4` | CStringArray | always | +0x17a4 | the other top-level worn items that are magical (part +0x224), rebuilt the same way |
 | 73 | `nonweapon_proficiencies` | CStringArray | always | +0x17cc | nonweapon proficiency part names, in the order taken. A Core Rules proficiency taken again is another entry, a Skills & Powers one the same entry with a higher cost |
-| 74 | `unknown_0x1830` | CStringArray[3] | always | +0x1830, +0x1844, +0x1858 | `[0]` Skills & Powers traits (Traits parts), `[1]` disadvantages (Disadvantages parts), `[2]` secondary skills; new characters store `[0]` and `[1]` sorted in byte order |
+| 74 | `unknown_0x1830` | CStringArray[3] | always | +0x1830, +0x1844, +0x1858 | `[0]` Skills & Powers traits (Traits parts), `[1]` disadvantages (Disadvantages parts), `[2]` secondary skills; new characters store `[0]` and `[1]` sorted in byte order; Update Character appends to them in the order taken |
 | 75 | `unknown_0x98` | CStringArray | always | +0x98 | part names the armor class computation reads (hands taken, part +0x24c, and a magic adjustment); empty in every fixture |
 | 76 | `nonweapon_details` | CObArray<CStringArray> | always | +0x1808 | one `CStringArray` object per nonweapon proficiency, parallel: the languages learned through Modern Languages and the like, empty for the others. See [below](#cstringarray-objects-in-nonweapon_details) |
 | 77 | `languages` | CStringArray | always | +0x181c | native languages, names of Languages parts, kept in alphabetical order; 2.0 writes none |
@@ -313,7 +313,7 @@ WriteCount.
 | # | field | type | member | meaning |
 |---|---|---|---|---|
 | 1 | count | u32 | +0x190 | number of classes |
-| 2 | `unknown_0x50` | u32[10] | +0x50 | Skills & Powers fighting styles in the order learned, 0 for none: ids 1993 to 2001 (one-handed weapon, weapon and shield, two-handed weapon, two weapon, missile, horse archer, thrown weapon/sling, two weapon +2, one-handed weapon +2). Not class data: a new class leaves it alone |
+| 2 | `unknown_0x50` | u32[10] | +0x50 | Skills & Powers fighting styles in the order learned, 0 for none: ids 1993 to 1999 (one-handed weapon, weapon and shield, two-handed weapon, two weapon, missile, horse archer, thrown weapon/sling), 2001 two weapon +2 and 2002 one-handed weapon +2 (2000 is unused; the program's style list, built at 0x464d71). Not class data: a new class leaves it alone |
 | 3 | `names` | CString[count] | +0x194 | class names in slot order, resolved to `CClassOb`s by name at load (pointers at +0x194 + 4 * slot) |
 
 The class slot g (0 to 4) indexes `unknown_0x1618`, `unknown_0xc60`,

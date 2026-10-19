@@ -111,6 +111,11 @@ pub struct CharacterLists {
     /// Subrace, racial and class abilities, schools and spheres, when they
     /// may have changed.
     pub abilities: Option<crate::abilities::CharacterAbilities>,
+    /// Weapon of choice, expertise, specializations, mastery, unarmed
+    /// combat, shields, armor, fighting styles, traits and disadvantages,
+    /// when they may have changed. Its weapon proficiencies replace
+    /// `weapon_proficiencies`.
+    pub combat: Option<crate::combat::CharacterCombat>,
 }
 
 /// An item in a bundle.
@@ -189,6 +194,7 @@ impl CharacterLists {
             new_classes: Vec::new(),
             advancement: None,
             abilities: None,
+            combat: None,
             spellbooks: d
                 .inventory
                 .iter()
@@ -229,8 +235,11 @@ impl CharacterLists {
         // Core Rules 2.0 leaves the weight and the worn lists empty.
         let expansion = character.version.starts_with("TSRP3");
         let d = &mut character.data;
-        d.weapon_proficiencies
-            .clone_from(&self.weapon_proficiencies);
+        // The combat rules write them when they are given.
+        if self.combat.is_none() {
+            d.weapon_proficiencies
+                .clone_from(&self.weapon_proficiencies);
+        }
         if d.languages != self.languages {
             d.languages.clone_from(&self.languages);
             d.languages.sort();
