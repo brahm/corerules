@@ -297,22 +297,36 @@ A right-click on a list row or a combo box opens the help of the record it shows
 | monster types | the number `MonsterType::picture` starts with (`atoi`) | `Monsters.hlp` | topic |
 
 An id of 0 or below has no help. Encounters, templates, traps, saved treasure and
-characters show a summary instead, and the user database's records a box with their
-description. The original also has fixed numbers for a few rows found by name (psionic
-disciplines, attack and defense modes, fighting styles, weapon groups, three monsters);
-the app does not.
+characters show a summary instead. A few rows have fixed numbers, found by name:
 
-`Installation::item_help` reads the shipped records (`Database/`) and keeps, by name, the
-help of each kind whose id is a topic of its file; every shipped race, class, part, spell
-and psionic power but the kit `None` has one, and nearly all monsters and monster types.
-Part names never repeat across part types, but a part and a race can share a name, so
-`ItemKind::order` puts the kind of record the screen lists first.
+| row | found by | topic | file | shown |
+|---|---|---|---|---|
+| a language `Regional` | its text (0x4B4C45) | 1046 | `Prof.hlp` | popup |
+| a psionic discipline | the text has `Clairsentient`, `Psychokinetic`, `Psychometabolic`, `Psychoportive` or `Telepathic` (0x4B40EA) | 210 to 214 | `Psionics.hlp` | popup |
+| a psionic attack or defense mode | the program's table (0x47BE3A) | 8008 to 8012, 9008 to 9012 | `Psionics.hlp` | popup |
+| a fighting style | the style's number (0x4B5C29) | 8001 to 8009 | `Prof.hlp` | popup |
+| a tight or broad weapon group | the group's list (0x4B42BD, 0x4B42F1) | 3017, 3018 | `Equip.hlp` | topic |
+| a spell book `Book of Infinite Spells` | its text (0x4B5235) | 149 | `Magic.hlp` | topic |
+| the monster `Drider`; an `Earth Kin` whose id is 0x65; a `Kuo-Toa` whose id is 0 | its name (0x4B56FA) | 0x70, 0x66, 0xD7 | `Monsters.hlp` | topic |
+
+A record of the user database (`UserDbas/`) never opens help: the original shows its
+"Custom Help" box (dialog 394) with what the record says, before looking for a shipped
+record of that name (for a custom monster, a print preview of it).
+
+`Installation::item_help` reads the user database's records, then the shipped records
+(`Database/`), and keeps, by name, the user record's description or the help of each kind
+whose id is a topic of its file, with the rows above (the weapon groups' names are read
+from the program's lists). Every shipped race, class, part, spell and psionic power but
+the kit `None` has help, and nearly all monsters and monster types. Part names never
+repeat across part types, but a part and a race can share a name, so `ItemKind::order`
+puts the kind of record the screen lists first.
 
 The app does both with one right-click on any screen (the same screens as F1): the first
 of the texts under the pointer (the label, the button, the row's labels, the row or group
 title, a tooltip, nearest first) that names a hotspot of the screen, in the interface's
-language or in English, shows its popup; otherwise the first that names a shipped record
-opens its help. A link in a popup opens the help window.
+language or in English, shows its popup; otherwise the first that names a record shows
+its description, for a user record, or opens its help. A link in a popup opens the help
+window.
 
 ## The About box
 

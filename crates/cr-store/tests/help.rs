@@ -244,3 +244,49 @@ fn the_shipped_records_open_their_books_help() {
         .unwrap();
     assert_eq!((topic.file, topic.number), ("Charactr.hlp", 100));
 }
+
+#[test]
+fn a_user_record_shows_its_own_description() {
+    use cr_store::help::{ItemFound, ItemKind, topic};
+    use cr_store::userdb::powers::Powers;
+    use cr_store::userdb::{Sources, UserDb, UserKind, Value};
+    let Some(original) = install() else { return };
+    if original.path("UserDbas/AllowedU.dat").is_none() {
+        return;
+    }
+    // A copy of the user database next to links to the rest.
+    let root = std::env::temp_dir().join(format!("cr-help-custom-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(root.join("UserDbas")).unwrap();
+    for name in ["Database", "Help"] {
+        std::os::unix::fs::symlink(original.path(name).unwrap(), root.join(name)).unwrap();
+    }
+    for entry in std::fs::read_dir(original.path("UserDbas").unwrap()).unwrap() {
+        let entry = entry.unwrap();
+        if entry.file_type().unwrap().is_file() {
+            std::fs::copy(entry.path(), root.join("UserDbas").join(entry.file_name())).unwrap();
+        }
+    }
+    let install = Installation::open(&root).unwrap();
+    let mut db = UserDb::<Powers>::load(&install).unwrap();
+    let fields = Powers::fields(db.flavor);
+    let mut power = db.new_record(0, "");
+    for (label, text) in [
+        ("Name", "Udb power"),
+        ("Description", "Udb power description."),
+    ] {
+        let field = fields.iter().find(|f| f.label == label).unwrap();
+        field.set(&mut power, &Value::Text(text.into()), &Sources::default());
+    }
+    db.add(power).unwrap();
+    db.save(&install).unwrap();
+    let found = install
+        .item_help()
+        .find("Udb power", &ItemKind::order(topic::PSIONIC_POWERS));
+    let _ = std::fs::remove_dir_all(&root);
+    let Some(ItemFound::Custom { title, text }) = found else {
+        panic!("{found:?}");
+    };
+    assert_eq!(title, "Udb power");
+    assert!(text.ends_with("Udb power description."), "{text}");
+}
