@@ -90,7 +90,10 @@ the original programs wrote.
 - **Editors for every user database**: races, classes and allowed
   combinations, parts (weapons, armor, kits, proficiencies and the rest),
   spells, psionic powers, monsters, monster types, traps and treasure
-  tables
+  tables. A monster type's picture is chosen among those in
+  `Bitmaps/Monsters` and `UserBMP`, a race's among the portraits, or made
+  from a picture of your own as portraits are (monster pictures go to
+  `UserBMP`, at 300×300)
 - **Packages**: Export, Import, New Package and Edit Package for `.xpx`
   packages with characters and any user record, byte for byte as the
   Expansion writes them; Core Rules 2.0 `.xpt` packages are imported and

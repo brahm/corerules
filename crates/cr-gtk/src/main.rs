@@ -9,7 +9,7 @@ mod extract;
 mod lists;
 mod npc;
 mod party;
-mod portrait;
+mod picture;
 mod prefs;
 mod sheet;
 mod tables;
@@ -1763,7 +1763,7 @@ fn character_editor(
     );
     abilities.add(&exceptional);
 
-    let (portrait_row, portrait) = portrait::row(
+    let (portrait_row, portrait) = picture::portrait_row(
         root,
         choices.character.data.race.clone(),
         details.portrait.clone(),

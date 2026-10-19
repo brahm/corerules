@@ -171,17 +171,22 @@ record! {
     pub struct MonsterType {
         /// "Aarakocra", "Aboleth".
         name: String,
-        /// Bitmap of the picture page ("5to34.bmp").
+        /// Bitmap of the picture page ("5to34.bmp"); empty in the types
+        /// the original's editor writes.
         page_picture: String,
-        /// Empty in the shipped data.
+        /// Empty in the shipped data. The original's type editor writes the
+        /// file name of `picture` here ("teste.bmp").
         unknown_0x14: String,
-        /// Empty in the shipped data.
+        /// Empty in the shipped data. The original's type editor writes the
+        /// folder of `picture` here, with its last backslash
+        /// ("C:\Program Files\AD&D Core Rules 2.0\Userbmp\").
         unknown_0x10: String,
         /// 0 to 12.
         unknown_0x18: i32,
         /// 0 or small.
         unknown_0x1c: i32,
-        /// Picture bitmap ("6.bmp").
+        /// Picture bitmap ("6.bmp"); the original's type editor writes the
+        /// whole path ("C:\Program Files\AD&D Core Rules 2.0\Userbmp\teste.bmp").
         picture: String,
     }
 }

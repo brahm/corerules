@@ -15,6 +15,7 @@ use super::{
     FieldDesc, FieldKind, Flavor, NameError, NewContext, Options, UserKind, Value, default_reason,
     udb_combo, udb_int, udb_multiline, udb_text,
 };
+use crate::pictures::{Kind, split_stored};
 use crate::treasure::LETTERS;
 use crate::{Installation, Result};
 
@@ -67,7 +68,21 @@ impl UserKind for MonsterTypes {
         const PAGE: &str = tr_noop!("Monster Type");
         vec![
             udb_text!(PAGE, tr_noop!("Name of Type"), 50, name),
-            udb_text!(PAGE, tr_noop!("Bitmap"), 0, picture),
+            // The original's editor keeps the path whole and split into its
+            // file and folder, and no page strip.
+            FieldDesc::new(
+                PAGE,
+                tr_noop!("Bitmap"),
+                FieldKind::Picture(Kind::Monster),
+                |r: &Rec, _| Value::Text(r.picture.clone()),
+                |r, _, v, _| {
+                    r.picture = v.text();
+                    let (folder, file) = split_stored(&r.picture);
+                    r.unknown_0x14 = file.to_owned();
+                    r.unknown_0x10 = folder.to_owned();
+                    r.page_picture.clear();
+                },
+            ),
         ]
     }
 
@@ -767,6 +782,33 @@ mod tests {
         db.add(ty).unwrap();
         db.save(&t.install).unwrap();
         assert!(t.root.join("UserDbas/MonTypeU.dat").exists());
+    }
+
+    #[test]
+    fn a_type_keeps_its_picture_as_the_original_writes_it() {
+        let mut ty = MonsterTypes::new_record(&context(""));
+        let fields = MonsterTypes::fields(Flavor::Expansion);
+        let bitmap = fields.iter().find(|f| f.label == "Bitmap").unwrap();
+        let stored = "C:\\Program Files\\AD&D Core Rules 2.0\\Userbmp\\teste.bmp";
+        bitmap.set(&mut ty, &Value::Text(stored.into()), &Sources::default());
+        assert_eq!(ty.picture, stored);
+        assert_eq!(ty.page_picture, "");
+        assert_eq!(ty.unknown_0x14, "teste.bmp");
+        assert_eq!(
+            ty.unknown_0x10,
+            "C:\\Program Files\\AD&D Core Rules 2.0\\Userbmp\\"
+        );
+        assert_eq!(bitmap.get(&ty), Value::Text(stored.into()));
+        bitmap.set(&mut ty, &Value::Text(String::new()), &Sources::default());
+        assert_eq!(
+            [
+                ty.picture,
+                ty.page_picture,
+                ty.unknown_0x14,
+                ty.unknown_0x10
+            ],
+            [""; 4].map(String::from)
+        );
     }
 
     #[test]

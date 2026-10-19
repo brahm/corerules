@@ -1056,6 +1056,31 @@ fn control<R: Clone + 'static, H: Host + 'static>(
             };
             (row.upcast(), Box::new(load))
         }
+        FieldKind::Picture(kind) => {
+            let root = host
+                .with_install(|i| Ok(i.root().to_owned()))
+                .and_then(|r| r.ok())
+                .unwrap_or_default();
+            let set = {
+                let (root, changed) = (root.clone(), changed.clone());
+                move |path: Option<&std::path::Path>| {
+                    let stored = path
+                        .and_then(|p| cr_store::pictures::stored_path(&root, p))
+                        .unwrap_or_default();
+                    changed(index, Value::Text(stored.clone()));
+                    stored
+                }
+            };
+            let (row, show) = crate::picture::row(
+                root,
+                kind,
+                String::new(),
+                glib::markup_escape_text(label).as_str(),
+                value().text(),
+                set,
+            );
+            (row.upcast(), Box::new(move || show(value().text())))
+        }
     }
 }
 

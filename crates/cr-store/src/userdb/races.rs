@@ -17,6 +17,7 @@ use super::{
     FieldDesc, FieldKind, Flavor, NewContext, Options, Sources, UserKind, Value, udb_int, udb_list,
     udb_multiline, udb_text,
 };
+use crate::pictures::{Kind, joined, split_stored};
 use crate::{Installation, Result};
 
 pub struct Races;
@@ -297,7 +298,22 @@ impl UserKind for Races {
             100,
             unknown_0x21c[0]
         ));
-        f.push(udb_text!(MAIN, tr_noop!("Race Image"), 0, portrait));
+        f.push(FieldDesc::new(
+            MAIN,
+            tr_noop!("Race Image"),
+            FieldKind::Picture(Kind::Portrait),
+            |r: &Race, _| Value::Text(joined(&r.portrait_folder, &r.portrait)),
+            |r, _, v, _| {
+                let stored = v.text();
+                let (folder, file) = split_stored(&stored);
+                // Clearing the picture keeps the folder the race's
+                // portraits are looked for in.
+                if !file.is_empty() && !folder.is_empty() {
+                    folder.clone_into(&mut r.portrait_folder);
+                }
+                file.clone_into(&mut r.portrait);
+            },
+        ));
 
         // Evermore: Class Info and Level Limits.
         if flavor == Flavor::Core20 {
@@ -582,6 +598,23 @@ mod tests {
     use super::*;
     use crate::userdb::testing::TempInstall;
     use crate::userdb::{NameError, UserDb};
+
+    #[test]
+    fn a_race_keeps_its_image_as_folder_and_file() {
+        let mut race = new_race("");
+        let fields = Races::fields(Flavor::Expansion);
+        let image = fields.iter().find(|f| f.label == "Race Image").unwrap();
+        let sources = crate::userdb::Sources::default();
+        let stored = format!("{PORTRAIT_FOLDER}Elfm1.bmp");
+        image.set(&mut race, &Value::Text(stored.clone()), &sources);
+        assert_eq!(race.portrait_folder, PORTRAIT_FOLDER);
+        assert_eq!(race.portrait, "Elfm1.bmp");
+        assert_eq!(image.get(&race), Value::Text(stored));
+        image.set(&mut race, &Value::Text(String::new()), &sources);
+        assert_eq!(race.portrait, "");
+        assert_eq!(race.portrait_folder, PORTRAIT_FOLDER);
+        assert_eq!(image.get(&race), Value::Text(String::new()));
+    }
 
     #[test]
     fn subraces_share_the_race_names_and_warn_on_delete() {

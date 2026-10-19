@@ -1204,7 +1204,7 @@ impl Wizard {
         who.add(&player);
         who.add(&gender);
         let (portrait_row, portrait) =
-            crate::portrait::row(self.0.root.clone(), d.race.clone(), d.portrait.clone());
+            crate::picture::portrait_row(self.0.root.clone(), d.race.clone(), d.portrait.clone());
         who.add(&portrait_row);
 
         let alignment = combo_row(tr("Alignment"), &rules.alignments(&d.classes), &d.alignment);
