@@ -151,6 +151,11 @@ impl Image {
         dialog_texts(self.resource(5, id)?)
     }
 
+    /// The controls of dialog resource `id`, in template order.
+    pub fn dialog_controls(&self, id: u16) -> Option<Vec<Control>> {
+        Some(dialog(self.resource(5, id)?)?.1)
+    }
+
     /// Resource `id` of type `kind`, in its first language.
     fn resource(&self, kind: u16, id: u16) -> Option<&[u8]> {
         let root = self.resources?;
@@ -307,6 +312,24 @@ pub struct StaticText {
     pub text: String,
 }
 
+/// A control of a dialog template.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Control {
+    pub id: u32,
+    /// The help id a `DLGTEMPLATEEX` item gives (0 for none, and in a
+    /// `DLGTEMPLATE`).
+    pub help: u32,
+    /// The predefined class's ordinal (0x80 button, 0x82 static, …), or
+    /// `None` for a class named by string.
+    pub class: Option<u16>,
+    pub style: u32,
+    pub x: i16,
+    pub y: i16,
+    /// The text, `&` mnemonics removed unless `SS_NOPREFIX` is set on a
+    /// static control.
+    pub text: Option<String>,
+}
+
 /// A UTF-16 string or an ordinal (`0xFFFF` and a u16) of a dialog
 /// template; `None` for an ordinal or an empty string.
 fn sz_or_ord(d: &[u8], at: &mut usize) -> Option<Option<String>> {
@@ -344,8 +367,30 @@ fn without_mnemonics(text: &str) -> String {
 }
 
 /// The caption and the static controls of a `DLGTEMPLATE` or
-/// `DLGTEMPLATEEX`.
+/// `DLGTEMPLATEEX`, top to bottom and left to right.
 fn dialog_texts(d: &[u8]) -> Option<(String, Vec<StaticText>)> {
+    let (caption, controls) = dialog(d)?;
+    let mut texts: Vec<_> = controls
+        .into_iter()
+        .filter(|c| c.class == Some(0x82))
+        .filter_map(|c| {
+            let text = c.text?;
+            Some((
+                c.y,
+                c.x,
+                StaticText {
+                    style: c.style,
+                    text,
+                },
+            ))
+        })
+        .collect();
+    texts.sort_by_key(|t| (t.0, t.1));
+    Some((caption, texts.into_iter().map(|(_, _, t)| t).collect()))
+}
+
+/// The caption and the controls of a `DLGTEMPLATE` or `DLGTEMPLATEEX`.
+fn dialog(d: &[u8]) -> Option<(String, Vec<Control>)> {
     let ex = u16_at(d, 0)? == 1 && u16_at(d, 2)? == 0xFFFF;
     let (style, count, mut at) = if ex {
         (u32_at(d, 12)?, u16_at(d, 16)?, 26)
@@ -360,13 +405,21 @@ fn dialog_texts(d: &[u8]) -> Option<(String, Vec<StaticText>)> {
         at += if ex { 6 } else { 2 };
         sz_or_ord(d, &mut at)?;
     }
-    let mut texts = Vec::new();
+    let mut controls = Vec::new();
     for _ in 0..count {
         at = at.next_multiple_of(4);
         // helpID, exStyle, style, x, y, cx, cy, id (u32), or style,
         // exStyle, x, y, cx, cy, id (u16).
-        let place = if ex { at + 12 } else { at + 8 };
-        let style = u32_at(d, if ex { at + 8 } else { at })?;
+        let (help, style, place, id) = if ex {
+            (
+                u32_at(d, at)?,
+                u32_at(d, at + 8)?,
+                at + 12,
+                u32_at(d, at + 20)?,
+            )
+        } else {
+            (0, u32_at(d, at)?, at + 8, u32::from(u16_at(d, at + 16)?))
+        };
         let x = u16_at(d, place)? as i16;
         let y = u16_at(d, place + 2)? as i16;
         at += if ex { 24 } else { 18 };
@@ -378,22 +431,22 @@ fn dialog_texts(d: &[u8]) -> Option<(String, Vec<StaticText>)> {
         sz_or_ord(d, &mut at)?;
         let text = sz_or_ord(d, &mut at)?;
         at += 2 + usize::from(u16_at(d, at)?);
-        // 0x82: a static control.
-        if let (Some(0x82), Some(text)) = (class, text) {
-            // SS_NOPREFIX keeps the `&`.
-            let text = if style & 0x80 != 0 {
-                text
-            } else {
-                without_mnemonics(&text)
-            };
-            texts.push((y, x, StaticText { style, text }));
-        }
+        // SS_NOPREFIX keeps a static control's `&`.
+        let text = match text {
+            Some(text) if class == Some(0x82) && style & 0x80 != 0 => Some(text),
+            text => text.map(|t| without_mnemonics(&t)),
+        };
+        controls.push(Control {
+            id,
+            help,
+            class,
+            style,
+            x,
+            y,
+            text,
+        });
     }
-    texts.sort_by_key(|t| (t.0, t.1));
-    Some((
-        without_mnemonics(&caption),
-        texts.into_iter().map(|(_, _, t)| t).collect(),
-    ))
+    Some((without_mnemonics(&caption), controls))
 }
 
 #[cfg(test)]

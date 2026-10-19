@@ -175,3 +175,21 @@ fn every_screen_s_topic_is_in_the_program_help() {
         assert!(n != cr_store::help::topic::MAIN_MENU, "{section}");
     }
 }
+
+#[test]
+fn the_screens_controls_have_their_popup_help() {
+    let Some(install) = install() else { return };
+    let program = install.help_file("Program.hlp").unwrap();
+    let screens: Vec<u32> = cr_store::help::topic::ALL
+        .into_iter()
+        .chain(cr_store::help::topic::ROLL_METHODS)
+        .filter(|&n| !install.screen_help(n).is_empty())
+        .collect();
+    // The screens the original draws as pictures with hotspots.
+    assert!(screens.len() >= 30, "{}", screens.len());
+    let help = install.screen_help(cr_store::help::topic::ROLL_METHOD);
+    let topic = help.topic_of("Help...").unwrap();
+    assert_eq!(help.topic_of("_help"), Some(topic));
+    assert!(program.topic_of_number(topic).is_some());
+    assert_eq!(help.topic_of("no such control"), None);
+}

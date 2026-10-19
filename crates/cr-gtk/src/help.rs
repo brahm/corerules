@@ -13,7 +13,7 @@ use cr_formats::rtf::{Align, Format, Rgb, TabKind};
 use cr_formats::winhelp::{HelpFile, Item, Link, Macro, Paragraph, Topic};
 use cr_i18n::tr;
 use cr_store::Installation;
-use cr_store::help::Contents;
+use cr_store::help::{Contents, ScreenHelp};
 use gtk::{gdk, gio, glib, pango};
 
 /// Which topic to show.
@@ -79,6 +79,10 @@ const MARGIN: i32 = 24;
 thread_local! {
     /// The help window of each installation.
     static OPEN: RefCell<HashMap<PathBuf, Weak<Viewer>>> = RefCell::default();
+    /// The program help and the controls' help of each screen, read
+    /// once per installation.
+    static PROGRAM: RefCell<HashMap<PathBuf, Option<Rc<HelpFile>>>> = RefCell::default();
+    static SCREENS: RefCell<HashMap<(PathBuf, u32), Rc<ScreenHelp>>> = RefCell::default();
 }
 
 /// Adds the original's Help… button to `header`, and F1 to `area` (a
@@ -102,17 +106,131 @@ pub fn add_button(
     add_key(area, move || topic());
 }
 
-/// F1 on `area` opens the program help at the topic `topic` gives.
+/// F1 on `area` opens the program help at the topic `topic` gives, and a
+/// right-click on one of its controls shows the help of the original's
+/// control of that name in a popup, as the original's screens do.
 pub fn add_key(area: &impl IsA<gtk::Widget>, topic: impl Fn() -> u32 + 'static) {
+    let topic = Rc::new(topic);
     let keys = gtk::ShortcutController::new();
     keys.add_shortcut(gtk::Shortcut::new(
         gtk::ShortcutTrigger::parse_string("F1"),
-        Some(gtk::CallbackAction::new(move |widget, _| {
-            show(widget, topic());
-            glib::Propagation::Stop
+        Some(gtk::CallbackAction::new({
+            let topic = topic.clone();
+            move |widget, _| {
+                show(widget, topic());
+                glib::Propagation::Stop
+            }
         })),
     ));
     area.add_controller(keys);
+    // After the controls' own right-click menus.
+    let click = gtk::GestureClick::builder()
+        .button(gdk::BUTTON_SECONDARY)
+        .build();
+    click.connect_pressed(move |gesture, _, x, y| {
+        let Some(area) = gesture.widget() else { return };
+        let Some(picked) = area.pick(x, y, gtk::PickFlags::DEFAULT) else {
+            return;
+        };
+        // Not a control of a dialog shown over this screen.
+        let dialog = |w: &gtk::Widget| w.ancestor(adw::Dialog::static_type());
+        if dialog(&picked) != dialog(&area) {
+            return;
+        }
+        let texts = control_texts(&picked, &area);
+        if texts.is_empty() {
+            return;
+        }
+        gesture.set_state(gtk::EventSequenceState::Claimed);
+        let spec = std::iter::once(topic().to_string())
+            .chain(texts)
+            .collect::<Vec<_>>()
+            .join("\n");
+        let _ = area.activate_action("win.help-control", Some(&spec.to_variant()));
+    });
+    area.add_controller(click);
+}
+
+/// What the control at `widget` reads, and its containers up to `area`,
+/// nearest first: labels, buttons, rows and groups, and tooltips.
+fn control_texts(widget: &gtk::Widget, area: &gtk::Widget) -> Vec<String> {
+    let mut texts = Vec::new();
+    let mut at = Some(widget.clone());
+    while let Some(w) = at {
+        let text = if let Some(l) = w.downcast_ref::<gtk::Label>() {
+            Some(l.text().to_string())
+        } else if let Some(b) = w.downcast_ref::<gtk::Button>() {
+            b.label().map(|l| l.to_string())
+        } else if let Some(b) = w.downcast_ref::<gtk::CheckButton>() {
+            b.label().map(|l| l.to_string())
+        } else if let Some(r) = w.downcast_ref::<adw::PreferencesRow>() {
+            Some(r.title().to_string())
+        } else if let Some(g) = w.downcast_ref::<adw::PreferencesGroup>() {
+            Some(g.title().to_string())
+        } else if let Some(f) = w.downcast_ref::<gtk::Frame>() {
+            f.label().map(|l| l.to_string())
+        } else {
+            None
+        };
+        texts.extend(text);
+        texts.extend(w.tooltip_text().map(|t| t.to_string()));
+        if w == *area {
+            break;
+        }
+        at = w.parent();
+    }
+    texts.retain(|t| !t.trim().is_empty());
+    texts
+}
+
+/// Shows, over `parent`, the help of the control of the original's screen
+/// `screen` (a [`cr_store::help::topic`] number) that reads one of `texts`
+/// (as shown, or in English), the first that has one.
+pub fn control_popup(
+    parent: &adw::ApplicationWindow,
+    install: &Installation,
+    screen: u32,
+    texts: &[&str],
+) {
+    let root = install.root().to_owned();
+    let help = SCREENS.with_borrow_mut(|screens| {
+        screens
+            .entry((root.clone(), screen))
+            .or_insert_with(|| Rc::new(install.screen_help(screen)))
+            .clone()
+    });
+    let Some(number) = texts.iter().find_map(|&text| {
+        help.topic_of(text).or_else(|| {
+            cr_i18n::sources(text)
+                .into_iter()
+                .find_map(|source| help.topic_of(source))
+        })
+    }) else {
+        return;
+    };
+    let program = PROGRAM.with_borrow_mut(|files| {
+        files
+            .entry(root)
+            .or_insert_with(|| install.help_file("Program.hlp").ok().map(Rc::new))
+            .clone()
+    });
+    let follow = {
+        let parent = parent.clone();
+        let root = install.root().to_owned();
+        move |link: &Link| match viewer(&parent, &root) {
+            Ok(viewer) => {
+                viewer.follow_from("program.hlp", link);
+                viewer.window.present();
+            }
+            Err(e) => eprintln!("{e}"),
+        }
+    };
+    if let Some(dialog) = program
+        .as_ref()
+        .and_then(|p| popup_dialog(p, p.topic_of_number(number)?, follow))
+    {
+        dialog.present(Some(parent));
+    }
 }
 
 /// Opens the program help (`Program.hlp`) at `topic`, through the main
@@ -132,29 +250,31 @@ pub fn open(
     file: &str,
     target: Target,
 ) -> Result<(), String> {
-    let key = install.root().to_owned();
-    let existing = OPEN.with_borrow(|open| open.get(&key).and_then(Weak::upgrade));
-    let viewer = match existing {
-        Some(viewer) => viewer,
-        None => {
-            let app = parent
-                .application()
-                .ok_or(tr("The application is shutting down"))?;
-            let install = Installation::open(install.root()).map_err(|e| e.to_string())?;
-            let viewer = Viewer::new(&app, install);
-            OPEN.with_borrow_mut(|open| {
-                open.retain(|_, v| v.strong_count() > 0);
-                open.insert(key, Rc::downgrade(&viewer));
-            });
-            viewer
-        }
-    };
+    let viewer = viewer(parent, install.root())?;
     let place = viewer
         .resolve(file, &target)
         .ok_or_else(|| tr!("The help topic is not in {file}", file = file.to_owned()))?;
     viewer.go(place, true);
     viewer.window.present();
     Ok(())
+}
+
+/// The help window of the installation at `root`, opened if it is not.
+fn viewer(parent: &adw::ApplicationWindow, root: &std::path::Path) -> Result<Rc<Viewer>, String> {
+    let existing = OPEN.with_borrow(|open| open.get(root).and_then(Weak::upgrade));
+    if let Some(viewer) = existing {
+        return Ok(viewer);
+    }
+    let app = parent
+        .application()
+        .ok_or(tr("The application is shutting down"))?;
+    let install = Installation::open(root).map_err(|e| e.to_string())?;
+    let viewer = Viewer::new(&app, install);
+    OPEN.with_borrow_mut(|open| {
+        open.retain(|_, v| v.strong_count() > 0);
+        open.insert(root.to_owned(), Rc::downgrade(&viewer));
+    });
+    Ok(viewer)
 }
 
 impl Viewer {
@@ -552,25 +672,21 @@ impl Viewer {
     }
 
     fn link_at(&self, x: f64, y: f64) -> Option<Link> {
-        let (bx, by) =
-            self.view
-                .window_to_buffer_coords(gtk::TextWindowType::Widget, x as i32, y as i32);
-        let iter = self.view.iter_at_location(bx, by)?;
-        let offset = iter.offset();
-        self.links
-            .borrow()
-            .iter()
-            .find(|(start, end, _)| (*start..*end).contains(&offset))
-            .map(|(_, _, link)| link.clone())
+        link_at(&self.view, &self.links.borrow(), x, y)
     }
 
-    fn follow(&self, link: &Link) {
+    fn follow(self: &Rc<Self>, link: &Link) {
         let Some(current) = self.current.borrow().clone() else {
             return;
         };
+        self.follow_from(&current.file, link);
+    }
+
+    /// Follows `link` of a topic of `from` (lower case).
+    fn follow_from(self: &Rc<Self>, from: &str, link: &Link) {
         let (place, popup) = match link {
             Link::Topic { hash, file, popup } => {
-                let name = file.clone().unwrap_or_else(|| current.file.clone());
+                let name = file.clone().unwrap_or_else(|| from.to_owned());
                 let place = self.file(&name).and_then(|h| {
                     Some(Place {
                         file: name.to_ascii_lowercase(),
@@ -580,9 +696,9 @@ impl Viewer {
                 (place, *popup)
             }
             Link::Offset { offset, popup } => {
-                let place = self.file(&current.file).and_then(|h| {
+                let place = self.file(from).and_then(|h| {
                     Some(Place {
-                        file: current.file.clone(),
+                        file: from.to_owned(),
                         topic: h.topic_at(*offset)?,
                     })
                 });
@@ -602,14 +718,11 @@ impl Viewer {
                     context,
                     popup,
                 }) => (
-                    self.resolve(
-                        file.as_deref().unwrap_or(&current.file),
-                        &Target::Context(context),
-                    ),
+                    self.resolve(file.as_deref().unwrap_or(from), &Target::Context(context)),
                     popup,
                 ),
                 Some(Macro::Contents { file }) => (
-                    self.resolve(file.as_deref().unwrap_or(&current.file), &Target::Contents),
+                    self.resolve(file.as_deref().unwrap_or(from), &Target::Contents),
                     false,
                 ),
                 None => (None, false),
@@ -623,43 +736,115 @@ impl Viewer {
     }
 
     /// A popup topic, shown in a dialog over the window.
-    fn popup(&self, place: Place) {
+    fn popup(self: &Rc<Self>, place: Place) {
         let Some(help) = self.file(&place.file) else {
             return;
         };
-        let Some(topic) = help.topics.get(place.topic) else {
-            return;
+        let weak = Rc::downgrade(self);
+        let file = place.file.clone();
+        let follow = move |link: &Link| {
+            if let Some(v) = weak.upgrade() {
+                v.follow_from(&file, link);
+            }
         };
-        let view = gtk::TextView::builder()
-            .editable(false)
-            .cursor_visible(false)
-            .wrap_mode(gtk::WrapMode::WordChar)
-            .left_margin(18)
-            .right_margin(18)
-            .top_margin(12)
-            .bottom_margin(18)
-            .build();
-        let buffer = gtk::TextBuffer::new(None);
-        let tags = RefCell::default();
-        let (_, pictures) = render(&buffer, &view, &help, topic, &tags);
-        view.set_buffer(Some(&buffer));
-        add_pictures(&view, &help, pictures);
-        let scroller = gtk::ScrolledWindow::builder()
-            .hscrollbar_policy(gtk::PolicyType::Never)
-            .propagate_natural_height(true)
-            .max_content_height(500)
-            .child(&view)
-            .build();
-        let toolbar = adw::ToolbarView::new();
-        toolbar.add_top_bar(&adw::HeaderBar::new());
-        toolbar.set_content(Some(&scroller));
-        let dialog = adw::Dialog::builder()
-            .title(topic.display_title())
-            .content_width(480)
-            .child(&toolbar)
-            .build();
-        dialog.present(Some(&self.window));
+        if let Some(dialog) = popup_dialog(&help, place.topic, follow) {
+            dialog.present(Some(&self.window));
+        }
     }
+}
+
+/// The link of `links` (buffer offsets) at `x`, `y` of `view`.
+fn link_at(view: &gtk::TextView, links: &[(i32, i32, Link)], x: f64, y: f64) -> Option<Link> {
+    let (bx, by) = view.window_to_buffer_coords(gtk::TextWindowType::Widget, x as i32, y as i32);
+    let offset = view.iter_at_location(bx, by)?.offset();
+    links
+        .iter()
+        .find(|(start, end, _)| (*start..*end).contains(&offset))
+        .map(|(_, _, link)| link.clone())
+}
+
+/// A dialog showing topic `topic` of `help`, as WinHelp shows a popup;
+/// a link closes it and goes to `follow`.
+fn popup_dialog(
+    help: &HelpFile,
+    topic: usize,
+    follow: impl Fn(&Link) + 'static,
+) -> Option<adw::Dialog> {
+    let topic = help.topics.get(topic)?;
+    let view = gtk::TextView::builder()
+        .editable(false)
+        .cursor_visible(false)
+        .wrap_mode(gtk::WrapMode::WordChar)
+        .left_margin(18)
+        .right_margin(18)
+        .top_margin(12)
+        .bottom_margin(18)
+        .build();
+    let buffer = gtk::TextBuffer::new(None);
+    let tags = RefCell::default();
+    let (links, pictures) = render(&buffer, &view, help, topic, &tags);
+    view.set_buffer(Some(&buffer));
+    add_pictures(&view, help, pictures);
+    let links = Rc::new(links);
+    let motion = gtk::EventControllerMotion::new();
+    motion.connect_motion({
+        let links = links.clone();
+        move |motion, x, y| {
+            if let Some(view) = motion.widget() {
+                let over = view
+                    .downcast_ref::<gtk::TextView>()
+                    .and_then(|v| link_at(v, &links, x, y))
+                    .is_some();
+                view.set_cursor_from_name(Some(if over { "pointer" } else { "text" }));
+            }
+        }
+    });
+    view.add_controller(motion);
+    let scroller = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .propagate_natural_height(true)
+        .max_content_height(500)
+        .child(&view)
+        .build();
+    // A text view knows its height once it has laid its lines out, after
+    // it shows: the popup then grows to fit the topic.
+    view.connect_map({
+        let scroller = scroller.clone();
+        move |view| {
+            let (view, scroller) = (view.clone(), scroller.clone());
+            glib::idle_add_local_once(move || {
+                let (y, height) = view.line_yrange(&view.buffer().end_iter());
+                let height = y + height + view.top_margin() + view.bottom_margin();
+                scroller.set_min_content_height(height.min(500));
+            });
+        }
+    });
+    let toolbar = adw::ToolbarView::new();
+    toolbar.add_top_bar(&adw::HeaderBar::new());
+    toolbar.set_content(Some(&scroller));
+    let dialog = adw::Dialog::builder()
+        .title(topic.display_title())
+        .content_width(480)
+        .child(&toolbar)
+        .build();
+    let click = gtk::GestureClick::new();
+    click.connect_released({
+        let dialog = dialog.downgrade();
+        move |gesture, _, x, y| {
+            let Some(view) = gesture.widget().and_downcast::<gtk::TextView>() else {
+                return;
+            };
+            if let Some(link) = link_at(&view, &links, x, y) {
+                gesture.set_state(gtk::EventSequenceState::Claimed);
+                if let Some(dialog) = dialog.upgrade() {
+                    dialog.close();
+                }
+                follow(&link);
+            }
+        }
+    });
+    view.add_controller(click);
+    Some(dialog)
 }
 
 /// The text tag of a run.

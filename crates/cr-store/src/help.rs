@@ -335,6 +335,49 @@ impl Installation {
     }
 }
 
+/// The help of the controls of one of the original's screens: the topics
+/// of `Program.hlp` that a right-click on a control shows in a popup.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ScreenHelp {
+    /// Each control's text, then the title of its topic, made comparable,
+    /// with the topic's number.
+    texts: Vec<(String, u32)>,
+}
+
+impl ScreenHelp {
+    /// The topic of the control that reads `text`, its own text or its
+    /// topic's title, ignoring case, mnemonics and a trailing `…` or `:`.
+    pub fn topic_of(&self, text: &str) -> Option<u32> {
+        let text = comparable(text);
+        self.texts
+            .iter()
+            .find(|(t, _)| *t == text)
+            .map(|&(_, topic)| topic)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.texts.is_empty()
+    }
+}
+
+/// A control's text made comparable with the app's labels.
+fn comparable(text: &str) -> String {
+    let text: String = text
+        .chars()
+        .filter(|&c| c != '&' && c != '_')
+        .collect::<String>()
+        .to_lowercase();
+    let mut text = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    while let Some(t) = text
+        .strip_suffix("...")
+        .or_else(|| text.strip_suffix('…'))
+        .or_else(|| text.strip_suffix(':'))
+    {
+        text = t.trim_end().to_owned();
+    }
+    text
+}
+
 /// What the original's About box shows (Help > About…, dialog 100): its
 /// lines, the installation's `License.txt` and the lines of its Credits
 /// window (dialog 412). Read from the Expansion's program at run time.
@@ -347,6 +390,46 @@ pub struct OriginalAbout {
 
 impl Installation {
     /// The original's About box, as far as the installation has it.
+    /// The help of the controls of the original's screen `screen` (a
+    /// [`topic`] number): the hotspots of its dialog template whose help
+    /// id is a topic of `Program.hlp`.
+    pub fn screen_help(&self, screen: u32) -> ScreenHelp {
+        // A dialog's own id, or a control's help id (0x8000_0000 | dialog
+        // << 16 | control).
+        let dialog = if screen < 0x1_0000 {
+            screen
+        } else {
+            (screen >> 16) & 0x7FFF
+        };
+        let controls = u16::try_from(dialog).ok().and_then(|dialog| {
+            crate::exe::Image::open(self, crate::treasure::Flavor::Expansion)
+                .ok()?
+                .dialog_controls(dialog)
+        });
+        let Some(program) = self.help_file("Program.hlp").ok() else {
+            return ScreenHelp::default();
+        };
+        let mut texts = Vec::new();
+        let mut titles = Vec::new();
+        for control in controls.unwrap_or_default() {
+            // The original draws its screens as pictures, with a hotspot
+            // for each control of these styles (0x40F036).
+            if control.help == 0 || control.style & 0x0C == 0 || control.style & 0xC0 != 0 {
+                continue;
+            }
+            let Some(n) = program.topic_of_number(control.help) else {
+                continue;
+            };
+            if let Some(text) = &control.text {
+                texts.push((comparable(text), control.help));
+            }
+            titles.push((comparable(&program.topics[n].display_title()), control.help));
+        }
+        texts.extend(titles);
+        texts.retain(|(t, _)| !t.is_empty());
+        ScreenHelp { texts }
+    }
+
     pub fn original_about(&self) -> OriginalAbout {
         let image = crate::exe::Image::open(self, crate::treasure::Flavor::Expansion).ok();
         let texts = |id| {
@@ -391,6 +474,13 @@ impl Installation {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn control_texts_compare_without_case_mnemonics_or_ellipses() {
+        assert_eq!(comparable("&Help..."), "help");
+        assert_eq!(comparable("_Points  Left:"), "points left");
+        assert_eq!(comparable("Next …"), "next");
+    }
 
     #[test]
     fn contents_lines_are_headings_or_topics() {

@@ -345,6 +345,26 @@ impl Window {
                 }
             })
             .build();
+        // A right-click on a control: its screen and what it reads.
+        let help_control = gio::ActionEntry::builder("help-control")
+            .parameter_type(Some(glib::VariantTy::STRING))
+            .activate({
+                let this = this.clone();
+                move |_, _, spec| {
+                    let Some(spec) = spec.and_then(|s| s.str()) else {
+                        return;
+                    };
+                    let mut lines = spec.lines();
+                    let Some(screen) = lines.next().and_then(|n| n.parse().ok()) else {
+                        return;
+                    };
+                    let texts: Vec<&str> = lines.collect();
+                    if let Some(install) = this.install.borrow().as_ref() {
+                        help::control_popup(&this.window, install, screen, &texts);
+                    }
+                }
+            })
+            .build();
         let about = gio::ActionEntry::builder("about")
             .activate({
                 let this = this.clone();
@@ -393,7 +413,8 @@ impl Window {
                 move |_, _, _| transfer::edit_package(&Rc::new(this.clone()))
             })
             .build();
-        this.window.add_action_entries([help, help_here, about]);
+        this.window
+            .add_action_entries([help, help_here, help_control, about]);
         help::add_key(&this.window, {
             let this = this.clone();
             move || topic::of_section(&userdb::Host::current_section(&this))
