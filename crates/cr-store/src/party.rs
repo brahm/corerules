@@ -242,7 +242,7 @@ impl Installation {
         Ok(())
     }
 
-    fn chars_folder(&self) -> Result<PathBuf> {
+    pub(crate) fn chars_folder(&self) -> Result<PathBuf> {
         self.path("Chars")
             .ok_or_else(|| Error::Invalid(tr("The installation has no Chars folder").into()))
     }
@@ -257,7 +257,7 @@ impl Installation {
         Ok(bytes)
     }
 
-    fn write_index(&self, bytes: &[u8]) -> Result<()> {
+    pub(crate) fn write_index(&self, bytes: &[u8]) -> Result<()> {
         match self.path("Chars/index.chr") {
             Some(path) => replace(&path, bytes),
             None => write_new(&self.chars_folder()?.join("index.chr"), bytes),
