@@ -482,6 +482,8 @@ pub struct RaceRules {
     points: u32,
     saved: u32,
     abilities: Vec<String>,
+    /// What the abilities cost as a package (`Race.unknown_0xe0`).
+    package_cost: i64,
 }
 
 /// A subrace record: its movement, its Skills & Powers points, ability
@@ -493,6 +495,9 @@ struct SubraceRules {
     points: u32,
     saved: u32,
     abilities: Vec<String>,
+    /// What the package costs: High elf 40, though its abilities' costs
+    /// add up to 45.
+    package_cost: i64,
     languages: Vec<String>,
 }
 
@@ -722,6 +727,7 @@ impl Installation {
                 points: r.unknown_0xa8.max(0) as u32,
                 saved: r.unknown_0xac.max(0) as u32,
                 abilities: r.abilities.clone(),
+                package_cost: r.unknown_0xe0.into(),
                 multi_classes: r
                     .multi_classes
                     .iter()
@@ -748,6 +754,7 @@ impl Installation {
                     points: sub.unknown_0xa8.max(0) as u32,
                     saved: sub.unknown_0xac.max(0) as u32,
                     abilities: sub.abilities.clone(),
+                    package_cost: sub.unknown_0xe0.into(),
                     languages: sub.languages.clone(),
                 };
                 if sub.unknown_0x1e0[0] != 0 {
@@ -1642,15 +1649,31 @@ impl CreationRules {
             .map_or_else(|| cost_in_name(name), |r| r.1)
     }
 
-    /// Racial points not spent; negative when overspent.
+    /// What the subrace's package costs, as one price rather than the sum
+    /// of its abilities.
+    fn package_cost(&self, race: &str, subrace: &str) -> i64 {
+        let Some(r) = self.race(race) else {
+            return 0;
+        };
+        r.subraces
+            .iter()
+            .find(|s| s.name == subrace)
+            .map_or(r.package_cost, |s| s.package_cost)
+    }
+
+    /// Racial points not spent; negative when overspent. The program
+    /// charges the package at its price (0x5b7339) and the abilities bought
+    /// on top of it at theirs.
     pub fn racial_points_left(&self, draft: &Draft) -> i64 {
         let (points, _) = self.racial_points(&draft.race, &draft.subrace);
-        let spent: i64 = draft
+        let package = self.racial_package(&draft.race, &draft.subrace);
+        let bought: i64 = draft
             .racial_abilities
             .iter()
+            .filter(|a| !package.contains(a))
             .map(|a| i64::from(self.racial_ability_cost(a)))
             .sum();
-        i64::from(points) - spent
+        i64::from(points) - self.package_cost(&draft.race, &draft.subrace) - bought
     }
 
     /// The class abilities a Skills & Powers character of the class may
@@ -2813,6 +2836,7 @@ mod tests {
                         points: 45,
                         saved: 5,
                         abilities: vec!["Dwarf, Infravision (10)".into()],
+                        package_cost: 10,
                         languages: vec!["Dwarf".into(), "Gnome".into()],
                     })
                     .collect()
@@ -2823,6 +2847,7 @@ mod tests {
             points: if name == "Dwarf" { 45 } else { 10 },
             saved: if name == "Dwarf" { 5 } else { 10 },
             abilities: Vec::new(),
+            package_cost: 0,
         }
     }
 
