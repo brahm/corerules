@@ -283,7 +283,7 @@ pub fn backgrounds(install: &Installation) -> Result<Vec<String>> {
 const BACKGROUNDS: usize = 21;
 
 /// `Chars/<file>`, refusing names that would leave the folder.
-fn character_path(file: &str) -> Result<String> {
+pub(crate) fn character_path(file: &str) -> Result<String> {
     if file.is_empty() || file.contains(['/', '\\']) || file.starts_with('.') {
         return Err(Error::Invalid(tr!(
             "{file} is not a character file name",

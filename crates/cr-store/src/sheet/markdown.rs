@@ -200,6 +200,7 @@ mod tests {
                     content: SectionContent::PageBreak,
                 },
             ],
+            border: None,
         }
     }
 

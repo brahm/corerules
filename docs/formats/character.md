@@ -365,6 +365,15 @@ The section ids and names are in
 (`SECTIONS`). View, Print and Export save the choice back into the `.dat`
 without touching `index.chr`. 2.0 always prints its fixed list.
 
+The app saves the same way when the sheet's options are saved: version
+2, `unknown_0x260` 1, the border, and the sections as pairs, in order,
+repeats and an empty list included. The original's dialog always opens
+on Normal Borders (0x598347); the app's opens on the stored border. Only
+printing and Save as PDF use the border: Normal draws a frame whose top
+line runs through the title (the original's 16-twip pen), Thin a thin
+rectangle with the title inside (7 twips), None the titles alone. The
+TXT, HTML and Markdown exports ignore it, as the original's do.
+
 ### ClassSlot
 
 Inline record (Rust `ClassSlot`), five back to back. Slot g's lists are at

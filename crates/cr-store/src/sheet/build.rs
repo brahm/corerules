@@ -430,10 +430,15 @@ pub(super) fn build(rules: &SheetRules, ch: &Character) -> Result<Sheet> {
             sections.push(section);
         }
     }
+    let border = match rules.flavor {
+        Flavor::Expansion => Some(rules.sheet_choice(ch)?.border),
+        Flavor::Core20 => None,
+    };
     Ok(Sheet {
         title: ch.data.name.clone(),
         flavor: rules.flavor,
         sections,
+        border,
     })
 }
 

@@ -16,6 +16,7 @@ mod picture;
 mod prefs;
 mod print;
 mod sheet;
+mod sheet_options;
 mod skills;
 mod tables;
 mod transfer;
@@ -765,19 +766,42 @@ impl Window {
         self.toasts.add_toast(adw::Toast::new(message));
     }
 
-    /// Shows the character sheet of the character in `Chars/<file>`.
+    /// Shows the character sheet of the character in `Chars/<file>`; an
+    /// Expansion character's sections and border can be changed there.
     fn show_sheet(&self, file: &str) {
-        let sheet = match &*self.install.borrow() {
-            Some(install) => install.character(file).and_then(|c| install.sheet(&c)),
+        let loaded = match &*self.install.borrow() {
+            Some(install) => install.character(file).and_then(|c| {
+                let rules = install.sheet_rules()?;
+                let choice = (rules.flavor() == cr_store::sheet::Flavor::Expansion
+                    && !install.is_core20())
+                .then(|| rules.sheet_choice(&c))
+                .transpose()?;
+                Ok((rules.sheet(&c)?, choice))
+            }),
             None => return,
         };
-        match sheet {
-            Ok(sheet) => {
-                let this = self.clone();
-                sheet::show(&self.window, sheet, move |message| this.toast(message));
-            }
-            Err(e) => self.toast(&e.to_string()),
-        }
+        let (sheet, choice) = match loaded {
+            Ok(loaded) => loaded,
+            Err(e) => return self.toast(&e.to_string()),
+        };
+        let options = choice.map(|choice| sheet::Options {
+            choice,
+            save: Box::new({
+                let (this, file) = (self.clone(), file.to_owned());
+                move |choice| match &*this.install.borrow() {
+                    Some(install) => install
+                        .save_sheet_choice(&file, choice)
+                        .and_then(|()| install.character(&file))
+                        .and_then(|c| install.sheet(&c))
+                        .map_err(|e| e.to_string()),
+                    None => Err(String::new()),
+                }
+            }),
+        });
+        let this = self.clone();
+        sheet::show(&self.window, sheet, options, move |message| {
+            this.toast(message)
+        });
     }
 
     /// Opens the editor for the character stored in `Chars/<file>`.
