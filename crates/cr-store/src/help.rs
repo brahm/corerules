@@ -429,6 +429,9 @@ pub enum ItemFound {
     /// A record of the user database: the original's Custom Help box
     /// (dialog 394) with what the record says.
     Custom { title: String, text: String },
+    /// A monster of the user database, which the original shows as it
+    /// prints it ([`Installation::custom_monster_sheet`]).
+    CustomMonster(String),
 }
 
 /// The help of the installation's records, by name: the shipped records'
@@ -484,7 +487,7 @@ impl ItemHelp {
     pub fn topic_of(&self, name: &str, order: &[ItemKind]) -> Option<ItemTopic> {
         match self.find(name, order)? {
             ItemFound::Topic(topic) => Some(topic),
-            ItemFound::Custom { .. } => None,
+            ItemFound::Custom { .. } | ItemFound::CustomMonster(_) => None,
         }
     }
 
@@ -562,7 +565,7 @@ fn part_help(part_type: usize) -> Option<(&'static str, bool)> {
 }
 
 /// A control's text made comparable with the app's labels.
-fn comparable(text: &str) -> String {
+pub(crate) fn comparable(text: &str) -> String {
     let text: String = text
         .chars()
         .filter(|&c| c != '&' && c != '_')
@@ -682,15 +685,15 @@ impl Installation {
         let mut files: HashMap<&str, Option<HelpFile>> = HashMap::new();
         let mut help = ItemHelp::default();
         for (kind, entry) in self.custom_records() {
-            let text = custom_text(&entry);
-            help.add(
-                kind,
-                &entry.title,
+            let found = if kind == ItemKind::Monster {
+                ItemFound::CustomMonster(entry.title.clone())
+            } else {
                 ItemFound::Custom {
                     title: entry.title.clone(),
-                    text,
-                },
-            );
+                    text: custom_text(&entry),
+                }
+            };
+            help.add(kind, &entry.title, found);
         }
         let mut add = |help: &mut ItemHelp,
                        kind,

@@ -14,28 +14,7 @@ use gtk::{gio, glib, pango};
 /// Opens a dialog with `sheet` over `parent`; `toast` reports exports.
 pub fn show(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) + 'static) {
     let sheet = Rc::new(sheet);
-    let content = gtk::Box::builder()
-        .orientation(gtk::Orientation::Vertical)
-        .spacing(18)
-        .margin_top(18)
-        .margin_bottom(24)
-        .margin_start(12)
-        .margin_end(12)
-        .build();
-    for section in &sheet.sections {
-        if let cr_store::sheet::SectionContent::Columns(columns) = &section.content {
-            content.append(&columns_widget(columns));
-        }
-    }
-    let clamp = adw::Clamp::builder()
-        .maximum_size(900)
-        .child(&content)
-        .build();
-    let scroll = gtk::ScrolledWindow::builder()
-        .hscrollbar_policy(gtk::PolicyType::Never)
-        .child(&clamp)
-        .vexpand(true)
-        .build();
+    let scroll = content(&sheet);
 
     let print = gtk::Button::builder()
         .icon_name("printer-symbolic")
@@ -124,6 +103,71 @@ pub fn show(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) +
     }
     dialog.insert_action_group("sheet", Some(&actions));
     dialog.present(Some(parent));
+}
+
+/// Shows `sheet` over `parent` as the original's print preview does, to
+/// print or save as PDF; `toast` reports the result.
+pub fn preview(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) + 'static) {
+    let sheet = Rc::new(sheet);
+    let print = crate::print::button();
+    let pdf = gtk::Button::builder()
+        .icon_name("document-save-symbolic")
+        .tooltip_text(tr("Save as PDF"))
+        .build();
+    let header = adw::HeaderBar::new();
+    header.pack_start(&print);
+    header.pack_start(&pdf);
+    let view = adw::ToolbarView::new();
+    view.add_top_bar(&header);
+    view.set_content(Some(&content(&sheet)));
+    let dialog = adw::Dialog::builder()
+        .title(&sheet.title)
+        .content_width(860)
+        .content_height(720)
+        .child(&view)
+        .build();
+    let toast: Rc<dyn Fn(&str)> = Rc::new(toast);
+    print.connect_clicked({
+        let (sheet, dialog, toast) = (sheet.clone(), dialog.clone(), toast.clone());
+        move |_| print_sheet(&dialog, &sheet, None, &*toast)
+    });
+    pdf.connect_clicked({
+        let (sheet, dialog, toast) = (sheet.clone(), dialog.clone(), toast.clone());
+        move |_| {
+            let (sheet, dialog2, toast) = (sheet.clone(), dialog.clone(), toast.clone());
+            let title = sheet.title.clone();
+            save_file(&dialog, &title, "pdf", tr("PDF documents"), move |path| {
+                print_sheet(&dialog2, &sheet, Some(path), &*toast)
+            });
+        }
+    });
+    dialog.present(Some(parent));
+}
+
+/// The sheet's sections, scrolling.
+fn content(sheet: &Sheet) -> gtk::ScrolledWindow {
+    let content = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(18)
+        .margin_top(18)
+        .margin_bottom(24)
+        .margin_start(12)
+        .margin_end(12)
+        .build();
+    for section in &sheet.sections {
+        if let cr_store::sheet::SectionContent::Columns(columns) = &section.content {
+            content.append(&columns_widget(columns));
+        }
+    }
+    let clamp = adw::Clamp::builder()
+        .maximum_size(900)
+        .child(&content)
+        .build();
+    gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .child(&clamp)
+        .vexpand(true)
+        .build()
 }
 
 /// Asks where to save, suggesting the file name the original uses
@@ -338,6 +382,8 @@ enum Printed {
     /// column widths of the table in points.
     Row(Vec<(String, usize, usize, bool, bool)>, Rc<Vec<f64>>),
     Text(String, f64),
+    /// A picture and its width and height in points.
+    Picture(gtk::gdk::Texture, f64, f64),
     PageBreak,
 }
 
@@ -472,7 +518,17 @@ fn print_items(sheet: &Sheet, context: &gtk::PrintContext, width: f64) -> Vec<(P
                         let h = measure(&text, Some(width)).1;
                         items.push((Printed::Text(text, 0.0), h + 2.0));
                     }
-                    Block::Image { .. } => {}
+                    Block::Image { file, .. } => {
+                        // At most 2.5 inches high, as wide as it fits.
+                        if let Some(texture) = file.as_deref().and_then(texture) {
+                            let (w, h) = (f64::from(texture.width()), f64::from(texture.height()));
+                            let scale = (180.0 / h).min(width / w).min(1.0);
+                            items.push((
+                                Printed::Picture(texture.upcast(), w * scale, h * scale),
+                                h * scale + 4.0,
+                            ));
+                        }
+                    }
                 }
             }
             items.push((Printed::Text(String::new(), 0.0), 8.0));
@@ -587,6 +643,9 @@ pub(crate) fn print_sheet(
                     }
                     Printed::Text(text, indent) => {
                         draw(text, *indent, y, Some(width - indent), false, false)
+                    }
+                    Printed::Picture(texture, w, h) => {
+                        crate::print::draw_texture(&cr, texture, 0.0, y, *w, *h)
                     }
                     Printed::PageBreak => {}
                 }

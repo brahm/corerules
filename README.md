@@ -152,7 +152,9 @@ Expansion converts a 2.0 package, and leaves the 2.0 folder untouched.
   program help, as the original's Help… buttons do; a right-click on a
   control shows its help, and on a race, class, item, spell, psionic power
   or monster its topic in the book's help (or, for a record of the user
-  database, its description); the Help menu has the
+  database, its description), and on a character, trap, encounter,
+  template or saved treasure its summary, as the original does; the help
+  window and the monster page can print; the Help menu has the
   Online Manual, the Tome of Help (every installed book's help) and About,
   with the original's version, copyright and credits. The installation's
   WinHelp files are read by the app's own help window

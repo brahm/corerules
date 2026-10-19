@@ -270,7 +270,7 @@ impl Installation {
 
     /// The records of `Database/<name>.dat` then `UserDbas/<name>U.dat`,
     /// keyed for the user database editors of section `id`.
-    fn udb_entries(
+    pub(crate) fn udb_entries(
         &self,
         name: &str,
         id: &str,
@@ -648,7 +648,7 @@ fn encounter_entry(e: &Encounter, rules: Option<&EncounterRules>) -> Entry {
     }
 }
 
-fn template_entries(rules: &EncounterRules) -> Vec<Entry> {
+pub(crate) fn template_entries(rules: &EncounterRules) -> Vec<Entry> {
     sorted(
         rules
             .templates()
@@ -1061,7 +1061,7 @@ fn psionic_entry(object: &Object) -> Option<Entry> {
     })
 }
 
-fn monster_entry(object: &Object) -> Option<Entry> {
+pub(crate) fn monster_entry(object: &Object) -> Option<Entry> {
     let Object::Monster(m) = object else {
         return None;
     };

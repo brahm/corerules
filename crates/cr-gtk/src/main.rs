@@ -14,6 +14,7 @@ mod npc;
 mod party;
 mod picture;
 mod prefs;
+mod print;
 mod sheet;
 mod skills;
 mod tables;
@@ -255,6 +256,27 @@ impl Window {
             }
         });
 
+        for (button, print) in [
+            (&this.browser.monster_view_button, false),
+            (&this.browser.monster_print_button, true),
+        ] {
+            button.connect_clicked({
+                let this = this.clone();
+                move |_| {
+                    let key = this.browser.current_key.borrow().clone();
+                    let Some((_, origin, name)) = cr_store::userdb::parse_key(&key) else {
+                        return;
+                    };
+                    let custom = origin == cr_store::userdb::Origin::Custom;
+                    if let Some(install) = this.install.borrow().as_ref() {
+                        let toasts = this.toasts.clone();
+                        let toast = move |m: &str| toasts.add_toast(adw::Toast::new(m));
+                        help::monster(&this.window, install, name, custom, print, toast);
+                    }
+                }
+            });
+        }
+
         let preferences = gio::ActionEntry::builder("preferences")
             .activate({
                 let this = this.clone();
@@ -361,7 +383,9 @@ impl Window {
                     };
                     let texts: Vec<&str> = lines.collect();
                     if let Some(install) = this.install.borrow().as_ref() {
-                        help::context_help(&this.window, install, screen, &texts);
+                        let toasts = this.toasts.clone();
+                        let toast = move |m: &str| toasts.add_toast(adw::Toast::new(m));
+                        help::context_help(&this.window, install, screen, &texts, toast);
                     }
                 }
             })
@@ -1102,6 +1126,9 @@ struct Browser {
     delete_button: gtk::Button,
     /// Creates an encounter from a template or a 2-20 table.
     generate_button: gtk::Button,
+    /// A monster's View and Print, as on the original's Monsters screen.
+    monster_view_button: gtk::Button,
+    monster_print_button: gtk::Button,
     /// The key of the entry on the detail page.
     current_key: Rc<RefCell<String>>,
     /// The Characters section's party filter and what each choice shows:
@@ -1123,6 +1150,8 @@ struct DetailPane {
     npc_button: gtk::Button,
     delete_button: gtk::Button,
     generate_button: gtk::Button,
+    monster_view_button: gtk::Button,
+    monster_print_button: gtk::Button,
     current_key: Rc<RefCell<String>>,
     /// Copy, New and Delete for standard and custom records.
     udb_actions: userdb::DetailActions,
@@ -1160,6 +1189,9 @@ impl DetailPane {
             } else {
                 tr("Create Encounter")
             }));
+        let monster = cr_store::userdb::parse_key(key).is_some_and(|(s, ..)| s == "monsters");
+        self.monster_view_button.set_visible(monster);
+        self.monster_print_button.set_visible(monster);
         self.current_key.borrow_mut().clone_from(&entry.key);
     }
 
@@ -1172,6 +1204,8 @@ impl DetailPane {
         self.npc_button.set_visible(false);
         self.delete_button.set_visible(false);
         self.generate_button.set_visible(false);
+        self.monster_view_button.set_visible(false);
+        self.monster_print_button.set_visible(false);
         self.udb_actions.update("");
         self.current_key.borrow_mut().clear();
     }
@@ -1226,8 +1260,20 @@ impl Browser {
             .tooltip_text(tr("Create Encounter"))
             .visible(false)
             .build();
+        let monster_view_button = gtk::Button::builder()
+            .icon_name("help-browser-symbolic")
+            .tooltip_text(tr("View"))
+            .visible(false)
+            .build();
+        let monster_print_button = gtk::Button::builder()
+            .icon_name("printer-symbolic")
+            .tooltip_text(tr("Print"))
+            .visible(false)
+            .build();
         let detail_header = adw::HeaderBar::new();
         detail_header.pack_start(&delete_button);
+        detail_header.pack_end(&monster_print_button);
+        detail_header.pack_end(&monster_view_button);
         detail_header.pack_end(&generate_button);
         detail_header.pack_end(&edit_button);
         detail_header.pack_end(&sheet_button);
@@ -1248,6 +1294,8 @@ impl Browser {
             npc_button: npc_button.clone(),
             delete_button: delete_button.clone(),
             generate_button: generate_button.clone(),
+            monster_view_button: monster_view_button.clone(),
+            monster_print_button: monster_print_button.clone(),
             current_key: current_key.clone(),
             udb_actions,
             read_only: Rc::default(),
@@ -1513,6 +1561,8 @@ impl Browser {
             npc_button,
             delete_button,
             generate_button,
+            monster_view_button,
+            monster_print_button,
             current_key,
             party_filter,
             party_choices,

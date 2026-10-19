@@ -328,6 +328,33 @@ language or in English, shows its popup; otherwise the first that names a record
 its description, for a user record, or opens its help. A link in a popup opens the help
 window.
 
+### Summaries
+
+On the screens whose records have no help the original summarizes the record instead
+(0x4B3B22); `Installation::summary` gives the same:
+
+| screen | shown | content |
+|---|---|---|
+| Character Management | text box `Summary of NPC` or `Summary of Player Character` (0x4B6572) | `Name: ` and the name, then the lines of its `Chars/` index entry |
+| Traps | text box `Trap` (0x4B68DC) | `Name`, `Damage`, `Detection Modifier`, `Number of Characters Trapped`, `Saving Throw`, `Special Effects`, `Location`, one per line, from `Traps.dat` and `TrapsU.dat` |
+| Encounters | print preview (0x64ADF4) | the encounter's page, as its View/Print prints it, with a box for each trap |
+| Encounter templates | print preview | the template's page |
+| Saved treasure | print preview | the bundle's page |
+
+A monster of the user database shows its print preview (0x69DB64):
+`Installation::custom_monster_sheet` gives its page, with its name, its type's picture,
+its statistics and its texts. The Monsters screen's Print does the same for a custom
+monster; for a shipped one it opens the monster's topic of `Monsters.hlp`. The app's
+monster page has View (the topic, or the page) and Print buttons.
+
+### Printing
+
+The help window prints the topic it shows (WinHelp's Print Topic), with its fonts,
+colours, indents, tabs and pictures, and the Custom Help box prints its text in a
+plain font, as the original's Print... does (Arial 11). A print preview prints its page
+or saves it as a PDF; a printed page shows its pictures, so a character sheet now prints
+the character's portrait.
+
 ## The About box
 
 The original's About window is dialog 100: five static lines (the game's name, the Expansion's

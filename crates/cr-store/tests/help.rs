@@ -245,21 +245,18 @@ fn the_shipped_records_open_their_books_help() {
     assert_eq!((topic.file, topic.number), ("Charactr.hlp", 100));
 }
 
-#[test]
-fn a_user_record_shows_its_own_description() {
-    use cr_store::help::{ItemFound, ItemKind, topic};
-    use cr_store::userdb::powers::Powers;
-    use cr_store::userdb::{Sources, UserDb, UserKind, Value};
-    let Some(original) = install() else { return };
-    if original.path("UserDbas/AllowedU.dat").is_none() {
-        return;
-    }
-    // A copy of the user database next to links to the rest.
-    let root = std::env::temp_dir().join(format!("cr-help-custom-{}", std::process::id()));
+/// A copy of the user database of an Expansion installation next to links
+/// to the rest, for test `test`: its folder and the installation.
+fn user_copy(test: &str) -> Option<(std::path::PathBuf, Installation)> {
+    let original = install()?;
+    original.path("UserDbas/AllowedU.dat")?;
+    let root = std::env::temp_dir().join(format!("cr-help-{test}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     std::fs::create_dir_all(root.join("UserDbas")).unwrap();
-    for name in ["Database", "Help"] {
-        std::os::unix::fs::symlink(original.path(name).unwrap(), root.join(name)).unwrap();
+    for name in ["Database", "Help", "Bitmaps"] {
+        if let Some(path) = original.path(name) {
+            std::os::unix::fs::symlink(path, root.join(name)).unwrap();
+        }
     }
     for entry in std::fs::read_dir(original.path("UserDbas").unwrap()).unwrap() {
         let entry = entry.unwrap();
@@ -268,6 +265,96 @@ fn a_user_record_shows_its_own_description() {
         }
     }
     let install = Installation::open(&root).unwrap();
+    Some((root, install))
+}
+
+#[test]
+fn a_user_monster_shows_as_the_original_prints_it() {
+    use cr_store::help::{ItemFound, ItemKind, topic};
+    use cr_store::userdb::monsters::Monsters;
+    use cr_store::userdb::{Sources, UserDb, UserKind, Value};
+    let Some((root, install)) = user_copy("monster") else {
+        return;
+    };
+    // A monster of the first shipped monster's type.
+    let mut db = UserDb::<Monsters>::load(&install).unwrap();
+    let kind = db.list(cr_store::userdb::Filter::All)[0]
+        .record
+        .monster_type
+        .clone();
+    let mut beast = db.new_record(0, &kind);
+    let fields = Monsters::fields(db.flavor);
+    let name = fields.iter().find(|f| f.label == "Name").unwrap();
+    name.set(
+        &mut beast,
+        &Value::Text("Udb beast".into()),
+        &Sources::default(),
+    );
+    db.add(beast).unwrap();
+    db.save(&install).unwrap();
+    let found = install
+        .item_help()
+        .find("Udb beast", &ItemKind::order(topic::MONSTERS));
+    let sheet = install.custom_monster_sheet("Udb beast");
+    let _ = std::fs::remove_dir_all(&root);
+    assert_eq!(found, Some(ItemFound::CustomMonster("Udb beast".into())));
+    let sheet = sheet.unwrap();
+    assert_eq!(sheet.title, "Udb beast");
+    assert!(sheet.sections.len() > 1);
+}
+
+#[test]
+fn the_summarized_screens_show_their_records_summaries() {
+    use cr_store::help::topic;
+    use cr_store::summary::Summary;
+    let Some(install) = install() else { return };
+    let sections = install.catalog();
+    let entries = |id: &str| &sections.iter().find(|s| s.id == id).unwrap().entries;
+    // A character's name and its index entry's lines; a trap's seven
+    // rows.
+    for (id, screen) in [
+        ("characters", topic::CHARACTER_MANAGEMENT),
+        ("traps", topic::TRAPS),
+    ] {
+        for entry in entries(id) {
+            let summary = install.summary(screen, &entry.title);
+            let Some(Summary::Text { title, text }) = summary else {
+                panic!("{id} {}: {summary:?}", entry.title);
+            };
+            assert!(!title.is_empty());
+            assert!(text.lines().next().unwrap().contains(&entry.title));
+            if id == "traps" {
+                assert_eq!(text.lines().count(), 7, "{text}");
+            }
+        }
+    }
+    // A page headed with the record's name.
+    for (id, screen, most) in [
+        ("encounters", topic::ENCOUNTERS, usize::MAX),
+        ("templates", topic::ENCOUNTER_TEMPLATES, 20),
+        ("treasure", topic::TREASURE_BUNDLES, usize::MAX),
+    ] {
+        for entry in entries(id).iter().take(most) {
+            let summary = install.summary(screen, &entry.title);
+            let Some(Summary::Page(sheet)) = summary else {
+                panic!("{id} {}: {summary:?}", entry.title);
+            };
+            assert_eq!(sheet.title, entry.title);
+        }
+    }
+    // Other screens' records have help, not a summary.
+    let race = &entries("races")[0].title;
+    assert_eq!(install.summary(topic::RACES, race), None);
+}
+
+#[test]
+fn a_user_record_shows_its_own_description() {
+    use cr_store::help::{ItemFound, ItemKind, topic};
+    use cr_store::userdb::powers::Powers;
+    use cr_store::userdb::{Sources, UserDb, UserKind, Value};
+    let Some((root, install)) = user_copy("custom") else {
+        return;
+    };
     let mut db = UserDb::<Powers>::load(&install).unwrap();
     let fields = Powers::fields(db.flavor);
     let mut power = db.new_record(0, "");

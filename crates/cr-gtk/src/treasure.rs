@@ -8,7 +8,7 @@ use std::rc::Rc;
 use adw::prelude::*;
 use cr_i18n::tr;
 use cr_store::help::topic;
-use cr_store::sheet::{self as crsheet, Block, Cell, ListItem, Sheet, SheetBox, Table};
+use cr_store::sheet::Sheet;
 use cr_store::treasure::{Bundle, Coin, Counts, LETTERS, Rand, TreasureRules};
 use gtk::{gio, glib};
 
@@ -442,61 +442,11 @@ impl State {
 
     /// The bundle as a printable page: the items, nested, then the summary.
     fn sheet(&self) -> Sheet {
-        fn list(bundle: &Bundle) -> Vec<ListItem> {
-            bundle
-                .items
-                .iter()
-                .map(|item| {
-                    let mut children: Vec<ListItem> = item
-                        .spells()
-                        .iter()
-                        .map(|s| ListItem {
-                            text: format!("{} ({})", s.name, s.pages),
-                            children: None,
-                        })
-                        .collect();
-                    if let Some(contents) = &item.contents {
-                        children.extend(list(contents));
-                    }
-                    ListItem {
-                        text: item.label(),
-                        children: (!children.is_empty()).then_some(children),
-                    }
-                })
-                .collect()
-        }
-        let bundle = self.bundle.borrow();
-        let rows = self
-            .rules
-            .summary(&bundle)
-            .lines()
-            .iter()
-            .map(|line| {
-                let (title, value) = line.rsplit_once(": ").unwrap_or((line, ""));
-                vec![Cell::new(title), Cell::new(value).right()]
-            })
-            .collect();
-        Sheet {
-            title: self
-                .saved
-                .borrow()
-                .clone()
-                .unwrap_or_else(|| "Treasure".into()),
-            flavor: self.rules.flavor(),
-            sections: vec![crsheet::Section {
-                id: 0,
-                content: crsheet::SectionContent::Columns(vec![
-                    vec![SheetBox {
-                        title: "Treasure".into(),
-                        body: vec![Block::List(list(&bundle))],
-                    }],
-                    vec![SheetBox {
-                        title: "Summary".into(),
-                        body: vec![Block::Table(Table { columns: 2, rows })],
-                    }],
-                ]),
-            }],
-        }
+        let title = self.saved.borrow().clone();
+        self.rules.sheet(
+            title.as_deref().unwrap_or("Treasure"),
+            &self.bundle.borrow(),
+        )
     }
 }
 
