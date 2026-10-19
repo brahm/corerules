@@ -1369,6 +1369,21 @@ impl CreationRules {
         kits
     }
 
+    /// Every kit, "None" first, as Update Character offers them whatever
+    /// the race and classes.
+    pub fn all_kits(&self) -> Vec<String> {
+        let mut kits: Vec<String> = self
+            .kits
+            .iter()
+            .filter(|k| k.name != "None")
+            .map(|k| k.name.clone())
+            .collect();
+        kits.sort_by_cached_key(|k| crate::collate::sort_key(k));
+        kits.dedup();
+        kits.insert(0, "None".into());
+        kits
+    }
+
     /// 2d6 on the kit's social class table (the "None" kit's for no kit).
     pub fn roll_social_class(&self, kit: &str, dice: &mut Dice) -> String {
         let table = self

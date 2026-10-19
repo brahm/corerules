@@ -517,6 +517,112 @@ impl AdvanceRules {
         Ok(total as i32)
     }
 
+    /// The Hit Points arrows of Update Character's Name page (0x5bf569):
+    /// changes the stored rolls so the hit points move by `delta`.
+    ///
+    /// Up, one roll takes it all, with no maximum: a dual-classed
+    /// character's active class at its level, otherwise the first class
+    /// with the highest level (at level 1 the rolls are averaged, so the
+    /// roll takes `delta` times the number of classes). Down, the rolls
+    /// are emptied from the highest level, first class on ties, each down
+    /// to what keeps it at 1 or more after a Constitution penalty, until
+    /// `delta` is used or no roll can give more. Where the original would
+    /// loop for ever (a multi-class level 1 roll that can give less than
+    /// one point per class), the roll is skipped.
+    pub fn adjust_hit_points(&self, character: &mut Character, delta: i32) -> Result<()> {
+        let n = character.data.classes.names.len();
+        if delta == 0 || n == 0 {
+            return Ok(());
+        }
+        let actual = (0..n)
+            .map(|g| self.level_of(character, g))
+            .collect::<Result<Vec<_>>>()?;
+        let dual = self.dual_classed(character);
+        // 0x5bf506: the first class with the highest level.
+        let highest = |levels: &[u32]| {
+            let (mut slot, mut max) = (0, 0);
+            for (g, &l) in levels.iter().enumerate() {
+                if l > max {
+                    (slot, max) = (g, l);
+                }
+            }
+            (slot, max as usize)
+        };
+        let n32 = n as i32;
+        let mut delta = delta;
+        if delta > 0 {
+            let (slot, level) = if dual {
+                let mut s = n - 1;
+                while s > 0 && actual[s - 1] >= actual[s] {
+                    s -= 1;
+                }
+                (s, actual[s] as usize)
+            } else {
+                let (s, l) = highest(&actual);
+                if l == 1 {
+                    delta *= n32;
+                }
+                (s, l)
+            };
+            if level > 0 {
+                let roll = &mut character.data.unknown_0xc60[slot][level - 1];
+                *roll = (*roll as i32 + delta) as u32;
+            }
+            return Ok(());
+        }
+        // Only a Constitution penalty counts, shared among the classes.
+        let mut con = f64::from(self.constitution_adjustment(character, 0)?.min(0));
+        if !dual {
+            con /= n as f64;
+        }
+        let mut levels = actual.clone();
+        while delta != 0 {
+            let (s, l) = highest(&levels);
+            if dual && actual[..s].iter().any(|&a| a as usize >= l) {
+                // A level an earlier class already has: its roll is not used.
+                levels[s] -= 1;
+                continue;
+            }
+            if l == 0 {
+                break;
+            }
+            let roll = &mut character.data.unknown_0xc60[s][l - 1];
+            let r = *roll as i32;
+            let available = (f64::from(r) + con - 1.0) as i32;
+            if l == 1 {
+                let wanted = if dual { delta } else { delta * n32 };
+                if available < 1 {
+                    levels[s] -= 1;
+                } else if available >= -wanted {
+                    *roll = (r + wanted) as u32;
+                    delta = 0;
+                } else {
+                    let (taken, used) = if dual {
+                        (available, available)
+                    } else {
+                        (available / n32, available / n32 * n32)
+                    };
+                    if taken == 0 {
+                        levels[s] -= 1;
+                        continue;
+                    }
+                    delta += taken;
+                    *roll = (r - used) as u32;
+                }
+            } else if available <= 0 {
+                levels[s] -= 1;
+            } else if available >= -delta {
+                *roll = (r + delta) as u32;
+                delta = 0;
+            } else {
+                levels[s] -= 1;
+                delta += available;
+                *roll = (r - available) as u32;
+            }
+        }
+        Ok(())
+    }
+
     /// The class table's spell slots of class `g` at its level, as the
     /// NPC experience value reads them (Expansion 0x43b133, 2.0 0x41ff10):
     /// the alternative table when one of the class's abilities selects it
