@@ -71,6 +71,8 @@ the original programs wrote.
 - **Parties**: Manage Parties… puts characters in a party, takes them out
   or deletes every member; a character can be deleted, with Undo; the list
   filters by party
+- **Convert to NPC** and **Convert to Character** move a character to the
+  DM Toolkit's NPCs and back, writing the same files as the Expansion
 
 <p>
   <img src="docs/screenshots/new-character.png" width="49%" alt="The New Character wizard rolling ability scores">

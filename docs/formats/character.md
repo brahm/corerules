@@ -113,6 +113,7 @@ What each operation does, in the original and in the app:
 | save a generated NPC | NPC generator; `npc.rs` `save_npc` | new file, party written to `unknown_0x1e68[3]` | appended; NPC mark 1, `flag_0x28` 1, party in +0x2c; 2.0 layout 1 |
 | change in place | View, Print and Export re-save the sheet options; `edit.rs` | same file | the original leaves the entry alone; the app sets `name`, the `Player's Name:` line, the `Class:` line when a class was added and the `Level:` line when levels changed, and keeps everything else |
 | Convert to Character | 0x44c865; `npc.rs` `convert_to_character` | `unknown_0x1da4` = 0, same file | `unknown_0x24` = 0 |
+| Convert to NPC | Character Generator button, after "This will move the selected Player Character to the NPC List in the DM Toolkit"; `npc.rs` `convert_to_npc` | `unknown_0x1da4` = 1, saved under a new name, old file deleted (`tests/fixtures/characters/to-npc`) | stays in place with the new `file`, `unknown_0x24` = 1 and `flag_0x28` = 1; the details lines are left alone |
 | put in or take out of a party | 0x5ab684, 0x5abb05; `party.rs` `set_party` | saved under a new name in the Expansion layout (`Character::upgraded`), party in `unknown_0x1e68[3]`; old file deleted | old entry removed, new entry appended with the Class and Level lines and the party in +0x2c |
 | import from a package | 0x49d529 (2.0 0x4def60); `export.rs` `import` | one new file per character | appended per character: the Expansion without Class/Level lines; 2.0 like a new character's with the levels computed, in layout 0 or 1 by the character's NPC mark |
 | Update Character | 0x44c23f | saved under a new name, old file deleted | old entry removed, a fresh one appended |
@@ -204,7 +205,7 @@ version.
 | 28 | `unknown_0x134` | u32[4] | always | +0x134 to +0x140 | Skills & Powers shield proficiencies, 1 when held: buckler, small, medium, body shield |
 | 29 | `unknown_0x144` | CString | always | +0x144 | unknown; empty in every fixture |
 | 30 | `unknown_0x148` | u32[6] | always | +0x148 to +0x15c | unknown; 0 in every fixture |
-| 31 | `unknown_0x1da4` | u32 | always | +0x1da4 | NPC mark: 1 for an NPC; copied into the entry's +0x24, cleared by Convert to Character |
+| 31 | `unknown_0x1da4` | u32 | always | +0x1da4 | NPC mark: 1 for an NPC; copied into the entry's +0x24, set by Convert to NPC and cleared by Convert to Character |
 | 32 | `unknown_0x186c` | u32 | always | +0x186c | read by the wild-talent test (0x42e832: non-zero, or a trait with part +0x744, makes the character a wild talent) |
 | 33 | `unknown_0x1874` | u32 | always | +0x1874 | unknown |
 | 34 | `unknown_0x1870` | u32 | always | +0x1870 | unknown |

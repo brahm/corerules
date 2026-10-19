@@ -223,6 +223,14 @@ impl Window {
             }
         });
 
+        this.browser.npc_button.connect_clicked({
+            let this = this.clone();
+            move |_| {
+                let key = this.browser.current_key.borrow().clone();
+                this.convert_to_npc(&key);
+            }
+        });
+
         this.browser.generate_button.connect_clicked({
             let this = this.clone();
             move |_| {
@@ -632,6 +640,37 @@ impl Window {
         }
     }
 
+    /// Convert to NPC: after the original's question, the selected
+    /// character moves to the DM Toolkit's NPCs.
+    fn convert_to_npc(&self, file: &str) {
+        let alert = adw::AlertDialog::builder()
+            .heading(tr("Convert to NPC?"))
+            .body(tr(
+                "This will move the selected Player Character to the NPC List in the DM Toolkit.",
+            ))
+            .default_response("cancel")
+            .close_response("cancel")
+            .build();
+        alert.add_responses(&[("cancel", tr("_Cancel")), ("convert", tr("_Convert"))]);
+        alert.set_response_appearance("convert", adw::ResponseAppearance::Suggested);
+        let this = self.clone();
+        let file = file.to_owned();
+        alert.connect_response(Some("convert"), move |_, _| {
+            let result = match &*this.install.borrow() {
+                Some(install) => install.convert_to_npc(&file),
+                None => return,
+            };
+            match result {
+                Ok(new) => {
+                    this.reload("characters", Some(new));
+                    this.toast(tr("Converted to an NPC"));
+                }
+                Err(e) => this.toast(&e.to_string()),
+            }
+        });
+        alert.present(Some(&self.window));
+    }
+
     fn toast(&self, message: &str) {
         self.toasts.add_toast(adw::Toast::new(message));
     }
@@ -961,6 +1000,8 @@ struct Browser {
     sheet_button: gtk::Button,
     /// Clears the NPC mark of a generated character.
     convert_button: gtk::Button,
+    /// Sets it on a player character.
+    npc_button: gtk::Button,
     /// Deletes a character.
     delete_button: gtk::Button,
     /// Creates an encounter from a template or a 2-20 table.
@@ -983,6 +1024,7 @@ struct DetailPane {
     edit_button: gtk::Button,
     sheet_button: gtk::Button,
     convert_button: gtk::Button,
+    npc_button: gtk::Button,
     delete_button: gtk::Button,
     generate_button: gtk::Button,
     current_key: Rc<RefCell<String>>,
@@ -1011,6 +1053,8 @@ impl DetailPane {
         self.sheet_button.set_visible(character);
         self.convert_button
             .set_visible(writable && character && entry.npc);
+        self.npc_button
+            .set_visible(writable && character && !entry.npc);
         self.delete_button.set_visible(writable && character);
         self.generate_button
             .set_visible(writable && (key.starts_with(TEMPLATE_KEY) || key.starts_with(TABLE_KEY)));
@@ -1029,6 +1073,7 @@ impl DetailPane {
         self.edit_button.set_visible(false);
         self.sheet_button.set_visible(false);
         self.convert_button.set_visible(false);
+        self.npc_button.set_visible(false);
         self.delete_button.set_visible(false);
         self.generate_button.set_visible(false);
         self.udb_actions.update("");
@@ -1070,6 +1115,11 @@ impl Browser {
             .tooltip_text(tr("Convert to Character"))
             .visible(false)
             .build();
+        let npc_button = gtk::Button::builder()
+            .icon_name("system-switch-user-symbolic")
+            .tooltip_text(tr("Convert to NPC"))
+            .visible(false)
+            .build();
         let delete_button = gtk::Button::builder()
             .icon_name("user-trash-symbolic")
             .tooltip_text(tr("Delete Character"))
@@ -1086,6 +1136,7 @@ impl Browser {
         detail_header.pack_end(&edit_button);
         detail_header.pack_end(&sheet_button);
         detail_header.pack_end(&convert_button);
+        detail_header.pack_end(&npc_button);
         let udb_actions = userdb::DetailActions::new();
         udb_actions.pack(&detail_header);
         detail_view.add_top_bar(&detail_header);
@@ -1098,6 +1149,7 @@ impl Browser {
             edit_button: edit_button.clone(),
             sheet_button: sheet_button.clone(),
             convert_button: convert_button.clone(),
+            npc_button: npc_button.clone(),
             delete_button: delete_button.clone(),
             generate_button: generate_button.clone(),
             current_key: current_key.clone(),
@@ -1362,6 +1414,7 @@ impl Browser {
             edit_button,
             sheet_button,
             convert_button,
+            npc_button,
             delete_button,
             generate_button,
             current_key,

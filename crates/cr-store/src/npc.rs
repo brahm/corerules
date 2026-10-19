@@ -360,6 +360,47 @@ impl Installation {
 }
 
 impl Installation {
+    /// Convert to NPC (the Character Generator's button, which asks first:
+    /// "This will move the selected Player Character to the NPC List in the
+    /// DM Toolkit"): sets the NPC mark of the character in `Chars/<file>`
+    /// (data +0x1da4) and of its list entry (+0x24, and +0x28 as for an
+    /// NPC). Like the original, the character is saved under a new name and
+    /// the old file deleted; the entry keeps its place and its details.
+    /// Returns the new file name.
+    pub fn convert_to_npc(&self, file: &str) -> Result<String> {
+        let mut character = self.character(file)?;
+        character.data.unknown_0x1da4 = 1;
+        let format = |source| Error::Format {
+            path: file.into(),
+            source,
+        };
+        let bytes = character.to_bytes().map_err(format)?;
+        if self.path("Chars/index.chr").is_none() {
+            return Err(Error::Invalid(tr("The character list is missing").into()));
+        }
+        let chars = self.chars_folder()?;
+        let mut index = self.characters()?;
+        let new = new_file_name(&chars, &index);
+        let entry = index
+            .entries
+            .iter_mut()
+            .find(|e| e.file.eq_ignore_ascii_case(file))
+            .ok_or_else(|| Error::Invalid(tr!("{file} is not in the character list", file)))?;
+        entry.file.clone_from(&new);
+        entry.unknown_0x24 = 1;
+        entry.flag_0x28 = 1;
+        let index_bytes = index.to_bytes().map_err(format)?;
+        Character::parse(&bytes).map_err(format)?;
+        CharacterIndex::parse(&index_bytes).map_err(format)?;
+        let old = self
+            .path(&format!("Chars/{file}"))
+            .ok_or_else(|| Error::Invalid(tr!("{file} not found", file)))?;
+        write_new(&chars.join(&new), &bytes)?;
+        self.write_index(&index_bytes)?;
+        fs::remove_file(&old).map_err(|source| Error::Io { path: old, source })?;
+        Ok(new)
+    }
+
     /// Convert to Character: clears the NPC mark of the character in
     /// `Chars/<file>` (data +0x1da4) and of its list entry (+0x24).
     pub fn convert_to_character(&self, file: &str) -> Result<()> {
