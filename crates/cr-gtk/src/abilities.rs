@@ -72,15 +72,6 @@ pub(crate) fn cost_text(points: i64) -> String {
     }
 }
 
-fn row(title: &str, points: Option<i64>) -> RowSpec<()> {
-    RowSpec {
-        value: (),
-        title: title.to_owned(),
-        subtitle: points.map(cost_text).unwrap_or_default(),
-        number: None,
-    }
-}
-
 /// A list of names whose picker offers `offer()` minus the names listed.
 pub(crate) fn names_list(
     title: &str,
@@ -88,8 +79,28 @@ pub(crate) fn names_list(
     cost: impl Fn(&str) -> Option<i64> + 'static,
     offer: impl Fn(&RowList<()>) -> Vec<String> + 'static,
 ) -> RowList<()> {
-    let cost = Rc::new(cost);
-    let rows = names.iter().map(|n| row(n, cost(n))).collect();
+    described_list(
+        title,
+        names,
+        move |name| cost(name).map(cost_text).unwrap_or_default(),
+        offer,
+    )
+}
+
+/// [`names_list`] with `subtitle` under each name.
+pub(crate) fn described_list(
+    title: &str,
+    names: &[String],
+    subtitle: impl Fn(&str) -> String + 'static,
+    offer: impl Fn(&RowList<()>) -> Vec<String> + 'static,
+) -> RowList<()> {
+    let row = Rc::new(move |name: &str| RowSpec {
+        value: (),
+        title: name.to_owned(),
+        subtitle: subtitle(name),
+        number: None,
+    });
+    let rows = names.iter().map(|n| row(n)).collect();
     // The picker needs the list it fills, which exists only after `new`.
     let this: Rc<RefCell<Option<RowList<()>>>> = Rc::default();
     let list = RowList::new(
@@ -109,7 +120,7 @@ pub(crate) fn names_list(
                     .collect()
             }
         },
-        move |name| Some(row(&name, cost(&name))),
+        move |name| Some(row(&name)),
     );
     *this.borrow_mut() = Some(list.clone());
     list

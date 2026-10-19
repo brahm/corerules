@@ -177,6 +177,13 @@ impl Installation {
             });
             rules.apply(&mut character, &combat)?;
         }
+        if let Some(skills) = lists.and_then(|l| l.skills.as_ref()) {
+            self.skill_rules()?.apply(
+                &mut character,
+                skills,
+                &mut crate::create::Dice::default(),
+            )?;
+        }
         if let Some(lists) = lists {
             lists.apply(&mut character, &self.part_table()?)?;
             if !lists.new_classes.is_empty() {

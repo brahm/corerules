@@ -53,7 +53,11 @@ const USAGE: &str = "usage:
                             Arts), shield+= (Buckler, Small shield, Medium
                             shield, Body shield), armor+=, style+=
                             (fighting styles), trait+=, disadvantage+=,
-                            each with -=
+                            each with -=; rogue=SKILL:POINTS (put in at
+                            the current level), discipline+=, primary=,
+                            primary2= (psychic adept), science+=,
+                            devotion+= (a non-psionicist's wild talents),
+                            attack+=, defense+=, each with -=
   cr sheet INSTALL_DIR FILE [--html|--txt|--md]
                             print the character sheet of Chars/FILE (or of
                             the character file at path FILE) as the export
@@ -752,8 +756,41 @@ fn cmd_edit(install: &Installation, args: &[String]) -> cr_store::Result<()> {
         }
         Ok(())
     };
+    // Rogue skill points, psionic powers, wild talents, attack and
+    // defense modes.
+    let skill_rules = std::cell::OnceCell::new();
+    let skills = |lists: &mut CharacterLists| -> cr_store::Result<&cr_store::skills::SkillRules> {
+        let rules = match skill_rules.get() {
+            Some(r) => r,
+            None => {
+                let _ = skill_rules.set(install.skill_rules()?);
+                skill_rules.get().unwrap()
+            }
+        };
+        if lists.skills.is_none() {
+            lists.skills = Some(rules.skills_of(&character));
+        }
+        Ok(rules)
+    };
     for change in changes {
         if let Some((list, value, add)) = list_change(change) {
+            if ["discipline", "science", "devotion", "attack", "defense"].contains(&list) {
+                skills(&mut lists)?;
+                let new = lists.skills.as_mut().unwrap();
+                let names = match list {
+                    "discipline" => &mut new.disciplines,
+                    "science" => &mut new.sciences,
+                    "devotion" => &mut new.devotions,
+                    "attack" => &mut new.attacks,
+                    _ => &mut new.defenses,
+                };
+                if add {
+                    names.push(value.into());
+                } else {
+                    names.retain(|n| n != value);
+                }
+                continue;
+            }
             const FLAGS: [(&str, &[&str]); 2] = [
                 ("unarmed", &cr_store::create::UNARMED),
                 ("shield", &cr_store::create::SHIELDS),
@@ -966,6 +1003,28 @@ fn cmd_edit(install: &Installation, args: &[String]) -> cr_store::Result<()> {
                 _ => &mut new.mastery,
             };
             *weapon = (!value.is_empty() && value != "none").then(|| value.into());
+            continue;
+        }
+        if field == "rogue" {
+            let rules = skills(&mut lists)?;
+            let (skill, points) = value
+                .rsplit_once(':')
+                .and_then(|(s, p)| Some((s, p.parse().ok()?)))
+                .ok_or_else(|| invalid(format!("rogue is SKILL:POINTS, not {value}")))?;
+            let skills = rules.rogue_skills(&character);
+            let i = skills
+                .iter()
+                .position(|s| s.label.trim_end_matches('*').eq_ignore_ascii_case(skill))
+                .ok_or_else(|| {
+                    let names: Vec<_> = skills.iter().map(|s| s.label.as_str()).collect();
+                    invalid(format!("rogue skills: {}", names.join(", ")))
+                })?;
+            lists.skills.as_mut().unwrap().rogue[i] = points;
+            continue;
+        }
+        if field == "primary" || field == "primary2" {
+            skills(&mut lists)?;
+            lists.skills.as_mut().unwrap().primary[usize::from(field == "primary2")] = value.into();
             continue;
         }
         if field == "subrace" {

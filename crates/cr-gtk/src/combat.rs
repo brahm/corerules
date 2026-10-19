@@ -15,15 +15,20 @@ use cr_store::create::{SHIELDS, UNARMED};
 use crate::abilities::{cost_text, names_list};
 use crate::lists::RowList;
 
-/// A combo of "None" and some weapons.
+/// A combo of "None" and some names.
 #[derive(Clone)]
-struct WeaponCombo {
-    row: adw::ComboRow,
+pub(crate) struct WeaponCombo {
+    pub(crate) row: adw::ComboRow,
     options: Rc<RefCell<Vec<String>>>,
 }
 
 impl WeaponCombo {
-    fn new(title: &str, subtitle: &str, options: Vec<String>, selected: Option<&String>) -> Self {
+    pub(crate) fn new(
+        title: &str,
+        subtitle: &str,
+        options: Vec<String>,
+        selected: Option<&String>,
+    ) -> Self {
         let row = adw::ComboRow::builder()
             .title(title)
             .subtitle(subtitle)
@@ -48,14 +53,14 @@ impl WeaponCombo {
     }
 
     /// Offers `options`, keeping the weapon chosen when it is among them.
-    fn refill(&self, options: Vec<String>) {
+    pub(crate) fn refill(&self, options: Vec<String>) {
         if *self.options.borrow() != options {
             let selected = self.value();
             self.fill(options, selected.as_ref());
         }
     }
 
-    fn value(&self) -> Option<String> {
+    pub(crate) fn value(&self) -> Option<String> {
         let i = self.row.selected() as usize;
         (i > 0)
             .then(|| self.options.borrow().get(i - 1).cloned())

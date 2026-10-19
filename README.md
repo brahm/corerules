@@ -65,7 +65,9 @@ the original programs wrote.
   racial and class abilities, schools and spheres, weapon proficiencies,
   weapon of choice, expertise, specializations, mastery, unarmed combat,
   shields, armor, fighting styles, traits and disadvantages (charging and
-  refunding character points as Update Character does), nonweapon
+  refunding character points as Update Character does), rogue skill points
+  at the current level, psionic disciplines and powers, wild talents and
+  psionic attack and defense modes (with Update Character's limits), nonweapon
   proficiencies, languages, spells known, spellbooks and memorized spells, the nine
   equipment groups with quantities, and Spending Money
 - **Experience and levels** per class, all classes or split, with the prime

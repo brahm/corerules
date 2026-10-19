@@ -191,12 +191,12 @@ version.
 | 14 | `strength` | u32[3] | always | +0x172c, +0x1734, +0x1738 | Strength, Stamina, Muscle. The score includes the racial adjustment; with the Core Rules all three are equal |
 | 15 | `exceptional_strength` | u32 | always | +0x1730 | 1 to 100 for 18/01 to 18/00, 0 for none |
 | 16 | `abilities` | (u32[3])[5] | always | +0x173c to +0x1774 | Dexterity (Aim, Balance), Constitution (Health, Fitness), Intelligence (Reason, Knowledge), Wisdom (Intuition, Willpower), Charisma (Leadership, Appearance): score and two subabilities each, like `strength`. Scores go from 1 to 25; a generated NPC's subability can be below 0 and is stored as its u32 bit pattern |
-| 17 | `unknown_0x1980` | CString[2] | always | +0x1980, +0x1984 | psionic primary discipline(s), marked on the sheet |
+| 17 | `unknown_0x1980` | CString[2] | always | +0x1980, +0x1984 | psionic primary discipline(s), marked on the sheet; `[1]` only for a psychic adept (a class ability with part +0x785). Update Character's Psionics dialog writes both on Close |
 | 18 | `unknown_0x162c` | u32 | always | +0x162c | unknown; 0 in every fixture |
 | 19 | `unknown_0x1778` | u32[6] | always | +0x1778 to +0x178c | `[0]` unspent Skills & Powers character points (the Core Rules nonweapon page also writes its Points Left here); `[1..5]` copper, silver, electrum, gold, platinum totals the equipment page caches. The wizard stores the starting gold in `[4]`; the page recomputes the totals from the coin items |
 | 20 | `unknown_0x17bc` | u32[3] | always | +0x17bc, +0x17c0, +0x17c4 | movement rates the equipment page caches (`[0]` the base rate after armor); the sheet recomputes them. New Expansion characters get the race's or subrace's rate in `[0]` |
 | 21 | `carried_weight` | f32 bits | always | +0x17b8 | weight carried in pounds. The Expansion trusts it (encumbrance, AC and THAC0 penalties), so it must change with the equipment; 2.0 writes 0 |
-| 22 | `unknown_0x196c` | CStringArray[3] | always | +0x196c, +0x1988, +0x199c | psionic disciplines, sciences, devotions |
+| 22 | `unknown_0x196c` | CStringArray[3] | always | +0x196c, +0x1988, +0x199c | psionic disciplines, sciences, devotions. The Psionics dialog writes the disciplines sorted (its list box sorts) and the powers in the order taken; a non-psionicist's wild talents are stored in `[1]` and `[2]` too |
 | 23 | `race` | CString | always | +0x160 | race name |
 | 24 | `subrace` | CString | always | +0x164 | subrace (`Hill dwarf`), may be empty |
 | 25 | `kit` | CString | always | +0x15c0 | kit name, `None` for none |
@@ -233,7 +233,7 @@ version.
 | 56 | `classes` | [ClassList](#classlist) | always | +0x50, +0x190, +0x194 | the classes |
 | 57 | `weapon_proficiencies` | CStringArray | always | +0xc0 | weapon proficiencies: names of Weapons parts, in the order taken |
 | 58 | `unknown_0xac` | CStringArray[7] | always | +0xac, +0xd4, +0xe8, +0xfc, +0x110, +0x1e8c, +0x19b0 | `[0]` unknown; `[1]` and `[2]` Skills & Powers broad and tight weapon groups (old notes, from code only); `[3]` weapons the character specializes in (sheet `(Specialist)`); `[4]` Skills & Powers armor proficiencies (halve that armor's weight; Update Character's Shield and Armor dialog appends to it); `[5]` nonweapon proficiencies that get +1 to their score; `[6]` psionic attack modes |
-| 59 | `unknown_0x19c4` | CStringArray | always | +0x19c4 | psionic defense modes (old notes, code only) |
+| 59 | `unknown_0x19c4` | CStringArray | always | +0x19c4 | psionic defense modes, names the Psionic Attacks and Defenses dialog takes from the program (Tsrp3.exe 0x81a4c8 to 0x81a51c, attacks 0x81a468 to 0x81a4b4) |
 | 60 | `racial_abilities` | CStringArray | always | +0x168 | racial ability part names (with the cost suffix the part name has); new characters store them sorted in byte order; Update Character writes the subrace's package plus the abilities bought, sorted as its list box sorts |
 | 61 | `spells` | CStringArray | always | +0x3a0 | wizard spells known, in the order learned |
 | 62 | `priest_spells` | CStringArray | always | +0x3b4 | priest spells known |
@@ -241,7 +241,7 @@ version.
 | 64 | `unknown_0x1878` | CStringArray | always | +0x1878 | unknown; only the copy constructor and Serialize touch it |
 | 65 | `rogue_skills` | [RogueSkills](#ccharacterdocrogueskillsob-serialize-0x59a8ab) | always | +0x15c8 | thief and bard skills and the points added to them |
 | 66 | `unknown_0xc60` | (u32[100])[5] | always | +0xc60 | hit point roll per class slot (400 bytes each) and level: `[g][L-1]` is the roll of level L. Losing levels keeps the rolls. Update Character's Hit Points arrows change them (0x5bf569, `advance.rs` `adjust_hit_points`) |
-| 67 | `unknown_0x1430` | u32[100] | always | +0x1430 | PSPs gained at each level, `[L-1]` for level L (one array for the character); the sheet shows the sum |
+| 67 | `unknown_0x1430` | u32[100] | always | +0x1430 | PSPs gained at each level, `[L-1]` for level L (one array for the character); the sheet shows the sum. Closing the Wild Talents dialog with talents and no PSPs sets `[0]` to 10 + 1d4 + the Wisdom, Constitution and Intelligence bonuses (0 below 16, then 1 per point); it then takes the old talents' initial costs (power +0x48) off `[0]` and adds the new ones' |
 | 68 | `nonweapon_costs` | CDWordArray | always | +0x17e0 | what each nonweapon proficiency cost: slots (Core Rules) or character points (Skills & Powers); one per `nonweapon_proficiencies` entry |
 | 69 | `nonweapon_bonuses` | CDWordArray | v > 50 | +0x17f4 | bonus ranks per nonweapon proficiency, added to its score; 0 wherever the program adds one; parallel |
 | 70 | `class_slots` | [ClassSlot](#classslot)[5] | always | +0x1a8, +0x270, +0x2d4, +0x338 | per class slot: class abilities, schools, spheres |
@@ -338,6 +338,14 @@ The sheet's discretionary column is the sum of all 100 values; the base,
 racial, ability, armor, trait and kit parts are computed. A new character's
 1st-level points go in `[0]`. The list holds the skills (class abilities with
 part +0x77c = 6) of every class with class flag +0x27a4, each name once.
+
+Update Character's Rogue Skills dialog changes only the column of the rogue
+class's current level, `[L-1]`. The points to put in are class +0xb4 at 1st
+level and +0xb8 at each level after (the best over the character's rogue
+classes; thief 60 and 30, bard 20 and 15), less what the earlier columns
+hold. With class flag +0x278c (thief) one skill may get at most half of the
+points available at the level, which the dialog asks before exceeding, as it
+asks before a skill passes 95%.
 
 ### CCharacterSheetOptions (Serialize 0x599eb8)
 
