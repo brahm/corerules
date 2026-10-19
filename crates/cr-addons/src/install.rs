@@ -7,6 +7,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use cr_formats::export::ExportFile;
+use cr_i18n::tr;
 use cr_store::Installation;
 use cr_store::export::{Category, ImportReport, contents};
 
@@ -53,19 +54,19 @@ pub fn check(dir: &Path) -> Folder {
 pub fn package() -> Result<ExportFile, String> {
     let mut data = Vec::new();
     lzma_rs::xz_decompress(&mut io::Cursor::new(PACKAGE), &mut data)
-        .map_err(|e| format!("Os addons embutidos estão corrompidos: {e}"))?;
-    ExportFile::parse(&data).map_err(|e| format!("Não consegui ler os addons embutidos: {e}"))
+        .map_err(|e| tr!("The built-in add-ons are damaged: {e}", e))?;
+    ExportFile::parse(&data).map_err(|e| tr!("Could not read the built-in add-ons: {e}", e))
 }
 
 /// Copies `UserDbas/` and `Chars/` into a folder beside the data folder;
 /// returns that folder.
 pub fn backup(install: &Installation, stamp: &str) -> Result<PathBuf, String> {
-    let to = beside(install.root(), &format!("antes-dos-addons-{stamp}"));
+    let to = beside(install.root(), &format!("before-addons-{stamp}"));
     for name in ["UserDbas", "Chars"] {
         if let Some(from) = install.path(name) {
             let target = to.join(from.file_name().unwrap_or(name.as_ref()));
             copy_dir(&from, &target)
-                .map_err(|e| format!("Não consegui copiar {}: {e}", from.display()))?;
+                .map_err(|e| tr!("Could not copy {folder}: {e}", folder = from.display(), e))?;
         }
     }
     Ok(to)
@@ -88,7 +89,7 @@ pub fn import(install: &Installation, file: &ExportFile, stamp: &str) -> Result<
             .filter(|&n| items[n].category != Category::Character)
             .collect()
     });
-    let failed = |e: cr_store::Error| format!("A importação falhou: {e}");
+    let failed = |e: cr_store::Error| tr!("The import failed: {e}", e);
     let report = install.import(file, first.as_deref()).map_err(failed)?;
     let classes: Vec<usize> = (0..items.len())
         .filter(|&n| items[n].category == Category::Class)
@@ -97,10 +98,11 @@ pub fn import(install: &Installation, file: &ExportFile, stamp: &str) -> Result<
 
     let mut log = String::new();
     write_report(&mut log, &report);
-    log.push_str("=== segunda passagem (classes)\n");
+    log.push_str("=== second pass (classes)\n");
     write_report(&mut log, &second);
     let path = beside(install.root(), &format!("addons-{stamp}.log"));
-    fs::write(&path, log).map_err(|e| format!("Não consegui gravar {}: {e}", path.display()))?;
+    fs::write(&path, log)
+        .map_err(|e| tr!("Could not write {file}: {e}", file = path.display(), e))?;
     if let Some(userdbas) = install.path("UserDbas") {
         let _ = fs::write(userdbas.join(MARKER), stamp);
     }

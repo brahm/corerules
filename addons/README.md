@@ -48,16 +48,26 @@ Além de `latest`, cada versão do app tem a sua tag, como `0.7.2`.
 
    Sem FUSE, rode com `APPIMAGE_EXTRACT_AND_RUN=1`.
 
-2. A janela mostra a pasta de dados que o Core Rules usa, normalmente `~/.local/share/corerules/data`. Para outra instalação da Expansion, como a do programa original no Wine, clique em **Escolher…** e indique a pasta que tem `Database`.
+2. A janela procura o Core Rules sozinha e mostra cada cópia que achou, com a pasta de dados que ela lê:
+
+   | Como o app foi instalado | Pasta de dados |
+   | --- | --- |
+   | Flatpak | `~/.var/app/io.github.brahm.CoreRules/data/corerules/data` |
+   | Pacote .deb ou .rpm | `~/.local/share/corerules/data` |
+   | AppImage (em Downloads, Aplicativos, Área de Trabalho, `~/.local/bin`, `/opt` ou a pasta pessoal) | `~/.local/share/corerules/data` |
+
+   Sem essa pasta, cada cópia usa a instalação do programa original no Wine, em `~/.wine/drive_c/Program Files/AD&D Core Rules 2.0`, como o próprio app faz. Se a cópia ainda não tem os dados do jogo, o botão **Abrir o Core Rules** a abre para você usar **Extrair dados do CD…**; depois clique em ↻ para procurar de novo. Para instalar numa pasta que o instalador não achou, use **Outra pasta…** e indique a pasta que tem `Database`.
 
 3. Clique em **Instalar**. A importação leva menos de um minuto.
 
-4. Abra o Core Rules. Os addons aparecem nos bancos de dados do usuário (Raças, Classes, Magias, Monstros e o resto) e os personagens dos módulos na lista de personagens. Se o app já estava aberto, feche e abra de novo.
+4. Abra o Core Rules, pelo botão **Abrir o Core Rules** ou como de costume. Os addons aparecem nos bancos de dados do usuário (Raças, Classes, Magias, Monstros e o resto) e os personagens dos módulos na lista de personagens. Se o app já estava aberto, feche e abra de novo.
+
+A janela fala os mesmos idiomas do app (português, inglês, espanhol, italiano, francês e alemão) e segue o que foi escolhido nas Preferências do Core Rules; sem escolha, segue o idioma do sistema. Os addons em si continuam em português.
 
 ## O que o instalador faz
 
-1. Confere se a pasta é uma instalação da Expansion.
-2. Copia `UserDbas/` e `Chars/` para uma pasta ao lado, por exemplo `data-antes-dos-addons-20261019-010700/`.
+1. Confere se cada pasta é uma instalação da Expansion. Quando duas cópias do app leem a mesma pasta, ela recebe os addons uma vez só.
+2. Copia `UserDbas/` e `Chars/` para uma pasta ao lado, por exemplo `data-before-addons-20261019-010700/`.
 3. Importa o `Comunidade.xpx`. Um registro do usuário com o mesmo nome de um addon é substituído pelo do addon, como no Import do programa original.
 4. Importa de novo só as classes. Uma combinação raça/classe que cita duas classes novas só entra quando as duas já existem.
 
@@ -72,8 +82,10 @@ Troque `UserDbas/` e `Chars/` pela cópia de segurança, pondo no lugar de `DATA
 ```sh
 cd ~/.local/share/corerules
 rm -rf data/UserDbas data/Chars
-cp -r data-antes-dos-addons-DATA/UserDbas data-antes-dos-addons-DATA/Chars data/
+cp -r data-before-addons-DATA/UserDbas data-before-addons-DATA/Chars data/
 ```
+
+No Flatpak, a pasta é `~/.var/app/io.github.brahm.CoreRules/data/corerules`.
 
 ## Como o instalador é gerado
 
