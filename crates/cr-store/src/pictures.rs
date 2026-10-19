@@ -188,7 +188,7 @@ pub fn portrait_bitmap(data: &[u8], palette: Option<&[[u8; 3]]>) -> Option<Vec<u
         .to_rgba8()
         .into_raw();
     // Transparent parts go over white.
-    for p in rgba.chunks_exact_mut(4) {
+    for p in rgba.as_chunks_mut::<4>().0 {
         let alpha = u32::from(p[3]);
         for c in &mut p[..3] {
             *c = ((u32::from(*c) * alpha + 255 * (255 - alpha)) / 255) as u8;
@@ -200,14 +200,12 @@ pub fn portrait_bitmap(data: &[u8], palette: Option<&[[u8; 3]]>) -> Option<Vec<u
         None => {
             let quant = color_quant::NeuQuant::new(1, 256, &rgba);
             let indices = rgba
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .map(|p| quant.index_of(p) as u8)
                 .collect();
-            let palette = quant
-                .color_map_rgb()
-                .chunks_exact(3)
-                .map(|c| [c[0], c[1], c[2]])
-                .collect();
+            let palette = quant.color_map_rgb().as_chunks::<3>().0.to_vec();
             (palette, indices)
         }
     };
@@ -224,7 +222,9 @@ pub fn portrait_bitmap(data: &[u8], palette: Option<&[[u8; 3]]>) -> Option<Vec<u
 fn dither(rgba: &[u8], palette: &[[u8; 3]]) -> Vec<u8> {
     let width = PORTRAIT_WIDTH as usize;
     let mut pixels: Vec<[i32; 3]> = rgba
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
         .map(|p| [p[0].into(), p[1].into(), p[2].into()])
         .collect();
     let mut indices = Vec::with_capacity(pixels.len());
