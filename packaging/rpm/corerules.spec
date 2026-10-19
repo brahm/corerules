@@ -4,7 +4,7 @@
 %global debug_package %{nil}
 
 Name:           corerules
-Version:        %{?version_override}%{!?version_override:0.8.0}
+Version:        %{?version_override}%{!?version_override:0.8.1}
 Release:        1%{?dist}
 Summary:        Browse and edit AD&D Core Rules 2.0 characters and rules
 License:        MIT
@@ -50,6 +50,10 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/io.github.brah
 %{_metainfodir}/io.github.brahm.CoreRules.metainfo.xml
 
 %changelog
+* Mon Oct 19 2026 Brahm - 0.8.1-1
+- Beta: monster types, monsters, races and characters show their pictures;
+  fixes for the encounter NPC text and the translated metainfo
+
 * Mon Oct 19 2026 Brahm - 0.8.0-1
 - Beta: Extract Data from CD... copies the rules data from the Core Rules
   CD or its ISO image, with no script

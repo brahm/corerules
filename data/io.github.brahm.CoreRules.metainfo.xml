@@ -85,6 +85,11 @@
     <color type="primary" scheme_preference="dark">#77101b</color>
   </branding>
   <releases>
+    <release version="0.8.1" date="2026-10-19" type="development">
+      <description>
+        <p>Beta: monster types, monsters, races and characters show their pictures, and encounters say why an NPC was not generated.</p>
+      </description>
+    </release>
     <release version="0.8.0" date="2026-10-19" type="development">
       <description>
         <p>Beta: Extract Data from CD… copies the rules data from the Core Rules CD or its ISO image, with no script.</p>
