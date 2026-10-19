@@ -60,6 +60,7 @@ struct Viewer {
     title: adw::WindowTitle,
     toasts: adw::ToastOverlay,
     back: gtk::Button,
+    print: gtk::Button,
     split: adw::OverlaySplitView,
     list: gtk::ListBox,
     search: gtk::SearchEntry,
@@ -209,15 +210,23 @@ fn labels(widget: &gtk::Widget) -> Vec<String> {
 /// Shows, over `parent`, the help of what a right-click on the original's
 /// screen `screen` (a [`cr_store::help::topic`] number) at a control that
 /// reads one of `texts` (as shown, or in English) shows: the first that
-/// is one of the screen's hotspots (a popup of the program help) or a
-/// shipped record (its topic in its book's help).
+/// is one of the screen's hotspots (a popup of the program help), a
+/// record the screen summarizes (its summary) or a record (its topic in
+/// its book's help, or what a record of the user database says).
+/// `toast` reports what a summary's page saves.
 pub fn context_help(
     parent: &adw::ApplicationWindow,
     install: &Installation,
     screen: u32,
     texts: &[&str],
+    toast: impl Fn(&str) + 'static,
 ) {
     use cr_store::help::topic;
+    use cr_store::summary::Summary;
+    enum Found {
+        Item(ItemFound),
+        Summary(Summary),
+    }
     let root = install.root().to_owned();
     let controls = SCREENS.with_borrow_mut(|screens| {
         screens
@@ -226,14 +235,15 @@ pub fn context_help(
             .clone()
     });
     // The original shows a summary for these, not help.
-    let summaries = [
+    let summarized = [
         topic::ENCOUNTERS,
         topic::ENCOUNTER_TEMPLATES,
         topic::TRAPS,
         topic::TREASURE_BUNDLES,
         topic::CHARACTER_MANAGEMENT,
-    ];
-    let items = (!summaries.contains(&screen)).then(|| {
+    ]
+    .contains(&screen);
+    let items = (!summarized).then(|| {
         ITEMS.with_borrow_mut(|items| {
             items
                 .entry(root.clone())
@@ -247,18 +257,35 @@ pub fn context_help(
             .clone()
             .find_map(|t| controls.topic_of(t))
             .map(|number| {
-                ItemFound::Topic(ItemTopic {
+                Found::Item(ItemFound::Topic(ItemTopic {
                     file: "Program.hlp",
                     number,
                     popup: true,
-                })
+                }))
             });
-        control.or_else(|| items.as_ref()?.find(text, &ItemKind::order(screen)))
+        control.or_else(|| match &items {
+            Some(items) => items.find(text, &ItemKind::order(screen)).map(Found::Item),
+            None => install.summary(screen, text).map(Found::Summary),
+        })
     });
     let found = match found {
-        Some(ItemFound::Topic(found)) => found,
-        Some(ItemFound::Custom { title, text }) => {
-            custom_dialog(&title, &text).present(Some(parent));
+        Some(Found::Item(ItemFound::Topic(found))) => found,
+        Some(Found::Item(ItemFound::Custom { title, text })) => {
+            text_dialog(&title, &text, true).present(Some(parent));
+            return;
+        }
+        Some(Found::Summary(Summary::Text { title, text })) => {
+            text_dialog(&title, &text, false).present(Some(parent));
+            return;
+        }
+        Some(Found::Item(ItemFound::CustomMonster(name))) => {
+            if let Some(sheet) = install.custom_monster_sheet(&name) {
+                crate::sheet::preview(parent, sheet, toast);
+            }
+            return;
+        }
+        Some(Found::Summary(Summary::Page(sheet))) => {
+            crate::sheet::preview(parent, sheet, toast);
             return;
         }
         None => return,
@@ -291,6 +318,62 @@ pub fn context_help(
         .and_then(|h| popup_dialog(h, h.topic_of_number(found.number)?, follow))
     {
         dialog.present(Some(parent));
+    }
+}
+
+/// The Monsters screen's View and Print (0x6D3BFA, 0x6D2B4F) on the
+/// monster `name`: a monster of the user database (`custom`) shows as it
+/// prints, or prints; a shipped one opens its topic of `Monsters.hlp`, or
+/// prints that topic. `toast` reports what printing does.
+pub fn monster(
+    parent: &adw::ApplicationWindow,
+    install: &Installation,
+    name: &str,
+    custom: bool,
+    print: bool,
+    toast: impl Fn(&str) + 'static,
+) {
+    if custom {
+        let Some(sheet) = install.custom_monster_sheet(name) else {
+            return;
+        };
+        if print {
+            crate::sheet::print_sheet(parent, &Rc::new(sheet), None, &toast);
+        } else {
+            crate::sheet::preview(parent, sheet, toast);
+        }
+        return;
+    }
+    let root = install.root().to_owned();
+    let items = ITEMS.with_borrow_mut(|items| {
+        items
+            .entry(root.clone())
+            .or_insert_with(|| Rc::new(install.item_help()))
+            .clone()
+    });
+    let Some(found) = items.topic_of(name, &[ItemKind::Monster]) else {
+        toast(&tr!("{name} has no help topic", name = name));
+        return;
+    };
+    if !print {
+        if let Err(e) = open(parent, install, found.file, Target::Number(found.number)) {
+            toast(&e);
+        }
+        return;
+    }
+    let file = found.file.to_ascii_lowercase();
+    let help = FILES.with_borrow_mut(|files| {
+        files
+            .entry((root, file))
+            .or_insert_with(|| install.help_file(found.file).ok().map(Rc::new))
+            .clone()
+    });
+    if let Some(help) = help
+        && let Some(topic) = help
+            .topic_of_number(found.number)
+            .and_then(|t| help.topics.get(t))
+    {
+        print_topic(parent, &help, topic, &toast);
     }
 }
 
@@ -365,9 +448,11 @@ impl Viewer {
             .tooltip_text(tr("Contents"))
             .active(true)
             .build();
+        let print = crate::print::button();
         let header = adw::HeaderBar::builder().title_widget(&title).build();
         header.pack_start(&sidebar_button);
         header.pack_start(&back);
+        header.pack_end(&print);
         let content = adw::ToolbarView::new();
         content.add_top_bar(&header);
         let toasts = adw::ToastOverlay::new();
@@ -431,6 +516,7 @@ impl Viewer {
             title,
             toasts,
             back,
+            print,
             split,
             list,
             search,
@@ -454,6 +540,14 @@ impl Viewer {
 
     fn connect(self: &Rc<Self>) {
         let weak = Rc::downgrade(self);
+        self.print.connect_clicked({
+            let weak = weak.clone();
+            move |_| {
+                if let Some(v) = weak.upgrade() {
+                    v.print_current();
+                }
+            }
+        });
         self.back.connect_clicked({
             let weak = weak.clone();
             move |_| {
@@ -585,7 +679,8 @@ impl Viewer {
         self.window.set_title(Some(&help.title));
         let buffer = gtk::TextBuffer::new(None);
         self.tags.borrow_mut().clear();
-        let (links, pictures) = render(&buffer, &self.view, &help, topic, &self.tags);
+        let dark = adw::StyleManager::default().is_dark();
+        let (links, pictures) = render(&buffer, &self.view, &help, topic, &self.tags, dark);
         if topic.paragraphs.is_empty() {
             buffer.insert(&mut buffer.end_iter(), tr("Choose a topic from the list."));
             self.split.set_show_sidebar(true);
@@ -607,6 +702,21 @@ impl Viewer {
         }
         self.select_row(&place);
         self.view.grab_focus();
+    }
+
+    /// Prints the topic shown.
+    fn print_current(&self) {
+        let Some(place) = self.current.borrow().clone() else {
+            return;
+        };
+        let Some(help) = self.file(&place.file) else {
+            return;
+        };
+        if let Some(topic) = help.topics.get(place.topic) {
+            let toasts = self.toasts.clone();
+            let toast = move |text: &str| toasts.add_toast(adw::Toast::new(text));
+            print_topic(&self.window, &help, topic, &toast);
+        }
     }
 
     fn go_back(&self) {
@@ -824,9 +934,10 @@ fn link_at(view: &gtk::TextView, links: &[(i32, i32, Link)], x: f64, y: f64) -> 
         .map(|(_, _, link)| link.clone())
 }
 
-/// The original's Custom Help box: what a record of the user database
-/// named `title` says, which it shows in place of help.
-fn custom_dialog(title: &str, text: &str) -> adw::Dialog {
+/// A box of text titled `title`: the original's Custom Help box (what a
+/// record of the user database says, with Print when `print`) or its
+/// summary of a character or trap.
+fn text_dialog(title: &str, text: &str, print: bool) -> adw::Dialog {
     let label = gtk::Label::builder()
         .label(text)
         .wrap(true)
@@ -850,14 +961,24 @@ fn custom_dialog(title: &str, text: &str) -> adw::Dialog {
         .max_content_height(500)
         .child(&label)
         .build();
+    let header = adw::HeaderBar::new();
     let toolbar = adw::ToolbarView::new();
-    toolbar.add_top_bar(&adw::HeaderBar::new());
+    toolbar.add_top_bar(&header);
     toolbar.set_content(Some(&scroller));
-    adw::Dialog::builder()
+    let dialog = adw::Dialog::builder()
         .title(title)
         .content_width(480)
         .child(&toolbar)
-        .build()
+        .build();
+    if print {
+        let button = crate::print::button();
+        header.pack_start(&button);
+        button.connect_clicked({
+            let (dialog, title, text) = (dialog.clone(), title.to_owned(), text.to_owned());
+            move |_| crate::print::print_text(&dialog, &title, &text)
+        });
+    }
+    dialog
 }
 
 /// A dialog showing topic `topic` of `help`, as WinHelp shows a popup;
@@ -879,7 +1000,8 @@ fn popup_dialog(
         .build();
     let buffer = gtk::TextBuffer::new(None);
     let tags = RefCell::default();
-    let (links, pictures) = render(&buffer, &view, help, topic, &tags);
+    let dark = adw::StyleManager::default().is_dark();
+    let (links, pictures) = render(&buffer, &view, help, topic, &tags, dark);
     view.set_buffer(Some(&buffer));
     add_pictures(&view, help, pictures);
     let links = Rc::new(links);
@@ -951,6 +1073,7 @@ fn run_tag(
     format: &Format,
     link: bool,
     tags: &RefCell<HashMap<(Format, bool), gtk::TextTag>>,
+    dark: bool,
 ) -> gtk::TextTag {
     if let Some(tag) = tags.borrow().get(&(*format, link)) {
         return tag.clone();
@@ -973,19 +1096,12 @@ fn run_tag(
     if link {
         // WinHelp's hotspots: green and underlined.
         tag.set_underline(pango::Underline::Single);
-        tag.set_foreground(Some(if adw::StyleManager::default().is_dark() {
-            "#8ff0a4"
-        } else {
-            "#1c7c3c"
-        }));
+        tag.set_foreground(Some(if dark { "#8ff0a4" } else { "#1c7c3c" }));
     } else {
         if format.underline {
             tag.set_underline(pango::Underline::Single);
         }
-        if let Some(rgba) = format
-            .color
-            .and_then(|c| shown_color(c, adw::StyleManager::default().is_dark()))
-        {
+        if let Some(rgba) = format.color.and_then(|c| shown_color(c, dark)) {
             tag.set_foreground_rgba(Some(&rgba));
         }
     }
@@ -1071,11 +1187,13 @@ fn render(
     help: &HelpFile,
     topic: &Topic,
     tags: &RefCell<HashMap<(Format, bool), gtk::TextTag>>,
+    dark: bool,
 ) -> (Links, Pictures) {
     let mut out = Out {
         buffer,
         help,
         tags,
+        dark,
         links: Vec::new(),
         pictures: Vec::new(),
     };
@@ -1163,6 +1281,8 @@ struct Out<'a> {
     buffer: &'a gtk::TextBuffer,
     help: &'a HelpFile,
     tags: &'a RefCell<HashMap<(Format, bool), gtk::TextTag>>,
+    /// Colours as shown on a dark background.
+    dark: bool,
     links: Links,
     pictures: Pictures,
 }
@@ -1178,6 +1298,7 @@ impl Out<'_> {
                         &run.format,
                         run.link.is_some(),
                         self.tags,
+                        self.dark,
                     );
                     let start = end.offset();
                     self.buffer
@@ -1203,23 +1324,58 @@ impl Out<'_> {
 /// original.
 fn add_pictures(view: &gtk::TextView, help: &HelpFile, pictures: Pictures) {
     for (anchor, n) in pictures {
-        let Some(bitmap) = help.picture(n) else {
+        let Some((texture, width, height)) = picture(help, n) else {
             continue;
         };
-        let Ok(texture) = gdk::Texture::from_bytes(&glib::Bytes::from(&bitmap.bmp)) else {
-            continue;
-        };
-        let width = bitmap.width.min(560);
-        let height = u64::from(bitmap.height) * u64::from(width) / u64::from(bitmap.width.max(1));
         let picture = gtk::Picture::builder()
             .paintable(&texture)
             .can_shrink(true)
             .content_fit(gtk::ContentFit::Contain)
-            .width_request(width as i32)
-            .height_request(height as i32)
+            .width_request(width)
+            .height_request(height)
             .build();
         view.add_child_at_anchor(&picture, &anchor);
     }
+}
+
+/// Picture `n` of `help` and the size it shows at, no wider than a
+/// screen of the original.
+fn picture(help: &HelpFile, n: u16) -> Option<(gdk::Texture, i32, i32)> {
+    let bitmap = help.picture(n)?;
+    let texture = gdk::Texture::from_bytes(&glib::Bytes::from(&bitmap.bmp)).ok()?;
+    let width = bitmap.width.min(560);
+    let height = u64::from(bitmap.height) * u64::from(width) / u64::from(bitmap.width.max(1));
+    Some((texture, width as i32, height as i32))
+}
+
+/// Prints topic `topic` of `help`, as WinHelp's Print Topic does.
+fn print_topic(
+    parent: &impl IsA<gtk::Widget>,
+    help: &HelpFile,
+    topic: &Topic,
+    toast: &dyn Fn(&str),
+) {
+    let buffer = gtk::TextBuffer::new(None);
+    // A view only measures the tables' columns.
+    let (_, pictures) = render(
+        &buffer,
+        &gtk::TextView::new(),
+        help,
+        topic,
+        &RefCell::default(),
+        false,
+    );
+    let pictures: Vec<_> = pictures
+        .into_iter()
+        .filter_map(|(anchor, n)| {
+            let (texture, width, height) = picture(help, n)?;
+            Some((anchor, texture, width, height))
+        })
+        .collect();
+    let title = Some(topic.display_title())
+        .filter(|t| !t.is_empty())
+        .unwrap_or_else(|| help.title.clone());
+    crate::print::print_buffer(parent, &title, &buffer, &pictures, toast);
 }
 
 /// The About window (Help > About…): the app's, with what the original's

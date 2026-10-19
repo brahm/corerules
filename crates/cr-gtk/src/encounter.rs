@@ -12,7 +12,7 @@ use cr_store::encounter::{
     add_trap, check_name, hit_point_text, remove_trap, roll_2_to_20, roll_and_pick,
 };
 use cr_store::help::topic;
-use cr_store::sheet::{self as crsheet, Block, Cell, ListItem, Sheet, SheetBox, Table};
+use cr_store::sheet::Sheet;
 use cr_store::treasure::{Bundle, Rand};
 use cr_store::userdb::traps::Traps;
 use cr_store::userdb::{Filter, Origin, UserDb};
@@ -1034,121 +1034,8 @@ impl<H: Host + 'static> State<H> {
 
     /// The encounter as a printable page (the original's View/Print).
     fn sheet(&self) -> Sheet {
-        let encounter = self.encounter.borrow();
-        let t = self.rules.totals(&encounter);
-        let mut rows = vec![vec![
-            Cell::header("Number"),
-            Cell::header("Monster"),
-            Cell::header("Hit Points"),
-        ]];
-        for p in &encounter.monsters {
-            rows.push(vec![
-                Cell::new(p.count.to_string()).right(),
-                Cell::new(&p.monster.name),
-                Cell::new(hit_point_text(&p.hit_points)),
-            ]);
-        }
-        for p in &encounter.npcs {
-            rows.push(vec![
-                Cell::new(p.count.to_string()).right(),
-                Cell::new(self.rules.npc_name(p).trim()),
-                Cell::new(""),
-            ]);
-        }
-        let stats: Vec<String> = encounter
-            .monsters
-            .iter()
-            .map(|p| self.rules.stat_line(p))
-            .chain(encounter.npcs.iter().map(|p| self.rules.npc_line(p)))
-            .collect();
-        let mut boxes = vec![
-            SheetBox {
-                title: "Encounter Totals".into(),
-                body: vec![Block::Table(Table {
-                    columns: 2,
-                    rows: [
-                        ("Gold Value", t.gold_value),
-                        ("Monster XP", t.monster_xp),
-                        ("Treasure XP", t.treasure_xp),
-                    ]
-                    .iter()
-                    .map(|(k, v)| {
-                        vec![
-                            Cell::new(*k),
-                            Cell::new(cr_store::treasure::thousands(*v)).right(),
-                        ]
-                    })
-                    .collect(),
-                })],
-            },
-            SheetBox {
-                title: "Monsters and Nonplayer Characters".into(),
-                body: vec![Block::Table(Table { columns: 3, rows })],
-            },
-        ];
-        if !stats.is_empty() {
-            boxes.push(SheetBox {
-                title: "Statistics".into(),
-                body: vec![Block::Paragraph(stats.join("\n\n"))],
-            });
-        }
-        for (title, bundle) in [
-            ("Treasure", &encounter.treasure),
-            ("Items", &encounter.items),
-        ] {
-            if !bundle.is_empty() {
-                boxes.push(SheetBox {
-                    title: title.into(),
-                    body: vec![Block::List(list_items(bundle))],
-                });
-            }
-        }
-        if !encounter.description.trim().is_empty() {
-            boxes.push(SheetBox {
-                title: "Description".into(),
-                body: vec![Block::Paragraph(encounter.description.clone())],
-            });
-        }
-        Sheet {
-            title: if encounter.name.is_empty() {
-                "Encounter".into()
-            } else {
-                encounter.name.clone()
-            },
-            flavor: self.rules.flavor(),
-            sections: boxes
-                .into_iter()
-                .map(|b| crsheet::Section {
-                    id: 0,
-                    content: crsheet::SectionContent::Columns(vec![vec![b]]),
-                })
-                .collect(),
-        }
+        self.rules.sheet(&self.encounter.borrow())
     }
-}
-
-fn list_items(bundle: &Bundle) -> Vec<ListItem> {
-    bundle
-        .items
-        .iter()
-        .map(|item| {
-            let mut children: Vec<ListItem> = item
-                .spells()
-                .iter()
-                .map(|s| ListItem {
-                    text: format!("{} ({})", s.name, s.pages),
-                    children: None,
-                })
-                .collect();
-            if let Some(contents) = &item.contents {
-                children.extend(list_items(contents));
-            }
-            ListItem {
-                text: item.label(),
-                children: (!children.is_empty()).then_some(children),
-            }
-        })
-        .collect()
 }
 
 /// A bundle's items as rows; an item holding others expands.

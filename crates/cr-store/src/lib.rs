@@ -27,6 +27,7 @@ pub mod pictures;
 pub mod settings;
 pub mod sheet;
 pub mod skills;
+pub mod summary;
 pub mod tables;
 pub mod treasure;
 pub mod userdb;
