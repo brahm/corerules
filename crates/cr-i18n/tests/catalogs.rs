@@ -67,3 +67,19 @@ fn catalogs_are_complete() {
         problems.join("\n")
     );
 }
+
+/// The metainfo tells software centers which languages the app speaks;
+/// the catalogs are built into the program, so nothing generates the list.
+#[test]
+fn metainfo_lists_every_language() {
+    let path = extract::po_dir().join("../../../data/io.github.brahm.CoreRules.metainfo.xml");
+    let metainfo = std::fs::read_to_string(path).unwrap();
+    let listed: Vec<&str> = metainfo
+        .split("<lang")
+        .skip(1)
+        .filter_map(|s| s.split_once('>')?.1.split_once("</lang>"))
+        .map(|(code, _)| code)
+        .collect();
+    let codes: Vec<&str> = Language::ALL.iter().map(|l| l.code()).collect();
+    assert_eq!(listed, codes);
+}

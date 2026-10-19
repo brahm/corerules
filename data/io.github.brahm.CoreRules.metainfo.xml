@@ -72,6 +72,14 @@
     <control>touch</control>
   </supports>
   <content_rating type="oars-1.1"/>
+  <languages>
+    <lang>en_US</lang>
+    <lang percentage="100">pt_BR</lang>
+    <lang percentage="100">es</lang>
+    <lang percentage="100">it</lang>
+    <lang percentage="100">fr</lang>
+    <lang percentage="100">de</lang>
+  </languages>
   <branding>
     <color type="primary" scheme_preference="light">#f9c0c4</color>
     <color type="primary" scheme_preference="dark">#77101b</color>

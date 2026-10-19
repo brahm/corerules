@@ -279,7 +279,9 @@ flatpak-builder --user --install-deps-from=flathub --install build \
 
 The Packages workflow in GitHub Actions builds all four, installs each one
 on clean Ubuntu 26.04, Ubuntu latest, Fedora 44 and Fedora latest
-containers and starts the app. Pushing a `v*` tag, or running the workflow
+containers and starts the app there once in each of its six languages,
+checking that every text on screen is in that language
+(`packaging/smoke-test.sh`). Pushing a `v*` tag, or running the workflow
 with a tag, publishes them as a release; `packaging/release-notes.md` is its
 description. Releases before 1.0 are published as betas.
 
