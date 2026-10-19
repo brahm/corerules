@@ -143,9 +143,8 @@ fn record(rec: &[u8], joliet: bool) -> Option<(bool, Entry)> {
         return Some((true, entry));
     }
     let mut name = if joliet {
-        let units: Vec<u16> = id
-            .chunks_exact(2)
-            .map(|c| u16::from_be_bytes([c[0], c[1]]))
+        let units: Vec<u16> = (0..id.len() / 2)
+            .map(|i| u16::from_be_bytes([id[2 * i], id[2 * i + 1]]))
             .collect();
         String::from_utf16_lossy(&units)
     } else {
