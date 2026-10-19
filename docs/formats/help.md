@@ -12,8 +12,9 @@ Rust:
   `Item`, `Run`, `Link`, `Macro`, `context_hash`, `lz77`): the `.hlp` reader, read only.
 * [`winhelp_bitmap.rs`](../../crates/cr-formats/src/winhelp_bitmap.rs): the `|bmN` pictures.
 * [`help.rs`](../../crates/cr-store/src/help.rs) (`Contents`, `Installation::help_file`,
-  `Installation::help_contents`, `topic`, `Installation::original_about`): the `.cnt`
-  reader, the lookup in `Help/`, the screens' topics and the About box's texts.
+  `Installation::help_contents`, `topic`, `Installation::screen_help`,
+  `Installation::item_help`, `Installation::original_about`): the `.cnt` reader, the
+  lookup in `Help/`, the screens' topics, the right-click help and the About box's texts.
 * [`cr-gtk/src/help.rs`](../../crates/cr-gtk/src/help.rs): the help window (behaviour only,
   summarised at the end).
 
@@ -263,8 +264,55 @@ the app's screens stand for (New Character's pages, the character editor's tabs,
 database editor, the generators, Export and Import, …), and each screen's Help button
 (the header's question mark) and F1 open that topic of `Program.hlp`. The abilities page
 opens the topic of the roll method chosen; F1 in the main window opens the section's topic.
-Right-click help on single controls (`HELP_CONTEXTPOPUP` with the controls' help ids) and
-the database items' own help ids are not used.
+
+## Right-click help
+
+The original's screens are pictures with hotspots: `CBitmapDialog` (0x40F036) makes one
+for each control of its `DLGTEMPLATEEX` whose style has bit 0x04 or 0x08 set and 0x40 and
+0x80 clear, and keeps the item's help id (`0x8000_0000 | dialog << 16 | control`). A
+right-click on a hotspot (0x4EB025) runs `WinHelpA(Program.hlp, HELP_CONTEXTPOPUP, id)`.
+`Installation::screen_help` reads those controls from the program
+([program.md](program.md#resources-and-message-boxes)) and keeps each one's text and its
+topic's title with the id, when the id is a topic of `Program.hlp`.
+
+A right-click on a list row or a combo box opens the help of the record it shows
+(0x4B3B22, 0x4E673B), by the list's kind of record and the record's help id:
+
+| record | help id | file | shown |
+|---|---|---|---|
+| weapons, armor, weapon proficiencies, currency | `PartHead::unknown_0x1e4` | `Equip.hlp` | topic |
+| equipment, gems and art | `PartHead::unknown_0x1e4` | `Equip.hlp` | popup |
+| nonweapon proficiencies | `PartHead::unknown_0x1e4` | `Prof.hlp` | topic |
+| racial abilities, languages, traits, disadvantages, class abilities | `PartHead::unknown_0x1e4` | `Prof.hlp` | popup |
+| magical items | `PartHead::unknown_0x1e4` | `Magic.hlp` | topic |
+| count | `PartHead::unknown_0x1e4` | `Magic.hlp` | popup |
+| schools, spheres | `PartHead::unknown_0x1e4` | `Spells.hlp` | popup |
+| kits | `PartHead::unknown_0x1e4` | `Kits.hlp` | topic |
+| wizard and priest spells | `Spell::id` | `Spells.hlp` | topic |
+| races and subraces | `Race::id` | `Charactr.hlp` | topic |
+| classes | `ClassData::unknown_0xc` (not `id`) | `Charactr.hlp` | topic |
+| a multi-class (class names joined by `/`) | 100 | `Charactr.hlp` | topic |
+| psionic powers | `PsionicPower::unknown_0x24` | `Psionics.hlp` | topic |
+| monsters | `Monster::unknown_0x3b8`; when 0, its type's | `Monsters.hlp` | topic |
+| monster types | the number `MonsterType::picture` starts with (`atoi`) | `Monsters.hlp` | topic |
+
+An id of 0 or below has no help. Encounters, templates, traps, saved treasure and
+characters show a summary instead, and the user database's records a box with their
+description. The original also has fixed numbers for a few rows found by name (psionic
+disciplines, attack and defense modes, fighting styles, weapon groups, three monsters);
+the app does not.
+
+`Installation::item_help` reads the shipped records (`Database/`) and keeps, by name, the
+help of each kind whose id is a topic of its file; every shipped race, class, part, spell
+and psionic power but the kit `None` has one, and nearly all monsters and monster types.
+Part names never repeat across part types, but a part and a race can share a name, so
+`ItemKind::order` puts the kind of record the screen lists first.
+
+The app does both with one right-click on any screen (the same screens as F1): the first
+of the texts under the pointer (the label, the button, the row's labels, the row or group
+title, a tooltip, nearest first) that names a hotspot of the screen, in the interface's
+language or in English, shows its popup; otherwise the first that names a shipped record
+opens its help. A link in a popup opens the help window.
 
 ## The About box
 

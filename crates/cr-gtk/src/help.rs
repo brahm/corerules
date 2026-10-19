@@ -13,7 +13,7 @@ use cr_formats::rtf::{Align, Format, Rgb, TabKind};
 use cr_formats::winhelp::{HelpFile, Item, Link, Macro, Paragraph, Topic};
 use cr_i18n::tr;
 use cr_store::Installation;
-use cr_store::help::{Contents, ScreenHelp};
+use cr_store::help::{Contents, ItemHelp, ItemKind, ItemTopic, ScreenHelp};
 use gtk::{gdk, gio, glib, pango};
 
 /// Which topic to show.
@@ -73,16 +73,20 @@ struct Viewer {
     hovering: Cell<bool>,
 }
 
+/// A help file read once, if it reads.
+type Shared = Option<Rc<HelpFile>>;
+
 /// The space beside the text, in pixels.
 const MARGIN: i32 = 24;
 
 thread_local! {
     /// The help window of each installation.
     static OPEN: RefCell<HashMap<PathBuf, Weak<Viewer>>> = RefCell::default();
-    /// The program help and the controls' help of each screen, read
-    /// once per installation.
-    static PROGRAM: RefCell<HashMap<PathBuf, Option<Rc<HelpFile>>>> = RefCell::default();
+    /// The help files popups show, the controls' help of each screen and
+    /// the records' help, read once per installation.
+    static FILES: RefCell<HashMap<(PathBuf, String), Shared>> = RefCell::default();
     static SCREENS: RefCell<HashMap<(PathBuf, u32), Rc<ScreenHelp>>> = RefCell::default();
+    static ITEMS: RefCell<HashMap<PathBuf, Rc<ItemHelp>>> = RefCell::default();
 }
 
 /// Adds the original's Help… button to `header`, and F1 to `area` (a
@@ -108,7 +112,8 @@ pub fn add_button(
 
 /// F1 on `area` opens the program help at the topic `topic` gives, and a
 /// right-click on one of its controls shows the help of the original's
-/// control of that name in a popup, as the original's screens do.
+/// control or record of that name, as the original's screens do (see
+/// [`context_help`]).
 pub fn add_key(area: &impl IsA<gtk::Widget>, topic: impl Fn() -> u32 + 'static) {
     let topic = Rc::new(topic);
     let keys = gtk::ShortcutController::new();
@@ -174,6 +179,10 @@ fn control_texts(widget: &gtk::Widget, area: &gtk::Widget) -> Vec<String> {
         };
         texts.extend(text);
         texts.extend(w.tooltip_text().map(|t| t.to_string()));
+        // A list row: what each of its labels reads.
+        if w.css_name() == "row" {
+            texts.extend(labels(&w));
+        }
         if w == *area {
             break;
         }
@@ -183,51 +192,94 @@ fn control_texts(widget: &gtk::Widget, area: &gtk::Widget) -> Vec<String> {
     texts
 }
 
-/// Shows, over `parent`, the help of the control of the original's screen
-/// `screen` (a [`cr_store::help::topic`] number) that reads one of `texts`
-/// (as shown, or in English), the first that has one.
-pub fn control_popup(
+/// The texts of the labels in `widget`, in order.
+fn labels(widget: &gtk::Widget) -> Vec<String> {
+    let mut texts = Vec::new();
+    let mut child = widget.first_child();
+    while let Some(c) = child {
+        match c.downcast_ref::<gtk::Label>() {
+            Some(label) => texts.push(label.text().to_string()),
+            None => texts.extend(labels(&c)),
+        }
+        child = c.next_sibling();
+    }
+    texts
+}
+
+/// Shows, over `parent`, the help of what a right-click on the original's
+/// screen `screen` (a [`cr_store::help::topic`] number) at a control that
+/// reads one of `texts` (as shown, or in English) shows: the first that
+/// is one of the screen's hotspots (a popup of the program help) or a
+/// shipped record (its topic in its book's help).
+pub fn context_help(
     parent: &adw::ApplicationWindow,
     install: &Installation,
     screen: u32,
     texts: &[&str],
 ) {
+    use cr_store::help::topic;
     let root = install.root().to_owned();
-    let help = SCREENS.with_borrow_mut(|screens| {
+    let controls = SCREENS.with_borrow_mut(|screens| {
         screens
             .entry((root.clone(), screen))
             .or_insert_with(|| Rc::new(install.screen_help(screen)))
             .clone()
     });
-    let Some(number) = texts.iter().find_map(|&text| {
-        help.topic_of(text).or_else(|| {
-            cr_i18n::sources(text)
-                .into_iter()
-                .find_map(|source| help.topic_of(source))
+    // The original shows a summary for these, not help.
+    let summaries = [
+        topic::ENCOUNTERS,
+        topic::ENCOUNTER_TEMPLATES,
+        topic::TRAPS,
+        topic::TREASURE_BUNDLES,
+        topic::CHARACTER_MANAGEMENT,
+    ];
+    let items = (!summaries.contains(&screen)).then(|| {
+        ITEMS.with_borrow_mut(|items| {
+            items
+                .entry(root.clone())
+                .or_insert_with(|| Rc::new(install.item_help()))
+                .clone()
         })
-    }) else {
+    });
+    let found = texts.iter().find_map(|&text| {
+        let english = std::iter::once(text).chain(cr_i18n::sources(text));
+        let control = english
+            .clone()
+            .find_map(|t| controls.topic_of(t))
+            .map(|number| ItemTopic {
+                file: "Program.hlp",
+                number,
+                popup: true,
+            });
+        control.or_else(|| items.as_ref()?.topic_of(text, &ItemKind::order(screen)))
+    });
+    let Some(found) = found else { return };
+    if !found.popup {
+        if let Err(e) = open(parent, install, found.file, Target::Number(found.number)) {
+            eprintln!("{e}");
+        }
         return;
-    };
-    let program = PROGRAM.with_borrow_mut(|files| {
+    }
+    let file = found.file.to_ascii_lowercase();
+    let help = FILES.with_borrow_mut(|files| {
         files
-            .entry(root)
-            .or_insert_with(|| install.help_file("Program.hlp").ok().map(Rc::new))
+            .entry((root.clone(), file.clone()))
+            .or_insert_with(|| install.help_file(found.file).ok().map(Rc::new))
             .clone()
     });
     let follow = {
         let parent = parent.clone();
-        let root = install.root().to_owned();
         move |link: &Link| match viewer(&parent, &root) {
             Ok(viewer) => {
-                viewer.follow_from("program.hlp", link);
+                viewer.follow_from(&file, link);
                 viewer.window.present();
             }
             Err(e) => eprintln!("{e}"),
         }
     };
-    if let Some(dialog) = program
+    if let Some(dialog) = help
         .as_ref()
-        .and_then(|p| popup_dialog(p, p.topic_of_number(number)?, follow))
+        .and_then(|h| popup_dialog(h, h.topic_of_number(found.number)?, follow))
     {
         dialog.present(Some(parent));
     }

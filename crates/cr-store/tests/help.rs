@@ -193,3 +193,54 @@ fn the_screens_controls_have_their_popup_help() {
     assert!(program.topic_of_number(topic).is_some());
     assert_eq!(help.topic_of("no such control"), None);
 }
+
+#[test]
+fn the_shipped_records_open_their_books_help() {
+    use cr_store::help::{ItemKind, topic};
+    let Some(install) = install() else { return };
+    let items = install.item_help();
+    let sections = install.catalog();
+    let mut files = std::collections::HashMap::new();
+    for (id, screen, least) in [
+        ("races", topic::RACES, 100),
+        ("classes", topic::CLASSES, 100),
+        ("weapons", topic::PARTS, 100),
+        ("armor", topic::PARTS, 100),
+        ("equipment", topic::PARTS, 100),
+        ("magic-items", topic::PARTS, 100),
+        ("nonweapon", topic::PARTS, 100),
+        ("wizard-spells", topic::SPELLS, 100),
+        ("priest-spells", topic::SPELLS, 100),
+        ("psionics", topic::PSIONIC_POWERS, 100),
+        ("monsters", topic::MONSTERS, 98),
+        ("monster-types", topic::MONSTERS, 90),
+    ] {
+        let section = sections.iter().find(|s| s.id == id).unwrap();
+        let order = ItemKind::order(screen);
+        let found = section
+            .entries
+            .iter()
+            .filter(|e| {
+                items.topic_of(&e.title, &order).is_some_and(|t| {
+                    files
+                        .entry(t.file)
+                        .or_insert_with(|| install.help_file(t.file).ok())
+                        .as_ref()
+                        .is_some_and(|h| h.topic_of_number(t.number).is_some())
+                })
+            })
+            .count();
+        assert!(
+            found * 100 >= section.entries.len() * least,
+            "{id}: {found} of {}",
+            section.entries.len()
+        );
+    }
+    // A multi-class: the topic on multi-class characters.
+    let classes = &sections.iter().find(|s| s.id == "classes").unwrap().entries;
+    let multi = format!("{}/{}", classes[0].title, classes[1].title);
+    let topic = items
+        .topic_of(&multi, &ItemKind::order(topic::CLASSES))
+        .unwrap();
+    assert_eq!((topic.file, topic.number), ("Charactr.hlp", 100));
+}

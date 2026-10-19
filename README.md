@@ -149,7 +149,9 @@ Expansion converts a 2.0 package, and leaves the 2.0 folder untouched.
   `cr export`, `cr import`, `cr package`, `cr party`, `cr delete`,
   `cr survey`
 - **Help**: the Help button and F1 on every screen open its topic of the
-  program help, as the original's Help… buttons do; the Help menu has the
+  program help, as the original's Help… buttons do; a right-click on a
+  control shows its help, and on a race, class, item, spell, psionic power
+  or monster its topic in the book's help; the Help menu has the
   Online Manual, the Tome of Help (every installed book's help) and About,
   with the original's version, copyright and credits. The installation's
   WinHelp files are read by the app's own help window

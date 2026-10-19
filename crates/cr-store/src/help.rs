@@ -2,6 +2,10 @@
 //! contents files (`.cnt`), as the Help… buttons, the Help menu and the
 //! books' Help versions open them.
 
+use std::collections::{HashMap, HashSet};
+
+use cr_formats::database::ObjectList;
+use cr_formats::object::Object;
 use cr_formats::winhelp::HelpFile;
 
 use crate::{Error, Installation, Result};
@@ -360,6 +364,123 @@ impl ScreenHelp {
     }
 }
 
+/// A database record's topic in its book's help file, as the original's
+/// right-click on a list row opens it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ItemTopic {
+    /// The file in `Help/`.
+    pub file: &'static str,
+    /// The number of its `[MAP]`: the record's help id.
+    pub number: u32,
+    /// Shown in a popup (`HELP_CONTEXTPOPUP`), not in the help window.
+    pub popup: bool,
+}
+
+/// What a record is: the original's list of it knows, and opens its
+/// record's help by name among those.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ItemKind {
+    /// Races, subraces and classes.
+    Character,
+    Part,
+    Spell,
+    Psionic,
+    /// Monsters and monster types.
+    Monster,
+}
+
+impl ItemKind {
+    /// The kinds of record a screen lists first, then the others: a part
+    /// and a race can share a name.
+    pub fn order(screen: u32) -> [ItemKind; 5] {
+        use ItemKind::*;
+        let first = match screen {
+            topic::RACES
+            | topic::RACE
+            | topic::CLASSES
+            | topic::CLASS
+            | topic::CLASSES_ALLOWED
+            | topic::RACE_AND_CLASS
+            | topic::SUBRACE
+            | topic::CLASS_ABILITIES
+            | topic::CHARACTER_INFORMATION
+            | topic::NPC_CREATION
+            | topic::NPC_GROUP => Character,
+            topic::SPELLS | topic::CHARACTER_SPELLS => Spell,
+            topic::PSIONIC_POWERS | topic::PSIONIC_POWER => Psionic,
+            topic::MONSTERS | topic::MONSTER_TYPE | topic::ENCOUNTER => Monster,
+            _ => Part,
+        };
+        let mut order = [first; 5];
+        let rest = [Part, Spell, Character, Psionic, Monster];
+        for (at, kind) in (1..).zip(rest.into_iter().filter(|k| *k != first)) {
+            order[at] = kind;
+        }
+        order
+    }
+}
+
+/// The help of the installation's shipped records, by name. The user
+/// database's records have none: the original shows their description.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ItemHelp {
+    names: HashMap<String, Vec<(ItemKind, ItemTopic)>>,
+    classes: HashSet<String>,
+}
+
+impl ItemHelp {
+    /// The topic of the record named `name` (what a list row shows, up to
+    /// a tab), of the first kind of `order` that has one; a multi-class
+    /// (class names joined by `/`) has the topic on multi-class characters.
+    pub fn topic_of(&self, name: &str, order: &[ItemKind]) -> Option<ItemTopic> {
+        let name = comparable(name.split('\t').next().unwrap_or(name));
+        if let Some(topics) = self.names.get(&name) {
+            return order.iter().find_map(|kind| {
+                topics
+                    .iter()
+                    .find(|(k, _)| k == kind)
+                    .map(|(_, topic)| topic.clone())
+            });
+        }
+        let multi = name.contains('/')
+            && name
+                .split('/')
+                .all(|class| self.classes.contains(class.trim()));
+        multi.then_some(ItemTopic {
+            file: "Charactr.hlp",
+            number: 100,
+            popup: false,
+        })
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.names.is_empty()
+    }
+}
+
+/// The help file of a part type (an index of `PART_TYPES`) and whether its
+/// topics are popups (0x4B3B22).
+fn part_help(part_type: usize) -> Option<(&'static str, bool)> {
+    Some(match part_type {
+        // Weapons, armor, weapon proficiencies, currency.
+        0 | 1 | 3 | 16 => ("Equip.hlp", false),
+        // Equipment, gems and art.
+        7 | 13 => ("Equip.hlp", true),
+        // Nonweapon proficiencies.
+        4 => ("Prof.hlp", false),
+        // Racial abilities, languages, traits, disadvantages, class
+        // abilities.
+        5 | 6 | 11 | 12 | 14 => ("Prof.hlp", true),
+        8 => ("Magic.hlp", false),
+        // Count.
+        17 => ("Magic.hlp", true),
+        // Schools, spheres.
+        9 | 18 => ("Spells.hlp", true),
+        15 => ("Kits.hlp", false),
+        _ => return None,
+    })
+}
+
 /// A control's text made comparable with the app's labels.
 fn comparable(text: &str) -> String {
     let text: String = text
@@ -376,6 +497,13 @@ fn comparable(text: &str) -> String {
         text = t.trim_end().to_owned();
     }
     text
+}
+
+/// The number a file name starts with (`atoi`): a monster type's help id
+/// is its picture's ("6.bmp").
+fn leading_number(text: &str) -> i64 {
+    let digits: String = text.chars().take_while(char::is_ascii_digit).collect();
+    digits.parse().unwrap_or(0)
 }
 
 /// What the original's About box shows (Help > About…, dialog 100): its
@@ -430,6 +558,127 @@ impl Installation {
         ScreenHelp { texts }
     }
 
+    /// The help of the shipped records (`Database/`), as the original's
+    /// right-click on a list row opens it (0x4B3B22): parts, spells,
+    /// races, classes, psionic powers, monsters and monster types whose
+    /// help id is a topic of their file.
+    pub fn item_help(&self) -> ItemHelp {
+        let mut files: HashMap<&str, Option<HelpFile>> = HashMap::new();
+        let mut help = ItemHelp::default();
+        let mut add = |kind, name: &str, file: &'static str, number: i64, popup: bool| {
+            let Ok(number) = u32::try_from(number) else {
+                return;
+            };
+            let known = files
+                .entry(file)
+                .or_insert_with(|| self.help_file(file).ok())
+                .as_ref()
+                .is_some_and(|h| number > 0 && h.topic_of_number(number).is_some());
+            let topics = help.names.entry(comparable(name)).or_default();
+            if known && !topics.iter().any(|(k, _)| *k == kind) {
+                topics.push((
+                    kind,
+                    ItemTopic {
+                        file,
+                        number,
+                        popup,
+                    },
+                ));
+            }
+        };
+        if let Ok(parts) = self.load_parts() {
+            for (part_type, objects) in parts.arrays.iter().enumerate() {
+                let Some((file, popup)) = part_help(part_type) else {
+                    continue;
+                };
+                for object in objects {
+                    if let Object::Part(p) = object {
+                        add(
+                            ItemKind::Part,
+                            &p.head.name,
+                            file,
+                            p.head.unknown_0x1e4.into(),
+                            popup,
+                        );
+                    }
+                }
+            }
+        }
+        if let Ok(spells) = self.load_spells() {
+            for object in spells.wizard.iter().chain(&spells.priest) {
+                if let Object::Spell(s) = object {
+                    add(ItemKind::Spell, &s.name, "Spells.hlp", s.id.into(), false);
+                }
+            }
+        }
+        let types: HashMap<String, i64> = self
+            .shipped("MonType")
+            .iter()
+            .filter_map(|o| match o {
+                Object::MonsterType(t) => Some((comparable(&t.name), leading_number(&t.picture))),
+                _ => None,
+            })
+            .collect();
+        for name in ["Race", "Class", "Psionic", "Monster", "MonType"] {
+            for object in self.shipped(name) {
+                match &object {
+                    Object::Race(r) => add(
+                        ItemKind::Character,
+                        &r.name,
+                        "Charactr.hlp",
+                        r.id.into(),
+                        false,
+                    ),
+                    Object::Class(c) => {
+                        help.classes.insert(comparable(c.name()));
+                        if let cr_formats::classes::Class::Expansion { data, .. } = &**c {
+                            add(
+                                ItemKind::Character,
+                                &data.name,
+                                "Charactr.hlp",
+                                data.unknown_0xc.into(),
+                                false,
+                            );
+                        }
+                    }
+                    Object::PsionicPower(p) => add(
+                        ItemKind::Psionic,
+                        &p.name,
+                        "Psionics.hlp",
+                        p.unknown_0x24.into(),
+                        false,
+                    ),
+                    // A monster without a help id has its type's.
+                    Object::Monster(m) => {
+                        let number = match m.unknown_0x3b8 {
+                            0 => types.get(&comparable(&m.name)).copied().unwrap_or(0),
+                            n => n.into(),
+                        };
+                        add(ItemKind::Monster, &m.name, "Monsters.hlp", number, false);
+                    }
+                    Object::MonsterType(t) => add(
+                        ItemKind::Monster,
+                        &t.name,
+                        "Monsters.hlp",
+                        leading_number(&t.picture),
+                        false,
+                    ),
+                    _ => {}
+                }
+            }
+        }
+        help
+    }
+
+    /// The records of `Database/<name>.dat`.
+    fn shipped(&self, name: &str) -> Vec<Object> {
+        self.read(&format!("Database/{name}.dat"))
+            .ok()
+            .and_then(|data| ObjectList::parse(&data).ok())
+            .map(|list| list.objects)
+            .unwrap_or_default()
+    }
+
     pub fn original_about(&self) -> OriginalAbout {
         let image = crate::exe::Image::open(self, crate::treasure::Flavor::Expansion).ok();
         let texts = |id| {
@@ -474,6 +723,23 @@ impl Installation {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_screen_lists_its_own_kind_of_record_first() {
+        use ItemKind::*;
+        assert_eq!(
+            ItemKind::order(topic::RACES),
+            [Character, Part, Spell, Psionic, Monster]
+        );
+        assert_eq!(
+            ItemKind::order(topic::EQUIPMENT),
+            [Part, Spell, Character, Psionic, Monster]
+        );
+        assert_eq!(
+            ItemKind::order(topic::MONSTERS),
+            [Monster, Part, Spell, Character, Psionic]
+        );
+    }
 
     #[test]
     fn control_texts_compare_without_case_mnemonics_or_ellipses() {

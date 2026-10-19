@@ -519,7 +519,7 @@ impl Installation {
         PartsFile::parse(&data).map_err(|e| format!("{relative}: {e}"))
     }
 
-    fn load_spells(&self) -> std::result::Result<SpellsFile, String> {
+    pub(crate) fn load_spells(&self) -> std::result::Result<SpellsFile, String> {
         let relative = "Database/Spells.dat";
         let data = self.read(relative).map_err(|e| e.to_string())?;
         SpellsFile::parse(&data).map_err(|e| format!("{relative}: {e}"))

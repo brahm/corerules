@@ -345,7 +345,8 @@ impl Window {
                 }
             })
             .build();
-        // A right-click on a control: its screen and what it reads.
+        // A right-click on a control or a row: its screen and what it
+        // reads.
         let help_control = gio::ActionEntry::builder("help-control")
             .parameter_type(Some(glib::VariantTy::STRING))
             .activate({
@@ -360,7 +361,7 @@ impl Window {
                     };
                     let texts: Vec<&str> = lines.collect();
                     if let Some(install) = this.install.borrow().as_ref() {
-                        help::control_popup(&this.window, install, screen, &texts);
+                        help::context_help(&this.window, install, screen, &texts);
                     }
                 }
             })
