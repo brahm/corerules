@@ -3,6 +3,7 @@
 //! classes every later page offers.
 
 use std::cell::RefCell;
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -42,6 +43,8 @@ type SetCheck = dyn Fn(&mut Draft, usize, bool);
 
 struct Inner {
     rules: CreationRules,
+    /// The installation, for the portraits.
+    root: PathBuf,
     draft: RefCell<Draft>,
     dice: RefCell<Dice>,
     nav: adw::NavigationView,
@@ -57,6 +60,7 @@ struct Wizard(Rc<Inner>);
 pub fn new_character(
     parent: &impl IsA<gtk::Widget>,
     rules: CreationRules,
+    root: PathBuf,
     create: impl Fn(&Draft) -> Result<(), String> + 'static,
 ) {
     let nav = adw::NavigationView::new();
@@ -68,6 +72,7 @@ pub fn new_character(
         .build();
     let wizard = Wizard(Rc::new(Inner {
         rules,
+        root,
         draft: RefCell::new(Draft::new(&SETTINGS[0])),
         dice: RefCell::new(Dice::default()),
         nav,
@@ -1198,6 +1203,9 @@ impl Wizard {
         who.add(&name);
         who.add(&player);
         who.add(&gender);
+        let (portrait_row, portrait) =
+            crate::portrait::row(self.0.root.clone(), d.race.clone(), d.portrait.clone());
+        who.add(&portrait_row);
 
         let alignment = combo_row(tr("Alignment"), &rules.alignments(&d.classes), &d.alignment);
         let kit = combo_row(
@@ -1416,6 +1424,7 @@ impl Wizard {
                     let mut d = this.0.draft.borrow_mut();
                     d.name = name.text().trim().to_owned();
                     d.player = player.text().trim().to_owned();
+                    d.portrait = portrait.borrow().clone();
                     d.male = male();
                     d.alignment = combo_value(&alignment);
                     d.kit = combo_value(&kit);

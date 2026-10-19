@@ -594,6 +594,10 @@ pub struct Draft {
     pub armor_proficiencies: Vec<String>,
     /// In the order learned.
     pub fighting_styles: Vec<String>,
+    /// The portrait's folder and file name (see
+    /// [`crate::pictures::stored_portrait`]); empty for none, as the
+    /// original's wizard leaves it.
+    pub portrait: [String; 2],
 }
 
 impl Draft {
@@ -638,6 +642,7 @@ impl Draft {
             shields: [false; 4],
             armor_proficiencies: Vec::new(),
             fighting_styles: Vec::new(),
+            portrait: Default::default(),
         }
     }
 
@@ -2461,6 +2466,7 @@ impl CreationRules {
             let d = &mut character.data;
             d.player.clone_from(&draft.player);
             d.name = draft.name.trim().to_owned();
+            d.unknown_0x1db8.clone_from(&draft.portrait);
             d.class_title = draft.class_title();
             d.unknown_0x90 = "NONE".into();
             d.social_class.clone_from(&draft.social_class);
@@ -3094,6 +3100,35 @@ mod tests {
         fs::create_dir_all(root.join("Database")).unwrap();
         let install = Installation::open(&root).unwrap();
         (root, install)
+    }
+
+    #[test]
+    fn portraits_are_kept_as_the_original_keeps_them() {
+        let (root, install) = installation("portrait");
+        let rules = rules(true);
+        let mut d = draft(&rules);
+        // The original's wizard leaves the portrait empty.
+        let file = install.create_character(&rules, &d).unwrap();
+        let c = install.character(&file).unwrap();
+        assert_eq!(c.data.unknown_0x1db8, [String::new(), String::new()]);
+
+        d.portrait = crate::pictures::stored_portrait("Dwarf1.bmp");
+        let file = install.create_character(&rules, &d).unwrap();
+        let c = install.character(&file).unwrap();
+        assert_eq!(
+            c.data.unknown_0x1db8,
+            [
+                "C:\\Program Files\\AD&D Core Rules 2.0\\Bitmaps\\Portrait\\",
+                "Dwarf1.bmp"
+            ]
+        );
+        let mut details = crate::edit::CharacterDetails::of(&c);
+        assert_eq!(details.portrait, c.data.unknown_0x1db8);
+        details.portrait = Default::default();
+        install.save_character_details(&file, &details).unwrap();
+        let c = install.character(&file).unwrap();
+        assert_eq!(c.data.unknown_0x1db8, [String::new(), String::new()]);
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
