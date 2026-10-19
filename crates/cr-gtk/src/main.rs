@@ -81,9 +81,36 @@ fn main() -> glib::ExitCode {
             },
         }
         window.window.present();
+        if std::env::var_os("CORERULES_PRINT_TEXTS").is_some() {
+            let window = window.window.clone();
+            glib::timeout_add_local_once(std::time::Duration::from_secs(2), move || {
+                print_texts(window.upcast_ref());
+            });
+        }
     });
     // The optional folder argument is handled above, not by GApplication.
     app.run_with_args(&std::env::args().take(1).collect::<Vec<_>>())
+}
+
+/// Prints the text of every label on screen under `widget`, one per line
+/// after `text` and a tab, with line breaks written `\n`, so the package
+/// tests can check the interface's language (`CORERULES_PRINT_TEXTS=1`, see
+/// `packaging/smoke-test.sh`).
+fn print_texts(widget: &gtk::Widget) {
+    if !widget.is_mapped() {
+        return;
+    }
+    if let Some(label) = widget.downcast_ref::<gtk::Label>() {
+        let text = label.label();
+        if !text.is_empty() {
+            println!("text\t{}", text.replace('\n', "\\n"));
+        }
+    }
+    let mut child = widget.first_child();
+    while let Some(c) = child {
+        print_texts(&c);
+        child = c.next_sibling();
+    }
 }
 
 /// Symbolic icons the icon theme lacks, by name.

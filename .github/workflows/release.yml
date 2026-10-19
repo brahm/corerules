@@ -117,7 +117,8 @@ jobs:
           path: CoreRules-${{ needs.version.outputs.version }}.flatpak
 
   # Each package goes onto a clean container of the oldest and the newest
-  # supported release, and the app has to start and keep running. Minimal
+  # supported release, and the app has to start and keep running in each
+  # interface language, with its texts in that language. Minimal
   # containers lack the Mesa drivers every desktop has, so the tests add them.
   test-deb:
     needs: deb
