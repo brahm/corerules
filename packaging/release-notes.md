@@ -15,6 +15,10 @@ What's new in 0.8.0:
   moves next to it for Import Core Rules 2.0…
 - `extract-data.sh` is gone: the app does its job, and its copies from a
   CD are writable
+- The community add-ons come as their own self-installing app,
+  `CoreRules-Addons-*-x86_64.AppImage`, published on GitHub Packages as
+  `corerules-addons` (see `addons/README.md`); the tarball and its shell
+  installer are gone
 
 What the app does: it opens a Core Rules 2.0 Expansion installation (or its
 CD, or a data package), creates and edits characters with the Core Rules or

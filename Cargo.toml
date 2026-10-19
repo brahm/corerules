@@ -1,6 +1,9 @@
 [workspace]
 resolver = "3"
-members = ["crates/cr-i18n", "crates/cr-formats", "crates/cr-store", "crates/cr-cli", "crates/cr-gtk"]
+members = ["crates/cr-i18n", "crates/cr-formats", "crates/cr-store", "crates/cr-cli", "crates/cr-gtk", "crates/cr-addons"]
+# The add-ons installer carries 9 MB of add-ons; only its own AppImage
+# builds it (cargo build -p cr-addons).
+default-members = ["crates/cr-i18n", "crates/cr-formats", "crates/cr-store", "crates/cr-cli", "crates/cr-gtk"]
 
 [workspace.package]
 version = "0.8.0"

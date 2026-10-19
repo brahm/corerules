@@ -1,0 +1,19 @@
+[package]
+name = "cr-addons"
+description = "Installer of the community add-ons for Core Rules"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "corerules-addons"
+path = "src/main.rs"
+
+[dependencies]
+cr-formats.workspace = true
+cr-store.workspace = true
+gtk = { package = "gtk4", version = "0.9", features = ["v4_14"] }
+adw = { package = "libadwaita", version = "0.7", features = ["v1_5"] }
+lzma-rs = "0.3"
