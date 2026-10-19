@@ -2,14 +2,17 @@
 # Starts the app on a virtual display once for each interface language and
 # checks that it keeps running, loads its icons and shows its texts in that
 # language. Usage: packaging/smoke-test.sh COMMAND [ARGS...]
-# Needs xvfb-run, dbus-run-session and awk, and the catalogs in
-# crates/cr-i18n/po next to this script (SMOKE_PO overrides the folder).
+# Each start gets its own session bus and process group, so an instance
+# left behind by a launcher (the AppImage's, flatpak's) cannot take the
+# next start's place. Needs xvfb-run, dbus-run-session, setsid and awk,
+# and the catalogs in crates/cr-i18n/po next to this script (SMOKE_PO
+# overrides the folder).
 # SMOKE_LANGUAGES picks the languages. Leaves a screenshot of each language
 # in ${SCREENSHOT:-smoke}-LANGUAGE.png when xwd and ImageMagick are around.
 set -u
 script=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
 if [ -z "${SMOKE_INSIDE:-}" ]; then
-    SMOKE_INSIDE=1 exec xvfb-run -a -s '-screen 0 1100x720x24' dbus-run-session -- "$script" "$@"
+    SMOKE_INSIDE=1 exec xvfb-run -a -s '-screen 0 1100x720x24' "$script" "$@"
 fi
 
 po=${SMOKE_PO:-$(dirname "$script")/../crates/cr-i18n/po}
@@ -38,7 +41,7 @@ for code in ${SMOKE_LANGUAGES:-en_US pt_BR es it fr de}; do
     log=$tmp/$code.log
     texts=$tmp/$code.txt
     LANG=$code.UTF-8 LC_ALL= LC_MESSAGES= LANGUAGE= CORERULES_PRINT_TEXTS=1 \
-        "$@" >"$texts" 2>"$log" &
+        setsid dbus-run-session -- "$@" >"$texts" 2>"$log" &
     pid=$!
     sleep "${SMOKE_SECONDS:-8}"
     if ! kill -0 $pid 2>/dev/null; then
@@ -51,7 +54,7 @@ for code in ${SMOKE_LANGUAGES:-en_US pt_BR es it fr de}; do
     if command -v xwd >/dev/null && command -v convert >/dev/null; then
         xwd -root -silent | convert xwd:- "${SCREENSHOT:-smoke}-$code.png"
     fi
-    kill $pid
+    kill -- -$pid
     wait $pid 2>/dev/null
     cat "$log" >&2
     if grep -q "Failed to load icon" "$log"; then
@@ -68,6 +71,7 @@ for code in ${SMOKE_LANGUAGES:-en_US pt_BR es it fr de}; do
     fi
     result=$(awk -F '\t' '
         FNR == NR { if ($1 != "") { tr[$2] = 1; if ($2 != $1) en[$1] = 1 }; next }
+        !sub(/^text\t/, "") { next }
         { shown++ }
         $0 in tr { translated++ }
         $0 in en { print "  untranslated: " $0 }
