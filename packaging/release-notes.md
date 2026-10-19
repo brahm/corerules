@@ -3,19 +3,22 @@ checked against the original programs, but the app has had little use
 outside those checks. Keep a copy of your `Chars` and `UserDbas` folders,
 and report anything that differs from the original.
 
-What's new in 0.7.2:
+What's new in 0.8.0:
 
-- DM Toolkit packages made with the Expansion after its later patches
-  import: the spell points of their classes, which the CD's program cannot
-  read, are left out, and their kits are written in the CD's layout.
-  Classes with spell-like abilities by level import as well
-- A user record that has a standard record's name, as imported packages
-  bring, can be edited and saved while it keeps that name
-- `cr import` takes the category names `--list` prints and finds names
-  with trailing spaces
-- `addons/` in the repository holds 686 community add-ons converted to the
-  Expansion and consolidated into one package, with an installer and a
-  guide in Portuguese
+- **Extract Data from CD…** in the main menu (and on the start page when
+  no data is found) copies what the app uses from the Core Rules 2.0 or
+  Expansion CD into the app's data folder. It reads the CD's ISO image
+  directly, with no mounting or other tools, or takes the mounted CD, an
+  installation or a Wine prefix. `cr extract-data` does the same from the
+  command line
+- The Expansion takes the data folder over from Core Rules 2.0 data, which
+  moves next to it for Import Core Rules 2.0…
+- `extract-data.sh` is gone: the app does its job, and its copies from a
+  CD are writable
+- The community add-ons come as their own self-installing app,
+  `CoreRules-Addons-*-x86_64.AppImage`, published on GitHub Packages as
+  `corerules-addons` (see `addons/README.md`); the tarball and its shell
+  installer are gone
 
 What the app does: it opens a Core Rules 2.0 Expansion installation (or its
 CD, or a data package), creates and edits characters with the Core Rules or

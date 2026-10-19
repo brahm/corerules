@@ -27,7 +27,7 @@ field.
 ## Installation layout
 
 The app opens the program folder of an installation (the one holding
-`Database`), the data package `packaging/extract-data.sh` makes from it
+`Database`), the data package Extract Data from CD… makes from it or from the CD
 (`~/.local/share/corerules/data`), or the default folder of a Wine prefix
 (`drive_c/Program Files/AD&D Core Rules 2.0`). Folder and file names differ
 in case between the CD, the installer and the programs' own writes
@@ -55,7 +55,7 @@ installation and converted to the Expansion's layouts (see
 | `MapMaker/Moi*.dat`, `Mapmaker.ini`, `*.pal`, `*.mtf` | Map Maker II object sets and settings | not decoded | no | no |
 | `*.FCW` | Campaign Mapper drawings | carried inside packages as bytes; not decoded | no | inside packages |
 | `UserDbas/enctable.dat` | 0 bytes in both programs; the name does not occur in `Tsrp3.exe` | - | no | no |
-| `Help/*.hlp`, `Help/*.cnt`, `WebHelp/**` | WinHelp and HTML help | not decoded; `extract-data.sh` copies the `.cnt` files, the app does not read them | no | no |
+| `Help/*.hlp`, `Help/*.cnt`, `WebHelp/**` | WinHelp and HTML help | not decoded; Extract Data from CD… copies the `.cnt` files, the app does not read them | no | no |
 | `Sounds`, `Animate`, `Wizard`, `Or`, `Userbmp`, other `Bitmaps` | program artwork and sounds (BMP, GIF, WAV) | standard formats | no | no |
 
 Map Maker II, the Campaign Mapper and the dice roller are outside the app's

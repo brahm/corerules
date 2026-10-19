@@ -14,6 +14,17 @@ mod transfer;
 mod userdb;
 
 const USAGE: &str = "usage:
+  cr extract-data SOURCE [DEST_DIR]
+                            copy what the app uses out of a Core Rules 2.0
+                            or Expansion CD into a data package, as Extract
+                            Data from CD... does: SOURCE is the CD's ISO
+                            image, the mounted CD, an installation (the
+                            folder holding Database/) or a Wine prefix;
+                            DEST_DIR, which must not exist, defaults to
+                            ~/.local/share/corerules/data while that is
+                            free, else a corerules-data-EDITION folder
+                            next to it (the Expansion takes the data
+                            folder over from 2.0 data, which moves there)
   cr survey [INSTALL_DIR]   list database files, record counts and classes
   cr chars [INSTALL_DIR]    list characters
   cr edit INSTALL_DIR FILE FIELD=VALUE...
@@ -179,6 +190,15 @@ fn main() -> ExitCode {
         eprintln!("{USAGE}");
         return ExitCode::FAILURE;
     };
+    if command == "extract-data" {
+        return match cmd_extract_data(&args[1..]) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("cr: {e}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     // INSTALL_DIR may be left out whenever the next argument is not a
     // folder: the data package or the Wine installation is used.
     let (install, rest) = match args.get(1).filter(|d| std::path::Path::new(d).is_dir()) {
@@ -249,6 +269,38 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+fn cmd_extract_data(args: &[String]) -> cr_store::Result<()> {
+    use cr_store::extract::Extraction;
+    let (source, dest) = match args {
+        [source] => (source, None),
+        [source, dest] => (source, Some(std::path::PathBuf::from(dest))),
+        _ => {
+            eprintln!("{USAGE}");
+            return Ok(());
+        }
+    };
+    let extraction = Extraction::probe(std::path::Path::new(source))?;
+    let dest = match dest {
+        Some(dest) => {
+            extraction.write(&dest)?;
+            dest
+        }
+        None => {
+            let installed = extraction.install()?;
+            if let Some(moved) = &installed.moved {
+                outln!("Moved the core20 data to {}", moved.display());
+            }
+            installed.path
+        }
+    };
+    outln!(
+        "Extracted the {} data into {}",
+        extraction.edition().id(),
+        dest.display()
+    );
+    Ok(())
 }
 
 fn cmd_survey(install: &Installation) -> cr_store::Result<()> {
