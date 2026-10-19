@@ -35,7 +35,8 @@ Além de `latest`, cada versão do app tem a sua tag, como `0.7.2`.
 |---|---|
 | `Comunidade.xpx` | os addons consolidados, no formato da Expansion |
 | `instalar-addons.sh` | importa os addons no pacote de dados do app |
-| `bin/cr` | a ferramenta de linha de comando que o instalador usa (binário estático, roda em qualquer Linux x86-64); também cria o pacote de dados a partir do CD |
+| `bin/cr` | a ferramenta de linha de comando que o instalador usa (binário estático, roda em qualquer Linux x86-64) |
+| `extract-data.sh` | cria o pacote de dados a partir da sua instalação do Core Rules |
 | `README.md`, `relatorio.md`, `compatibilidade.csv`, `conflitos.csv` | este guia e o relatório por addon |
 | `SHA256SUMS` | as somas de verificação |
 
@@ -45,7 +46,7 @@ O aplicativo não vem no pacote. Instale o Core Rules 0.7.2 ou mais novo pela [p
 
 * Linux x86-64.
 * O app Core Rules 0.7.2 ou mais novo.
-* O seu CD do AD&D Core Rules 2.0 Expansion (ou a imagem ISO dele), ou uma instalação sua no Wine. Os addons não trazem as regras.
+* Uma instalação sua do AD&D Core Rules 2.0 Expansion, no Wine ou copiada do CD. Os addons não trazem as regras.
 
 ## Instalação
 
@@ -56,12 +57,11 @@ O aplicativo não vem no pacote. Instale o Core Rules 0.7.2 ou mais novo pela [p
    cd addons-comunidade-expansion
    ```
 
-2. Crie o pacote de dados do app, se ainda não tiver um. No app, use **Extrair dados do CD…** no menu principal (ou na tela inicial) e escolha a imagem ISO do CD da Expansion ou a pasta do CD montado. Os dados vão para `~/.local/share/corerules/data`. Pela linha de comando, o `cr` do pacote faz o mesmo:
+2. Crie o pacote de dados do app a partir da sua instalação, se ainda não tiver um. Ele fica em `~/.local/share/corerules/data`.
 
    ```sh
-   bin/cr extract-data /caminho/add_core_rules_2_expansion.iso  # a imagem ISO do CD
-   bin/cr extract-data /media/$USER/EVERMORE                    # o CD montado
-   bin/cr extract-data "$HOME/.wine"                            # Core Rules instalado no Wine
+   ./extract-data.sh --install "$HOME/.wine"        # Core Rules instalado no Wine
+   ./extract-data.sh --install /caminho/do/Program  # ou a pasta que tem Database/
    ```
 
 3. Instale os addons:

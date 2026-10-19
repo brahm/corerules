@@ -1,8 +1,8 @@
 #!/bin/sh
 # Builds target/addons/addons-comunidade-expansion.tar.gz, the community
 # add-ons package for the Expansion: the consolidated Comunidade.xpx, the
-# installer and a static cr that reads it (and extracts the data package
-# from the CDs). The Addons package workflow publishes it on GitHub Packages.
+# installer, a static cr that reads it and the data extraction script. The
+# Addons package workflow publishes it on GitHub Packages.
 #
 #   packaging/addons/build.sh [COMUNIDADE.xpx]
 #
