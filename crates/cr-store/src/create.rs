@@ -559,6 +559,8 @@ pub struct Draft {
     pub weight: u32,
     /// The hit die rolled for each class.
     pub hit_dice: Vec<u32>,
+    /// The die (1d6) of a psionicist's 1st-level PSPs; 0 for others.
+    pub psionic_roll: u32,
     pub nonweapon_proficiencies: Vec<String>,
     /// Native languages.
     pub languages: Vec<String>,
@@ -624,6 +626,7 @@ impl Draft {
             height: 0,
             weight: 0,
             hit_dice: Vec::new(),
+            psionic_roll: 0,
             nonweapon_proficiencies: Vec::new(),
             languages: Vec::new(),
             weapon_proficiencies: Vec::new(),
@@ -1441,6 +1444,23 @@ impl CreationRules {
             .iter()
             .map(|c| dice.roll(1, self.class(c).map_or(0, |c| c.hit_die.max(0) as u32)))
             .collect()
+    }
+
+    /// The die of the 1st-level PSPs, rolled after the hit dice when a
+    /// class is a psionicist (0x5ba3e0); 0 when none is.
+    pub fn roll_psionic(&self, classes: &[String], dice: &mut Dice) -> u32 {
+        if self.is_psionicist(classes) {
+            dice.roll(1, 6)
+        } else {
+            0
+        }
+    }
+
+    /// Whether one of `classes` is of the psionicist group.
+    fn is_psionicist(&self, classes: &[String]) -> bool {
+        classes
+            .iter()
+            .any(|c| self.class(c).is_some_and(|c| c.group == 4))
     }
 
     /// Exceptional strength applies to warriors with Strength 18.
@@ -2697,6 +2717,13 @@ impl CreationRules {
                 pack.contents = Some(Box::new(Object::InventoryBundle(contents)));
             }
         }
+        // A psionicist starts with the PSPs of the 1st level, from the
+        // final scores (0x42e916).
+        if self.is_psionicist(&draft.classes) {
+            let roll = draft.psionic_roll.clamp(1, 6);
+            character.data.unknown_0x1430[0] =
+                crate::advance::first_level_psionic_points(&character, roll);
+        }
         if self.expansion {
             let weight = carried_weight(&character, &self.parts) as f32;
             character.data.carried_weight = weight.to_bits();
@@ -3621,5 +3648,28 @@ mod tests {
         bad.fighting_styles.push("Missile".into());
         assert!(rules.problem(&bad).unwrap().contains("twice"));
         fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn a_psionicist_starts_with_first_level_psps() {
+        let rules = rules(true);
+        let mut d = draft(&rules);
+        d.classes = vec!["Psionicist".into()];
+        d.hit_dice = vec![5];
+        d.scores = [10, 10, 16, 16, 17, 10];
+        d.psionic_roll = 4;
+        let c = rules.build(&d).unwrap();
+        // 15, the die and a point for each Wisdom, Intelligence and
+        // Constitution point over 15.
+        let over = |score: [u32; 3]| score[0].saturating_sub(15);
+        let [con, int, wis] = [1, 2, 3].map(|a| over(c.data.abilities[a]));
+        assert_eq!(c.data.unknown_0x1430[0], 15 + 4 + wis + int + con);
+        assert!(c.data.unknown_0x1430[1..].iter().all(|&p| p == 0));
+
+        let mut dice = Dice::seeded(3);
+        assert!((1..=6).contains(&rules.roll_psionic(&d.classes, &mut dice)));
+        let fighter = vec!["Fighter".to_owned()];
+        assert_eq!(rules.roll_psionic(&fighter, &mut dice), 0);
+        d.classes = fighter;
+        assert_eq!(rules.build(&d).unwrap().data.unknown_0x1430[0], 0);
     }
 }
