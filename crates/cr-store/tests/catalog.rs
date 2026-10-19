@@ -56,10 +56,12 @@ fn portraits_are_offered_race_first() {
         let cr_formats::Object::Race(race) = race else {
             continue;
         };
-        let choices = install.portrait_choices(&race.name).unwrap();
+        let choices = install
+            .picture_choices(cr_store::pictures::Kind::Portrait, &race.name)
+            .unwrap();
         assert_eq!(choices.len(), bitmaps, "{}", race.name);
-        let offered = choices.iter().take_while(|c| c.race).count();
-        assert!(choices[offered..].iter().all(|c| !c.race), "{}", race.name);
+        let offered = choices.iter().take_while(|c| c.first).count();
+        assert!(choices[offered..].iter().all(|c| !c.first), "{}", race.name);
         offered_any |= offered > 0;
         for choice in &choices[..offered] {
             let image = cr_formats::bmp::decode(&std::fs::read(&choice.path).unwrap());
@@ -68,6 +70,35 @@ fn portraits_are_offered_race_first() {
     }
     assert!(offered_any);
     assert_eq!(install.program_palette().map(|p| p.len()), Some(256));
+}
+
+/// Every shipped monster type's picture is among those a monster type may
+/// have, and none of those is a strip the books' pages are cut from.
+#[test]
+fn monster_pictures_include_the_shipped_ones() {
+    use cr_store::pictures::Kind;
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = cr_store::Installation::open(dir).unwrap();
+    let choices = install.picture_choices(Kind::Monster, "").unwrap();
+    assert!(choices.len() > 300, "{}", choices.len());
+    for choice in &choices {
+        let header = std::fs::read(&choice.path).unwrap();
+        let image = cr_formats::bmp::decode(&header).unwrap();
+        assert!(image.width <= 2 * image.height, "{}", choice.file);
+    }
+    for object in install.list_objects("MonType").unwrap() {
+        let cr_formats::Object::MonsterType(t) = object else {
+            continue;
+        };
+        if t.picture.is_empty() {
+            continue;
+        }
+        let path = install.picture_path(&t.picture, Kind::Monster);
+        let path = path.unwrap_or_else(|| panic!("{}", t.picture));
+        assert!(choices.iter().any(|c| c.path == path), "{}", t.picture);
+    }
 }
 
 /// The weight the Expansion stored in each of its test characters equals

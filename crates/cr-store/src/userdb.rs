@@ -273,6 +273,10 @@ pub enum FieldKind {
     },
     /// Several lines (descriptions, notes).
     MultiLine,
+    /// A picture of that kind ([`Value::Text`], the path the record
+    /// keeps), chosen among the installation's or made from one of the
+    /// user's (see [`crate::pictures`]).
+    Picture(crate::pictures::Kind),
     Int {
         min: i64,
         max: i64,
