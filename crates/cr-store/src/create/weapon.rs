@@ -1050,4 +1050,3 @@ fn option_label(count: i32, names: &[String]) -> String {
         names = names.join(", ")
     )
 }
-
