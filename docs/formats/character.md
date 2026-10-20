@@ -216,8 +216,8 @@ version.
 | 39 | `flag_0x1de1` | u8 | v > 33 | +0x1de1 | unknown |
 | 40 | `flags_0x1de6` | u8[2] | v > 36 | +0x1de6 | unknown |
 | 41 | `flags_0x1de8` | u8[2] | v > 40 | +0x1de8 | unknown |
-| 42 | `flags_0x1dea` | u8[3] | v > 34 | +0x1dea | unknown (note the condition: this field follows a v > 40 one) |
-| 43 | `unknown_0x1df0` | (u32, u8) | v > 37 | +0x1df0, +0x1df4 | unknown; `(0xffffffff, 0)` in new Expansion characters and NPCs |
+| 42 | `flags_0x1dea` | u8[3] | v > 34 | +0x1dea | warnings ignored for good on the Nonweapon Proficiencies page (IDD 245's Ignore): `[0]` the proficiencies the kit bars (kit +0x26c), `[1]` the secondary skills it limits to (+0x2d0), `[2]` its "no secondary skills" (+0x314). Note the condition: this field follows a v > 40 one |
+| 43 | `unknown_0x1df0` | (u32, u8) | v > 37 | +0x1df0, +0x1df4 | the u32: whether the kit's starting nonweapon slots (kit +0x318) are used, 1 yes, 0xffffffff no or none, 0 not asked yet (Core Rules, 5c458c); the u8: 1 once the user declined to learn the proficiency the kit requires by a level (kit +0x31c, +0x320). `(0xffffffff, 0)` in new Expansion characters and NPCs |
 | 44 | `unknown_0x1df8` | u32 | v > 41 | +0x1df8 | unknown |
 | 45 | `unknown_0x1dfc` | u32 | v > 44 | +0x1dfc | unknown |
 | 46 | `unknown_0x39c` | CString | v > 46 | +0x39c | unknown |

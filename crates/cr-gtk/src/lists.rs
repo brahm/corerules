@@ -232,6 +232,9 @@ pub struct RowSpec<T> {
 
 type Rows<T> = Rc<RefCell<Vec<(T, adw::ActionRow, Option<adw::SpinRow>)>>>;
 type Callback = Rc<RefCell<Option<Box<dyn Fn()>>>>;
+/// Asked before a row is removed, with the row's value and what removes
+/// it.
+type RemoveCheck<T> = Rc<RefCell<Option<Box<dyn Fn(&T, Box<dyn FnOnce()>)>>>>;
 
 /// How big an item's icon is drawn at the start of its row.
 const ROW_ICON_SIZE: i32 = 40;
@@ -245,6 +248,7 @@ pub struct RowList<T: 'static> {
     empty: adw::ActionRow,
     /// Called after every change.
     changed: Callback,
+    remove_check: RemoveCheck<T>,
     /// The icons drawn at the start of the rows, by title (item name).
     icons: Rc<RefCell<Option<Rc<ItemIcons>>>>,
 }
@@ -256,6 +260,7 @@ impl<T: Clone + 'static> Clone for RowList<T> {
             rows: self.rows.clone(),
             empty: self.empty.clone(),
             changed: self.changed.clone(),
+            remove_check: self.remove_check.clone(),
             icons: self.icons.clone(),
         }
     }
@@ -290,6 +295,7 @@ impl<T: Clone + 'static> RowList<T> {
             rows: Rc::default(),
             empty,
             changed: Rc::default(),
+            remove_check: Rc::default(),
             icons: Rc::default(),
         };
         for row in rows {
@@ -358,11 +364,26 @@ impl<T: Clone + 'static> RowList<T> {
         remove.connect_clicked({
             let list = self.clone();
             move |_| {
-                let position = list.rows.borrow().iter().position(|r| r.1 == row);
-                if let Some(position) = position {
-                    list.rows.borrow_mut().remove(position);
-                    list.group.remove(&row);
-                    list.update();
+                let remove: Box<dyn FnOnce()> = Box::new({
+                    let (list, row) = (list.clone(), row.clone());
+                    move || {
+                        let position = list.rows.borrow().iter().position(|r| r.1 == row);
+                        if let Some(position) = position {
+                            list.rows.borrow_mut().remove(position);
+                            list.group.remove(&row);
+                            list.update();
+                        }
+                    }
+                });
+                let value = list
+                    .rows
+                    .borrow()
+                    .iter()
+                    .find(|r| r.1 == row)
+                    .map(|r| r.0.clone());
+                match (&*list.remove_check.borrow(), value) {
+                    (Some(check), Some(value)) => check(&value, remove),
+                    _ => remove(),
                 }
             }
         });
@@ -401,6 +422,26 @@ impl<T: Clone + 'static> RowList<T> {
             self.group.remove(&row);
         }
         self.update();
+    }
+
+    /// Adds a row as Add does.
+    pub fn add(&self, spec: RowSpec<T>) {
+        self.push(spec);
+        self.update();
+    }
+
+    /// Rewrites each row's subtitle from its value and number.
+    pub fn set_subtitles(&self, f: impl Fn(&T, Option<u32>) -> String) {
+        for (value, row, spin) in self.rows.borrow().iter() {
+            let subtitle = f(value, spin.as_ref().map(|s| s.value() as u32));
+            row.set_subtitle(&glib::markup_escape_text(&subtitle));
+        }
+    }
+
+    /// Has `f` decide whether a row goes: it gets the row's value and what
+    /// removes it.
+    pub fn connect_remove(&self, f: impl Fn(&T, Box<dyn FnOnce()>) + 'static) {
+        *self.remove_check.borrow_mut() = Some(Box::new(f));
     }
 
     /// Calls `f` after every change.

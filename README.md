@@ -53,6 +53,11 @@ the original programs wrote.
   original's warnings and the kit's information text. The kit's fixed rogue
   skill adjustments, barred class abilities, schools, spells and languages
   are applied when the character is written, and again when an edit is saved
+- **Class and kit proficiencies** in New Character: the required ones go in
+  first, bonus, free and kit-recommended ones cost less or nothing, the
+  bonus, free, +1 and +2 picks are offered as the Expansion offers them, the
+  kit's own starting slots are asked about, and a proficiency the kit bars
+  brings the original's warning
 - **Player's Option** (Skills & Powers) creation, as the Expansion's
   Player's Option button: Methods VII to X, racial and class abilities
   bought with character points, subabilities, traits and disadvantages,
