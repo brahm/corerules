@@ -163,6 +163,94 @@ fn the_proficiencies_page_follows_the_class_and_kit() {
 }
 
 #[test]
+fn nonweapon_costs_follow_the_groups_the_classes_and_kit_open() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(Path::new(&dir)).unwrap();
+    if install.is_core20() {
+        return;
+    }
+    let rules = install.creation_rules().unwrap();
+    let known = rules.nonweapon_proficiencies();
+    let costs = |draft: &Draft| -> Vec<u32> {
+        known
+            .iter()
+            .map(|n| rules.nonweapon_cost(draft, n))
+            .collect()
+    };
+    // A proficiency of no group of the class costs a slot more, 2 points
+    // with Skills & Powers; a class opening more groups pays less.
+    for skills_and_powers in [false, true] {
+        let mut fighter = thief();
+        fighter.classes = vec!["Fighter".into()];
+        fighter.skills_and_powers = skills_and_powers;
+        let mut ranger = fighter.clone();
+        ranger.classes = vec!["Ranger".into()];
+        let extra = if skills_and_powers { 2 } else { 1 };
+        let (a, b) = (costs(&fighter), costs(&ranger));
+        assert!(a.iter().zip(&b).any(|(a, b)| *a == b + extra));
+        assert!(a.iter().zip(&b).all(|(a, b)| a >= b || a + extra == *b));
+    }
+    // Some kits open groups or name proficiencies of their own.
+    let (mut opened, mut learn) = (0, 0);
+    for class in ["Fighter", "Thief", "Cleric", "Mage", "Paladin"] {
+        let mut base = thief();
+        base.classes = vec![class.into()];
+        let plain = costs(&base);
+        for kit in rules.kits(&base.race, &base.subrace, &base.classes) {
+            let mut draft = base.clone();
+            draft.kit = kit;
+            opened += usize::from(costs(&draft).iter().zip(&plain).any(|(k, p)| k < p));
+            // The proficiency to learn by a level is asked about from it.
+            draft.level = 20;
+            if let Some(question) = rules.nonweapon_by_level(&draft) {
+                learn += 1;
+                draft.level = 1;
+                assert!(rules.nonweapon_by_level(&draft).is_none());
+                draft.level = 20;
+                draft.by_level_declined = true;
+                assert!(rules.nonweapon_by_level(&draft).is_none());
+                draft.by_level_declined = false;
+                let name = known
+                    .iter()
+                    .find(|n| question.text.contains(n.as_str()))
+                    .unwrap();
+                draft.nonweapon_proficiencies = vec![name.clone()];
+                assert!(rules.nonweapon_by_level(&draft).is_none());
+            }
+        }
+    }
+    assert!(opened > 0 && learn > 0);
+
+    // Taken again, a proficiency is one entry costing 1 more a rank; a
+    // Core Rules language one is another entry.
+    let mut draft = thief();
+    let (plain, language) = (
+        known
+            .iter()
+            .find(|n| !rules.language_nonweapon(n) && rules.nonweapon_cost(&draft, n) > 0)
+            .unwrap()
+            .clone(),
+        known
+            .iter()
+            .find(|n| rules.language_nonweapon(n))
+            .unwrap()
+            .clone(),
+    );
+    let cost = rules.nonweapon_cost(&draft, &plain);
+    draft.nonweapon_proficiencies = vec![plain.clone(), plain.clone(), plain.clone()];
+    assert_eq!(
+        rules.nonweapon_entries(&draft),
+        [(plain.clone(), 3, cost + 2)]
+    );
+    draft.nonweapon_proficiencies = vec![language.clone(), language.clone()];
+    assert_eq!(rules.nonweapon_entries(&draft).len(), 2);
+    draft.skills_and_powers = true;
+    assert_eq!(rules.nonweapon_entries(&draft).len(), 1);
+}
+
+#[test]
 fn the_weapon_proficiencies_follow_the_kit() {
     let Some(dir) = std::env::var_os("CORERULES_DIR") else {
         return;

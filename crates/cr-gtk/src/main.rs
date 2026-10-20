@@ -10,6 +10,7 @@ mod encounter;
 mod extract;
 mod help;
 mod lists;
+mod nonweapon;
 mod npc;
 mod party;
 mod picture;
@@ -2149,7 +2150,11 @@ fn character_editor(
     page.add(&abilities);
     page.add(&history_group);
 
-    let editors = ListEditors::new(lists, &choices, classes);
+    let editors = ListEditors::new(lists, &choices, classes, &advanced);
+    level_listeners.borrow_mut().push(Box::new({
+        let editor = editors.nonweapon_proficiencies.clone();
+        move || editor.levels_changed()
+    }));
     // Memorized spells against the slots of the levels the character has
     // now, as the original's memorize dialog counts them.
     for (slot, _, list) in &editors.memorized {
@@ -2291,6 +2296,9 @@ fn character_editor(
     let skill_rules = choices.skills.clone();
     // Leaving the original's Weapon Proficiencies page checks the kit's
     // specializations first.
+    // Leaving the original's Nonweapon Proficiencies page asks about the
+    // proficiency the kit has the character learn by a level; Yes stays.
+    let nonweapon_editor = editors.nonweapon_proficiencies.clone();
     let save_all: Rc<dyn Fn()> = Rc::new({
         let dialog = dialog.clone();
         let combat_editor = combat_editor.clone();
@@ -2353,7 +2361,17 @@ fn character_editor(
             }
         }
     });
-    save_button.connect_clicked(move |_| combat_editor.check_leaving(save_all.clone()));
+    let stay: Rc<dyn Fn()> = Rc::new({
+        let stack = stack.clone();
+        move || stack.set_visible_child_name("proficiencies")
+    });
+    save_button.connect_clicked(move |_| {
+        let (nonweapon_editor, stay, save_all) =
+            (nonweapon_editor.clone(), stay.clone(), save_all.clone());
+        combat_editor.check_leaving(Rc::new(move || {
+            nonweapon_editor.check_leaving(stay.clone(), save_all.clone())
+        }))
+    });
     dialog.present(Some(parent));
 }
 
@@ -2807,7 +2825,6 @@ const ABILITY_NAMES: [[&str; 3]; 6] = [
 
 /// Names the list editors offer, from the installation's databases.
 struct Choices {
-    nonweapon: Rc<Vec<String>>,
     languages: Rc<Vec<String>>,
     wizard_spells: Rc<Vec<String>>,
     priest_spells: Rc<Vec<String>>,
@@ -2829,6 +2846,8 @@ struct Choices {
     /// Subraces, racial and class abilities, schools and spheres.
     abilities: Rc<cr_store::abilities::AbilityRules>,
     combat: Rc<cr_store::combat::CombatRules>,
+    /// Nonweapon proficiencies' costs and the kit's questions about them.
+    proficiencies: Rc<cr_store::proficiencies::ProficiencyRules>,
     /// Rogue skills, psionic powers, wild talents, attack and defense modes.
     skills: Rc<cr_store::skills::SkillRules>,
 }
@@ -2846,7 +2865,6 @@ impl Choices {
         let advance = Arc::new(install.advance_rules()?);
         let creation = Arc::new(install.creation_rules()?);
         Ok(Self {
-            nonweapon: Rc::new(install.part_names("Non-Weapon Proficiencies")?),
             languages: Rc::new(install.part_names("Languages")?),
             wizard_spells: Rc::new(install.spell_names(true)?),
             priest_spells: Rc::new(install.spell_names(false)?),
@@ -2857,6 +2875,9 @@ impl Choices {
             class_ids: install.class_ids()?,
             new_classes: install.class_table()?.choices(character),
             combat: Rc::new(install.combat_rules_with(creation.clone(), advance.clone())?),
+            proficiencies: Rc::new(
+                install.proficiency_rules_with(creation.clone(), advance.clone()),
+            ),
             advance,
             character: character.clone(),
             creation,
@@ -2871,7 +2892,9 @@ impl Choices {
 struct ListEditors {
     /// Edited on the Combat page.
     weapon_proficiencies: Vec<String>,
-    nonweapon_proficiencies: ListEditor,
+    nonweapon_proficiencies: nonweapon::NonweaponEditor,
+    /// The nonweapon proficiencies as read, to tell whether they changed.
+    original_nonweapon: cr_store::proficiencies::CharacterNonweapon,
     languages: ListEditor,
     wizard_spells: ListEditor,
     priest_spells: ListEditor,
@@ -2897,7 +2920,13 @@ fn ordinal(level: u32) -> String {
 }
 
 impl ListEditors {
-    fn new(lists: &CharacterLists, choices: &Choices, classes: &[String]) -> Self {
+    /// `advanced` is the character at the levels the editor has now.
+    fn new(
+        lists: &CharacterLists,
+        choices: &Choices,
+        classes: &[String],
+        advanced: &Rc<RefCell<Character>>,
+    ) -> Self {
         let wizard_spells = ListEditor::new(
             tr("Wizard Spells Known"),
             &lists.wizard_spells,
@@ -3068,11 +3097,11 @@ impl ListEditors {
 
         Self {
             weapon_proficiencies: lists.weapon_proficiencies.clone(),
-            nonweapon_proficiencies: ListEditor::new(
-                tr("Nonweapon Proficiencies"),
-                &lists.nonweapon_proficiencies,
-                choices.nonweapon.clone(),
+            nonweapon_proficiencies: nonweapon::NonweaponEditor::new(
+                choices.proficiencies.clone(),
+                advanced.clone(),
             ),
+            original_nonweapon: choices.proficiencies.nonweapon_of(&choices.character),
             languages: ListEditor::new(
                 tr("Native Languages"),
                 &lists.languages,
@@ -3156,9 +3185,10 @@ impl ListEditors {
                 })
                 .collect();
         }
+        let nonweapon = self.nonweapon_proficiencies.nonweapon();
         CharacterLists {
             weapon_proficiencies: self.weapon_proficiencies.clone(),
-            nonweapon_proficiencies: self.nonweapon_proficiencies.items(),
+            nonweapon_proficiencies: nonweapon.entries.iter().map(|e| e.name.clone()).collect(),
             languages: self.languages.items(),
             wizard_spells: self.wizard_spells.items(),
             priest_spells: self.priest_spells.items(),
@@ -3170,6 +3200,7 @@ impl ListEditors {
             abilities: None,
             combat: None,
             skills: None,
+            nonweapon: (nonweapon != self.original_nonweapon).then_some(nonweapon),
             spellbooks: self
                 .spellbooks
                 .iter()

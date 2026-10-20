@@ -32,7 +32,7 @@ mod update;
 mod weapon;
 
 pub use group::GroupOffer;
-pub use nonweapon::{NonweaponPick, PickKind};
+pub use nonweapon::{NonweaponPick, PickKind, required_removal};
 pub use update::KitPick;
 pub(crate) use update::{ignored_checks, write_checks};
 use weapon::{AbilityWeapons, WeaponRules};
@@ -545,14 +545,18 @@ pub struct Ware {
 
 /// A nonweapon proficiency: its cost in slots (Core Rules) and character
 /// points (Skills & Powers), its groups (general, priest, rogue, warrior,
-/// wizard, psionicist) and the subabilities it needs ("Wisdom/Willpower").
+/// wizard, psionicist), its ability (+0x460), the subabilities it needs
+/// ("Wisdom/Willpower") and whether it is a language one (+0x75c), which a
+/// Core Rules character takes again as another entry.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct NonweaponRules {
     name: String,
     slots: u32,
     points: u32,
     groups: [bool; 6],
+    ability: String,
     relevant: Vec<String>,
+    language: bool,
 }
 
 /// Every choice made for a new character.
@@ -658,6 +662,18 @@ pub struct Draft {
     /// The highest class level: 1 in New Character, the character's in
     /// Update Character.
     pub level: u32,
+    /// Each class's level in Update Character; empty, all 1st, in New
+    /// Character.
+    pub class_levels: Vec<u32>,
+    /// Update Character: the scores and subabilities the character has,
+    /// in place of those [`Draft::scores`] give.
+    pub held_scores: Option<[[u32; 3]; 6]>,
+    /// The nonweapon proficiencies chosen for a class at its levels
+    /// (+0x1e28), which cost nothing.
+    pub level_nonweapon: Vec<String>,
+    /// Whether the kit's question about the proficiency to learn by a
+    /// level was answered No (the byte of +0x1df0).
+    pub by_level_declined: bool,
     /// An existing character in Update Character, whose class abilities
     /// are those it holds and where the creation-only rules do not apply.
     pub updating: bool,
@@ -720,6 +736,10 @@ impl Draft {
             weapon_focus: None,
             free_specialization: None,
             level: 1,
+            class_levels: Vec::new(),
+            held_scores: None,
+            level_nonweapon: Vec::new(),
+            by_level_declined: false,
             updating: false,
         }
     }
@@ -748,6 +768,7 @@ impl Draft {
         self.lent_nonweapon = 0;
         self.weapon_focus = None;
         self.free_specialization = None;
+        self.by_level_declined = false;
     }
 }
 
@@ -768,6 +789,8 @@ pub struct CreationRules {
     class_ability_costs: HashMap<String, i32>,
     /// What each class ability does to weapon proficiencies.
     ability_weapons: HashMap<String, AbilityWeapons>,
+    /// The nonweapon proficiency each class ability makes free (+0x718).
+    ability_nonweapon: HashMap<String, String>,
     /// The weapons racial abilities make free.
     racial_weapons: HashMap<String, Vec<String>>,
     traits: Vec<(String, u32)>,
@@ -889,6 +912,7 @@ impl Installation {
             racial_abilities: Vec::new(),
             class_ability_costs: HashMap::new(),
             ability_weapons: HashMap::new(),
+            ability_nonweapon: HashMap::new(),
             racial_weapons: HashMap::new(),
             traits: Vec::new(),
             disadvantages: Vec::new(),
@@ -958,11 +982,13 @@ impl Installation {
                         slots: rules.parts.nonweapon_cost(name, false),
                         points: rules.parts.nonweapon_cost(name, true),
                         groups: part.data.unknown_0x48c.map(|g| g != 0),
+                        ability: part.head.unknown_0x460.clone(),
                         relevant: [&part.head.unknown_0x458, &part.head.unknown_0x45c]
                             .into_iter()
                             .filter(|r| !r.is_empty())
                             .cloned()
                             .collect(),
+                        language: part.data.unknown_0x75c[0] != 0,
                     });
                 }
             }
@@ -1000,6 +1026,12 @@ impl Installation {
                     .ability_weapons
                     .entry(part.head.name.clone())
                     .or_insert_with(|| AbilityWeapons::of(part));
+                if !part.data.unknown_0x718.is_empty() {
+                    rules
+                        .ability_nonweapon
+                        .entry(part.head.name.clone())
+                        .or_insert_with(|| part.data.unknown_0x718.clone());
+                }
             }
             for part in parts("Traits") {
                 if seen.insert(("trait", part.head.name.clone())) {
@@ -1656,69 +1688,102 @@ impl CreationRules {
         self.nonweapon.iter().map(|n| n.name.clone()).collect()
     }
 
-    /// What a nonweapon proficiency costs the drafted character: slots with
-    /// the Core Rules; with Skills & Powers its character points, 2 more
-    /// when it belongs to none of the character's groups (nor the general
-    /// one), 1 less when the kit recommends it, and 1 more for each point
-    /// a relevant subability is below 9. Nothing when the classes or the
-    /// kit make it free.
+    /// What a nonweapon proficiency costs the drafted character (0x43776b):
+    /// its slots with the Core Rules, 1 more when it belongs to none of the
+    /// groups the character takes at the normal cost; with Skills & Powers
+    /// its character points, 2 more for such a proficiency, 1 less when
+    /// the kit recommends it, and 1 more for each point a relevant
+    /// subability is below 9. Nothing when a class ability, the classes or
+    /// the kit make it free.
     pub fn nonweapon_cost(&self, draft: &Draft, name: &str) -> u32 {
         let Some(n) = self.nonweapon.iter().find(|n| n.name == name) else {
             return 1;
         };
+        if !self.expansion {
+            return n.slots;
+        }
+        let core = !draft.skills_and_powers;
+        let mut cost = i64::from(if core { n.slots } else { n.points });
+        if !self.in_nonweapon_groups(draft, n) {
+            cost += if core { 1 } else { 2 };
+        }
+        if !core {
+            cost -= i64::from(self.recommended_nonweapon(draft, name));
+            let subabilities = self.subability_scores(draft);
+            for score in n
+                .relevant
+                .iter()
+                .filter_map(|r| subability_score(&subabilities, r))
+            {
+                cost += i64::from(9u32.saturating_sub(score));
+            }
+        }
         if self.free_nonweapon(draft, name) {
             return 0;
         }
-        if !draft.skills_and_powers {
-            return n.slots;
-        }
-        let groups = self.proficiency_groups(&draft.classes);
-        let foreign = !n.groups.iter().zip(groups).any(|(&has, own)| has && own);
-        let subabilities = self.subability_scores(draft);
-        let shortfall: u32 = n
-            .relevant
-            .iter()
-            .filter_map(|r| subability_score(&subabilities, r))
-            .map(|score| 9u32.saturating_sub(score))
-            .sum();
-        (n.points + if foreign { 2 } else { 0 } + shortfall)
-            .saturating_sub(u32::from(self.recommended_nonweapon(draft, name)))
+        cost.max(0) as u32
     }
 
-    /// The nonweapon proficiency groups open to the classes at the normal
-    /// cost: general, and the classes' own.
-    fn proficiency_groups(&self, classes: &[String]) -> [bool; 6] {
-        let mut groups = [true, false, false, false, false, false];
-        for class in classes.iter().filter_map(|c| self.class(c)) {
-            let index = match class.group {
-                0 => 3,
-                1 => 2,
-                2 => 1,
-                3 => 4,
-                _ => 5,
-            };
-            groups[index] = true;
-        }
-        groups
+    /// Whether the character takes a proficiency at the normal cost: one of
+    /// the general group, or of a group of its classes, one the classes
+    /// (+0x3044) or the kit (+0x30f to +0x313) open, of an ability the
+    /// classes open (+0x3049), or one the kit names (+0x2bc).
+    fn in_nonweapon_groups(&self, draft: &Draft, n: &NonweaponRules) -> bool {
+        // The proficiency's group, the class group, the classes' flag and
+        // the kit's.
+        const OPEN: [(usize, i32, usize, u32); 5] = [
+            (1, 2, 2, 0x310),
+            (2, 1, 1, 0x312),
+            (3, 0, 0, 0x30f),
+            (4, 3, 3, 0x311),
+            (5, 4, 4, 0x313),
+        ];
+        let classes: Vec<&ClassRules> = self.draft_classes(draft).collect();
+        let kit = self.kit(&draft.kit);
+        let kit_opens = |offset| kit.is_some_and(|k| k.flag(offset));
+        let ability = ABILITIES.iter().position(|a| *a == n.ability);
+        n.groups[0]
+            || OPEN.iter().any(|&(group, class_group, flag, offset)| {
+                n.groups[group]
+                    && (classes
+                        .iter()
+                        .any(|c| c.group == class_group || c.nonweapon_groups[flag])
+                        || kit_opens(offset))
+            })
+            || ability.is_some_and(|a| classes.iter().any(|c| c.ability_groups[a]))
+            || kit.is_some_and(|k| k.sa(0x2bc).contains(&n.name))
     }
 
     /// Slots (Core Rules) or character points (Skills & Powers) the
-    /// draft's nonweapon proficiencies take. A proficiency taken again
-    /// takes its slots again with the Core Rules; with Skills & Powers
-    /// each further rank costs 1 point.
+    /// draft's nonweapon proficiencies take, as [`Self::nonweapon_entries`]
+    /// keeps them.
     pub fn nonweapon_spent(&self, draft: &Draft) -> u32 {
-        if draft.skills_and_powers {
-            self.nonweapon_ranks(draft)
-                .iter()
-                .map(|(n, ranks)| self.nonweapon_rank_cost(draft, n, *ranks))
-                .sum()
-        } else {
-            draft
-                .nonweapon_proficiencies
-                .iter()
-                .map(|n| self.nonweapon_cost(draft, n))
-                .sum()
+        self.nonweapon_entries(draft).iter().map(|e| e.2).sum()
+    }
+
+    /// The draft's nonweapon proficiencies as the file keeps them, with
+    /// the ranks and the slots or points each entry takes: a proficiency
+    /// taken again is one entry with 1 more for each further rank (5c30df),
+    /// but a Core Rules language one is another entry at its full cost.
+    pub fn nonweapon_entries(&self, draft: &Draft) -> Vec<(String, u32, u32)> {
+        let mut entries = Vec::new();
+        for (name, ranks) in self.nonweapon_ranks(draft) {
+            let cost = self.nonweapon_cost(draft, &name);
+            if !draft.skills_and_powers && self.language_nonweapon(&name) {
+                entries.extend((0..ranks).map(|_| (name.clone(), 1, cost)));
+            } else {
+                entries.push((name, ranks, cost + ranks.saturating_sub(1)));
+            }
         }
+        entries
+    }
+
+    /// Whether a Core Rules character takes the proficiency again as
+    /// another entry (+0x75c).
+    pub fn language_nonweapon(&self, name: &str) -> bool {
+        self.nonweapon
+            .iter()
+            .any(|n| n.name == name && (n.language || !self.expansion))
     }
 
     /// Each nonweapon proficiency once, in the order first taken, with how
@@ -1732,11 +1797,6 @@ impl CreationRules {
             }
         }
         ranks
-    }
-
-    /// Skills & Powers: what a proficiency costs with this many ranks.
-    pub fn nonweapon_rank_cost(&self, draft: &Draft, name: &str, ranks: u32) -> u32 {
-        self.nonweapon_cost(draft, name) + ranks.saturating_sub(1)
     }
 
     /// Every language, for the proficiencies that teach them.
@@ -1757,6 +1817,9 @@ impl CreationRules {
     /// Each ability's score and its two subabilities, after the racial
     /// adjustments; with the Core Rules the subabilities equal the score.
     pub fn subability_scores(&self, draft: &Draft) -> [[u32; 3]; 6] {
+        if let Some(held) = draft.held_scores {
+            return held;
+        }
         let adjusted = self.adjusted(&draft.race, &draft.scores);
         std::array::from_fn(|a| {
             let score = adjusted[a] as i32;
@@ -2817,12 +2880,8 @@ impl CreationRules {
         // lists editor adds them.
         // A Skills & Powers proficiency taken again is one entry with more
         // ranks; a Core Rules one is another entry.
-        let ranks = self.nonweapon_ranks(draft);
-        let nonweapon: Vec<String> = if draft.skills_and_powers {
-            ranks.iter().map(|(n, _)| n.clone()).collect()
-        } else {
-            draft.nonweapon_proficiencies.clone()
-        };
+        let entries = self.nonweapon_entries(draft);
+        let nonweapon: Vec<String> = entries.iter().map(|e| e.0.clone()).collect();
         let mut lists = CharacterLists {
             weapon_proficiencies: draft.weapon_proficiencies.clone(),
             nonweapon_proficiencies: nonweapon.clone(),
@@ -2856,16 +2915,10 @@ impl CreationRules {
             // The learned languages, one per slot or rank, go with the
             // proficiencies that teach them.
             let mut learned = draft.learned_languages.iter();
-            character.data.nonweapon_details = nonweapon
+            character.data.nonweapon_details = entries
                 .iter()
-                .map(|n| {
-                    let count = if !teaches_languages(n) {
-                        0
-                    } else if draft.skills_and_powers {
-                        ranks.iter().find(|r| &r.0 == n).map_or(1, |r| r.1)
-                    } else {
-                        1
-                    };
+                .map(|(n, ranks, _)| {
+                    let count = if teaches_languages(n) { *ranks } else { 0 };
                     Object::StringArray(learned.by_ref().take(count as usize).cloned().collect())
                 })
                 .collect();
@@ -2873,12 +2926,7 @@ impl CreationRules {
         if self.expansion {
             // What the classes and the kit did on the proficiencies page.
             let d = &mut character.data;
-            if !draft.skills_and_powers {
-                d.nonweapon_costs = nonweapon
-                    .iter()
-                    .map(|n| self.nonweapon_cost(draft, n))
-                    .collect();
-            }
+            d.nonweapon_costs = entries.iter().map(|e| e.2).collect();
             if let Some(lists) = d.unknown_0x1930.as_mut() {
                 lists[1] = self.bonus_nonweapon(draft);
             }
@@ -2927,10 +2975,6 @@ impl CreationRules {
             // The lists went in as Core Rules ones; now the points.
             let d = &mut character.data;
             d.skills_and_powers = 1;
-            d.nonweapon_costs = ranks
-                .iter()
-                .map(|(n, count)| self.nonweapon_rank_cost(draft, n, *count))
-                .collect();
             d.unknown_0x1778[0] = self.points_left(draft).max(0) as u32;
             let sorted = |list: &[String]| {
                 let mut list = list.to_vec();
@@ -3060,6 +3104,8 @@ mod tests {
             weapon_slots: if group == 0 { 4 } else { 1 },
             weapon_slot_levels: 3,
             nonweapon_slots: if group == 0 { 3 } else { 4 },
+            nonweapon_slot_levels: 3,
+            nonweapon_slot_count: 1,
             alignments: match name {
                 "Paladin" => vec!["Lawful Good".into()],
                 _ => any.iter().map(|a| a.to_string()).collect(),
@@ -3102,6 +3148,9 @@ mod tests {
             required_nonweapon: Vec::new(),
             bonus_nonweapon: Vec::new(),
             bonus_nonweapon_count: 1,
+            nonweapon_groups: [false; 5],
+            ability_groups: [false; 6],
+            level_nonweapon: Vec::new(),
             core_specialization: group == 0,
             weapon_rule: "Any".into(),
             weapon_list: Vec::new(),
@@ -3171,7 +3220,9 @@ mod tests {
             slots,
             points,
             groups,
+            ability: String::new(),
             relevant: vec![relevant.into()],
+            language: teaches_languages(name),
         }
     }
 
@@ -3264,6 +3315,7 @@ mod tests {
             )]
             .into_iter()
             .collect(),
+            ability_nonweapon: HashMap::new(),
             racial_weapons: HashMap::new(),
             traits: vec![("Allure".into(), 4)],
             disadvantages: vec![("Allergies".into(), 3), ("Greed".into(), 7)],
@@ -3452,7 +3504,7 @@ mod tests {
         d.alignment = "Chaotic Neutral".into();
         assert!(rules.problem(&d).is_some());
         let mut d = draft(&rules);
-        d.nonweapon_proficiencies = vec!["Tracking".into(); 4];
+        d.nonweapon_proficiencies = vec!["Tracking".into(); 8];
         assert!(rules.problem(&d).unwrap().contains("slots"));
         let mut d = draft(&rules);
         d.purchases = vec![("Dagger".into(), 30)];

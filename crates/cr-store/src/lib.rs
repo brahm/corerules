@@ -25,6 +25,7 @@ pub mod lists;
 pub mod npc;
 pub mod party;
 pub mod pictures;
+pub mod proficiencies;
 pub mod settings;
 pub mod sheet;
 pub mod skills;
