@@ -75,6 +75,8 @@ enum Kind {
     Classes,
     /// Parts of one type.
     Parts(usize),
+    /// The section of the other part types, where New asks for the type.
+    OtherParts,
     Tables,
 }
 
@@ -95,7 +97,8 @@ fn kind_of(section: &str) -> Option<Kind> {
         "kits" => Kind::Parts(parts::KITS),
         "nonweapon" => Kind::Parts(4),
         "treasure-tables" => Kind::Tables,
-        _ => return None,
+        parts::OTHER_SECTION => Kind::OtherParts,
+        id => Kind::Parts(parts::other_type(id)?),
     })
 }
 
@@ -115,7 +118,18 @@ fn new_title(kind: Kind) -> &'static str {
         Kind::Parts(parts::EQUIPMENT) => tr("New Equipment"),
         Kind::Parts(parts::MAGICAL_ITEMS) => tr("New Magical Item"),
         Kind::Parts(parts::KITS) => tr("New Kit"),
-        Kind::Parts(_) => tr("New Proficiency"),
+        Kind::Parts(4) => tr("New Proficiency"),
+        Kind::Parts(5) => tr("New Racial Ability"),
+        Kind::Parts(6) => tr("New Language"),
+        Kind::Parts(9) => tr("New School of Magic"),
+        Kind::Parts(11) => tr("New Trait"),
+        Kind::Parts(12) => tr("New Disadvantage"),
+        Kind::Parts(13) => tr("New Gem or Art Object"),
+        Kind::Parts(parts::CLASS_ABILITIES) => tr("New Class Ability"),
+        Kind::Parts(16) => tr("New Currency Type"),
+        Kind::Parts(17) => tr("New Count"),
+        Kind::Parts(18) => tr("New Sphere"),
+        Kind::Parts(_) | Kind::OtherParts => tr("New Part"),
         Kind::Tables => tr("New Treasure Table"),
     }
 }
@@ -137,7 +151,9 @@ fn new_menu_label(kind: Option<Kind>) -> &'static str {
         Some(Kind::Parts(parts::EQUIPMENT)) => tr("_New Equipment…"),
         Some(Kind::Parts(parts::MAGICAL_ITEMS)) => tr("_New Magical Item…"),
         Some(Kind::Parts(parts::KITS)) => tr("_New Kit…"),
-        Some(Kind::Parts(_)) => tr("_New Proficiency…"),
+        Some(Kind::Parts(4)) => tr("_New Proficiency…"),
+        // New in the other parts' section asks for the type.
+        Some(Kind::Parts(_) | Kind::OtherParts) => tr("_New Part…"),
         Some(Kind::Tables) => tr("_New Treasure Table…"),
     }
 }
@@ -256,8 +272,9 @@ fn run<H: Host + 'static>(
     };
     let section: &'static str = SECTIONS
         .iter()
-        .find(|s| **s == section)
         .copied()
+        .chain(parts::OTHER_TYPES.iter().map(|(id, ..)| *id))
+        .find(|s| *s == section)
         .unwrap_or("");
     let target = Target {
         section,
@@ -274,6 +291,8 @@ fn run<H: Host + 'static>(
         Kind::Races => act::<Races, H>(host, &target, 0, action),
         Kind::Classes => act::<Classes, H>(host, &target, 0, action),
         Kind::Parts(t) => act::<Parts, H>(host, &target, t, action),
+        Kind::OtherParts if action == Action::New => new_other_part(host),
+        Kind::OtherParts => {}
         Kind::Tables => table_action(host, &target, action),
     }
 }
@@ -296,6 +315,49 @@ const SECTIONS: [&str; 15] = [
     "nonweapon",
     "treasure-tables",
 ];
+
+/// New in the other parts' section: asks for the type ("Select the Type"
+/// of IDD 139), starting on the shown part's, then opens the editor.
+fn new_other_part<H: Host + 'static>(host: &Shared<H>) {
+    let Some(flavor) = errors(
+        &**host,
+        host.with_install(|i| Ok(cr_store::encounter::flavor_of(i))),
+    ) else {
+        return;
+    };
+    let offered = parts::editable_types(flavor);
+    let types: Vec<(&'static str, &'static str)> = parts::OTHER_TYPES
+        .iter()
+        .filter(|(_, t, _)| offered.iter().any(|(o, _)| o == t))
+        .map(|&(id, _, name)| (id, tr(name)))
+        .collect();
+    let shown = udb::parse_key(&host.current_key()).map(|(section, ..)| section.to_owned());
+    let choice = gtk::DropDown::from_strings(&types.iter().map(|(_, n)| *n).collect::<Vec<_>>());
+    choice.set_selected(
+        types
+            .iter()
+            .position(|(id, _)| shown.as_deref() == Some(*id))
+            .unwrap_or(0) as u32,
+    );
+    let alert = adw::AlertDialog::builder()
+        .heading(tr("New Part"))
+        .body(tr("Select the type of the new part."))
+        .extra_child(&choice)
+        .default_response("create")
+        .close_response("cancel")
+        .build();
+    alert.add_responses(&[("cancel", tr("_Cancel")), ("create", tr("C_reate"))]);
+    alert.set_response_appearance("create", adw::ResponseAppearance::Suggested);
+    alert.connect_response(Some("create"), {
+        let host = host.clone();
+        move |_, _| {
+            if let Some((id, _)) = types.get(choice.selected() as usize) {
+                run(&host, id, Origin::Standard, "", Action::New);
+            }
+        }
+    });
+    alert.present(Some(&host.parent()));
+}
 
 /// The record an action is about.
 struct Target {
@@ -362,6 +424,9 @@ fn act<K: UserKind, H: Host + 'static>(
         }
         Action::Copy => {
             let Some(record) = record else { return };
+            if let Some(refusal) = K::copy_refusal(&record) {
+                return host.toast(&refusal);
+            }
             let copy = db.copy_of(&record);
             editor::<K, H>(
                 host,

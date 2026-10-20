@@ -298,3 +298,23 @@ fn dual_class_choices_match_the_original() {
     human.data.strength = [14; 3];
     assert!(matches!(table.choices(&human), ClassChoice::Refused(_)));
 }
+
+/// The other part types share one section, each entry keyed by its type.
+#[test]
+fn other_parts_carry_their_type() {
+    use cr_store::userdb::parts::{OTHER_SECTION, other_type};
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = cr_store::Installation::open(dir).unwrap();
+    let catalog = install.catalog();
+    let others = catalog.iter().find(|s| s.id == OTHER_SECTION).unwrap();
+    let mut types = std::collections::HashSet::new();
+    for entry in &others.entries {
+        let (id, ..) = cr_store::userdb::parse_key(&entry.key).unwrap();
+        types.insert(other_type(id).unwrap());
+    }
+    // The Expansion ships records of all ten; Core Rules 2.0 has no
+    // class abilities.
+    assert!(types.len() >= 9, "{types:?}");
+}

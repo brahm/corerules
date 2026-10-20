@@ -118,6 +118,33 @@ impl Installation {
                 self.udb_entries("Class", "classes", class_entry),
             ),
         ];
+        // The parts of one type, standard then user, keyed for section `id`.
+        let mut part_entries = |part_type: &str, id: &str| match (&parts, &user_parts) {
+            (Ok(parts), Ok(user)) => {
+                let has_icon = crate::pictures::ICON_PART_TYPES.contains(&part_type);
+                Ok([
+                    (Origin::Standard, Some(parts)),
+                    (Origin::Custom, user.as_ref()),
+                ]
+                .into_iter()
+                .filter_map(|(origin, file)| Some((origin, file?)))
+                .flat_map(|(origin, file)| {
+                    file.of_type(part_type)
+                        .unwrap_or_default()
+                        .iter()
+                        .filter_map(|object| {
+                            let mut e = part_entry(object)?;
+                            if has_icon && let Object::Part(p) = object {
+                                e.icon = finder.icon(&p.head.unknown_0x234);
+                            }
+                            Some(udb_mark(e, id, origin))
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>())
+            }
+            (Err(e), _) | (_, Err(e)) => Err(e.clone()),
+        };
         for (id, title, icon, part_type) in [
             (
                 "kits",
@@ -152,34 +179,31 @@ impl Installation {
                 "Non-Weapon Proficiencies",
             ),
         ] {
-            let has_icon = crate::pictures::ICON_PART_TYPES.contains(&part_type);
-            let entries = match (&parts, &user_parts) {
-                (Ok(parts), Ok(user)) => Ok(sorted(
-                    [
-                        (Origin::Standard, Some(parts)),
-                        (Origin::Custom, user.as_ref()),
-                    ]
-                    .into_iter()
-                    .filter_map(|(origin, file)| Some((origin, file?)))
-                    .flat_map(|(origin, file)| {
-                        file.of_type(part_type)
-                            .unwrap_or_default()
-                            .iter()
-                            .filter_map(|object| {
-                                let mut e = part_entry(object)?;
-                                if has_icon && let Object::Part(p) = object {
-                                    e.icon = finder.icon(&p.head.unknown_0x234);
-                                }
-                                Some(udb_mark(e, id, origin))
-                            })
-                            .collect::<Vec<_>>()
-                    })
-                    .collect(),
-                )),
-                (Err(e), _) | (_, Err(e)) => Err(e.clone()),
-            };
+            let entries = part_entries(part_type, id).map(sorted);
             sections.push(section(id, title, icon, entries));
         }
+        // The other part types, together, as the original's Parts list
+        // shows them one type at a time.
+        let others: std::result::Result<Vec<Vec<Entry>>, String> =
+            crate::userdb::parts::OTHER_TYPES
+                .iter()
+                .map(|&(id, part_type, name)| {
+                    let entries = part_entries(crate::userdb::parts::type_name(part_type), id)?;
+                    Ok(entries
+                        .into_iter()
+                        .map(|mut e| {
+                            e.subtitle = format!("{} · {}", e.subtitle, tr(name));
+                            e
+                        })
+                        .collect())
+                })
+                .collect();
+        sections.push(section(
+            crate::userdb::parts::OTHER_SECTION,
+            tr("Other Parts"),
+            "application-x-addon-symbolic",
+            others.map(|o| sorted(o.concat())),
+        ));
         for (id, title, wizard) in [
             ("wizard-spells", tr("Wizard Spells"), true),
             ("priest-spells", tr("Priest Spells"), false),

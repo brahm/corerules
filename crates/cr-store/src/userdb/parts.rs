@@ -6,11 +6,13 @@
 //! "TSRP3 V7" version block, Core Rules 2.0 without it (so the fields that
 //! block switches on are absent).
 //!
-//! The pages ported here are the ones weapons, armor, equipment, magical
-//! items and kits use: Main, Weapons, Proficiencies, Costs, Adjustments,
-//! Saving Throws, Items Worn, Container, Restrict Class, Description and,
-//! for Expansion kits, Kit (availability and starting money). Every other
-//! member keeps the value the record had (a copy keeps its source's).
+//! The pages ported here cover every type the list offers but weapon
+//! proficiencies: Main, Weapons, Proficiencies, Costs, Adjustments, Saving
+//! Throws, Items Worn, Container, Carry Me, Skills, Abilities, Schools,
+//! Setting, Racial, Traits, Class Abilities, Magic Items, General Info,
+//! Restrict Class, Description and, for Expansion kits, Kit (availability
+//! and starting money). Every other member keeps the value the record had
+//! (a copy keeps its source's).
 
 use cr_formats::parts::{
     KIT_CURRENT_VERSION, KIT_HEADER, PART_TYPES, Part, PartData, PartHead, PartKit, PartKitData,
@@ -38,6 +40,38 @@ pub const EQUIPMENT: usize = 7;
 pub const MAGICAL_ITEMS: usize = 8;
 pub const CLASS_ABILITIES: usize = 14;
 pub const KITS: usize = 15;
+
+/// The part types the app lists together in one section, the ones without
+/// a section of their own: the id their records' keys carry, their array
+/// index and their name. Weapon proficiencies are left out: the files hold
+/// none, the program makes them from the weapons.
+pub const OTHER_TYPES: [(&str, usize, &str); 10] = [
+    ("racial-abilities", 5, tr_noop!("Racial Abilities")),
+    ("languages", 6, tr_noop!("Languages")),
+    ("schools", 9, tr_noop!("Schools of Magic")),
+    ("traits", 11, tr_noop!("Traits")),
+    ("disadvantages", 12, tr_noop!("Disadvantages")),
+    ("gems-and-art", 13, tr_noop!("Gems and Art")),
+    (
+        "class-abilities",
+        CLASS_ABILITIES,
+        tr_noop!("Class Abilities"),
+    ),
+    ("currency", 16, tr_noop!("Currency Types")),
+    ("count", 17, tr_noop!("Count")),
+    ("spheres", 18, tr_noop!("Spheres")),
+];
+
+/// The id of the section that lists [`OTHER_TYPES`].
+pub const OTHER_SECTION: &str = "parts";
+
+/// The part type of an [`OTHER_TYPES`] id.
+pub fn other_type(id: &str) -> Option<usize> {
+    OTHER_TYPES
+        .iter()
+        .find(|(i, ..)| *i == id)
+        .map(|(_, t, _)| *t)
+}
 
 /// The part types the Custom Data list offers ("Select the Type"),
 /// alphabetically, with their array index. Core Rules 2.0 has no Class
@@ -344,6 +378,15 @@ impl UserKind for Parts {
         f
     }
 
+    /// Copy (IDD 139, 0x6907e2) refuses the class abilities whose value
+    /// is one the program computes itself, such as the rogue skills: only
+    /// No score, Dexterity / Level and Base and increment (+0x77c 0, 1
+    /// and 5) are copied.
+    fn copy_refusal(r: &PartRec) -> Option<String> {
+        (r.part_type == CLASS_ABILITIES && ![0, 1, 5].contains(&r.part.data.unknown_0x778[1]))
+            .then(|| tr("This class ability may not be copied.  Returning.").to_owned())
+    }
+
     fn name_message(error: &NameError, r: &PartRec, _adding: bool) -> String {
         let reason = match error {
             NameError::Used | NameError::UsedByStandard => {
@@ -541,5 +584,38 @@ mod tests {
         assert_eq!(t3.len(), 17);
         assert_eq!(t3[0], (ARMOR, "Armor"));
         assert_eq!(editable_types(Flavor::Core20).len(), 16);
+    }
+
+    /// The other types and the six with sections of their own are every
+    /// type the original's list offers but weapon proficiencies.
+    #[test]
+    fn other_types_complete_the_list() {
+        let own = [WEAPONS, ARMOR, 4, EQUIPMENT, MAGICAL_ITEMS, KITS];
+        let mut listed: Vec<usize> = OTHER_TYPES.iter().map(|(_, t, _)| *t).collect();
+        listed.extend(own);
+        listed.sort_unstable();
+        let mut offered: Vec<usize> = editable_types(Flavor::Expansion)
+            .into_iter()
+            .map(|(t, _)| t)
+            .filter(|t| *t != 3)
+            .collect();
+        offered.sort_unstable();
+        assert_eq!(listed, offered);
+        for (id, t, _) in OTHER_TYPES {
+            assert_eq!(other_type(id), Some(t));
+        }
+        assert_eq!(other_type(OTHER_SECTION), None);
+    }
+
+    #[test]
+    fn computed_class_abilities_are_not_copied() {
+        let mut ability = Parts::new_record(&context(Flavor::Expansion, CLASS_ABILITIES));
+        for (value, refused) in [(0, false), (1, false), (5, false), (2, true), (6, true)] {
+            ability.part.data.unknown_0x778[1] = value;
+            assert_eq!(Parts::copy_refusal(&ability).is_some(), refused, "{value}");
+        }
+        let mut trait_ = Parts::new_record(&context(Flavor::Expansion, 11));
+        trait_.part.data.unknown_0x778[1] = 6;
+        assert_eq!(Parts::copy_refusal(&trait_), None);
     }
 }
