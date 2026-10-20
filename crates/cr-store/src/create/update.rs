@@ -23,6 +23,8 @@ pub(crate) fn ignored_checks(d: &CharacterData) -> Vec<WeaponCheck> {
         (groups[2] != 0, WeaponCheck::Sword),
         (groups[1] != 0, WeaponCheck::Thrown),
         (groups[0] != 0, WeaponCheck::OddMissile),
+        (groups[4] != 0, WeaponCheck::BroadGroup),
+        (groups[5] != 0, WeaponCheck::TightGroup),
         (on(d.flag_0x1dde), WeaponCheck::FirstFromList),
         (every_other[1] != 0, WeaponCheck::EveryOther),
         (creation[1] != 0, WeaponCheck::Recommended),
@@ -46,6 +48,8 @@ pub(crate) fn write_checks(d: &mut CharacterData, ignored: &[WeaponCheck], liste
         flags[1] = ignored(WeaponCheck::Thrown);
         flags[2] = ignored(WeaponCheck::Sword);
         flags[3] = ignored(WeaponCheck::Barred);
+        flags[4] = ignored(WeaponCheck::BroadGroup);
+        flags[5] = ignored(WeaponCheck::TightGroup);
     }
     d.flags_0x1ddc = Some([u8::from(listed), ignored(WeaponCheck::EveryOther)]);
     d.flags_0x1de8 = Some([
@@ -93,6 +97,8 @@ impl CreationRules {
         draft
             .weapon_proficiencies
             .clone_from(&d.weapon_proficiencies);
+        draft.broad_groups.clone_from(&d.unknown_0xac[1]);
+        draft.tight_groups.clone_from(&d.unknown_0xac[2]);
         draft.specializations.clone_from(&d.unknown_0xac[3]);
         let named = |s: &String| (!s.is_empty()).then(|| s.clone());
         draft.weapon_of_choice = named(&d.unknown_0x124[0]);
@@ -128,14 +134,15 @@ impl CreationRules {
     }
 
     /// The weapons the kit has the character pick that are still to be
-    /// picked: `picked` are those already kept.
+    /// picked, among those it is proficient in: `picked` are those
+    /// already kept.
     pub fn kit_picks(&self, draft: &Draft, picked: &[Option<String>; 2]) -> Vec<KitPick> {
         if !self.draft_kit(draft).is_some_and(|k| k.flag(0x380)) {
             return Vec::new();
         }
+        let covered = self.covered_weapons(draft);
         let held = |test: fn(&super::WeaponRules) -> bool| -> Vec<String> {
-            draft
-                .weapon_proficiencies
+            covered
                 .iter()
                 .filter(|n| self.weapon_part(n).is_some_and(test))
                 .cloned()

@@ -2072,6 +2072,58 @@ impl Wizard {
             },
         );
         *weapon_list.borrow_mut() = Some(weapons.clone());
+        // Skills & Powers: the broad and tight weapon groups (IDD 308).
+        let group_list = |broad: bool| {
+            let title = if broad {
+                tr("Broad Weapon Groups")
+            } else {
+                tr("Tight Weapon Groups")
+            };
+            let spec = {
+                let this = self.clone();
+                move |name: String| RowSpec {
+                    value: name.clone(),
+                    subtitle: this.rules().group_weapons(broad, &name).join(", "),
+                    title: name,
+                    number: None,
+                }
+            };
+            let taken = if broad {
+                &d.broad_groups
+            } else {
+                &d.tight_groups
+            };
+            let cell: Rc<RefCell<Option<RowList<String>>>> = Rc::default();
+            let list = RowList::new(
+                title,
+                taken.iter().cloned().map(spec.clone()).collect(),
+                {
+                    let this = self.clone();
+                    move || this.rules().group_choices(&this.0.draft.borrow(), broad)
+                },
+                {
+                    let (this, cell) = (self.clone(), cell.clone());
+                    move |name: String| {
+                        let add = {
+                            let (cell, spec, name) = (cell.clone(), spec.clone(), name.clone());
+                            Rc::new(move || {
+                                if let Some(list) = &*cell.borrow() {
+                                    list.add(spec(name.clone()));
+                                }
+                            })
+                        };
+                        this.add_group(broad, name, false, add);
+                        None
+                    }
+                },
+            );
+            list.group
+                .set_description(Some(&if broad { points(6) } else { points(4) }));
+            list.group.set_visible(sp && rules.expansion);
+            *cell.borrow_mut() = Some(list.clone());
+            list
+        };
+        let (broad, tight) = (group_list(true), group_list(false));
         // Core Rules: weapon specialization, as the original's dialog.
         let core = rules.core_specializes(&d);
         let specialization_spec = {
@@ -2248,22 +2300,23 @@ impl Wizard {
                 learned.clone(),
             );
             let specializations = specializations.clone();
+            let (broad, tight) = (broad.clone(), tight.clone());
             move || {
                 let mut probe = this.0.draft.borrow().clone();
                 probe.nonweapon_proficiencies = repeated(&nonweapon);
                 probe.weapon_proficiencies = names(&weapons);
+                probe.broad_groups = names(&broad);
+                probe.tight_groups = names(&tight);
                 probe.languages = native.clone();
                 probe.learned_languages = names(&learned);
                 if sp {
                     probe.traits = names(&traits);
                     probe.disadvantages = names(&disadvantages);
                     // The combat options keep only weapons still taken.
-                    let kept = |w: &Option<String>| {
-                        w.clone().filter(|w| probe.weapon_proficiencies.contains(w))
-                    };
+                    let weapons = this.rules().covered_weapons(&probe);
+                    let kept = |w: &Option<String>| w.clone().filter(|w| weapons.contains(w));
                     probe.weapon_of_choice = kept(&probe.weapon_of_choice);
                     probe.expertise = kept(&probe.expertise);
-                    let weapons = probe.weapon_proficiencies.clone();
                     probe.specializations.retain(|w| weapons.contains(w));
                 }
                 if this.rules().core_specializes(&probe) {
@@ -2302,6 +2355,15 @@ impl Wizard {
                 }
             }
         });
+        for (list, is_broad) in [(&broad, true), (&tight, false)] {
+            let (this, current) = (self.clone(), current.clone());
+            list.connect_remove(move |_, remove| {
+                match this.rules().group_removal(&current(), is_broad) {
+                    Some(text) => message(&this.0.dialog, tr("Weapon Groups"), &text),
+                    None => remove(),
+                }
+            });
+        }
         let update = Rc::new({
             let (this, nonweapon, weapons, next, current) = (
                 self.clone(),
@@ -2328,6 +2390,12 @@ impl Wizard {
                 *taken_disadvantages.borrow_mut() = names(&disadvantages);
                 *taken_languages.borrow_mut() = names(&learned);
                 let probe = current();
+                {
+                    // The kit's checks on adding a weapon count the groups'.
+                    let mut d = this.0.draft.borrow_mut();
+                    d.broad_groups.clone_from(&probe.broad_groups);
+                    d.tight_groups.clone_from(&probe.tight_groups);
+                }
                 let rules = this.rules();
                 nonweapon.set_subtitles(|name, _| nonweapon_subtitle(rules, &probe, name));
                 weapons.set_subtitles(|name, _| weapon_subtitle(rules, &probe, name));
@@ -2532,6 +2600,8 @@ impl Wizard {
             &traits,
             &disadvantages,
             &weapons,
+            &broad,
+            &tight,
             &specializations,
         ] {
             let update = update.clone();
@@ -2573,6 +2643,8 @@ impl Wizard {
                     d.languages = probe.languages;
                     d.learned_languages = probe.learned_languages;
                     d.weapon_proficiencies = probe.weapon_proficiencies;
+                    d.broad_groups = probe.broad_groups;
+                    d.tight_groups = probe.tight_groups;
                     d.traits = probe.traits;
                     d.disadvantages = probe.disadvantages;
                     d.specializations = probe.specializations;
@@ -2597,6 +2669,8 @@ impl Wizard {
                 &requirements_group,
                 &lending_group,
                 &weapons.group,
+                &broad.group,
+                &tight.group,
                 &focus_group,
                 &specializations.group,
                 &free_group,
@@ -2643,6 +2717,37 @@ impl Wizard {
                 this.add_weapon(name.clone(), taken.clone(), true, add.clone());
             },
         );
+    }
+
+    /// Buys a broad (else tight) weapon group once the kit's warning is
+    /// passed, Ignore passing it for good (5d3d63, 5d4121), and the
+    /// questions are answered Yes; refuses one the classes may not buy
+    /// (5cde66).
+    fn add_group(&self, broad: bool, name: String, warned: bool, add: Rc<dyn Fn()>) {
+        let d = self.0.draft.borrow().clone();
+        let rules = self.rules();
+        if !warned && let Some(warning) = rules.group_warnings(&d, broad, &name).into_iter().next()
+        {
+            let this = self.clone();
+            ignorable(
+                &self.0.dialog,
+                tr("Kit Weapon Proficiency Requirements"),
+                &warning.text,
+                move || {
+                    this.0
+                        .draft
+                        .borrow_mut()
+                        .ignored_weapon_checks
+                        .push(warning.check);
+                    this.add_group(broad, name.clone(), true, add.clone());
+                },
+            );
+            return;
+        }
+        match rules.group_offer(&d, broad) {
+            Ok(offer) => ask_each(self.0.dialog.upcast_ref(), offer.questions.into(), add),
+            Err(text) => message(&self.0.dialog, tr("Weapon Groups"), &text),
+        }
     }
 
     /// Core Rules: specializes in a weapon once the questions (from the
@@ -3050,7 +3155,7 @@ impl Wizard {
         // weapons taken.
         // The first item is "None"; the others are the weapons.
         let mut weapon_items = vec![tr("None").to_owned()];
-        weapon_items.extend(d.weapon_proficiencies.iter().cloned());
+        weapon_items.extend(rules.covered_weapons(&d));
         let weapon_row = |title: &str, subtitle: String, chosen: &Option<String>| {
             let row = combo_row(
                 title,

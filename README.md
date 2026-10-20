@@ -71,8 +71,11 @@ the original programs wrote.
 - **Player's Option** (Skills & Powers) creation, as the Expansion's
   Player's Option button: Methods VII to X, racial and class abilities
   bought with character points, subabilities, traits and disadvantages,
-  proficiencies with ranks, weapon of choice, expertise and specialization,
-  unarmed combat, shield and armor proficiencies, fighting styles
+  proficiencies with ranks, broad and tight weapon groups (warriors and
+  priests, 6 and 4 points, covering their weapons for the kit's checks,
+  the specializations and the attack penalty), weapon of choice, expertise
+  and specialization, unarmed combat, shield and armor proficiencies,
+  fighting styles
 - **Portraits**, in New Character and when editing: one of the race's
   portraits or any other in `Bitmaps/Portrait`, or a BMP, JPEG, GIF or PNG
   picture of your own, which the app cuts to the portraits' size and saves
@@ -83,7 +86,7 @@ the original programs wrote.
   background event and history, portrait, age, height, weight, hit points
   (moving the rolls as the original's arrows do), ability scores, subrace,
   racial and class abilities, schools and spheres, weapon proficiencies,
-  weapon of choice, expertise, specializations, mastery, unarmed combat,
+  weapon groups, weapon of choice, expertise, specializations, mastery, unarmed combat,
   shields, armor, fighting styles, traits and disadvantages (charging and
   refunding character points as Update Character does, with its questions
   and the kit's weapon warnings, the Core Rules slots left, the kit's free

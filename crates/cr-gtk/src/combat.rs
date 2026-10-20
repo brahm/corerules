@@ -16,7 +16,7 @@ use cr_store::create::{SHIELDS, UNARMED};
 use gtk::glib;
 
 use crate::abilities::{cost_text, names_list};
-use crate::create::{ask, ask_each, ignorable, notice};
+use crate::create::{ask, ask_each, ignorable, message, notice};
 use crate::lists::{RowList, RowSpec};
 
 /// The character's class levels as the editor has them now.
@@ -95,6 +95,9 @@ struct State {
     /// changes.
     quiet: Rc<Cell<bool>>,
     weapons: RowList<()>,
+    /// Skills & Powers: the broad and tight weapon groups.
+    broad: Option<RowList<()>>,
+    tight: Option<RowList<()>>,
     weapon_of_choice: Option<WeaponCombo>,
     expertise: Option<WeaponCombo>,
     mastery: Option<WeaponCombo>,
@@ -127,6 +130,8 @@ impl State {
         };
         CharacterCombat {
             weapons: self.weapons.rows_titles(),
+            broad_groups: titles(&self.broad, &o.broad_groups),
+            tight_groups: titles(&self.tight, &o.tight_groups),
             weapon_of_choice: weapon(&self.weapon_of_choice, &o.weapon_of_choice),
             expertise: weapon(&self.expertise, &o.expertise),
             mastery: weapon(&self.mastery, &o.mastery),
@@ -217,6 +222,53 @@ impl State {
         ));
     }
 
+    /// Buys a broad (else tight) weapon group once the kit's warning is
+    /// ignored and the questions are answered Yes, or says why the
+    /// character may not.
+    fn add_group(&self, broad: bool, name: String) {
+        let new = self.combat();
+        let levels = (self.levels)();
+        let warning = self
+            .rules
+            .group_warnings(&self.character, &new, &levels, broad, &name)
+            .into_iter()
+            .next();
+        if let Some(warning) = warning {
+            let this = self.clone();
+            ignorable(
+                &self.parent,
+                tr("Kit Weapon Proficiency Requirements"),
+                &warning.text,
+                move || {
+                    this.kit.borrow_mut().ignored.push(warning.check);
+                    this.add_group(broad, name.clone());
+                },
+            );
+            return;
+        }
+        let purchase = match self
+            .rules
+            .group_purchase(&self.character, &new, &levels, broad)
+        {
+            Ok(purchase) => purchase,
+            Err(text) => {
+                message(&self.parent, tr("Weapon Groups"), &text);
+                return;
+            }
+        };
+        let this = self.clone();
+        self.buy(purchase, move |cost| {
+            let mut new = this.combat();
+            this.rules.group_bought(&mut new, &name, cost);
+            this.kit.borrow_mut().bought = new.bought;
+            let list = if broad { &this.broad } else { &this.tight };
+            if let Some(list) = list {
+                let weapons = this.rules.group_weapons(broad, &name).join(", ");
+                list.add(row(name.clone(), format!("{}: {weapons}", cost_text(cost))));
+            }
+        });
+    }
+
     /// Specializes in a weapon once the questions are answered Yes and
     /// the kit's warnings ignored.
     fn specialize(&self, name: String) {
@@ -280,6 +332,12 @@ impl State {
             this.unarmed[i].set_active(true);
             this.quiet.set(false);
         });
+    }
+
+    /// The weapons held, the groups' too.
+    fn covered_weapons(&self) -> Vec<String> {
+        self.rules
+            .covered_weapons(&self.character, &self.combat(), &(self.levels)())
     }
 
     /// Points are shown for Skills & Powers characters only.
@@ -382,8 +440,8 @@ impl CombatEditor {
         if skills_and_powers {
             let group = adw::PreferencesGroup::builder()
                 .description(tr(
-                    "Removing a weapon proficiency refunds nothing; everything \
-                     else on this page is refunded when removed.",
+                    "Removing a weapon proficiency or weapon group refunds nothing; \
+                     everything else on this page is refunded when removed.",
                 ))
                 .build();
             let row = adw::ActionRow::builder()
@@ -428,6 +486,51 @@ impl CombatEditor {
         };
         page.add(&weapons.group);
 
+        // Skills & Powers: the broad and tight weapon groups (IDD 308).
+        let group_list = |broad: bool| {
+            let taken = if broad {
+                &original.broad_groups
+            } else {
+                &original.tight_groups
+            };
+            let (offer_state, add_state) = (state_of.clone(), state_of.clone());
+            let list = asking_list(
+                if broad {
+                    tr("Broad Weapon Groups")
+                } else {
+                    tr("Tight Weapon Groups")
+                },
+                taken
+                    .iter()
+                    .map(|name| row(name.clone(), rules.group_weapons(broad, name).join(", ")))
+                    .collect(),
+                move || {
+                    offer_state().map_or_else(Vec::new, |s| {
+                        s.rules
+                            .group_choices(&s.character, &s.combat(), &(s.levels)(), broad)
+                    })
+                },
+                move |name| {
+                    if let Some(state) = add_state() {
+                        state.add_group(broad, name);
+                    }
+                },
+            );
+            list.group
+                .set_description(Some(&cost_text(if broad { 6 } else { 4 })));
+            page.add(&list.group);
+            list
+        };
+        let groups = skills_and_powers
+            && !rules
+                .group_choices(&character, &original, &(*levels)(), true)
+                .is_empty();
+        let (broad, tight) = if groups || !original.broad_groups.is_empty() {
+            (Some(group_list(true)), Some(group_list(false)))
+        } else {
+            (None, None)
+        };
+
         let specialization = rules.specialization_cost(&character);
         let specializations = {
             let (offer_state, add_state) = (state_of.clone(), state_of.clone());
@@ -441,8 +544,7 @@ impl CombatEditor {
                 move || {
                     offer_state().map_or_else(Vec::new, |s| {
                         let taken = s.specializations.rows_titles();
-                        s.weapons
-                            .rows_titles()
+                        s.covered_weapons()
                             .into_iter()
                             .filter(|n| !taken.contains(n))
                             .collect()
@@ -459,6 +561,7 @@ impl CombatEditor {
         let group = adw::PreferencesGroup::builder()
             .title(tr("Specialization"))
             .build();
+        let covered = rules.covered_weapons(&character, &original, &(*levels)());
         let (weapon_of_choice, expertise, mastery) = if skills_and_powers {
             let combo = |title: &str, cost: i64, options: Vec<String>, selected| {
                 let combo = WeaponCombo::new(title, &cost_text(cost), options, selected);
@@ -469,13 +572,13 @@ impl CombatEditor {
                 combo(
                     tr("Weapon of Choice"),
                     rules.weapon_of_choice_cost(&character),
-                    original.weapons.clone(),
+                    covered.clone(),
                     original.weapon_of_choice.as_ref(),
                 ),
                 combo(
                     tr("Weapon Expertise"),
                     rules.expertise_cost(&character),
-                    original.weapons.clone(),
+                    covered.clone(),
                     original.expertise.as_ref(),
                 ),
                 combo(
@@ -606,6 +709,8 @@ impl CombatEditor {
             kit_group,
             quiet: Rc::default(),
             weapons,
+            broad,
+            tight,
             weapon_of_choice,
             expertise,
             mastery,
@@ -634,34 +739,61 @@ impl CombatEditor {
         // Skills & Powers: removing a proficiency the character had
         // refunds nothing, which the original says once.
         if skills_and_powers {
-            let (state, told) = (state.clone(), Rc::new(Cell::new(false)));
-            state.weapons.clone().connect_remove(move |_, remove| {
-                let remove = RefCell::new(Some(remove));
-                let remove = move || {
-                    if let Some(remove) = remove.borrow_mut().take() {
-                        remove();
+            let told = Rc::new(Cell::new(false));
+            let lists = [
+                (Some(state.weapons.clone()), None),
+                (state.broad.clone(), Some(true)),
+                (state.tight.clone(), Some(false)),
+            ];
+            for (list, group) in lists {
+                let Some(list) = list else { continue };
+                let (state, told) = (state.clone(), told.clone());
+                list.connect_remove(move |_, remove| {
+                    // A group stays while there is specialization
+                    // information.
+                    if let Some(broad) = group
+                        && let Some(text) = state.rules.group_removal(
+                            &state.character,
+                            &state.combat(),
+                            &(state.levels)(),
+                            broad,
+                        )
+                    {
+                        message(&state.parent, tr("Weapon Groups"), &text);
+                        return;
                     }
-                };
-                if told.replace(true) {
-                    remove();
-                    return;
-                }
-                notice(
-                    &state.parent,
-                    tr("Warning"),
-                    tr(
-                        "In Update, character points are not returned for removing Weapon \
-                        Proficiencies, Tight Groups, or Broad Groups.",
-                    ),
-                    remove,
-                );
-            });
+                    let remove = RefCell::new(Some(remove));
+                    let remove = move || {
+                        if let Some(remove) = remove.borrow_mut().take() {
+                            remove();
+                        }
+                    };
+                    if told.replace(true) {
+                        remove();
+                        return;
+                    }
+                    notice(
+                        &state.parent,
+                        tr("Warning"),
+                        tr(
+                            "In Update, character points are not returned for removing Weapon \
+                            Proficiencies, Tight Groups, or Broad Groups.",
+                        ),
+                        remove,
+                    );
+                });
+            }
         }
         // The combos offer the proficiencies and specializations listed.
-        state.weapons.connect_changed({
+        let weapon_lists = [
+            Some(&state.weapons),
+            state.broad.as_ref(),
+            state.tight.as_ref(),
+        ];
+        for list in weapon_lists.into_iter().flatten() {
             let (state, refresh) = (state.clone(), refresh.clone());
-            move || {
-                let weapons = state.weapons.rows_titles();
+            list.connect_changed(move || {
+                let weapons = state.covered_weapons();
                 for combo in [&state.weapon_of_choice, &state.expertise]
                     .into_iter()
                     .flatten()
@@ -669,8 +801,8 @@ impl CombatEditor {
                     combo.refill(weapons.clone());
                 }
                 refresh();
-            }
-        });
+            });
+        }
         state.specializations.connect_changed({
             let (state, refresh) = (state.clone(), refresh.clone());
             move || {

@@ -25,11 +25,13 @@
 //! options, the fighting styles each class group may learn, the rogue
 //! skill tables) follows the books, as in the original.
 
+mod group;
 mod kit;
 mod nonweapon;
 mod update;
 mod weapon;
 
+pub use group::GroupOffer;
 pub use nonweapon::{NonweaponPick, PickKind};
 pub use update::KitPick;
 pub(crate) use update::{ignored_checks, write_checks};
@@ -52,6 +54,7 @@ use cr_formats::spells::SpellsFile;
 
 use crate::dual::ClassRules;
 use crate::edit::{CLASS_LINE, LEVEL_LINE, PLAYER_LINE, replace, with_suffix};
+use crate::groups::WeaponGroups;
 use crate::lists::{CARRIED, CharacterLists, Item, PartTable, carried_weight};
 use crate::npc::data::Kit;
 use crate::settings::Setting;
@@ -582,6 +585,10 @@ pub struct Draft {
     /// Native languages.
     pub languages: Vec<String>,
     pub weapon_proficiencies: Vec<String>,
+    /// Skills & Powers: the broad and tight weapon groups bought, which
+    /// cover their weapons (see [`CreationRules::covered_weapons`]).
+    pub broad_groups: Vec<String>,
+    pub tight_groups: Vec<String>,
     /// Wizard spells known.
     pub spells: Vec<String>,
     /// Starting money, in gold pieces.
@@ -679,6 +686,8 @@ impl Draft {
             nonweapon_proficiencies: Vec::new(),
             languages: Vec::new(),
             weapon_proficiencies: Vec::new(),
+            broad_groups: Vec::new(),
+            tight_groups: Vec::new(),
             spells: Vec::new(),
             gold: 0,
             pack: true,
@@ -772,6 +781,8 @@ pub struct CreationRules {
     languages: Vec<String>,
     abilities: HashSet<String>,
     parts: PartTable,
+    /// The Player's Option weapon groups.
+    groups: WeaponGroups,
 }
 
 impl Installation {
@@ -887,20 +898,13 @@ impl Installation {
             languages: Vec::new(),
             abilities: self.part_names("Class Abilities")?.into_iter().collect(),
             parts: self.part_table()?,
+            groups: if expansion {
+                WeaponGroups::load(self)
+            } else {
+                WeaponGroups::default()
+            },
         };
         let mut seen = HashSet::new();
-        // The tight weapon groups' ids, which the program holds (its part
-        // document's constructor 0x677978); the bows are id 6.
-        let tight_groups: HashMap<String, i32> = if expansion {
-            crate::exe::Image::open(self, crate::treasure::Flavor::Expansion)
-                .ok()
-                .and_then(|image| image.id_tables(0x677978, 0x3800, 0x572030).remove(&0x248))
-                .unwrap_or_default()
-                .into_iter()
-                .collect()
-        } else {
-            HashMap::new()
-        };
         for relative in ["Database/Parts.dat", "UserDbas/PartsU.dat"] {
             if self.path(relative).is_none() {
                 continue;
@@ -1033,7 +1037,7 @@ impl Installation {
                                 .data
                                 .unknown_0x1cc
                                 .iter()
-                                .filter_map(|g| tight_groups.get(g).copied())
+                                .filter_map(|g| rules.groups.tight_id(g))
                                 .collect(),
                             damage: [
                                 part.head.unknown_0x3b4.clone(),
@@ -2489,11 +2493,12 @@ impl CreationRules {
     /// Skills & Powers: the combat options are open to the character.
     pub fn combat_problem(&self, draft: &Draft) -> Option<String> {
         let classes = &draft.classes;
+        let covered = self.covered_weapons(draft);
         for weapon in [&draft.weapon_of_choice, &draft.expertise]
             .into_iter()
             .flatten()
         {
-            if !draft.weapon_proficiencies.contains(weapon) {
+            if !covered.contains(weapon) {
                 return Some(tr!("{weapon} needs its weapon proficiency", weapon));
             }
         }
@@ -2680,7 +2685,7 @@ impl CreationRules {
             if let Some(w) = draft
                 .specializations
                 .iter()
-                .find(|w| !draft.weapon_proficiencies.contains(w))
+                .find(|w| !self.covered_weapons(draft).contains(w))
             {
                 return Some(tr!(
                     "Specializing in {weapon} needs its proficiency",
@@ -2934,6 +2939,8 @@ impl CreationRules {
             };
             d.unknown_0x1830[0] = sorted(&draft.traits);
             d.unknown_0x1830[1] = sorted(&draft.disadvantages);
+            d.unknown_0xac[1].clone_from(&draft.broad_groups);
+            d.unknown_0xac[2].clone_from(&draft.tight_groups);
             d.unknown_0xac[3] = sorted(&draft.specializations);
             d.unknown_0xac[4] = sorted(&draft.armor_proficiencies);
             d.unknown_0x124 = [
@@ -3103,6 +3110,7 @@ mod tests {
             unarmed: name == "Fighter",
             early_specialization: name == "Fighter",
             cheap_specialization: name == "Fighter",
+            group_question: false,
         }
     }
 
@@ -3324,6 +3332,7 @@ mod tests {
                 .map(String::from)
                 .collect(),
             parts: PartTable::default(),
+            groups: WeaponGroups::default(),
         }
     }
 
