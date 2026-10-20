@@ -17,6 +17,7 @@ use cr_store::create::{
     rogue_skill_of, roll_dice_pool, roll_seven_dice, seven_dice_scores,
 };
 use cr_store::help::topic;
+use cr_store::kit_magic::KitMagicRules;
 use cr_store::pictures::ItemIcons;
 use cr_store::settings::{SETTINGS, Setting};
 use gtk::glib;
@@ -1354,6 +1355,8 @@ impl Wizard {
             d.rogue_points = [0; 8];
             d.rogue_bonus = None;
             d.rogue_chosen.clear();
+            d.barred_schools_ignored = false;
+            d.eliminated_schools.clear();
             d.unarmed.clear();
             d.shields = [false; 4];
             d.armor_proficiencies.clear();
@@ -1734,7 +1737,12 @@ impl Wizard {
                     d.portrait = portrait.borrow().clone();
                     d.male = male();
                     d.alignment = combo_value(&alignment);
-                    d.kit = combo_value(&kit);
+                    let chosen = combo_value(&kit);
+                    if d.kit != chosen {
+                        d.barred_schools_ignored = false;
+                        d.eliminated_schools.clear();
+                    }
+                    d.kit = chosen;
                     if let Some(class) = SOCIAL_CLASSES.get(social_class.selected() as usize) {
                         d.social_class = (*class).to_owned();
                     }
@@ -3727,8 +3735,12 @@ impl Wizard {
             {
                 let (this, taken, classes) = (self.clone(), taken.clone(), d.classes.clone());
                 move || {
+                    let d = this.0.draft.borrow().clone();
                     this.rules()
-                        .spells(&classes)
+                        .draft_spells(&Draft {
+                            classes: classes.clone(),
+                            ..d
+                        })
                         .into_iter()
                         .filter(|n| !taken.borrow().contains(n))
                         .collect()
@@ -3736,6 +3748,56 @@ impl Wizard {
             },
             move |name| Some(spec(name)),
         );
+        // The kit's barred schools, warned about as the page opens, and
+        // the schools a kit limited to five has the wizard eliminate
+        // (62f1c8); the spells of schools no longer kept go.
+        let mut groups = Vec::new();
+        let drop_spells = {
+            let (this, spells) = (self.clone(), spells.clone());
+            move || {
+                let allowed = this.rules().draft_spells(&this.0.draft.borrow());
+                let kept: Vec<String> = spells
+                    .values()
+                    .into_iter()
+                    .map(|(v, _)| v)
+                    .filter(|v| allowed.contains(v))
+                    .collect();
+                if kept.len() < spells.values().len() {
+                    spells.clear();
+                    for name in kept {
+                        spells.add(spec(name));
+                    }
+                }
+            }
+        };
+        if let Some(warning) = rules.kit_barred_schools_warning(&d) {
+            let (this, parent) = (self.clone(), spells.group.clone());
+            let drop_spells = drop_spells.clone();
+            glib::idle_add_local_once(move || {
+                ignorable(
+                    &parent,
+                    tr("Kit Class Ability Requirements"),
+                    &warning,
+                    move || this.0.draft.borrow_mut().barred_schools_ignored = true,
+                );
+                drop_spells();
+            });
+        }
+        if let Some((count, schools)) = rules.kit_schools_to_eliminate(&d) {
+            let this = self.clone();
+            let drop_spells = drop_spells.clone();
+            groups.push(crate::kit_magic::check_group(
+                tr("Eliminated Schools"),
+                &KitMagicRules::elimination_text(&d.kit, count),
+                &schools,
+                &d.eliminated_schools,
+                count,
+                move |names| {
+                    this.0.draft.borrow_mut().eliminated_schools = names;
+                    drop_spells();
+                },
+            ));
+        }
         let next = next_button(tr("_Next"));
         spells.connect_changed({
             let (spells, next, taken) = (spells.clone(), next.clone(), taken.clone());
@@ -3765,9 +3827,14 @@ impl Wizard {
                 this.push(this.equipment_page());
             }
         });
-        step(tr("Spells"), &[&group], &next, None, || {
-            topic::CHARACTER_SPELLS
-        })
+        groups.push(group);
+        step(
+            tr("Spells"),
+            &groups.iter().collect::<Vec<_>>(),
+            &next,
+            None,
+            || topic::CHARACTER_SPELLS,
+        )
     }
 
     /// Starting money and what it buys; the last page.

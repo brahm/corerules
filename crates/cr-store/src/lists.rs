@@ -124,6 +124,10 @@ pub struct CharacterLists {
     /// questions answered, when the page's rules chose them (see
     /// [`crate::proficiencies`]). They replace `nonweapon_proficiencies`.
     pub nonweapon: Option<crate::proficiencies::CharacterNonweapon>,
+    /// The kit's schools and spheres as the Spells and Memorize pages
+    /// trim them, and its warnings ignored (see [`crate::kit_magic`]),
+    /// when the pages were shown.
+    pub kit_magic: Option<crate::kit_magic::CharacterKitMagic>,
 }
 
 /// An item in a bundle.
@@ -205,6 +209,7 @@ impl CharacterLists {
             combat: None,
             skills: None,
             nonweapon: None,
+            kit_magic: None,
             spellbooks: d
                 .inventory
                 .iter()

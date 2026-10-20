@@ -21,6 +21,7 @@ pub mod extract;
 pub mod groups;
 pub mod help;
 mod iso9660;
+pub mod kit_magic;
 pub mod lists;
 pub mod npc;
 pub mod party;

@@ -370,4 +370,45 @@ impl AbilityEditor {
     pub fn abilities(&self) -> CharacterAbilities {
         self.state.abilities()
     }
+
+    /// Adds what the kit tells about the schools and the minor and major
+    /// spheres to their groups, as the original's Schools and Spheres
+    /// pages do: `notes(list, taken)` with `list` 0 for schools, 1 for
+    /// minor spheres and 2 for major ones. The result shows them again.
+    pub fn show_kit_notices(&self, notes: Rc<dyn Fn(usize, usize) -> Vec<String>>) -> Rc<dyn Fn()> {
+        let mut shows: Vec<Rc<dyn Fn()>> = Vec::new();
+        for class in &self.state.classes {
+            for (kind, list) in [&class.schools, &class.minor, &class.major]
+                .into_iter()
+                .enumerate()
+            {
+                let Some(list) = list.clone() else { continue };
+                let base = list.group.description().map(|d| d.to_string());
+                let show: Rc<dyn Fn()> = Rc::new({
+                    let (list, notes) = (list.clone(), notes.clone());
+                    move || {
+                        let mut text: Vec<String> = base.iter().cloned().collect();
+                        text.extend(
+                            notes(kind, list.rows_titles().len())
+                                .iter()
+                                .map(|n| glib::markup_escape_text(n).to_string()),
+                        );
+                        let text = text.join("\n\n");
+                        list.group
+                            .set_description((!text.is_empty()).then_some(text.as_str()));
+                    }
+                });
+                list.also_connect_changed({
+                    let show = show.clone();
+                    move || show()
+                });
+                shows.push(show);
+            }
+        }
+        Rc::new(move || {
+            for show in &shows {
+                show();
+            }
+        })
+    }
 }

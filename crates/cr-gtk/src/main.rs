@@ -9,6 +9,7 @@ mod create;
 mod encounter;
 mod extract;
 mod help;
+mod kit_magic;
 mod lists;
 mod nonweapon;
 mod npc;
@@ -2150,7 +2151,19 @@ fn character_editor(
     page.add(&abilities);
     page.add(&history_group);
 
-    let editors = ListEditors::new(lists, &choices, classes, &advanced);
+    let kit_magic_editor = kit_magic::KitMagicEditor::new(
+        choices.kit_magic.clone(),
+        &choices.character,
+        Rc::new({
+            let kit = kit.clone();
+            move || create::combo_value(&kit)
+        }),
+    );
+    kit.connect_selected_notify({
+        let editor = kit_magic_editor.clone();
+        move |_| editor.rebuild()
+    });
+    let editors = ListEditors::new(lists, &choices, classes, &advanced, &kit_magic_editor);
     level_listeners.borrow_mut().push(Box::new({
         let editor = editors.nonweapon_proficiencies.clone();
         move || editor.levels_changed()
@@ -2177,6 +2190,12 @@ fn character_editor(
     }
     let ability_editor =
         abilities::AbilityEditor::new(choices.abilities.clone(), &choices.character);
+    let show_notices = ability_editor.show_kit_notices(Rc::new({
+        let editor = kit_magic_editor.clone();
+        move |list, taken| editor.notices(list, taken)
+    }));
+    show_notices();
+    kit_magic_editor.connect_changed(move || show_notices());
     let levels: combat::Levels = Rc::new({
         let (rules, advanced) = (choices.advance.clone(), advanced.clone());
         move || {
@@ -2223,8 +2242,9 @@ fn character_editor(
         tr("Skills"),
         "system-run-symbolic",
     );
+    kit_magic_editor.set_rest(editors.spell_groups());
     stack.add_titled_with_icon(
-        &editors.spells_page(),
+        &kit_magic_editor.page,
         Some("spells"),
         tr("Spells"),
         "starred-symbolic",
@@ -2235,6 +2255,17 @@ fn character_editor(
         tr("Equipment"),
         "package-x-generic-symbolic",
     );
+    // The kit trims the schools and spheres once the Spells page is shown,
+    // as the original's Spells and Memorize pages do.
+    let spells_shown = Rc::new(std::cell::Cell::new(false));
+    stack.connect_visible_child_name_notify({
+        let spells_shown = spells_shown.clone();
+        move |stack| {
+            if stack.visible_child_name().as_deref() == Some("spells") {
+                spells_shown.set(true);
+            }
+        }
+    });
     let error = adw::Banner::new("");
 
     let cancel = gtk::Button::with_mnemonic(tr("_Cancel"));
@@ -2294,6 +2325,7 @@ fn character_editor(
     let ability_rules = choices.abilities.clone();
     let combat_rules = choices.combat.clone();
     let skill_rules = choices.skills.clone();
+    let kit_magic_rules = choices.kit_magic.clone();
     // Leaving the original's Weapon Proficiencies page checks the kit's
     // specializations first.
     // Leaving the original's Nonweapon Proficiencies page asks about the
@@ -2345,6 +2377,10 @@ fn character_editor(
             let edited = skills_editor.skills();
             if edited != skill_rules.skills_of(&original) {
                 lists.skills = Some(edited);
+            }
+            let magic = kit_magic_editor.magic();
+            if spells_shown.get() || magic != kit_magic_rules.magic_of(&original) {
+                lists.kit_magic = Some(magic);
             }
             let advancement = Advancement::between(&original, &advanced.borrow());
             if advancement != Advancement::of(&original) {
@@ -2850,6 +2886,8 @@ struct Choices {
     proficiencies: Rc<cr_store::proficiencies::ProficiencyRules>,
     /// Rogue skills, psionic powers, wild talents, attack and defense modes.
     skills: Rc<cr_store::skills::SkillRules>,
+    /// The kit's schools, spheres and spell use.
+    kit_magic: Rc<cr_store::kit_magic::KitMagicRules>,
 }
 
 impl Choices {
@@ -2884,6 +2922,7 @@ impl Choices {
             backgrounds: cr_store::edit::backgrounds(install)?,
             abilities: Rc::new(install.ability_rules()?),
             skills: Rc::new(install.skill_rules()?),
+            kit_magic: Rc::new(install.kit_magic_rules()?),
         })
     }
 }
@@ -2926,6 +2965,7 @@ impl ListEditors {
         choices: &Choices,
         classes: &[String],
         advanced: &Rc<RefCell<Character>>,
+        kit_magic: &kit_magic::KitMagicEditor,
     ) -> Self {
         let wizard_spells = ListEditor::new(
             tr("Wizard Spells Known"),
@@ -3020,20 +3060,28 @@ impl ListEditors {
                 let all = choices.priest_spells.clone();
                 Box::new(move || all.to_vec())
             };
-            let list = RowList::new(
-                &tr!("Memorized ({class})", class),
-                rows,
-                offer,
+            // The kit's warning comes first, which needs the list.
+            let this: Rc<RefCell<Option<RowList<u32>>>> = Rc::default();
+            let list = RowList::new(&tr!("Memorized ({class})", class), rows, offer, {
+                let (this, kit_magic) = (this.clone(), kit_magic.clone());
                 move |name| {
                     let level = levels.get(&name).copied()?;
-                    Some(RowSpec {
-                        value: level,
-                        subtitle: tr!("{ordinal} level", ordinal = ordinal(level)),
-                        title: name,
-                        number: None,
-                    })
-                },
-            );
+                    let list = this.borrow().clone()?;
+                    kit_magic.check_spell_use(&list.group, {
+                        let list = list.clone();
+                        move || {
+                            list.add(RowSpec {
+                                value: level,
+                                subtitle: tr!("{ordinal} level", ordinal = ordinal(level)),
+                                title: name.clone(),
+                                number: None,
+                            })
+                        }
+                    });
+                    None
+                }
+            });
+            *this.borrow_mut() = Some(list.clone());
             memorized.push((slot, wizard, list));
         }
 
@@ -3124,17 +3172,14 @@ impl ListEditors {
         page
     }
 
-    fn spells_page(&self) -> adw::PreferencesPage {
-        let page = adw::PreferencesPage::new();
-        page.add(&self.wizard_spells.group);
-        page.add(&self.priest_spells.group);
-        for (_, list) in &self.spellbooks {
-            page.add(&list.group);
-        }
-        for (_, _, list) in &self.memorized {
-            page.add(&list.group);
-        }
-        page
+    /// The Spells page's groups, after the kit's.
+    fn spell_groups(&self) -> Vec<adw::PreferencesGroup> {
+        [&self.wizard_spells.group, &self.priest_spells.group]
+            .into_iter()
+            .chain(self.spellbooks.iter().map(|(_, list)| &list.group))
+            .chain(self.memorized.iter().map(|(_, _, list)| &list.group))
+            .cloned()
+            .collect()
     }
 
     fn equipment_page(&self) -> adw::PreferencesPage {
@@ -3201,6 +3246,7 @@ impl ListEditors {
             combat: None,
             skills: None,
             nonweapon: (nonweapon != self.original_nonweapon).then_some(nonweapon),
+            kit_magic: None,
             spellbooks: self
                 .spellbooks
                 .iter()

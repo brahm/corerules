@@ -55,7 +55,10 @@ the original programs wrote.
   are applied when the character is written, and again when an edit is saved.
   The kit's own rogue skill points, its bonus to one skill of a list, the
   skills it has the character choose and its list for the starting points
-  (with the original's warning) are on the Rogue Skills page
+  (with the original's warning) are on the Rogue Skills page. The schools
+  the kit bars are warned about on the Spells page and go unless ignored,
+  and a kit limited to five schools has the wizard eliminate the rest, the
+  spells offered following the schools kept
 - **Class and kit proficiencies** in New Character: the required ones go in
   first, bonus, free and kit-recommended ones cost less or nothing, the
   bonus, free, +1 and +2 picks are offered as the Expansion offers them, the
@@ -100,8 +103,12 @@ the original programs wrote.
   psionic attack and defense modes (with Update Character's limits), nonweapon
   proficiencies (ranks, costs as New Character charges them, the kit's free
   ones at their levels, the Core Rules slots left, and the kit's warnings
-  and questions), languages, spells known, spellbooks and memorized spells, the nine
-  equipment groups with quantities, and Spending Money
+  and questions), languages, spells known, spellbooks and memorized spells
+  (with the kit's barred schools, the schools beyond five to eliminate, the
+  spheres to keep, its free sphere and its warning for a kit that never
+  uses spells, as Update Character's Spells and Memorize pages ask, and
+  the kit's notes on the schools and spheres of the Abilities page), the
+  nine equipment groups with quantities, and Spending Money
 - **Experience and levels** per class, all classes or split, with the prime
   requisite bonus, hit point rolls, PSPs, character points and the
   Expansion's racial level limits; **dual-classing** for humans
