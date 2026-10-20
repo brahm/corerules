@@ -11,8 +11,9 @@ use cr_i18n::{tr, tr_noop, trn};
 use cr_store::create::{
     ABILITIES, CreationRules, DISADVANTAGE_POINTS, Dice, Draft, METHOD_VI_DICE, METHOD_VII_POINTS,
     METHOD_VIII_DICE, METHOD_X_STRENGTH_STEP, MOST_DISADVANTAGES, MOST_FIGHTING_STYLES,
-    ROGUE_SKILLS, RollMethod, SHIELDS, STANDARD_PACK, SUBABILITIES, SUBABILITY_SPREAD, UNARMED,
-    max_spells_per_level, point_table, roll_dice_pool, roll_seven_dice, seven_dice_scores,
+    NonweaponPick, PickKind, ROGUE_SKILLS, RollMethod, SHIELDS, STANDARD_PACK, SUBABILITIES,
+    SUBABILITY_SPREAD, UNARMED, max_spells_per_level, point_table, roll_dice_pool, roll_seven_dice,
+    seven_dice_scores,
 };
 use cr_store::help::topic;
 use cr_store::pictures::ItemIcons;
@@ -138,10 +139,22 @@ fn ask(
     yes: impl Fn() + 'static,
     no: impl Fn() + 'static,
 ) {
+    question(parent, heading, body, false, yes, no);
+}
+
+/// A Yes/No question with either answer the default.
+fn question(
+    parent: &impl IsA<gtk::Widget>,
+    heading: &str,
+    body: &str,
+    yes_default: bool,
+    yes: impl Fn() + 'static,
+    no: impl Fn() + 'static,
+) {
     let alert = adw::AlertDialog::builder()
         .heading(heading)
         .body(body)
-        .default_response("no")
+        .default_response(if yes_default { "yes" } else { "no" })
         .close_response("no")
         .build();
     alert.add_responses(&[("no", tr("_No")), ("yes", tr("_Yes"))]);
@@ -150,6 +163,36 @@ fn ask(
             yes();
         } else {
             no();
+        }
+    });
+    alert.present(Some(parent));
+}
+
+/// A warning the user may ignore, as the original's IDD 245: OK refuses
+/// what was asked and Ignore allows it, for good.
+fn ignorable(
+    parent: &impl IsA<gtk::Widget>,
+    heading: &str,
+    body: &str,
+    ignore: impl Fn() + 'static,
+) {
+    let body = format!(
+        "{body}\n\n{}",
+        tr(
+            "If you choose to ignore this message and save this character, this message will \
+            not appear for this character again."
+        )
+    );
+    let alert = adw::AlertDialog::builder()
+        .heading(heading)
+        .body(body)
+        .default_response("ok")
+        .close_response("ok")
+        .build();
+    alert.add_responses(&[("ignore", tr("_Ignore")), ("ok", tr("_OK"))]);
+    alert.connect_response(None, move |_, response| {
+        if response == "ignore" {
+            ignore();
         }
     });
     alert.present(Some(parent));
@@ -1264,14 +1307,10 @@ impl Wizard {
         }
         d.gold = rules.roll_gold(&d.classes, &mut dice);
         if changed {
-            d.nonweapon_proficiencies.clear();
-            d.weapon_proficiencies.clear();
+            d.reset_proficiencies();
             d.spells.clear();
             d.purchases.clear();
-            d.learned_languages.clear();
             d.rogue_points = [0; 8];
-            d.weapon_of_choice = None;
-            d.expertise = None;
             d.unarmed.clear();
             d.shields = [false; 4];
             d.armor_proficiencies.clear();
@@ -1683,35 +1722,51 @@ impl Wizard {
     /// Skills & Powers also traits and disadvantages, all paid in
     /// character points.
     fn proficiencies_page(&self) -> adw::NavigationPage {
-        self.0.draft.borrow_mut().proficiencies_started = true;
+        {
+            let mut d = self.0.draft.borrow_mut();
+            d.proficiencies_started = true;
+            // The proficiencies the classes and the kit require go in once
+            // (0x4414e1).
+            if !d.required_nonweapon_added {
+                for name in self.rules().required_nonweapon(&d) {
+                    if !d.nonweapon_proficiencies.contains(&name) {
+                        d.nonweapon_proficiencies.push(name);
+                    }
+                }
+                d.required_nonweapon_added = true;
+            }
+        }
         let d = self.0.draft.borrow().clone();
         let rules = self.rules();
         let sp = d.skills_and_powers;
-        let adjusted = rules.adjusted(&d.race, &d.scores);
-        let nonweapon_slots = rules.nonweapon_slots(&d.classes, adjusted[3]);
         let weapon_slots = rules.weapon_slots(&d.classes);
         let weapon_cost = rules.weapon_cost(&d.classes);
         let native = rules.native_languages(&d);
 
         // A proficiency may be taken more than once: more slots with the
         // Core Rules, more ranks at 1 point each with Skills & Powers.
+        // What a proficiency costs; the classes and the kit make some free.
+        let nonweapon_subtitle = move |rules: &CreationRules, draft: &Draft, name: &str| {
+            let cost = rules.nonweapon_cost(draft, name);
+            if sp {
+                tr!("{cost}, 1 more a further rank", cost = points(cost.into()))
+            } else if cost == 0 {
+                tr("Free").into()
+            } else {
+                tr!("{slots} each time", slots = slots(cost))
+            }
+        };
         let nonweapon_spec = {
             let (this, draft) = (self.clone(), d.clone());
-            move |name: String, times: u32| {
-                let cost = this.rules().nonweapon_cost(&draft, &name);
-                RowSpec {
-                    value: name.clone(),
-                    title: name,
-                    subtitle: if sp {
-                        tr!("{cost}, 1 more a further rank", cost = points(cost.into()))
-                    } else {
-                        tr!("{slots} each time", slots = slots(cost))
-                    },
-                    number: Some((times, 1, 10)),
-                }
+            move |name: String, times: u32| RowSpec {
+                value: name.clone(),
+                subtitle: nonweapon_subtitle(this.rules(), &draft, &name),
+                title: name,
+                number: Some((times, 1, 10)),
             }
         };
         let taken_nonweapon: Rc<RefCell<Vec<String>>> = Rc::default();
+        let nonweapon_list: Rc<RefCell<Option<RowList<String>>>> = Rc::default();
         let nonweapon = RowList::new(
             tr("Nonweapon Proficiencies"),
             rules
@@ -1729,8 +1784,72 @@ impl Wizard {
                         .collect()
                 }
             },
-            move |name| Some(nonweapon_spec(name, 1)),
+            {
+                let (this, list) = (self.clone(), nonweapon_list.clone());
+                move |name: String| {
+                    // A proficiency the kit bars needs the warning ignored
+                    // (5c857b).
+                    let d = this.0.draft.borrow();
+                    let barred = this.rules().barred_nonweapon(&d);
+                    if d.barred_nonweapon_ignored || !barred.contains(&name) {
+                        return Some(nonweapon_spec(name, 1));
+                    }
+                    let body = format!(
+                        "{}\n{}",
+                        tr!(
+                            "The kit \"{kit}\" does not allow you to select non-weapon \
+                             proficiencies from the following list.",
+                            kit = d.kit
+                        ),
+                        barred.join(", ")
+                    );
+                    drop(d);
+                    let (this2, list, spec) = (this.clone(), list.clone(), nonweapon_spec.clone());
+                    ignorable(
+                        &this.0.dialog,
+                        tr("Kit Non-Weapon Proficiency Requirements"),
+                        &body,
+                        move || {
+                            this2.0.draft.borrow_mut().barred_nonweapon_ignored = true;
+                            if let Some(list) = &*list.borrow() {
+                                list.add(spec(name.clone(), 1));
+                            }
+                        },
+                    );
+                    None
+                }
+            },
         );
+        *nonweapon_list.borrow_mut() = Some(nonweapon.clone());
+        // Removing a required proficiency asks first (5c2856).
+        nonweapon.connect_remove({
+            let this = self.clone();
+            move |name, remove| {
+                let required = {
+                    let d = this.0.draft.borrow();
+                    this.rules().required_nonweapon(&d).contains(name)
+                };
+                if !required {
+                    remove();
+                    return;
+                }
+                let remove = std::cell::Cell::new(Some(remove));
+                ask(
+                    &this.0.dialog,
+                    tr("Required Non-Weapon Proficiency"),
+                    tr(
+                        "The Non-Weapon Proficiency you are attempting to remove is required for \
+                        this character.\nAre you sure you wish to continue?",
+                    ),
+                    move || {
+                        if let Some(remove) = remove.take() {
+                            remove();
+                        }
+                    },
+                    || {},
+                );
+            }
+        });
 
         // Traits cost points; disadvantages give them.
         let trait_spec = {
@@ -1966,6 +2085,7 @@ impl Wizard {
                 *taken_languages.borrow_mut() = names(&learned);
                 let probe = current();
                 let rules = this.rules();
+                nonweapon.set_subtitles(|name, _| nonweapon_subtitle(rules, &probe, name));
                 let room = rules.language_slots(&probe);
                 language_room.set(room);
                 let languages_left = room as i64 - probe.learned_languages.len() as i64;
@@ -1976,6 +2096,7 @@ impl Wizard {
                     room
                 )));
                 if !sp {
+                    let nonweapon_slots = rules.nonweapon_slots_for(&probe);
                     let spent = rules.nonweapon_spent(&probe);
                     let weapons_taken = probe.weapon_proficiencies.len() as u32;
                     nonweapon.group.set_description(Some(&tr!(
@@ -2032,6 +2153,37 @@ impl Wizard {
             let update = update.clone();
             move || update()
         });
+        let picks: Vec<adw::PreferencesGroup> = rules
+            .nonweapon_picks(&d)
+            .into_iter()
+            .map(|pick| self.pick_group(pick, update.clone()))
+            .collect();
+        // The kit's starting slots, when it has them (5c458c).
+        if let Some(base) = rules.kit_nonweapon_base(&d)
+            && d.kit_nonweapon_base.is_none()
+        {
+            let (this, update) = (self.clone(), update.clone());
+            glib::idle_add_local_once(move || {
+                let choose = |this: &Self, update: &Rc<dyn Fn()>, choice: bool| {
+                    this.0.draft.borrow_mut().kit_nonweapon_base = Some(choice);
+                    update();
+                };
+                let (this2, update2): (Self, Rc<dyn Fn()>) = (this.clone(), update.clone());
+                let (this3, update3): (Self, Rc<dyn Fn()>) = (this.clone(), update.clone());
+                question(
+                    &this.0.dialog,
+                    tr("Kit Specifies Starting NWP Slots"),
+                    &tr!(
+                        "Your kit specifies using a starting base of {slots} NWP slots. Do you \
+                         want to use the kit's value?",
+                        slots = base
+                    ),
+                    true,
+                    move || choose(&this2, &update2, true),
+                    move || choose(&this3, &update3, false),
+                );
+            });
+        }
         for list in [&nonweapon, &traits, &disadvantages, &weapons] {
             let update = update.clone();
             list.connect_changed(move || update());
@@ -2063,21 +2215,111 @@ impl Wizard {
                 }
             }
         });
-        step(
-            tr("Proficiencies"),
-            &[
-                &nonweapon.group,
+        let groups: Vec<&adw::PreferencesGroup> = std::iter::once(&nonweapon.group)
+            .chain(&picks)
+            .chain([
                 &traits.group,
                 &disadvantages.group,
                 &languages,
                 &learned.group,
                 &weapons.group,
                 &points_group,
-            ],
-            &next,
-            None,
-            || topic::NONWEAPON_PROFICIENCIES,
-        )
+            ])
+            .collect();
+        step(tr("Proficiencies"), &groups, &next, None, || {
+            topic::NONWEAPON_PROFICIENCIES
+        })
+    }
+
+    /// A list the classes or the kit have the user pick proficiencies
+    /// from, as the original's pickers (5c7997, 5c6ca8, 5c6ad8): the
+    /// picks go straight into the draft.
+    fn pick_group(&self, pick: NonweaponPick, changed: Rc<dyn Fn()>) -> adw::PreferencesGroup {
+        let (title, description) = match pick.kind {
+            PickKind::Bonus(_) if pick.from_kit => (
+                tr("Bonus Proficiencies"),
+                tr!(
+                    "The kit {kit} allows you to select {count} bonus NWPs from the list below.",
+                    kit = pick.source,
+                    count = pick.count
+                ),
+            ),
+            PickKind::Bonus(_) => (
+                tr("Bonus Proficiencies"),
+                tr!(
+                    "The class {class} allows you to select {count} bonus NWPs from the list \
+                     below.",
+                    class = pick.source,
+                    count = pick.count
+                ),
+            ),
+            PickKind::PlusTwo => (
+                tr("+2 Proficiency"),
+                tr!(
+                    "The kit {kit} allows you to pick a NWP from this list to receive a +2 bonus.",
+                    kit = pick.source
+                ),
+            ),
+            PickKind::Free => (
+                tr("Free Proficiency"),
+                tr("Select a non-weapon proficiency that will be free.").into(),
+            ),
+            PickKind::PlusOne => (
+                tr("+1 Proficiencies"),
+                tr!(
+                    "Select non-weapon proficiencies that will receive +1 to their score, up \
+                     to {count}.",
+                    count = pick.count
+                ),
+            ),
+        };
+        let group = adw::PreferencesGroup::builder()
+            .title(title)
+            .description(escape(&description))
+            .build();
+        let picked = self.0.draft.borrow().picked(pick.kind).to_vec();
+        let checks: Rc<RefCell<Vec<(String, gtk::CheckButton)>>> = Rc::default();
+        // No more than the count may be ticked.
+        let limit = {
+            let checks = checks.clone();
+            move || {
+                let checks = checks.borrow();
+                let full = checks.iter().filter(|(_, c)| c.is_active()).count() >= pick.count;
+                for (_, check) in checks.iter() {
+                    check.set_sensitive(check.is_active() || !full);
+                }
+            }
+        };
+        for name in &pick.names {
+            let check = gtk::CheckButton::builder()
+                .active(picked.contains(name))
+                .valign(gtk::Align::Center)
+                .build();
+            let row = adw::ActionRow::builder()
+                .title(escape(name))
+                .activatable_widget(&check)
+                .build();
+            row.add_prefix(&check);
+            group.add(&row);
+            checks.borrow_mut().push((name.clone(), check.clone()));
+            check.connect_toggled({
+                let (this, checks, limit, changed) =
+                    (self.clone(), checks.clone(), limit.clone(), changed.clone());
+                move |_| {
+                    let names = checks
+                        .borrow()
+                        .iter()
+                        .filter(|(_, c)| c.is_active())
+                        .map(|(n, _)| n.clone())
+                        .collect();
+                    this.0.draft.borrow_mut().set_picked(pick.kind, names);
+                    limit();
+                    changed();
+                }
+            });
+        }
+        limit();
+        group
     }
 
     /// Skills & Powers: weapon of choice, expertise and specialization,

@@ -96,7 +96,7 @@ const KIT_SCHOOLS: [(i32, &[&str]); 6] = [
 const MODERN_LANGUAGES: &str = "Modern Languages";
 
 impl CreationRules {
-    fn kit(&self, name: &str) -> Option<&Kit> {
+    pub(super) fn kit(&self, name: &str) -> Option<&Kit> {
         self.kits.iter().find(|k| k.name == name).map(|k| &k.kit)
     }
 

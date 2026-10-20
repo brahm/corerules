@@ -26,6 +26,9 @@
 //! skill tables) follows the books, as in the original.
 
 mod kit;
+mod nonweapon;
+
+pub use nonweapon::{NonweaponPick, PickKind};
 
 use cr_i18n::{tr, tr_noop};
 use std::collections::{HashMap, HashSet};
@@ -615,6 +618,16 @@ pub struct Draft {
     /// The proficiencies page was reached, so a new kit resets its
     /// choices (the original's +0x2236 and +0x2237).
     pub proficiencies_started: bool,
+    /// What was picked from each of [`CreationRules::nonweapon_picks`].
+    pub nonweapon_picks: Vec<(PickKind, Vec<String>)>,
+    /// Whether the kit's starting nonweapon slots are used, once asked
+    /// (+0x1df0).
+    pub kit_nonweapon_base: Option<bool>,
+    /// The required proficiencies were added (+0x18b4).
+    pub required_nonweapon_added: bool,
+    /// The warning about the proficiencies the kit bars was ignored
+    /// (+0x1dea).
+    pub barred_nonweapon_ignored: bool,
 }
 
 impl Draft {
@@ -662,6 +675,10 @@ impl Draft {
             fighting_styles: Vec::new(),
             portrait: Default::default(),
             proficiencies_started: false,
+            nonweapon_picks: Vec::new(),
+            kit_nonweapon_base: None,
+            required_nonweapon_added: false,
+            barred_nonweapon_ignored: false,
         }
     }
 
@@ -679,6 +696,10 @@ impl Draft {
         self.weapon_of_choice = None;
         self.expertise = None;
         self.proficiencies_started = false;
+        self.nonweapon_picks.clear();
+        self.kit_nonweapon_base = None;
+        self.required_nonweapon_added = false;
+        self.barred_nonweapon_ignored = false;
     }
 }
 
@@ -1538,11 +1559,16 @@ impl CreationRules {
     /// What a nonweapon proficiency costs the drafted character: slots with
     /// the Core Rules; with Skills & Powers its character points, 2 more
     /// when it belongs to none of the character's groups (nor the general
-    /// one), and 1 more for each point a relevant subability is below 9.
+    /// one), 1 less when the kit recommends it, and 1 more for each point
+    /// a relevant subability is below 9. Nothing when the classes or the
+    /// kit make it free.
     pub fn nonweapon_cost(&self, draft: &Draft, name: &str) -> u32 {
         let Some(n) = self.nonweapon.iter().find(|n| n.name == name) else {
             return 1;
         };
+        if self.free_nonweapon(draft, name) {
+            return 0;
+        }
         if !draft.skills_and_powers {
             return n.slots;
         }
@@ -1555,7 +1581,8 @@ impl CreationRules {
             .filter_map(|r| subability_score(&subabilities, r))
             .map(|score| 9u32.saturating_sub(score))
             .sum();
-        n.points + if foreign { 2 } else { 0 } + shortfall
+        (n.points + if foreign { 2 } else { 0 } + shortfall)
+            .saturating_sub(u32::from(self.recommended_nonweapon(draft, name)))
     }
 
     /// The nonweapon proficiency groups open to the classes at the normal
@@ -1806,7 +1833,7 @@ impl CreationRules {
 
     /// Points for nonweapon proficiencies and traits: those kept from the
     /// abilities, the best of the classes' allotments, the bonus for
-    /// Knowledge, and what disadvantages give.
+    /// Knowledge, what disadvantages give, and one a level from kit +0x30d.
     pub fn proficiency_points(&self, draft: &Draft) -> u32 {
         let allotment = draft
             .classes
@@ -1828,6 +1855,7 @@ impl CreationRules {
             + allotment
             + bonus_languages(knowledge)
             + disadvantages.min(DISADVANTAGE_POINTS)
+            + self.kit_level_slots(draft)
     }
 
     /// Points the nonweapon proficiencies and traits leave; negative when
@@ -2255,7 +2283,7 @@ impl CreationRules {
         if let Some(problem) = if draft.skills_and_powers {
             self.points_problem(draft)
         } else {
-            self.slots_problem(draft, adjusted[3])
+            self.slots_problem(draft)
         } {
             return Some(problem);
         }
@@ -2397,8 +2425,8 @@ impl CreationRules {
     }
 
     /// Core Rules: the proficiencies fit the slots.
-    fn slots_problem(&self, draft: &Draft, intelligence: u32) -> Option<String> {
-        let slots = self.nonweapon_slots(&draft.classes, intelligence);
+    fn slots_problem(&self, draft: &Draft) -> Option<String> {
+        let slots = self.nonweapon_slots_for(draft);
         let spent = self.nonweapon_spent(draft);
         if spent > slots {
             return Some(tr!(
@@ -2695,6 +2723,39 @@ impl CreationRules {
                 })
                 .collect();
         }
+        if self.expansion {
+            // What the classes and the kit did on the proficiencies page.
+            let d = &mut character.data;
+            if !draft.skills_and_powers {
+                d.nonweapon_costs = nonweapon
+                    .iter()
+                    .map(|n| self.nonweapon_cost(draft, n))
+                    .collect();
+            }
+            if let Some(lists) = d.unknown_0x1930.as_mut() {
+                lists[1] = self.bonus_nonweapon(draft);
+            }
+            if let Some(plus_two) = d.unknown_0x1958.as_mut() {
+                *plus_two = draft.picked(PickKind::PlusTwo).to_vec();
+            }
+            d.unknown_0x1e20 = draft
+                .picked(PickKind::Free)
+                .first()
+                .cloned()
+                .unwrap_or_default();
+            d.unknown_0xac[5] = draft.picked(PickKind::PlusOne).to_vec();
+            if let Some(flags) = d.flags_0x1dea.as_mut() {
+                flags[0] = u8::from(draft.barred_nonweapon_ignored);
+            }
+            if let Some(base) = d.unknown_0x1df0.as_mut() {
+                let chosen = draft.kit_nonweapon_base == Some(true);
+                base.0 = if chosen && self.kit_nonweapon_base(draft).is_some() {
+                    1
+                } else {
+                    u32::MAX
+                };
+            }
+        }
         if draft.skills_and_powers {
             // The lists went in as Core Rules ones; now the points.
             let d = &mut character.data;
@@ -2872,6 +2933,10 @@ mod tests {
                 Vec::new()
             },
             rogue_skills: group == 1,
+            free_nonweapon: Vec::new(),
+            required_nonweapon: Vec::new(),
+            bonus_nonweapon: Vec::new(),
+            bonus_nonweapon_count: 1,
         }
     }
 
@@ -3268,8 +3333,8 @@ mod tests {
         assert_eq!(data.class_slots[0].abilities, ["Fighter, Followers (5)"]);
         assert!(data.class_slots[1].abilities.is_empty());
         assert_eq!(data.class_slots[1].unknown_0x270.len(), 2);
-        // apply() takes the cost from the part table, which is empty here.
-        assert_eq!(data.nonweapon_costs, [1]);
+        // Tracking takes 2 slots.
+        assert_eq!(data.nonweapon_costs, [2]);
         assert_eq!(data.nonweapon_bonuses, Some(vec![0]));
         assert_eq!(data.languages, ["Dwarf"]);
         // Core Rules characters get the subrace's package too.

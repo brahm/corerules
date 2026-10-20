@@ -53,6 +53,14 @@ pub struct ClassRules {
     pub schools: Vec<String>,
     /// Candidate for rogue skills (+0x27a4).
     pub rogue_skills: bool,
+    /// Nonweapon proficiencies the class makes free (+0x2fa0) and those it
+    /// requires (+0x2fcc); the Expansion's only.
+    pub free_nonweapon: Vec<String>,
+    pub required_nonweapon: Vec<String>,
+    /// Bonus nonweapon proficiencies (+0x2fb4) and how many of them to
+    /// pick (+0x2fc8[0]); the Expansion's only.
+    pub bonus_nonweapon: Vec<String>,
+    pub bonus_nonweapon_count: i32,
 }
 
 impl ClassRules {
@@ -78,6 +86,10 @@ impl ClassRules {
                 minor_spheres: data.unknown_0x274c.clone(),
                 schools: data.unknown_0x2760.clone(),
                 rogue_skills: data.flag_0x27a4.unwrap_or(0) != 0,
+                free_nonweapon: data.unknown_0x2fa0.clone(),
+                required_nonweapon: data.unknown_0x2fcc.clone(),
+                bonus_nonweapon: data.unknown_0x2fb4.clone().unwrap_or_default(),
+                bonus_nonweapon_count: data.unknown_0x2fc8.map_or(1, |c| c[0]),
             },
             // The 2.0 layout keeps the same values in one array, and the
             // same lists in a fixed array of lists.
@@ -103,6 +115,10 @@ impl ClassRules {
                     schools: data.unknown_0x58[5].clone(),
                     minor_spheres: data.unknown_0x58[6].clone(),
                     rogue_skills: v[0] == 1,
+                    free_nonweapon: Vec::new(),
+                    required_nonweapon: Vec::new(),
+                    bonus_nonweapon: Vec::new(),
+                    bonus_nonweapon_count: 0,
                 }
             }
         }
