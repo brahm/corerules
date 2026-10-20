@@ -25,6 +25,8 @@
 //! options, the fighting styles each class group may learn, the rogue
 //! skill tables) follows the books, as in the original.
 
+mod kit;
+
 use cr_i18n::{tr, tr_noop};
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -42,6 +44,7 @@ use cr_formats::spells::SpellsFile;
 use crate::dual::ClassRules;
 use crate::edit::{CLASS_LINE, LEVEL_LINE, PLAYER_LINE, replace, with_suffix};
 use crate::lists::{CARRIED, CharacterLists, Item, PartTable, carried_weight};
+use crate::npc::data::Kit;
 use crate::settings::Setting;
 use crate::{Error, Installation, Result};
 
@@ -501,7 +504,7 @@ struct SubraceRules {
     languages: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 struct KitRules {
     name: String,
     /// Class titles allowed ("Fighter/Thief"); empty for any.
@@ -511,6 +514,10 @@ struct KitRules {
     excluded_races: Vec<String>,
     /// Social class per 2d6 roll, indexed by the roll.
     social_classes: Vec<String>,
+    /// Classes that may not take the kit (the part's +0x82c).
+    barred_classes: Vec<String>,
+    /// Everything else the kit says, by member offset.
+    kit: Kit,
 }
 
 /// Something the equipment page sells.
@@ -605,6 +612,9 @@ pub struct Draft {
     /// [`crate::pictures::stored_portrait`]); empty for none, as the
     /// original's wizard leaves it.
     pub portrait: [String; 2],
+    /// The proficiencies page was reached, so a new kit resets its
+    /// choices (the original's +0x2236 and +0x2237).
+    pub proficiencies_started: bool,
 }
 
 impl Draft {
@@ -651,11 +661,24 @@ impl Draft {
             armor_proficiencies: Vec::new(),
             fighting_styles: Vec::new(),
             portrait: Default::default(),
+            proficiencies_started: false,
         }
     }
 
     pub fn class_title(&self) -> String {
         self.classes.join("/")
+    }
+
+    /// What changing the kit resets once the proficiencies page was
+    /// reached: the weapon and nonweapon proficiencies.
+    pub fn reset_proficiencies(&mut self) {
+        self.nonweapon_proficiencies.clear();
+        self.learned_languages.clear();
+        self.weapon_proficiencies.clear();
+        self.specializations.clear();
+        self.weapon_of_choice = None;
+        self.expertise = None;
+        self.proficiencies_started = false;
     }
 }
 
@@ -841,6 +864,8 @@ impl Installation {
                     races: data.unknown_0x10.clone(),
                     excluded_races: data.unknown_0xa8.clone(),
                     social_classes: data.unknown_0x10c.clone(),
+                    barred_classes: part.data.allowed_classes.clone().unwrap_or_default(),
+                    kit: Kit::of(data),
                 });
             }
             for part in parts("Non-Weapon Proficiencies") {
@@ -2005,10 +2030,17 @@ impl CreationRules {
         let mut chosen = if draft.skills_and_powers {
             draft.class_abilities.get(slot).cloned().unwrap_or_default()
         } else {
-            draft
+            let mut chosen = draft
                 .classes
                 .get(slot)
-                .map_or_else(Vec::new, |c| self.default_class_abilities(c))
+                .map_or_else(Vec::new, |c| self.default_class_abilities(c));
+            // Leaving the Name page takes the kit's barred abilities from
+            // the first class (0x443662).
+            if slot == 0 {
+                let barred = self.kit_barred_abilities(&draft.kit);
+                chosen.retain(|a| !barred.contains(a));
+            }
+            chosen
         };
         chosen.sort_by(|x, y| x.as_bytes().cmp(y.as_bytes()));
         chosen
@@ -2064,7 +2096,11 @@ impl CreationRules {
             .get(skill)
             .copied()
             .unwrap_or(0);
-        let score = base + racial + dexterity + draft.rogue_points[skill] as i32;
+        let score = base
+            + racial
+            + dexterity
+            + draft.rogue_points[skill] as i32
+            + self.kit_rogue_adjustment(draft, skill);
         (score, score + unarmored)
     }
     /// Weapons one of the classes may use.
@@ -2717,6 +2753,9 @@ impl CreationRules {
                 pack.contents = Some(Box::new(Object::InventoryBundle(contents)));
             }
         }
+        if self.expansion {
+            self.apply_kit(&mut character, &vec![1; draft.classes.len()]);
+        }
         // A psionicist starts with the PSPs of the 1st level, from the
         // final scores (0x42e916).
         if self.is_psionicist(&draft.classes) {
@@ -2832,6 +2871,7 @@ mod tests {
             } else {
                 Vec::new()
             },
+            rogue_skills: group == 1,
         }
     }
 
@@ -2954,6 +2994,8 @@ mod tests {
                 races: Vec::new(),
                 excluded_races: Vec::new(),
                 social_classes: vec!["Upper class".into(); 13],
+                barred_classes: Vec::new(),
+                kit: Kit::default(),
             }],
             nonweapon: vec![
                 nonweapon("Swimming", 1, 1, 0, "Strength/Stamina"),

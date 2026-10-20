@@ -48,6 +48,11 @@ the original programs wrote.
   rogue skill points, spells and starting equipment. The original has no
   campaign settings, so each setting only narrows what the installed
   databases offer, following its campaign book
+- **Kits** in New Character, as the Expansion offers them: only those the
+  character's scores, gender, alignment and classes allow, with the
+  original's warnings and the kit's information text. The kit's fixed rogue
+  skill adjustments, barred class abilities, schools, spells and languages
+  are applied when the character is written, and again when an edit is saved
 - **Player's Option** (Skills & Powers) creation, as the Expansion's
   Player's Option button: Methods VII to X, racial and class abilities
   bought with character points, subabilities, traits and disadvantages,

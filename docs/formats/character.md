@@ -264,7 +264,7 @@ version.
 | 87 | `unknown_0x1e3c` | CObArray | v > 49 | +0x1e3c | the NPC generator records here, per class, how many copies of a language-teaching proficiency it granted (0x4d9527); element class not identified, empty in every fixture |
 | 88 | `flag_0x1ea8` | u8 | v > 48 | +0x1ea8 | unknown |
 | 89 | `unknown_0x1e00` | CStringArray | v > 51 | +0x1e00 | unknown (old notes: kit school restrictions, low confidence) |
-| 90 | `unknown_0x2174` | CObArray | v > 52 | +0x2174 | unknown; element class not identified, empty in every fixture |
+| 90 | `unknown_0x2174` | CObArray<CPartKitBonusOb> | v > 52 | +0x2174 | the languages the kit has granted (kit +0x5fc, +0x600; 0x442a83): `name` "Modern Languages", `unknown_0x8` the level, `unknown_0xc` 6; one per level, so each level grants once. Empty in every fixture |
 
 Two conditions are out of version order: field 42 (v > 34) follows field 41
 (v > 40), and field 87 (v > 49) comes before field 88 (v > 48). The reader
@@ -338,6 +338,16 @@ The sheet's discretionary column is the sum of all 100 values; the base,
 racial, ability, armor, trait and kit parts are computed. A new character's
 1st-level points go in `[0]`. The list holds the skills (class abilities with
 part +0x77c = 6) of every class with class flag +0x27a4, each name once.
+
+Leaving the Name page of Create or Update Character applies the kit
+(0x442cac, `create/kit.rs`). Its fixed rogue skill adjustments (kit +0x174)
+are added once: `[0]` becomes the column of the first rogue class's level
+plus the adjustment, and `flag_0x1610` is set to 1. A character with no rogue
+class loses the list. The same step removes the kit's barred class abilities
+(kit +0x1c8) from the first class slot of a Core Rules character, gives a
+specialist the kit's schools when kit +0x1f0 is set, adds the kit's spells
+(+0x634) to `spells` or `priest_spells`, and adds the kit's languages by
+level (`unknown_0x2174`).
 
 Update Character's Rogue Skills dialog changes only the column of the rogue
 class's current level, `[L-1]`. The points to put in are class +0xb4 at 1st
@@ -522,6 +532,5 @@ refer to classes it introduced.
   items) do not stop either program from loading or printing a character;
   the Update wizard's pages report "Error finding ..." for names they cannot
   resolve.
-* Not identified: the element classes of `unknown_0x1e3c`, `unknown_0x2174`
-  and the version 1 sheet options; the meaning of the flags at +0x1ddc to
+* Not identified: the element class of `unknown_0x1e3c` and the version 1 sheet options; the meaning of the flags at +0x1ddc to
   +0x1dec and most other `unknown_*` fields marked unknown above.

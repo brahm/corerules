@@ -298,6 +298,9 @@ pub struct Kit {
     pub spell_table: Vec<Option<[i32; 10]>>,
     /// Fixed rogue skill adjustments (+0x174 `CPartIDOb`s: skill, amount).
     pub rogue_adjust: Vec<(String, i32)>,
+    /// Spells the kit's characters know (+0x634 `CSpellsOb`s): name and
+    /// whether it is a wizard spell (+0x68).
+    pub bonus_spells: Vec<(String, bool)>,
 }
 
 impl Kit {
@@ -569,6 +572,15 @@ impl Kit {
             .flatten()
             .filter_map(|o| match o {
                 Object::PartId(p) => Some((p.name.clone(), p.part_type)),
+                _ => None,
+            })
+            .collect();
+        k.bonus_spells = d
+            .bonus_spells
+            .iter()
+            .flatten()
+            .filter_map(|o| match o {
+                Object::Spell(s) => Some((s.name.clone(), s.wizard != 0)),
                 _ => None,
             })
             .collect();
