@@ -607,6 +607,11 @@ pub trait UserKind: 'static {
         None
     }
 
+    /// Why the original refuses to copy `record`, when it does.
+    fn copy_refusal(_record: &Self::Rec) -> Option<String> {
+        None
+    }
+
     /// One line under the name in lists.
     fn summary(_record: &Self::Rec) -> String {
         String::new()

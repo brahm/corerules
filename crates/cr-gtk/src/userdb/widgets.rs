@@ -235,6 +235,8 @@ pub fn two_list(
     arrows.append(&add);
     arrows.append(&remove);
 
+    // Loading an empty choice draws nothing, so draw what is available now.
+    draw();
     let root = gtk::Box::builder().spacing(6).build();
     root.append(&column(tr("Available"), Some(&search), &left));
     root.append(&arrows);

@@ -44,6 +44,7 @@ use cr_store::lists::{
 use cr_store::npc::NpcRules;
 use cr_store::pictures::{ICON_SIZE, ItemIcons};
 use cr_store::treasure::Rand;
+use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES, other_type};
 use gtk::{gio, glib};
 use lists::{ListEditor, RowList, RowSpec, pick};
 
@@ -681,6 +682,11 @@ impl Window {
         let install = self.install.borrow();
         let Some(install) = install.as_ref() else {
             return;
+        };
+        // The other part types share one section.
+        let section = match other_type(section) {
+            Some(_) => OTHER_SECTION,
+            None => section,
         };
         self.browser.show_section(section);
         self.browser.load(install.catalog(), key.as_deref());
@@ -1337,7 +1343,18 @@ impl Browser {
             .visible(false)
             .build();
         let party_choices: Rc<RefCell<Vec<Option<String>>>> = Rc::default();
+        // The type of the other parts, in their section.
+        let type_filter = gtk::DropDown::builder()
+            .model(&gtk::StringList::new(
+                &std::iter::once(tr("All Types"))
+                    .chain(OTHER_TYPES.iter().map(|(_, _, name)| tr(name)))
+                    .collect::<Vec<_>>(),
+            ))
+            .tooltip_text(tr("Show a Part Type"))
+            .visible(false)
+            .build();
         let filter = gtk::CustomFilter::new({
+            let type_filter = type_filter.clone();
             let (search, origin_filter) = (search.clone(), origin_filter.clone());
             let (party_filter, party_choices) = (party_filter.clone(), party_choices.clone());
             move |item| {
@@ -1353,8 +1370,13 @@ impl Browser {
                     (Some(theirs), Some(wanted)) => theirs.eq_ignore_ascii_case(&wanted),
                     _ => true,
                 };
+                let of_type = match (type_filter.selected() as usize).checked_sub(1) {
+                    Some(i) => row.part_type == OTHER_TYPES.get(i).map(|(id, ..)| *id),
+                    None => true,
+                };
                 userdb::passes(&origin_filter, row.origin)
                     && in_party
+                    && of_type
                     && (needle.is_empty()
                         || row.title.to_lowercase().contains(&needle)
                         || row.subtitle.to_lowercase().contains(&needle))
@@ -1365,6 +1387,10 @@ impl Browser {
             move |_| filter.changed(gtk::FilterChange::Different)
         });
         party_filter.connect_selected_notify({
+            let filter = filter.clone();
+            move |_| filter.changed(gtk::FilterChange::Different)
+        });
+        type_filter.connect_selected_notify({
             let filter = filter.clone();
             move |_| filter.changed(gtk::FilterChange::Different)
         });
@@ -1439,6 +1465,7 @@ impl Browser {
         entries_header.pack_start(&new_button);
         entries_header.pack_end(&origin_filter);
         entries_header.pack_end(&party_filter);
+        entries_header.pack_end(&type_filter);
         let read_only_banner = adw::Banner::builder()
             .title(tr("Core Rules 2.0 is read-only"))
             .tooltip_text(tr(
@@ -1518,6 +1545,7 @@ impl Browser {
                 origin_filter.set_visible(userdb::has_origins(section.id));
                 party_filter
                     .set_visible(section.id == "characters" && party_choices.borrow().len() > 1);
+                type_filter.set_visible(section.id == OTHER_SECTION);
                 entries_page.set_title(section.title);
                 inner_page.set_title(section.title);
                 search.set_text("");
@@ -1532,6 +1560,9 @@ impl Browser {
                             subtitle: e.subtitle.clone(),
                             origin: userdb::origin_of(&e.key),
                             party: (section.id == "characters").then(|| e.party.clone()),
+                            part_type: cr_store::userdb::parse_key(&e.key).and_then(|(id, ..)| {
+                                OTHER_TYPES.iter().map(|(i, ..)| *i).find(|i| *i == id)
+                            }),
                         })
                     })
                     .collect();
@@ -1632,8 +1663,17 @@ impl Browser {
             .enumerate()
             .find(|(_, e)| e.key == key)
         {
-            // The search was cleared, so list positions are entry indexes.
-            self.selection.set_selected(position as u32);
+            // The search was cleared, but the type and origin filters may
+            // still hide entries before it.
+            let shown = (0..self.selection.n_items()).find(|&i| {
+                self.selection
+                    .item(i)
+                    .and_downcast::<glib::BoxedAnyObject>()
+                    .is_some_and(|item| item.borrow::<Row>().index == position)
+            });
+            if let Some(shown) = shown {
+                self.selection.set_selected(shown);
+            }
             self.detail.show(entry);
             self.inner.set_show_content(true);
         }
@@ -1727,6 +1767,8 @@ struct Row {
     origin: Option<cr_store::userdb::Origin>,
     /// The party of a character, empty for none.
     party: Option<String>,
+    /// The type of one of the other parts (an [`OTHER_TYPES`] id).
+    part_type: Option<&'static str>,
 }
 
 fn row_factory() -> gtk::SignalListItemFactory {

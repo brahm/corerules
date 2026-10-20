@@ -103,8 +103,10 @@ the original programs wrote.
 - **Table Rolls** on every table of the books, with the originals' dice
   and follow-up rolls
 - **Editors for every user database**: races, classes and allowed
-  combinations, parts (weapons, armor, kits, proficiencies and the rest),
-  spells, psionic powers, monsters, monster types, traps and treasure
+  combinations, parts (weapons, armor, kits and proficiencies, plus the
+  ten other types in Other Parts: racial and class abilities, languages,
+  schools, spheres, traits, disadvantages, gems and art, currency and
+  Count), spells, psionic powers, monsters, monster types, traps and treasure
   tables. A monster type's picture is chosen among those in
   `Bitmaps/Monsters` and `UserBMP`, a race's among the portraits, or made
   from a picture of your own as portraits are (monster pictures go to

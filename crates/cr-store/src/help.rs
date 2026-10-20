@@ -78,6 +78,11 @@ pub mod topic {
             "races" => RACES,
             "classes" => CLASSES,
             "kits" | "weapons" | "armor" | "equipment" | "magic-items" | "nonweapon" => PARTS,
+            id if id == crate::userdb::parts::OTHER_SECTION
+                || crate::userdb::parts::other_type(id).is_some() =>
+            {
+                PARTS
+            }
             "wizard-spells" | "priest-spells" => SPELLS,
             "psionics" => PSIONIC_POWERS,
             "monsters" | "monster-types" => MONSTERS,
