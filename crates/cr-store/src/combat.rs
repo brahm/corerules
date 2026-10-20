@@ -38,17 +38,26 @@
 //!   15-point limit after creation; removing either one undoes it.
 //!
 //! Everything is refunded in full when removed except weapon proficiencies.
-//! Where the original offers a choice for free or lets the points go below
-//! 0 after asking, the app refuses, as on the abilities pages. Kits, weapon
-//! groups, racial weapon abilities and the program's level checks are not
-//! modelled. Core Rules characters pay slots, which the original only
-//! counts; the app charges them nothing and offers only the proficiencies,
-//! specializations and unarmed styles their pages show.
+//! Where the original lets the points go below 0 after asking, the app
+//! refuses, as on the abilities pages; a weapon proficiency or unarmed
+//! style it offers for free when the points run short is taken for free.
+//! Core Rules characters pay slots, which the original only counts and
+//! asks about when none is left; the app charges them nothing.
+//!
+//! The kit's and classes' weapon rules are New Character's, applied as
+//! Update Character applies them (see [`crate::create`]): an existing
+//! character is seen as a [`Draft`] at its highest class level, so the
+//! kit's free weapons and the specialization level come with the levels.
+//! The kit's warnings are asked again unless ignored, which the file
+//! keeps; the creation-only ones are left out. The weapon the kit has the
+//! character focus in may be changed, and the Cavalier picks its sword at
+//! 3rd level and its horseman's weapon at 5th, which are fixed once saved.
 //!
 //! The lists keep their order with new choices appended, as the original
 //! saves them; a fighting style code the app does not know is kept.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use cr_formats::Object;
 use cr_formats::character::Character;
@@ -56,8 +65,12 @@ use cr_formats::classes::Class;
 use cr_formats::parts::{Part, PartsFile};
 use cr_i18n::tr;
 
+use crate::advance::AdvanceRules;
 use crate::collate::sort_key;
-use crate::create::MOST_FIGHTING_STYLES;
+use crate::create::{
+    CreationRules, Draft, KitPick, MOST_FIGHTING_STYLES, Question, UNARMED, WeaponCheck,
+    WeaponWarning, ignored_checks, write_checks,
+};
 use crate::{Error, Installation, Result};
 
 /// The fighting styles of the Fighting Styles dialog and the codes the
@@ -114,11 +127,43 @@ pub struct CombatRules {
     /// sorted.
     traits: Vec<(String, i64, String)>,
     disadvantages: Vec<(String, i64, String)>,
+    /// New Character's rules, for the kit's and classes' weapon rules.
+    creation: Option<Arc<CreationRules>>,
+    /// For the class levels.
+    advance: Option<Arc<AdvanceRules>>,
+}
+
+/// What taking a weapon proficiency or unarmed style asks and costs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Purchase {
+    /// Asked in turn; No to any of them does not take it.
+    pub questions: Vec<Question>,
+    /// Asked last when the points run short: Yes takes it for nothing.
+    pub free: Option<Question>,
+    /// The character points it costs.
+    pub cost: i64,
 }
 
 impl Installation {
     pub fn combat_rules(&self) -> Result<CombatRules> {
-        let mut rules = CombatRules::default();
+        self.combat_rules_with(
+            Arc::new(self.creation_rules()?),
+            Arc::new(self.advance_rules()?),
+        )
+    }
+
+    /// [`Self::combat_rules`] with New Character's and the advancement
+    /// rules already loaded.
+    pub fn combat_rules_with(
+        &self,
+        creation: Arc<CreationRules>,
+        advance: Arc<AdvanceRules>,
+    ) -> Result<CombatRules> {
+        let mut rules = CombatRules {
+            creation: Some(creation),
+            advance: Some(advance),
+            ..CombatRules::default()
+        };
         for object in self.list_objects("Class")? {
             if let Object::Class(class) = object
                 && let Class::Expansion { data, .. } = *class
@@ -223,6 +268,20 @@ pub struct CharacterCombat {
     pub styles: Vec<String>,
     pub traits: Vec<String>,
     pub disadvantages: Vec<String>,
+    /// The kit's warnings ignored for good.
+    pub ignored: Vec<WeaponCheck>,
+    /// The last weapon added was from the kit's list for every other one,
+    /// or none was yet (`flags_0x1ddc[0]`).
+    pub every_other_listed: bool,
+    /// The weapon the kit has the character focus in
+    /// (`unknown_0x1e68[6]`).
+    pub focus: Option<String>,
+    /// The weapons the kit has the character pick, as [`KitPick::slot`]
+    /// (`unknown_0x1e68[4]` and `[5]`).
+    pub kit_picks: [Option<String>; 2],
+    /// What each weapon proficiency and unarmed style taken here was
+    /// charged, the last one counting.
+    pub bought: Vec<(String, i64)>,
 }
 
 /// What is in `new` and not in `old`, and the other way round, counting
@@ -286,6 +345,274 @@ impl CombatRules {
         character.data.classes.names.len() > 1
     }
 
+    /// The character's class levels as stored.
+    pub fn levels(&self, character: &Character) -> Vec<u32> {
+        self.advance
+            .as_ref()
+            .and_then(|a| a.levels(character).ok())
+            .map_or_else(|| vec![1], |l| l.iter().map(|c| c.level).collect())
+    }
+
+    /// The character with `new` chosen, as New Character's rules see it in
+    /// Update Character at its class `levels`.
+    fn draft(
+        &self,
+        character: &Character,
+        new: &CharacterCombat,
+        levels: &[u32],
+    ) -> Option<(&CreationRules, Draft)> {
+        let rules = self.creation.as_deref()?;
+        let mut draft = rules.update_draft(character, levels);
+        draft.weapon_proficiencies.clone_from(&new.weapons);
+        draft.specializations.clone_from(&new.specializations);
+        draft.weapon_of_choice.clone_from(&new.weapon_of_choice);
+        draft.expertise.clone_from(&new.expertise);
+        draft.unarmed = UNARMED
+            .iter()
+            .zip(new.unarmed)
+            .filter(|u| u.1)
+            .map(|u| (*u.0).to_owned())
+            .collect();
+        draft.ignored_weapon_checks.clone_from(&new.ignored);
+        draft.every_other_listed = new.every_other_listed;
+        draft.weapon_focus.clone_from(&new.focus);
+        Some((rules, draft))
+    }
+
+    /// The Core Rules weapon slots left, for a Core Rules character of the
+    /// Expansion.
+    pub fn core_slots_left(
+        &self,
+        character: &Character,
+        new: &CharacterCombat,
+        levels: &[u32],
+    ) -> Option<i64> {
+        let (rules, draft) = self.draft(character, new, levels)?;
+        let dual = self
+            .advance
+            .as_ref()
+            .is_some_and(|a| a.dual_classed(character));
+        rules
+            .core_specializes(&draft)
+            .then(|| rules.core_weapon_slots_left(&draft, levels, dual))
+    }
+
+    /// What a weapon proficiency costs at `levels` with `new` chosen;
+    /// nothing for a Core Rules character.
+    pub fn weapon_price(
+        &self,
+        character: &Character,
+        new: &CharacterCombat,
+        levels: &[u32],
+        weapon: &str,
+    ) -> i64 {
+        if !character.skills_and_powers() {
+            return 0;
+        }
+        match self.draft(character, new, levels) {
+            Some((rules, draft)) => rules.weapon_cost_for(&draft, weapon).into(),
+            None => self.weapon_cost(character, weapon),
+        }
+    }
+
+    /// What taking a weapon proficiency besides those of `new` asks and
+    /// costs (0x444079, 5cc802): the class and kit questions, then with the
+    /// Core Rules whether to take it with no slot left, with Skills &
+    /// Powers whether to take it for free when the points run short.
+    pub fn weapon_purchase(
+        &self,
+        character: &Character,
+        new: &CharacterCombat,
+        levels: &[u32],
+        weapon: &str,
+    ) -> Purchase {
+        let cost = self.weapon_price(character, new, levels, weapon);
+        let mut purchase = Purchase {
+            questions: Vec::new(),
+            free: None,
+            cost,
+        };
+        let Some((rules, draft)) = self.draft(character, new, levels) else {
+            return purchase;
+        };
+        purchase.questions = rules.weapon_questions(&draft, &new.weapons, weapon);
+        if self
+            .core_slots_left(character, new, levels)
+            .is_some_and(|left| left <= 0)
+            && rules.weapon_takes_slot(&draft, weapon)
+        {
+            purchase.questions.push(Question::new(
+                tr("Warning"),
+                tr("No slots are available. Select anyway?").into(),
+            ));
+        }
+        if character.skills_and_powers()
+            && cost > self.points_left(character, new) + i64::from(draft.lent_nonweapon)
+        {
+            purchase.free = Some(Question::new(
+                tr("Warning"),
+                tr(
+                    "You do not have enough Character Points to purchase this weapon \
+                     proficiency. Would you like to purchase it for free?",
+                )
+                .into(),
+            ));
+        }
+        purchase
+    }
+
+    /// The kit's warnings taking a weapon proficiency besides those of
+    /// `new` gives, leaving out those ignored and the creation-only ones.
+    pub fn weapon_warnings(
+        &self,
+        character: &Character,
+        new: &CharacterCombat,
+        levels: &[u32],
+        weapon: &str,
+    ) -> Vec<WeaponWarning> {
+        self.draft(character, new, levels)
+            .map(|(rules, draft)| rules.weapon_warnings(&draft, &new.weapons, weapon))
+            .unwrap_or_default()
+    }
+
+    /// Notes a weapon proficiency or unarmed style taken for `cost`, the
+    /// kit that wants every other weapon from its list remembering whether
+    /// this one was (5d1501). The caller adds it to `new`.
+    pub fn bought(
+        &self,
+        character: &Character,
+        new: &mut CharacterCombat,
+        levels: &[u32],
+        name: &str,
+        cost: i64,
+    ) {
+        if !UNARMED.contains(&name)
+            && let Some((rules, mut draft)) = self.draft(character, new, levels)
+        {
+            rules.weapon_added(&mut draft, &new.weapons, name);
+            new.every_other_listed = draft.every_other_listed;
+        }
+        new.bought.push((name.to_owned(), cost));
+    }
+
+    /// The questions before specializing in a weapon (61edf1, 61e897):
+    /// whether to with an unarmed style, then the classes' and level's.
+    pub fn specialization_questions(
+        &self,
+        character: &Character,
+        new: &CharacterCombat,
+        levels: &[u32],
+        weapon: &str,
+    ) -> Vec<Question> {
+        let Some((rules, draft)) = self.draft(character, new, levels) else {
+            return Vec::new();
+        };
+        let mut questions: Vec<Question> =
+            rules.specialization_conflict(&draft).into_iter().collect();
+        questions.extend(rules.specialization_questions(&draft, weapon));
+        questions
+    }
+
+    /// The kit's warnings specializing in a weapon gives (61ff56).
+    pub fn specialization_warnings(
+        &self,
+        character: &Character,
+        new: &CharacterCombat,
+        levels: &[u32],
+        weapon: &str,
+    ) -> Vec<WeaponWarning> {
+        self.draft(character, new, levels)
+            .map(|(rules, draft)| rules.specialization_warnings(&draft, weapon))
+            .unwrap_or_default()
+    }
+
+    /// What taking an unarmed style asks and costs (6208ac): whether the
+    /// classes allow it, and whether to have it with a weapon
+    /// specialization, which then asks about the slots or points.
+    pub fn unarmed_purchase(
+        &self,
+        character: &Character,
+        new: &CharacterCombat,
+        levels: &[u32],
+    ) -> Purchase {
+        let cost = if character.skills_and_powers() {
+            self.specialization_cost(character)
+        } else {
+            0
+        };
+        let mut purchase = Purchase {
+            questions: Vec::new(),
+            free: None,
+            cost,
+        };
+        let Some((rules, draft)) = self.draft(character, new, levels) else {
+            return purchase;
+        };
+        purchase.questions = rules.unarmed_questions(&draft);
+        if rules.unarmed_conflict(&draft).is_some() {
+            if character.skills_and_powers() {
+                if cost > self.points_left(character, new) {
+                    purchase.free = Some(Question::new(
+                        tr("Warning"),
+                        tr(
+                            "The character does not have enough Character Points. Purchase for \
+                            free?",
+                        )
+                        .into(),
+                    ));
+                }
+            } else if self
+                .core_slots_left(character, new, levels)
+                .is_some_and(|left| left < 2)
+            {
+                purchase.questions.push(Question::new(
+                    tr("Warning"),
+                    tr("You do not have enough slots. Select anyway?").into(),
+                ));
+            }
+        }
+        purchase
+    }
+
+    /// The weapon the kit has the character focus in: the prompt and the
+    /// proficiencies it may be.
+    pub fn focus_choices(
+        &self,
+        character: &Character,
+        new: &CharacterCombat,
+        levels: &[u32],
+    ) -> Option<(String, Vec<String>)> {
+        let (rules, draft) = self.draft(character, new, levels)?;
+        rules.focus_choices(&draft)
+    }
+
+    /// The weapons the kit has the character pick at `levels` that the
+    /// file does not keep yet.
+    pub fn kit_picks(
+        &self,
+        character: &Character,
+        new: &CharacterCombat,
+        levels: &[u32],
+    ) -> Vec<KitPick> {
+        let stored = self.combat_of(character).kit_picks;
+        self.draft(character, new, levels)
+            .map(|(rules, draft)| rules.kit_picks(&draft, &stored))
+            .unwrap_or_default()
+    }
+
+    /// The kit's warnings about the specializations on leaving the page
+    /// (5d2bef, 5d2f71).
+    pub fn leaving_warnings(
+        &self,
+        character: &Character,
+        new: &CharacterCombat,
+        levels: &[u32],
+    ) -> Vec<WeaponWarning> {
+        self.draft(character, new, levels)
+            .map(|(rules, draft)| rules.leaving_warnings(&draft))
+            .unwrap_or_default()
+    }
+
     /// Every weapon, sorted.
     pub fn weapon_names(&self) -> Vec<String> {
         self.weapons.iter().map(|w| w.0.clone()).collect()
@@ -327,9 +654,9 @@ impl CombatRules {
         })
     }
 
-    /// What a weapon proficiency costs; nothing for a Core Rules
-    /// character.
-    pub fn weapon_cost(&self, character: &Character, weapon: &str) -> i64 {
+    /// What a weapon proficiency costs without New Character's rules;
+    /// nothing for a Core Rules character.
+    fn weapon_cost(&self, character: &Character, weapon: &str) -> i64 {
         if !character.skills_and_powers() {
             return 0;
         }
@@ -459,14 +786,28 @@ impl CombatRules {
                 .collect(),
             traits: d.unknown_0x1830[0].clone(),
             disadvantages: d.unknown_0x1830[1].clone(),
+            ignored: ignored_checks(d),
+            every_other_listed: d.flags_0x1ddc.is_none_or(|f| f[0] != 0),
+            focus: d.unknown_0x1e68.as_ref().and_then(|t| named(&t[6])),
+            kit_picks: d
+                .unknown_0x1e68
+                .as_ref()
+                .map(|t| [named(&t[4]), named(&t[5])])
+                .unwrap_or_default(),
+            bought: Vec::new(),
         }
     }
 
     /// The points `new` costs compared with what the character has.
     fn spent(&self, character: &Character, new: &CharacterCombat) -> i64 {
         let old = self.combat_of(character);
+        let bought = |name: &str| new.bought.iter().rev().find(|b| b.0 == name).map(|b| b.1);
         let (added, _) = changes(&old.weapons, &new.weapons);
-        let mut spent: i64 = added.iter().map(|w| self.weapon_cost(character, w)).sum();
+        let levels = self.levels(character);
+        let mut spent: i64 = added
+            .iter()
+            .map(|w| bought(w).unwrap_or_else(|| self.weapon_price(character, &old, &levels, w)))
+            .sum();
         if !character.skills_and_powers() {
             return spent;
         }
@@ -490,10 +831,15 @@ impl CombatRules {
         spent += single(&old.mastery, &new.mastery, self.mastery_cost(character));
         let specialization = self.specialization_cost(character);
         let count = |flags: &[bool]| flags.iter().filter(|&&f| f).count() as i64;
-        spent += (new.specializations.len() as i64 - old.specializations.len() as i64
-            + count(&new.unarmed)
-            - count(&old.unarmed))
-            * specialization;
+        spent +=
+            (new.specializations.len() as i64 - old.specializations.len() as i64) * specialization;
+        for (i, style) in UNARMED.iter().enumerate() {
+            spent += match (old.unarmed[i], new.unarmed[i]) {
+                (false, true) => bought(style).unwrap_or(specialization),
+                (true, false) => -specialization,
+                _ => 0,
+            };
+        }
         spent += (count(&new.shields) - count(&old.shields)) * self.shield_cost(character);
         spent += (new.armor.len() as i64 - old.armor.len() as i64) * self.armor_cost(character);
         let styles =
@@ -608,6 +954,25 @@ impl CombatRules {
         }
         if new.disadvantages != old.disadvantages {
             d.unknown_0x1830[1].clone_from(&new.disadvantages);
+        }
+        // The kit's flags, in the Expansion's files.
+        if d.flags_0x1ddc.is_some()
+            && (new.ignored != old.ignored || new.every_other_listed != old.every_other_listed)
+        {
+            write_checks(d, &new.ignored, new.every_other_listed);
+        }
+        if let Some(texts) = d.unknown_0x1e68.as_mut() {
+            if new.focus != old.focus {
+                texts[6] = new.focus.clone().unwrap_or_default();
+            }
+            // A pick kept is never changed.
+            for (slot, pick) in new.kit_picks.iter().enumerate() {
+                if old.kit_picks[slot].is_none()
+                    && let Some(pick) = pick
+                {
+                    texts[4 + slot].clone_from(pick);
+                }
+            }
         }
         Ok(())
     }

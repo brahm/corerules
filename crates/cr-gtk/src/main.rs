@@ -27,6 +27,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use adw::prelude::*;
 use cr_formats::character::Character;
@@ -2171,7 +2172,20 @@ fn character_editor(
     }
     let ability_editor =
         abilities::AbilityEditor::new(choices.abilities.clone(), &choices.character);
-    let combat_editor = combat::CombatEditor::new(choices.combat.clone(), &choices.character);
+    let levels: combat::Levels = Rc::new({
+        let (rules, advanced) = (choices.advance.clone(), advanced.clone());
+        move || {
+            rules
+                .levels(&advanced.borrow())
+                .map_or_else(|_| vec![1], |l| l.iter().map(|c| c.level).collect())
+        }
+    });
+    let combat_editor =
+        combat::CombatEditor::new(choices.combat.clone(), &choices.character, levels);
+    level_listeners.borrow_mut().push(Box::new({
+        let editor = combat_editor.clone();
+        move || editor.levels_changed()
+    }));
     let skills_editor = skills::SkillsEditor::new(choices.skills.clone(), &choices.character);
     let stack = adw::ViewStack::new();
     stack.add_titled_with_icon(
@@ -2275,9 +2289,12 @@ fn character_editor(
     let ability_rules = choices.abilities.clone();
     let combat_rules = choices.combat.clone();
     let skill_rules = choices.skills.clone();
-    save_button.connect_clicked({
+    // Leaving the original's Weapon Proficiencies page checks the kit's
+    // specializations first.
+    let save_all: Rc<dyn Fn()> = Rc::new({
         let dialog = dialog.clone();
-        move |_| {
+        let combat_editor = combat_editor.clone();
+        move || {
             let details = CharacterDetails {
                 name: name.text().trim().to_owned(),
                 player: player.text().trim().to_owned(),
@@ -2336,6 +2353,7 @@ fn character_editor(
             }
         }
     });
+    save_button.connect_clicked(move |_| combat_editor.check_leaving(save_all.clone()));
     dialog.present(Some(parent));
 }
 
@@ -2425,7 +2443,7 @@ fn classes_group(
 /// `advanced`, a copy of the character that the save compares with the
 /// character as read.
 fn experience_group(
-    rules: &Rc<AdvanceRules>,
+    rules: &Arc<AdvanceRules>,
     advanced: &Rc<RefCell<Character>>,
     listeners: &Listeners,
 ) -> adw::PreferencesGroup {
@@ -2631,7 +2649,7 @@ fn thousands(n: u32) -> String {
 /// Asks how much experience to give to which classes, then gives it.
 fn experience_dialog(
     parent: &impl IsA<gtk::Widget>,
-    rules: &Rc<AdvanceRules>,
+    rules: &Arc<AdvanceRules>,
     advanced: &Rc<RefCell<Character>>,
     changed: impl Fn() + 'static,
 ) {
@@ -2801,11 +2819,11 @@ struct Choices {
     class_ids: HashMap<String, i32>,
     /// Classes the character may add, or why none.
     new_classes: ClassChoice,
-    advance: Rc<AdvanceRules>,
+    advance: Arc<AdvanceRules>,
     /// The character as read, for experience and levels.
     character: Character,
     /// Alignments, kits and the social class tables.
-    creation: Rc<cr_store::create::CreationRules>,
+    creation: Arc<cr_store::create::CreationRules>,
     /// The Background… dialog's events, "NONE" first.
     backgrounds: Vec<String>,
     /// Subraces, racial and class abilities, schools and spheres.
@@ -2825,6 +2843,8 @@ impl Choices {
         items.retain(|n| !COINS.iter().any(|c| c.0 == n));
         items.sort_by_cached_key(|n| cr_store::collate::sort_key(n));
         items.dedup();
+        let advance = Arc::new(install.advance_rules()?);
+        let creation = Arc::new(install.creation_rules()?);
         Ok(Self {
             nonweapon: Rc::new(install.part_names("Non-Weapon Proficiencies")?),
             languages: Rc::new(install.part_names("Languages")?),
@@ -2836,12 +2856,12 @@ impl Choices {
             priest_levels: Rc::new(install.spell_levels(false)?),
             class_ids: install.class_ids()?,
             new_classes: install.class_table()?.choices(character),
-            advance: Rc::new(install.advance_rules()?),
+            combat: Rc::new(install.combat_rules_with(creation.clone(), advance.clone())?),
+            advance,
             character: character.clone(),
-            creation: Rc::new(install.creation_rules()?),
+            creation,
             backgrounds: cr_store::edit::backgrounds(install)?,
             abilities: Rc::new(install.ability_rules()?),
-            combat: Rc::new(install.combat_rules()?),
             skills: Rc::new(install.skill_rules()?),
         })
     }

@@ -31,6 +31,8 @@ pub struct ClassRules {
     pub hit_die: i32,
     /// Weapon and nonweapon proficiency slots at 1st level.
     pub weapon_slots: i32,
+    /// The levels for each further weapon slot (+0xd8).
+    pub weapon_slot_levels: i32,
     pub nonweapon_slots: i32,
     pub alignments: Vec<String>,
     /// Minimum Str, Dex, Con, Int, Wis, Cha.
@@ -89,6 +91,7 @@ impl ClassRules {
                 group: data.unknown_0x14[0],
                 hit_die: data.unknown_0x84[0],
                 weapon_slots: data.unknown_0xcc[2],
+                weapon_slot_levels: data.unknown_0xcc[3],
                 nonweapon_slots: data.unknown_0xbc[1],
                 alignments: data.alignments.clone(),
                 requirements: data.ability_requirements,
@@ -126,6 +129,7 @@ impl ClassRules {
                     group: v[0],
                     hit_die: v[17],
                     weapon_slots: v[29],
+                    weapon_slot_levels: 0,
                     nonweapon_slots: v[25],
                     alignments: data.unknown_0x58[2].clone(),
                     requirements: v[2..8].try_into().unwrap(),

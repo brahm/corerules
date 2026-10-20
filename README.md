@@ -85,7 +85,10 @@ the original programs wrote.
   racial and class abilities, schools and spheres, weapon proficiencies,
   weapon of choice, expertise, specializations, mastery, unarmed combat,
   shields, armor, fighting styles, traits and disadvantages (charging and
-  refunding character points as Update Character does), rogue skill points
+  refunding character points as Update Character does, with its questions
+  and the kit's weapon warnings, the Core Rules slots left, the kit's free
+  weapons at their levels, the kit's focus weapon, and the Cavalier's sword
+  at 3rd level and horseman's weapon at 5th), rogue skill points
   at the current level, psionic disciplines and powers, wild talents and
   psionic attack and defense modes (with Update Character's limits), nonweapon
   proficiencies, languages, spells known, spellbooks and memorized spells, the nine

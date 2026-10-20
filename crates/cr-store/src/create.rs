@@ -27,9 +27,12 @@
 
 mod kit;
 mod nonweapon;
+mod update;
 mod weapon;
 
 pub use nonweapon::{NonweaponPick, PickKind};
+pub use update::KitPick;
+pub(crate) use update::{ignored_checks, write_checks};
 use weapon::{AbilityWeapons, WeaponRules};
 pub use weapon::{Question, WeaponCheck, WeaponWarning};
 
@@ -645,6 +648,12 @@ pub struct Draft {
     /// Core Rules: the free specialization picked from the kit's list
     /// (+0x550), on top of [`Draft::specializations`].
     pub free_specialization: Option<String>,
+    /// The highest class level: 1 in New Character, the character's in
+    /// Update Character.
+    pub level: u32,
+    /// An existing character in Update Character, whose class abilities
+    /// are those it holds and where the creation-only rules do not apply.
+    pub updating: bool,
 }
 
 impl Draft {
@@ -701,6 +710,8 @@ impl Draft {
             lent_nonweapon: 0,
             weapon_focus: None,
             free_specialization: None,
+            level: 1,
+            updating: false,
         }
     }
 
@@ -1034,6 +1045,7 @@ impl Installation {
                                 part.head.unknown_0x4cc != 0,
                             ],
                             wizard_extra: flag(part.data.flag_0x4d0),
+                            horseman: flag(part.data.flag_0x724),
                         });
                     }
                     let price = &part.head.unknown_0x1f8;
@@ -2006,19 +2018,11 @@ impl CreationRules {
 
     /// Skills & Powers: what specializing in one weapon costs, `None`
     /// when the character cannot specialize at 1st level: a class ability
-    /// must allow it, or the kit (+0x518, which also passes the level), and
-    /// only a class that specializes early (+0x2792) may at 1st level, and
-    /// only single-classed (61e897, 0x43a17e).
+    /// must allow it, or the kit (+0x518), and the level must (61e897).
     pub fn specialization_cost(&self, draft: &Draft) -> Option<u32> {
         let kit_allows = self.kit(&draft.kit).is_some_and(|k| k.flag(0x518));
-        let early = draft.classes.len() == 1
-            && draft
-                .classes
-                .iter()
-                .filter_map(|c| self.class(c))
-                .any(|c| c.early_specialization);
-        let allowed =
-            (self.abilities_allow_specialization(draft) || kit_allows) && (kit_allows || early);
+        let allowed = (self.abilities_allow_specialization(draft) || kit_allows)
+            && self.level_allows_specialization(draft);
         allowed.then(|| self.po_specialization_cost(&draft.classes))
     }
 
@@ -2171,7 +2175,7 @@ impl CreationRules {
     /// The class abilities the character file gets per class: those bought
     /// with Skills & Powers, the defaults with the Core Rules.
     fn chosen_class_abilities(&self, draft: &Draft, slot: usize) -> Vec<String> {
-        let mut chosen = if draft.skills_and_powers {
+        let mut chosen = if draft.skills_and_powers || draft.updating {
             draft.class_abilities.get(slot).cloned().unwrap_or_default()
         } else {
             let mut chosen = draft
@@ -2885,28 +2889,13 @@ impl CreationRules {
             if let Some(flags) = d.flags_0x1dea.as_mut() {
                 flags[0] = u8::from(draft.barred_nonweapon_ignored);
             }
-            let ignored = |check| u8::from(draft.ignored_weapon_checks.contains(&check));
-            d.flag_0x1dde = Some(ignored(WeaponCheck::FirstFromList));
-            if let Some(flags) = d.flags_0x1ddf.as_mut() {
-                flags[0] = ignored(WeaponCheck::OddMissile);
-                flags[1] = ignored(WeaponCheck::Thrown);
-                flags[2] = ignored(WeaponCheck::Sword);
-                flags[3] = ignored(WeaponCheck::Barred);
-            }
-            d.flags_0x1ddc = Some([
-                u8::from(draft.every_other_listed),
-                ignored(WeaponCheck::EveryOther),
-            ]);
+            update::write_checks(d, &draft.ignored_weapon_checks, draft.every_other_listed);
             // Punching, wrestling and martial arts, in either rule system.
             if let Some(flags) = d.flags_0x1e54.as_mut() {
                 for (flag, style) in flags.iter_mut().zip(UNARMED) {
                     *flag = u8::from(draft.unarmed.iter().any(|u| u == style));
                 }
             }
-            d.flags_0x1de8 = Some([
-                ignored(WeaponCheck::Ranged),
-                ignored(WeaponCheck::Recommended),
-            ]);
             if let Some((least, _)) = self.nonweapon_lending(draft) {
                 d.unknown_0x1df8 = Some(self.borrowed_nonweapon(draft));
                 d.unknown_0x1dfc = Some(least);
@@ -2914,11 +2903,6 @@ impl CreationRules {
             if let Some(texts) = d.unknown_0x1e68.as_mut() {
                 texts[6] = draft.weapon_focus.clone().unwrap_or_default();
             }
-            d.flag_0x1de1 = Some(ignored(WeaponCheck::SpecializationRequired));
-            d.flags_0x1de6 = Some([
-                ignored(WeaponCheck::SpecializationList),
-                ignored(WeaponCheck::SpecializationByLevel),
-            ]);
             if self.core_specializes(draft) {
                 let mut all = self.all_specializations(draft);
                 all.sort_by(|x, y| x.as_bytes().cmp(y.as_bytes()));
@@ -3067,6 +3051,7 @@ mod tests {
             group,
             hit_die,
             weapon_slots: if group == 0 { 4 } else { 1 },
+            weapon_slot_levels: 3,
             nonweapon_slots: if group == 0 { 3 } else { 4 },
             alignments: match name {
                 "Paladin" => vec!["Lawful Good".into()],
@@ -3287,6 +3272,7 @@ mod tests {
                     thief: true,
                     ability_barred: [false; 2],
                     wizard_extra: false,
+                    horseman: false,
                 })
                 .collect(),
             wizard_spells: vec![
