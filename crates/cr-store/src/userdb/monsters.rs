@@ -4,11 +4,15 @@
 //!
 //! Attack types (`AttackU.dat`) are only read: a monster's Attacks page
 //! picks from `Attack.dat` and `AttackU.dat`, and the chosen attacks are
-//! stored in the monster as copies of those records.
+//! stored in the monster as copies of those records. Its Spells page
+//! (IDD 208) keeps copies of spells the same way, its Inventory page is
+//! the Treasure Bundle Editor (IDD 290), and Suggest XP Value works the
+//! experience out from the other pages.
 
 use cr_formats::Object;
 use cr_formats::inventory::InventoryBundle;
 use cr_formats::monster::{Arsenal, Monster, MonsterAttack, MonsterType};
+use cr_formats::spells::Spell;
 use cr_i18n::{tr, tr_noop};
 
 use super::{
@@ -16,7 +20,7 @@ use super::{
     udb_combo, udb_int, udb_multiline, udb_text,
 };
 use crate::pictures::{Kind, split_stored};
-use crate::treasure::LETTERS;
+use crate::treasure::{Bundle, LETTERS};
 use crate::{Installation, Result};
 
 pub struct MonsterTypes;
@@ -360,6 +364,11 @@ impl UserKind for Monsters {
                 0,
                 i32::MAX as i64,
                 experience
+            )
+            .suggest(
+                tr_noop!("Suggest XP Value"),
+                suggested_experience,
+                experience_question,
             ),
             udb_combo!(
                 ECOLOGY,
@@ -524,6 +533,20 @@ impl UserKind for Monsters {
             udb_multiline!(TEXT, tr_noop!("Ecology"), unknown_0x340),
             udb_multiline!(TEXT, tr_noop!("Variants"), unknown_0x344),
             udb_multiline!(TEXT, tr_noop!("Combat"), notes),
+            FieldDesc::new(
+                tr_noop!("Spells"),
+                tr_noop!("Spells available to this Monster"),
+                FieldKind::Dual(Options::Source("spells")),
+                |r, _| Value::List(spell_names(r)),
+                |r, _, v, sources| set_spells(r, &v.list(), &sources.spells),
+            ),
+            FieldDesc::new(
+                tr_noop!("Inventory"),
+                tr_noop!("Inventory"),
+                FieldKind::Items,
+                |r: &Rec, _| Value::Items(Bundle::from_inventory(&r.inventory).unwrap_or_default()),
+                |r, _, v, _| r.inventory = v.items().to_inventory(),
+            ),
         ];
         for i in 0..4 {
             fields.push(other_ac(i));
@@ -687,6 +710,83 @@ pub fn set_attacks(m: &mut Monster, names: &[String], types: &[MonsterAttack]) {
         };
         m.arsenal.attack_list.extend(attack);
     }
+}
+
+/// The names of a monster's spells (the "Spells available to this
+/// Monster" list of IDD 208).
+pub fn spell_names(m: &Monster) -> Vec<String> {
+    m.spells
+        .iter()
+        .filter_map(|o| match o {
+            Object::Spell(s) => Some(s.name.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Sets a monster's spells to `names`: spells it already has are kept,
+/// new ones are copied from `spells`, as Add does.
+pub fn set_spells(m: &mut Monster, names: &[String], spells: &[Spell]) {
+    let old = std::mem::take(&mut m.spells);
+    for name in names {
+        let kept = old
+            .iter()
+            .find(|o| matches!(o, Object::Spell(s) if &s.name == name))
+            .cloned()
+            .or_else(|| {
+                spells
+                    .iter()
+                    .find(|s| &s.name == name)
+                    .map(|s| Object::Spell(Box::new(s.clone())))
+            });
+        m.spells.extend(kept);
+    }
+}
+
+/// The experience Suggest XP Value offers (0x67eac2): the hit dice, plus
+/// one for an armor class under 1, flying, each special defense and magic
+/// resistance (two above 50%), plus each attack's own value, looked up
+/// with the hit dice bonus in the experience table (0x67ebe5).
+pub fn suggested_experience(m: &Monster) -> i64 {
+    let mut level = i64::from(m.hit_dice);
+    level += i64::from(m.armor_class < 1);
+    level += i64::from(m.fly_rate != 0);
+    level += m.unknown_0x44c.iter().filter(|&&f| f != 0).count() as i64;
+    let resistance = m.magic_resistance;
+    level += i64::from(resistance > 0 && resistance < 51);
+    level += 2 * i64::from(resistance > 50);
+    level += m
+        .arsenal
+        .attack_list
+        .iter()
+        .map(|o| match o {
+            Object::MonsterAttack(a) => i64::from(a.unknown_0x40),
+            _ => 0,
+        })
+        .sum::<i64>();
+    experience_for(level, m.unknown_0x438)
+}
+
+/// The experience table (0x67ebe5) by level, a positive hit dice bonus
+/// counting one level more below 10.
+fn experience_for(level: i64, bonus: i32) -> i64 {
+    const TABLE: [i64; 11] = [7, 15, 35, 65, 120, 175, 270, 420, 650, 975, 1400];
+    match level {
+        ..1 => 7,
+        1 if bonus < -1 => 7,
+        1..10 => TABLE[(level + i64::from(bonus > 0)) as usize],
+        10 => 1400,
+        11 | 12 => 2000,
+        _ => (level - 10) * 1000,
+    }
+}
+
+/// Suggest XP Value's question (0x6d60fa).
+pub fn experience_question(xp: i64) -> String {
+    tr!(
+        "This monster is worth approximately {xp} experience points. Would you like to set the experience point value to {xp}?",
+        xp
+    )
 }
 
 /// Treasure letters as the book writes them: "A, Bx2, Q".
@@ -853,5 +953,67 @@ mod tests {
         assert_eq!(m.armor_class_notes, ["", "Underside", "", "", ""]);
         field("Description").set(&mut m, &Value::Text(String::new()), &sources);
         assert_eq!(m.armor_class_notes.len(), 5);
+    }
+
+    #[test]
+    fn the_suggested_experience_counts_what_the_monster_has() {
+        let mut m = Monsters::new_record(&context("Udbtype"));
+        let at = |m: &Monster| suggested_experience(m);
+        assert_eq!(at(&m), 7, "no hit dice");
+        m.hit_dice = 3;
+        let three = at(&m);
+        m.armor_class = 0;
+        let four = at(&m);
+        assert!(four > three, "an armor class under 1 counts");
+        m.armor_class = 10;
+        m.fly_rate = 12;
+        assert_eq!(at(&m), four, "flying counts as much");
+        m.fly_rate = 0;
+        m.unknown_0x44c[2] = 1;
+        assert_eq!(at(&m), four, "so does a special defense");
+        m.unknown_0x44c[2] = 0;
+        m.unknown_0x438 = 2;
+        assert_eq!(at(&m), four, "a hit dice bonus counts one level below 10");
+        m.unknown_0x438 = 0;
+        m.magic_resistance = 60;
+        let five = at(&m);
+        m.hit_dice = 4;
+        m.magic_resistance = 20;
+        assert_eq!(at(&m), five, "over 50% resistance counts two");
+        m.magic_resistance = 0;
+        m.hit_dice = 20;
+        m.unknown_0x438 = 3;
+        let twenty = at(&m);
+        m.unknown_0x438 = 0;
+        assert_eq!(at(&m), twenty, "the bonus no longer counts from 10 on");
+        m.hit_dice = 21;
+        assert_eq!(at(&m) - twenty, 1000, "a thousand a level from 13 on");
+        assert!(experience_question(five).contains(&five.to_string()));
+    }
+
+    #[test]
+    fn spells_and_inventory_are_edited_as_copies() {
+        let mut m = Monsters::new_record(&context("Udbtype"));
+        let fields = Monsters::fields(Flavor::Expansion);
+        let field = |label: &str| fields.iter().find(|f| f.label == label).unwrap();
+        let mut sources = Sources::default();
+        let mut spell = crate::userdb::spells::Spells::new_record(&context(""));
+        spell.name = "Udb bolt".into();
+        sources.spells = vec![spell];
+        let spells = field("Spells available to this Monster");
+        spells.set(&mut m, &Value::List(vec!["Udb bolt".into()]), &sources);
+        assert_eq!(spells.get(&m), Value::List(vec!["Udb bolt".into()]));
+        // A spell the monster has is kept when the list is set again.
+        sources.spells.clear();
+        let names = spells.get(&m);
+        spells.set(&mut m, &names, &sources);
+        assert_eq!(m.spells.len(), 1);
+
+        let inventory = field("Inventory");
+        let mut bundle = Bundle::default();
+        bundle.insert(crate::treasure::Item::new("Udb sword", 2), true);
+        inventory.set(&mut m, &Value::Items(bundle.clone()), &sources);
+        assert_eq!(m.inventory.items.len(), 1);
+        assert_eq!(inventory.get(&m), Value::Items(bundle));
     }
 }

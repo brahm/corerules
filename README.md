@@ -149,7 +149,9 @@ the original programs wrote.
   combinations, parts (weapons, armor, kits and proficiencies, plus the
   ten other types in Other Parts: racial and class abilities, languages,
   schools, spheres, traits, disadvantages, gems and art, currency and
-  Count), spells, psionic powers, monsters, monster types, traps, treasure
+  Count), spells, psionic powers, monsters (with their spells, their
+  inventory in the Treasure Bundle Editor and Suggest XP Value), monster
+  types, traps, treasure
   tables and encounter templates (monsters, NPCs, items with their coins
   and escorts, traps, treasure types and the 2-20 table, with the
   original's dependents and "and"/"or" second groups). A monster type's picture is chosen among those in
