@@ -58,6 +58,12 @@ the original programs wrote.
   bonus, free, +1 and +2 picks are offered as the Expansion offers them, the
   kit's own starting slots are asked about, and a proficiency the kit bars
   brings the original's warning
+- **Kit weapon proficiencies** in New Character: the kit's slots, prices
+  and weapon list, the original's warnings for the weapons it bars or
+  requires, the nonweapon slots it lets weapons use, its requirements, the
+  weapon to focus in, and Core Rules weapon specialization (2 slots for a
+  bow, 1 for the others, a free one some kits give) with the original's
+  questions
 - **Player's Option** (Skills & Powers) creation, as the Expansion's
   Player's Option button: Methods VII to X, racial and class abilities
   bought with character points, subabilities, traits and disadvantages,

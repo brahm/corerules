@@ -61,6 +61,8 @@ pub struct ClassRules {
     /// pick (+0x2fc8[0]); the Expansion's only.
     pub bonus_nonweapon: Vec<String>,
     pub bonus_nonweapon_count: i32,
+    /// May specialize as a Core Rules character, as fighters (+0x2797).
+    pub core_specialization: bool,
 }
 
 impl ClassRules {
@@ -90,6 +92,7 @@ impl ClassRules {
                 required_nonweapon: data.unknown_0x2fcc.clone(),
                 bonus_nonweapon: data.unknown_0x2fb4.clone().unwrap_or_default(),
                 bonus_nonweapon_count: data.unknown_0x2fc8.map_or(1, |c| c[0]),
+                core_specialization: data.flag_0x2797 == Some(1),
             },
             // The 2.0 layout keeps the same values in one array, and the
             // same lists in a fixed array of lists.
@@ -119,6 +122,7 @@ impl ClassRules {
                     required_nonweapon: Vec::new(),
                     bonus_nonweapon: Vec::new(),
                     bonus_nonweapon_count: 0,
+                    core_specialization: false,
                 }
             }
         }
