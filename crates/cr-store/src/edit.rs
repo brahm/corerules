@@ -159,6 +159,14 @@ impl Installation {
         }
         let mut character = self.character(file)?;
         let before_kit = character.data.kit.clone();
+        // Loaded once for the lists.
+        let shared = match lists {
+            Some(_) => Some((
+                std::sync::Arc::new(self.creation_rules()?),
+                std::sync::Arc::new(self.advance_rules()?),
+            )),
+            None => None,
+        };
         details.apply(&mut character);
         if let Some(abilities) = lists.and_then(|l| l.abilities.as_ref()) {
             self.ability_rules()?.apply(&mut character, abilities)?;
@@ -166,10 +174,11 @@ impl Installation {
         // Weapon proficiencies cost points too, so a changed list goes
         // through the combat rules even with nothing else of theirs.
         if let Some(lists) = lists
+            && let Some((creation, advance)) = &shared
             && (lists.combat.is_some()
                 || lists.weapon_proficiencies != character.data.weapon_proficiencies)
         {
-            let rules = self.combat_rules()?;
+            let rules = self.combat_rules_with(creation.clone(), advance.clone())?;
             let combat = lists.combat.clone().unwrap_or_else(|| {
                 let mut combat = rules.combat_of(&character);
                 combat.weapons.clone_from(&lists.weapon_proficiencies);
@@ -196,14 +205,15 @@ impl Installation {
                 advancement.apply(&mut character);
             }
             // Leaving Update Character's Name page applies the kit again.
-            if character.version.starts_with("TSRP3") {
-                let levels: Vec<u32> = self
-                    .advance_rules()?
+            if let Some((creation, advance)) = &shared
+                && character.version.starts_with("TSRP3")
+            {
+                let levels: Vec<u32> = advance
                     .levels(&character)?
                     .iter()
                     .map(|c| c.level)
                     .collect();
-                self.creation_rules()?.apply_kit(&mut character, &levels);
+                creation.apply_kit(&mut character, &levels);
             }
         }
         // The index entry lists the levels joined with "/".

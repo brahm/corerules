@@ -133,7 +133,7 @@ pub(crate) fn message(parent: &impl IsA<gtk::Widget>, heading: &str, body: &str)
 }
 
 /// A Yes/No question, No the default as in the original.
-fn ask(
+pub(crate) fn ask(
     parent: &impl IsA<gtk::Widget>,
     heading: &str,
     body: &str,
@@ -170,7 +170,12 @@ fn question(
 }
 
 /// A message with OK that runs `then` once closed.
-fn notice(parent: &impl IsA<gtk::Widget>, heading: &str, body: &str, then: impl Fn() + 'static) {
+pub(crate) fn notice(
+    parent: &impl IsA<gtk::Widget>,
+    heading: &str,
+    body: &str,
+    then: impl Fn() + 'static,
+) {
     let alert = adw::AlertDialog::builder()
         .heading(heading)
         .body(body)
@@ -184,7 +189,11 @@ fn notice(parent: &impl IsA<gtk::Widget>, heading: &str, body: &str, then: impl 
 
 /// Asks the questions in turn and runs `then` once each is answered Yes
 /// (a notice only needs OK).
-fn ask_each(parent: &adw::Dialog, mut questions: VecDeque<Question>, then: Rc<dyn Fn()>) {
+pub(crate) fn ask_each(
+    parent: &gtk::Widget,
+    mut questions: VecDeque<Question>,
+    then: Rc<dyn Fn()>,
+) {
     let Some(question) = questions.pop_front() else {
         then();
         return;
@@ -202,7 +211,7 @@ fn ask_each(parent: &adw::Dialog, mut questions: VecDeque<Question>, then: Rc<dy
 
 /// A warning the user may ignore, as the original's IDD 245: OK refuses
 /// what was asked and Ignore allows it, for good.
-fn ignorable(
+pub(crate) fn ignorable(
     parent: &impl IsA<gtk::Widget>,
     heading: &str,
     body: &str,
@@ -2609,7 +2618,7 @@ impl Wizard {
         if !asked {
             let this = self.clone();
             ask_each(
-                &self.0.dialog,
+                self.0.dialog.upcast_ref(),
                 rules.weapon_questions(&d, &taken, &name).into(),
                 Rc::new(move || this.add_weapon(name.clone(), taken.clone(), true, add.clone())),
             );
@@ -2848,7 +2857,7 @@ impl Wizard {
         let questions = rules.specialization_questions(&probe, &name);
         let this = self.clone();
         ask_each(
-            &self.0.dialog,
+            self.0.dialog.upcast_ref(),
             questions.into(),
             Rc::new(move || this.po_specialization_warning(&name, &state, &choose)),
         );

@@ -17,6 +17,7 @@ use std::path::{Path, PathBuf};
 use cr_formats::character::Character;
 use cr_store::Installation;
 use cr_store::combat::CombatRules;
+use cr_store::create::WeaponCheck;
 
 fn fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/characters")
@@ -42,7 +43,8 @@ fn lirael() -> Character {
 fn a_proficiency_weapon_of_choice_and_unarmed_style_write_what_the_original_writes() {
     let Some(rules) = rules() else { return };
     let mut ours = lirael();
-    assert_eq!(rules.weapon_cost(&ours, "Adze"), 2);
+    let (held, levels) = (rules.combat_of(&ours), rules.levels(&ours));
+    assert_eq!(rules.weapon_price(&ours, &held, &levels, "Adze"), 2);
     assert_eq!(rules.weapon_of_choice_cost(&ours), 2);
     assert_eq!(rules.expertise_cost(&ours), 2);
     assert_eq!(rules.specialization_cost(&ours), 4);
@@ -121,4 +123,97 @@ fn fighting_styles_cost_by_class_group_and_keep_their_codes() {
     assert_eq!(saved.data.classes.unknown_0x50[..3], [2002, 1997, 0]);
     assert_eq!(saved.data.unknown_0x1778[0], 14);
     assert_eq!(rules.combat_of(&saved).styles, new.styles);
+}
+
+#[test]
+fn update_applies_the_kit_and_class_weapon_rules_by_level() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(Path::new(&dir)).unwrap();
+    if install.is_core20() {
+        return;
+    }
+    let (creation, rules) = (
+        install.creation_rules().unwrap(),
+        install.combat_rules().unwrap(),
+    );
+    let fighter = |kit: &str, skills_and_powers: bool| {
+        let mut draft = cr_store::create::Draft::new(&cr_store::settings::SETTINGS[0]);
+        draft.scores = [16; 6];
+        draft.race = "Human".into();
+        draft.classes = vec!["Fighter".into()];
+        draft.alignment = "Lawful Good".into();
+        draft.name = "Test".into();
+        draft.hit_dice = vec![1];
+        draft.pack = false;
+        draft.skills_and_powers = skills_and_powers;
+        draft.kit = kit.into();
+        creation.build(&draft).unwrap()
+    };
+    let weapons = creation.weapon_choices(&cr_store::create::Draft::new(
+        &cr_store::settings::SETTINGS[0],
+    ));
+
+    // The Cavalier picks a sword from 3rd level and a horseman's weapon
+    // from 5th, once.
+    let mut picking = 0;
+    for kit in creation.all_kits() {
+        let mut character = fighter(&kit, false);
+        character.data.weapon_proficiencies.clone_from(&weapons);
+        let held = rules.combat_of(&character);
+        let picks = |levels: &[u32], character: &Character| {
+            rules.kit_picks(character, &rules.combat_of(character), levels)
+        };
+        if picks(&[20], &character).is_empty() {
+            continue;
+        }
+        picking += 1;
+        assert!(picks(&[1], &character).is_empty());
+        assert_eq!(picks(&[3], &character).len(), 1);
+        assert_eq!(picks(&[5], &character).len(), 2);
+        let sword = picks(&[3], &character)[0].choices[0].clone();
+        let mut new = held.clone();
+        new.kit_picks[0] = Some(sword.clone());
+        rules.apply(&mut character, &new).unwrap();
+        assert_eq!(character.data.unknown_0x1e68.as_ref().unwrap()[4], sword);
+        assert!(picks(&[3], &character).is_empty());
+        // A pick kept is never changed.
+        let mut again = rules.combat_of(&character);
+        again.kit_picks[0] = Some(weapons[0].clone());
+        rules.apply(&mut character, &again).unwrap();
+        assert_eq!(character.data.unknown_0x1e68.as_ref().unwrap()[4], sword);
+    }
+    assert!(picking > 0);
+
+    // The warnings ignored are kept in the file's flags.
+    let mut character = fighter("None", false);
+    let mut new = rules.combat_of(&character);
+    new.ignored = vec![WeaponCheck::Sword, WeaponCheck::EveryOther];
+    rules.apply(&mut character, &new).unwrap();
+    let ignored = rules.combat_of(&character).ignored;
+    assert!(ignored.contains(&WeaponCheck::Sword) && ignored.contains(&WeaponCheck::EveryOther));
+
+    // The Core Rules ask before a weapon with no slot left.
+    let levels = [1];
+    let held = rules.combat_of(&character);
+    let none_held = rules.weapon_purchase(&character, &held, &levels, &weapons[0]);
+    let mut all = held.clone();
+    all.weapons = weapons[1..].to_vec();
+    assert!(rules.core_slots_left(&character, &all, &levels).unwrap() <= 0);
+    let none_left = rules.weapon_purchase(&character, &all, &levels, &weapons[0]);
+    assert_eq!(none_left.questions.len(), none_held.questions.len() + 1);
+
+    // Skills & Powers offers a weapon for free when the points run short.
+    let mut character = fighter("None", true);
+    let held = rules.combat_of(&character);
+    let bought = rules.weapon_purchase(&character, &held, &levels, &weapons[0]);
+    assert!(bought.cost > 0);
+    character.data.unknown_0x1778[0] = 0;
+    let short = rules.weapon_purchase(&character, &held, &levels, &weapons[0]);
+    assert!(bought.free.is_none() && short.free.is_some());
+    let mut new = held.clone();
+    rules.bought(&character, &mut new, &levels, &weapons[0], 0);
+    new.weapons.push(weapons[0].clone());
+    assert_eq!(rules.points_left(&character, &new), 0);
 }

@@ -41,6 +41,8 @@ pub(super) struct WeaponRules {
     pub ability_barred: [bool; 2],
     /// A wizard pays 3 points more for it out of class (+0x4d0).
     pub wizard_extra: bool,
+    /// The Cavalier's horseman's bonus applies to it (+0x724).
+    pub horseman: bool,
 }
 
 impl WeaponRules {
@@ -76,8 +78,10 @@ pub(super) struct AbilityWeapons {
     /// Weapon Use Lesser and Major (+0x81c, +0x820).
     pub use_lesser: bool,
     pub use_major: bool,
-    /// Skills & Powers: allows weapon specialization (+0x782).
+    /// Skills & Powers: allows weapon specialization, and more than one
+    /// (+0x782, +0x783).
     pub specialize: bool,
+    pub multiple: bool,
 }
 
 impl AbilityWeapons {
@@ -91,6 +95,7 @@ impl AbilityWeapons {
             use_lesser: on(0x81c),
             use_major: on(0x820),
             specialize: on(0x782),
+            multiple: on(0x783),
         }
     }
 
@@ -103,6 +108,7 @@ impl AbilityWeapons {
             use_lesser: self.use_lesser || other.use_lesser,
             use_major: self.use_major || other.use_major,
             specialize: self.specialize || other.specialize,
+            multiple: self.multiple || other.multiple,
         }
     }
 }
@@ -150,7 +156,7 @@ pub struct Question {
 }
 
 impl Question {
-    fn new(title: &str, text: String) -> Self {
+    pub fn new(title: &str, text: String) -> Self {
         Self {
             title: title.into(),
             text,
@@ -167,17 +173,20 @@ pub struct WeaponWarning {
 }
 
 /// What buying a weapon proficiency costs and asks first.
-struct Offer {
+pub(super) struct Offer {
     cost: u32,
     questions: Vec<Question>,
+    /// The original's price is above 0 (0x444079): not a free weapon nor
+    /// one the kit prices.
+    pub charged: bool,
 }
 
 impl CreationRules {
-    fn weapon_part(&self, name: &str) -> Option<&WeaponRules> {
+    pub(super) fn weapon_part(&self, name: &str) -> Option<&WeaponRules> {
         self.weapons.iter().find(|w| w.name == name)
     }
 
-    fn draft_kit(&self, draft: &Draft) -> Option<&Kit> {
+    pub(super) fn draft_kit(&self, draft: &Draft) -> Option<&Kit> {
         self.kit(&draft.kit).filter(|_| self.expansion)
     }
 
@@ -247,13 +256,15 @@ impl CreationRules {
     /// A weapon the kit (+0x470, up to the level) or a racial ability
     /// (+0x574, +0x578) makes free.
     fn weapon_free(&self, draft: &Draft, name: &str) -> bool {
-        self.draft_kit(draft)
-            .is_some_and(|k| k.free_weapons.iter().any(|(w, l)| w == name && *l <= 1))
-            || draft
-                .racial_abilities
+        self.draft_kit(draft).is_some_and(|k| {
+            k.free_weapons
                 .iter()
-                .filter_map(|a| self.racial_weapons.get(a))
-                .any(|weapons| weapons.iter().any(|w| w == name))
+                .any(|(w, l)| w == name && *l <= draft.level.max(1) as i32)
+        }) || draft
+            .racial_abilities
+            .iter()
+            .filter_map(|a| self.racial_weapons.get(a))
+            .any(|weapons| weapons.iter().any(|w| w == name))
     }
 
     /// The weapons the page offers: every weapon, the classes' price and
@@ -261,7 +272,10 @@ impl CreationRules {
     /// use), and at 1st level only the kit's list when it has one
     /// (+0x4b8).
     pub fn weapon_choices(&self, draft: &Draft) -> Vec<String> {
-        let only = self.draft_kit(draft).map_or(&[][..], |k| k.sa(0x4b8));
+        let only = match self.draft_kit(draft) {
+            Some(kit) if draft.level <= 1 => kit.sa(0x4b8),
+            _ => &[],
+        };
         self.weapons
             .iter()
             .filter(|w| self.expansion || self.weapon_in_class(draft, w))
@@ -310,19 +324,26 @@ impl CreationRules {
     /// Powers charge the classes' points, nothing for a free weapon, a
     /// point less for one the kit favors (+0x444, +0x384), and 1 more for
     /// one out of class (a wizard 2, or 3 with +0x4d0).
-    fn weapon_offer(&self, draft: &Draft, taken: &[String], name: &str) -> Offer {
+    pub(super) fn weapon_offer(&self, draft: &Draft, taken: &[String], name: &str) -> Offer {
         let core = !draft.skills_and_powers;
         let base = if core {
             1
         } else {
             self.weapon_cost(&draft.classes)
         };
-        let offer = |cost, questions| Offer { cost, questions };
+        let offer = |cost, questions| Offer {
+            cost,
+            questions,
+            charged: true,
+        };
         let Some(weapon) = self.weapon_part(name).filter(|_| self.expansion) else {
             return offer(base, Vec::new());
         };
         if self.weapon_free(draft, name) {
-            return offer(u32::from(core), Vec::new());
+            return Offer {
+                charged: false,
+                ..offer(u32::from(core), Vec::new())
+            };
         }
         let kit = self.draft_kit(draft);
         let price = kit
@@ -361,7 +382,10 @@ impl CreationRules {
                     )
                 });
             } else if core && let Some(price) = price {
-                return offer(price, questions);
+                return Offer {
+                    charged: false,
+                    ..offer(price, questions)
+                };
             } else {
                 questions.push(Question::new(
                     class_restriction,
@@ -397,7 +421,10 @@ impl CreationRules {
                     (true, true) => 3,
                 };
             } else if let Some(price) = price {
-                return offer(price, questions);
+                return Offer {
+                    charged: false,
+                    ..offer(price, questions)
+                };
             } else {
                 questions.push(Question::new(
                     class_restriction,
@@ -508,7 +535,8 @@ impl CreationRules {
                 warnings.push(WeaponWarning { check, text });
             }
         };
-        if kit.flag(0x508) && weapon.missile {
+        // Creation only: no missile weapons (+0x508).
+        if kit.flag(0x508) && weapon.missile && !draft.updating {
             warn(
                 WeaponCheck::Ranged,
                 tr!(
@@ -612,7 +640,7 @@ impl CreationRules {
                 ),
             );
         }
-        if kit.flag(0x76) {
+        if kit.flag(0x76) && !draft.updating {
             let mut allowed: Vec<String> = kit
                 .wp_options
                 .iter()
@@ -875,7 +903,42 @@ impl CreationRules {
                 )));
             }
         }
-        if kit.is_some_and(|k| k.flag(0x538)) && self.weapon_part(name).is_some_and(|w| w.melee) {
+        if !self.core_specializes(draft) && draft.updating {
+            // Update Character asks where New Character refuses.
+            let abilities = self.ability_weapons(draft);
+            if !abilities.specialize && !kit.is_some_and(|k| k.flag(0x518)) {
+                questions.push(Question::new(
+                    tr("Not Allowed"),
+                    tr("This character does not have any Class Abilities allowing \
+                        specialization. Add specialization anyway?")
+                    .into(),
+                ));
+            }
+            if !self.level_allows_specialization(draft) {
+                questions.push(Question::new(
+                    tr("Not Allowed"),
+                    tr(
+                        "This character is not of high enough level to specialize. Add \
+                        specialization anyway?",
+                    )
+                    .into(),
+                ));
+            }
+            if !draft.specializations.is_empty() && !abilities.multiple {
+                questions.push(Question::new(
+                    tr("Warning"),
+                    tr(
+                        "This character does not have any Class Abilities allowing multiple \
+                        specialization. Add specialization anyway?",
+                    )
+                    .into(),
+                ));
+            }
+        }
+        if kit.is_some_and(|k| k.flag(0x538))
+            && !draft.updating
+            && self.weapon_part(name).is_some_and(|w| w.melee)
+        {
             questions.push(Question::new(
                 tr("Kit Restriction"),
                 tr!(
@@ -888,9 +951,136 @@ impl CreationRules {
         questions
     }
 
+    /// Skills & Powers: whether the highest class level lets the character
+    /// specialize (0x43a17e): always with the kit's +0x518; a class that
+    /// specializes early when single-classed or past 1st level, warriors
+    /// past 2nd, priests past 4th, rogues and psionicists past 5th, wizards
+    /// past 6th.
+    pub(super) fn level_allows_specialization(&self, draft: &Draft) -> bool {
+        if self.draft_kit(draft).is_some_and(|k| k.flag(0x518)) {
+            return true;
+        }
+        let top = draft.level.max(1);
+        if self.draft_classes(draft).any(|c| c.early_specialization) {
+            return draft.classes.len() == 1 || top > 1;
+        }
+        let groups = self.class_groups(&draft.classes);
+        [(0, 2), (2, 4), (1, 5), (4, 5), (3, 6)]
+            .iter()
+            .find(|&&(g, _)| groups[g])
+            .is_some_and(|&(_, past)| top > past)
+    }
+
     /// Whether the character may take an unarmed style.
     pub fn unarmed_allowed(&self, draft: &Draft) -> bool {
         self.unarmed_cost(draft).is_some()
+    }
+
+    /// Update Character: the questions before taking an unarmed style
+    /// (6208ac), whether the classes allow it while none is held and
+    /// whether to have it with a weapon specialization; Yes to both keeps
+    /// everything.
+    pub fn unarmed_questions(&self, draft: &Draft) -> Vec<Question> {
+        let mut questions = Vec::new();
+        if !self.unarmed_allowed(draft) && draft.unarmed.is_empty() {
+            questions.push(Question::new(
+                tr("Warning Message"),
+                tr("This class is not allowed Unarmed Combat. Take it anyway?").into(),
+            ));
+        }
+        questions.extend(self.unarmed_conflict(draft));
+        questions
+    }
+
+    /// Core Rules weapon slots left in Update Character (0x4397d1): the
+    /// classes' first slots and one more every so many levels (each
+    /// class's for a dual-class character, or combined with +0x486d), or
+    /// the kit's (+0x454, +0x44c, +0x458, +0x45c, +0x448, +0x468), less
+    /// what the proficiencies, specializations and unarmed styles take,
+    /// plus the nonweapon slots lent. `levels` are the classes' levels.
+    pub fn core_weapon_slots_left(&self, draft: &Draft, levels: &[u32], dual: bool) -> i64 {
+        let kit = self.draft_kit(draft);
+        let ki = |off, default| kit.map_or(default, |k| k.i_or(off, default));
+        let every_slot = kit.is_some_and(|k| k.flag(0x44c));
+        let (per_level, from_level) = (ki(0x458, -1), ki(0x45c, -1));
+        let combine = self.draft_classes(draft).any(|c| c.combine_slots);
+        let (mut first, mut per, mut top, mut count, mut more) = (0, i32::MAX, 0, 0, 0);
+        for (class, &level) in self.draft_classes(draft).zip(levels) {
+            let level = level as i32;
+            let (initial, step) = (class.weapon_slots, class.weapon_slot_levels);
+            if dual && step != 0 {
+                first += initial + level.div_euclid(step);
+            } else if combine {
+                first += initial;
+                per = per.wrapping_add(step);
+                top = top.max(level);
+            } else {
+                first = first.max(initial);
+                per = per.min(step);
+                top = top.max(level);
+            }
+            if every_slot {
+                count += i32::from(level > 0) + i32::from(level > 2) + i32::from(level > 5);
+            }
+            if per_level > 0 && level > per_level {
+                more = level / per_level;
+            }
+        }
+        if ki(0x454, -1) > -1 {
+            first = ki(0x454, -1);
+        }
+        let classes = draft.classes.len() as i32;
+        if !dual && classes > 1 {
+            count = count.div_euclid(classes);
+            more = more.div_euclid(classes);
+        }
+        let mut slots = if every_slot {
+            count
+        } else if per_level < 1 {
+            match per {
+                0 | i32::MAX => first,
+                per => first + top.div_euclid(per),
+            }
+        } else {
+            first + more
+        };
+        let level = draft.level.max(1) as i32;
+        if from_level != -1 && level < from_level {
+            slots = first;
+        }
+        slots += ki(0x448, 0);
+        if ki(0x468, 0) != 0 && ki(0x46c, 0) <= level {
+            slots += ki(0x468, 0);
+        }
+        let price = kit
+            .map(|k| k.i_or(0x460, -1))
+            .filter(|&p| p != -1)
+            .map(|p| i64::from(p) + 1);
+        let taken: i64 = draft
+            .weapon_proficiencies
+            .iter()
+            .map(|name| {
+                let grants = kit.is_some_and(|k| {
+                    k.free_weapons.iter().any(|(w, l)| w == name && *l <= level)
+                        || k.sa(0x484).contains(name)
+                });
+                let out_of_class = self
+                    .weapon_part(name)
+                    .is_some_and(|w| !self.weapon_in_class(draft, w));
+                match price {
+                    _ if grants => 0,
+                    Some(price) if out_of_class => price,
+                    _ => 1,
+                }
+            })
+            .sum();
+        let specializations: u32 = self
+            .all_specializations(draft)
+            .iter()
+            .map(|s| self.core_specialization_cost(draft, s))
+            .sum();
+        i64::from(slots) - taken - i64::from(specializations) - 2 * draft.unarmed.len() as i64
+            + i64::from(draft.lent_nonweapon)
     }
 
     /// Core Rules: whether one more unarmed style fits the weapon slots.
@@ -899,7 +1089,8 @@ impl CreationRules {
     }
 
     /// The question taking an unarmed style asks when the character
-    /// specializes in a weapon (6208ac); Yes drops the specializations.
+    /// specializes in a weapon (6208ac); in New Character Yes drops the
+    /// specializations, in Update Character it keeps both.
     pub fn unarmed_conflict(&self, draft: &Draft) -> Option<Question> {
         let specialized = if self.core_specializes(draft) {
             !self.all_specializations(draft).is_empty()
@@ -909,25 +1100,40 @@ impl CreationRules {
         specialized.then(|| {
             Question::new(
                 tr("Warning Message"),
-                tr(
-                    "You may not specialize in both a weapon and unarmed combat. Remove the \
-                    weapon specialization?",
-                )
+                if draft.updating {
+                    tr(
+                        "You may not specialize in both a weapon and unarmed combat. Specialize \
+                        in both anyway?",
+                    )
+                } else {
+                    tr(
+                        "You may not specialize in both a weapon and unarmed combat. Remove the \
+                        weapon specialization?",
+                    )
+                }
                 .into(),
             )
         })
     }
 
     /// The question specializing in a weapon asks when the character has
-    /// an unarmed style (61edf1); Yes drops the unarmed styles.
+    /// an unarmed style (61edf1); in New Character Yes drops the unarmed
+    /// styles, in Update Character it keeps both.
     pub fn specialization_conflict(&self, draft: &Draft) -> Option<Question> {
         (!draft.unarmed.is_empty()).then(|| {
             Question::new(
                 tr("Warning"),
-                tr(
-                    "You may not specialize in both a weapon and unarmed combat. Remove \
-                    unarmed combat?",
-                )
+                if draft.updating {
+                    tr(
+                        "You may not specialize in both a weapon and unarmed combat. Specialize \
+                        in both anyway?",
+                    )
+                } else {
+                    tr(
+                        "You may not specialize in both a weapon and unarmed combat. Remove \
+                        unarmed combat?",
+                    )
+                }
                 .into(),
             )
         })
@@ -997,7 +1203,7 @@ impl CreationRules {
             );
         }
         let level = kit.i_or(0x51c, 101);
-        if level <= 1 {
+        if level <= draft.level.max(1) as i32 {
             let (melee, missile) = (kit.flag(0x520), kit.flag(0x521));
             let fits = |w: &WeaponRules| {
                 if melee {
@@ -1050,4 +1256,3 @@ fn option_label(count: i32, names: &[String]) -> String {
         names = names.join(", ")
     )
 }
-
