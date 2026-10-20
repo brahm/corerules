@@ -34,6 +34,7 @@ mod equip;
 pub(crate) mod magic;
 mod names;
 mod prof;
+pub(crate) use prof::{BROAD_SWORDS, broad_has_tight};
 mod program;
 mod rogue;
 pub(crate) mod state;

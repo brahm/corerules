@@ -60,10 +60,14 @@ the original programs wrote.
   brings the original's warning
 - **Kit weapon proficiencies** in New Character: the kit's slots, prices
   and weapon list, the original's warnings for the weapons it bars or
-  requires, the nonweapon slots it lets weapons use, its requirements, the
-  weapon to focus in, and Core Rules weapon specialization (2 slots for a
-  bow, 1 for the others, a free one some kits give) with the original's
-  questions
+  requires (its sword list, thrown weapons, every other one from a list),
+  the nonweapon slots it lets weapons use, its requirements, the weapon to
+  focus in, and Core Rules weapon specialization (2 slots for a bow, 1 for
+  the others, a free one some kits give) with the original's questions;
+  weapons out of class ask first (Core Rules) or cost more (Player's
+  Option), as do a cleric's edged weapons and the class abilities that
+  limit weapons, and unarmed combat goes to the classes and kits that
+  allow it, never together with a weapon specialization
 - **Player's Option** (Skills & Powers) creation, as the Expansion's
   Player's Option button: Methods VII to X, racial and class abilities
   bought with character points, subabilities, traits and disadvantages,
