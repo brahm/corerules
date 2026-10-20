@@ -255,6 +255,10 @@ impl Installation {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CharacterCombat {
     pub weapons: Vec<String>,
+    /// Skills & Powers: the broad and tight weapon groups
+    /// (`unknown_0xac[1]` and `[2]`).
+    pub broad_groups: Vec<String>,
+    pub tight_groups: Vec<String>,
     pub weapon_of_choice: Option<String>,
     pub expertise: Option<String>,
     pub mastery: Option<String>,
@@ -279,8 +283,8 @@ pub struct CharacterCombat {
     /// The weapons the kit has the character pick, as [`KitPick::slot`]
     /// (`unknown_0x1e68[4]` and `[5]`).
     pub kit_picks: [Option<String>; 2],
-    /// What each weapon proficiency and unarmed style taken here was
-    /// charged, the last one counting.
+    /// What each weapon proficiency, weapon group and unarmed style taken
+    /// here was charged, the last one counting.
     pub bought: Vec<(String, i64)>,
 }
 
@@ -364,6 +368,8 @@ impl CombatRules {
         let rules = self.creation.as_deref()?;
         let mut draft = rules.update_draft(character, levels);
         draft.weapon_proficiencies.clone_from(&new.weapons);
+        draft.broad_groups.clone_from(&new.broad_groups);
+        draft.tight_groups.clone_from(&new.tight_groups);
         draft.specializations.clone_from(&new.specializations);
         draft.weapon_of_choice.clone_from(&new.weapon_of_choice);
         draft.expertise.clone_from(&new.expertise);
@@ -495,6 +501,12 @@ impl CombatRules {
         new.bought.push((name.to_owned(), cost));
     }
 
+    /// Notes a weapon group bought for `cost`; the caller adds it to
+    /// `new`.
+    pub fn group_bought(&self, new: &mut CharacterCombat, name: &str, cost: i64) {
+        new.bought.push((name.to_owned(), cost));
+    }
+
     /// The questions before specializing in a weapon (61edf1, 61e897):
     /// whether to with an unarmed style, then the classes' and level's.
     pub fn specialization_questions(
@@ -572,6 +584,112 @@ impl CombatRules {
             }
         }
         purchase
+    }
+
+    /// The weapons the character is proficient in with `new`, those the
+    /// weapon groups cover too.
+    pub fn covered_weapons(
+        &self,
+        character: &Character,
+        new: &CharacterCombat,
+        levels: &[u32],
+    ) -> Vec<String> {
+        match self.draft(character, new, levels) {
+            Some((rules, draft)) => rules.covered_weapons(&draft),
+            None => new.weapons.clone(),
+        }
+    }
+
+    /// The broad (else tight) weapon groups a Skills & Powers character
+    /// may still buy.
+    pub fn group_choices(
+        &self,
+        character: &Character,
+        new: &CharacterCombat,
+        levels: &[u32],
+        broad: bool,
+    ) -> Vec<String> {
+        self.draft(character, new, levels)
+            .map(|(rules, draft)| rules.group_choices(&draft, broad))
+            .unwrap_or_default()
+    }
+
+    /// The weapons a broad (else tight) group covers.
+    pub fn group_weapons(&self, broad: bool, name: &str) -> Vec<String> {
+        self.creation
+            .as_ref()
+            .map(|rules| rules.group_weapons(broad, name))
+            .unwrap_or_default()
+    }
+
+    /// The kit's warning buying a broad (else tight) group gives, which
+    /// comes first (5d3d63, 5d4121).
+    pub fn group_warnings(
+        &self,
+        character: &Character,
+        new: &CharacterCombat,
+        levels: &[u32],
+        broad: bool,
+        name: &str,
+    ) -> Vec<WeaponWarning> {
+        self.draft(character, new, levels)
+            .map(|(rules, draft)| rules.group_warnings(&draft, broad, name))
+            .unwrap_or_default()
+    }
+
+    /// What buying a broad (else tight) group asks and costs, then whether
+    /// to buy it for free when the points run short (5cee66, 5cf37c), or
+    /// why the character may not.
+    pub fn group_purchase(
+        &self,
+        character: &Character,
+        new: &CharacterCombat,
+        levels: &[u32],
+        broad: bool,
+    ) -> std::result::Result<Purchase, String> {
+        let Some((rules, draft)) = self.draft(character, new, levels) else {
+            return Err(tr("Only Warriors are allowed to buy weapon Groups").into());
+        };
+        let offer = rules.group_offer(&draft, broad)?;
+        let cost = i64::from(offer.cost);
+        let free = (cost > self.points_left(character, new)).then(|| {
+            Question::new(
+                tr("Warning"),
+                if broad {
+                    tr(
+                        "You do not have enough Character Points to purchase this broad group. \
+                         Would you like to purchase it for free?",
+                    )
+                } else {
+                    tr(
+                        "You do not have enough Character Points to purchase this tight group. \
+                         Would you like to purchase it for free?",
+                    )
+                }
+                .into(),
+            )
+        });
+        Ok(Purchase {
+            questions: offer.questions,
+            free,
+            cost,
+        })
+    }
+
+    /// Why a broad (else tight) group may not go: while there is a weapon
+    /// of choice, expertise, mastery or specialization.
+    pub fn group_removal(
+        &self,
+        character: &Character,
+        new: &CharacterCombat,
+        levels: &[u32],
+        broad: bool,
+    ) -> Option<String> {
+        let (rules, mut draft) = self.draft(character, new, levels)?;
+        if new.mastery.is_some() {
+            draft.weapon_of_choice.clone_from(&new.mastery);
+        }
+        rules.group_removal(&draft, broad)
     }
 
     /// The weapon the kit has the character focus in: the prompt and the
@@ -770,6 +888,8 @@ impl CombatRules {
         let flags = d.flags_0x1e54.unwrap_or_default();
         CharacterCombat {
             weapons: d.weapon_proficiencies.clone(),
+            broad_groups: d.unknown_0xac[1].clone(),
+            tight_groups: d.unknown_0xac[2].clone(),
             weapon_of_choice: named(&d.unknown_0x124[0]),
             expertise: named(&d.unknown_0x124[1]),
             mastery: named(&d.unknown_0x124[2]),
@@ -810,6 +930,23 @@ impl CombatRules {
             .sum();
         if !character.skills_and_powers() {
             return spent;
+        }
+        for (broad, old, new) in [
+            (true, &old.broad_groups, &new.broad_groups),
+            (false, &old.tight_groups, &new.tight_groups),
+        ] {
+            let (added, _) = changes(old, new);
+            for group in added {
+                spent += bought(group).unwrap_or_else(|| {
+                    self.creation
+                        .as_ref()
+                        .and_then(|rules| {
+                            let draft = rules.update_draft(character, &levels);
+                            rules.group_offer(&draft, broad).ok()
+                        })
+                        .map_or(0, |offer| offer.cost.into())
+                });
+            }
         }
         // Each of the three is charged when set and refunded when cleared;
         // another weapon replaces the old one for nothing.
@@ -878,7 +1015,8 @@ impl CombatRules {
             .chain(&new.expertise)
             .chain(&new.mastery)
             .chain(&new.specializations);
-        if let Some(weapon) = used.into_iter().find(|w| !new.weapons.contains(w)) {
+        let covered = self.covered_weapons(character, new, &self.levels(character));
+        if let Some(weapon) = used.into_iter().find(|w| !covered.contains(w)) {
             return Some(tr!(
                 "{weapon} needs a weapon proficiency in it",
                 weapon = weapon.as_str()
@@ -916,6 +1054,10 @@ impl CombatRules {
         d.unknown_0x1778[0] = left as u32;
         if new.weapons != old.weapons {
             d.weapon_proficiencies.clone_from(&new.weapons);
+        }
+        if new.broad_groups != old.broad_groups || new.tight_groups != old.tight_groups {
+            d.unknown_0xac[1].clone_from(&new.broad_groups);
+            d.unknown_0xac[2].clone_from(&new.tight_groups);
         }
         let dialog = |c: &CharacterCombat| {
             (

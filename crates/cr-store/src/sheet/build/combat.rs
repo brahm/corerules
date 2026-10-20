@@ -680,13 +680,24 @@ fn racial_weapon_bonus(ctx: &Ctx, weapon: &Part) -> (i32, i32) {
     (attack, damage)
 }
 
+/// A weapon proficiency in the weapon, or with Skills & Powers a weapon
+/// group holding it (0x4321ac, 0x431db1).
 fn proficient(ctx: &Ctx, p: &Part) -> bool {
     let base = base_name(p);
-    ctx.ch
-        .data
-        .weapon_proficiencies
+    let d = &ctx.ch.data;
+    let groups = &ctx.rules.groups;
+    d.weapon_proficiencies
         .iter()
         .any(|w| w == base || w == &p.head.name)
+        || (ctx.sp && {
+            let tight: Vec<i32> = p
+                .data
+                .unknown_0x1cc
+                .iter()
+                .filter_map(|g| groups.tight_id(g))
+                .collect();
+            groups.covers(&d.unknown_0xac[1], &d.unknown_0xac[2], &tight)
+        })
 }
 
 fn specialized(ctx: &Ctx, p: &Part) -> bool {

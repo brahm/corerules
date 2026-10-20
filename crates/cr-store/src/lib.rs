@@ -18,6 +18,7 @@ pub mod encounter;
 mod exe;
 pub mod export;
 pub mod extract;
+pub mod groups;
 pub mod help;
 mod iso9660;
 pub mod lists;

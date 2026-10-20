@@ -143,6 +143,10 @@ pub enum WeaponCheck {
     /// A melee or missile specialization by a level (+0x51c, +0x520,
     /// +0x521; +0x1de7), checked on leaving the page.
     SpecializationByLevel,
+    /// Skills & Powers: broad and tight weapon groups the kit bars
+    /// (+0x3c0, +0x3d4; +0x1de4, +0x1de5).
+    BroadGroup,
+    TightGroup,
 }
 
 /// A question before taking something, which No answers by not taking
@@ -190,7 +194,10 @@ impl CreationRules {
         self.kit(&draft.kit).filter(|_| self.expansion)
     }
 
-    fn draft_classes<'a>(&'a self, draft: &'a Draft) -> impl Iterator<Item = &'a ClassRules> {
+    pub(super) fn draft_classes<'a>(
+        &'a self,
+        draft: &'a Draft,
+    ) -> impl Iterator<Item = &'a ClassRules> {
         draft.classes.iter().filter_map(|c| self.class(c))
     }
 
@@ -487,6 +494,7 @@ impl CreationRules {
             .iter()
             .map(|w| self.weapon_cost_for(draft, w))
             .sum::<u32>()
+            + self.group_spent(draft)
             + self.specialization_spent(draft)
             + core_unarmed
     }
@@ -508,6 +516,7 @@ impl CreationRules {
     /// The kit's list for every other weapon, while it still applies.
     fn every_other_list<'a>(&'a self, draft: &Draft, taken: &[String]) -> Option<&'a [String]> {
         let list = self.draft_kit(draft)?.sa(0x410);
+        let taken = self.with_groups(draft, taken);
         let applies = !list.is_empty()
             && !draft
                 .ignored_weapon_checks
@@ -517,7 +526,8 @@ impl CreationRules {
     }
 
     /// The warnings adding a weapon to those `taken` gives, in the
-    /// original's order, leaving out those ignored.
+    /// original's order, leaving out those ignored; the weapons the
+    /// groups cover count as taken.
     pub fn weapon_warnings(
         &self,
         draft: &Draft,
@@ -527,6 +537,7 @@ impl CreationRules {
         let (Some(kit), Some(weapon)) = (self.draft_kit(draft), self.weapon_part(name)) else {
             return Vec::new();
         };
+        let taken = &self.with_groups(draft, taken);
         let kit_name = draft.kit.as_str();
         let listed = |text: String, list: &[String]| format!("{text}\n{}", list.join(", "));
         let mut warnings = Vec::new();

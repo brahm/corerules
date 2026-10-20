@@ -217,3 +217,106 @@ fn update_applies_the_kit_and_class_weapon_rules_by_level() {
     new.weapons.push(weapons[0].clone());
     assert_eq!(rules.points_left(&character, &new), 0);
 }
+
+#[test]
+fn weapon_groups_cover_their_weapons_and_cost_warriors_and_priests_points() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(Path::new(&dir)).unwrap();
+    if install.is_core20() {
+        return;
+    }
+    let (creation, rules) = (
+        install.creation_rules().unwrap(),
+        install.combat_rules().unwrap(),
+    );
+    let draft = |class: &str, skills_and_powers: bool| {
+        let mut draft = cr_store::create::Draft::new(&cr_store::settings::SETTINGS[0]);
+        draft.scores = [16; 6];
+        draft.race = "Human".into();
+        draft.classes = vec![class.into()];
+        draft.alignment = "Lawful Good".into();
+        draft.name = "Test".into();
+        draft.hit_dice = vec![1];
+        draft.pack = false;
+        draft.skills_and_powers = skills_and_powers;
+        draft
+    };
+
+    // Skills & Powers only, and warriors and priests only.
+    let fighter = draft("Fighter", true);
+    assert!(
+        creation
+            .group_choices(&draft("Fighter", false), true)
+            .is_empty()
+    );
+    let covering = |draft: &cr_store::create::Draft, broad: bool| {
+        creation
+            .group_choices(draft, broad)
+            .into_iter()
+            .find(|g| !creation.group_weapons(broad, g).is_empty())
+            .unwrap()
+    };
+    let (broad, tight) = (covering(&fighter, true), covering(&fighter, false));
+    assert!(creation.group_offer(&fighter, true).is_ok());
+    assert!(creation.group_offer(&draft("Cleric", true), false).is_ok());
+    assert!(creation.group_offer(&draft("Thief", true), true).is_err());
+
+    // A group costs points and covers its weapons, which a specialization
+    // may then be in.
+    let mut grouped = fighter.clone();
+    grouped.broad_groups = vec![broad.clone()];
+    grouped.tight_groups = vec![tight.clone()];
+    let covered = creation.group_weapons(true, &broad);
+    assert!(!covered.is_empty());
+    assert!(
+        covered
+            .iter()
+            .all(|w| creation.covered_weapons(&grouped).contains(w))
+    );
+    assert!(creation.points_left(&grouped) < creation.points_left(&fighter));
+    assert!(!creation.group_choices(&grouped, true).contains(&broad));
+    grouped.weapon_of_choice = Some(covered[0].clone());
+    assert!(creation.combat_problem(&grouped).is_none());
+    assert!(creation.group_removal(&grouped, true).is_some());
+    grouped.weapon_of_choice = None;
+    assert!(creation.group_removal(&grouped, true).is_none());
+
+    // The file keeps them, and Update Character reads them back.
+    let mut character = creation.build(&grouped).unwrap();
+    assert_eq!(character.data.unknown_0xac[1], std::slice::from_ref(&broad));
+    assert_eq!(character.data.unknown_0xac[2], std::slice::from_ref(&tight));
+    let held = rules.combat_of(&character);
+    assert_eq!(held.broad_groups, std::slice::from_ref(&broad));
+    let levels = [1];
+    assert!(covered.iter().all(|w| {
+        rules
+            .covered_weapons(&character, &held, &levels)
+            .contains(w)
+    }));
+
+    // Update Character offers a group for free when the points run short,
+    // and keeps it in the file.
+    let next = covering(&grouped, true);
+    character.data.unknown_0x1778[0] = 0;
+    let purchase = rules
+        .group_purchase(&character, &held, &levels, true)
+        .unwrap();
+    assert!(purchase.cost > 0 && purchase.free.is_some());
+    let mut new = held.clone();
+    rules.group_bought(&mut new, &next, 0);
+    new.broad_groups.push(next.clone());
+    assert_eq!(rules.points_left(&character, &new), 0);
+    rules.apply(&mut character, &new).unwrap();
+    assert_eq!(character.data.unknown_0xac[1], [broad, next]);
+
+    // The kit's warning about the groups it bars is kept once ignored.
+    let mut new = rules.combat_of(&character);
+    new.ignored = vec![WeaponCheck::BroadGroup, WeaponCheck::TightGroup];
+    rules.apply(&mut character, &new).unwrap();
+    let ignored = rules.combat_of(&character).ignored;
+    assert!(
+        ignored.contains(&WeaponCheck::BroadGroup) && ignored.contains(&WeaponCheck::TightGroup)
+    );
+}

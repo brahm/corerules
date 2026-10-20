@@ -340,6 +340,8 @@ pub struct SheetRules {
     root: std::path::PathBuf,
     /// The Turning Undead labels and legend, read from the program.
     turning: Vec<String>,
+    /// The Player's Option weapon groups, read from the program.
+    groups: crate::groups::WeaponGroups,
 }
 
 impl SheetRules {
@@ -380,6 +382,11 @@ impl Installation {
             windows_root: "C:\\Program Files\\AD&D Core Rules 2.0".into(),
             root: self.root().to_owned(),
             turning: Vec::new(),
+            groups: if expansion {
+                crate::groups::WeaponGroups::load(self)
+            } else {
+                Default::default()
+            },
         };
         rules.turning = build::combat::turning_texts(self, rules.flavor);
         for object in self.list_objects("Class")? {

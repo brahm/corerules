@@ -80,6 +80,9 @@ pub struct ClassRules {
     /// (+0x2792), and for 2 points, 4 multi-classed (+0x2791).
     pub early_specialization: bool,
     pub cheap_specialization: bool,
+    /// Skills & Powers: buying a weapon group asks first, as the cleric's
+    /// (+0x27a1).
+    pub group_question: bool,
 }
 
 impl ClassRules {
@@ -118,6 +121,7 @@ impl ClassRules {
                 unarmed: data.flags_0x2795.is_some_and(|f| f[1] != 0),
                 early_specialization: data.flag_0x2792.unwrap_or(0) != 0,
                 cheap_specialization: data.flag_0x2791.unwrap_or(0) != 0,
+                group_question: data.flag_0x27a1 == Some(1),
             },
             // The 2.0 layout keeps the same values in one array, and the
             // same lists in a fixed array of lists.
@@ -156,6 +160,7 @@ impl ClassRules {
                     unarmed: false,
                     early_specialization: false,
                     cheap_specialization: false,
+                    group_question: false,
                 }
             }
         }
