@@ -574,3 +574,94 @@ fn the_rogue_skills_page_follows_the_kit() {
         "{own_points} {bonuses} {restricted} {chosen}"
     );
 }
+
+#[test]
+fn the_kit_trims_the_schools_and_spheres() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(Path::new(&dir)).unwrap();
+    if install.is_core20() {
+        return;
+    }
+    let rules = install.creation_rules().unwrap();
+    let magic = install.kit_magic_rules().unwrap();
+    let (mut barred, mut eliminated, mut spheres, mut free, mut never) = (0, 0, 0, 0, 0);
+    for kit in rules.all_kits() {
+        for class in ["Mage", "Cleric", "Druid"] {
+            let mut base = thief();
+            base.classes = vec![class.into()];
+            base.kit.clone_from(&kit);
+
+            // Creation removes the barred schools unless ignored, and
+            // Update removes them too.
+            if rules.kit_barred_schools_warning(&base).is_some() {
+                barred += 1;
+                let built = rules.build(&base).unwrap();
+                assert!(magic.barred_schools_warning(&built, &kit).is_none());
+                let mut draft = base.clone();
+                draft.barred_schools_ignored = true;
+                assert!(rules.kit_barred_schools_warning(&draft).is_none());
+                let mut kept = rules.build(&draft).unwrap();
+                assert!(magic.barred_schools_warning(&kept, &kit).is_some());
+                let mut new = magic.magic_of(&kept);
+                assert!(new.barred_ignored);
+                new.barred_ignored = false;
+                magic.apply(&mut kept, &new);
+                assert!(magic.barred_schools_warning(&kept, &kit).is_none());
+            }
+
+            // The schools beyond five go, once.
+            if let Some((count, schools)) = rules.kit_schools_to_eliminate(&base) {
+                eliminated += 1;
+                let mut draft = base.clone();
+                draft.eliminated_schools = schools[..count].to_vec();
+                let built = rules.build(&draft).unwrap();
+                assert_eq!(built.data.class_slots[0].unknown_0x270.len(), 5);
+                let new = magic.magic_of(&built);
+                assert_eq!(new.eliminated.len(), count);
+                assert!(magic.schools_to_eliminate(&built, &kit, &new).is_none());
+                let offered = rules.draft_spells(&draft);
+                assert!(offered.len() <= rules.draft_spells(&base).len());
+            }
+
+            let built = rules.build(&base).unwrap();
+            let mut updated = built.clone();
+            let mut new = magic.magic_of(&built);
+            if let Some((count, schools)) = magic.schools_to_eliminate(&built, &kit, &new) {
+                new.eliminated = schools[..count].to_vec();
+            }
+            // The spheres kept are at most the kit's numbers.
+            for pick in magic.sphere_picks(&built, &kit) {
+                spheres += 1;
+                new.spheres
+                    .push((pick.slot, pick.major, pick.names[..pick.most].to_vec()));
+            }
+            let choices = magic.free_sphere_choices(&built, &kit);
+            if let Some(sphere) = choices.first() {
+                free += 1;
+                new.free_sphere.clone_from(sphere);
+            }
+            if magic.spell_use_warning(&kit, &new).is_some() {
+                never += 1;
+                new.spell_use_ignored = true;
+                assert!(magic.spell_use_warning(&kit, &new).is_none());
+            }
+            magic.apply(&mut updated, &new);
+            let after = magic.magic_of(&updated);
+            assert!(magic.sphere_picks(&updated, &kit).is_empty());
+            assert!(magic.schools_to_eliminate(&updated, &kit, &after).is_none());
+            if !choices.is_empty() {
+                assert_eq!(after.free_sphere, choices[0]);
+                assert!(magic.free_sphere_choices(&updated, &kit).is_empty());
+            }
+            assert_eq!(after.spell_use_ignored, new.spell_use_ignored);
+        }
+    }
+    // Some kit bars schools, limits a wizard to five, gives a free sphere
+    // and never uses spells.
+    assert!(
+        barred > 0 && eliminated > 0 && free > 0 && never > 0,
+        "{barred} {eliminated} {spheres} {free} {never}"
+    );
+}

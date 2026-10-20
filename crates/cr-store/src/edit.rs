@@ -171,6 +171,9 @@ impl Installation {
         if let Some(abilities) = lists.and_then(|l| l.abilities.as_ref()) {
             self.ability_rules()?.apply(&mut character, abilities)?;
         }
+        if let Some(magic) = lists.and_then(|l| l.kit_magic.as_ref()) {
+            self.kit_magic_rules()?.apply(&mut character, magic);
+        }
         // Weapon proficiencies cost points too, so a changed list goes
         // through the combat rules even with nothing else of theirs.
         if let Some(lists) = lists

@@ -450,6 +450,18 @@ impl<T: Clone + 'static> RowList<T> {
         self.update();
     }
 
+    /// Calls `f` after every change too, after what is called already.
+    pub fn also_connect_changed(&self, f: impl Fn() + 'static) {
+        let before = self.changed.borrow_mut().take();
+        *self.changed.borrow_mut() = Some(Box::new(move || {
+            if let Some(before) = &before {
+                before();
+            }
+            f();
+        }));
+        self.update();
+    }
+
     fn update(&self) {
         self.empty.set_visible(self.rows.borrow().is_empty());
         if let Some(changed) = &*self.changed.borrow() {

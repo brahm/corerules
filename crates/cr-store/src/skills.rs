@@ -54,7 +54,6 @@ use cr_i18n::tr;
 use crate::advance::AdvanceRules;
 use crate::collate::sort_key;
 use crate::create::Dice;
-use crate::npc::data::Kit;
 use crate::npc::magic::{bonus16, psi_dev, psi_disc, psi_sci};
 use crate::sheet::SheetRules;
 use crate::userdb::powers::DISCIPLINES;
@@ -192,7 +191,6 @@ impl Installation {
         }
         powers.sort_by_cached_key(|p| sort_key(&p.name));
         let mut adept_abilities = HashSet::new();
-        let mut kits = HashMap::new();
         for relative in ["Database/Parts.dat", "UserDbas/PartsU.dat"] {
             if self.path(relative).is_none() {
                 continue;
@@ -208,24 +206,22 @@ impl Installation {
                     adept_abilities.insert(p.head.name.clone());
                 }
             }
-            for object in file.of_type("Character Kits").unwrap_or_default() {
-                if let Object::Part(p) = object
-                    && let Some(Some(kit)) = &p.data.kit
-                    && let Object::PartKit(kit) = &**kit
-                    && let Some(data) = &kit.data
-                {
-                    let kit = Kit::of(data);
-                    kits.entry(p.head.name.clone()).or_insert_with(|| KitRogue {
-                        first: kit.i_or(0x120, -1),
-                        per_level: kit.i_or(0x124, -1),
-                        adjust: kit.rogue_adjust.clone(),
-                        first_bonus: (kit.i(0x13c), kit.sa(0x140).to_vec()),
-                        later_bonus: (kit.i(0x154), kit.sa(0x158).to_vec()),
-                        chosen: (kit.i(0x16c), kit.i(0x170)),
-                    });
-                }
-            }
         }
+        let kits = self
+            .kit_parts()?
+            .into_iter()
+            .map(|(name, kit)| {
+                let rogue = KitRogue {
+                    first: kit.i_or(0x120, -1),
+                    per_level: kit.i_or(0x124, -1),
+                    adjust: kit.rogue_adjust.clone(),
+                    first_bonus: (kit.i(0x13c), kit.sa(0x140).to_vec()),
+                    later_bonus: (kit.i(0x154), kit.sa(0x158).to_vec()),
+                    chosen: (kit.i(0x16c), kit.i(0x170)),
+                };
+                (name, rogue)
+            })
+            .collect();
         let image = crate::exe::Image::open(self, crate::treasure::Flavor::Expansion).ok();
         let texts = |vas: &[u32]| -> Vec<String> {
             image.as_ref().map_or_else(Vec::new, |i| {

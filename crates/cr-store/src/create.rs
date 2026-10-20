@@ -625,6 +625,12 @@ pub struct Draft {
     pub rogue_bonus: Option<String>,
     /// The rogue skills the kit has the character choose (+0x16c).
     pub rogue_chosen: Vec<String>,
+    /// The kit's warning about the schools it bars was ignored
+    /// (`flag_0x1ea8`).
+    pub barred_schools_ignored: bool,
+    /// The schools a kit limited to five has the wizard eliminate
+    /// (`unknown_0x1e00`).
+    pub eliminated_schools: Vec<String>,
     /// Skills & Powers combat options.
     pub weapon_of_choice: Option<String>,
     pub expertise: Option<String>,
@@ -725,6 +731,8 @@ impl Draft {
             rogue_points: [0; 8],
             rogue_bonus: None,
             rogue_chosen: Vec::new(),
+            barred_schools_ignored: false,
+            eliminated_schools: Vec::new(),
             weapon_of_choice: None,
             expertise: None,
             unarmed: Vec::new(),
@@ -2358,16 +2366,30 @@ impl CreationRules {
         else {
             return Vec::new();
         };
+        self.spells_of(&wizard.schools)
+    }
+
+    /// [`Self::spells`] of the schools the kit leaves the draft's wizard
+    /// class ([`Self::kit_wizard_schools`]).
+    pub fn draft_spells(&self, draft: &Draft) -> Vec<String> {
+        self.kit_wizard_schools(draft)
+            .map(|schools| self.spells_of(&schools))
+            .unwrap_or_default()
+    }
+
+    /// The 1st-level wizard spells of `wizard` schools, every one with
+    /// none.
+    fn spells_of(&self, wizard: &[String]) -> Vec<String> {
         let mut spells: Vec<String> = self
             .wizard_spells
             .iter()
             .filter(|(_, level, schools)| {
                 *level == 1
-                    && (wizard.schools.is_empty()
+                    && (wizard.is_empty()
                         || schools.is_empty()
                         || schools
                             .iter()
-                            .any(|s| wizard.schools.contains(s) || s.contains("Lesser Divination")))
+                            .any(|s| wizard.contains(s) || s.contains("Lesser Divination")))
             })
             .map(|s| s.0.clone())
             .collect();
@@ -3046,6 +3068,7 @@ impl CreationRules {
         }
         if self.expansion {
             self.apply_kit(&mut character, &vec![1; draft.classes.len()]);
+            self.write_kit_schools(draft, &mut character);
         }
         // A psionicist starts with the PSPs of the 1st level, from the
         // final scores (0x42e916).

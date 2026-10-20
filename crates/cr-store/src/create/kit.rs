@@ -7,7 +7,9 @@
 //! spells it knows and the languages it adds by level. Also what the kit
 //! does on the Rogue Skills page of Create (IDD 342): its bonus to one
 //! skill at 1st level, the skills it has the character choose and the
-//! list its starting points go to.
+//! list its starting points go to; and on the Spells page (62f1c8), the
+//! schools it bars and those a kit limited to five has the wizard
+//! eliminate (see [`crate::kit_magic`]).
 
 use cr_formats::Object;
 use cr_formats::character::{Character, CharacterData};
@@ -223,6 +225,90 @@ impl CreationRules {
         let count = kit.i(0x16c);
         let names: Vec<String> = self.rogue_skills(draft).into_iter().map(|s| s.0).collect();
         (count > 0 && !names.is_empty()).then_some((count as usize, kit.i(0x170), names))
+    }
+
+    /// The schools of the draft's wizard class as the kit has them: the
+    /// different opposition schools (+0x1f0; 0x442cdf), or the class's.
+    fn kit_class_schools(&self, draft: &Draft) -> Option<Vec<String>> {
+        let class = draft
+            .classes
+            .iter()
+            .filter_map(|c| self.class(c))
+            .find(|c| c.group == 3)?;
+        let opposition = self
+            .draft_kit(draft)
+            .filter(|k| k.flag(0x1f0))
+            .and_then(|_| KIT_SCHOOLS.iter().find(|(id, _)| *id == class.id));
+        Some(match opposition {
+            Some((_, schools)) => schools.iter().map(|s| (*s).to_owned()).collect(),
+            None => class.schools.clone(),
+        })
+    }
+
+    /// The kit's warning about the schools it bars that the wizard class
+    /// has, unless ignored (+0x1dc; 63056f).
+    pub fn kit_barred_schools_warning(&self, draft: &Draft) -> Option<String> {
+        let barred = self.draft_kit(draft)?.sa(0x1dc);
+        let schools = self.kit_class_schools(draft)?;
+        (!draft.barred_schools_ignored && schools.iter().any(|s| barred.contains(s)))
+            .then(|| crate::kit_magic::barred_text(&draft.kit, barred))
+    }
+
+    /// How many schools beyond five a kit limited to five (+0x1fc;
+    /// 6309df) has the draft eliminate, and the schools to eliminate them
+    /// from.
+    pub fn kit_schools_to_eliminate(&self, draft: &Draft) -> Option<(usize, Vec<String>)> {
+        let kit = self.draft_kit(draft)?;
+        if !kit.flag(0x1fc) {
+            return None;
+        }
+        let schools = crate::kit_magic::kept(
+            &self.kit_class_schools(draft)?,
+            kit.sa(0x1dc),
+            draft.barred_schools_ignored,
+            &[],
+        );
+        let count = schools.len().checked_sub(5).filter(|&n| n > 0)?;
+        Some((count, schools))
+    }
+
+    /// The wizard class's schools once the kit's barred ones go, unless
+    /// ignored, and the eliminated ones; none without a wizard class.
+    pub fn kit_wizard_schools(&self, draft: &Draft) -> Option<Vec<String>> {
+        let schools = self.kit_class_schools(draft)?;
+        let barred = self.draft_kit(draft).map_or(&[][..], |k| k.sa(0x1dc));
+        Some(crate::kit_magic::kept(
+            &schools,
+            barred,
+            draft.barred_schools_ignored,
+            &draft.eliminated_schools,
+        ))
+    }
+
+    /// Writes the draft's schools into the wizard class, with the kit's
+    /// warning ignored and the schools eliminated.
+    pub(super) fn write_kit_schools(&self, draft: &Draft, character: &mut Character) {
+        let Some(kit) = self.draft_kit(draft) else {
+            return;
+        };
+        let d = &mut character.data;
+        for (slot, name) in draft.classes.iter().enumerate().take(5) {
+            if self.class(name).is_some_and(|c| c.group == 3) {
+                let s = &mut d.class_slots[slot];
+                s.unknown_0x270 = crate::kit_magic::kept(
+                    &s.unknown_0x270,
+                    kit.sa(0x1dc),
+                    draft.barred_schools_ignored,
+                    &draft.eliminated_schools,
+                );
+            }
+        }
+        if d.flag_0x1ea8.is_some() {
+            d.flag_0x1ea8 = Some(u8::from(draft.barred_schools_ignored));
+        }
+        if d.unknown_0x1e00.is_some() && !draft.eliminated_schools.is_empty() {
+            d.unknown_0x1e00 = Some(draft.eliminated_schools.clone());
+        }
     }
 
     /// The kit's warning when starting rogue points go to a skill outside
