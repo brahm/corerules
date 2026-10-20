@@ -1739,7 +1739,6 @@ impl Wizard {
         let d = self.0.draft.borrow().clone();
         let rules = self.rules();
         let sp = d.skills_and_powers;
-        let weapon_slots = rules.weapon_slots(&d.classes);
         let weapon_cost = rules.weapon_cost(&d.classes);
         let native = rules.native_languages(&d);
 
@@ -1974,37 +1973,192 @@ impl Wizard {
             },
             move |name| Some(language_spec(name)),
         );
-        let weapon_spec = move |name: String| RowSpec {
-            value: name.clone(),
-            title: name,
-            subtitle: if sp {
-                points(weapon_cost.into())
-            } else {
+        // What a weapon costs; the kit makes some cheaper or dearer.
+        let weapon_subtitle = move |rules: &CreationRules, draft: &Draft, name: &str| {
+            let cost = rules.weapon_cost_for(draft, name);
+            if sp {
+                points(cost.into())
+            } else if cost == 1 {
                 String::new()
-            },
-            number: None,
+            } else {
+                slots(cost)
+            }
+        };
+        let weapon_spec = {
+            let (this, draft) = (self.clone(), d.clone());
+            move |name: String| RowSpec {
+                value: name.clone(),
+                subtitle: weapon_subtitle(this.rules(), &draft, &name),
+                title: name,
+                number: None,
+            }
         };
         let taken_weapons: Rc<RefCell<Vec<String>>> = Rc::default();
+        let weapon_list: Rc<RefCell<Option<RowList<String>>>> = Rc::default();
         let weapons = RowList::new(
             tr("Weapon Proficiencies"),
             d.weapon_proficiencies
                 .iter()
                 .cloned()
-                .map(weapon_spec)
+                .map(weapon_spec.clone())
                 .collect(),
             {
-                let (this, taken, classes) =
-                    (self.clone(), taken_weapons.clone(), d.classes.clone());
+                let (this, taken) = (self.clone(), taken_weapons.clone());
                 move || {
                     this.rules()
-                        .weapons(&classes)
+                        .weapon_choices(&this.0.draft.borrow())
                         .into_iter()
                         .filter(|n| !taken.borrow().contains(n))
                         .collect()
                 }
             },
-            move |name| Some(weapon_spec(name)),
+            {
+                let (this, taken, list) =
+                    (self.clone(), taken_weapons.clone(), weapon_list.clone());
+                move |name: String| {
+                    let add = {
+                        let (list, spec, name) = (list.clone(), weapon_spec.clone(), name.clone());
+                        Rc::new(move || {
+                            if let Some(list) = &*list.borrow() {
+                                list.add(spec(name.clone()));
+                            }
+                        })
+                    };
+                    let taken = taken.borrow().clone();
+                    this.add_weapon(name, taken, false, add);
+                    None
+                }
+            },
         );
+        *weapon_list.borrow_mut() = Some(weapons.clone());
+        // Core Rules: weapon specialization, as the original's dialog.
+        let core = rules.core_specializes(&d);
+        let specialization_spec = {
+            let (this, draft) = (self.clone(), d.clone());
+            move |name: String| RowSpec {
+                value: name.clone(),
+                subtitle: slots(this.rules().core_specialization_cost(&draft, &name)),
+                title: name,
+                number: None,
+            }
+        };
+        let specialization_list: Rc<RefCell<Option<RowList<String>>>> = Rc::default();
+        // The draft as the page has it, once known.
+        type Probe = Rc<dyn Fn() -> Draft>;
+        let probe_cell: Rc<RefCell<Option<Probe>>> = Rc::default();
+        let specializations = RowList::new(
+            tr("Weapon Specialization"),
+            if core {
+                d.specializations
+                    .iter()
+                    .cloned()
+                    .map(specialization_spec.clone())
+                    .collect()
+            } else {
+                Vec::new()
+            },
+            {
+                let (taken, list) = (taken_weapons.clone(), specialization_list.clone());
+                move || {
+                    let chosen: Vec<String> = list
+                        .borrow()
+                        .as_ref()
+                        .map(|l| l.values().into_iter().map(|(v, _)| v).collect())
+                        .unwrap_or_default();
+                    taken
+                        .borrow()
+                        .iter()
+                        .filter(|w| !chosen.contains(w))
+                        .cloned()
+                        .collect()
+                }
+            },
+            {
+                let (this, list, probe) = (
+                    self.clone(),
+                    specialization_list.clone(),
+                    probe_cell.clone(),
+                );
+                move |name: String| {
+                    let probe = probe.borrow().clone()?;
+                    let add = {
+                        let (list, spec, name) =
+                            (list.clone(), specialization_spec.clone(), name.clone());
+                        Rc::new(move || {
+                            if let Some(list) = &*list.borrow() {
+                                list.add(spec(name.clone()));
+                            }
+                        })
+                    };
+                    this.specialize(name, 0, probe, add);
+                    None
+                }
+            },
+        );
+        *specialization_list.borrow_mut() = Some(specializations.clone());
+        specializations.group.set_visible(core);
+        // The free specialization the kit offers.
+        let free_choices = rules.free_specialization_choices(&d).to_vec();
+        let free_row = adw::ComboRow::builder().title(tr("Weapon")).build();
+        {
+            let mut items = vec![tr("None").to_owned()];
+            items.extend(free_choices.iter().cloned());
+            let chosen = d.free_specialization.clone();
+            refill(&free_row, &items, chosen.as_deref().unwrap_or(&items[0]));
+        }
+        let free_group = adw::PreferencesGroup::builder()
+            .title(tr("Free Specialization"))
+            .description(escape(tr(
+                "Your kit allows choosing a free weapon specialization from this list.",
+            )))
+            .visible(!free_choices.is_empty())
+            .build();
+        free_group.add(&free_row);
+
+        // The nonweapon slots the kit lets weapons use.
+        let lending_range = rules.nonweapon_lending(&d);
+        let lending = adw::SpinRow::with_range(0.0, 1.0, 1.0);
+        lending.set_title(tr("Nonweapon slots used"));
+        let lending_group = adw::PreferencesGroup::builder()
+            .title(tr("Nonweapon Slots for Weapons"))
+            .description(escape(&tr!(
+                "The kit {kit} lets weapon proficiencies use nonweapon proficiency slots.",
+                kit = d.kit
+            )))
+            .visible(lending_range.is_some())
+            .build();
+        lending_group.add(&lending);
+        // The weapon to focus in.
+        let focus_choices = rules.focus_choices(&d);
+        let focus = adw::ComboRow::builder().title(tr("Weapon")).build();
+        let focus_group = adw::PreferencesGroup::builder()
+            .title(tr("Weapon Focus"))
+            .visible(focus_choices.is_some())
+            .build();
+        if let Some((prompt, _)) = &focus_choices {
+            focus_group.set_description(Some(&escape(prompt)));
+        }
+        focus_group.add(&focus);
+        // What the kit asks of the weapons, as the original's box.
+        let requirements = rules.weapon_requirements(&d);
+        let requirements_group = adw::PreferencesGroup::builder()
+            .title(tr("Kit Weapon Proficiency Requirements"))
+            .description(escape(&tr!(
+                "The kit {kit} has the following weapon proficiency requirements:",
+                kit = d.kit
+            )))
+            .visible(!requirements.is_empty())
+            .build();
+        for line in &requirements {
+            let row = adw::ActionRow::builder()
+                .title(line)
+                .use_markup(false)
+                .build();
+            requirements_group.add(&row);
+        }
+        // Set while the page fills its rows, so their signals change
+        // nothing.
+        let filling = Rc::new(std::cell::Cell::new(false));
 
         let points_row = adw::ActionRow::builder()
             .title(tr("Character Points Left"))
@@ -2039,6 +2193,7 @@ impl Wizard {
                 weapons.clone(),
                 learned.clone(),
             );
+            let specializations = specializations.clone();
             move || {
                 let mut probe = this.0.draft.borrow().clone();
                 probe.nonweapon_proficiencies = repeated(&nonweapon);
@@ -2057,7 +2212,40 @@ impl Wizard {
                     let weapons = probe.weapon_proficiencies.clone();
                     probe.specializations.retain(|w| weapons.contains(w));
                 }
+                if this.rules().core_specializes(&probe) {
+                    probe.specializations = names(&specializations);
+                }
+                let focus = this.rules().focus_choices(&probe);
+                if let Some((_, choices)) = focus {
+                    probe.weapon_focus = probe.weapon_focus.filter(|w| choices.contains(w));
+                } else {
+                    probe.weapon_focus = None;
+                }
                 probe
+            }
+        });
+        *probe_cell.borrow_mut() = Some(current.clone());
+        // Core Rules: a specialized weapon keeps its proficiency until the
+        // specialization goes (5cae2c).
+        weapons.connect_remove({
+            let (this, current) = (self.clone(), current.clone());
+            move |name, remove| {
+                let probe = current();
+                let rules = this.rules();
+                if rules.core_specializes(&probe)
+                    && rules.all_specializations(&probe).contains(name)
+                {
+                    message(
+                        &this.0.dialog,
+                        tr("Specialized Weapon"),
+                        tr(
+                            "You must remove all specialization information for this weapon \
+                             before you can remove its proficiency.",
+                        ),
+                    );
+                } else {
+                    remove();
+                }
             }
         });
         let update = Rc::new({
@@ -2077,6 +2265,8 @@ impl Wizard {
                 taken_languages.clone(),
                 language_room.clone(),
             );
+            let (lending, focus, filling) = (lending.clone(), focus.clone(), filling.clone());
+            let specializations = specializations.clone();
             move || {
                 *taken_nonweapon.borrow_mut() = names(&nonweapon);
                 *taken_weapons.borrow_mut() = names(&weapons);
@@ -2086,6 +2276,29 @@ impl Wizard {
                 let probe = current();
                 let rules = this.rules();
                 nonweapon.set_subtitles(|name, _| nonweapon_subtitle(rules, &probe, name));
+                weapons.set_subtitles(|name, _| weapon_subtitle(rules, &probe, name));
+                specializations
+                    .set_subtitles(|name, _| slots(rules.core_specialization_cost(&probe, name)));
+                let mut costs = tr!(
+                    "Bows take {bows}, other weapons 1 slot.",
+                    bows = slots(rules.bow_specialization_cost(&probe))
+                );
+                if let Some(free) = rules.free_specialization(&probe) {
+                    costs = format!("{costs} {}", tr!("{free} is free.", free));
+                }
+                specializations.group.set_description(Some(&escape(&costs)));
+                filling.set(true);
+                if let Some((least, most)) = rules.nonweapon_lending(&probe) {
+                    lending.set_range(least.into(), most.into());
+                    lending.set_value(rules.borrowed_nonweapon(&probe).into());
+                }
+                if let Some((_, choices)) = rules.focus_choices(&probe) {
+                    let mut items = vec![tr("None").to_owned()];
+                    items.extend(choices);
+                    let chosen = probe.weapon_focus.clone();
+                    refill(&focus, &items, chosen.as_deref().unwrap_or(&items[0]));
+                }
+                filling.set(false);
                 let room = rules.language_slots(&probe);
                 language_room.set(room);
                 let languages_left = room as i64 - probe.learned_languages.len() as i64;
@@ -2098,7 +2311,8 @@ impl Wizard {
                 if !sp {
                     let nonweapon_slots = rules.nonweapon_slots_for(&probe);
                     let spent = rules.nonweapon_spent(&probe);
-                    let weapons_taken = probe.weapon_proficiencies.len() as u32;
+                    let weapon_slots = rules.weapon_slots_for(&probe);
+                    let weapons_taken = rules.weapon_spent(&probe);
                     nonweapon.group.set_description(Some(&tr!(
                         "{left} of {slots} left: the class's slots and the languages Intelligence allows",
                         left = nonweapon_slots as i64 - spent as i64,
@@ -2137,7 +2351,7 @@ impl Wizard {
                     "{cost} each; {free} come with the class, and points left from the \
                      proficiencies pay for more",
                     cost = points(weapon_cost.into()),
-                    free = points(rules.weapon_points(&probe.classes).into())
+                    free = points(rules.weapon_points_for(&probe).into())
                 )));
                 let total = rules.points_left(&probe);
                 points_label.set_label(&total.to_string().replace('-', "−"));
@@ -2152,6 +2366,29 @@ impl Wizard {
         learned.connect_changed({
             let update = update.clone();
             move || update()
+        });
+        lending.connect_value_notify({
+            let (this, update, filling) = (self.clone(), update.clone(), filling.clone());
+            move |row| {
+                if !filling.get() {
+                    this.0.draft.borrow_mut().lent_nonweapon = row.value() as u32;
+                    update();
+                }
+            }
+        });
+        focus.connect_selected_notify({
+            let (this, filling) = (self.clone(), filling.clone());
+            move |row| {
+                if filling.get() {
+                    return;
+                }
+                let chosen = row
+                    .selected_item()
+                    .and_downcast::<gtk::StringObject>()
+                    .map(|s| s.string().to_string())
+                    .filter(|_| row.selected() > 0);
+                this.0.draft.borrow_mut().weapon_focus = chosen;
+            }
         });
         let picks: Vec<adw::PreferencesGroup> = rules
             .nonweapon_picks(&d)
@@ -2184,14 +2421,54 @@ impl Wizard {
                 );
             });
         }
-        for list in [&nonweapon, &traits, &disadvantages, &weapons] {
+        free_row.connect_selected_notify({
+            let (this, update) = (self.clone(), update.clone());
+            move |row| {
+                let chosen = row
+                    .selected_item()
+                    .and_downcast::<gtk::StringObject>()
+                    .map(|s| s.string().to_string())
+                    .filter(|_| row.selected() > 0);
+                this.0.draft.borrow_mut().free_specialization = chosen;
+                update();
+            }
+        });
+        for list in [
+            &nonweapon,
+            &traits,
+            &disadvantages,
+            &weapons,
+            &specializations,
+        ] {
             let update = update.clone();
             list.connect_changed(move || update());
         }
         next.connect_clicked({
             let this = self.clone();
-            move |_| {
+            move |next| {
                 let probe = current();
+                // The specializations the kit requires (5d2bef, 5d2f71);
+                // Ignore leaves the page.
+                if this.rules().core_specializes(&probe)
+                    && let Some(warning) = this.rules().leaving_warnings(&probe).into_iter().next()
+                {
+                    let (this2, next) = (this.clone(), next.clone());
+                    ignorable(
+                        &this.0.dialog,
+                        tr("Kit Weapon Proficiency Requirements"),
+                        &warning.text,
+                        move || {
+                            this2
+                                .0
+                                .draft
+                                .borrow_mut()
+                                .ignored_weapon_checks
+                                .push(warning.check);
+                            next.emit_clicked();
+                        },
+                    );
+                    return;
+                }
                 {
                     let mut d = this.0.draft.borrow_mut();
                     if d.weapon_proficiencies != probe.weapon_proficiencies {
@@ -2207,6 +2484,7 @@ impl Wizard {
                     d.specializations = probe.specializations;
                     d.weapon_of_choice = probe.weapon_of_choice;
                     d.expertise = probe.expertise;
+                    d.weapon_focus = probe.weapon_focus;
                 }
                 if sp {
                     this.push(this.combat_page());
@@ -2222,13 +2500,110 @@ impl Wizard {
                 &disadvantages.group,
                 &languages,
                 &learned.group,
+                &requirements_group,
+                &lending_group,
                 &weapons.group,
+                &focus_group,
+                &specializations.group,
+                &free_group,
                 &points_group,
             ])
             .collect();
         step(tr("Proficiencies"), &groups, &next, None, || {
             topic::NONWEAPON_PROFICIENCIES
         })
+    }
+
+    /// Adds a weapon proficiency once the kit's warnings allow it
+    /// (0x444079, 5d4aa7): a Yes/No question for a ranged weapon the kit
+    /// limits, then each warning, which Ignore passes for good.
+    fn add_weapon(&self, name: String, taken: Vec<String>, confirmed: bool, add: Rc<dyn Fn()>) {
+        let d = self.0.draft.borrow().clone();
+        let rules = self.rules();
+        if !confirmed && rules.weapon_needs_confirmation(&d, &name) {
+            let this = self.clone();
+            ask(
+                &self.0.dialog,
+                tr("Kit Restriction"),
+                tr(
+                    "The selected kit limits the character from weapons which fire ranged \
+                     attacks. This weapon fires ranged attacks. Would you like to purchase it \
+                     anyway?",
+                ),
+                move || this.add_weapon(name.clone(), taken.clone(), true, add.clone()),
+                || {},
+            );
+            return;
+        }
+        let Some(warning) = rules.weapon_warnings(&d, &taken, &name).into_iter().next() else {
+            add();
+            return;
+        };
+        let this = self.clone();
+        ignorable(
+            &self.0.dialog,
+            tr("Kit Weapon Proficiency Requirements"),
+            &warning.text,
+            move || {
+                this.0
+                    .draft
+                    .borrow_mut()
+                    .ignored_weapon_checks
+                    .push(warning.check);
+                this.add_weapon(name.clone(), taken.clone(), true, add.clone());
+            },
+        );
+    }
+
+    /// Core Rules: specializes in a weapon once the questions (from the
+    /// `asked`th on) are answered Yes, the kit's warning passed and the
+    /// slots suffice (61e897).
+    fn specialize(
+        &self,
+        name: String,
+        asked: usize,
+        probe: Rc<dyn Fn() -> Draft>,
+        add: Rc<dyn Fn()>,
+    ) {
+        let d = probe();
+        let rules = self.rules();
+        if let Some(question) = rules.specialization_questions(&d, &name).get(asked) {
+            let this = self.clone();
+            ask(
+                &self.0.dialog,
+                &question.title,
+                &question.text,
+                move || this.specialize(name.clone(), asked + 1, probe.clone(), add.clone()),
+                || {},
+            );
+            return;
+        }
+        if let Some(warning) = rules.specialization_warnings(&d, &name).into_iter().next() {
+            let this = self.clone();
+            ignorable(
+                &self.0.dialog,
+                tr("Kit Specialization Requirements"),
+                &warning.text,
+                move || {
+                    this.0
+                        .draft
+                        .borrow_mut()
+                        .ignored_weapon_checks
+                        .push(warning.check);
+                    this.specialize(name.clone(), asked, probe.clone(), add.clone());
+                },
+            );
+            return;
+        }
+        if !rules.specialization_fits(&d, &name) {
+            message(
+                &self.0.dialog,
+                tr("Not Allowed"),
+                tr("You do not have enough slots."),
+            );
+            return;
+        }
+        add();
     }
 
     /// A list the classes or the kit have the user pick proficiencies

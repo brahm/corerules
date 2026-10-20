@@ -174,10 +174,16 @@ impl CreationRules {
         (base >= 1).then_some(base as u32)
     }
 
+    /// Core Rules nonweapon proficiency slots, less those lent to weapon
+    /// proficiencies.
+    pub fn nonweapon_slots_for(&self, draft: &Draft) -> u32 {
+        self.nonweapon_slots_unlent(draft) - self.borrowed_nonweapon(draft)
+    }
+
     /// Core Rules nonweapon proficiency slots (5c458c): the best of the
     /// classes', or the kit's when chosen, plus the languages Intelligence
     /// gives, one more with kit +0x30c and one a level with +0x30d.
-    pub fn nonweapon_slots_for(&self, draft: &Draft) -> u32 {
+    pub(super) fn nonweapon_slots_unlent(&self, draft: &Draft) -> u32 {
         let intelligence = self.adjusted(&draft.race, &draft.scores)[3];
         let mut slots = match self.kit_nonweapon_base(draft) {
             Some(base) if draft.kit_nonweapon_base == Some(true) => {

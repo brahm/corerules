@@ -27,8 +27,11 @@
 
 mod kit;
 mod nonweapon;
+mod weapon;
 
 pub use nonweapon::{NonweaponPick, PickKind};
+use weapon::WeaponRules;
+pub use weapon::{WeaponCheck, WeaponWarning};
 
 use cr_i18n::{tr, tr_noop};
 use std::collections::{HashMap, HashSet};
@@ -62,6 +65,8 @@ pub const ABILITIES: [&str; 6] = [
 
 /// `inventory` indexes of the readied and worn items.
 const READIED: usize = 3;
+/// The bows' tight weapon group id.
+const BOW_GROUP: i32 = 6;
 const WORN: usize = 5;
 
 /// What the original's wizard buys for every new character: a backpack
@@ -628,6 +633,16 @@ pub struct Draft {
     /// The warning about the proficiencies the kit bars was ignored
     /// (+0x1dea).
     pub barred_nonweapon_ignored: bool,
+    /// The kit's warnings about weapon proficiencies that were ignored.
+    pub ignored_weapon_checks: Vec<WeaponCheck>,
+    /// Nonweapon slots lent to weapon proficiencies, when the kit allows
+    /// (see [`CreationRules::nonweapon_lending`]).
+    pub lent_nonweapon: u32,
+    /// The weapon the kit has the character focus in (+0x1e68).
+    pub weapon_focus: Option<String>,
+    /// Core Rules: the free specialization picked from the kit's list
+    /// (+0x550), on top of [`Draft::specializations`].
+    pub free_specialization: Option<String>,
 }
 
 impl Draft {
@@ -679,6 +694,10 @@ impl Draft {
             kit_nonweapon_base: None,
             required_nonweapon_added: false,
             barred_nonweapon_ignored: false,
+            ignored_weapon_checks: Vec::new(),
+            lent_nonweapon: 0,
+            weapon_focus: None,
+            free_specialization: None,
         }
     }
 
@@ -700,6 +719,10 @@ impl Draft {
         self.kit_nonweapon_base = None;
         self.required_nonweapon_added = false;
         self.barred_nonweapon_ignored = false;
+        self.ignored_weapon_checks.clear();
+        self.lent_nonweapon = 0;
+        self.weapon_focus = None;
+        self.free_specialization = None;
     }
 }
 
@@ -721,7 +744,7 @@ pub struct CreationRules {
     traits: Vec<(String, u32)>,
     disadvantages: Vec<(String, u32)>,
     /// Weapons and the classes that may not use them.
-    weapons: Vec<(String, Vec<String>)>,
+    weapons: Vec<WeaponRules>,
     /// Wizard spells: name, level, schools.
     wizard_spells: Vec<(String, i32, Vec<String>)>,
     pub wares: Vec<Ware>,
@@ -844,6 +867,18 @@ impl Installation {
             parts: self.part_table()?,
         };
         let mut seen = HashSet::new();
+        // The tight weapon groups' ids, which the program holds (its part
+        // document's constructor 0x677978); the bows are id 6.
+        let tight_groups: HashMap<String, i32> = if expansion {
+            crate::exe::Image::open(self, crate::treasure::Flavor::Expansion)
+                .ok()
+                .and_then(|image| image.id_tables(0x677978, 0x3800, 0x572030).remove(&0x248))
+                .unwrap_or_default()
+                .into_iter()
+                .collect()
+        } else {
+            HashMap::new()
+        };
         for relative in ["Database/Parts.dat", "UserDbas/PartsU.dat"] {
             if self.path(relative).is_none() {
                 continue;
@@ -951,10 +986,20 @@ impl Installation {
                         continue;
                     }
                     if part_type == "Weapons" {
-                        rules.weapons.push((
-                            part.head.name.clone(),
-                            part.data.allowed_classes.clone().unwrap_or_default(),
-                        ));
+                        let kind = &part.head.unknown_0x3b8;
+                        let bow = part
+                            .data
+                            .unknown_0x1cc
+                            .iter()
+                            .any(|g| tight_groups.get(g) == Some(&BOW_GROUP));
+                        rules.weapons.push(WeaponRules {
+                            name: part.head.name.clone(),
+                            barred_classes: part.data.allowed_classes.clone().unwrap_or_default(),
+                            melee: kind[0] != 0,
+                            missile: kind[1] != 0,
+                            ranged: kind[2] != 0,
+                            bow,
+                        });
                     }
                     let price = &part.head.unknown_0x1f8;
                     let cost = [500, 100, 10, 1]
@@ -1004,7 +1049,7 @@ impl Installation {
             .sort_by_cached_key(|n| crate::collate::sort_key(&n.0));
         rules
             .weapons
-            .sort_by_cached_key(|n| crate::collate::sort_key(&n.0));
+            .sort_by_cached_key(|n| crate::collate::sort_key(&n.name));
         rules
             .wares
             .sort_by_cached_key(|n| crate::collate::sort_key(&n.name));
@@ -2045,10 +2090,9 @@ impl CreationRules {
     /// levels: what the proficiencies leave, plus the weapon allotment,
     /// less the weapon proficiencies and the combat options.
     pub fn points_left(&self, draft: &Draft) -> i64 {
-        let cost = i64::from(self.weapon_cost(&draft.classes));
-        let allotment = i64::from(self.weapon_points(&draft.classes));
+        let allotment = i64::from(self.weapon_points_for(draft));
         self.proficiency_points_left(draft) + allotment
-            - draft.weapon_proficiencies.len() as i64 * cost
+            - i64::from(self.weapon_spent(draft))
             - i64::from(self.combat_spent(draft))
     }
 
@@ -2135,8 +2179,8 @@ impl CreationRules {
     pub fn weapons(&self, classes: &[String]) -> Vec<String> {
         self.weapons
             .iter()
-            .filter(|(_, forbidden)| classes.iter().any(|c| !forbidden.contains(c)))
-            .map(|(name, _)| name.clone())
+            .filter(|w| classes.iter().any(|c| !w.barred_classes.contains(c)))
+            .map(|w| w.name.clone())
             .collect()
     }
 
@@ -2435,9 +2479,14 @@ impl CreationRules {
                 slots
             ));
         }
-        let slots = self.weapon_slots(&draft.classes);
-        if draft.weapon_proficiencies.len() as u32 > slots {
-            return Some(tr!("There are {slots} weapon proficiency slots", slots));
+        let slots = self.weapon_slots_for(draft);
+        let spent = self.weapon_spent(draft);
+        if spent > slots {
+            return Some(tr!(
+                "The weapon proficiencies take {spent} slots; there are {slots}",
+                spent,
+                slots
+            ));
         }
         None
     }
@@ -2747,6 +2796,34 @@ impl CreationRules {
             if let Some(flags) = d.flags_0x1dea.as_mut() {
                 flags[0] = u8::from(draft.barred_nonweapon_ignored);
             }
+            let ignored = |check| u8::from(draft.ignored_weapon_checks.contains(&check));
+            d.flag_0x1dde = Some(ignored(WeaponCheck::FirstFromList));
+            if let Some(flags) = d.flags_0x1ddf.as_mut() {
+                flags[0] = ignored(WeaponCheck::OddMissile);
+                flags[3] = ignored(WeaponCheck::Barred);
+            }
+            d.flags_0x1de8 = Some([
+                ignored(WeaponCheck::Ranged),
+                ignored(WeaponCheck::Recommended),
+            ]);
+            if let Some((least, _)) = self.nonweapon_lending(draft) {
+                d.unknown_0x1df8 = Some(self.borrowed_nonweapon(draft));
+                d.unknown_0x1dfc = Some(least);
+            }
+            if let Some(texts) = d.unknown_0x1e68.as_mut() {
+                texts[6] = draft.weapon_focus.clone().unwrap_or_default();
+            }
+            d.flag_0x1de1 = Some(ignored(WeaponCheck::SpecializationRequired));
+            d.flags_0x1de6 = Some([
+                ignored(WeaponCheck::SpecializationList),
+                ignored(WeaponCheck::SpecializationByLevel),
+            ]);
+            if self.core_specializes(draft) {
+                let mut all = self.all_specializations(draft);
+                all.sort_by(|x, y| x.as_bytes().cmp(y.as_bytes()));
+                d.unknown_0xac[3] = all;
+            }
+            d.unknown_0x1dc8 = Some(self.free_specialization(draft).into_iter().collect());
             if let Some(base) = d.unknown_0x1df0.as_mut() {
                 let chosen = draft.kit_nonweapon_base == Some(true);
                 base.0 = if chosen && self.kit_nonweapon_base(draft).is_some() {
@@ -2937,6 +3014,7 @@ mod tests {
             required_nonweapon: Vec::new(),
             bonus_nonweapon: Vec::new(),
             bonus_nonweapon_count: 1,
+            core_specialization: group == 0,
         }
     }
 
@@ -3083,10 +3161,17 @@ mod tests {
             .collect(),
             traits: vec![("Allure".into(), 4)],
             disadvantages: vec![("Allergies".into(), 3), ("Greed".into(), 7)],
-            weapons: vec![
-                ("Dagger".into(), Vec::new()),
-                ("Sword, long".into(), vec!["Mage".into()]),
-            ],
+            weapons: [("Dagger", vec![]), ("Sword, long", vec!["Mage".into()])]
+                .into_iter()
+                .map(|(name, barred_classes)| WeaponRules {
+                    name: name.into(),
+                    barred_classes,
+                    melee: true,
+                    missile: name == "Dagger",
+                    ranged: false,
+                    bow: false,
+                })
+                .collect(),
             wizard_spells: vec![
                 (
                     "Magic Missile".into(),

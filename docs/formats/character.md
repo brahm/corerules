@@ -211,15 +211,15 @@ version.
 | 34 | `unknown_0x1870` | u32 | always | +0x1870 | unknown |
 | 35 | `unknown_0x1dc4` | u32 | always | +0x1dc4 | Expansion level-limit mode (Level dialog radios): 0 none, 1 racial limits, 2 limits with prime requisite bonuses. Experience is never capped, only the level |
 | 36 | `flags_0x1ddc` | u8[2] | v > 30 | +0x1ddc | unknown; `[1, 0]` in new Expansion characters and NPCs |
-| 37 | `flag_0x1dde` | u8 | v > 31 | +0x1dde | unknown |
-| 38 | `flags_0x1ddf` | u8[6] | v > 32 | +0x1ddf | unknown |
-| 39 | `flag_0x1de1` | u8 | v > 33 | +0x1de1 | unknown |
-| 40 | `flags_0x1de6` | u8[2] | v > 36 | +0x1de6 | unknown |
-| 41 | `flags_0x1de8` | u8[2] | v > 40 | +0x1de8 | unknown |
+| 37 | `flag_0x1dde` | u8 | v > 31 | +0x1dde | 1 once the kit's warning that some of the first weapon proficiencies come from its list (kit +0x43c, +0x440, +0x424) was ignored for good (IDD 245's Ignore, Weapon Proficiencies page 5d4aa7) |
+| 38 | `flags_0x1ddf` | u8[6] | v > 32 | +0x1ddf, +0x1de0, +0x1de2..+0x1de5 | weapon proficiency warnings of the kit ignored for good, as `flag_0x1dde`: `[0]` every odd-numbered one a missile or thrown weapon (kit +0x438), `[1]` a thrown weapon or one from its list (+0x3fc), `[2]` its sword rule (+0x398), `[3]` the weapons it bars (+0x3ac); the rest unknown |
+| 39 | `flag_0x1de1` | u8 | v > 33 | +0x1de1 | 1 once the warning that the kit requires a specialization from its list (kit +0x3e8) was ignored for good, on leaving the Weapon Proficiencies page (5d2bef) |
+| 40 | `flags_0x1de6` | u8[2] | v > 36 | +0x1de6, +0x1de7 | specialization warnings of the kit ignored for good: `[0]` specializations only from its list (kit +0x524), `[1]` a melee or missile specialization by a level (+0x51c, +0x520, +0x521; 5d2f71) |
+| 41 | `flags_0x1de8` | u8[2] | v > 40 | +0x1de8, +0x1de9 | weapon proficiency warnings of the kit ignored for good: `[0]` no missile weapons at creation (kit +0x508), `[1]` only those it requires or recommends (+0x76, the +0x568 groups and +0x384) |
 | 42 | `flags_0x1dea` | u8[3] | v > 34 | +0x1dea | warnings ignored for good on the Nonweapon Proficiencies page (IDD 245's Ignore): `[0]` the proficiencies the kit bars (kit +0x26c), `[1]` the secondary skills it limits to (+0x2d0), `[2]` its "no secondary skills" (+0x314). Note the condition: this field follows a v > 40 one |
 | 43 | `unknown_0x1df0` | (u32, u8) | v > 37 | +0x1df0, +0x1df4 | the u32: whether the kit's starting nonweapon slots (kit +0x318) are used, 1 yes, 0xffffffff no or none, 0 not asked yet (Core Rules, 5c458c); the u8: 1 once the user declined to learn the proficiency the kit requires by a level (kit +0x31c, +0x320). `(0xffffffff, 0)` in new Expansion characters and NPCs |
-| 44 | `unknown_0x1df8` | u32 | v > 41 | +0x1df8 | unknown |
-| 45 | `unknown_0x1dfc` | u32 | v > 44 | +0x1dfc | unknown |
+| 44 | `unknown_0x1df8` | u32 | v > 41 | +0x1df8 | nonweapon proficiency slots the kit lets weapon proficiencies use (kit +0x44d), Core Rules; 0 otherwise |
+| 45 | `unknown_0x1dfc` | u32 | v > 44 | +0x1dfc | the least of those slots: half the nonweapon slots with kit +0x44e, else 0 |
 | 46 | `unknown_0x39c` | CString | v > 46 | +0x39c | unknown |
 | 47 | `unknown_0x1e50` | u32 | always | +0x1e50 | unknown |
 | 48 | `flags_0x1e54` | u8[5] | v > 53 | +0x1e54 | Skills & Powers unarmed combat specializations, 1 when held: punching, wrestling, martial arts, then two flags nothing sets |
@@ -253,7 +253,7 @@ version.
 | 76 | `nonweapon_details` | CObArray<CStringArray> | always | +0x1808 | one `CStringArray` object per nonweapon proficiency, parallel: the languages learned through Modern Languages and the like, empty for the others. See [below](#cstringarray-objects-in-nonweapon_details) |
 | 77 | `languages` | CStringArray | always | +0x181c | native languages, names of Languages parts, kept in alphabetical order; 2.0 writes none |
 | 78 | `unknown_0x1930` | CStringArray[2] | v > 29 | +0x1930, +0x1944 | `[0]` unknown (old notes: bonus proficiencies a class requires, low confidence); `[1]` proficiencies chosen as class or kit bonuses, which the sheet counts as granted |
-| 79 | `unknown_0x1dc8` | CStringArray | v > 35 | +0x1dc8 | unknown (old notes: free kit weapon specializations, low confidence) |
+| 79 | `unknown_0x1dc8` | CStringArray | v > 35 | +0x1dc8 | the free weapon specialization, picked from the kit's list (+0x550) or the first taken from those it makes free (+0x53c), also in the specializations (`unknown_0xac[3]`); it costs nothing (61de85) |
 | 80 | `unknown_0x1958` | CStringArray | v > 38 | +0x1958 | nonweapon proficiencies that get +2 to their score |
 | 81 | `inventory` | [CInventoryBundle](#inventory-bundles)[9] | always | +0x19d8 + 0x6c * i | the nine equipment bundles, inline |
 | 82 | `unknown_0x1ea4` | (u8, CStringArray[2]) | v > 39 | +0x1ea4, +0x214c, +0x2160 | unknown; the rogue-skill total's kit adjustment (0x442f93) reads +0x2160 |
