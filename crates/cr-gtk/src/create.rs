@@ -3,6 +3,7 @@
 //! classes every later page offers.
 
 use std::cell::RefCell;
+use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -11,9 +12,9 @@ use cr_i18n::{tr, tr_noop, trn};
 use cr_store::create::{
     ABILITIES, CreationRules, DISADVANTAGE_POINTS, Dice, Draft, METHOD_VI_DICE, METHOD_VII_POINTS,
     METHOD_VIII_DICE, METHOD_X_STRENGTH_STEP, MOST_DISADVANTAGES, MOST_FIGHTING_STYLES,
-    NonweaponPick, PickKind, ROGUE_SKILLS, RollMethod, SHIELDS, STANDARD_PACK, SUBABILITIES,
-    SUBABILITY_SPREAD, UNARMED, max_spells_per_level, point_table, roll_dice_pool, roll_seven_dice,
-    seven_dice_scores,
+    NonweaponPick, PickKind, Question, ROGUE_SKILLS, RollMethod, SHIELDS, STANDARD_PACK,
+    SUBABILITIES, SUBABILITY_SPREAD, UNARMED, max_spells_per_level, point_table, roll_dice_pool,
+    roll_seven_dice, seven_dice_scores,
 };
 use cr_store::help::topic;
 use cr_store::pictures::ItemIcons;
@@ -166,6 +167,37 @@ fn question(
         }
     });
     alert.present(Some(parent));
+}
+
+/// A message with OK that runs `then` once closed.
+fn notice(parent: &impl IsA<gtk::Widget>, heading: &str, body: &str, then: impl Fn() + 'static) {
+    let alert = adw::AlertDialog::builder()
+        .heading(heading)
+        .body(body)
+        .default_response("ok")
+        .close_response("ok")
+        .build();
+    alert.add_response("ok", tr("_OK"));
+    alert.connect_response(None, move |_, _| then());
+    alert.present(Some(parent));
+}
+
+/// Asks the questions in turn and runs `then` once each is answered Yes
+/// (a notice only needs OK).
+fn ask_each(parent: &adw::Dialog, mut questions: VecDeque<Question>, then: Rc<dyn Fn()>) {
+    let Some(question) = questions.pop_front() else {
+        then();
+        return;
+    };
+    let next = {
+        let parent = parent.clone();
+        move || ask_each(&parent, questions.clone(), then.clone())
+    };
+    if question.notice {
+        notice(parent, &question.title, &question.text, next);
+    } else {
+        ask(parent, &question.title, &question.text, next, || {});
+    }
 }
 
 /// A warning the user may ignore, as the original's IDD 245: OK refuses
@@ -2043,6 +2075,17 @@ impl Wizard {
             }
         };
         let specialization_list: Rc<RefCell<Option<RowList<String>>>> = Rc::default();
+        let unarmed_checks: Rc<RefCell<Vec<gtk::CheckButton>>> = Rc::default();
+        // Specializing drops the unarmed styles, once asked.
+        let drop_unarmed: Rc<dyn Fn()> = Rc::new({
+            let (this, checks) = (self.clone(), unarmed_checks.clone());
+            move || {
+                this.0.draft.borrow_mut().unarmed.clear();
+                for check in checks.borrow().iter() {
+                    check.set_active(false);
+                }
+            }
+        });
         // The draft as the page has it, once known.
         type Probe = Rc<dyn Fn() -> Draft>;
         let probe_cell: Rc<RefCell<Option<Probe>>> = Rc::default();
@@ -2074,13 +2117,15 @@ impl Wizard {
                 }
             },
             {
-                let (this, list, probe) = (
+                let (this, list, probe, drop_unarmed) = (
                     self.clone(),
                     specialization_list.clone(),
                     probe_cell.clone(),
+                    drop_unarmed.clone(),
                 );
                 move |name: String| {
                     let probe = probe.borrow().clone()?;
+                    let drop_unarmed = drop_unarmed.clone();
                     let add = {
                         let (list, spec, name) =
                             (list.clone(), specialization_spec.clone(), name.clone());
@@ -2090,7 +2135,7 @@ impl Wizard {
                             }
                         })
                     };
-                    this.specialize(name, 0, probe, add);
+                    this.specialize(name, 0, probe, drop_unarmed, add);
                     None
                 }
             },
@@ -2363,6 +2408,26 @@ impl Wizard {
                 );
             }
         });
+        // Core Rules: unarmed combat, from the specialization dialog.
+        let unarmed = self.unarmed_group(
+            current.clone(),
+            Rc::new({
+                let this = self.clone();
+                move |unarmed| this.0.draft.borrow_mut().unarmed = unarmed
+            }),
+            update.clone(),
+            unarmed_checks.clone(),
+            Rc::new({
+                let (this, specializations, free_row) =
+                    (self.clone(), specializations.clone(), free_row.clone());
+                move || {
+                    specializations.clear();
+                    this.0.draft.borrow_mut().free_specialization = None;
+                    free_row.set_selected(0);
+                }
+            }),
+        );
+        unarmed.set_visible(core && unarmed.is_visible());
         learned.connect_changed({
             let update = update.clone();
             move || update()
@@ -2422,13 +2487,33 @@ impl Wizard {
             });
         }
         free_row.connect_selected_notify({
-            let (this, update) = (self.clone(), update.clone());
+            let (this, update, drop_unarmed) = (self.clone(), update.clone(), drop_unarmed.clone());
             move |row| {
                 let chosen = row
                     .selected_item()
                     .and_downcast::<gtk::StringObject>()
                     .map(|s| s.string().to_string())
                     .filter(|_| row.selected() > 0);
+                let conflict = chosen
+                    .as_ref()
+                    .and_then(|_| this.rules().specialization_conflict(&this.0.draft.borrow()));
+                if let Some(conflict) = conflict {
+                    let (this2, update2, drop_unarmed) =
+                        (this.clone(), update.clone(), drop_unarmed.clone());
+                    let row2 = row.clone();
+                    ask(
+                        &this.0.dialog,
+                        &conflict.title,
+                        &conflict.text,
+                        move || {
+                            drop_unarmed();
+                            this2.0.draft.borrow_mut().free_specialization = chosen.clone();
+                            update2();
+                        },
+                        move || row2.set_selected(0),
+                    );
+                    return;
+                }
                 this.0.draft.borrow_mut().free_specialization = chosen;
                 update();
             }
@@ -2506,6 +2591,7 @@ impl Wizard {
                 &focus_group,
                 &specializations.group,
                 &free_group,
+                &unarmed,
                 &points_group,
             ])
             .collect();
@@ -2514,28 +2600,23 @@ impl Wizard {
         })
     }
 
-    /// Adds a weapon proficiency once the kit's warnings allow it
-    /// (0x444079, 5d4aa7): a Yes/No question for a ranged weapon the kit
-    /// limits, then each warning, which Ignore passes for good.
-    fn add_weapon(&self, name: String, taken: Vec<String>, confirmed: bool, add: Rc<dyn Fn()>) {
+    /// Adds a weapon proficiency once the questions buying it asks are
+    /// answered Yes (0x444079), then each of the kit's warnings, which
+    /// Ignore passes for good (5d4aa7).
+    fn add_weapon(&self, name: String, taken: Vec<String>, asked: bool, add: Rc<dyn Fn()>) {
         let d = self.0.draft.borrow().clone();
         let rules = self.rules();
-        if !confirmed && rules.weapon_needs_confirmation(&d, &name) {
+        if !asked {
             let this = self.clone();
-            ask(
+            ask_each(
                 &self.0.dialog,
-                tr("Kit Restriction"),
-                tr(
-                    "The selected kit limits the character from weapons which fire ranged \
-                     attacks. This weapon fires ranged attacks. Would you like to purchase it \
-                     anyway?",
-                ),
-                move || this.add_weapon(name.clone(), taken.clone(), true, add.clone()),
-                || {},
+                rules.weapon_questions(&d, &taken, &name).into(),
+                Rc::new(move || this.add_weapon(name.clone(), taken.clone(), true, add.clone())),
             );
             return;
         }
         let Some(warning) = rules.weapon_warnings(&d, &taken, &name).into_iter().next() else {
+            rules.weapon_added(&mut self.0.draft.borrow_mut(), &taken, &name);
             add();
             return;
         };
@@ -2563,17 +2644,47 @@ impl Wizard {
         name: String,
         asked: usize,
         probe: Rc<dyn Fn() -> Draft>,
+        drop_unarmed: Rc<dyn Fn()>,
         add: Rc<dyn Fn()>,
     ) {
         let d = probe();
         let rules = self.rules();
+        // Unarmed combat goes first, once Yes is answered (61edf1).
+        if let Some(conflict) = rules.specialization_conflict(&d) {
+            let this = self.clone();
+            ask(
+                &self.0.dialog,
+                &conflict.title,
+                &conflict.text,
+                move || {
+                    drop_unarmed();
+                    this.specialize(
+                        name.clone(),
+                        asked,
+                        probe.clone(),
+                        drop_unarmed.clone(),
+                        add.clone(),
+                    );
+                },
+                || {},
+            );
+            return;
+        }
         if let Some(question) = rules.specialization_questions(&d, &name).get(asked) {
             let this = self.clone();
             ask(
                 &self.0.dialog,
                 &question.title,
                 &question.text,
-                move || this.specialize(name.clone(), asked + 1, probe.clone(), add.clone()),
+                move || {
+                    this.specialize(
+                        name.clone(),
+                        asked + 1,
+                        probe.clone(),
+                        drop_unarmed.clone(),
+                        add.clone(),
+                    )
+                },
                 || {},
             );
             return;
@@ -2590,7 +2701,13 @@ impl Wizard {
                         .borrow_mut()
                         .ignored_weapon_checks
                         .push(warning.check);
-                    this.specialize(name.clone(), asked, probe.clone(), add.clone());
+                    this.specialize(
+                        name.clone(),
+                        asked,
+                        probe.clone(),
+                        drop_unarmed.clone(),
+                        add.clone(),
+                    );
                 },
             );
             return;
@@ -2697,6 +2814,189 @@ impl Wizard {
         group
     }
 
+    /// Skills & Powers: specializes in a weapon once the question about
+    /// unarmed combat is answered Yes (which drops it), the kit's
+    /// questions too and its warning passed (61edf1).
+    fn po_specialize(
+        &self,
+        name: String,
+        state: Rc<RefCell<Draft>>,
+        drop_unarmed: Rc<dyn Fn()>,
+        choose: Rc<dyn Fn()>,
+    ) {
+        let probe = state.borrow().clone();
+        let rules = self.rules();
+        if let Some(conflict) = rules.specialization_conflict(&probe) {
+            let this = self.clone();
+            ask(
+                &self.0.dialog,
+                &conflict.title,
+                &conflict.text,
+                move || {
+                    drop_unarmed();
+                    this.po_specialize(
+                        name.clone(),
+                        state.clone(),
+                        drop_unarmed.clone(),
+                        choose.clone(),
+                    );
+                },
+                || {},
+            );
+            return;
+        }
+        let questions = rules.specialization_questions(&probe, &name);
+        let this = self.clone();
+        ask_each(
+            &self.0.dialog,
+            questions.into(),
+            Rc::new(move || this.po_specialization_warning(&name, &state, &choose)),
+        );
+    }
+
+    /// The kit's warning about the specialization, if any, then `choose`.
+    fn po_specialization_warning(
+        &self,
+        name: &str,
+        state: &Rc<RefCell<Draft>>,
+        choose: &Rc<dyn Fn()>,
+    ) {
+        let probe = state.borrow().clone();
+        let Some(warning) = self
+            .rules()
+            .specialization_warnings(&probe, name)
+            .into_iter()
+            .next()
+        else {
+            choose();
+            return;
+        };
+        let (this, state, choose) = (self.clone(), state.clone(), choose.clone());
+        ignorable(
+            &self.0.dialog,
+            tr("Kit Specialization Requirements"),
+            &warning.text,
+            move || {
+                state.borrow_mut().ignored_weapon_checks.push(warning.check);
+                this.0
+                    .draft
+                    .borrow_mut()
+                    .ignored_weapon_checks
+                    .push(warning.check);
+                choose();
+            },
+        );
+    }
+
+    /// The unarmed styles to tick, when a class or the kit allows them;
+    /// one taken while a weapon is specialized asks first, and Yes drops
+    /// the specialization (6208ac). The Core Rules check the slots.
+    fn unarmed_group(
+        &self,
+        probe: Rc<dyn Fn() -> Draft>,
+        set_unarmed: Rc<dyn Fn(Vec<String>)>,
+        update: Rc<dyn Fn()>,
+        checks: Rc<RefCell<Vec<gtk::CheckButton>>>,
+        drop_specialization: Rc<dyn Fn()>,
+    ) -> adw::PreferencesGroup {
+        let d = probe();
+        let rules = self.rules();
+        let cost = rules.unarmed_cost(&d);
+        let group = adw::PreferencesGroup::builder()
+            .title(tr("Unarmed Combat"))
+            .description(tr(
+                "Specialization in an unarmed style, not together with a weapon specialization",
+            ))
+            .visible(cost.is_some())
+            .build();
+        let filling = Rc::new(std::cell::Cell::new(false));
+        for (i, name) in UNARMED.iter().enumerate() {
+            let check = gtk::CheckButton::builder()
+                .valign(gtk::Align::Center)
+                .active(d.unarmed.iter().any(|u| u == name))
+                .build();
+            let subtitle = match cost {
+                Some(cost) if d.skills_and_powers => points(cost.into()),
+                Some(cost) => slots(cost),
+                None => String::new(),
+            };
+            let row = adw::ActionRow::builder()
+                .title(*name)
+                .subtitle(subtitle)
+                .activatable_widget(&check)
+                .build();
+            row.add_prefix(&check);
+            group.add(&row);
+            checks.borrow_mut().push(check.clone());
+            let (this, probe, set_unarmed, update, filling, drop_specialization) = (
+                self.clone(),
+                probe.clone(),
+                set_unarmed.clone(),
+                update.clone(),
+                filling.clone(),
+                drop_specialization.clone(),
+            );
+            check.connect_toggled(move |check| {
+                let mut unarmed = probe().unarmed;
+                if filling.get() || check.is_active() == unarmed.iter().any(|u| u == name) {
+                    return;
+                }
+                if !check.is_active() {
+                    unarmed.retain(|u| u != name);
+                    set_unarmed(unarmed);
+                    update();
+                    return;
+                }
+                filling.set(true);
+                check.set_active(false);
+                filling.set(false);
+                let take: Rc<dyn Fn()> = Rc::new({
+                    let (probe, set_unarmed, update, filling, check) = (
+                        probe.clone(),
+                        set_unarmed.clone(),
+                        update.clone(),
+                        filling.clone(),
+                        check.clone(),
+                    );
+                    move || {
+                        let mut unarmed = probe().unarmed;
+                        unarmed.push(UNARMED[i].to_owned());
+                        set_unarmed(unarmed);
+                        filling.set(true);
+                        check.set_active(true);
+                        filling.set(false);
+                        update();
+                    }
+                });
+                let rules = this.rules();
+                let probe = probe();
+                if let Some(conflict) = rules.unarmed_conflict(&probe) {
+                    // Dropping the specialization frees its slots.
+                    let drop_specialization = drop_specialization.clone();
+                    ask(
+                        &this.0.dialog,
+                        &conflict.title,
+                        &conflict.text,
+                        move || {
+                            drop_specialization();
+                            take();
+                        },
+                        || {},
+                    );
+                } else if !probe.skills_and_powers && !rules.unarmed_fits(&probe) {
+                    message(
+                        &this.0.dialog,
+                        tr("Not Allowed"),
+                        tr("You do not have enough slots."),
+                    );
+                } else {
+                    take();
+                }
+            });
+        }
+        group
+    }
+
     /// Skills & Powers: weapon of choice, expertise and specialization,
     /// unarmed combat, shield and armor proficiencies and fighting styles,
     /// paid from the points the proficiencies leave, as the original's
@@ -2779,7 +3079,7 @@ impl Wizard {
         );
         specialization.set_visible(specialization_cost.is_some());
         let picked = |row: &adw::ComboRow| (row.selected() > 0).then(|| combo_value(row));
-        for (row, field) in [(&choice, 0), (&expertise, 1), (&specialization, 2)] {
+        for (row, field) in [(&choice, 0), (&expertise, 1)] {
             let (state, update) = (state.clone(), update.clone());
             row.connect_selected_notify(move |row| {
                 {
@@ -2787,17 +3087,87 @@ impl Wizard {
                     let value = picked(row);
                     match field {
                         0 => probe.weapon_of_choice = value,
-                        1 => probe.expertise = value,
-                        _ => probe.specializations = value.into_iter().collect(),
+                        _ => probe.expertise = value,
                     }
                 }
                 update();
             });
         }
+        // Set while a selection or a check is put back, so its handler
+        // changes nothing.
+        let filling = Rc::new(std::cell::Cell::new(false));
+        let unarmed_checks: Rc<RefCell<Vec<gtk::CheckButton>>> = Rc::default();
+        let quietly = {
+            let filling = filling.clone();
+            move |f: &dyn Fn()| {
+                filling.set(true);
+                f();
+                filling.set(false);
+            }
+        };
+        // Specializing asks first about unarmed combat, the kit's melee
+        // rule and its list (61edf1).
+        specialization.connect_selected_notify({
+            let (this, state, update, filling, quietly) = (
+                self.clone(),
+                state.clone(),
+                update.clone(),
+                filling.clone(),
+                quietly.clone(),
+            );
+            let (items, unarmed_checks) = (weapon_items.clone(), unarmed_checks.clone());
+            move |row| {
+                if filling.get() {
+                    return;
+                }
+                let Some(name) = picked(row) else {
+                    state.borrow_mut().specializations.clear();
+                    update();
+                    return;
+                };
+                let before = state.borrow().specializations.first().cloned();
+                let at = |name: Option<&String>| {
+                    name.and_then(|n| items.iter().position(|i| i == n))
+                        .unwrap_or(0) as u32
+                };
+                quietly(&|| row.set_selected(at(before.as_ref())));
+                let choose: Rc<dyn Fn()> = Rc::new({
+                    let (row, state, update, quietly, name) = (
+                        row.clone(),
+                        state.clone(),
+                        update.clone(),
+                        quietly.clone(),
+                        name.clone(),
+                    );
+                    let at = at(Some(&name));
+                    move || {
+                        quietly(&|| row.set_selected(at));
+                        state.borrow_mut().specializations = vec![name.clone()];
+                        update();
+                    }
+                });
+                let drop_unarmed: Rc<dyn Fn()> = Rc::new({
+                    let (state, quietly, checks) =
+                        (state.clone(), quietly.clone(), unarmed_checks.clone());
+                    move || {
+                        state.borrow_mut().unarmed.clear();
+                        quietly(&|| {
+                            for check in checks.borrow().iter() {
+                                check.set_active(false);
+                            }
+                        });
+                    }
+                });
+                this.po_specialize(name, state.clone(), drop_unarmed, choose);
+            }
+        });
         let weapons = adw::PreferencesGroup::builder()
             .title(tr("Weapons"))
-            .description(if specialization_cost.is_none() && classes.iter().any(|c| c == "Fighter") {
-                tr("Only a single-classed fighter with Weapon specialization may specialize at 1st level")
+            .description(if specialization_cost.is_none() {
+                tr(
+                    "This character does not have any Class Abilities allowing specialization at \
+                    1st level.",
+                )
             } else {
                 tr("Among the weapon proficiencies taken")
             })
@@ -2831,21 +3201,23 @@ impl Wizard {
                 group.add(&row);
             }
         };
-        let unarmed_cost = rules.unarmed_cost(&classes);
-        let unarmed = adw::PreferencesGroup::builder()
-            .title(tr("Unarmed Combat"))
-            .description(tr("Specialization in an unarmed style, for fighters"))
-            .visible(unarmed_cost.is_some())
-            .build();
-        checks(
-            &unarmed,
-            &UNARMED,
-            unarmed_cost.unwrap_or(0),
-            &|i| d.unarmed.iter().any(|u| u == UNARMED[i]),
-            Rc::new(|probe: &mut Draft, i, on| {
-                probe.unarmed.retain(|u| u != UNARMED[i]);
-                if on {
-                    probe.unarmed.push(UNARMED[i].to_owned());
+        let unarmed = self.unarmed_group(
+            Rc::new({
+                let state = state.clone();
+                move || state.borrow().clone()
+            }),
+            Rc::new({
+                let state = state.clone();
+                move |unarmed| state.borrow_mut().unarmed = unarmed
+            }),
+            update.clone(),
+            unarmed_checks.clone(),
+            Rc::new({
+                let (state, quietly, specialization) =
+                    (state.clone(), quietly.clone(), specialization.clone());
+                move || {
+                    state.borrow_mut().specializations.clear();
+                    quietly(&|| specialization.set_selected(0));
                 }
             }),
         );

@@ -1,14 +1,21 @@
 //! What the kit does on the Weapon Proficiencies page of the original's
 //! Create Character (IDD 308): the slots or points (59e778), the weapons
-//! it offers and what they cost (0x444079), the warnings when adding one
-//! (5d4aa7), the nonweapon slots a kit lets weapons use, the
-//! requirements it lists (5d44df), the weapon to focus in and, for the
-//! Core Rules, weapon specialization (IDD 356, 61e897).
+//! it offers, what they cost and the questions before buying one
+//! (0x444079), the warnings when adding one (5d4aa7), the nonweapon slots
+//! a kit lets weapons use, the requirements it lists (5d44df), the weapon
+//! to focus in, weapon specialization and unarmed combat (IDD 356,
+//! 61e897).
 
+use cr_formats::parts::Part;
 use cr_i18n::tr;
 
-use super::{CreationRules, Draft};
-use crate::npc::data::Kit;
+use super::{BOW_GROUP, CreationRules, Draft};
+use crate::dual::ClassRules;
+use crate::npc::data::{Kit, PartExt};
+use crate::npc::{BROAD_SWORDS, broad_has_tight};
+
+/// The slots a Core Rules unarmed style takes (61e5c1).
+const CORE_UNARMED_SLOTS: u32 = 2;
 
 /// A weapon part: who may not use it and what kind of weapon it is.
 #[derive(Debug, Clone)]
@@ -22,8 +29,82 @@ pub(super) struct WeaponRules {
     pub missile: bool,
     /// It fires ranged attacks, needing ammunition (+0x3c0).
     pub ranged: bool,
-    /// In the bows' tight group (+0x1cc).
-    pub bow: bool,
+    /// Its tight groups' ids (+0x1cc).
+    pub tight: Vec<i32>,
+    /// Its damage types, and the Core Rules' own when set (+0x3b4,
+    /// +0x3e4).
+    pub damage: [String; 2],
+    /// A thief may use it (+0x448).
+    pub thief: bool,
+    /// Not for the classes the lesser or major Weapon Use ability lets use
+    /// weapons (+0x4c8, +0x4cc).
+    pub ability_barred: [bool; 2],
+    /// A wizard pays 3 points more for it out of class (+0x4d0).
+    pub wizard_extra: bool,
+}
+
+impl WeaponRules {
+    pub fn bow(&self) -> bool {
+        self.tight.contains(&BOW_GROUP)
+    }
+
+    /// In a tight group of the swords' broad group (4798c2).
+    pub fn sword(&self) -> bool {
+        self.tight.iter().any(|&t| broad_has_tight(t, BROAD_SWORDS))
+    }
+
+    /// Piercing or slashing (0x661802).
+    pub fn edged(&self, core: bool) -> bool {
+        let damage = match &self.damage {
+            [_, own] if core && !own.is_empty() => own,
+            [damage, _] => damage,
+        };
+        damage.contains('P') || damage.contains('S')
+    }
+}
+
+/// What a class ability does to weapon proficiencies.
+#[derive(Debug, Clone, Copy, Default)]
+pub(super) struct AbilityWeapons {
+    /// Cleric Weapon Allowance: one edged weapon (+0x7a0).
+    pub allowance: bool,
+    /// Melee, cleric (not edged) or thief weapons only (+0x7c0, +0x7c4,
+    /// +0x7c8).
+    pub melee_only: bool,
+    pub blunt_only: bool,
+    pub thief_only: bool,
+    /// Weapon Use Lesser and Major (+0x81c, +0x820).
+    pub use_lesser: bool,
+    pub use_major: bool,
+    /// Skills & Powers: allows weapon specialization (+0x782).
+    pub specialize: bool,
+}
+
+impl AbilityWeapons {
+    pub(super) fn of(part: &Part) -> Self {
+        let on = |off| part.n(off) != 0;
+        Self {
+            allowance: on(0x7a0),
+            melee_only: on(0x7c0),
+            blunt_only: on(0x7c4),
+            thief_only: on(0x7c8),
+            use_lesser: on(0x81c),
+            use_major: on(0x820),
+            specialize: on(0x782),
+        }
+    }
+
+    fn or(self, other: Self) -> Self {
+        Self {
+            allowance: self.allowance || other.allowance,
+            melee_only: self.melee_only || other.melee_only,
+            blunt_only: self.blunt_only || other.blunt_only,
+            thief_only: self.thief_only || other.thief_only,
+            use_lesser: self.use_lesser || other.use_lesser,
+            use_major: self.use_major || other.use_major,
+            specialize: self.specialize || other.specialize,
+        }
+    }
 }
 
 /// A warning the kit gives when a weapon proficiency is added, which the
@@ -34,12 +115,18 @@ pub enum WeaponCheck {
     Ranged,
     /// Weapons the kit bars (+0x3ac; +0x1de3).
     Barred,
+    /// The first sword from a list (+0x398; +0x1de2).
+    Sword,
+    /// Thrown weapons or those from a list (+0x3fc; +0x1de0).
+    Thrown,
     /// Every odd-numbered one a missile or thrown weapon (+0x438;
     /// +0x1ddf).
     OddMissile,
     /// Some of the first ones from a list (+0x43c, +0x440, +0x424;
     /// +0x1dde).
     FirstFromList,
+    /// Every other one from a list (+0x410; +0x1ddd).
+    EveryOther,
     /// Only those the kit requires or recommends (+0x76; +0x1de9).
     Recommended,
     /// Specializations only from a list (+0x524; +0x1de6).
@@ -52,12 +139,24 @@ pub enum WeaponCheck {
     SpecializationByLevel,
 }
 
-/// A Yes/No question before specializing, which No answers by not
-/// specializing: its title and text.
+/// A question before taking something, which No answers by not taking
+/// it, or a notice to acknowledge: its title and text.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Question {
     pub title: String,
     pub text: String,
+    /// Only to acknowledge, with OK.
+    pub notice: bool,
+}
+
+impl Question {
+    fn new(title: &str, text: String) -> Self {
+        Self {
+            title: title.into(),
+            text,
+            notice: false,
+        }
+    }
 }
 
 /// A warning about a weapon to add: which one and its text.
@@ -65,6 +164,12 @@ pub struct Question {
 pub struct WeaponWarning {
     pub check: WeaponCheck,
     pub text: String,
+}
+
+/// What buying a weapon proficiency costs and asks first.
+struct Offer {
+    cost: u32,
+    questions: Vec<Question>,
 }
 
 impl CreationRules {
@@ -76,29 +181,90 @@ impl CreationRules {
         self.kit(&draft.kit).filter(|_| self.expansion)
     }
 
+    fn draft_classes<'a>(&'a self, draft: &'a Draft) -> impl Iterator<Item = &'a ClassRules> {
+        draft.classes.iter().filter_map(|c| self.class(c))
+    }
+
+    /// What the character's class abilities do to weapons.
+    fn ability_weapons(&self, draft: &Draft) -> AbilityWeapons {
+        (0..draft.classes.len())
+            .flat_map(|slot| self.chosen_class_abilities(draft, slot))
+            .filter_map(|a| self.ability_weapons.get(&a).copied())
+            .fold(AbilityWeapons::default(), AbilityWeapons::or)
+    }
+
+    /// Whether a class's own rule lets it use the weapon (0x669550).
+    fn class_allows(class: &ClassRules, weapon: &WeaponRules, core: bool) -> bool {
+        if class.weapon_rule == "Any" || class.weapon_list.contains(&weapon.name) {
+            return true;
+        }
+        if (class.no_edged && weapon.edged(core)) || class.weapon_rule == "Only from list below" {
+            return false;
+        }
+        let damage = match &weapon.damage {
+            [_, own] if core && !own.is_empty() => own,
+            [damage, _] => damage,
+        };
+        damage == "none" || class.weapon_rule.contains(damage.as_str())
+    }
+
     /// Whether one of the classes may use the weapon, or the kit gives it
-    /// (+0x484).
+    /// (+0x484), or a Weapon Use ability allows it (0x444079).
     fn weapon_in_class(&self, draft: &Draft, weapon: &WeaponRules) -> bool {
-        draft
+        if !self.expansion {
+            return draft
+                .classes
+                .iter()
+                .any(|c| !weapon.barred_classes.contains(c));
+        }
+        let core = !draft.skills_and_powers;
+        let kit_gives = self
+            .draft_kit(draft)
+            .is_some_and(|k| k.sa(0x484).contains(&weapon.name));
+        let some = (draft
             .classes
             .iter()
             .any(|c| !weapon.barred_classes.contains(c))
-            || self
+            || kit_gives)
+            && self
+                .draft_classes(draft)
+                .any(|c| Self::class_allows(c, weapon, core));
+        let abilities = self.ability_weapons(draft);
+        some || (abilities.use_lesser && !weapon.ability_barred[0])
+            || (abilities.use_major && !weapon.ability_barred[1])
+    }
+
+    /// An edged weapon a class may not use, as clerics, unless the kit
+    /// gives it (+0x484).
+    fn cleric_restricted(&self, draft: &Draft, weapon: &WeaponRules) -> bool {
+        self.draft_classes(draft).any(|c| c.no_edged)
+            && weapon.edged(!draft.skills_and_powers)
+            && !self
                 .draft_kit(draft)
                 .is_some_and(|k| k.sa(0x484).contains(&weapon.name))
     }
 
-    /// The weapons the page offers: those the classes or the kit allow,
-    /// any weapon when the kit lets the Core Rules take others at a price
-    /// (+0x460), and at 1st level only the kit's list when it has one
+    /// A weapon the kit (+0x470, up to the level) or a racial ability
+    /// (+0x574, +0x578) makes free.
+    fn weapon_free(&self, draft: &Draft, name: &str) -> bool {
+        self.draft_kit(draft)
+            .is_some_and(|k| k.free_weapons.iter().any(|(w, l)| w == name && *l <= 1))
+            || draft
+                .racial_abilities
+                .iter()
+                .filter_map(|a| self.racial_weapons.get(a))
+                .any(|weapons| weapons.iter().any(|w| w == name))
+    }
+
+    /// The weapons the page offers: every weapon, the classes' price and
+    /// questions deciding (the Core Rules 2.0 only those the classes may
+    /// use), and at 1st level only the kit's list when it has one
     /// (+0x4b8).
     pub fn weapon_choices(&self, draft: &Draft) -> Vec<String> {
-        let kit = self.draft_kit(draft);
-        let any = !draft.skills_and_powers && kit.is_some_and(|k| k.i_or(0x460, -1) != -1);
-        let only = kit.map_or(&[][..], |k| k.sa(0x4b8));
+        let only = self.draft_kit(draft).map_or(&[][..], |k| k.sa(0x4b8));
         self.weapons
             .iter()
-            .filter(|w| any || self.weapon_in_class(draft, w))
+            .filter(|w| self.expansion || self.weapon_in_class(draft, w))
             .filter(|w| only.is_empty() || only.contains(&w.name))
             .map(|w| w.name.clone())
             .collect()
@@ -137,49 +303,190 @@ impl CreationRules {
         (base as i32 + kit.i(0x448)).max(0) as u32
     }
 
-    /// What a weapon proficiency costs: with the Core Rules a slot, or
-    /// the kit's price for a weapon the classes may not use (+0x460);
-    /// with Skills & Powers the classes' points, nothing for the kit's
-    /// free weapons (+0x470) and a point less for those it favors (+0x444,
-    /// +0x384).
-    pub fn weapon_cost_for(&self, draft: &Draft, name: &str) -> u32 {
-        let kit = self.draft_kit(draft);
-        if !draft.skills_and_powers {
-            let out_of_class = self
-                .weapon_part(name)
-                .is_some_and(|w| !self.weapon_in_class(draft, w));
-            return match kit.map(|k| k.i_or(0x460, -1)) {
-                Some(price) if out_of_class && price != -1 => (price + 1).max(1) as u32,
-                _ => 1,
-            };
-        }
-        let cost = self.weapon_cost(&draft.classes);
-        let Some(kit) = kit else {
-            return cost;
+    /// What buying a weapon besides those `taken` costs and asks first, in
+    /// the original's order (0x444079, 5cc802). The Core Rules charge a
+    /// slot, or the kit's price where the original refuses the weapon
+    /// (+0x460): an edged one for a cleric, or one out of class. Skills &
+    /// Powers charge the classes' points, nothing for a free weapon, a
+    /// point less for one the kit favors (+0x444, +0x384), and 1 more for
+    /// one out of class (a wizard 2, or 3 with +0x4d0).
+    fn weapon_offer(&self, draft: &Draft, taken: &[String], name: &str) -> Offer {
+        let core = !draft.skills_and_powers;
+        let base = if core {
+            1
+        } else {
+            self.weapon_cost(&draft.classes)
         };
-        if kit.free_weapons.iter().any(|(w, l)| w == name && *l <= 1) {
-            return 0;
+        let offer = |cost, questions| Offer { cost, questions };
+        let Some(weapon) = self.weapon_part(name).filter(|_| self.expansion) else {
+            return offer(base, Vec::new());
+        };
+        if self.weapon_free(draft, name) {
+            return offer(u32::from(core), Vec::new());
         }
-        let favored = kit.flag(0x444) || kit.sa(0x384).iter().any(|n| n == name);
-        cost.saturating_sub(u32::from(favored))
+        let kit = self.draft_kit(draft);
+        let price = kit
+            .map(|k| k.i_or(0x460, -1))
+            .filter(|&p| p != -1)
+            .map(|p| (p + 1).max(0) as u32);
+        let abilities = self.ability_weapons(draft);
+        let class_restriction = tr("Verify ignore Class Restriction");
+        let mut questions = Vec::new();
+        if self.cleric_restricted(draft, weapon) {
+            if abilities.allowance {
+                let restricted = taken
+                    .iter()
+                    .filter_map(|t| self.weapon_part(t))
+                    .any(|w| self.cleric_restricted(draft, w));
+                if restricted {
+                    questions.push(Question::new(
+                        class_restriction,
+                        tr(
+                            "Your Cleric character already has at least one restricted Weapon \
+                            Proficiency. Would you like to purchase another anyway?",
+                        )
+                        .into(),
+                    ));
+                }
+                questions.push(Question {
+                    notice: true,
+                    ..Question::new(
+                        class_restriction,
+                        tr(
+                            "This Weapon Proficiency is restricted to Clerics. Since you have \
+                            the Class Ability 'Weapon Allowance' this will be your favored edged \
+                            weapon.",
+                        )
+                        .into(),
+                    )
+                });
+            } else if core && let Some(price) = price {
+                return offer(price, questions);
+            } else {
+                questions.push(Question::new(
+                    class_restriction,
+                    tr(
+                        "This Weapon Proficiency is not allowed for Clerics. Would you like to \
+                        purchase it anyway?",
+                    )
+                    .into(),
+                ));
+            }
+        }
+        let mut cost = base;
+        if !core && kit.is_some_and(|k| k.flag(0x444) || k.sa(0x384).iter().any(|n| n == name)) {
+            cost = cost.saturating_sub(1);
+        }
+        if kit.is_some_and(|k| k.flag(0x79)) && weapon.ranged {
+            questions.push(Question::new(
+                tr("Verify ignore Kit Restriction"),
+                tr(
+                    "The selected kit limits the character from weapons which fire ranged \
+                    attacks. This weapon fires ranged attacks. Would you like to purchase it \
+                    anyway?",
+                )
+                .into(),
+            ));
+        }
+        if !self.weapon_in_class(draft, weapon) {
+            if !core {
+                let wizard = self.draft_classes(draft).any(|c| c.group == 3);
+                cost += match (wizard, weapon.wizard_extra) {
+                    (false, _) => 1,
+                    (true, false) => 2,
+                    (true, true) => 3,
+                };
+            } else if let Some(price) = price {
+                return offer(price, questions);
+            } else {
+                questions.push(Question::new(
+                    class_restriction,
+                    tr(
+                        "This Weapon Proficiency is not allowed to your class. Would you like \
+                        to purchase it anyway?",
+                    )
+                    .into(),
+                ));
+            }
+        }
+        let restrictions = [
+            (
+                abilities.melee_only && !weapon.melee,
+                tr(
+                    "This character has a class restriction limiting it to melee weapons. The \
+                    selected weapon proficiency is not a melee weapon. Would you like to \
+                    purchase this proficiency anyway?",
+                ),
+            ),
+            (
+                abilities.blunt_only && weapon.edged(core),
+                tr(
+                    "This character has a class restriction limiting it to non-edged weapons. \
+                    Would you like to purchase this proficiency anyway?",
+                ),
+            ),
+            (
+                abilities.thief_only && !weapon.thief,
+                tr(
+                    "This character has a class restriction limiting it to thief weapons. This \
+                    weapon is not available to thieves. Would you like to purchase this \
+                    proficiency anyway?",
+                ),
+            ),
+        ];
+        for (_, text) in restrictions.into_iter().filter(|r| r.0) {
+            questions.push(Question::new(class_restriction, text.into()));
+        }
+        offer(if core { 1 } else { cost }, questions)
+    }
+
+    /// What a weapon proficiency costs (see [`Self::weapon_questions`]
+    /// for the questions buying it asks).
+    pub fn weapon_cost_for(&self, draft: &Draft, name: &str) -> u32 {
+        self.weapon_offer(draft, &draft.weapon_proficiencies, name)
+            .cost
     }
 
     /// The slots or points the weapon proficiencies take, with the Core
-    /// Rules the specializations' too.
+    /// Rules the specializations' and unarmed styles' too.
     pub fn weapon_spent(&self, draft: &Draft) -> u32 {
+        let core_unarmed = if self.core_specializes(draft) {
+            draft.unarmed.len() as u32 * CORE_UNARMED_SLOTS
+        } else {
+            0
+        };
         draft
             .weapon_proficiencies
             .iter()
             .map(|w| self.weapon_cost_for(draft, w))
             .sum::<u32>()
             + self.specialization_spent(draft)
+            + core_unarmed
     }
 
-    /// Whether adding the weapon asks first, as the kit limits ranged
-    /// attacks (+0x79).
-    pub fn weapon_needs_confirmation(&self, draft: &Draft, name: &str) -> bool {
-        self.draft_kit(draft).is_some_and(|k| k.flag(0x79))
-            && self.weapon_part(name).is_some_and(|w| w.ranged)
+    /// The questions buying a weapon besides those `taken` asks first, in
+    /// the original's order; No to any of them does not buy it.
+    pub fn weapon_questions(&self, draft: &Draft, taken: &[String], name: &str) -> Vec<Question> {
+        self.weapon_offer(draft, taken, name).questions
+    }
+
+    /// Notes a weapon added to those `taken`: the kit that wants every
+    /// other one from its list remembers whether this one was (5d1501).
+    pub fn weapon_added(&self, draft: &mut Draft, taken: &[String], name: &str) {
+        if let Some(list) = self.every_other_list(draft, taken) {
+            draft.every_other_listed = list.iter().any(|n| n == name);
+        }
+    }
+
+    /// The kit's list for every other weapon, while it still applies.
+    fn every_other_list<'a>(&'a self, draft: &Draft, taken: &[String]) -> Option<&'a [String]> {
+        let list = self.draft_kit(draft)?.sa(0x410);
+        let applies = !list.is_empty()
+            && !draft
+                .ignored_weapon_checks
+                .contains(&WeaponCheck::EveryOther)
+            && !list.iter().all(|n| taken.contains(n));
+        applies.then_some(list)
     }
 
     /// The warnings adding a weapon to those `taken` gives, in the
@@ -225,6 +532,39 @@ impl CreationRules {
                 ),
             );
         }
+        // The first sword from the list; then any (5d3345).
+        let swords = kit.sa(0x398);
+        if !swords.is_empty()
+            && weapon.sword()
+            && !swords.contains(&weapon.name)
+            && !taken.iter().any(|t| swords.contains(t))
+        {
+            warn(
+                WeaponCheck::Sword,
+                listed(
+                    tr!(
+                        "The kit \"{kit}\" requires that you select a sword weapon proficiency \
+                         from the following list.",
+                        kit = kit_name
+                    ),
+                    swords,
+                ),
+            );
+        }
+        let thrown = kit.sa(0x3fc);
+        if !thrown.is_empty() && !weapon.missile && !thrown.contains(&weapon.name) {
+            warn(
+                WeaponCheck::Thrown,
+                listed(
+                    tr!(
+                        "The kit \"{kit}\" requires that you select a thrown weapon or one from \
+                         the following list.",
+                        kit = kit_name
+                    ),
+                    thrown,
+                ),
+            );
+        }
         if kit.flag(0x438) && taken.len().is_multiple_of(2) && !weapon.missile {
             warn(
                 WeaponCheck::OddMissile,
@@ -254,6 +594,23 @@ impl CreationRules {
                     ),
                 );
             }
+        }
+        // After one off the list, the next from it (5d1501).
+        if let Some(list) = self.every_other_list(draft, taken)
+            && !draft.every_other_listed
+            && !list.contains(&weapon.name)
+        {
+            warn(
+                WeaponCheck::EveryOther,
+                listed(
+                    tr!(
+                        "The kit \"{kit}\" requires that you select every other weapon \
+                         proficiency from the following list.",
+                        kit = kit_name
+                    ),
+                    list,
+                ),
+            );
         }
         if kit.flag(0x76) {
             let mut allowed: Vec<String> = kit
@@ -452,7 +809,7 @@ impl CreationRules {
         if self.free_specialization(draft).as_deref() == Some(name) {
             return 0;
         }
-        if self.weapon_part(name).is_some_and(|w| w.bow) {
+        if self.weapon_part(name).is_some_and(|w| w.bow()) {
             self.bow_specialization_cost(draft)
         } else {
             1
@@ -479,51 +836,101 @@ impl CreationRules {
             .sum()
     }
 
-    /// Core Rules: the questions before specializing in a weapon, in the
-    /// original's order (61e897); the kit may let others than single-class
-    /// fighters specialize (+0x518, or the focus weapon with +0x4b3).
+    /// Skills & Powers: whether a class ability allows specialization
+    /// (+0x782).
+    pub(super) fn abilities_allow_specialization(&self, draft: &Draft) -> bool {
+        self.ability_weapons(draft).specialize
+    }
+
+    /// The questions before specializing in a weapon, in the original's
+    /// order (61e897, 61fdab): with the Core Rules whether others than a
+    /// single-class fighter may (the kit may let them, +0x518, or the
+    /// focus weapon with +0x4b3) and whether one more may; then whether a
+    /// melee weapon may at creation (+0x538).
     pub fn specialization_questions(&self, draft: &Draft, name: &str) -> Vec<Question> {
         let kit = self.draft_kit(draft);
-        let kit_allows = kit.is_some_and(|k| {
-            k.flag(0x518)
-                || (k.flag(0x4ac) && k.flag(0x4b3) && draft.weapon_focus.as_deref() == Some(name))
-        });
-        let fighter = draft
-            .classes
-            .iter()
-            .filter_map(|c| self.class(c))
-            .any(|c| c.core_specialization);
-        let not_allowed = |text: &str| Question {
-            title: tr("Not Allowed").into(),
-            text: text.into(),
-        };
         let mut questions = Vec::new();
-        if !fighter && !kit_allows {
-            questions.push(not_allowed(tr(
-                "Only fighters may specialize. Specialize anyway?",
-            )));
-        }
-        if draft.classes.len() > 1 && !kit_allows {
-            questions.push(not_allowed(tr(
-                "Only single-class fighters may specialize. Specialize anyway?",
-            )));
-        }
-        if !self.all_specializations(draft).is_empty() {
-            questions.push(not_allowed(tr(
-                "Only one specialization is allowed. Specialize anyway?",
-            )));
+        if self.core_specializes(draft) {
+            let kit_allows = kit.is_some_and(|k| {
+                k.flag(0x518)
+                    || (k.flag(0x4ac)
+                        && k.flag(0x4b3)
+                        && draft.weapon_focus.as_deref() == Some(name))
+            });
+            let fighter = self.draft_classes(draft).any(|c| c.core_specialization);
+            let not_allowed = |text: &str| Question::new(tr("Not Allowed"), text.into());
+            if !fighter && !kit_allows {
+                questions.push(not_allowed(tr(
+                    "Only fighters may specialize. Specialize anyway?",
+                )));
+            }
+            if draft.classes.len() > 1 && !kit_allows {
+                questions.push(not_allowed(tr(
+                    "Only single-class fighters may specialize. Specialize anyway?",
+                )));
+            }
+            if !self.all_specializations(draft).is_empty() {
+                questions.push(not_allowed(tr(
+                    "Only one specialization is allowed. Specialize anyway?",
+                )));
+            }
         }
         if kit.is_some_and(|k| k.flag(0x538)) && self.weapon_part(name).is_some_and(|w| w.melee) {
-            questions.push(Question {
-                title: tr("Kit Restriction").into(),
-                text: tr!(
+            questions.push(Question::new(
+                tr("Kit Restriction"),
+                tr!(
                     "The kit \"{kit}\" does not allow specialization of melee weapons during \
                      character creation. Do you wish to ignore this?",
                     kit = draft.kit
                 ),
-            });
+            ));
         }
         questions
+    }
+
+    /// Whether the character may take an unarmed style.
+    pub fn unarmed_allowed(&self, draft: &Draft) -> bool {
+        self.unarmed_cost(draft).is_some()
+    }
+
+    /// Core Rules: whether one more unarmed style fits the weapon slots.
+    pub fn unarmed_fits(&self, draft: &Draft) -> bool {
+        self.weapon_spent(draft) + CORE_UNARMED_SLOTS <= self.weapon_slots_for(draft)
+    }
+
+    /// The question taking an unarmed style asks when the character
+    /// specializes in a weapon (6208ac); Yes drops the specializations.
+    pub fn unarmed_conflict(&self, draft: &Draft) -> Option<Question> {
+        let specialized = if self.core_specializes(draft) {
+            !self.all_specializations(draft).is_empty()
+        } else {
+            !draft.specializations.is_empty()
+        };
+        specialized.then(|| {
+            Question::new(
+                tr("Warning Message"),
+                tr(
+                    "You may not specialize in both a weapon and unarmed combat. Remove the \
+                    weapon specialization?",
+                )
+                .into(),
+            )
+        })
+    }
+
+    /// The question specializing in a weapon asks when the character has
+    /// an unarmed style (61edf1); Yes drops the unarmed styles.
+    pub fn specialization_conflict(&self, draft: &Draft) -> Option<Question> {
+        (!draft.unarmed.is_empty()).then(|| {
+            Question::new(
+                tr("Warning"),
+                tr(
+                    "You may not specialize in both a weapon and unarmed combat. Remove \
+                    unarmed combat?",
+                )
+                .into(),
+            )
+        })
     }
 
     /// The warning specializing in a weapon gives, when the kit allows
@@ -643,3 +1050,4 @@ fn option_label(count: i32, names: &[String]) -> String {
         names = names.join(", ")
     )
 }
+

@@ -210,9 +210,9 @@ version.
 | 33 | `unknown_0x1874` | u32 | always | +0x1874 | unknown |
 | 34 | `unknown_0x1870` | u32 | always | +0x1870 | unknown |
 | 35 | `unknown_0x1dc4` | u32 | always | +0x1dc4 | Expansion level-limit mode (Level dialog radios): 0 none, 1 racial limits, 2 limits with prime requisite bonuses. Experience is never capped, only the level |
-| 36 | `flags_0x1ddc` | u8[2] | v > 30 | +0x1ddc | unknown; `[1, 0]` in new Expansion characters and NPCs |
+| 36 | `flags_0x1ddc` | u8[2] | v > 30 | +0x1ddc, +0x1ddd | the kit that wants every other weapon proficiency from its list (+0x410): `[0]` 1 when the last one added was from the list, or none was yet (`[1, 0]` in new characters and NPCs), `[1]` its warning ignored for good |
 | 37 | `flag_0x1dde` | u8 | v > 31 | +0x1dde | 1 once the kit's warning that some of the first weapon proficiencies come from its list (kit +0x43c, +0x440, +0x424) was ignored for good (IDD 245's Ignore, Weapon Proficiencies page 5d4aa7) |
-| 38 | `flags_0x1ddf` | u8[6] | v > 32 | +0x1ddf, +0x1de0, +0x1de2..+0x1de5 | weapon proficiency warnings of the kit ignored for good, as `flag_0x1dde`: `[0]` every odd-numbered one a missile or thrown weapon (kit +0x438), `[1]` a thrown weapon or one from its list (+0x3fc), `[2]` its sword rule (+0x398), `[3]` the weapons it bars (+0x3ac); the rest unknown |
+| 38 | `flags_0x1ddf` | u8[6] | v > 32 | +0x1ddf, +0x1de0, +0x1de2..+0x1de5 | weapon proficiency warnings of the kit ignored for good, as `flag_0x1dde`: `[0]` every odd-numbered one a missile or thrown weapon (kit +0x438), `[1]` a thrown weapon or one from its list (+0x3fc), `[2]` its sword rule (+0x398), `[3]` the weapons it bars (+0x3ac), `[4]` and `[5]` the broad and tight weapon groups it bars (+0x3c0, +0x3d4) |
 | 39 | `flag_0x1de1` | u8 | v > 33 | +0x1de1 | 1 once the warning that the kit requires a specialization from its list (kit +0x3e8) was ignored for good, on leaving the Weapon Proficiencies page (5d2bef) |
 | 40 | `flags_0x1de6` | u8[2] | v > 36 | +0x1de6, +0x1de7 | specialization warnings of the kit ignored for good: `[0]` specializations only from its list (kit +0x524), `[1]` a melee or missile specialization by a level (+0x51c, +0x520, +0x521; 5d2f71) |
 | 41 | `flags_0x1de8` | u8[2] | v > 40 | +0x1de8, +0x1de9 | weapon proficiency warnings of the kit ignored for good: `[0]` no missile weapons at creation (kit +0x508), `[1]` only those it requires or recommends (+0x76, the +0x568 groups and +0x384) |
@@ -222,7 +222,7 @@ version.
 | 45 | `unknown_0x1dfc` | u32 | v > 44 | +0x1dfc | the least of those slots: half the nonweapon slots with kit +0x44e, else 0 |
 | 46 | `unknown_0x39c` | CString | v > 46 | +0x39c | unknown |
 | 47 | `unknown_0x1e50` | u32 | always | +0x1e50 | unknown |
-| 48 | `flags_0x1e54` | u8[5] | v > 53 | +0x1e54 | Skills & Powers unarmed combat specializations, 1 when held: punching, wrestling, martial arts, then two flags nothing sets |
+| 48 | `flags_0x1e54` | u8[5] | v > 53 | +0x1e54 | unarmed combat specializations, 1 when held, in either rule system: punching, wrestling, martial arts, then two flags nothing sets |
 | 49 | `unknown_0x1e5c` | u32[3] | always | +0x1e5c | unknown |
 | 50 | `alignment` | CString | always | +0x8c | alignment (`Lawful Good`) |
 | 51 | `unknown_0x1db8` | CString[2] | always | +0x1db8, +0x1dbc | portrait: file name, then folder; the sheet uses `Bitmaps\Portrait\NA.bmp` when either is empty |
@@ -532,5 +532,5 @@ refer to classes it introduced.
   items) do not stop either program from loading or printing a character;
   the Update wizard's pages report "Error finding ..." for names they cannot
   resolve.
-* Not identified: the element class of `unknown_0x1e3c` and the version 1 sheet options; the meaning of the flags at +0x1ddc to
+* Not identified: the element class of `unknown_0x1e3c` and the version 1 sheet options; the meaning of the flags at +0x1deb and
   +0x1dec and most other `unknown_*` fields marked unknown above.

@@ -293,3 +293,107 @@ fn the_weapon_proficiencies_follow_the_kit() {
     assert!(warned > 0 && narrowed > 0 && dearer > 0);
     assert!(lent > 0 && focused > 0 && listed > 0 && freed > 0 && asked > 0);
 }
+
+#[test]
+fn buying_a_weapon_asks_what_the_original_asks() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(Path::new(&dir)).unwrap();
+    if install.is_core20() {
+        return;
+    }
+    let rules = install.creation_rules().unwrap();
+    let (mut sword_lists, mut unarmed_kits, mut melee_barred) = (0, 0, 0);
+    for skills_and_powers in [false, true] {
+        for class in [
+            "Fighter", "Paladin", "Ranger", "Thief", "Bard", "Cleric", "Druid", "Mage",
+        ] {
+            let mut base = thief();
+            base.classes = vec![class.into()];
+            base.skills_and_powers = skills_and_powers;
+            let class_cost = rules.weapon_cost_for(&base, "");
+            let unarmed_alone = rules.unarmed_cost(&base).is_some();
+            assert_eq!(unarmed_alone, class == "Fighter");
+            // Every weapon is offered; those out of class ask first (the
+            // Core Rules) or cost more (Skills & Powers).
+            let choices = rules.weapon_choices(&base);
+            let asked = choices
+                .iter()
+                .filter(|w| !rules.weapon_questions(&base, &[], w).is_empty())
+                .count();
+            let dearer = choices
+                .iter()
+                .filter(|w| rules.weapon_cost_for(&base, w) > class_cost)
+                .count();
+            if class == "Mage" {
+                assert!(if skills_and_powers { dearer } else { asked } > 0);
+            }
+            if !skills_and_powers {
+                assert_eq!(dearer, 0);
+            }
+            for kit in rules.kits(&base.race, &base.subrace, &base.classes) {
+                let mut draft = base.clone();
+                draft.kit = kit;
+                // A kit's sword list: a sword off it warns until one on it
+                // is taken.
+                for name in rules.weapon_choices(&draft) {
+                    let warns = |taken: &[String]| {
+                        rules
+                            .weapon_warnings(&draft, taken, &name)
+                            .iter()
+                            .any(|w| w.check == WeaponCheck::Sword)
+                    };
+                    if warns(&[]) {
+                        let cleared = rules
+                            .weapon_choices(&draft)
+                            .into_iter()
+                            .any(|listed| !warns(std::slice::from_ref(&listed)));
+                        assert!(cleared);
+                        sword_lists += 1;
+                    }
+                }
+                if rules.unarmed_cost(&draft).is_some() && !unarmed_alone {
+                    unarmed_kits += 1;
+                }
+            }
+        }
+    }
+    // A Skills & Powers kit may bar specializing in melee weapons at
+    // creation, after asking.
+    for kit in rules.all_kits() {
+        let mut draft = thief();
+        draft.classes = vec!["Fighter".into()];
+        draft.skills_and_powers = true;
+        draft.kit = kit;
+        let asked = rules
+            .weapon_choices(&draft)
+            .iter()
+            .filter(|w| !rules.specialization_questions(&draft, w).is_empty())
+            .count();
+        melee_barred += usize::from(asked > 0);
+    }
+    assert!(sword_lists > 0 && melee_barred > 0 && unarmed_kits > 0);
+
+    // Unarmed combat and weapon specialization exclude each other.
+    let mut fighter = thief();
+    fighter.classes = vec!["Fighter".into()];
+    fighter.pack = false;
+    let weapon = rules.weapon_choices(&fighter)[0].clone();
+    fighter.weapon_proficiencies = vec![weapon.clone()];
+    assert_eq!(rules.unarmed_cost(&fighter), Some(2));
+    assert!(rules.unarmed_conflict(&fighter).is_none());
+    fighter.unarmed = vec!["Punching".into()];
+    assert!(rules.specialization_conflict(&fighter).is_some());
+    assert_eq!(rules.weapon_spent(&fighter), 1 + 2);
+    assert_eq!(rules.problem(&fighter), None);
+    let character = rules.build(&fighter).unwrap();
+    assert_eq!(character.data.flags_0x1e54.unwrap()[..3], [1, 0, 0]);
+    fighter.specializations = vec![weapon];
+    assert!(rules.unarmed_conflict(&fighter).is_some());
+    assert!(rules.problem(&fighter).is_some());
+    // The kit's every-other list starts open, and is written with its
+    // flag.
+    assert!(fighter.every_other_listed);
+    assert_eq!(character.data.flags_0x1ddc, Some([1, 0]));
+}

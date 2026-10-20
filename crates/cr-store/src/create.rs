@@ -30,8 +30,8 @@ mod nonweapon;
 mod weapon;
 
 pub use nonweapon::{NonweaponPick, PickKind};
-use weapon::WeaponRules;
-pub use weapon::{WeaponCheck, WeaponWarning};
+use weapon::{AbilityWeapons, WeaponRules};
+pub use weapon::{Question, WeaponCheck, WeaponWarning};
 
 use cr_i18n::{tr, tr_noop};
 use std::collections::{HashMap, HashSet};
@@ -383,9 +383,8 @@ fn group_points(group: i32) -> u32 {
 pub const DISADVANTAGE_POINTS: u32 = 15;
 pub const MOST_DISADVANTAGES: usize = 2;
 
-/// Weapon specialization at 1st level: only single-classed fighters,
-/// for 2 points. A multi-classed fighter is not of high enough level, but
-/// may take an unarmed style for twice that.
+/// Skills & Powers weapon specialization for a class that specializes
+/// cheaply, as fighters: 2 points, twice that multi-classed.
 const SPECIALIZATION_COST: u32 = 2;
 
 /// The unarmed combat styles a fighter may specialize in, in the order of
@@ -635,6 +634,9 @@ pub struct Draft {
     pub barred_nonweapon_ignored: bool,
     /// The kit's warnings about weapon proficiencies that were ignored.
     pub ignored_weapon_checks: Vec<WeaponCheck>,
+    /// The last weapon added was from the kit's list for every other one,
+    /// or none was yet (+0x1ddc).
+    pub every_other_listed: bool,
     /// Nonweapon slots lent to weapon proficiencies, when the kit allows
     /// (see [`CreationRules::nonweapon_lending`]).
     pub lent_nonweapon: u32,
@@ -695,6 +697,7 @@ impl Draft {
             required_nonweapon_added: false,
             barred_nonweapon_ignored: false,
             ignored_weapon_checks: Vec::new(),
+            every_other_listed: true,
             lent_nonweapon: 0,
             weapon_focus: None,
             free_specialization: None,
@@ -720,6 +723,8 @@ impl Draft {
         self.required_nonweapon_added = false;
         self.barred_nonweapon_ignored = false;
         self.ignored_weapon_checks.clear();
+        self.every_other_listed = true;
+        self.unarmed.clear();
         self.lent_nonweapon = 0;
         self.weapon_focus = None;
         self.free_specialization = None;
@@ -741,6 +746,10 @@ pub struct CreationRules {
     /// and class abilities, traits, and the points disadvantages give.
     racial_abilities: Vec<(String, i32)>,
     class_ability_costs: HashMap<String, i32>,
+    /// What each class ability does to weapon proficiencies.
+    ability_weapons: HashMap<String, AbilityWeapons>,
+    /// The weapons racial abilities make free.
+    racial_weapons: HashMap<String, Vec<String>>,
     traits: Vec<(String, u32)>,
     disadvantages: Vec<(String, u32)>,
     /// Weapons and the classes that may not use them.
@@ -857,6 +866,8 @@ impl Installation {
             nonweapon: Vec::new(),
             racial_abilities: Vec::new(),
             class_ability_costs: HashMap::new(),
+            ability_weapons: HashMap::new(),
+            racial_weapons: HashMap::new(),
             traits: Vec::new(),
             disadvantages: Vec::new(),
             weapons: Vec::new(),
@@ -954,6 +965,15 @@ impl Installation {
                     rules
                         .racial_abilities
                         .push((part.head.name.clone(), cost(part)));
+                    // The weapons it makes free (+0x574, +0x578).
+                    let free: Vec<String> = part.data.unknown_0x574[..2]
+                        .iter()
+                        .filter(|w| !w.is_empty())
+                        .cloned()
+                        .collect();
+                    if !free.is_empty() {
+                        rules.racial_weapons.insert(part.head.name.clone(), free);
+                    }
                 }
             }
             for part in parts("Class Abilities") {
@@ -961,6 +981,10 @@ impl Installation {
                     .class_ability_costs
                     .entry(part.head.name.clone())
                     .or_insert_with(|| cost(part));
+                rules
+                    .ability_weapons
+                    .entry(part.head.name.clone())
+                    .or_insert_with(|| AbilityWeapons::of(part));
             }
             for part in parts("Traits") {
                 if seen.insert(("trait", part.head.name.clone())) {
@@ -987,18 +1011,29 @@ impl Installation {
                     }
                     if part_type == "Weapons" {
                         let kind = &part.head.unknown_0x3b8;
-                        let bow = part
-                            .data
-                            .unknown_0x1cc
-                            .iter()
-                            .any(|g| tight_groups.get(g) == Some(&BOW_GROUP));
+                        let flag = |f: Option<u8>| f.unwrap_or(0) != 0;
                         rules.weapons.push(WeaponRules {
                             name: part.head.name.clone(),
                             barred_classes: part.data.allowed_classes.clone().unwrap_or_default(),
                             melee: kind[0] != 0,
                             missile: kind[1] != 0,
                             ranged: kind[2] != 0,
-                            bow,
+                            tight: part
+                                .data
+                                .unknown_0x1cc
+                                .iter()
+                                .filter_map(|g| tight_groups.get(g).copied())
+                                .collect(),
+                            damage: [
+                                part.head.unknown_0x3b4.clone(),
+                                part.head.unknown_0x3e4.clone(),
+                            ],
+                            thief: flag(part.data.flag_0x448),
+                            ability_barred: [
+                                part.data.unknown_0x4c8 != 0,
+                                part.head.unknown_0x4cc != 0,
+                            ],
+                            wizard_extra: flag(part.data.flag_0x4d0),
                         });
                     }
                     let price = &part.head.unknown_0x1f8;
@@ -1587,13 +1622,17 @@ impl CreationRules {
         class + bonus_languages(intelligence)
     }
 
+    /// Weapon proficiency slots: the best of the classes, or their sum
+    /// when one of them combines a multi-class character's slots
+    /// (59e778).
     pub fn weapon_slots(&self, classes: &[String]) -> u32 {
-        classes
-            .iter()
-            .filter_map(|c| self.class(c))
-            .map(|c| c.weapon_slots.max(0) as u32)
-            .max()
-            .unwrap_or(0)
+        let classes: Vec<&ClassRules> = classes.iter().filter_map(|c| self.class(c)).collect();
+        let slots = classes.iter().map(|c| c.weapon_slots.max(0) as u32);
+        if classes.iter().any(|c| c.combine_slots) {
+            slots.sum()
+        } else {
+            slots.max().unwrap_or(0)
+        }
     }
 
     /// The nonweapon proficiencies, by name.
@@ -1965,18 +2004,45 @@ impl CreationRules {
             .unwrap_or(prices[4])
     }
 
-    /// What specializing in one weapon costs, for a single-classed fighter
-    /// who has the Weapon specialization ability; `None` when the
-    /// character cannot specialize at 1st level.
+    /// Skills & Powers: what specializing in one weapon costs, `None`
+    /// when the character cannot specialize at 1st level: a class ability
+    /// must allow it, or the kit (+0x518, which also passes the level), and
+    /// only a class that specializes early (+0x2792) may at 1st level, and
+    /// only single-classed (61e897, 0x43a17e).
     pub fn specialization_cost(&self, draft: &Draft) -> Option<u32> {
-        if draft.classes != ["Fighter"] {
-            return None;
+        let kit_allows = self.kit(&draft.kit).is_some_and(|k| k.flag(0x518));
+        let early = draft.classes.len() == 1
+            && draft
+                .classes
+                .iter()
+                .filter_map(|c| self.class(c))
+                .any(|c| c.early_specialization);
+        let allowed =
+            (self.abilities_allow_specialization(draft) || kit_allows) && (kit_allows || early);
+        allowed.then(|| self.po_specialization_cost(&draft.classes))
+    }
+
+    /// Skills & Powers: what a specialization or an unarmed style costs
+    /// (0x43a072): 2 points, 4 multi-classed, for a class that
+    /// specializes cheaply (+0x2791), otherwise warriors 4, priests 6,
+    /// rogues and psionicists 8, wizards 10.
+    fn po_specialization_cost(&self, classes: &[String]) -> u32 {
+        if classes
+            .iter()
+            .filter_map(|c| self.class(c))
+            .any(|c| c.cheap_specialization)
+        {
+            return if classes.len() == 1 {
+                SPECIALIZATION_COST
+            } else {
+                2 * SPECIALIZATION_COST
+            };
         }
-        let has_ability = draft
-            .class_abilities
-            .first()
-            .is_some_and(|a| a.iter().any(|a| a.contains("Weapon specialization")));
-        has_ability.then_some(SPECIALIZATION_COST)
+        let groups = self.class_groups(classes);
+        [(0, 4), (2, 6), (1, 8), (4, 8), (3, 10)]
+            .iter()
+            .find(|&&(g, _)| groups[g])
+            .map_or(10, |&(_, cost)| cost)
     }
 
     /// Weapon of choice: warriors 2 points, wizards 4, the others 3.
@@ -1995,17 +2061,23 @@ impl CreationRules {
         }
     }
 
-    /// Specializing in an unarmed style: fighters only, at what weapon
-    /// specialization costs, twice that when multi-classed.
-    pub fn unarmed_cost(&self, classes: &[String]) -> Option<u32> {
-        classes
-            .iter()
-            .any(|c| c == "Fighter")
-            .then_some(if classes.len() == 1 {
-                SPECIALIZATION_COST
+    /// What an unarmed style costs, `None` when no class allows unarmed
+    /// combat (+0x2796) and the kit does not either (+0x4b4): the Core
+    /// Rules 2 slots, Skills & Powers what a specialization does.
+    pub fn unarmed_cost(&self, draft: &Draft) -> Option<u32> {
+        let allowed = self.kit(&draft.kit).is_some_and(|k| k.flag(0x4b4))
+            || draft
+                .classes
+                .iter()
+                .filter_map(|c| self.class(c))
+                .any(|c| c.unarmed);
+        allowed.then(|| {
+            if draft.skills_and_powers {
+                self.po_specialization_cost(&draft.classes)
             } else {
-                2 * SPECIALIZATION_COST
-            })
+                2
+            }
+        })
     }
 
     /// A shield or armor proficiency: a weapon proficiency's cost for
@@ -2081,7 +2153,7 @@ impl CreationRules {
                 .as_ref()
                 .map_or(0, |_| self.expertise_cost(draft))
             + draft.specializations.len() as u32 * self.specialization_cost(draft).unwrap_or(0)
-            + draft.unarmed.len() as u32 * self.unarmed_cost(classes).unwrap_or(0)
+            + draft.unarmed.len() as u32 * self.unarmed_cost(draft).unwrap_or(0)
             + shields * self.shield_cost(classes)
             + styles
     }
@@ -2422,8 +2494,11 @@ impl CreationRules {
             }
         }
         if !draft.unarmed.is_empty() {
-            if self.unarmed_cost(classes).is_none() {
-                return Some(tr("Only fighters may specialize in unarmed combat").into());
+            if self.unarmed_cost(draft).is_none() {
+                return Some(
+                    tr("There are no classes for this character which allow unarmed combat.")
+                        .into(),
+                );
             }
             if !draft.specializations.is_empty() {
                 return Some(
@@ -2487,6 +2562,19 @@ impl CreationRules {
                 spent,
                 slots
             ));
+        }
+        if !draft.unarmed.is_empty() {
+            if !self.core_specializes(draft) || !self.unarmed_allowed(draft) {
+                return Some(
+                    tr("There are no classes for this character which allow unarmed combat.")
+                        .into(),
+                );
+            }
+            if !self.all_specializations(draft).is_empty() {
+                return Some(
+                    tr("Unarmed combat and weapon specialization do not go together").into(),
+                );
+            }
         }
         None
     }
@@ -2579,10 +2667,11 @@ impl CreationRules {
         }
         if !draft.specializations.is_empty() {
             if self.specialization_cost(draft).is_none() {
-                return Some(tr!(
-                    "Only a single-classed fighter with {ability} may specialize",
-                    ability = "Weapon specialization"
-                ));
+                return Some(
+                    tr("This character does not have any Class Abilities allowing \
+                        specialization at 1st level.")
+                    .into(),
+                );
             }
             if let Some(w) = draft
                 .specializations
@@ -2800,7 +2889,19 @@ impl CreationRules {
             d.flag_0x1dde = Some(ignored(WeaponCheck::FirstFromList));
             if let Some(flags) = d.flags_0x1ddf.as_mut() {
                 flags[0] = ignored(WeaponCheck::OddMissile);
+                flags[1] = ignored(WeaponCheck::Thrown);
+                flags[2] = ignored(WeaponCheck::Sword);
                 flags[3] = ignored(WeaponCheck::Barred);
+            }
+            d.flags_0x1ddc = Some([
+                u8::from(draft.every_other_listed),
+                ignored(WeaponCheck::EveryOther),
+            ]);
+            // Punching, wrestling and martial arts, in either rule system.
+            if let Some(flags) = d.flags_0x1e54.as_mut() {
+                for (flag, style) in flags.iter_mut().zip(UNARMED) {
+                    *flag = u8::from(draft.unarmed.iter().any(|u| u == style));
+                }
             }
             d.flags_0x1de8 = Some([
                 ignored(WeaponCheck::Ranged),
@@ -2857,11 +2958,6 @@ impl CreationRules {
                 String::new(),
             ];
             d.unknown_0x134 = draft.shields.map(u32::from);
-            if let Some(flags) = d.flags_0x1e54.as_mut() {
-                for (flag, style) in flags.iter_mut().zip(UNARMED) {
-                    *flag = u8::from(draft.unarmed.iter().any(|u| u == style));
-                }
-            }
             for (slot, style) in d.classes.unknown_0x50.iter_mut().zip(
                 draft
                     .fighting_styles
@@ -3015,6 +3111,13 @@ mod tests {
             bonus_nonweapon: Vec::new(),
             bonus_nonweapon_count: 1,
             core_specialization: group == 0,
+            weapon_rule: "Any".into(),
+            weapon_list: Vec::new(),
+            no_edged: false,
+            combine_slots: false,
+            unarmed: name == "Fighter",
+            early_specialization: name == "Fighter",
+            cheap_specialization: name == "Fighter",
         }
     }
 
@@ -3159,6 +3262,16 @@ mod tests {
             .into_iter()
             .map(|(n, c)| (n.to_owned(), c))
             .collect(),
+            ability_weapons: [(
+                "Fighter, Weapon specialization (5)".to_owned(),
+                AbilityWeapons {
+                    specialize: true,
+                    ..Default::default()
+                },
+            )]
+            .into_iter()
+            .collect(),
+            racial_weapons: HashMap::new(),
             traits: vec![("Allure".into(), 4)],
             disadvantages: vec![("Allergies".into(), 3), ("Greed".into(), 7)],
             weapons: [("Dagger", vec![]), ("Sword, long", vec!["Mage".into()])]
@@ -3169,7 +3282,11 @@ mod tests {
                     melee: true,
                     missile: name == "Dagger",
                     ranged: false,
-                    bow: false,
+                    tight: Vec::new(),
+                    damage: ["P".into(), String::new()],
+                    thief: true,
+                    ability_barred: [false; 2],
+                    wizard_extra: false,
                 })
                 .collect(),
             wizard_spells: vec![
@@ -3556,7 +3673,7 @@ mod tests {
         assert!(rules.problem(&d).unwrap().contains("proficiency"));
         let mut d = skills_and_powers_draft(&rules);
         d.class_abilities[0].retain(|a| !a.contains("specialization"));
-        assert!(rules.problem(&d).unwrap().contains("fighter"));
+        assert!(rules.problem(&d).unwrap().contains("Class Abilities"));
         let mut d = skills_and_powers_draft(&rules);
         // 11 points left from the proficiencies, 8 for weapons.
         d.nonweapon_proficiencies = vec!["Spellcraft".into(); 3];
@@ -3821,10 +3938,10 @@ mod tests {
         multi.class_abilities = vec![d.class_abilities[0].clone(), Vec::new()];
         multi.hit_dice = vec![7, 3];
         assert_eq!(rules.specialization_cost(&multi), None);
-        assert!(rules.problem(&multi).unwrap().contains("single-classed"));
+        assert!(rules.problem(&multi).is_some());
         multi.specializations.clear();
         multi.unarmed = vec!["Punching".into()];
-        assert_eq!(rules.unarmed_cost(&multi.classes), Some(4));
+        assert_eq!(rules.unarmed_cost(&multi), Some(4));
         assert_eq!(rules.problem(&multi), None);
         let file = install.create_character(&rules, &multi).unwrap();
         let data = install.character(&file).unwrap().data;

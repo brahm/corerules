@@ -63,6 +63,21 @@ pub struct ClassRules {
     pub bonus_nonweapon_count: i32,
     /// May specialize as a Core Rules character, as fighters (+0x2797).
     pub core_specialization: bool,
+    /// The weapons the class may use (+0x3000: "Any", "Only from list
+    /// below" or damage types) and its list (+0x3004).
+    pub weapon_rule: String,
+    pub weapon_list: Vec<String>,
+    /// May not use edged weapons, as clerics (+0x27a0).
+    pub no_edged: bool,
+    /// The weapon slots of a multi-classed character are the classes' sum
+    /// (+0x486d).
+    pub combine_slots: bool,
+    /// May take unarmed combat (+0x2796).
+    pub unarmed: bool,
+    /// Skills & Powers: specializes at 1st level when single-classed
+    /// (+0x2792), and for 2 points, 4 multi-classed (+0x2791).
+    pub early_specialization: bool,
+    pub cheap_specialization: bool,
 }
 
 impl ClassRules {
@@ -93,6 +108,13 @@ impl ClassRules {
                 bonus_nonweapon: data.unknown_0x2fb4.clone().unwrap_or_default(),
                 bonus_nonweapon_count: data.unknown_0x2fc8.map_or(1, |c| c[0]),
                 core_specialization: data.flag_0x2797 == Some(1),
+                weapon_rule: data.unknown_0x3000.clone().unwrap_or_default(),
+                weapon_list: data.unknown_0x3004.clone().unwrap_or_default(),
+                no_edged: data.flags_0x27a0.is_some_and(|f| f[0] != 0),
+                combine_slots: data.flags_0x486e.is_some_and(|f| f[4] != 0),
+                unarmed: data.flags_0x2795.is_some_and(|f| f[1] != 0),
+                early_specialization: data.flag_0x2792.unwrap_or(0) != 0,
+                cheap_specialization: data.flag_0x2791.unwrap_or(0) != 0,
             },
             // The 2.0 layout keeps the same values in one array, and the
             // same lists in a fixed array of lists.
@@ -123,6 +145,13 @@ impl ClassRules {
                     bonus_nonweapon: Vec::new(),
                     bonus_nonweapon_count: 0,
                     core_specialization: false,
+                    weapon_rule: "Any".into(),
+                    weapon_list: Vec::new(),
+                    no_edged: false,
+                    combine_slots: false,
+                    unarmed: false,
+                    early_specialization: false,
+                    cheap_specialization: false,
                 }
             }
         }

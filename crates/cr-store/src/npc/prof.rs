@@ -121,7 +121,7 @@ pub fn pierce_slash(w: &Part, core: bool) -> bool {
 }
 
 /// 0x479ef2(tight, broad): the broad weapon group holds the tight one.
-fn broad_has_tight(tight: i32, broad: i32) -> bool {
+pub(crate) fn broad_has_tight(tight: i32, broad: i32) -> bool {
     if matches!(tight, 6 | 10 | 11 | 12 | 30 | 31) {
         return false;
     }
@@ -137,7 +137,7 @@ fn broad_has_tight(tight: i32, broad: i32) -> bool {
 }
 
 /// The broad group id of the swords (CPartDoc +0x234).
-const BROAD_SWORDS: i32 = 6;
+pub(crate) const BROAD_SWORDS: i32 = 6;
 
 impl Gen<'_> {
     /// 0x4798c2 for the swords: one of the weapon's groups (+0x1cc) is a
