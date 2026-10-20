@@ -5,7 +5,9 @@
 //! (5c458c), the proficiencies the kit bars (5c857b) and which ones cost
 //! nothing (0x43776b).
 
-use super::{CreationRules, Draft, bonus_languages};
+use cr_i18n::tr;
+
+use super::{CreationRules, Draft, Question, bonus_languages};
 
 /// A list the page has the user pick some proficiencies from.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -197,22 +199,83 @@ impl CreationRules {
         slots
     }
 
+    /// Core Rules nonweapon proficiency slots in Update Character
+    /// (5c458c), before those the proficiencies take: the classes' at
+    /// their levels (each class's own added up for a dual-class
+    /// character), or the kit's starting slots when chosen, one more with
+    /// kit +0x30c and a slot every 3 levels up to 6th instead, the
+    /// languages Intelligence gives, less the slots lent to weapon
+    /// proficiencies, plus one a level with kit +0x30d.
+    pub fn core_nonweapon_slots(&self, draft: &Draft, dual: bool) -> i64 {
+        let kit = self.draft_kit(draft);
+        let combine = self.draft_classes(draft).any(|c| c.combine_slots);
+        let (mut first, mut extra, mut per, mut top, mut count) =
+            (0i64, 0i64, 100_000i64, 0i64, 0i64);
+        for (i, class) in self.draft_classes(draft).enumerate() {
+            let level = i64::from(draft.class_levels.get(i).copied().unwrap_or(1));
+            let (initial, step, more) = (
+                i64::from(class.nonweapon_slots),
+                i64::from(class.nonweapon_slot_levels),
+                i64::from(class.nonweapon_slot_count),
+            );
+            if dual {
+                first += initial;
+                extra += level.checked_div(step).unwrap_or(0) * more;
+                continue;
+            }
+            if combine {
+                first += initial;
+                per += step;
+            } else {
+                first = first.max(initial);
+                per = per.min(step);
+            }
+            top = top.max(level);
+            count = count.max(more);
+        }
+        if draft.kit_nonweapon_base == Some(true)
+            && let Some(base) = kit.map(|k| k.i(0x318))
+        {
+            first = i64::from(base);
+        }
+        if kit.is_some_and(|k| k.flag(0x30c)) {
+            first += 1;
+            per = 3;
+            extra = 0;
+            if top > 6 {
+                top = 0;
+            }
+        }
+        let by_level = top.checked_div(per).unwrap_or(0) * count;
+        let intelligence = self.subability_scores(draft)[3][2];
+        let mut slots = extra + first + by_level + i64::from(bonus_languages(intelligence))
+            - i64::from(draft.lent_nonweapon);
+        if kit.is_some_and(|k| k.flag(0x30d)) {
+            slots += i64::from(draft.level);
+        }
+        slots
+    }
+
     /// One slot or point a level, at 1st level one (kit +0x30d).
     pub(crate) fn kit_level_slots(&self, draft: &Draft) -> u32 {
         let extra = self.expansion && self.kit(&draft.kit).is_some_and(|k| k.flag(0x30d));
         u32::from(extra)
     }
 
-    /// Whether a proficiency costs the new character nothing (0x43776b):
-    /// the classes make it free (+0x2fa0), it is a bonus one, the kit's
-    /// free one (+0xa4) or the one picked as free, or the kit gives it by
-    /// 1st level (+0x2f8).
+    /// Whether a proficiency costs the character nothing (0x43776b): a
+    /// class ability gives it (+0x718), the kit makes it free (+0xa4), it
+    /// is the one picked as free, the kit gives it by the highest class
+    /// level (+0x2f8), or the classes grant it (0x440ddf).
     pub(crate) fn free_nonweapon(&self, draft: &Draft, name: &str) -> bool {
         if !self.expansion {
             return false;
         }
-        let classes = draft.classes.iter().filter_map(|c| self.class(c));
-        if classes.flat_map(|c| &c.free_nonweapon).any(|n| n == name) {
+        let given = draft
+            .class_abilities
+            .iter()
+            .flatten()
+            .any(|a| self.ability_nonweapon.get(a).is_some_and(|n| n == name));
+        if given {
             return true;
         }
         if let Some(kit) = self.kit(&draft.kit)
@@ -221,11 +284,76 @@ impl CreationRules {
                 || kit
                     .free_nwp
                     .iter()
-                    .any(|(n, level)| n == name && *level <= 1))
+                    .any(|(n, level)| n == name && *level <= draft.level as i32))
         {
             return true;
         }
-        self.bonus_nonweapon(draft).iter().any(|n| n == name)
+        self.granted_nonweapon(draft, name)
+    }
+
+    /// The proficiencies the classes grant (0x440ddf): those they make
+    /// free (+0x2fa0), the bonus ones, those their lists give by their
+    /// levels (+0x3514; not a language one with the Core Rules) and those
+    /// chosen at their levels (+0x1e28).
+    fn granted_nonweapon(&self, draft: &Draft, name: &str) -> bool {
+        let language =
+            !draft.skills_and_powers && self.nonweapon.iter().any(|n| n.name == name && n.language);
+        for (i, class) in self.draft_classes(draft).enumerate() {
+            let level = draft.class_levels.get(i).copied().unwrap_or(1) as i32;
+            if class.free_nonweapon.iter().any(|n| n == name)
+                || (!language
+                    && class
+                        .level_nonweapon
+                        .iter()
+                        .any(|(n, from)| n == name && *from <= level))
+            {
+                return true;
+            }
+        }
+        draft.level_nonweapon.iter().any(|n| n == name)
+            || self.bonus_nonweapon(draft).iter().any(|n| n == name)
+    }
+
+    /// What leaving the page asks when the kit has the character learn a
+    /// proficiency by a level (+0x31c, +0x320), it is that level, the
+    /// proficiency is still to learn and the question was not answered No
+    /// before (5c8e84): Yes stays on the page, No goes on and is kept.
+    pub fn nonweapon_by_level(&self, draft: &Draft) -> Option<Question> {
+        let kit = self.kit(&draft.kit).filter(|_| self.expansion)?;
+        let (name, level) = (kit.s(0x31c), kit.i(0x320));
+        (level > 0
+            && !name.is_empty()
+            && !draft.by_level_declined
+            && draft.level as i32 >= level
+            && !draft.nonweapon_proficiencies.iter().any(|n| n == name))
+        .then(|| {
+            Question::new(
+                tr("Required NWP By Level"),
+                tr!(
+                    "Your kit requires that you learn \"{proficiency}\" by level {level}.\n\n\
+                     Would you like to stay and choose that NWP?",
+                    proficiency = name,
+                    level
+                ),
+            )
+        })
+    }
+
+    /// The warning taking a proficiency the kit bars (+0x26c) gives
+    /// (5c857b), unless it was ignored.
+    pub fn barred_nonweapon_warning(&self, draft: &Draft, name: &str) -> Option<String> {
+        let barred = self.barred_nonweapon(draft);
+        (!draft.barred_nonweapon_ignored && barred.iter().any(|b| b == name)).then(|| {
+            format!(
+                "{}\n{}",
+                tr!(
+                    "The kit \"{kit}\" does not allow you to select non-weapon proficiencies \
+                     from the following list.",
+                    kit = draft.kit
+                ),
+                barred.join(", ")
+            )
+        })
     }
 
     /// Skills & Powers: the kit's recommended proficiencies (+0x258) cost
@@ -236,4 +364,17 @@ impl CreationRules {
                 .kit(&draft.kit)
                 .is_some_and(|k| k.sa(0x258).iter().any(|n| n == name))
     }
+}
+
+/// What removing the last rank of a required proficiency asks first
+/// (5c2856).
+pub fn required_removal() -> Question {
+    Question::new(
+        tr("Required Non-Weapon Proficiency"),
+        tr(
+            "The Non-Weapon Proficiency you are attempting to remove is required for this \
+             character.\nAre you sure you wish to continue?",
+        )
+        .into(),
+    )
 }

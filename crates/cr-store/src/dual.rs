@@ -34,6 +34,10 @@ pub struct ClassRules {
     /// The levels for each further weapon slot (+0xd8).
     pub weapon_slot_levels: i32,
     pub nonweapon_slots: i32,
+    /// Core Rules: the levels for each further nonweapon proficiency
+    /// slots (+0xc4) and how many each time (+0xc8).
+    pub nonweapon_slot_levels: i32,
+    pub nonweapon_slot_count: i32,
     pub alignments: Vec<String>,
     /// Minimum Str, Dex, Con, Int, Wis, Cha.
     pub requirements: [i32; 6],
@@ -63,6 +67,16 @@ pub struct ClassRules {
     /// pick (+0x2fc8[0]); the Expansion's only.
     pub bonus_nonweapon: Vec<String>,
     pub bonus_nonweapon_count: i32,
+    /// The nonweapon proficiency groups the class also takes at the
+    /// normal cost (+0x3044: warrior, rogue, priest, wizard, psionicist),
+    /// and the abilities whose proficiencies it does (+0x3049: Strength,
+    /// Dexterity, Constitution, Intelligence, Wisdom, Charisma); the
+    /// Expansion's only.
+    pub nonweapon_groups: [bool; 5],
+    pub ability_groups: [bool; 6],
+    /// The nonweapon proficiencies the class makes free from a level
+    /// (+0x3514 entries worth nothing); the Expansion's only.
+    pub level_nonweapon: Vec<(String, i32)>,
     /// May specialize as a Core Rules character, as fighters (+0x2797).
     pub core_specialization: bool,
     /// The weapons the class may use (+0x3000: "Any", "Only from list
@@ -96,6 +110,8 @@ impl ClassRules {
                 weapon_slots: data.unknown_0xcc[2],
                 weapon_slot_levels: data.unknown_0xcc[3],
                 nonweapon_slots: data.unknown_0xbc[1],
+                nonweapon_slot_levels: data.unknown_0xbc[2],
+                nonweapon_slot_count: data.unknown_0xc8,
                 alignments: data.alignments.clone(),
                 requirements: data.ability_requirements,
                 prime: data.unknown_0x34.map(|p| p != 0),
@@ -113,6 +129,18 @@ impl ClassRules {
                 required_nonweapon: data.unknown_0x2fcc.clone(),
                 bonus_nonweapon: data.unknown_0x2fb4.clone().unwrap_or_default(),
                 bonus_nonweapon_count: data.unknown_0x2fc8.map_or(1, |c| c[0]),
+                nonweapon_groups: data.flags_0x3044.unwrap_or_default().map(|f| f != 0),
+                ability_groups: data.flags_0x3049.unwrap_or_default().map(|f| f != 0),
+                level_nonweapon: data
+                    .unknown_0x3514
+                    .iter()
+                    .filter_map(|o| match o {
+                        Object::KitBonus(b) if b.unknown_0xc == 0 => {
+                            Some((b.name.clone(), b.unknown_0x8))
+                        }
+                        _ => None,
+                    })
+                    .collect(),
                 core_specialization: data.flag_0x2797 == Some(1),
                 weapon_rule: data.unknown_0x3000.clone().unwrap_or_default(),
                 weapon_list: data.unknown_0x3004.clone().unwrap_or_default(),
@@ -135,6 +163,8 @@ impl ClassRules {
                     weapon_slots: v[29],
                     weapon_slot_levels: 0,
                     nonweapon_slots: v[25],
+                    nonweapon_slot_levels: 0,
+                    nonweapon_slot_count: 0,
                     alignments: data.unknown_0x58[2].clone(),
                     requirements: v[2..8].try_into().unwrap(),
                     prime: std::array::from_fn(|i| v[8 + i] != 0),
@@ -152,6 +182,9 @@ impl ClassRules {
                     required_nonweapon: Vec::new(),
                     bonus_nonweapon: Vec::new(),
                     bonus_nonweapon_count: 0,
+                    nonweapon_groups: [false; 5],
+                    ability_groups: [false; 6],
+                    level_nonweapon: Vec::new(),
                     core_specialization: false,
                     weapon_rule: "Any".into(),
                     weapon_list: Vec::new(),

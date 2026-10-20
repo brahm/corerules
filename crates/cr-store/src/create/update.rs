@@ -3,10 +3,11 @@
 //! file's flags for the kit's warnings ignored, and the weapons the kit
 //! has the character pick as it rises in level.
 
+use cr_formats::Object;
 use cr_formats::character::{Character, CharacterData};
 use cr_i18n::tr;
 
-use super::{CreationRules, Draft, UNARMED, WeaponCheck};
+use super::{CreationRules, Draft, PickKind, UNARMED, WeaponCheck};
 use crate::settings::SETTINGS;
 
 /// The kit's warnings the file says were ignored, as [`write_checks`]
@@ -120,9 +121,63 @@ impl CreationRules {
             .and_then(|f| f.first())
             .and_then(named);
         draft.level = levels.iter().copied().max().unwrap_or(1).max(1);
+        draft.class_levels = levels.to_vec();
+        draft.held_scores = Some(std::array::from_fn(|a| match a {
+            0 => d.strength,
+            a => d.abilities[a - 1],
+        }));
+        self.update_nonweapon(&mut draft, d);
         draft.proficiencies_started = true;
         draft.updating = true;
         draft
+    }
+
+    /// What the file keeps of the nonweapon proficiencies page: the
+    /// proficiencies, the picks from the classes' and the kit's lists, the
+    /// ones chosen at the classes' levels and the kit's questions answered.
+    fn update_nonweapon(&self, draft: &mut Draft, d: &CharacterData) {
+        draft
+            .nonweapon_proficiencies
+            .clone_from(&d.nonweapon_proficiencies);
+        let bonus = d.unknown_0x1930.as_ref().map_or(&[][..], |l| &l[1][..]);
+        for pick in self.nonweapon_picks(draft) {
+            let picked = match pick.kind {
+                PickKind::Bonus(_) => pick
+                    .names
+                    .iter()
+                    .filter(|n| bonus.contains(n))
+                    .cloned()
+                    .collect(),
+                PickKind::PlusTwo => d.unknown_0x1958.clone().unwrap_or_default(),
+                PickKind::Free => (!d.unknown_0x1e20.is_empty())
+                    .then(|| d.unknown_0x1e20.clone())
+                    .into_iter()
+                    .collect(),
+                PickKind::PlusOne => d.unknown_0xac[5].clone(),
+            };
+            draft.set_picked(pick.kind, picked);
+        }
+        draft.level_nonweapon = d
+            .unknown_0x1e28
+            .iter()
+            .flatten()
+            .filter_map(|o| match o {
+                Object::KitBonus(b) => Some(b),
+                _ => None,
+            })
+            .filter(|b| {
+                let level = draft.class_levels.get(b.unknown_0xc as usize).copied();
+                level.is_some_and(|l| b.unknown_0x8 >= 1 && b.unknown_0x8 as u32 <= l)
+            })
+            .map(|b| b.name.clone())
+            .collect();
+        draft.barred_nonweapon_ignored = d.flags_0x1dea.is_some_and(|f| f[0] != 0);
+        draft.kit_nonweapon_base = d.unknown_0x1df0.and_then(|(choice, _)| match choice {
+            1 => Some(true),
+            0 => None,
+            _ => Some(false),
+        });
+        draft.by_level_declined = d.unknown_0x1df0.is_some_and(|(_, declined)| declined != 0);
     }
 
     /// Whether buying the weapon takes a slot the Core Rules count in

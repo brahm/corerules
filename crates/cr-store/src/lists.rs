@@ -25,13 +25,14 @@
 //! * with Skills & Powers, a nonweapon proficiency is bought with
 //!   character points, so adding one spends its cost from the unspent
 //!   points and removing one refunds what it cost; a character without
-//!   enough points cannot take it;
+//!   enough points cannot take it; the editor charges them, ranks and the
+//!   kit's free ones included, through [`crate::proficiencies`];
 //! * native languages are kept in alphabetical order, as the program
 //!   saves them.
 //!
-//! Proficiency slots are not checked: the original computes them when it
-//! shows the character and simply shows a negative count when there are
-//! too many.
+//! Proficiency slots are not checked here: the original computes them when
+//! it shows the character and simply shows a negative count when there are
+//! too many ([`crate::proficiencies`] counts them for the editor).
 
 use std::collections::HashMap;
 
@@ -119,6 +120,10 @@ pub struct CharacterLists {
     /// Rogue skill points, psionic powers, wild talents and psionic attack
     /// and defense modes, when they may have changed.
     pub skills: Option<crate::skills::CharacterSkills>,
+    /// The nonweapon proficiencies with what each took and the kit's
+    /// questions answered, when the page's rules chose them (see
+    /// [`crate::proficiencies`]). They replace `nonweapon_proficiencies`.
+    pub nonweapon: Option<crate::proficiencies::CharacterNonweapon>,
 }
 
 /// An item in a bundle.
@@ -199,6 +204,7 @@ impl CharacterLists {
             abilities: None,
             combat: None,
             skills: None,
+            nonweapon: None,
             spellbooks: d
                 .inventory
                 .iter()
@@ -271,14 +277,23 @@ impl CharacterLists {
         let (mut names, mut costs, mut bonuses, mut details) =
             (Vec::new(), Vec::new(), Vec::new(), Vec::new());
         let mut spent = 0i64;
-        for name in &self.nonweapon_proficiencies {
+        // What the page's rules charged, else what the part says.
+        let chosen: Vec<(&String, Option<u32>)> = match &self.nonweapon {
+            Some(n) => n.entries.iter().map(|e| (&e.name, Some(e.spent))).collect(),
+            None => self
+                .nonweapon_proficiencies
+                .iter()
+                .map(|n| (n, None))
+                .collect(),
+        };
+        for (name, charged) in chosen {
             let old = d
                 .nonweapon_proficiencies
                 .iter()
                 .enumerate()
                 .find(|(i, n)| *n == name && kept[*i].is_some())
                 .and_then(|(i, _)| kept[i].take());
-            let (cost, bonus, detail) = old.unwrap_or_else(|| {
+            let (mut cost, bonus, detail) = old.unwrap_or_else(|| {
                 let cost = parts.nonweapon_cost(name, skills_and_powers);
                 spent += i64::from(cost);
                 (
@@ -287,6 +302,10 @@ impl CharacterLists {
                     Object::StringArray(Vec::new()),
                 )
             });
+            if let Some(charged) = charged {
+                spent += i64::from(charged) - i64::from(cost);
+                cost = charged;
+            }
             names.push(name.clone());
             costs.push(cost);
             bonuses.push(bonus.unwrap_or(0));
@@ -311,6 +330,14 @@ impl CharacterLists {
             d.nonweapon_bonuses = Some(bonuses);
         }
         d.nonweapon_details = details;
+        if let Some(n) = &self.nonweapon {
+            if let Some(flags) = d.flags_0x1dea.as_mut() {
+                flags[0] = u8::from(n.barred_ignored);
+            }
+            if let Some(by_level) = d.unknown_0x1df0.as_mut() {
+                by_level.1 = u8::from(n.by_level_declined);
+            }
+        }
 
         if d.unknown_0x3c8 != self.memorized {
             d.unknown_0x3c8.clone_from(&self.memorized);

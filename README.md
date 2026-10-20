@@ -94,7 +94,9 @@ the original programs wrote.
   at 3rd level and horseman's weapon at 5th), rogue skill points
   at the current level, psionic disciplines and powers, wild talents and
   psionic attack and defense modes (with Update Character's limits), nonweapon
-  proficiencies, languages, spells known, spellbooks and memorized spells, the nine
+  proficiencies (ranks, costs as New Character charges them, the kit's free
+  ones at their levels, the Core Rules slots left, and the kit's warnings
+  and questions), languages, spells known, spellbooks and memorized spells, the nine
   equipment groups with quantities, and Spending Money
 - **Experience and levels** per class, all classes or split, with the prime
   requisite bonus, hit point rolls, PSPs, character points and the

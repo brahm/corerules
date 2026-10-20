@@ -13,8 +13,8 @@ use cr_store::create::{
     ABILITIES, CreationRules, DISADVANTAGE_POINTS, Dice, Draft, METHOD_VI_DICE, METHOD_VII_POINTS,
     METHOD_VIII_DICE, METHOD_X_STRENGTH_STEP, MOST_DISADVANTAGES, MOST_FIGHTING_STYLES,
     NonweaponPick, PickKind, Question, ROGUE_SKILLS, RollMethod, SHIELDS, STANDARD_PACK,
-    SUBABILITIES, SUBABILITY_SPREAD, UNARMED, max_spells_per_level, point_table, roll_dice_pool,
-    roll_seven_dice, seven_dice_scores,
+    SUBABILITIES, SUBABILITY_SPREAD, UNARMED, max_spells_per_level, point_table, required_removal,
+    roll_dice_pool, roll_seven_dice, seven_dice_scores,
 };
 use cr_store::help::topic;
 use cr_store::pictures::ItemIcons;
@@ -387,7 +387,7 @@ fn money(copper: u32) -> String {
     }
 }
 
-fn slots(n: u32) -> String {
+pub(crate) fn slots(n: u32) -> String {
     trn!("{n} slot", "{n} slots", n)
 }
 
@@ -402,7 +402,7 @@ fn ability_title(name: &str) -> String {
     .to_owned()
 }
 
-fn points(n: i64) -> String {
+pub(crate) fn points(n: i64) -> String {
     let count = n.to_string().replace('-', "−");
     trn!("{count} point", "{count} points", n.unsigned_abs(), count)
 }
@@ -1790,6 +1790,8 @@ impl Wizard {
             let cost = rules.nonweapon_cost(draft, name);
             if sp {
                 tr!("{cost}, 1 more a further rank", cost = points(cost.into()))
+            } else if !rules.language_nonweapon(name) {
+                tr!("{cost}, 1 more a further rank", cost = slots(cost))
             } else if cost == 0 {
                 tr("Free").into()
             } else {
@@ -1829,21 +1831,12 @@ impl Wizard {
                 move |name: String| {
                     // A proficiency the kit bars needs the warning ignored
                     // (5c857b).
-                    let d = this.0.draft.borrow();
-                    let barred = this.rules().barred_nonweapon(&d);
-                    if d.barred_nonweapon_ignored || !barred.contains(&name) {
+                    let warning = this
+                        .rules()
+                        .barred_nonweapon_warning(&this.0.draft.borrow(), &name);
+                    let Some(body) = warning else {
                         return Some(nonweapon_spec(name, 1));
-                    }
-                    let body = format!(
-                        "{}\n{}",
-                        tr!(
-                            "The kit \"{kit}\" does not allow you to select non-weapon \
-                             proficiencies from the following list.",
-                            kit = d.kit
-                        ),
-                        barred.join(", ")
-                    );
-                    drop(d);
+                    };
                     let (this2, list, spec) = (this.clone(), list.clone(), nonweapon_spec.clone());
                     ignorable(
                         &this.0.dialog,
@@ -1874,13 +1867,11 @@ impl Wizard {
                     return;
                 }
                 let remove = std::cell::Cell::new(Some(remove));
+                let question = required_removal();
                 ask(
                     &this.0.dialog,
-                    tr("Required Non-Weapon Proficiency"),
-                    tr(
-                        "The Non-Weapon Proficiency you are attempting to remove is required for \
-                        this character.\nAre you sure you wish to continue?",
-                    ),
+                    &question.title,
+                    &question.text,
                     move || {
                         if let Some(remove) = remove.take() {
                             remove();
@@ -2611,6 +2602,22 @@ impl Wizard {
             let this = self.clone();
             move |next| {
                 let probe = current();
+                // The proficiency the kit has the character learn by a
+                // level (5c8e84): Yes stays, No goes on.
+                if let Some(question) = this.rules().nonweapon_by_level(&probe) {
+                    let (this2, next) = (this.clone(), next.clone());
+                    ask(
+                        &this.0.dialog,
+                        &question.title,
+                        &question.text,
+                        || {},
+                        move || {
+                            this2.0.draft.borrow_mut().by_level_declined = true;
+                            next.emit_clicked();
+                        },
+                    );
+                    return;
+                }
                 // The specializations the kit requires (5d2bef, 5d2f71);
                 // Ignore leaves the page.
                 if this.rules().core_specializes(&probe)
