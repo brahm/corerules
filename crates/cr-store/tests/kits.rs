@@ -665,3 +665,70 @@ fn the_kit_trims_the_schools_and_spheres() {
         "{barred} {eliminated} {spheres} {free} {never}"
     );
 }
+
+#[test]
+fn a_kit_may_scale_the_experience_each_level_takes() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(Path::new(&dir)).unwrap();
+    if install.is_core20() {
+        return;
+    }
+    let rules = install.creation_rules().unwrap();
+    let advance = install.advance_rules().unwrap();
+    let base = rules.build(&thief()).unwrap();
+    let plain = advance.levels(&base).unwrap()[0].next.unwrap();
+    let mut scaled = 0;
+    for kit in rules.all_kits() {
+        let mut character = base.clone();
+        character.data.kit = kit;
+        let next = advance.levels(&character).unwrap()[0].next.unwrap();
+        if next == plain {
+            continue;
+        }
+        scaled += 1;
+        // The 2nd level comes at the kit's threshold, not the class's.
+        character.data.unknown_0x1618[0] = plain.min(next) - 1;
+        assert_eq!(advance.levels(&character).unwrap()[0].level, 1);
+        character.data.unknown_0x1618[0] = next;
+        assert_eq!(advance.levels(&character).unwrap()[0].level, 2);
+        character.data.unknown_0x1618[0] = next - 1;
+        assert_eq!(advance.levels(&character).unwrap()[0].level, 1);
+    }
+    // Some kit changes the experience its levels take.
+    assert!(scaled > 0);
+}
+
+#[test]
+fn the_equipment_page_follows_the_kit() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(Path::new(&dir)).unwrap();
+    if install.is_core20() {
+        return;
+    }
+    let rules = install.creation_rules().unwrap();
+    let (mut texts, mut notices, mut funds) = (0, 0, 0);
+    for kit in rules.all_kits() {
+        let mut draft = thief();
+        draft.kit.clone_from(&kit);
+        if rules.kit_equipment_text(&kit).is_some() {
+            texts += 1;
+        }
+        for notice in rules.kit_equipment_notices(&draft) {
+            notices += 1;
+            assert!(notice.notice && !notice.text.is_empty());
+        }
+        // Keeping no money is always allowed.
+        assert!(rules.kit_retained_funds_warning(&draft, 0).is_none());
+        if rules.kit_retained_funds_warning(&draft, u32::MAX).is_some() {
+            funds += 1;
+        }
+    }
+    assert!(
+        texts > 0 && notices > 0 && funds > 0,
+        "{texts} {notices} {funds}"
+    );
+}

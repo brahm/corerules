@@ -3983,9 +3983,23 @@ impl Wizard {
         update();
 
         let items_group = items.group.clone();
+        // The kit's text and what it requires, as the page opens (494875,
+        // 5ea499).
+        {
+            let mut notices: VecDeque<Question> = rules
+                .kit_equipment_text(&d.kit)
+                .map(|text| Question::notice(&d.kit, text.to_owned()))
+                .into_iter()
+                .collect();
+            notices.extend(rules.kit_equipment_notices(&d));
+            let parent: gtk::Widget = items_group.clone().upcast();
+            if !notices.is_empty() {
+                glib::idle_add_local_once(move || ask_each(&parent, notices, Rc::new(|| {})));
+            }
+        }
         create.connect_clicked({
             let (this, banner) = (self.clone(), banner.clone());
-            move |_| {
+            move |create| {
                 let draft = {
                     let mut d = this.0.draft.borrow_mut();
                     d.gold = *gold.borrow();
@@ -3993,14 +4007,26 @@ impl Wizard {
                     d.purchases = purchases(&items);
                     d.clone()
                 };
-                match (this.0.create)(&draft) {
-                    Ok(()) => {
-                        this.0.dialog.close();
+                let finish = {
+                    let (this, banner, draft) = (this.clone(), banner.clone(), draft.clone());
+                    move || match (this.0.create)(&draft) {
+                        Ok(()) => {
+                            this.0.dialog.close();
+                        }
+                        Err(message) => {
+                            banner.set_title(&escape(&message));
+                            banner.set_revealed(true);
+                        }
                     }
-                    Err(message) => {
-                        banner.set_title(&escape(&message));
-                        banner.set_revealed(true);
+                };
+                // The money kept, against what the kit allows (5e33cb).
+                let rules = this.rules();
+                let kept = (draft.gold * 100).saturating_sub(rules.spent(&draft));
+                match rules.kit_retained_funds_warning(&draft, kept) {
+                    Some(warning) => {
+                        ignorable(create, tr("Kit Restriction"), &warning, finish);
                     }
+                    None => finish(),
                 }
             }
         });
