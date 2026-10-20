@@ -46,6 +46,21 @@ pub mod topic {
     pub const MONSTERS: u32 = 261;
     pub const TABLES: u32 = 265;
     pub const ENCOUNTER: u32 = 288;
+    /// The Encounter Template dialog and the dialogs its buttons open.
+    pub const ENCOUNTER_TEMPLATE: u32 = 289;
+    pub const TERRAIN_AND_CLIMATE: u32 = 273;
+    pub const TREASURE_TYPES: u32 = 276;
+    pub const TEMPLATE_ADD_MONSTER: u32 = 302;
+    pub const TEMPLATE_MONSTERS: u32 = 303;
+    pub const TEMPLATE_MONSTER: u32 = 304;
+    pub const TEMPLATE_MORE_MONSTERS: u32 = 306;
+    pub const TEMPLATE_ITEM: u32 = 309;
+    pub const TEMPLATE_ESCORT: u32 = 313;
+    pub const TEMPLATE_ADD_ITEM: u32 = 314;
+    pub const TEMPLATE_ITEMS: u32 = 315;
+    pub const TEMPLATE_TABLE: u32 = 325;
+    pub const TEMPLATE_NPCS: u32 = 383;
+    pub const TEMPLATE_NPC: u32 = 384;
     pub const TREASURE_BUNDLE: u32 = 290;
     pub const MONSTER_TYPE: u32 = 294;
     pub const TRAPS: u32 = 295;
@@ -110,6 +125,7 @@ pub mod topic {
             "monster-types" => MONSTER_TYPE,
             "traps" => TRAP,
             "treasure-tables" => TREASURE_TABLE,
+            "templates" => ENCOUNTER_TEMPLATE,
             other => of_section(other),
         }
     }
@@ -151,7 +167,7 @@ pub mod topic {
     }
 
     /// Every topic above, for the tests.
-    pub const ALL: [u32; 53] = [
+    pub const ALL: [u32; 67] = [
         MAIN_MENU,
         BOOKS,
         PARTS,
@@ -205,6 +221,20 @@ pub mod topic {
         EQUIPMENT_PICTURE,
         ENCOUNTERS,
         ENCOUNTER_TEMPLATES,
+        ENCOUNTER_TEMPLATE,
+        TERRAIN_AND_CLIMATE,
+        TREASURE_TYPES,
+        TEMPLATE_ADD_MONSTER,
+        TEMPLATE_MONSTERS,
+        TEMPLATE_MONSTER,
+        TEMPLATE_MORE_MONSTERS,
+        TEMPLATE_ITEM,
+        TEMPLATE_ESCORT,
+        TEMPLATE_ADD_ITEM,
+        TEMPLATE_ITEMS,
+        TEMPLATE_TABLE,
+        TEMPLATE_NPCS,
+        TEMPLATE_NPC,
     ];
 }
 

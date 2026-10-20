@@ -283,6 +283,17 @@ Rust `EncounterNpc`.
 | 4 | `levels` | i32[5] | +0x1c .. +0x2c | level in each class; -1 (0xffffffff) = none (the last two always -1) |
 | 5 | `unknown_0x30` | CObArray<CPartIDOb> | +0x30 | empty in all data; element type from the copy code at 0x653472 (new + ctor 0x65889e, vtable 0x7ae87c = CPartIDOb; see [parts.md](parts.md)) |
 
+### Writing EncPlatU.dat
+
+The Encounter Template editor (IDD 289) keeps the name as typed, without
+trimming, and refuses one that matches another template ignoring case.
+Saving under a new name removes the template and appends it at the end of
+EncPlatU.dat; saving under the same name rewrites it in place. A new
+template has `placement` [1, 0, 0] (both lair and wandering) and everything else zero.
+When a line's Properties dialog closes with OK, a line that is not dependent
+loses its reference and gets per and beyond 1; a monster line whose second
+group is "appear." loses its second name and gets the second dice 1d1 * 1 + 0.
+
 ## Encounters (Encount.dat, EncountU.dat)
 
 ### CEncounterOb (schema 88, size 0x194, Serialize 0x63c659)

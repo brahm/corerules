@@ -33,6 +33,7 @@ pub mod races;
 pub mod slots;
 pub mod spells;
 pub mod tables;
+pub mod templates;
 pub mod traps;
 
 use std::collections::HashMap;
@@ -554,6 +555,10 @@ pub trait UserKind: 'static {
     const FILE: &'static str;
     /// Longest name the name field takes (DDV_MaxChars).
     const MAX_NAME: usize = 50;
+    /// Whether a name is stored trimmed (it is always checked trimmed).
+    const TRIM_NAME: bool = true;
+    /// Whether a renamed record moves to the end of the user file.
+    const RENAME_TO_END: bool = false;
 
     fn name(record: &Self::Rec) -> &str;
     fn set_name(record: &mut Self::Rec, name: &str);
@@ -768,29 +773,43 @@ impl<K: UserKind> UserDb<K> {
         K::name_message(error, record, adding)
     }
 
-    /// Appends `record` (its name trimmed) to the user list; returns its
-    /// index.
+    /// Appends `record` (its name trimmed, unless the kind keeps it as
+    /// typed) to the user list; returns its index.
     pub fn add(&mut self, mut record: K::Rec) -> std::result::Result<usize, NameError> {
-        let name = K::name(&record).trim().to_owned();
-        K::set_name(&mut record, &name);
+        Self::trim(&mut record);
         self.validate_name(&record, None)?;
         K::prepare(&mut record);
         self.user.push(record);
         Ok(self.user.len() - 1)
     }
 
-    /// Replaces user record `index`, keeping its place in the file.
+    /// Replaces user record `index`, keeping its place in the file unless
+    /// the kind moves renamed records to the end; returns its index.
     pub fn replace(
         &mut self,
         index: usize,
         mut record: K::Rec,
-    ) -> std::result::Result<(), NameError> {
-        let name = K::name(&record).trim().to_owned();
-        K::set_name(&mut record, &name);
+    ) -> std::result::Result<usize, NameError> {
+        Self::trim(&mut record);
         self.validate_name(&record, Some(index))?;
         K::prepare(&mut record);
+        let renamed = !K::name(&self.user[index])
+            .trim()
+            .eq_ignore_ascii_case(K::name(&record).trim());
+        if K::RENAME_TO_END && renamed {
+            self.user.remove(index);
+            self.user.push(record);
+            return Ok(self.user.len() - 1);
+        }
         self.user[index] = record;
-        Ok(())
+        Ok(index)
+    }
+
+    fn trim(record: &mut K::Rec) {
+        if K::TRIM_NAME {
+            let name = K::name(record).trim().to_owned();
+            K::set_name(record, &name);
+        }
     }
 
     /// Removes user record `index`; nothing that refers to it changes.

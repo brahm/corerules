@@ -260,7 +260,7 @@ impl Installation {
             self.encounter_entries(rules.as_ref().ok()),
         ));
         sections.push(section(
-            "templates",
+            TEMPLATES,
             tr("Encounter Templates"),
             "view-list-bullet-symbolic",
             rules.as_ref().map(template_entries).map_err(Clone::clone),
@@ -594,10 +594,10 @@ impl Installation {
     }
 }
 
-/// Entry keys of saved encounters, templates and 2-20 tables start with
-/// these.
+/// Entry keys of saved encounters and 2-20 tables start with these;
+/// templates have user database keys ([`crate::userdb::key`], section
+/// "templates").
 pub const ENCOUNTER_KEY: &str = "encounter:";
-pub const TEMPLATE_KEY: &str = "template:";
 pub const TABLE_KEY: &str = "table:";
 
 fn encounter_entry(e: &Encounter, rules: Option<&EncounterRules>) -> Entry {
@@ -672,6 +672,9 @@ fn encounter_entry(e: &Encounter, rules: Option<&EncounterRules>) -> Entry {
     }
 }
 
+/// The id of the encounter templates' section.
+pub const TEMPLATES: &str = "templates";
+
 pub(crate) fn template_entries(rules: &EncounterRules) -> Vec<Entry> {
     sorted(
         rules
@@ -717,7 +720,15 @@ pub(crate) fn template_entries(rules: &EncounterRules) -> Vec<Entry> {
                     party: String::new(),
                     picture: None,
                     icon: None,
-                    key: format!("{TEMPLATE_KEY}{}", t.name),
+                    key: crate::userdb::key(
+                        TEMPLATES,
+                        if t.user {
+                            crate::userdb::Origin::Custom
+                        } else {
+                            crate::userdb::Origin::Standard
+                        },
+                        &t.name,
+                    ),
                     title: t.name.clone(),
                     subtitle: t.monster_type.clone(),
                     groups: vec![Group {
