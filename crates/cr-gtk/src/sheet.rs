@@ -8,13 +8,34 @@ use std::rc::Rc;
 use adw::prelude::*;
 use cr_i18n::{tr, tr_noop};
 use cr_store::help::topic;
-use cr_store::sheet::{Align, Block, CellKind, ListItem, Sheet, SheetBox, Table, Timestamp};
+use cr_store::sheet::{
+    Align, Block, Border, CellKind, ListItem, Sheet, SheetBox, SheetChoice, Table, Timestamp,
+};
 use gtk::{gio, glib, pango};
 
-/// Opens a dialog with `sheet` over `parent`; `toast` reports exports.
-pub fn show(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) + 'static) {
-    let sheet = Rc::new(sheet);
-    let scroll = content(&sheet);
+/// How the sheet dialog changes the character's sheet options: the
+/// choice it starts from, and what saves a new one and builds the sheet
+/// again.
+pub struct Options {
+    pub choice: SheetChoice,
+    pub save: SaveChoice,
+}
+
+/// Saves a choice and builds the sheet it gives.
+pub type SaveChoice = Box<dyn Fn(&SheetChoice) -> Result<Sheet, String>>;
+
+/// Opens a dialog with `sheet` over `parent`; with `options`, its
+/// Character Sheet Options button changes the sections and the border;
+/// `toast` reports exports.
+pub fn show(
+    parent: &impl IsA<gtk::Widget>,
+    sheet: Sheet,
+    options: Option<Options>,
+    toast: impl Fn(&str) + 'static,
+) {
+    let title = sheet.title.clone();
+    let flavor = sheet.flavor;
+    let current = Rc::new(RefCell::new(Rc::new(sheet)));
 
     let print = gtk::Button::builder()
         .icon_name("printer-symbolic")
@@ -24,7 +45,7 @@ pub fn show(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) +
     let menu = gio::Menu::new();
     menu.append(Some(tr("Save as _PDF…")), Some("sheet.pdf"));
     menu.append(Some(tr("Export as _HTML…")), Some("sheet.html"));
-    if sheet.flavor == cr_store::sheet::Flavor::Expansion {
+    if flavor == cr_store::sheet::Flavor::Expansion {
         menu.append(Some(tr("Export as _Text…")), Some("sheet.txt"));
     }
     menu.append(Some(tr("Export as _Markdown…")), Some("sheet.md"));
@@ -39,15 +60,46 @@ pub fn show(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) +
     let view = adw::ToolbarView::new();
     crate::help::add_button(&header, &view, || topic::CHARACTER_SHEET);
     view.add_top_bar(&header);
-    view.set_content(Some(&scroll));
+    view.set_content(Some(&content(&current.borrow())));
     let dialog = adw::Dialog::builder()
-        .title(&sheet.title)
+        .title(&title)
         .content_width(860)
         .content_height(720)
         .child(&view)
         .build();
 
     let toast: Rc<dyn Fn(&str)> = Rc::new(toast);
+    if let Some(options) = options {
+        let button = gtk::Button::builder()
+            .icon_name("view-list-symbolic")
+            .tooltip_text(tr("Character Sheet Options"))
+            .build();
+        header.pack_start(&button);
+        let options = Rc::new(RefCell::new(options));
+        let (dialog, current, view, toast) =
+            (dialog.clone(), current.clone(), view.clone(), toast.clone());
+        button.connect_clicked(move |_| {
+            let choice = options.borrow().choice.clone();
+            let (options, current, view, toast) = (
+                options.clone(),
+                current.clone(),
+                view.clone(),
+                toast.clone(),
+            );
+            crate::sheet_options::choose(&dialog, choice, move |choice| {
+                let built = (options.borrow().save)(&choice);
+                match built {
+                    Ok(sheet) => {
+                        options.borrow_mut().choice = choice;
+                        view.set_content(Some(&content(&sheet)));
+                        *current.borrow_mut() = Rc::new(sheet);
+                    }
+                    Err(e) => toast(&e),
+                }
+            });
+        });
+    }
+
     let actions = gio::SimpleActionGroup::new();
     let action = |name: &str, run: Box<dyn Fn()>| {
         let a = gio::SimpleAction::new(name, None);
@@ -55,13 +107,13 @@ pub fn show(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) +
         actions.add_action(&a);
     };
     action("print", {
-        let (sheet, dialog, toast) = (sheet.clone(), dialog.clone(), toast.clone());
-        Box::new(move || print_sheet(&dialog, &sheet, None, &*toast))
+        let (current, dialog, toast) = (current.clone(), dialog.clone(), toast.clone());
+        Box::new(move || print_sheet(&dialog, &current.borrow().clone(), None, &*toast))
     });
     action("pdf", {
-        let (sheet, dialog, toast) = (sheet.clone(), dialog.clone(), toast.clone());
+        let (current, dialog, toast) = (current.clone(), dialog.clone(), toast.clone());
         Box::new(move || {
-            let (sheet, dialog2, toast) = (sheet.clone(), dialog.clone(), toast.clone());
+            let (sheet, dialog2, toast) = (current.borrow().clone(), dialog.clone(), toast.clone());
             let title = sheet.title.clone();
             save_file(&dialog, &title, "pdf", tr("PDF documents"), move |path| {
                 print_sheet(&dialog2, &sheet, Some(path), &*toast)
@@ -74,9 +126,9 @@ pub fn show(parent: &impl IsA<gtk::Widget>, sheet: Sheet, toast: impl Fn(&str) +
         ("md", "md", tr_noop!("Markdown documents")),
     ] {
         action(name, {
-            let (sheet, dialog, toast) = (sheet.clone(), dialog.clone(), toast.clone());
+            let (current, dialog, toast) = (current.clone(), dialog.clone(), toast.clone());
             Box::new(move || {
-                let (sheet, toast) = (sheet.clone(), toast.clone());
+                let (sheet, toast) = (current.borrow().clone(), toast.clone());
                 save_file(
                     &dialog,
                     &sheet.title.clone(),
@@ -385,6 +437,23 @@ enum Printed {
     /// A picture and its width and height in points.
     Picture(gtk::gdk::Texture, f64, f64),
     PageBreak,
+    /// The end of a framed box.
+    BoxEnd,
+}
+
+/// How far a framed box's contents sit inside its frame, in points.
+const FRAME_PAD: f64 = 8.0;
+/// The height kept free at the foot of a printed page for its footer.
+const FOOTER: f64 = 16.0;
+
+/// Whether `border` draws frames, and with what pen: the original's
+/// 16-twip pen for Normal and 7 twips for Thin (0x6d728a).
+fn frame_pen(border: Option<Border>) -> Option<f64> {
+    match border {
+        Some(Border::Normal) => Some(0.8),
+        Some(Border::Thin) => Some(0.35),
+        Some(Border::None) | None => None,
+    }
 }
 
 const FONT: &str = "Sans 8";
@@ -393,6 +462,12 @@ const TITLE_FONT: &str = "Sans Bold 10";
 /// Lays the sheet out for printing: boxes one under the other, tables
 /// with their columns sized to fit the page.
 fn print_items(sheet: &Sheet, context: &gtk::PrintContext, width: f64) -> Vec<(Printed, f64)> {
+    let framed = frame_pen(sheet.border).is_some();
+    let width = if framed {
+        width - 2.0 * FRAME_PAD
+    } else {
+        width
+    };
     let layout = context.create_pango_layout();
     let font = pango::FontDescription::from_string(FONT);
     layout.set_font_description(Some(&font));
@@ -416,7 +491,9 @@ fn print_items(sheet: &Sheet, context: &gtk::PrintContext, width: f64) -> Vec<(P
             }
         };
         for sheet_box in columns.iter().flatten() {
-            if !sheet_box.title.is_empty() {
+            if framed {
+                items.push((Printed::Title(sheet_box.title.clone()), 20.0));
+            } else if !sheet_box.title.is_empty() {
                 items.push((Printed::Title(sheet_box.title.clone()), 18.0));
             }
             for block in &sheet_box.body {
@@ -531,14 +608,18 @@ fn print_items(sheet: &Sheet, context: &gtk::PrintContext, width: f64) -> Vec<(P
                     }
                 }
             }
+            if framed {
+                items.push((Printed::BoxEnd, 6.0));
+            }
             items.push((Printed::Text(String::new(), 0.0), 8.0));
         }
     }
     items
 }
 
-/// The items of one page: their index and vertical position.
-type Pages = Vec<(usize, f64)>;
+/// The items of one page: their index and vertical position, and whether
+/// a framed box from the page before runs on into it.
+type Pages = (Vec<(usize, f64)>, bool);
 
 /// Prints the sheet, or with `pdf` saves it there as a PDF.
 pub(crate) fn print_sheet(
@@ -559,10 +640,12 @@ pub(crate) fn print_sheet(
     operation.connect_begin_print({
         let (sheet, pages, items) = (sheet.clone(), pages.clone(), items.clone());
         move |operation, context| {
-            let (width, height) = (context.width(), context.height());
+            // The foot of each page is left for the footer.
+            let (width, height) = (context.width(), context.height() - FOOTER);
             let laid = print_items(&sheet, context, width);
-            let mut all = vec![Vec::new()];
+            let mut all: Vec<Pages> = vec![(Vec::new(), false)];
             let mut y = 0.0;
+            let mut open = false;
             for (i, (item, h)) in laid.iter().enumerate() {
                 let page_break = matches!(item, Printed::PageBreak);
                 // Keep a title with what follows it.
@@ -571,14 +654,32 @@ pub(crate) fn print_sheet(
                 } else {
                     *h
                 };
-                if page_break || (y + need > height && y > 0.0) {
-                    all.push(Vec::new());
-                    y = 0.0;
-                    if page_break {
-                        continue;
+                // A break on a page that has nothing yet, or the gap after
+                // a box landing at the top of one, would leave it blank.
+                if page_break {
+                    if y > 0.0 {
+                        all.push((Vec::new(), false));
+                        y = 0.0;
                     }
+                    continue;
                 }
-                all.last_mut().unwrap().push((i, y));
+                if y == 0.0 && matches!(item, Printed::Text(t, _) if t.is_empty()) {
+                    continue;
+                }
+                // A box's closing line and the gap after it stay with what
+                // came before, even a little past the bottom.
+                let trailing = matches!(item, Printed::BoxEnd)
+                    || matches!(item, Printed::Text(t, _) if t.is_empty());
+                if y + need > height && y > 0.0 && !trailing {
+                    all.push((Vec::new(), open));
+                    y = 0.0;
+                }
+                match item {
+                    Printed::Title(_) => open = true,
+                    Printed::BoxEnd => open = false,
+                    _ => {}
+                }
+                all.last_mut().unwrap().0.push((i, y));
                 y += h;
             }
             operation.set_n_pages(all.len() as i32);
@@ -588,6 +689,7 @@ pub(crate) fn print_sheet(
     });
     operation.connect_draw_page({
         let (pages, items, title) = (pages.clone(), items.clone(), sheet.title.clone());
+        let border = sheet.border;
         move |_, context, page| {
             let cr = context.cairo_context();
             let layout = context.create_pango_layout();
@@ -595,6 +697,13 @@ pub(crate) fn print_sheet(
             let bold = pango::FontDescription::from_string(TITLE_FONT);
             let width = context.width();
             let items = items.borrow();
+            let pen = frame_pen(border);
+            let pad = if pen.is_some() { FRAME_PAD } else { 0.0 };
+            let line = |x0: f64, y0: f64, x1: f64, y1: f64| {
+                cr.move_to(x0, y0);
+                cr.line_to(x1, y1);
+                let _ = cr.stroke();
+            };
             let draw = |text: &str, x: f64, y: f64, w: Option<f64>, right: bool, strong: bool| {
                 layout.set_font_description(Some(if strong { &bold } else { &font }));
                 layout.set_text(text);
@@ -607,14 +716,53 @@ pub(crate) fn print_sheet(
                 cr.move_to(x, y);
                 pangocairo::functions::show_layout(&cr, &layout);
             };
-            for &(i, y) in pages.borrow().get(page as usize).into_iter().flatten() {
+            let pages = pages.borrow();
+            let (placed, continued) = pages
+                .get(page as usize)
+                .map_or((&[][..], false), |(p, c)| (&p[..], *c));
+            // Where the open box's frame starts on this page.
+            let mut open = continued.then_some(0.0);
+            if let Some(pen) = pen {
+                cr.set_line_width(pen);
+            }
+            for &(i, y) in placed {
                 match &items[i].0 {
-                    Printed::Title(text) => {
-                        draw(text, 0.0, y, None, false, true);
-                        cr.set_line_width(0.5);
-                        cr.move_to(0.0, y + 15.0);
-                        cr.line_to(width, y + 15.0);
-                        let _ = cr.stroke();
+                    Printed::Title(text) => match border {
+                        // The other pages: a rule under the title.
+                        None => {
+                            draw(text, 0.0, y, None, false, true);
+                            cr.set_line_width(0.5);
+                            line(0.0, y + 15.0, width, y + 15.0);
+                        }
+                        Some(Border::None) => draw(text, 0.0, y, None, false, true),
+                        // A rectangle with the title inside.
+                        Some(Border::Thin) => {
+                            draw(text, pad, y + 3.0, None, false, true);
+                            line(0.0, y, width, y);
+                            open = Some(y);
+                        }
+                        // A frame whose top line runs through the title.
+                        Some(Border::Normal) => {
+                            let top = y + 7.0;
+                            if text.is_empty() {
+                                line(0.0, top, width, top);
+                            } else {
+                                draw(text, pad + 4.0, y, None, false, true);
+                                let (_, logical) = layout.extents();
+                                let w = f64::from(logical.width()) / f64::from(pango::SCALE);
+                                line(0.0, top, pad, top);
+                                line(pad + 8.0 + w, top, width, top);
+                            }
+                            open = Some(top);
+                        }
+                    },
+                    Printed::BoxEnd => {
+                        if let Some(top) = open.take() {
+                            let bottom = y + 3.0;
+                            line(0.0, top, 0.0, bottom);
+                            line(width, top, width, bottom);
+                            line(0.0, bottom, width, bottom);
+                        }
                     }
                     Printed::Row(cells, widths) => {
                         let starts: Vec<f64> = widths
@@ -637,18 +785,30 @@ pub(crate) fn print_sheet(
                             if *header {
                                 cr.set_source_rgb(0.35, 0.35, 0.35);
                             }
-                            draw(text, starts[c], y, Some(w.max(1.0)), *right, false);
+                            draw(text, pad + starts[c], y, Some(w.max(1.0)), *right, false);
                             cr.set_source_rgb(0.0, 0.0, 0.0);
                         }
                     }
-                    Printed::Text(text, indent) => {
-                        draw(text, *indent, y, Some(width - indent), false, false)
-                    }
+                    Printed::Text(text, indent) => draw(
+                        text,
+                        pad + indent,
+                        y,
+                        Some(width - 2.0 * pad - indent),
+                        false,
+                        false,
+                    ),
                     Printed::Picture(texture, w, h) => {
-                        crate::print::draw_texture(&cr, texture, 0.0, y, *w, *h)
+                        crate::print::draw_texture(&cr, texture, pad, y, *w, *h)
                     }
                     Printed::PageBreak => {}
                 }
+            }
+            // A box that runs on to the next page keeps its sides to the
+            // foot of this one.
+            if let Some(top) = open {
+                let bottom = context.height() - FOOTER;
+                line(0.0, top, 0.0, bottom);
+                line(width, top, width, bottom);
             }
             // Footer: name and page.
             draw(

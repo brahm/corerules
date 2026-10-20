@@ -182,6 +182,7 @@ fn page(title: &str, flavor: Flavor, boxes: Vec<SheetBox>) -> Sheet {
                 content: sheet::SectionContent::Columns(vec![vec![b]]),
             })
             .collect(),
+        border: None,
     }
 }
 
@@ -347,6 +348,7 @@ impl TreasureRules {
                     }],
                 ]),
             }],
+            border: None,
         }
     }
 }

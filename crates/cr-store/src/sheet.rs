@@ -66,6 +66,61 @@ pub struct Sheet {
     pub title: String,
     pub flavor: Flavor,
     pub sections: Vec<Section>,
+    /// How a printed Expansion character sheet frames its boxes; `None`
+    /// for the other pages, which keep a rule under each title.
+    pub border: Option<Border>,
+}
+
+/// The Border Style of the Expansion's Character Sheet Options (member
+/// +0x25c): how printing frames each box (layout 0x5eea10). The exports
+/// do not use it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Border {
+    /// No Borders (0): the titles alone.
+    None,
+    /// Thin Borders (1): a thin rectangle round each box.
+    Thin,
+    /// Normal Borders (2), what the dialog opens on: a heavier frame
+    /// whose top line runs through the title.
+    Normal,
+}
+
+impl Border {
+    pub const ALL: [Border; 3] = [Border::None, Border::Thin, Border::Normal];
+
+    /// The value stored in the character; anything else prints as Normal.
+    pub fn from_stored(value: u32) -> Self {
+        match value {
+            0 => Self::None,
+            1 => Self::Thin,
+            _ => Self::Normal,
+        }
+    }
+
+    pub fn stored(self) -> u32 {
+        match self {
+            Self::None => 0,
+            Self::Thin => 1,
+            Self::Normal => 2,
+        }
+    }
+
+    /// The combo's text.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::None => cr_i18n::tr("No Borders"),
+            Self::Thin => cr_i18n::tr("Thin Borders"),
+            Self::Normal => cr_i18n::tr("Normal Borders"),
+        }
+    }
+}
+
+/// What the Character Sheet Options dialog chooses: the sections in
+/// order (any of them, Page Break included, may repeat) and the border.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SheetChoice {
+    pub sections: Vec<u32>,
+    pub border: Border,
 }
 
 /// One section of the sheet, as chosen in the options (see
@@ -392,6 +447,40 @@ impl Installation {
     pub fn sheet(&self, character: &Character) -> Result<Sheet> {
         self.sheet_rules()?.sheet(character)
     }
+
+    /// Saves `choice` as the sheet options of the character in
+    /// `Chars/<file>`, as the dialog's OK does (0x599d5e): the sections as
+    /// (name, id) pairs in order, the border, and the flag that the list
+    /// is set. `index.chr` is not touched.
+    pub fn save_sheet_choice(&self, file: &str, choice: &SheetChoice) -> Result<()> {
+        let mut character = self.character(file)?;
+        let pairs = choice
+            .sections
+            .iter()
+            .filter_map(|&id| {
+                SECTIONS
+                    .iter()
+                    .find(|(s, _)| *s == id)
+                    .map(|(_, name)| ((*name).to_owned(), id))
+            })
+            .collect();
+        character.data.sheet_options = Some(cr_formats::character::SheetOptions {
+            version: 2,
+            unknown_0x260: 1,
+            unknown_0x25c: choice.border.stored(),
+            entries: SheetEntries::Pairs(pairs),
+        });
+        let format = |source| Error::Format {
+            path: file.into(),
+            source,
+        };
+        let bytes = character.to_bytes().map_err(format)?;
+        Character::parse(&bytes).map_err(format)?;
+        let path = self
+            .path(&crate::edit::character_path(file)?)
+            .ok_or_else(|| Error::Invalid(cr_i18n::tr!("{file} not found", file)))?;
+        crate::edit::replace(&path, &bytes)
+    }
 }
 
 impl SheetRules {
@@ -411,6 +500,22 @@ impl SheetRules {
             return Ok(pairs.iter().map(|p| p.1).collect());
         }
         build::default_sections(self, character)
+    }
+
+    /// What the Character Sheet Options dialog starts with: the stored
+    /// sections, or the defaults (0x598347), and the stored border. The
+    /// original always opens on Normal Borders; the app shows what was
+    /// saved.
+    pub fn sheet_choice(&self, character: &Character) -> Result<SheetChoice> {
+        let configured = character
+            .data
+            .sheet_options
+            .as_ref()
+            .filter(|o| o.unknown_0x260 != 0);
+        Ok(SheetChoice {
+            sections: self.section_ids(character)?,
+            border: configured.map_or(Border::Normal, |o| Border::from_stored(o.unknown_0x25c)),
+        })
     }
 
     /// Computes the sheet.
