@@ -33,7 +33,7 @@ use cr_formats::character::Character;
 use cr_i18n::{tr, tr_noop};
 use cr_store::Installation;
 use cr_store::advance::{AdvanceRules, Advancement};
-use cr_store::catalog::{ENCOUNTER_KEY, Entry, Section, TABLE_KEY, TEMPLATE_KEY, TREASURE_KEY};
+use cr_store::catalog::{ENCOUNTER_KEY, Entry, Section, TABLE_KEY, TEMPLATES, TREASURE_KEY};
 use cr_store::choices::{Caster, caster};
 use cr_store::dual::ClassChoice;
 use cr_store::edit::{ABILITY_RANGE, CharacterDetails};
@@ -250,7 +250,7 @@ impl Window {
             move |_| {
                 let key = this.browser.current_key.borrow().clone();
                 let host = Rc::new(this.clone());
-                if let Some(name) = key.strip_prefix(TEMPLATE_KEY) {
+                if let Some(name) = template_name(&key) {
                     encounter::create_from_template(&host, name)
                 } else if let Some(name) = key.strip_prefix(TABLE_KEY) {
                     encounter::roll_and_generate(&host, name)
@@ -1055,6 +1055,10 @@ impl userdb::Host for Window {
             .map(|s| s.id.to_owned())
             .unwrap_or_default()
     }
+
+    fn template_npc(&self, parent: &gtk::Widget, chosen: npc::Chosen) {
+        npc::template_npc(&Rc::new(self.clone()), parent, chosen)
+    }
 }
 
 impl encounter::Host for Window {
@@ -1088,6 +1092,13 @@ impl encounter::Host for Window {
     fn parent(&self) -> gtk::Widget {
         self.window.clone().upcast()
     }
+}
+
+/// The template a catalog key names.
+fn template_name(key: &str) -> Option<&str> {
+    cr_store::userdb::parse_key(key)
+        .filter(|(section, ..)| *section == TEMPLATES)
+        .map(|(.., name)| name)
 }
 
 fn open_menu() -> gtk::MenuButton {
@@ -1212,7 +1223,7 @@ impl DetailPane {
             .set_visible(writable && character && !entry.npc);
         self.delete_button.set_visible(writable && character);
         self.generate_button
-            .set_visible(writable && (key.starts_with(TEMPLATE_KEY) || key.starts_with(TABLE_KEY)));
+            .set_visible(writable && (template_name(key).is_some() || key.starts_with(TABLE_KEY)));
         self.generate_button
             .set_tooltip_text(Some(if key.starts_with(TABLE_KEY) {
                 tr("Roll and Create Encounter")

@@ -31,6 +31,7 @@ use cr_i18n::tr;
 
 use crate::lists::pick;
 
+mod templates;
 mod widgets;
 
 /// A redraw callback set once its widgets exist.
@@ -48,6 +49,8 @@ pub trait Host {
     fn current_key(&self) -> String;
     /// The id of the selected section.
     fn current_section(&self) -> String;
+    /// NPC Creation in template mode over `parent`; `chosen` gets the NPC.
+    fn template_npc(&self, parent: &gtk::Widget, chosen: crate::npc::Chosen);
 }
 
 type Shared<H> = Rc<H>;
@@ -78,6 +81,7 @@ enum Kind {
     /// The section of the other part types, where New asks for the type.
     OtherParts,
     Tables,
+    Templates,
 }
 
 fn kind_of(section: &str) -> Option<Kind> {
@@ -97,6 +101,7 @@ fn kind_of(section: &str) -> Option<Kind> {
         "kits" => Kind::Parts(parts::KITS),
         "nonweapon" => Kind::Parts(4),
         "treasure-tables" => Kind::Tables,
+        "templates" => Kind::Templates,
         parts::OTHER_SECTION => Kind::OtherParts,
         id => Kind::Parts(parts::other_type(id)?),
     })
@@ -131,6 +136,7 @@ fn new_title(kind: Kind) -> &'static str {
         Kind::Parts(18) => tr("New Sphere"),
         Kind::Parts(_) | Kind::OtherParts => tr("New Part"),
         Kind::Tables => tr("New Treasure Table"),
+        Kind::Templates => tr("New Encounter Template"),
     }
 }
 
@@ -155,6 +161,7 @@ fn new_menu_label(kind: Option<Kind>) -> &'static str {
         // New in the other parts' section asks for the type.
         Some(Kind::Parts(_) | Kind::OtherParts) => tr("_New Part…"),
         Some(Kind::Tables) => tr("_New Treasure Table…"),
+        Some(Kind::Templates) => tr("_New Encounter Template…"),
     }
 }
 
@@ -294,11 +301,12 @@ fn run<H: Host + 'static>(
         Kind::OtherParts if action == Action::New => new_other_part(host),
         Kind::OtherParts => {}
         Kind::Tables => table_action(host, &target, action),
+        Kind::Templates => templates::action(host, &target, action),
     }
 }
 
 /// The sections, for a `'static` id.
-const SECTIONS: [&str; 15] = [
+const SECTIONS: [&str; 16] = [
     "wizard-spells",
     "priest-spells",
     "traps",
@@ -314,6 +322,7 @@ const SECTIONS: [&str; 15] = [
     "kits",
     "nonweapon",
     "treasure-tables",
+    "templates",
 ];
 
 /// New in the other parts' section: asks for the type ("Select the Type"
@@ -771,7 +780,7 @@ fn finish<K: UserKind, H: Host + 'static>(
             let result = host.with_install(|install| {
                 let mut db = UserDb::<K>::load(install)?;
                 let stored = match editing {
-                    Some(i) if i < db.user.len() => db.replace(i, r.clone()).map(|()| i),
+                    Some(i) if i < db.user.len() => db.replace(i, r.clone()),
                     _ => db.add(r.clone()),
                 };
                 match stored {

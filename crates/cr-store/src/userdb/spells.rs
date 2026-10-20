@@ -258,7 +258,7 @@ mod tests {
         // Editing may keep its own name.
         let mut edited = db.user[1].clone();
         edited.level = 3;
-        assert_eq!(db.replace(1, edited), Ok(()));
+        assert_eq!(db.replace(1, edited), Ok(1));
 
         db.save(&t.install).unwrap();
         let reread = UserDb::<Spells>::load(&t.install).unwrap();
@@ -286,7 +286,7 @@ mod tests {
         db.user.push(imported);
         let mut edited = db.user[1].clone();
         edited.level = 2;
-        assert_eq!(db.replace(1, edited.clone()), Ok(()));
+        assert_eq!(db.replace(1, edited.clone()), Ok(1));
         edited.name = "Bless".into();
         edited.wizard = 0;
         edited.priest = 1;

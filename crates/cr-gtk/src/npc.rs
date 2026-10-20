@@ -133,8 +133,22 @@ fn log_messages(npc: &Npc) {
     }
 }
 
+/// Called with the NPC "Add to Template" generates.
+pub type Chosen = Box<dyn Fn(&Npc)>;
+
 /// Opens the New NPC dialog.
 pub fn new_npc<H: Host + 'static>(host: &Rc<H>) {
+    npc_dialog(host, None, &host.parent());
+}
+
+/// NPC Creation as an encounter template's Add opens it (template mode,
+/// 0x4bd39a): no ability scores or party, and "Add to Template" hands the
+/// generated NPC to `chosen` instead of saving it.
+pub fn template_npc<H: Host + 'static>(host: &Rc<H>, parent: &gtk::Widget, chosen: Chosen) {
+    npc_dialog(host, Some(chosen), parent);
+}
+
+fn npc_dialog<H: Host + 'static>(host: &Rc<H>, template: Option<Chosen>, parent: &gtk::Widget) {
     let Some(rules) = host.npc_rules() else {
         return;
     };
@@ -211,14 +225,19 @@ pub fn new_npc<H: Host + 'static>(host: &Rc<H>) {
     let party = adw::EntryRow::builder().title(tr("Party")).build();
     let save_group = adw::PreferencesGroup::new();
     save_group.add(&party);
-    save_group.set_visible(expansion);
+    save_group.set_visible(expansion && template.is_none());
+    abilities_group.set_visible(template.is_none());
 
     let page = adw::PreferencesPage::new();
     page.add(&character);
     page.add(&levels_group);
     page.add(&abilities_group);
     page.add(&save_group);
-    let create = create_button(tr("_Create"));
+    let create = create_button(if template.is_some() {
+        tr("Add to _Template")
+    } else {
+        tr("_Create")
+    });
     let dialog = dialog(tr("New NPC"), &page, &create, topic::NPC_CREATION);
 
     let selected_race = {
@@ -428,6 +447,10 @@ pub fn new_npc<H: Host + 'static>(host: &Rc<H>) {
                 Err(e) => return host.toast(&e.to_string()),
             };
             log_messages(&npc);
+            if let Some(chosen) = &template {
+                dialog.close();
+                return chosen(&npc);
+            }
             let party = party.text().trim().to_owned();
             match host.with_install(|install| install.save_npc(&npc, &party)) {
                 Some(Ok(file)) => {
@@ -443,7 +466,7 @@ pub fn new_npc<H: Host + 'static>(host: &Rc<H>) {
             }
         }
     });
-    dialog.present(Some(&host.parent()));
+    dialog.present(Some(parent));
 }
 
 /// "~Random" in the dialog's choices.

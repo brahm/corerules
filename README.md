@@ -106,8 +106,10 @@ the original programs wrote.
   combinations, parts (weapons, armor, kits and proficiencies, plus the
   ten other types in Other Parts: racial and class abilities, languages,
   schools, spheres, traits, disadvantages, gems and art, currency and
-  Count), spells, psionic powers, monsters, monster types, traps and treasure
-  tables. A monster type's picture is chosen among those in
+  Count), spells, psionic powers, monsters, monster types, traps, treasure
+  tables and encounter templates (monsters, NPCs, items with their coins
+  and escorts, traps, treasure types and the 2-20 table, with the
+  original's dependents and "and"/"or" second groups). A monster type's picture is chosen among those in
   `Bitmaps/Monsters` and `UserBMP`, a race's among the portraits, or made
   from a picture of your own as portraits are (monster pictures go to
   `UserBMP`, at 300×300). A weapon's, piece of equipment's, magical item's,
