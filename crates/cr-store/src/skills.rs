@@ -12,7 +12,16 @@
 //!   half of the points available at a level into one skill. Lowering a
 //!   skill gives its points back. The original asks before going over that
 //!   limit or past 95%, which the app only warns about; spending more
-//!   points than there are is refused. Kit bonus points are not modelled.
+//!   points than there are is refused.
+//! * The kit (62bc54 to 62cc45) may replace the class's points at 1st
+//!   level and per level (+0x120, +0x124). What it gives is not spent:
+//!   its fixed adjustments (+0x174) and its bonus of each level, which
+//!   the player puts into one skill of a list (+0x13c from +0x140 at 1st
+//!   level, +0x154 from +0x158 later) for every level still without one,
+//!   and which may not be taken back. It may also have the player choose
+//!   skills (+0x16c of them, for a +0x170% bonus) until they are chosen.
+//!   Both are kept as `CPartKitBonusOb`s (+0x15e4) with the rogue level
+//!   they were given at.
 //! * Psionicists choose disciplines, a primary discipline, sciences and
 //!   devotions, as many as their psionicist level allows (the program's
 //!   tables; a psychic adept, `flags_0x780[5]` on a class ability, gets
@@ -45,6 +54,7 @@ use cr_i18n::tr;
 use crate::advance::AdvanceRules;
 use crate::collate::sort_key;
 use crate::create::Dice;
+use crate::npc::data::Kit;
 use crate::npc::magic::{bonus16, psi_dev, psi_disc, psi_sci};
 use crate::sheet::SheetRules;
 use crate::userdb::powers::DISCIPLINES;
@@ -60,6 +70,49 @@ const DEFENSE_TEXTS: [u32; 5] = [0x81a4c8, 0x81a4e0, 0x81a4f4, 0x81a508, 0x81a51
 
 /// The psionicist class group.
 const PSIONICIST: i32 = 4;
+
+/// What a kit does to the rogue skills.
+#[derive(Debug, Clone, Default)]
+struct KitRogue {
+    /// Points at 1st level and per level after, when not −1.
+    first: i32,
+    per_level: i32,
+    /// Fixed adjustments (+0x174): skill, amount.
+    adjust: Vec<(String, i32)>,
+    /// The bonus at 1st level and its skills, then at each later level.
+    first_bonus: (i32, Vec<String>),
+    later_bonus: (i32, Vec<String>),
+    /// How many skills to choose and their bonus.
+    chosen: (i32, i32),
+}
+
+/// A kit's bonus to a rogue skill (`CPartKitBonusOb`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KitBonus {
+    /// The skill's class ability.
+    pub name: String,
+    /// The rogue level it was given at.
+    pub level: i32,
+    pub bonus: i32,
+}
+
+/// A level whose kit bonus is still to go to a skill.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RogueBonusPick {
+    pub level: u32,
+    pub amount: i32,
+    /// The skills it may go to.
+    pub names: Vec<String>,
+}
+
+/// The skills the kit has the character choose.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChosenPick {
+    /// How many more may be chosen.
+    pub count: usize,
+    pub bonus: i32,
+    pub names: Vec<String>,
+}
 
 #[derive(Debug, Clone, Copy, Default)]
 struct ClassEntry {
@@ -96,6 +149,7 @@ pub struct SkillRules {
     powers: Vec<Power>,
     /// Class abilities that make a psychic adept.
     adept_abilities: HashSet<String>,
+    kits: HashMap<String, KitRogue>,
     attacks: Vec<String>,
     defenses: Vec<String>,
 }
@@ -138,6 +192,7 @@ impl Installation {
         }
         powers.sort_by_cached_key(|p| sort_key(&p.name));
         let mut adept_abilities = HashSet::new();
+        let mut kits = HashMap::new();
         for relative in ["Database/Parts.dat", "UserDbas/PartsU.dat"] {
             if self.path(relative).is_none() {
                 continue;
@@ -153,6 +208,23 @@ impl Installation {
                     adept_abilities.insert(p.head.name.clone());
                 }
             }
+            for object in file.of_type("Character Kits").unwrap_or_default() {
+                if let Object::Part(p) = object
+                    && let Some(Some(kit)) = &p.data.kit
+                    && let Object::PartKit(kit) = &**kit
+                    && let Some(data) = &kit.data
+                {
+                    let kit = Kit::of(data);
+                    kits.entry(p.head.name.clone()).or_insert_with(|| KitRogue {
+                        first: kit.i_or(0x120, -1),
+                        per_level: kit.i_or(0x124, -1),
+                        adjust: kit.rogue_adjust.clone(),
+                        first_bonus: (kit.i(0x13c), kit.sa(0x140).to_vec()),
+                        later_bonus: (kit.i(0x154), kit.sa(0x158).to_vec()),
+                        chosen: (kit.i(0x16c), kit.i(0x170)),
+                    });
+                }
+            }
         }
         let image = crate::exe::Image::open(self, crate::treasure::Flavor::Expansion).ok();
         let texts = |vas: &[u32]| -> Vec<String> {
@@ -166,6 +238,7 @@ impl Installation {
             classes,
             powers,
             adept_abilities,
+            kits,
             attacks: texts(&ATTACK_TEXTS),
             defenses: texts(&DEFENSE_TEXTS),
         })
@@ -186,6 +259,10 @@ pub struct CharacterSkills {
     pub devotions: Vec<String>,
     pub attacks: Vec<String>,
     pub defenses: Vec<String>,
+    /// The kit's bonus of each level (`[L-1]`; none for a level without
+    /// one yet) and the skills it had chosen.
+    pub kit_bonuses: Vec<Option<KitBonus>>,
+    pub kit_chosen: Vec<KitBonus>,
 }
 
 /// One rogue skill as the dialog shows it.
@@ -199,6 +276,26 @@ pub struct RogueSkill {
     pub earlier: u32,
     /// The score without the points of the current level.
     pub base_score: i32,
+}
+
+fn kit_bonus(object: &Object) -> Option<KitBonus> {
+    match object {
+        Object::KitBonus(b) => Some(KitBonus {
+            name: b.name.clone(),
+            level: b.unknown_0x8,
+            bonus: b.unknown_0xc,
+        }),
+        _ => None,
+    }
+}
+
+fn kit_bonus_object(bonus: &KitBonus) -> Box<Object> {
+    Box::new(Object::KitBonus(cr_formats::classes::KitBonus {
+        version: 1,
+        name: bonus.name.clone(),
+        unknown_0x8: bonus.level,
+        unknown_0xc: bonus.bonus,
+    }))
 }
 
 fn sorted(mut names: Vec<String>) -> Vec<String> {
@@ -254,54 +351,296 @@ impl SkillRules {
             .collect()
     }
 
+    fn kit(&self, character: &Character) -> Option<&KitRogue> {
+        self.kits.get(&character.data.kit)
+    }
+
     /// The rogue points of the levels so far: the best 1st-level points of
-    /// the rogue classes, and their points per level after.
+    /// the rogue classes, and their points per level after, unless the
+    /// kit has its own (62bc54).
     fn rogue_budget(&self, character: &Character, level: u32) -> i64 {
         let rogue = || self.classes(character).filter(|c| c.rogue);
-        let first = rogue().map(|c| c.first).max().unwrap_or(0);
-        let per_level = rogue().map(|c| c.per_level).max().unwrap_or(0);
+        let mut first = rogue().map(|c| c.first).max().unwrap_or(0);
+        let mut per_level = rogue().map(|c| c.per_level).max().unwrap_or(0);
+        if let Some(kit) = self.kit(character) {
+            if kit.first != -1 {
+                first = kit.first.into();
+            }
+            if kit.per_level != -1 {
+                per_level = kit.per_level.into();
+            }
+        }
         first + per_level * i64::from(level.saturating_sub(1))
     }
 
+    /// The kit's fixed adjustment to a skill (62c689).
+    fn kit_adjustment(&self, character: &Character, name: &str) -> i64 {
+        self.kit(character)
+            .and_then(|k| k.adjust.iter().find(|(n, _)| n == name))
+            .map_or(0, |a| a.1.into())
+    }
+
+    /// What the kit gave a skill, which is not spent (62d1c7): its fixed
+    /// adjustment and its bonuses of every level.
+    fn kit_points(&self, character: &Character, new: &CharacterSkills, name: &str) -> i64 {
+        self.kit_adjustment(character, name)
+            + new
+                .kit_bonuses
+                .iter()
+                .flatten()
+                .filter(|b| b.name == name)
+                .map(|b| i64::from(b.bonus))
+                .sum::<i64>()
+    }
+
+    /// The kit's bonus of `level` to a skill, if it went there (62d0bc).
+    fn bonus_at(new: &CharacterSkills, level: u32, name: &str) -> i32 {
+        new.kit_bonuses
+            .get(level as usize - 1)
+            .and_then(Option::as_ref)
+            .filter(|b| b.name == name)
+            .map_or(0, |b| b.bonus)
+    }
+
+    /// The points each skill has at the levels before the current one,
+    /// with the bonuses `new` gives them.
+    fn earlier(&self, character: &Character, new: &CharacterSkills) -> Vec<i64> {
+        let old = self.skills_of(character);
+        let level = self.rogue_level(character).map_or(1, |l| l.1);
+        self.rogue_skills(character)
+            .iter()
+            .map(|skill| {
+                let added: i64 = (1..level)
+                    .filter(|&l| {
+                        old.kit_bonuses
+                            .get(l as usize - 1)
+                            .is_none_or(Option::is_none)
+                    })
+                    .map(|l| i64::from(Self::bonus_at(new, l, &skill.name)))
+                    .sum();
+                i64::from(skill.earlier) + added
+            })
+            .collect()
+    }
+
     /// The rogue points left with `new`; negative when it puts in more
-    /// than there are.
+    /// than there are. What the kit gave is not spent.
     pub fn rogue_points_left(&self, character: &Character, new: &CharacterSkills) -> i64 {
         let Some((_, level)) = self.rogue_level(character) else {
             return 0;
         };
-        let earlier: i64 = self
+        let earlier = self.earlier(character, new);
+        let spent: i64 = self
             .rogue_skills(character)
             .iter()
-            .map(|s| i64::from(s.earlier))
+            .zip(&earlier)
+            .zip(&new.rogue)
+            .map(|((skill, earlier), &current)| {
+                earlier + i64::from(current) - self.kit_points(character, new, &skill.name)
+            })
             .sum();
-        let current: i64 = new.rogue.iter().map(|&p| i64::from(p)).sum();
-        self.rogue_budget(character, level) - earlier - current
+        self.rogue_budget(character, level) - spent
     }
 
     /// The most one skill should get at this level, for a class that
-    /// limits it: half of the points available at this level.
-    pub fn rogue_limit(&self, character: &Character) -> Option<u32> {
+    /// limits it: half of the points available at this level, what the
+    /// kit gave counted in (62bef6).
+    pub fn rogue_limit(&self, character: &Character, new: &CharacterSkills) -> Option<u32> {
         let (slot, level) = self.rogue_level(character)?;
         let class = self.classes.get(&character.data.classes.names[slot])?;
         if !class.capped {
             return None;
         }
-        let earlier: i64 = self
-            .rogue_skills(character)
+        let mut available = self.rogue_budget(character, level);
+        if level > 1 {
+            for (skill, earlier) in self
+                .rogue_skills(character)
+                .iter()
+                .zip(self.earlier(character, new))
+            {
+                available += self.kit_points(character, new, &skill.name) - earlier;
+            }
+        }
+        Some((available.max(0) / 2) as u32)
+    }
+
+    /// The fewest points each skill may have at this level: the kit's
+    /// bonus of the level, and at 1st level its fixed adjustment
+    /// (62c7e3).
+    pub fn rogue_minimums(&self, character: &Character, new: &CharacterSkills) -> Vec<u32> {
+        let Some((_, level)) = self.rogue_level(character) else {
+            return Vec::new();
+        };
+        self.rogue_skills(character)
             .iter()
-            .map(|s| i64::from(s.earlier))
-            .sum();
-        Some(((self.rogue_budget(character, level) - earlier).max(0) / 2) as u32)
+            .map(|skill| {
+                let mut least = i64::from(Self::bonus_at(new, level, &skill.name));
+                if level == 1 {
+                    least += self.kit_adjustment(character, &skill.name);
+                }
+                least.max(0) as u32
+            })
+            .collect()
+    }
+
+    /// What the kit gave each skill, as the dialog's description lists
+    /// it: its fixed adjustment, then each level's bonus.
+    pub fn rogue_kit_points(
+        &self,
+        character: &Character,
+        new: &CharacterSkills,
+    ) -> Vec<(i32, Vec<(u32, i32)>)> {
+        self.rogue_skills(character)
+            .iter()
+            .map(|skill| {
+                let levels = new
+                    .kit_bonuses
+                    .iter()
+                    .zip(1..)
+                    .filter_map(|(b, l)| {
+                        b.as_ref()
+                            .filter(|b| b.name == skill.name)
+                            .map(|b| (l, b.bonus))
+                    })
+                    .collect();
+                (self.kit_adjustment(character, &skill.name) as i32, levels)
+            })
+            .collect()
+    }
+
+    /// The levels up to the rogue level whose kit bonus is still to go to
+    /// a skill, with the skills of the kit's list the character has
+    /// (62c05c, 62cc45).
+    pub fn rogue_bonus_picks(&self, character: &Character) -> Vec<RogueBonusPick> {
+        let (Some(kit), Some((_, level))) = (self.kit(character), self.rogue_level(character))
+        else {
+            return Vec::new();
+        };
+        let old = self.skills_of(character);
+        let skills = self.rogue_skills(character);
+        (1..=level)
+            .filter(|&l| {
+                old.kit_bonuses
+                    .get(l as usize - 1)
+                    .is_none_or(Option::is_none)
+            })
+            .filter_map(|l| {
+                let (amount, list) = if l == 1 {
+                    &kit.first_bonus
+                } else {
+                    &kit.later_bonus
+                };
+                let names: Vec<String> = list
+                    .iter()
+                    .filter(|n| skills.iter().any(|s| &s.name == *n))
+                    .cloned()
+                    .collect();
+                (*amount != 0 && !names.is_empty()).then_some(RogueBonusPick {
+                    level: l,
+                    amount: *amount,
+                    names,
+                })
+            })
+            .collect()
+    }
+
+    /// Puts the kit's bonus of a level into a skill, or none, in the
+    /// skill's points of that level.
+    pub fn set_rogue_bonus(
+        &self,
+        character: &Character,
+        new: &mut CharacterSkills,
+        level: u32,
+        name: Option<&str>,
+    ) {
+        let Some(pick) = self
+            .rogue_bonus_picks(character)
+            .into_iter()
+            .find(|p| p.level == level)
+        else {
+            return;
+        };
+        let Some((_, current)) = self.rogue_level(character) else {
+            return;
+        };
+        let skills = self.rogue_skills(character);
+        let at = level as usize - 1;
+        if new.kit_bonuses.len() <= at {
+            new.kit_bonuses.resize(at + 1, None);
+        }
+        let points = |new: &mut CharacterSkills, name: &str, amount: i32| {
+            if level == current
+                && let Some(i) = skills.iter().position(|s| s.name == name)
+                && let Some(value) = new.rogue.get_mut(i)
+            {
+                *value = value.saturating_add_signed(amount);
+            }
+        };
+        if let Some(old) = new.kit_bonuses[at].take() {
+            points(new, &old.name, -old.bonus);
+        }
+        if let Some(name) = name.filter(|n| pick.names.iter().any(|p| p == n)) {
+            points(new, name, pick.amount);
+            new.kit_bonuses[at] = Some(KitBonus {
+                name: name.to_owned(),
+                level: current as i32,
+                bonus: pick.amount,
+            });
+        }
+    }
+
+    /// The skills the kit still has the character choose (62c8e6).
+    pub fn chosen_pick(&self, character: &Character) -> Option<ChosenPick> {
+        let kit = self.kit(character)?;
+        self.rogue_level(character)?;
+        let (count, bonus) = kit.chosen;
+        let had = self.skills_of(character).kit_chosen;
+        let names: Vec<String> = self
+            .rogue_skills(character)
+            .into_iter()
+            .map(|s| s.name)
+            .filter(|n| !had.iter().any(|c| &c.name == n))
+            .collect();
+        let count = (count.max(0) as usize).saturating_sub(had.len());
+        (count > 0 && !names.is_empty()).then_some(ChosenPick {
+            count,
+            bonus,
+            names,
+        })
+    }
+
+    /// Chooses `names` besides the skills the character had chosen.
+    pub fn set_chosen(&self, character: &Character, new: &mut CharacterSkills, names: &[String]) {
+        let mut chosen = self.skills_of(character).kit_chosen;
+        if let (Some(pick), Some((_, level))) =
+            (self.chosen_pick(character), self.rogue_level(character))
+        {
+            chosen.extend(
+                names
+                    .iter()
+                    .filter(|n| pick.names.contains(n))
+                    .take(pick.count)
+                    .map(|n| KitBonus {
+                        name: n.clone(),
+                        level: level as i32,
+                        bonus: pick.bonus,
+                    }),
+            );
+        }
+        new.kit_chosen = chosen;
     }
 
     /// What the original would ask about before taking `new`'s rogue
-    /// points: a skill over the limit for one level, or past 95%.
+    /// points: a skill over the limit for one level, the kit's bonus left
+    /// out (62b489), or past 95%.
     pub fn rogue_warnings(&self, character: &Character, new: &CharacterSkills) -> Vec<String> {
-        let limit = self.rogue_limit(character);
+        let limit = self.rogue_limit(character, new);
+        let level = self.rogue_level(character).map_or(1, |l| l.1);
         let mut warnings = Vec::new();
         for (skill, &points) in self.rogue_skills(character).iter().zip(&new.rogue) {
             let name = &skill.label;
-            if limit.is_some_and(|l| points > l) {
+            let own = i64::from(points) - i64::from(Self::bonus_at(new, level, &skill.name));
+            if limit.is_some_and(|l| own > i64::from(l)) {
                 warnings.push(tr!(
                     "{skill} gets more than the {limit} points one skill may get at this level",
                     skill = name.as_str(),
@@ -414,6 +753,20 @@ impl SkillRules {
             devotions: d.unknown_0x196c[2].clone(),
             attacks: d.unknown_0xac[6].clone(),
             defenses: d.unknown_0x19c4.clone(),
+            kit_bonuses: d
+                .unknown_0x15e4
+                .as_ref()
+                .map(|l| {
+                    l[0].iter()
+                        .map(|o| o.as_deref().and_then(kit_bonus))
+                        .collect()
+                })
+                .unwrap_or_default(),
+            kit_chosen: d
+                .unknown_0x15e4
+                .as_ref()
+                .map(|l| l[1].iter().flatten().filter_map(|o| kit_bonus(o)).collect())
+                .unwrap_or_default(),
         }
     }
 
@@ -542,13 +895,36 @@ impl SkillRules {
                 .map(|p| p.psp)
                 .sum()
         };
+        let level = column.map_or(1, |c| c as u32 + 1);
         let d = &mut character.data;
         if let Some(column) = column {
             for (entry, &points) in d.rogue_skills.entries.iter_mut().zip(&new.rogue) {
                 if let Some(value) = entry.1.get_mut(column) {
                     *value = points;
                 }
+                // The kit's bonuses newly given to earlier levels.
+                for l in 1..level {
+                    let at = l as usize - 1;
+                    if old.kit_bonuses.get(at).is_none_or(Option::is_none) {
+                        let bonus = Self::bonus_at(new, l, &entry.0);
+                        entry.1[at] = entry.1[at].wrapping_add_signed(bonus);
+                    }
+                }
             }
+        }
+        if (new.kit_bonuses != old.kit_bonuses || new.kit_chosen != old.kit_chosen)
+            && let Some(lists) = &mut d.unknown_0x15e4
+        {
+            lists[0] = new
+                .kit_bonuses
+                .iter()
+                .map(|b| b.as_ref().map(kit_bonus_object))
+                .collect();
+            lists[1] = new
+                .kit_chosen
+                .iter()
+                .map(|b| Some(kit_bonus_object(b)))
+                .collect();
         }
         if psionicist && (new.primary != old.primary || new.disciplines != old.disciplines) {
             d.unknown_0x1980.clone_from(&new.primary);

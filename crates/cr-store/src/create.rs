@@ -458,7 +458,7 @@ fn dexterity_skill_adjustments(dexterity: u32) -> [i32; 5] {
 /// The rogue skill a class ability gives: "Thief, Pick pockets* (10)" is
 /// pick pockets. The star marks the skills that take points; a ranger's
 /// "Hide in shadows (5)" is not one.
-pub(crate) fn rogue_skill_of(ability: &str) -> Option<usize> {
+pub fn rogue_skill_of(ability: &str) -> Option<usize> {
     let name = ability.split_once(", ").map_or(ability, |(_, n)| n);
     let (name, _) = name.split_once('*')?;
     let name = name.trim();
@@ -620,6 +620,11 @@ pub struct Draft {
     /// Discretionary points added to each rogue skill, in the order of
     /// [`ROGUE_SKILLS`].
     pub rogue_points: [u32; 8],
+    /// The rogue skill the kit's 1st-level bonus goes to (+0x13c), by
+    /// its class ability's name.
+    pub rogue_bonus: Option<String>,
+    /// The rogue skills the kit has the character choose (+0x16c).
+    pub rogue_chosen: Vec<String>,
     /// Skills & Powers combat options.
     pub weapon_of_choice: Option<String>,
     pub expertise: Option<String>,
@@ -718,6 +723,8 @@ impl Draft {
             roll_method: RollMethod::FourDice,
             learned_languages: Vec::new(),
             rogue_points: [0; 8],
+            rogue_bonus: None,
+            rogue_chosen: Vec::new(),
             weapon_of_choice: None,
             expertise: None,
             unarmed: Vec::new(),
@@ -2276,15 +2283,25 @@ impl CreationRules {
     /// Discretionary rogue skill points at 1st level and the most for one
     /// skill: none without rogue skills, a bard's when the bard is the
     /// only class with them.
+    ///
+    /// A kit's own 1st-level points (+0x120, 62bc54) replace the class's,
+    /// and a thief may still put half of them into one skill.
     pub fn rogue_points(&self, draft: &Draft) -> (u32, u32) {
-        if self.rogue_skills(draft).is_empty() {
-            (0, 0)
-        } else if draft.classes.iter().any(|c| c == "Bard")
-            && !draft.classes.iter().any(|c| c == "Thief")
-        {
+        let bard = draft.classes.iter().any(|c| c == "Bard")
+            && !draft.classes.iter().any(|c| c == "Thief");
+        let (points, most) = if self.rogue_skills(draft).is_empty() {
+            return (0, 0);
+        } else if bard {
             BARD_POINTS
         } else {
             THIEF_POINTS
+        };
+        match self.kit(&draft.kit).map(|k| k.i_or(0x120, -1)) {
+            Some(kit) if kit >= 0 => {
+                let kit = kit as u32;
+                (kit, if bard { kit } else { kit / 2 })
+            }
+            _ => (points, most),
         }
     }
 
@@ -2315,7 +2332,11 @@ impl CreationRules {
             + racial
             + dexterity
             + draft.rogue_points[skill] as i32
-            + self.kit_rogue_adjustment(draft, skill);
+            + self.kit_rogue_adjustment(draft, skill)
+            + self
+                .kit_rogue_bonus_taken(draft)
+                .filter(|b| b.1 == skill)
+                .map_or(0, |b| b.2);
         (score, score + unarmored)
     }
     /// Weapons one of the classes may use.
@@ -2874,6 +2895,7 @@ impl CreationRules {
                     (name, values)
                 })
                 .collect();
+            self.write_kit_rogue_bonuses(draft, d);
         }
 
         // Proficiencies, languages, spells and equipment go in as the

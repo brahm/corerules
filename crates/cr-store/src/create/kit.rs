@@ -4,10 +4,14 @@
 //! allow brings, the kit's information text, and what leaving the page
 //! applies to the character (0x442cac): the kit's fixed rogue skill
 //! adjustments, the class abilities it bars, its schools of magic, the
-//! spells it knows and the languages it adds by level.
+//! spells it knows and the languages it adds by level. Also what the kit
+//! does on the Rogue Skills page of Create (IDD 342): its bonus to one
+//! skill at 1st level, the skills it has the character choose and the
+//! list its starting points go to.
 
 use cr_formats::Object;
-use cr_formats::character::Character;
+use cr_formats::character::{Character, CharacterData};
+use cr_formats::classes::KitBonus;
 
 use super::{CreationRules, Draft, rogue_skill_of};
 use crate::npc::data::Kit;
@@ -181,6 +185,100 @@ impl CreationRules {
             })
             .map(|(_, amount)| amount)
             .sum()
+    }
+
+    /// The kit's bonus to one rogue skill at 1st level (+0x13c, from the
+    /// skills in +0x140 the character has; 62cc45): the points and the
+    /// skills it may go to.
+    pub fn kit_rogue_bonus(&self, draft: &Draft) -> Option<(i32, Vec<String>)> {
+        let kit = self.kit(&draft.kit)?;
+        let amount = kit.i(0x13c);
+        let skills = self.rogue_skills(draft);
+        let names: Vec<String> = kit
+            .sa(0x140)
+            .iter()
+            .filter(|n| skills.iter().any(|(s, _)| s == *n))
+            .cloned()
+            .collect();
+        (amount != 0 && !names.is_empty()).then_some((amount, names))
+    }
+
+    /// The rogue skill the kit's 1st-level bonus went to, its index in
+    /// [`super::ROGUE_SKILLS`] and the points.
+    pub(super) fn kit_rogue_bonus_taken(&self, draft: &Draft) -> Option<(String, usize, i32)> {
+        let name = draft.rogue_bonus.as_ref()?;
+        let (amount, names) = self.kit_rogue_bonus(draft)?;
+        let skill = self
+            .rogue_skills(draft)
+            .into_iter()
+            .find(|(n, _)| n == name)?
+            .1;
+        names.contains(name).then(|| (name.clone(), skill, amount))
+    }
+
+    /// The rogue skills the kit has the character choose (+0x16c of them
+    /// for a +0x170% bonus; 62c8e6): the count, the bonus and the skills.
+    pub fn kit_chosen_skills(&self, draft: &Draft) -> Option<(usize, i32, Vec<String>)> {
+        let kit = self.kit(&draft.kit)?;
+        let count = kit.i(0x16c);
+        let names: Vec<String> = self.rogue_skills(draft).into_iter().map(|s| s.0).collect();
+        (count > 0 && !names.is_empty()).then_some((count as usize, kit.i(0x170), names))
+    }
+
+    /// The kit's warning when starting rogue points go to a skill outside
+    /// its list (+0x128; 62c144, Create only), which may be ignored.
+    pub fn kit_rogue_restriction(&self, draft: &Draft, skill: usize) -> Option<String> {
+        let list = self.kit(&draft.kit)?.sa(0x128);
+        if list.is_empty() || list.iter().any(|n| rogue_skill_of(n) == Some(skill)) {
+            return None;
+        }
+        let mut text = cr_i18n::tr(
+            "The selected kit requires that starting rogue points be spent only on skills \
+             from the following list.",
+        )
+        .to_owned();
+        for name in list {
+            text.push('\n');
+            text.push_str(name);
+        }
+        Some(text)
+    }
+
+    /// Writes the kit's 1st-level rogue bonus and chosen skills as the
+    /// original keeps them (+0x15e4: `CPartKitBonusOb`s of name, level
+    /// and bonus), adding the bonus to its skill.
+    pub(super) fn write_kit_rogue_bonuses(&self, draft: &Draft, d: &mut CharacterData) {
+        let bonus = |name: &str, level: i32, amount: i32| {
+            Box::new(Object::KitBonus(KitBonus {
+                version: 1,
+                name: name.to_owned(),
+                unknown_0x8: level,
+                unknown_0xc: amount,
+            }))
+        };
+        let taken = self.kit_rogue_bonus_taken(draft);
+        if let Some((name, _, amount)) = &taken
+            && let Some((_, values)) = d.rogue_skills.entries.iter_mut().find(|(n, _)| n == name)
+        {
+            values[0] = values[0].wrapping_add_signed(*amount);
+        }
+        let Some(lists) = &mut d.unknown_0x15e4 else {
+            return;
+        };
+        lists[0] = taken
+            .iter()
+            .map(|(name, _, amount)| Some(bonus(name, 1, *amount)))
+            .collect();
+        lists[1] = match self.kit_chosen_skills(draft) {
+            Some((count, amount, names)) => draft
+                .rogue_chosen
+                .iter()
+                .filter(|n| names.contains(n))
+                .take(count)
+                .map(|n| Some(bonus(n, 1, amount)))
+                .collect(),
+            None => Vec::new(),
+        };
     }
 
     /// The class abilities a Core Rules character of the kit loses from

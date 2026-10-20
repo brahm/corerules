@@ -2,7 +2,7 @@
 //! pages, starting from the campaign setting, which narrows the races and
 //! classes every later page offers.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -14,7 +14,7 @@ use cr_store::create::{
     METHOD_VIII_DICE, METHOD_X_STRENGTH_STEP, MOST_DISADVANTAGES, MOST_FIGHTING_STYLES,
     NonweaponPick, PickKind, Question, ROGUE_SKILLS, RollMethod, SHIELDS, STANDARD_PACK,
     SUBABILITIES, SUBABILITY_SPREAD, UNARMED, max_spells_per_level, point_table, required_removal,
-    roll_dice_pool, roll_seven_dice, seven_dice_scores,
+    rogue_skill_of, roll_dice_pool, roll_seven_dice, seven_dice_scores,
 };
 use cr_store::help::topic;
 use cr_store::pictures::ItemIcons;
@@ -1352,6 +1352,8 @@ impl Wizard {
             d.spells.clear();
             d.purchases.clear();
             d.rogue_points = [0; 8];
+            d.rogue_bonus = None;
+            d.rogue_chosen.clear();
             d.unarmed.clear();
             d.shields = [false; 4];
             d.armor_proficiencies.clear();
@@ -3549,10 +3551,47 @@ impl Wizard {
                 next.set_sensitive(left >= 0);
             }
         });
-        for (_, row) in &rows {
-            let update = update.clone();
-            row.connect_value_notify(move |_| update());
+        // Starting points outside the kit's list bring its warning, until
+        // ignored on this visit (62c144).
+        let ignored = Rc::new(Cell::new(false));
+        let values: Rc<RefCell<Vec<f64>>> =
+            Rc::new(RefCell::new(rows.iter().map(|(_, r)| r.value()).collect()));
+        for (index, (skill, row)) in rows.iter().enumerate() {
+            let (this, update, ignored, values, skill) = (
+                self.clone(),
+                update.clone(),
+                ignored.clone(),
+                values.clone(),
+                *skill,
+            );
+            row.connect_value_notify(move |row| {
+                let (before, wanted) = (values.borrow()[index], row.value());
+                if wanted > before && !ignored.get() {
+                    let warning = this
+                        .rules()
+                        .kit_rogue_restriction(&this.0.draft.borrow(), skill);
+                    if let Some(warning) = warning {
+                        row.set_value(before);
+                        let (row, ignored) = (row.clone(), ignored.clone());
+                        ignorable(
+                            &this.0.dialog,
+                            tr("Kit Requirements"),
+                            &warning,
+                            move || {
+                                ignored.set(true);
+                                row.set_value(wanted);
+                            },
+                        );
+                        return;
+                    }
+                }
+                values.borrow_mut()[index] = row.value();
+                update();
+            });
         }
+        // The kit's bonus and chosen skills go straight into the draft.
+        let mut groups = vec![group.clone()];
+        groups.extend(self.kit_rogue_groups(&d, update.clone()));
         update();
         next.connect_clicked({
             let this = self.clone();
@@ -3562,9 +3601,111 @@ impl Wizard {
                 this.after_rogue_skills();
             }
         });
-        step(tr("Rogue Skills"), &[&group], &next, None, || {
+        let groups: Vec<&adw::PreferencesGroup> = groups.iter().collect();
+        step(tr("Rogue Skills"), &groups, &next, None, || {
             topic::ROGUE_SKILLS
         })
+    }
+
+    /// The kit's 1st-level bonus to one rogue skill and the skills it has
+    /// the character choose, as groups of the original's pickers (62cc45,
+    /// 62c8e6). The picks go into the draft, and `changed` runs after a
+    /// bonus pick.
+    fn kit_rogue_groups(&self, d: &Draft, changed: Rc<dyn Fn()>) -> Vec<adw::PreferencesGroup> {
+        let rules = self.rules();
+        let mut groups = Vec::new();
+        if let Some((amount, names)) = rules.kit_rogue_bonus(d) {
+            let group = adw::PreferencesGroup::builder()
+                .title(tr("Kit Bonus"))
+                .description(escape(&tr!(
+                    "The selected kit allows you to add {points} point(s) to one rogue skill \
+                     from the following list at level {level}.",
+                    points = amount,
+                    level = 1
+                )))
+                .build();
+            let mut first: Option<gtk::CheckButton> = None;
+            for name in names {
+                let check = gtk::CheckButton::builder()
+                    .active(d.rogue_bonus.as_ref() == Some(&name))
+                    .valign(gtk::Align::Center)
+                    .build();
+                check.set_group(first.as_ref());
+                first.get_or_insert_with(|| check.clone());
+                let row = adw::ActionRow::builder()
+                    .title(escape(
+                        &rogue_skill_of(&name)
+                            .map_or(name.clone(), |i| tr(ROGUE_SKILLS[i].0).into()),
+                    ))
+                    .activatable_widget(&check)
+                    .build();
+                row.add_prefix(&check);
+                group.add(&row);
+                check.connect_toggled({
+                    let (this, changed) = (self.clone(), changed.clone());
+                    move |check| {
+                        if check.is_active() {
+                            this.0.draft.borrow_mut().rogue_bonus = Some(name.clone());
+                            changed();
+                        }
+                    }
+                });
+            }
+            groups.push(group);
+        }
+        if let Some((count, bonus, names)) = rules.kit_chosen_skills(d) {
+            let group = adw::PreferencesGroup::builder()
+                .title(tr("Chosen Rogue Skills"))
+                .description(escape(&tr!(
+                    "The selected kit allows you to select {count} skills as 'chosen' for a \
+                     {bonus}% bonus.",
+                    count,
+                    bonus
+                )))
+                .build();
+            let checks: Rc<RefCell<Vec<(String, gtk::CheckButton)>>> = Rc::default();
+            let limit = {
+                let checks = checks.clone();
+                move || {
+                    let checks = checks.borrow();
+                    let full = checks.iter().filter(|(_, c)| c.is_active()).count() >= count;
+                    for (_, check) in checks.iter() {
+                        check.set_sensitive(check.is_active() || !full);
+                    }
+                }
+            };
+            for name in names {
+                let check = gtk::CheckButton::builder()
+                    .active(d.rogue_chosen.contains(&name))
+                    .valign(gtk::Align::Center)
+                    .build();
+                let row = adw::ActionRow::builder()
+                    .title(escape(
+                        &rogue_skill_of(&name)
+                            .map_or(name.clone(), |i| tr(ROGUE_SKILLS[i].0).into()),
+                    ))
+                    .activatable_widget(&check)
+                    .build();
+                row.add_prefix(&check);
+                group.add(&row);
+                checks.borrow_mut().push((name, check.clone()));
+                check.connect_toggled({
+                    let (this, checks, limit) = (self.clone(), checks.clone(), limit.clone());
+                    move |_| {
+                        this.0.draft.borrow_mut().rogue_chosen = checks
+                            .borrow()
+                            .iter()
+                            .filter(|(_, c)| c.is_active())
+                            .map(|(n, _)| n.clone())
+                            .collect();
+                        limit();
+                    }
+                });
+            }
+            limit();
+            groups.push(group);
+        }
+        groups
     }
 
     /// The wizard spells known at 1st level.
