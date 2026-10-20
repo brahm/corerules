@@ -6,8 +6,10 @@
 //! psionicist and, with Skills & Powers, the character points are stored;
 //! levels, hit point totals and spell slots are worked out whenever they
 //! are shown. Losing levels leaves the rolls in place, and the original
-//! reuses them if the levels come back. Kits that scale experience or add
-//! hit points (none of the shipped ones) are not taken into account.
+//! reuses them if the levels come back. A kit may scale the experience
+//! each level takes (+0x5de, +0x5ec; 0x4437b6) and cap the prime requisite
+//! bonus (+0x5e4; 0x618999). Kits that add
+//! hit points are not taken into account.
 
 use std::collections::{HashMap, HashSet};
 
@@ -19,6 +21,7 @@ use cr_formats::parts::PartsFile;
 use cr_i18n::tr;
 
 use crate::create::Dice;
+use crate::npc::data::Kit;
 use crate::{Error, Installation, Result};
 
 /// Spell levels the sheet shows, 1st to 9th.
@@ -103,6 +106,18 @@ impl ClassAdvance {
             .unwrap_or(100) as u32
     }
 
+    /// [`Self::level`] with the thresholds scaled by `percent` (0x4437b6);
+    /// none when no threshold is above `xp`, where [`Self::level`] is used.
+    fn level_scaled(&self, xp: i64, percent: i64) -> Option<u32> {
+        (0..101)
+            .find(|&i| {
+                self.experience
+                    .get(i + 1)
+                    .is_some_and(|&t| t * percent / 100 > xp)
+            })
+            .map(|i| i as u32)
+    }
+
     /// The highest level the experience table reaches.
     fn max_level(&self) -> u32 {
         self.experience
@@ -119,6 +134,16 @@ impl ClassAdvance {
     }
 }
 
+/// What a kit does to experience.
+#[derive(Debug, Clone, Copy, Default)]
+struct KitExperience {
+    /// The percentage the experience of each level is changed by
+    /// (+0x5ec, when +0x5de is set).
+    scale: Option<i32>,
+    /// The most the prime requisite bonus may add, in percent (+0x5e4).
+    bonus_cap: Option<i32>,
+}
+
 /// The databases' view of advancement, loaded once per installation.
 #[derive(Debug, Default)]
 pub struct AdvanceRules {
@@ -131,6 +156,8 @@ pub struct AdvanceRules {
     alternative_slots: HashSet<String>,
     specialist: HashSet<String>,
     warrior_abilities: HashSet<String>,
+    /// What each kit does to experience, by name.
+    kits: HashMap<String, KitExperience>,
     /// The Expansion (level limits, Wisdom bonus only with Skills &
     /// Powers) rather than 2.0.
     expansion: bool,
@@ -185,6 +212,20 @@ impl Installation {
                 path: relative.into(),
                 source,
             })?;
+            for object in file.of_type("Character Kits").unwrap_or_default() {
+                if let Object::Part(p) = object
+                    && let Some(Some(kit)) = &p.data.kit
+                    && let Object::PartKit(kit) = &**kit
+                    && let Some(data) = &kit.data
+                {
+                    let kit = Kit::of(data);
+                    let experience = KitExperience {
+                        scale: kit.flag(0x5de).then(|| kit.i(0x5ec)),
+                        bonus_cap: Some(kit.i_or(0x5e4, -1)).filter(|&c| c != -1),
+                    };
+                    rules.kits.entry(p.head.name.clone()).or_insert(experience);
+                }
+            }
             for object in file.of_type("Class Abilities").unwrap_or_default() {
                 if let Object::Part(part) = object {
                     let name = part.head.name.clone();
@@ -344,9 +385,24 @@ impl AdvanceRules {
         Some(limit.max(1) as u32)
     }
 
+    /// What the character's kit does to experience.
+    fn kit(&self, character: &Character) -> KitExperience {
+        self.kits
+            .get(&character.data.kit)
+            .copied()
+            .filter(|_| self.expansion)
+            .unwrap_or_default()
+    }
+
     pub(crate) fn level_of(&self, character: &Character, g: usize) -> Result<u32> {
         let class = self.class(character, g)?;
-        let level = class.level(i64::from(character.data.unknown_0x1618[g]));
+        let xp = i64::from(character.data.unknown_0x1618[g]);
+        let level = match self.kit(character).scale {
+            Some(scale) => class
+                .level_scaled(xp, i64::from(scale) + 100)
+                .unwrap_or_else(|| class.level(xp)),
+            None => class.level(xp),
+        };
         Ok(match self.limit(character, g, class) {
             Some(limit) => level.min(limit),
             None => level,
@@ -367,7 +423,11 @@ impl AdvanceRules {
                 let class = self.class(character, g)?;
                 let level = self.level_of(character, g)?;
                 let limit = self.limit(character, g, class);
-                let next = class.threshold(level + 1);
+                let mut next = class.threshold(level + 1);
+                // 0x443744
+                if let Some(scale) = self.kit(character).scale {
+                    next = next * (i64::from(scale) + 100) / 100;
+                }
                 Ok(ClassLevel {
                     name: d.classes.names[g].clone(),
                     experience: d.unknown_0x1618[g],
@@ -403,11 +463,15 @@ impl AdvanceRules {
     ) -> Result<()> {
         let mut amount = amount;
         if prime_bonus {
-            let percent = if self.prime_bonus(character, g)? {
+            let mut percent = if self.prime_bonus(character, g)? {
                 110
             } else {
                 100
             };
+            // The kit's cap on the bonus (0x618999).
+            if let Some(cap) = self.kit(character).bonus_cap {
+                percent = percent.min(i64::from(cap) + 100);
+            }
             // C integer division truncates toward zero, as here.
             amount = amount * percent / 100;
         }

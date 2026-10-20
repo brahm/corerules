@@ -2258,12 +2258,20 @@ fn character_editor(
     // The kit trims the schools and spheres once the Spells page is shown,
     // as the original's Spells and Memorize pages do.
     let spells_shown = Rc::new(std::cell::Cell::new(false));
+    // The kit's text before the character is equipped (494875), once.
+    let equipped = std::cell::Cell::new(false);
     stack.connect_visible_child_name_notify({
-        let spells_shown = spells_shown.clone();
-        move |stack| {
-            if stack.visible_child_name().as_deref() == Some("spells") {
-                spells_shown.set(true);
+        let (spells_shown, rules, kit) =
+            (spells_shown.clone(), choices.creation.clone(), kit.clone());
+        move |stack| match stack.visible_child_name().as_deref() {
+            Some("spells") => spells_shown.set(true),
+            Some("equipment") if !equipped.replace(true) => {
+                let name = create::combo_value(&kit);
+                if let Some(text) = rules.kit_equipment_text(&name) {
+                    create::message(stack, &name, text);
+                }
             }
+            _ => {}
         }
     });
     let error = adw::Banner::new("");

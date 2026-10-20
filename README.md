@@ -58,7 +58,9 @@ the original programs wrote.
   (with the original's warning) are on the Rogue Skills page. The schools
   the kit bars are warned about on the Spells page and go unless ignored,
   and a kit limited to five schools has the wizard eliminate the rest, the
-  spells offered following the schools kept
+  spells offered following the schools kept. The Equipment page shows the
+  kit's text, the items and the chosen weapon it requires, and warns when
+  more money is kept than the kit allows
 - **Class and kit proficiencies** in New Character: the required ones go in
   first, bonus, free and kit-recommended ones cost less or nothing, the
   bonus, free, +1 and +2 picks are offered as the Expansion offers them, the
@@ -108,10 +110,12 @@ the original programs wrote.
   spheres to keep, its free sphere and its warning for a kit that never
   uses spells, as Update Character's Spells and Memorize pages ask, and
   the kit's notes on the schools and spheres of the Abilities page), the
-  nine equipment groups with quantities, and Spending Money
+  nine equipment groups with quantities (with the kit's text), and
+  Spending Money
 - **Experience and levels** per class, all classes or split, with the prime
   requisite bonus, hit point rolls, PSPs, character points and the
-  Expansion's racial level limits; **dual-classing** for humans
+  Expansion's racial level limits, and the kit's own experience per level
+  and cap on the bonus; **dual-classing** for humans
 - **Character sheet**: every section the originals export, shown in the
   app, printed, saved as PDF, or exported as the originals' TXT and HTML,
   matching their exports line for line, or as Markdown (in place of the

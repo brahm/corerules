@@ -167,6 +167,14 @@ impl Question {
             notice: false,
         }
     }
+
+    /// Only to acknowledge, with OK.
+    pub fn notice(title: &str, text: String) -> Self {
+        Self {
+            notice: true,
+            ..Self::new(title, text)
+        }
+    }
 }
 
 /// A warning about a weapon to add: which one and its text.

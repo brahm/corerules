@@ -9,13 +9,17 @@
 //! skill at 1st level, the skills it has the character choose and the
 //! list its starting points go to; and on the Spells page (62f1c8), the
 //! schools it bars and those a kit limited to five has the wizard
-//! eliminate (see [`crate::kit_magic`]).
+//! eliminate (see [`crate::kit_magic`]); and on the Equipment page, the
+//! kit's equipment text (0x494875), its restriction notices (0x5ea499)
+//! and the gold it lets the character keep (0x5e33cb).
 
 use cr_formats::Object;
 use cr_formats::character::{Character, CharacterData};
 use cr_formats::classes::KitBonus;
 
-use super::{CreationRules, Draft, rogue_skill_of};
+use cr_i18n::tr;
+
+use super::{CreationRules, Draft, Question, rogue_skill_of};
 use crate::npc::data::Kit;
 use crate::npc::state::KIT_TESTS;
 
@@ -309,6 +313,64 @@ impl CreationRules {
         if d.unknown_0x1e00.is_some() && !draft.eliminated_schools.is_empty() {
             d.unknown_0x1e00 = Some(draft.eliminated_schools.clone());
         }
+    }
+
+    /// The kit's text shown before a character of the kit is equipped
+    /// (+0xa0; 494875), in New Character and Update Character alike.
+    pub fn kit_equipment_text(&self, kit: &str) -> Option<&str> {
+        self.kit(kit)
+            .filter(|_| self.expansion)
+            .map(|k| k.s(0xa0))
+            .filter(|s| !s.trim().is_empty())
+    }
+
+    /// What New Character's Equipment page tells about the kit as it opens
+    /// (5ea499): the items it requires and its chosen weapon, neither
+    /// enforced.
+    pub fn kit_equipment_notices(&self, draft: &Draft) -> Vec<Question> {
+        let Some(kit) = self.draft_kit(draft) else {
+            return Vec::new();
+        };
+        let mut notices = Vec::new();
+        let items = kit.sa(0x584);
+        if !items.is_empty() {
+            let mut text = tr!(
+                "The kit {kit} requires that the following list of items be purchased during \
+                 character generation:",
+                kit = draft.kit.as_str()
+            );
+            for item in items {
+                text.push('\n');
+                text.push_str(item);
+            }
+            notices.push(Question::notice(tr("Kit Restriction"), text));
+        }
+        if kit.flag(0x580) {
+            notices.push(Question::notice(
+                tr("Kit Restriction"),
+                tr!(
+                    "The kit {kit} requires that the chosen weapon be purchased during \
+                     character generation.",
+                    kit = draft.kit.as_str()
+                ),
+            ));
+        }
+        notices
+    }
+
+    /// The kit's warning when the character keeps more than the money it
+    /// allows, `kept` in copper pieces (+0x5dc, +0x5e0; 5e33cb), which may
+    /// be ignored.
+    pub fn kit_retained_funds_warning(&self, draft: &Draft, kept: u32) -> Option<String> {
+        let kit = self.draft_kit(draft)?;
+        let most = kit.i(0x5e0);
+        (kit.flag(0x5dc) && i64::from(kept) > i64::from(most) * 100).then(|| {
+            tr!(
+                "The kit {kit} allows maximum retained funds of {most} gold piece(s).",
+                kit = draft.kit.as_str(),
+                most
+            )
+        })
     }
 
     /// The kit's warning when starting rogue points go to a skill outside
