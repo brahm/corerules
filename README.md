@@ -52,7 +52,10 @@ the original programs wrote.
   character's scores, gender, alignment and classes allow, with the
   original's warnings and the kit's information text. The kit's fixed rogue
   skill adjustments, barred class abilities, schools, spells and languages
-  are applied when the character is written, and again when an edit is saved
+  are applied when the character is written, and again when an edit is saved.
+  The kit's own rogue skill points, its bonus to one skill of a list, the
+  skills it has the character choose and its list for the starting points
+  (with the original's warning) are on the Rogue Skills page
 - **Class and kit proficiencies** in New Character: the required ones go in
   first, bonus, free and kit-recommended ones cost less or nothing, the
   bonus, free, +1 and +2 picks are offered as the Expansion offers them, the
@@ -92,7 +95,8 @@ the original programs wrote.
   and the kit's weapon warnings, the Core Rules slots left, the kit's free
   weapons at their levels, the kit's focus weapon, and the Cavalier's sword
   at 3rd level and horseman's weapon at 5th), rogue skill points
-  at the current level, psionic disciplines and powers, wild talents and
+  at the current level (with the kit's own points, its bonus of each level
+  and the skills it has the character choose, none of them spent), psionic disciplines and powers, wild talents and
   psionic attack and defense modes (with Update Character's limits), nonweapon
   proficiencies (ranks, costs as New Character charges them, the kit's free
   ones at their levels, the Core Rules slots left, and the kit's warnings

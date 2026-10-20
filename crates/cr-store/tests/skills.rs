@@ -55,7 +55,7 @@ fn rogue_points_write_what_the_original_writes() {
     let mut new = rules.skills_of(&ours);
     assert_eq!(rules.rogue_points_left(&ours, &new), 60);
     // A 1st-level thief may put half of her 60 points into one skill.
-    assert_eq!(rules.rogue_limit(&ours), Some(30));
+    assert_eq!(rules.rogue_limit(&ours, &new), Some(30));
     new.rogue = rogue_points(&rules, &ours, &[("Climb walls", 2), ("Pick pockets", 2)]);
     assert_eq!(rules.rogue_points_left(&ours, &new), 56);
     assert!(rules.rogue_warnings(&ours, &new).is_empty());
@@ -145,4 +145,55 @@ fn psionics_write_what_the_original_writes() {
     let mut more = rules.skills_of(&ours);
     more.sciences.push("Ejection".into());
     assert!(rules.problem(&ours, &more).is_some());
+}
+
+#[test]
+fn the_kit_gives_rogue_points_that_are_not_spent() {
+    let Some(rules) = rules() else { return };
+    let install =
+        Installation::open(Path::new(&std::env::var_os("CORERULES_DIR").unwrap())).unwrap();
+    let thief = read("thief.dat");
+    let usual = rules.rogue_points_left(&thief, &rules.skills_of(&thief));
+    let (mut own_points, mut bonuses, mut chosen) = (0, 0, 0);
+    for kit in install.creation_rules().unwrap().all_kits() {
+        let mut character = thief.clone();
+        character.data.kit = kit;
+        let mut new = rules.skills_of(&character);
+        let left = rules.rogue_points_left(&character, &new);
+        if left != usual {
+            own_points += 1;
+        }
+        // The 1st-level bonus goes to one skill of the kit's list, which
+        // keeps it, and costs no points.
+        let picks = rules.rogue_bonus_picks(&character);
+        assert!(picks.iter().all(|p| p.level == 1 && !p.names.is_empty()));
+        if let Some(pick) = picks.first() {
+            bonuses += 1;
+            let skills = rules.rogue_skills(&character);
+            let at = skills.iter().position(|s| s.name == pick.names[0]).unwrap();
+            let before = new.rogue[at];
+            rules.set_rogue_bonus(&character, &mut new, 1, Some(&pick.names[0]));
+            assert_eq!(new.rogue[at] as i32, before as i32 + pick.amount);
+            assert_eq!(rules.rogue_points_left(&character, &new), left);
+            assert!(rules.rogue_minimums(&character, &new)[at] as i32 >= pick.amount);
+            rules.set_rogue_bonus(&character, &mut new, 1, None);
+            assert_eq!(new.rogue[at], before);
+            rules.set_rogue_bonus(&character, &mut new, 1, Some(&pick.names[0]));
+        }
+        if let Some(pick) = rules.chosen_pick(&character) {
+            chosen += 1;
+            rules.set_chosen(&character, &mut new, &pick.names);
+            assert_eq!(new.kit_chosen.len(), pick.count.min(pick.names.len()));
+        }
+        let mut saved = character.clone();
+        rules.apply(&mut saved, &new, &mut Dice::seeded(1)).unwrap();
+        if saved.data.unknown_0x15e4.is_some() {
+            // Once given, the bonus and the chosen skills are not asked for
+            // again.
+            assert_eq!(rules.skills_of(&saved).kit_bonuses, new.kit_bonuses);
+            assert!(rules.rogue_bonus_picks(&saved).is_empty());
+            assert!(rules.chosen_pick(&saved).is_none());
+        }
+    }
+    assert!(own_points > 0 && bonuses > 0 && chosen > 0);
 }

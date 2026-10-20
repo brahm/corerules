@@ -2,6 +2,7 @@
 //! Update Character, with its Rogue Skills, Psionics, Wild Talents and
 //! Psionic Attacks and Defenses dialogs as groups.
 
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -18,6 +19,8 @@ use crate::lists::RowList;
 struct State {
     rules: Rc<SkillRules>,
     original: Rc<CharacterSkills>,
+    /// The kit's bonuses and chosen skills as edited.
+    kit: Rc<RefCell<CharacterSkills>>,
     rogue: Vec<adw::SpinRow>,
     primary: Vec<WeaponCombo>,
     disciplines: Option<RowList<()>>,
@@ -50,8 +53,11 @@ impl State {
                 .into_iter()
                 .partition(|n| self.rules.power(n).is_some_and(|p| p.devotion));
         }
+        let kit = self.kit.borrow();
         CharacterSkills {
             rogue: self.rogue.iter().map(|r| r.value() as u32).collect(),
+            kit_bonuses: kit.kit_bonuses.clone(),
+            kit_chosen: kit.kit_chosen.clone(),
             primary,
             disciplines: titles(&self.disciplines, &o.disciplines),
             sciences,
@@ -103,19 +109,12 @@ impl SkillsEditor {
             .visible(false)
             .build();
         let mut rogue = Vec::new();
+        let kit = Rc::new(RefCell::new((*original).clone()));
+        let mut rogue_group = None;
         let skills = rules.rogue_skills(&character);
-        if let Some((_, level)) = rules.rogue_level(&character) {
-            let mut description = tr!(
-                "The points put in at level {level}; lowering a skill gives its points back.",
-                level
-            );
-            if let Some(limit) = rules.rogue_limit(&character) {
-                description.push(' ');
-                description.push_str(&tr!("One skill should get at most {limit} of them.", limit));
-            }
+        if rules.rogue_level(&character).is_some() {
             let group = adw::PreferencesGroup::builder()
                 .title(tr("Rogue Skills"))
-                .description(description)
                 .build();
             let row = adw::ActionRow::builder().title(tr("Points Left")).build();
             row.add_suffix(&points);
@@ -137,6 +136,10 @@ impl SkillsEditor {
             }
             group.add(&warnings);
             page.add(&group);
+            rogue_group = Some(group);
+            for group in kit_rogue_groups(&rules, &character, &original, &kit, &rogue) {
+                page.add(&group);
+            }
         }
 
         let (mut primary, mut disciplines, mut sciences, mut devotions, mut wild_talents) =
@@ -246,6 +249,7 @@ impl SkillsEditor {
         let state = State {
             rules: rules.clone(),
             original,
+            kit,
             rogue,
             primary,
             disciplines,
@@ -259,6 +263,26 @@ impl SkillsEditor {
             let state = state.clone();
             move || {
                 let new = state.skills();
+                if let Some((group, (_, level))) =
+                    rogue_group.as_ref().zip(rules.rogue_level(&character))
+                {
+                    let mut description = tr!(
+                        "The points put in at level {level}; lowering a skill gives its points \
+                         back.",
+                        level
+                    );
+                    if let Some(limit) = rules.rogue_limit(&character, &new) {
+                        description.push(' ');
+                        description
+                            .push_str(&tr!("One skill should get at most {limit} of them.", limit));
+                    }
+                    group.set_description(Some(&description));
+                }
+                let minimums = rules.rogue_minimums(&character, &new);
+                for ((row, &least), &value) in state.rogue.iter().zip(&minimums).zip(&new.rogue) {
+                    row.adjustment().set_lower(f64::from(least.min(value)));
+                }
+                let kit_points = rules.rogue_kit_points(&character, &new);
                 let left = rules.rogue_points_left(&character, &new);
                 points.set_label(&left.to_string());
                 if left < 0 {
@@ -266,11 +290,31 @@ impl SkillsEditor {
                 } else {
                     points.remove_css_class("error");
                 }
-                for ((row, skill), value) in state.rogue.iter().zip(&skills).zip(&new.rogue) {
-                    row.set_subtitle(&tr!(
-                        "Score {score}%",
-                        score = skill.base_score + *value as i32
-                    ));
+                for (((row, skill), value), (adjustment, levels)) in state
+                    .rogue
+                    .iter()
+                    .zip(&skills)
+                    .zip(&new.rogue)
+                    .zip(&kit_points)
+                {
+                    let mut subtitle =
+                        tr!("Score {score}%", score = skill.base_score + *value as i32);
+                    if *adjustment != 0 {
+                        subtitle.push_str(" · ");
+                        subtitle.push_str(&tr!(
+                            "kit modifier {points}",
+                            points = format!("{adjustment:+}")
+                        ));
+                    }
+                    for (level, bonus) in levels {
+                        subtitle.push_str(" · ");
+                        subtitle.push_str(&tr!(
+                            "level {level}: {points}",
+                            level = *level,
+                            points = format!("{bonus:+}")
+                        ));
+                    }
+                    row.set_subtitle(&subtitle);
                 }
                 let found = rules.rogue_warnings(&character, &new);
                 warnings.set_label(&found.join("\n"));
@@ -290,6 +334,7 @@ impl SkillsEditor {
             let refresh = refresh.clone();
             row.connect_value_notify(move |_| refresh());
         }
+
         // The primary disciplines are among the disciplines taken.
         if let Some(list) = &state.disciplines {
             let (state, refresh) = (state.clone(), refresh.clone());
@@ -321,4 +366,149 @@ impl SkillsEditor {
     pub fn skills(&self) -> CharacterSkills {
         self.state.skills()
     }
+}
+
+/// The kit's bonus of each level still to go to a skill, and the skills
+/// it has the character choose, as groups of the original's pickers
+/// (62cc45, 62c8e6). Each pick goes into `kit` and the rows' points.
+fn kit_rogue_groups(
+    rules: &Rc<SkillRules>,
+    character: &Rc<Character>,
+    original: &Rc<CharacterSkills>,
+    kit: &Rc<RefCell<CharacterSkills>>,
+    rows: &[adw::SpinRow],
+) -> Vec<adw::PreferencesGroup> {
+    let current = {
+        let (kit, rows, original) = (kit.clone(), rows.to_vec(), original.clone());
+        move || {
+            let kit = kit.borrow();
+            CharacterSkills {
+                rogue: rows.iter().map(|r| r.value() as u32).collect(),
+                kit_bonuses: kit.kit_bonuses.clone(),
+                kit_chosen: kit.kit_chosen.clone(),
+                ..(*original).clone()
+            }
+        }
+    };
+    let skills = rules.rogue_skills(character);
+    let label = |name: &str| {
+        skills
+            .iter()
+            .find(|s| s.name == name)
+            .map_or_else(|| name.to_owned(), |s| s.label.clone())
+    };
+    let mut groups = Vec::new();
+    for pick in rules.rogue_bonus_picks(character) {
+        let description = tr!(
+            "The selected kit allows you to add {points} point(s) to one rogue skill from the \
+             following list at level {level}.",
+            points = pick.amount,
+            level = pick.level
+        );
+        let group = adw::PreferencesGroup::builder()
+            .title(tr!("Kit Bonus at Level {level}", level = pick.level))
+            .description(&description)
+            .build();
+        let mut first: Option<gtk::CheckButton> = None;
+        let picked = original
+            .kit_bonuses
+            .get(pick.level as usize - 1)
+            .and_then(Option::as_ref)
+            .map(|b| b.name.clone());
+        for name in &pick.names {
+            let check = gtk::CheckButton::builder()
+                .active(picked.as_ref() == Some(name))
+                .valign(gtk::Align::Center)
+                .build();
+            check.set_group(first.as_ref());
+            first.get_or_insert_with(|| check.clone());
+            let row = adw::ActionRow::builder()
+                .title(label(name))
+                .activatable_widget(&check)
+                .build();
+            row.add_prefix(&check);
+            group.add(&row);
+            check.connect_toggled({
+                let (rules, character, kit, rows, current, name) = (
+                    rules.clone(),
+                    character.clone(),
+                    kit.clone(),
+                    rows.to_vec(),
+                    current.clone(),
+                    name.clone(),
+                );
+                move |check| {
+                    if !check.is_active() {
+                        return;
+                    }
+                    let mut new = current();
+                    rules.set_rogue_bonus(&character, &mut new, pick.level, Some(&name));
+                    kit.borrow_mut().kit_bonuses = new.kit_bonuses.clone();
+                    for (row, &value) in rows.iter().zip(&new.rogue) {
+                        row.adjustment().set_lower(0.0);
+                        row.set_value(f64::from(value));
+                    }
+                }
+            });
+        }
+        groups.push(group);
+    }
+    if let Some(pick) = rules.chosen_pick(character) {
+        let group = adw::PreferencesGroup::builder()
+            .title(tr("Chosen Rogue Skills"))
+            .description(tr!(
+                "The selected kit allows you to select {count} skills as 'chosen' for a \
+                 {bonus}% bonus.",
+                count = pick.count,
+                bonus = pick.bonus
+            ))
+            .build();
+        let checks: Rc<RefCell<Vec<(String, gtk::CheckButton)>>> = Rc::default();
+        let limit = {
+            let checks = checks.clone();
+            move || {
+                let checks = checks.borrow();
+                let full = checks.iter().filter(|(_, c)| c.is_active()).count() >= pick.count;
+                for (_, check) in checks.iter() {
+                    check.set_sensitive(check.is_active() || !full);
+                }
+            }
+        };
+        for name in &pick.names {
+            let check = gtk::CheckButton::builder()
+                .valign(gtk::Align::Center)
+                .build();
+            let row = adw::ActionRow::builder()
+                .title(label(name))
+                .activatable_widget(&check)
+                .build();
+            row.add_prefix(&check);
+            group.add(&row);
+            checks.borrow_mut().push((name.clone(), check.clone()));
+            check.connect_toggled({
+                let (rules, character, kit, current, checks, limit) = (
+                    rules.clone(),
+                    character.clone(),
+                    kit.clone(),
+                    current.clone(),
+                    checks.clone(),
+                    limit.clone(),
+                );
+                move |_| {
+                    let names: Vec<String> = checks
+                        .borrow()
+                        .iter()
+                        .filter(|(_, c)| c.is_active())
+                        .map(|(n, _)| n.clone())
+                        .collect();
+                    let mut new = current();
+                    rules.set_chosen(&character, &mut new, &names);
+                    kit.borrow_mut().kit_chosen = new.kit_chosen;
+                    limit();
+                }
+            });
+        }
+        groups.push(group);
+    }
+    groups
 }

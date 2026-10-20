@@ -485,3 +485,92 @@ fn buying_a_weapon_asks_what_the_original_asks() {
     assert!(fighter.every_other_listed);
     assert_eq!(character.data.flags_0x1ddc, Some([1, 0]));
 }
+
+#[test]
+fn the_rogue_skills_page_follows_the_kit() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(Path::new(&dir)).unwrap();
+    if install.is_core20() {
+        return;
+    }
+    let rules = install.creation_rules().unwrap();
+    let (mut own_points, mut bonuses, mut restricted, mut chosen) = (0, 0, 0, 0);
+    // Every kit, whatever its races.
+    let base = thief();
+    let usual = rules.rogue_points(&base);
+    for kit in rules.all_kits() {
+        let mut draft = base.clone();
+        draft.kit = kit;
+        // A kit's own points, of which a thief puts half in a skill.
+        let (points, most) = rules.rogue_points(&draft);
+        if (points, most) != usual {
+            own_points += 1;
+            assert_eq!(most, points / 2);
+        }
+        let skills = rules.rogue_skills(&draft);
+        for (_, skill) in &skills {
+            if let Some(warning) = rules.kit_rogue_restriction(&draft, *skill) {
+                restricted += 1;
+                assert!(!warning.is_empty());
+            }
+        }
+        // Choosing every skill keeps as many as the kit allows.
+        let mut most_chosen = 0;
+        if let Some((count, _, names)) = rules.kit_chosen_skills(&draft) {
+            chosen += 1;
+            most_chosen = count.min(names.len());
+            draft.rogue_chosen = names;
+        }
+        let check_chosen = |character: &cr_formats::character::Character| {
+            if let Some(lists) = &character.data.unknown_0x15e4 {
+                assert_eq!(lists[1].len(), most_chosen);
+            }
+        };
+        let Some((amount, names)) = rules.kit_rogue_bonus(&draft) else {
+            let character = rules.build(&draft).unwrap();
+            check_chosen(&character);
+            if let Some(lists) = &character.data.unknown_0x15e4 {
+                assert!(lists[0].is_empty());
+            }
+            continue;
+        };
+        bonuses += 1;
+        let name = names[0].clone();
+        let skill = skills.iter().find(|s| s.0 == name).unwrap().1;
+        let before = rules.rogue_skill_score(&draft, skill).0;
+        draft.rogue_bonus = Some(name.clone());
+        assert_eq!(rules.rogue_skill_score(&draft, skill).0, before + amount);
+        let character = rules.build(&draft).unwrap();
+        check_chosen(&character);
+        let d = &character.data;
+        let values = &d
+            .rogue_skills
+            .entries
+            .iter()
+            .find(|e| e.0 == name)
+            .unwrap()
+            .1;
+        assert_eq!(
+            values[0] as i32,
+            draft.rogue_points[skill] as i32 + rules.kit_rogue_adjustment(&draft, skill) + amount
+        );
+        if let Some(lists) = &d.unknown_0x15e4 {
+            assert_eq!(lists[0].len(), 1);
+            let Some(cr_formats::Object::KitBonus(b)) = lists[0][0].as_deref() else {
+                panic!("no kit bonus");
+            };
+            assert_eq!(
+                (b.name.as_str(), b.unknown_0x8, b.unknown_0xc),
+                (name.as_str(), 1, amount)
+            );
+        }
+    }
+    // Some kit gives its own points, a bonus, a list for the starting
+    // points and skills to choose.
+    assert!(
+        own_points > 0 && bonuses > 0 && restricted > 0 && chosen > 0,
+        "{own_points} {bonuses} {restricted} {chosen}"
+    );
+}
