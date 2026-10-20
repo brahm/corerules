@@ -51,6 +51,8 @@ pub struct ClassRules {
     pub major_spheres: Vec<String>,
     pub minor_spheres: Vec<String>,
     pub schools: Vec<String>,
+    /// Candidate for rogue skills (+0x27a4).
+    pub rogue_skills: bool,
 }
 
 impl ClassRules {
@@ -75,6 +77,7 @@ impl ClassRules {
                 major_spheres: data.unknown_0x2738.clone(),
                 minor_spheres: data.unknown_0x274c.clone(),
                 schools: data.unknown_0x2760.clone(),
+                rogue_skills: data.flag_0x27a4.unwrap_or(0) != 0,
             },
             // The 2.0 layout keeps the same values in one array, and the
             // same lists in a fixed array of lists.
@@ -99,6 +102,7 @@ impl ClassRules {
                     major_spheres: data.unknown_0x58[4].clone(),
                     schools: data.unknown_0x58[5].clone(),
                     minor_spheres: data.unknown_0x58[6].clone(),
+                    rogue_skills: v[0] == 1,
                 }
             }
         }

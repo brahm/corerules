@@ -2096,9 +2096,10 @@ fn character_editor(
     kit.connect_selected_notify({
         let (rules, social_class) = (choices.creation.clone(), social_class.clone());
         move |kit| {
-            let rolled =
-                rules.roll_social_class(&create::combo_value(kit), &mut Default::default());
+            let chosen = create::combo_value(kit);
+            let rolled = rules.roll_social_class(&chosen, &mut Default::default());
             social_class.set_text(&rolled);
+            create::kit_information(kit, &rules, &chosen);
         }
     });
     let event = create::combo_row(

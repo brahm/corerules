@@ -118,6 +118,76 @@ fn step(
         .build()
 }
 
+/// A message with OK, as the original's message boxes.
+pub(crate) fn message(parent: &impl IsA<gtk::Widget>, heading: &str, body: &str) {
+    let alert = adw::AlertDialog::builder()
+        .heading(heading)
+        .body(body)
+        .default_response("ok")
+        .close_response("ok")
+        .build();
+    alert.add_response("ok", tr("_OK"));
+    alert.present(Some(parent));
+}
+
+/// A Yes/No question, No the default as in the original.
+fn ask(
+    parent: &impl IsA<gtk::Widget>,
+    heading: &str,
+    body: &str,
+    yes: impl Fn() + 'static,
+    no: impl Fn() + 'static,
+) {
+    let alert = adw::AlertDialog::builder()
+        .heading(heading)
+        .body(body)
+        .default_response("no")
+        .close_response("no")
+        .build();
+    alert.add_responses(&[("no", tr("_No")), ("yes", tr("_Yes"))]);
+    alert.connect_response(None, move |_, response| {
+        if response == "yes" {
+            yes();
+        } else {
+            no();
+        }
+    });
+    alert.present(Some(parent));
+}
+
+/// Shows the kit's information text when it has one, as the original
+/// does whenever a kit is chosen.
+pub(crate) fn kit_information(parent: &impl IsA<gtk::Widget>, rules: &CreationRules, kit: &str) {
+    if let Some(text) = rules.kit_information(kit) {
+        message(parent, tr("Kit Information"), text);
+    }
+}
+
+/// Fills a combo row with `items`, keeping `selected` selected (and
+/// listed).
+fn refill(row: &adw::ComboRow, items: &[String], selected: &str) {
+    let mut items = items.to_vec();
+    if !items.iter().any(|i| i == selected) {
+        items.push(selected.to_owned());
+    }
+    let model = gtk::StringList::new(&items.iter().map(String::as_str).collect::<Vec<_>>());
+    row.set_model(Some(&model));
+    select(row, selected);
+}
+
+/// Selects `value` in a combo row of strings.
+fn select(row: &adw::ComboRow, value: &str) {
+    let Some(model) = row.model() else { return };
+    if let Some(i) = (0..model.n_items()).find(|&i| {
+        model
+            .item(i)
+            .and_downcast::<gtk::StringObject>()
+            .is_some_and(|s| s.string() == value)
+    }) {
+        row.set_selected(i);
+    }
+}
+
 fn next_button(label: &str) -> gtk::Button {
     gtk::Button::builder()
         .label(label)
@@ -1180,7 +1250,7 @@ impl Wizard {
         if !alignments.contains(&d.alignment) {
             d.alignment = alignments.first().cloned().unwrap_or_default();
         }
-        if !rules.kits(&race, &d.subrace, &d.classes).contains(&d.kit) {
+        if !rules.kits_for(&d).contains(&d.kit) {
             d.kit = "None".into();
         }
         d.social_class = rules.roll_social_class(&d.kit, &mut dice);
@@ -1244,11 +1314,7 @@ impl Wizard {
         who.add(&portrait_row);
 
         let alignment = combo_row(tr("Alignment"), &rules.alignments(&d.classes), &d.alignment);
-        let kit = combo_row(
-            tr("Kit"),
-            &rules.kits(&d.race, &d.subrace, &d.classes),
-            &d.kit,
-        );
+        let kit = combo_row(tr("Kit"), &rules.kits_for(&d), &d.kit);
         // The combo row shows the classes translated; the draft keeps them
         // in English, by position.
         let social: Vec<String> = SOCIAL_CLASSES.iter().map(|s| tr(s).to_owned()).collect();
@@ -1428,10 +1494,133 @@ impl Wizard {
             let roll_weight = roll_weight.clone();
             move |_| roll_weight()
         });
-        // Height and weight depend on the gender.
-        gender.connect_selected_notify(move |_| {
-            roll_height();
-            roll_weight();
+        // The kits Create offers depend on the gender and the alignment.
+        let refilling = Rc::new(std::cell::Cell::new(false));
+        let refill_kits = Rc::new({
+            let (this, kit, male, alignment, refilling) = (
+                self.clone(),
+                kit.clone(),
+                male.clone(),
+                alignment.clone(),
+                refilling.clone(),
+            );
+            move || {
+                let mut probe = this.0.draft.borrow().clone();
+                probe.male = male();
+                probe.alignment = combo_value(&alignment);
+                refilling.set(true);
+                refill(&kit, &this.rules().kits_for(&probe), &combo_value(&kit));
+                refilling.set(false);
+            }
+        });
+        // A gender the kit does not allow is refused (0x5be7d3); height
+        // and weight depend on the gender.
+        let shown_gender = Rc::new(std::cell::Cell::new(d.male));
+        gender.connect_selected_notify({
+            let (this, kit, male, refill_kits) =
+                (self.clone(), kit.clone(), male.clone(), refill_kits.clone());
+            move |gender| {
+                let now = male();
+                if now == shown_gender.get() {
+                    return;
+                }
+                if !this.rules().kit_allows_gender(&combo_value(&kit), now) {
+                    message(
+                        &this.0.dialog,
+                        tr("Unable to change"),
+                        if now {
+                            tr("The currently selected kit is not available to male characters.")
+                        } else {
+                            tr("The currently selected kit is not available to female characters.")
+                        },
+                    );
+                    gender.set_selected(u32::from(now));
+                    return;
+                }
+                shown_gender.set(now);
+                roll_height();
+                roll_weight();
+                refill_kits();
+            }
+        });
+        // An alignment the kit does not allow takes a yes (0x5beb8f).
+        let shown_alignment = Rc::new(RefCell::new(d.alignment.clone()));
+        alignment.connect_selected_notify({
+            let (this, kit, refill_kits) = (self.clone(), kit.clone(), refill_kits.clone());
+            move |row| {
+                let chosen = combo_value(row);
+                if chosen == *shown_alignment.borrow() {
+                    return;
+                }
+                let accept = {
+                    let (shown, refill_kits, chosen) =
+                        (shown_alignment.clone(), refill_kits.clone(), chosen.clone());
+                    move || {
+                        *shown.borrow_mut() = chosen.clone();
+                        refill_kits();
+                    }
+                };
+                if this.rules().kit_allows_alignment(&combo_value(&kit), &chosen) {
+                    accept();
+                    return;
+                }
+                let revert = {
+                    let (row, shown) = (row.clone(), shown_alignment.clone());
+                    move || select(&row, &shown.borrow())
+                };
+                ask(
+                    &this.0.dialog,
+                    tr("Warning"),
+                    tr("The chosen alignment is not compatible with the chosen kit. Select anyway?"),
+                    accept,
+                    revert,
+                );
+            }
+        });
+        // A new kit resets the proficiencies once their page was reached
+        // (0x5be41b), and shows the kit's information.
+        let shown_kit = Rc::new(RefCell::new(d.kit.clone()));
+        kit.connect_selected_notify({
+            let this = self.clone();
+            move |row| {
+                let chosen = combo_value(row);
+                if refilling.get() || chosen.is_empty() || chosen == *shown_kit.borrow() {
+                    return;
+                }
+                let accept = {
+                    let (this, shown, chosen) = (this.clone(), shown_kit.clone(), chosen.clone());
+                    move || {
+                        *shown.borrow_mut() = chosen.clone();
+                        kit_information(&this.0.dialog, this.rules(), &chosen);
+                    }
+                };
+                if !this.0.draft.borrow().proficiencies_started {
+                    accept();
+                    return;
+                }
+                let reset = {
+                    let (this, accept) = (this.clone(), accept.clone());
+                    move || {
+                        this.0.draft.borrow_mut().reset_proficiencies();
+                        accept();
+                    }
+                };
+                let revert = {
+                    let (row, shown) = (row.clone(), shown_kit.clone());
+                    move || select(&row, &shown.borrow())
+                };
+                ask(
+                    &this.0.dialog,
+                    tr("Warning"),
+                    tr(
+                        "Your kit adjusts the cost of proficiencies. Changing your kit will reset \
+                        any selections of weapon and non-weapon proficiencies. Do you want to \
+                        continue?",
+                    ),
+                    reset,
+                    revert,
+                );
+            }
         });
         hp_roll.connect_clicked({
             let (this, hit_dice, classes) = (self.clone(), hit_dice.clone(), d.classes.clone());
@@ -1494,6 +1683,7 @@ impl Wizard {
     /// Skills & Powers also traits and disadvantages, all paid in
     /// character points.
     fn proficiencies_page(&self) -> adw::NavigationPage {
+        self.0.draft.borrow_mut().proficiencies_started = true;
         let d = self.0.draft.borrow().clone();
         let rules = self.rules();
         let sp = d.skills_and_powers;

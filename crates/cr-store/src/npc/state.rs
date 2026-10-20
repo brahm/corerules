@@ -91,7 +91,7 @@ pub enum Opt {
 /// The kit tests of 0x4c2a75 and 0x4d9eb0 in their order: the ability
 /// (0..6) and sub-ability (`None`: the score itself, else 0 or 1), and the
 /// offset of the kit's minimum byte.
-const KIT_TESTS: [(usize, Option<usize>, u32); 18] = [
+pub(crate) const KIT_TESTS: [(usize, Option<usize>, u32); 18] = [
     (0, None, 0x4c),
     (0, Some(1), 0x50),
     (0, Some(0), 0x4e),

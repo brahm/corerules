@@ -195,6 +195,16 @@ impl Installation {
             if let Some(advancement) = &lists.advancement {
                 advancement.apply(&mut character);
             }
+            // Leaving Update Character's Name page applies the kit again.
+            if character.version.starts_with("TSRP3") {
+                let levels: Vec<u32> = self
+                    .advance_rules()?
+                    .levels(&character)?
+                    .iter()
+                    .map(|c| c.level)
+                    .collect();
+                self.creation_rules()?.apply_kit(&mut character, &levels);
+            }
         }
         // The index entry lists the levels joined with "/".
         let levels = match lists {

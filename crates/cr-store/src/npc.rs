@@ -36,7 +36,7 @@ mod names;
 mod prof;
 mod program;
 mod rogue;
-mod state;
+pub(crate) mod state;
 mod texts;
 
 use std::collections::HashMap;
