@@ -213,7 +213,7 @@ impl CreationRules {
     /// classes', or the kit's when chosen, plus the languages Intelligence
     /// gives, one more with kit +0x30c and one a level with +0x30d.
     pub(super) fn nonweapon_slots_unlent(&self, draft: &Draft) -> u32 {
-        let intelligence = self.adjusted(&draft.race, &draft.scores)[3];
+        let intelligence = self.draft_scores(draft)[3];
         let mut slots = match self.kit_nonweapon_base(draft) {
             Some(base) if draft.kit_nonweapon_base == Some(true) => {
                 base + bonus_languages(intelligence)
