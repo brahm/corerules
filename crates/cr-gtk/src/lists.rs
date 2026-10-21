@@ -236,6 +236,10 @@ type Callback = Rc<RefCell<Option<Box<dyn Fn()>>>>;
 /// it.
 type RemoveCheck<T> = Rc<RefCell<Option<Box<dyn Fn(&T, Box<dyn FnOnce()>)>>>>;
 
+/// Asked before a chosen name becomes a row, with the name and what adds
+/// it.
+type AddCheck = Rc<RefCell<Option<Box<dyn Fn(&str, Box<dyn FnOnce()>)>>>>;
+
 /// How big an item's icon is drawn at the start of its row.
 const ROW_ICON_SIZE: i32 = 40;
 
@@ -249,6 +253,7 @@ pub struct RowList<T: 'static> {
     /// Called after every change.
     changed: Callback,
     remove_check: RemoveCheck<T>,
+    add_check: AddCheck,
     /// The icons drawn at the start of the rows, by title (item name).
     icons: Rc<RefCell<Option<Rc<ItemIcons>>>>,
 }
@@ -261,6 +266,7 @@ impl<T: Clone + 'static> Clone for RowList<T> {
             empty: self.empty.clone(),
             changed: self.changed.clone(),
             remove_check: self.remove_check.clone(),
+            add_check: self.add_check.clone(),
             icons: self.icons.clone(),
         }
     }
@@ -296,6 +302,7 @@ impl<T: Clone + 'static> RowList<T> {
             empty,
             changed: Rc::default(),
             remove_check: Rc::default(),
+            add_check: Rc::default(),
             icons: Rc::default(),
         };
         for row in rows {
@@ -309,9 +316,18 @@ impl<T: Clone + 'static> RowList<T> {
             move |button| {
                 let (list, make) = (list.clone(), make.clone());
                 pick(button, &title, choices(), move |name| {
-                    if let Some(spec) = make(name) {
-                        list.push(spec);
-                        list.update();
+                    let add: Box<dyn FnOnce()> = {
+                        let (list, make, name) = (list.clone(), make.clone(), name.clone());
+                        Box::new(move || {
+                            if let Some(spec) = make(name) {
+                                list.push(spec);
+                                list.update();
+                            }
+                        })
+                    };
+                    match &*list.add_check.borrow() {
+                        Some(check) => check(&name, add),
+                        None => add(),
                     }
                 });
             }
@@ -442,6 +458,12 @@ impl<T: Clone + 'static> RowList<T> {
     /// removes it.
     pub fn connect_remove(&self, f: impl Fn(&T, Box<dyn FnOnce()>) + 'static) {
         *self.remove_check.borrow_mut() = Some(Box::new(f));
+    }
+
+    /// Asks `f` before a name picked with Add becomes a row, with the name
+    /// and what adds it.
+    pub fn connect_add(&self, f: impl Fn(&str, Box<dyn FnOnce()>) + 'static) {
+        *self.add_check.borrow_mut() = Some(Box::new(f));
     }
 
     /// Calls `f` after every change.

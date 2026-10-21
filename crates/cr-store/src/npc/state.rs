@@ -204,6 +204,8 @@ pub struct Gen<'a> {
     pub wp: Weapons,
     pub weapon_list: Vec<String>,
     pub weapon_spec: Vec<String>,
+    /// +0x1e1c: the kit's focus weapon, empty for a generated NPC.
+    pub focus_weapon: String,
     pub languages: Vec<String>,
     pub nwp_langs: HashMap<usize, Vec<String>>,
     pub hp: Vec<Vec<i32>>,
@@ -302,6 +304,7 @@ impl<'a> Gen<'a> {
             wp: Weapons::default(),
             weapon_list: Vec::new(),
             weapon_spec: Vec::new(),
+            focus_weapon: String::new(),
             languages: Vec::new(),
             nwp_langs: HashMap::new(),
             hp: Vec::new(),
@@ -720,6 +723,12 @@ impl<'a> Gen<'a> {
                     .collect()
             })
             .collect();
+        self.set_ability_flags();
+    }
+
+    /// The flags of the class abilities (0x4c7cb2; 0x43d163 for a
+    /// character).
+    pub fn set_ability_flags(&mut self) {
         let any = |off: u32| self.class_ability_any(|p| p.n(off) != 0);
         let m6f = [
             any(0x7a0),

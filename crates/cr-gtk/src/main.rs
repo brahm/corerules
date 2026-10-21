@@ -698,6 +698,18 @@ impl Window {
         }
     }
 
+    /// The item check the Equipment pages use, read with the NPC
+    /// generator's data and kept with it; `None`, without a word, when
+    /// the program cannot be read.
+    fn item_rules(&self) -> Option<Rc<NpcRules>> {
+        if let Some(rules) = &*self.npc_rules.borrow() {
+            return Some(rules.clone());
+        }
+        let rules = Rc::new(self.install.borrow().as_ref()?.npc_rules().ok()?);
+        *self.npc_rules.borrow_mut() = Some(rules.clone());
+        Some(rules)
+    }
+
     /// Opens the New Character dialog.
     fn new_character(&self) {
         let (rules, root) = match &*self.install.borrow() {
@@ -709,7 +721,7 @@ impl Window {
             Err(e) => return self.toast(&e.to_string()),
         };
         let this = self.clone();
-        create::new_character(&self.window, rules, root, move |draft| {
+        create::new_character(&self.window, rules, self.item_rules(), root, move |draft| {
             let install = this.install.borrow();
             let Some(install) = install.as_ref() else {
                 return Err(tr("The installation is no longer open").into());
@@ -827,10 +839,11 @@ impl Window {
             Some(install) => Choices::load(install, &character),
             None => return,
         };
-        let choices = match choices {
+        let mut choices = match choices {
             Ok(choices) => choices,
             Err(e) => return self.toast(&e.to_string()),
         };
+        choices.item_rules = self.item_rules();
         let details = CharacterDetails::of(&character);
         let lists = CharacterLists::of(&character);
         let classes = character.data.classes.names.clone();
@@ -2188,8 +2201,10 @@ fn character_editor(
         list.connect_changed(show.clone());
         level_listeners.borrow_mut().push(Box::new(show));
     }
-    let ability_editor =
-        abilities::AbilityEditor::new(choices.abilities.clone(), &choices.character);
+    let ability_editor = Rc::new(abilities::AbilityEditor::new(
+        choices.abilities.clone(),
+        &choices.character,
+    ));
     let show_notices = ability_editor.show_kit_notices(Rc::new({
         let editor = kit_magic_editor.clone();
         move |list, taken| editor.notices(list, taken)
@@ -2205,12 +2220,57 @@ fn character_editor(
         }
     });
     let combat_editor =
-        combat::CombatEditor::new(choices.combat.clone(), &choices.character, levels);
+        combat::CombatEditor::new(choices.combat.clone(), &choices.character, levels.clone());
     level_listeners.borrow_mut().push(Box::new({
         let editor = combat_editor.clone();
         move || editor.levels_changed()
     }));
     let skills_editor = skills::SkillsEditor::new(choices.skills.clone(), &choices.character);
+    // Buying an item the character may not use asks first, as the
+    // original's Update Character does (0x43d7bc in its mode).
+    if let Some(check) = choices.item_rules.clone() {
+        let user = Rc::new({
+            let (advanced, levels, kit) = (advanced.clone(), levels.clone(), kit.clone());
+            let (ability_editor, combat_editor) = (ability_editor.clone(), combat_editor.clone());
+            move || {
+                let character = advanced.borrow();
+                let d = &character.data;
+                cr_store::npc::ItemUser {
+                    race: d.race.clone(),
+                    classes: d
+                        .classes
+                        .names
+                        .iter()
+                        .cloned()
+                        .zip(levels().into_iter().map(|l| l as i32))
+                        .collect(),
+                    skills_and_powers: character.skills_and_powers(),
+                    kit: create::combo_value(&kit),
+                    class_abilities: ability_editor
+                        .abilities()
+                        .classes
+                        .into_iter()
+                        .map(|c| c.abilities)
+                        .collect(),
+                    weapon_proficiencies: combat_editor.combat().weapons,
+                    focus_weapon: d
+                        .unknown_0x1e68
+                        .as_ref()
+                        .map(|t| t[6].clone())
+                        .unwrap_or_default(),
+                }
+            }
+        });
+        for (_, list) in &editors.equipment {
+            let (check, user, group) = (check.clone(), user.clone(), list.group.clone());
+            list.connect_add(
+                move |name, add| match check.item_problem(&user(), name, false) {
+                    Some(text) => create::item_error(&group, &text, add),
+                    None => add(),
+                },
+            );
+        }
+    }
     let stack = adw::ViewStack::new();
     stack.add_titled_with_icon(
         &page,
@@ -2896,6 +2956,8 @@ struct Choices {
     skills: Rc<cr_store::skills::SkillRules>,
     /// The kit's schools, spheres and spell use.
     kit_magic: Rc<cr_store::kit_magic::KitMagicRules>,
+    /// The item check of the Equipment page, when the program was read.
+    item_rules: Option<Rc<NpcRules>>,
 }
 
 impl Choices {
@@ -2931,6 +2993,7 @@ impl Choices {
             abilities: Rc::new(install.ability_rules()?),
             skills: Rc::new(install.skill_rules()?),
             kit_magic: Rc::new(install.kit_magic_rules()?),
+            item_rules: None,
         })
     }
 }

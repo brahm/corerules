@@ -4,7 +4,8 @@
 //! allow brings, the kit's information text, and what leaving the page
 //! applies to the character (0x442cac): the kit's fixed rogue skill
 //! adjustments, the class abilities it bars, its schools of magic, the
-//! spells it knows and the languages it adds by level. Also what the kit
+//! spells it knows and the languages it adds by level, and the hit points
+//! it adds to each roll (0x42d8f7). Also what the kit
 //! does on the Rogue Skills page of Create (IDD 342): its bonus to one
 //! skill at 1st level, the skills it has the character choose and the
 //! list its starting points go to; and on the Spells page (62f1c8), the
@@ -168,6 +169,46 @@ impl CreationRules {
             || self
                 .kit(kit)
                 .is_none_or(|k| kit_allows_alignment(k, alignment))
+    }
+
+    /// The kit's free equipment (+0x598), weapons (+0x5ac) and magic items
+    /// (+0x5c0), in that order, those the databases have.
+    pub fn kit_free_items(&self, kit: &str) -> Vec<String> {
+        self.kit(kit)
+            .filter(|_| self.expansion)
+            .map(|k| {
+                [0x598, 0x5ac, 0x5c0]
+                    .iter()
+                    .flat_map(|&o| k.sa(o))
+                    .filter(|name| self.parts.has(name))
+                    .cloned()
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// The percentage of an item's price the kit's characters pay (+0x90;
+    /// 5dda98); 100 without a kit.
+    pub fn kit_price_percent(&self, kit: &str) -> i32 {
+        self.kit(kit)
+            .filter(|_| self.expansion)
+            .map_or(100, |k| k.i_or(0x90, 100))
+    }
+
+    /// The notice New Character's Equipment page opens with when the kit
+    /// changes what items cost (5e2ba2), which says "higher" either way.
+    pub fn kit_price_notice(&self, kit: &str) -> Option<&'static str> {
+        let percent = self.kit_price_percent(kit);
+        (percent != 0 && percent != 100)
+            .then(|| tr("This character pays a higher price for items."))
+    }
+
+    /// The hit points the kit adds to every level's roll (+0x604, at the
+    /// end of 0x42d8f7), which may be negative.
+    pub fn kit_hit_points(&self, kit: &str) -> i32 {
+        self.kit(kit)
+            .filter(|_| self.expansion)
+            .map_or(0, |k| k.i(0x604))
     }
 
     /// The text the original shows in a "Kit Information" box when the kit

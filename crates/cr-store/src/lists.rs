@@ -538,6 +538,15 @@ impl PartTable {
         }
     }
 
+    /// Whether the databases have the item.
+    pub fn has(&self, name: &str) -> bool {
+        self.weights.contains_key(name)
+    }
+
+    pub fn is_armor(&self, name: &str) -> bool {
+        self.armor.contains(name)
+    }
+
     /// Pages of a part with pages.
     pub fn pages(&self, name: &str) -> Option<u32> {
         self.pages.get(name).copied()

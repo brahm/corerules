@@ -91,6 +91,21 @@ impl Session {
     }
 }
 
+/// What the item check reads of a character: its race (not the
+/// subrace), its classes with their levels, its rules, its kit, the class
+/// abilities of each class, its weapon proficiencies and the kit's focus
+/// weapon (+0x1e1c).
+#[derive(Debug, Clone, Default)]
+pub struct ItemUser {
+    pub race: String,
+    pub classes: Vec<(String, i32)>,
+    pub skills_and_powers: bool,
+    pub kit: String,
+    pub class_abilities: Vec<Vec<String>>,
+    pub weapon_proficiencies: Vec<String>,
+    pub focus_weapon: String,
+}
+
 /// Ability scores as the generator rolls them; the "Ability Scores…"
 /// button rolls them alone and Create NPC can then keep them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -564,6 +579,57 @@ impl NpcRules {
 
     pub fn flavor(&self) -> Flavor {
         self.flavor
+    }
+
+    /// Why the character may not use the item, as the original's Equipment
+    /// page says when an item is bought or moved to the items worn or
+    /// readied (0x43d7bc, 0x5e43f9); `None` when it may, or when the item
+    /// or a class is not in the databases. `create` is New Character,
+    /// which also checks the kit's armor at the start. The original lets
+    /// the user ignore the message.
+    pub fn item_problem(&self, user: &ItemUser, item: &str, create: bool) -> Option<String> {
+        let part = self.data.find(item)?;
+        let mut rand = Rand::seeded(0);
+        let session = Session::default();
+        let mut g = Gen::new(
+            &self.data,
+            &mut rand,
+            &session,
+            &user.race,
+            &user.classes,
+            user.skills_and_powers,
+        )
+        .ok()?;
+        g.kit_idx = self.data.part_exact(data::KITS, &user.kit);
+        g.kit_name.clone_from(&user.kit);
+        g.class_abilities = user
+            .class_abilities
+            .iter()
+            .map(|names| {
+                names
+                    .iter()
+                    .filter_map(|n| self.data.find_in(data::CLASS_ABILITIES, n))
+                    .collect()
+            })
+            .collect();
+        g.set_ability_flags();
+        g.weapon_list.clone_from(&user.weapon_proficiencies);
+        g.focus_weapon.clone_from(&user.focus_weapon);
+        let message = match g.restricted(part, create) {
+            0x1e => tr("This item cannot be used by this character class."),
+            0x1f => tr("This item cannot be used by this race."),
+            0x20 => tr("Only melee weapons can be used by this character."),
+            0x21 => tr("Only weapons available to clerics can be used by this character."),
+            0x22 => tr("Only weapons available to thieves can be used by this character."),
+            0x24 => tr("No miscellaneous magic can be used by this character."),
+            0x25 => tr("No poitions, oils or scrolls can be used by this character."),
+            0x26 => tr("No magic armor or weapons can be used by this character."),
+            0x27 => tr("No magic armor can be used by this character."),
+            0x28 => tr("This armor cannot be used by this character."),
+            0x29 => tr("Your kit does not allow the use of this item."),
+            _ => return None,
+        };
+        Some(message.into())
     }
 
     fn version(&self) -> &'static str {

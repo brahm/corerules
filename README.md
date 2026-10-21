@@ -58,9 +58,15 @@ the original programs wrote.
   (with the original's warning) are on the Rogue Skills page. The schools
   the kit bars are warned about on the Spells page and go unless ignored,
   and a kit limited to five schools has the wizard eliminate the rest, the
-  spells offered following the schools kept. The Equipment page shows the
-  kit's text, the items and the chosen weapon it requires, and warns when
-  more money is kept than the kit allows
+  spells offered following the schools kept. The kit's hit points go on
+  every hit die roll and its own dice and percentages on the starting
+  money. The Equipment page shows the kit's text, the items and the chosen
+  weapon it requires, charges the kit's percentage of each price, gives the
+  kit's free equipment, weapons and magic items, and warns when more money
+  is kept than the kit allows
+- **Items a character may not use**: buying one on the Equipment page of
+  New Character or of an edit asks first, with the original's message about
+  the class, race, class abilities or kit
 - **Class and kit proficiencies** in New Character: the required ones go in
   first, bonus, free and kit-recommended ones cost less or nothing, the
   bonus, free, +1 and +2 picks are offered as the Expansion offers them, the
@@ -110,12 +116,13 @@ the original programs wrote.
   spheres to keep, its free sphere and its warning for a kit that never
   uses spells, as Update Character's Spells and Memorize pages ask, and
   the kit's notes on the schools and spheres of the Abilities page), the
-  nine equipment groups with quantities (with the kit's text), and
+  nine equipment groups with quantities (with the kit's text, and the
+  original's question about an item the character may not use), and
   Spending Money
 - **Experience and levels** per class, all classes or split, with the prime
   requisite bonus, hit point rolls, PSPs, character points and the
-  Expansion's racial level limits, and the kit's own experience per level
-  and cap on the bonus; **dual-classing** for humans
+  Expansion's racial level limits, and the kit's own experience per level,
+  cap on the bonus and hit points per level; **dual-classing** for humans
 - **Character sheet**: every section the originals export, shown in the
   app, printed, saved as PDF, or exported as the originals' TXT and HTML,
   matching their exports line for line, or as Markdown (in place of the
