@@ -50,6 +50,10 @@ const SOCIAL_CLASSES: [&str; 4] = [
 
 type Create = dyn Fn(&Draft) -> Result<(), String>;
 
+/// The most points a rogue skill takes in Enter Character, which has no
+/// limits of its own (0x62b739): a skill's whole range.
+const ENTERED_ROGUE_POINTS: u32 = 100;
+
 /// What a check row sets on the draft: its index and whether it is on.
 type SetCheck = dyn Fn(&mut Draft, usize, bool);
 
@@ -1443,6 +1447,12 @@ impl Wizard {
             move || {
                 let mut probe = this.0.draft.borrow().clone();
                 probe.racial_abilities = chosen.borrow().clone();
+                // Enter Character charges no points (0x5b8181).
+                if this.0.entering {
+                    group
+                        .set_description(Some(tr("Free with Enter Character, as in the original")));
+                    return;
+                }
                 let left = this.rules().racial_points_left(&probe);
                 group.set_description(Some(&tr!(
                     "{left} of {total} left; up to {saved} kept for proficiencies",
@@ -1518,6 +1528,15 @@ impl Wizard {
             move || {
                 let mut probe = this.0.draft.borrow().clone();
                 probe.class_abilities = chosen.borrow().clone();
+                // Enter Character charges no points (0x5ba6f9).
+                if this.0.entering {
+                    for group in &groups {
+                        group.set_description(Some(tr(
+                            "Free with Enter Character, as in the original",
+                        )));
+                    }
+                    return;
+                }
                 let mut fine = true;
                 for (slot, group) in groups.iter().enumerate() {
                     let total = probe
@@ -2760,6 +2779,15 @@ impl Wizard {
                     left = languages_left,
                     room
                 )));
+                // Enter Character's proficiencies take no slots or points
+                // (0x5c30df, 0x5cd21c).
+                if this.0.entering {
+                    let free = tr("Free with Enter Character, as in the original");
+                    nonweapon.group.set_description(Some(free));
+                    weapons.group.set_description(Some(free));
+                    next.set_sensitive(true);
+                    return;
+                }
                 if !sp {
                     let nonweapon_slots = rules.nonweapon_slots_for(&probe);
                     let spent = rules.nonweapon_spent(&probe);
@@ -3172,7 +3200,8 @@ impl Wizard {
             );
             return;
         }
-        if !rules.specialization_fits(&d, &name) {
+        // Enter Character's slots are free (0x5cd21c).
+        if !self.0.entering && !rules.specialization_fits(&d, &name) {
             message(
                 &self.0.dialog,
                 tr("Not Allowed"),
@@ -3452,7 +3481,10 @@ impl Wizard {
                         },
                         || {},
                     );
-                } else if !probe.skills_and_powers && !rules.unarmed_fits(&probe) {
+                } else if !probe.skills_and_powers
+                    && !this.0.entering
+                    && !rules.unarmed_fits(&probe)
+                {
                     message(
                         &this.0.dialog,
                         tr("Not Allowed"),
@@ -3502,7 +3534,8 @@ impl Wizard {
                 points_label.set_label(&left.to_string().replace('-', "−"));
                 let problem = rules.combat_problem(&probe);
                 points_group.set_description(problem.as_deref());
-                next.set_sensitive(left >= 0 && problem.is_none());
+                // Enter Character charges no points (0x5d09e6).
+                next.set_sensitive((left >= 0 || this.0.entering) && problem.is_none());
             }
         });
 
@@ -3850,7 +3883,11 @@ impl Wizard {
                     "",
                     d.rogue_points[skill],
                     0,
-                    most,
+                    if self.0.entering {
+                        ENTERED_ROGUE_POINTS
+                    } else {
+                        most
+                    },
                 );
                 group.add(&row);
                 (skill, row)
@@ -3885,6 +3922,14 @@ impl Wizard {
                         score,
                         unarmored
                     ));
+                }
+                // Enter Character has no limits (0x62b739).
+                if this.0.entering {
+                    group.set_description(Some(tr(
+                        "Any points, as in the original's Enter Character; the race and \
+                         Dexterity adjust the scores",
+                    )));
+                    return;
                 }
                 let left = rules.rogue_points_left(&probe);
                 group.set_description(Some(&tr!(
@@ -4060,6 +4105,7 @@ impl Wizard {
         let rules = self.rules();
         let intelligence = rules.draft_scores(&d)[3];
         let most = max_spells_per_level(intelligence);
+        let entering = self.0.entering;
         let spec = |name: String| RowSpec {
             value: name.clone(),
             title: name,
@@ -4141,7 +4187,11 @@ impl Wizard {
             let (spells, next, taken) = (spells.clone(), next.clone(), taken.clone());
             move || {
                 let names: Vec<String> = spells.values().into_iter().map(|(v, _)| v).collect();
-                let description = if most == usize::MAX {
+                let description = if entering {
+                    tr("Spells the character knows, of any level, as the original's Enter \
+                        Character takes them")
+                    .to_owned()
+                } else if most == usize::MAX {
                     tr("1st-level spells the character knows. Intelligence allows any number.")
                         .to_owned()
                 } else {
@@ -4152,7 +4202,7 @@ impl Wizard {
                     )
                 };
                 spells.group.set_description(Some(&description));
-                next.set_sensitive(names.len() <= most);
+                next.set_sensitive(entering || names.len() <= most);
                 *taken.borrow_mut() = names;
             }
         });
@@ -4342,10 +4392,12 @@ impl Wizard {
 
         let items_group = items.group.clone();
         // The kit's text and what it requires, as the page opens (494875,
-        // 5ea499).
+        // 5ea499); New Character only.
         {
+            let entering = self.0.entering;
             let mut notices: VecDeque<Question> = rules
                 .kit_equipment_text(&d.kit)
+                .filter(|_| !entering)
                 .map(|text| Question::notice(&d.kit, text.to_owned()))
                 .into_iter()
                 .collect();
@@ -4353,7 +4405,9 @@ impl Wizard {
             if let Some(notice) = rules.kit_price_notice(&d.kit) {
                 notices.push_back(Question::notice(&d.kit, notice.to_owned()));
             }
-            notices.extend(rules.kit_equipment_notices(&d));
+            if !entering {
+                notices.extend(rules.kit_equipment_notices(&d));
+            }
             let parent: gtk::Widget = items_group.clone().upcast();
             if !notices.is_empty() {
                 glib::idle_add_local_once(move || ask_each(&parent, notices, Rc::new(|| {})));

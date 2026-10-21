@@ -56,7 +56,9 @@ the original programs wrote.
   on the details page each class's level or experience in the Levels
   dialog (prime requisite bonus, level limits, character points per level),
   rolling hit points and PSPs for each level gained, with hit point and PSP
-  arrows in place of the rolls
+  arrows in place of the rolls. The later pages take what the sheet has:
+  racial and class abilities, proficiencies, rogue points and spells of any
+  level with no limits or totals checked, the kit's equipment not imposed
 - **Kits** in New Character, as the Expansion offers them: only those the
   character's scores, gender, alignment and classes allow, with the
   original's warnings and the kit's information text. The kit's fixed rogue

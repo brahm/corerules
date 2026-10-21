@@ -762,6 +762,13 @@ impl Draft {
         }
     }
 
+    /// A character that already exists, in Update or Enter Character,
+    /// where the rules the original keeps for New Character (mode 0x378)
+    /// do not apply.
+    pub fn existing(&self) -> bool {
+        self.updating || self.entered.is_some()
+    }
+
     pub fn class_title(&self) -> String {
         self.classes.join("/")
     }
@@ -2436,25 +2443,26 @@ impl CreationRules {
         else {
             return Vec::new();
         };
-        self.spells_of(&wizard.schools)
+        self.spells_of(&wizard.schools, false)
     }
 
     /// [`Self::spells`] of the schools the kit leaves the draft's wizard
     /// class ([`Self::kit_wizard_schools`]).
+    /// With Enter Character, spells of every level (0x62dd5e).
     pub fn draft_spells(&self, draft: &Draft) -> Vec<String> {
         self.kit_wizard_schools(draft)
-            .map(|schools| self.spells_of(&schools))
+            .map(|schools| self.spells_of(&schools, draft.entered.is_some()))
             .unwrap_or_default()
     }
 
-    /// The 1st-level wizard spells of `wizard` schools, every one with
-    /// none.
-    fn spells_of(&self, wizard: &[String]) -> Vec<String> {
+    /// The 1st-level wizard spells (of any level with `any_level`) of
+    /// `wizard` schools, every one with none.
+    fn spells_of(&self, wizard: &[String], any_level: bool) -> Vec<String> {
         let mut spells: Vec<String> = self
             .wizard_spells
             .iter()
             .filter(|(_, level, schools)| {
-                *level == 1
+                (*level == 1 || any_level)
                     && (wizard.is_empty()
                         || schools.is_empty()
                         || schools
@@ -2568,26 +2576,13 @@ impl CreationRules {
                 kit = draft.kit
             ));
         }
-        if let Some(problem) = if draft.skills_and_powers {
-            self.points_problem(draft)
-        } else {
-            self.slots_problem(draft)
-        } {
+        // Enter Character saves with no completeness check (0x496b0b):
+        // the proficiencies, abilities, rogue skills and spells are free
+        // of their slots, points and limits.
+        if draft.entered.is_none()
+            && let Some(problem) = self.limits_problem(draft, &adjusted)
+        {
             return Some(problem);
-        }
-        if let Some(problem) = self.languages_problem(draft) {
-            return Some(problem);
-        }
-        if let Some(problem) = self.rogue_problem(draft) {
-            return Some(problem);
-        }
-        let most = max_spells_per_level(adjusted[3]);
-        if draft.spells.len() > most {
-            return Some(tr!(
-                "Intelligence {score} allows {most} spells of a level",
-                score = adjusted[3],
-                most
-            ));
         }
         if let Some((name, _)) = draft.purchases.iter().find(|(n, _)| self.ware(n).is_none()) {
             return Some(tr!("{name} is not for sale", name));
@@ -2635,6 +2630,33 @@ impl CreationRules {
                 "A {class} cannot be {alignment}",
                 class = draft.class_title(),
                 alignment = tr(&draft.alignment)
+            ));
+        }
+        None
+    }
+
+    /// New Character's slots, points and limits: the proficiencies,
+    /// languages, rogue skills and spells fit them.
+    fn limits_problem(&self, draft: &Draft, adjusted: &[u32; 6]) -> Option<String> {
+        if let Some(problem) = if draft.skills_and_powers {
+            self.points_problem(draft)
+        } else {
+            self.slots_problem(draft)
+        } {
+            return Some(problem);
+        }
+        if let Some(problem) = self.languages_problem(draft) {
+            return Some(problem);
+        }
+        if let Some(problem) = self.rogue_problem(draft) {
+            return Some(problem);
+        }
+        let most = max_spells_per_level(adjusted[3]);
+        if draft.spells.len() > most {
+            return Some(tr!(
+                "Intelligence {score} allows {most} spells of a level",
+                score = adjusted[3],
+                most
             ));
         }
         None
@@ -2712,7 +2734,8 @@ impl CreationRules {
                         .into(),
                 );
             }
-            if !draft.specializations.is_empty() {
+            // Update and Enter Character keep both once asked.
+            if !draft.specializations.is_empty() && !draft.existing() {
                 return Some(
                     tr("Unarmed combat and weapon specialization do not go together").into(),
                 );
@@ -3638,6 +3661,15 @@ mod tests {
         assert_eq!(c.data.abilities[1][0], 25);
         let entry = rules.entry(&d, &c, "x.dat");
         assert!(entry.details.iter().any(|l| l.ends_with("5/3")));
+
+        // Spells of any level, and no limits on the later pages.
+        assert!(rules.draft_spells(&d).iter().any(|s| s == "Fireball"));
+        let mut created = d.clone();
+        created.entered = None;
+        assert!(!rules.draft_spells(&created).iter().any(|s| s == "Fireball"));
+        d.spells = vec!["Magic Missile".into(); 20];
+        assert_eq!(rules.problem(&d), None);
+        assert!(rules.limits_problem(&d, &d.scores).is_some());
 
         // One class of each group at most.
         d.classes = vec!["Paladin".into(), "Fighter".into()];
