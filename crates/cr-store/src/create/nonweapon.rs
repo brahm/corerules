@@ -33,6 +33,9 @@ pub enum PickKind {
     Free,
     /// Some to get +1, from the kit's recommended ones (+0x94).
     PlusOne,
+    /// One that costs nothing, from what the class (by its index among the
+    /// draft's) offers at a level (+0x3514 with "May only pick one").
+    Level { class: usize, level: u32 },
 }
 
 impl Draft {
@@ -96,6 +99,30 @@ impl CreationRules {
                 names,
             })
             .collect();
+        // 5c6ca8's class half: each class's choices at each of its levels.
+        for (i, class) in draft.classes.iter().enumerate() {
+            let Some(rules) = self.class(class) else {
+                continue;
+            };
+            let levels = draft.class_levels.get(i).copied().unwrap_or(1);
+            for level in 1..=levels {
+                let names: Vec<String> = rules
+                    .level_nonweapon_choices
+                    .iter()
+                    .filter(|(_, l)| *l == level as i32)
+                    .map(|(n, _)| n.clone())
+                    .collect();
+                if !names.is_empty() {
+                    picks.push(NonweaponPick {
+                        kind: PickKind::Level { class: i, level },
+                        source: class.clone(),
+                        from_kit: false,
+                        count: 1,
+                        names,
+                    });
+                }
+            }
+        }
         let Some(kit) = self.kit(&draft.kit) else {
             return picks;
         };
@@ -310,8 +337,9 @@ impl CreationRules {
                 return true;
             }
         }
-        draft.level_nonweapon.iter().any(|n| n == name)
-            || self.bonus_nonweapon(draft).iter().any(|n| n == name)
+        draft.nonweapon_picks.iter().any(|(k, names)| {
+            matches!(k, PickKind::Level { .. }) && names.iter().any(|n| n == name)
+        }) || self.bonus_nonweapon(draft).iter().any(|n| n == name)
     }
 
     /// What leaving the page asks when the kit has the character learn a

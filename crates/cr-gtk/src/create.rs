@@ -2932,6 +2932,15 @@ impl Wizard {
                 tr("Free Proficiency"),
                 tr("Select a non-weapon proficiency that will be free.").into(),
             ),
+            PickKind::Level { level, .. } => (
+                tr("Free Proficiency"),
+                tr!(
+                    "The class {class} lets you pick at level {level} one non-weapon proficiency \
+                     that will be free.",
+                    class = pick.source,
+                    level
+                ),
+            ),
             PickKind::PlusOne => (
                 tr("+1 Proficiencies"),
                 tr!(

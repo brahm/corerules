@@ -77,6 +77,10 @@ pub struct ClassRules {
     /// The nonweapon proficiencies the class makes free from a level
     /// (+0x3514 entries worth nothing); the Expansion's only.
     pub level_nonweapon: Vec<(String, i32)>,
+    /// The nonweapon proficiencies the class offers at a level, of which
+    /// the character picks one that costs nothing (+0x3514 entries with
+    /// "May only pick one"), with their level; the Expansion's only.
+    pub level_nonweapon_choices: Vec<(String, i32)>,
     /// May specialize as a Core Rules character, as fighters (+0x2797).
     pub core_specialization: bool,
     /// The weapons the class may use (+0x3000: "Any", "Only from list
@@ -143,6 +147,16 @@ impl ClassRules {
                         _ => None,
                     })
                     .collect(),
+                level_nonweapon_choices: data
+                    .bonus_nwps
+                    .iter()
+                    .filter_map(|o| match o {
+                        Object::KitBonus(b) if b.unknown_0xc != 0 => {
+                            Some((b.name.clone(), b.unknown_0x8))
+                        }
+                        _ => None,
+                    })
+                    .collect(),
                 core_specialization: data.flag_0x2797 == Some(1),
                 weapon_rule: data.unknown_0x3000.clone().unwrap_or_default(),
                 weapon_list: data.unknown_0x3004.clone().unwrap_or_default(),
@@ -188,6 +202,7 @@ impl ClassRules {
                     nonweapon_groups: [false; 5],
                     ability_groups: [false; 6],
                     level_nonweapon: Vec::new(),
+                    level_nonweapon_choices: Vec::new(),
                     core_specialization: false,
                     weapon_rule: "Any".into(),
                     weapon_list: Vec::new(),

@@ -50,6 +50,9 @@ struct ClassAdvance {
     double_wisdom: bool,
     /// Casts priest spells, casts wizard spells.
     casts: (bool, bool),
+    /// The class ability each level grants, by level ("" for none; the
+    /// class editor's Level Details, +0x4870).
+    level_abilities: Vec<String>,
 }
 
 impl ClassAdvance {
@@ -69,6 +72,7 @@ impl ClassAdvance {
                 keep_first_roll: data.flags_0x4864.is_some_and(|f| f[0] != 0),
                 double_wisdom: data.flag_0x2790.unwrap_or(0) != 0,
                 casts: (data.unknown_0x2774[0] != 0, data.unknown_0x2774[1] != 0),
+                level_abilities: data.level_abilities.clone().unwrap_or_default(),
             },
             // The 2.0 layout keeps the same values in one array.
             Class::Core20(data) => {
@@ -93,6 +97,7 @@ impl ClassAdvance {
                     warrior_constitution: false,
                     keep_first_roll: false,
                     double_wisdom: false,
+                    level_abilities: Vec::new(),
                 }
             }
         }
@@ -158,6 +163,8 @@ pub struct AdvanceRules {
     alternative_slots: HashSet<String>,
     specialist: HashSet<String>,
     warrior_abilities: HashSet<String>,
+    /// Every Class Abilities part, for the abilities classes grant by level.
+    class_abilities: HashSet<String>,
     /// What each kit does to advancement, by name.
     kits: HashMap<String, KitAdvance>,
     /// The Expansion (level limits, Wisdom bonus only with Skills &
@@ -232,6 +239,7 @@ impl Installation {
             for object in file.of_type("Class Abilities").unwrap_or_default() {
                 if let Object::Part(part) = object {
                     let name = part.head.name.clone();
+                    rules.class_abilities.insert(name.clone());
                     if part.data.flags_0x780[4] != 0 {
                         rules.alternative_slots.insert(name.clone());
                     }
@@ -245,6 +253,21 @@ impl Installation {
             }
         }
         Ok(rules)
+    }
+}
+
+/// Adds to `abilities` the parts `granted` names for levels 1 to `level`,
+/// when they are class abilities the databases have (the original looks
+/// each up as a part of type 14) and not in `abilities` already. The
+/// original only does it when the list reaches the level.
+fn grant(granted: &[String], level: u32, known: &HashSet<String>, abilities: &mut Vec<String>) {
+    if granted.len() < level as usize {
+        return;
+    }
+    for name in &granted[1..=level as usize] {
+        if !name.is_empty() && known.contains(name) && !abilities.contains(name) {
+            abilities.push(name.clone());
+        }
     }
 }
 
@@ -495,7 +518,25 @@ impl AdvanceRules {
             let points = &mut character.data.unknown_0x1778[0];
             *points = (i64::from(*points) + change).max(0) as u32;
         }
+        self.grant_level_abilities(character);
         Ok(())
+    }
+
+    /// Gives each class the class abilities its levels so far grant
+    /// (Level Details' Class Abilities), as the original does when its
+    /// Level... dialog closes (0x61990a): free, and only those the class
+    /// does not have yet. Abilities of levels lost stay.
+    pub fn grant_level_abilities(&self, character: &mut Character) {
+        for g in 0..character.data.classes.names.len() {
+            let (Ok(level), Ok(class)) = (self.level_of(character, g), self.class(character, g))
+            else {
+                continue;
+            };
+            let granted = &class.level_abilities;
+            if let Some(slot) = character.data.class_slots.get_mut(g) {
+                grant(granted, level, &self.class_abilities, &mut slot.abilities);
+            }
+        }
     }
 
     /// The hit point roll of `level` (2 or more) in class `g`, with the
@@ -826,5 +867,30 @@ impl Advancement {
         d.unknown_0x1430 = self.psionic;
         d.unknown_0x1dc4 = self.level_limits;
         d.unknown_0x1778[0] = (i64::from(d.unknown_0x1778[0]) + self.points).max(0) as u32;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn levels_grant_their_class_abilities_once() {
+        let mut granted = vec![String::new(); 101];
+        granted[2] = "Turn Undead".into();
+        granted[3] = "Unknown".into();
+        granted[5] = "Followers".into();
+        let known: HashSet<String> = ["Turn Undead", "Followers"]
+            .into_iter()
+            .map(String::from)
+            .collect();
+        let mut abilities = vec!["Turn Undead".to_owned()];
+        grant(&granted, 4, &known, &mut abilities);
+        assert_eq!(abilities, ["Turn Undead"]);
+        grant(&granted, 5, &known, &mut abilities);
+        assert_eq!(abilities, ["Turn Undead", "Followers"]);
+        let mut none = Vec::new();
+        grant(&[], 5, &known, &mut none);
+        assert!(none.is_empty());
     }
 }
