@@ -15,6 +15,7 @@ use cr_formats::Object;
 use cr_formats::classes::{ClassData, KitBonus};
 
 use super::super::slots;
+use super::levels::{self, AutoFill};
 use super::{ABILITIES, ALIGNMENTS, Class, GROUPS, data, data_mut, group};
 use crate::userdb::{FieldDesc, FieldKind, Options, UserKind, Value};
 use cr_i18n::tr_noop;
@@ -552,6 +553,7 @@ fn more_page(f: &mut Vec<FieldDesc<Class>>) {
     const MAGIC: &str = tr_noop!("Magic");
     const ROGUE: &str = tr_noop!("Rogue Skills");
     const REMINDERS: &str = tr_noop!("Reminders");
+    f.push(auto_fill(MORE, AutoFill::More));
     f.extend([
         int!(MORE, tr_noop!("Starting HP: dice"), 1, 100, 0x94).group(HP),
         int!(
@@ -885,7 +887,80 @@ macro_rules! table {
 }
 
 /// IDD 335 Level Details and 221 Ability score bonus.
+/// Auto Fill: copies `fill`'s page from the class the setter is given.
+fn auto_fill(page: &'static str, fill: AutoFill) -> FieldDesc<Class> {
+    FieldDesc::new(
+        page,
+        tr_noop!("Auto Fill"),
+        FieldKind::AutoFill,
+        |_: &Class, _| Value::Text(String::new()),
+        |r, arg, v, sources| {
+            let fill = if arg == 0 {
+                AutoFill::Levels
+            } else {
+                AutoFill::More
+            };
+            let name = v.text();
+            let from = sources.class_records.iter().find(|c| c.name() == name);
+            if let (Some(to), Some(from)) = (data_mut(r), from.and_then(data)) {
+                levels::auto_fill(to, from, fill);
+            }
+        },
+    )
+    .arg(match fill {
+        AutoFill::Levels => 0,
+        AutoFill::More => 1,
+    })
+}
+
+/// What Level Details edits beyond its numbers: free spells, NWPs and
+/// class abilities by level.
+fn level_details(f: &mut Vec<FieldDesc<Class>>) {
+    f.extend([
+        FieldDesc::new(
+            LEVELS,
+            tr_noop!("Free Spells"),
+            FieldKind::FreeSpells,
+            |r: &Class, _| {
+                Value::FreeSpells(
+                    r.name().to_owned(),
+                    data(r).map(levels::free_spells).unwrap_or_default(),
+                )
+            },
+            |r, _, v, _| {
+                if let Some(d) = data_mut(r) {
+                    levels::set_free_spells(d, v.free_spells());
+                }
+            },
+        ),
+        FieldDesc::new(
+            LEVELS,
+            tr_noop!("NWPs by level"),
+            FieldKind::LevelNwps(Options::Source("Non-Weapon Proficiencies")),
+            |r: &Class, _| Value::LevelNwps(data(r).map(levels::level_nwps).unwrap_or_default()),
+            |r, _, v, _| {
+                if let Some(d) = data_mut(r) {
+                    levels::set_level_nwps(d, v.level_nwps());
+                }
+            },
+        ),
+        FieldDesc::new(
+            LEVELS,
+            tr_noop!("Class abilities by level"),
+            FieldKind::LevelAbilities(Options::Source("Class Abilities")),
+            |r: &Class, _| Value::Pairs(data(r).map(levels::level_abilities).unwrap_or_default()),
+            |r, _, v, _| {
+                if let Some(d) = data_mut(r) {
+                    levels::set_level_abilities(d, &v.pairs());
+                }
+            },
+        )
+        .visible(|r| data(r).is_some_and(|d| d.level_abilities.is_some())),
+    ]);
+}
+
 fn levels_page(f: &mut Vec<FieldDesc<Class>>) {
+    f.push(auto_fill(LEVELS, AutoFill::Levels));
     f.extend([
         FieldDesc::new(
             LEVELS,
@@ -974,6 +1049,7 @@ fn levels_page(f: &mut Vec<FieldDesc<Class>>) {
         .arg(0x337c)
         .group(tr_noop!("Attacks Per Round")),
     ]);
+    level_details(f);
 }
 
 #[cfg(test)]
@@ -1021,5 +1097,56 @@ mod tests {
         d.experience[3] = 2000;
         fix_experience(d);
         assert_eq!(&d.experience[..5], &[0, 0, 1, 2000, 2001]);
+    }
+
+    #[test]
+    fn level_details_fields_reach_the_class() {
+        let mut sources = crate::userdb::Sources::default();
+        let mut from = super::super::new_class();
+        data_mut(&mut from).unwrap().experience[2] = 1234;
+        sources.class_records.push(from);
+        let fields = fields();
+        let find = |kind: fn(&FieldKind) -> bool| {
+            fields
+                .iter()
+                .find(|f| f.page == LEVELS && kind(&f.kind))
+                .unwrap()
+        };
+        let mut c = super::super::new_class();
+
+        let spells = find(|k| matches!(k, FieldKind::FreeSpells));
+        let mut level = levels::FreeSpellLevel::new(3);
+        level.spells.push(levels::FreeSpell {
+            name: "Light".into(),
+            uses: 2,
+            wizard: false,
+        });
+        spells.set(
+            &mut c,
+            &Value::FreeSpells(String::new(), vec![level.clone()]),
+            &sources,
+        );
+        assert_eq!(spells.get(&c).free_spells(), vec![level]);
+
+        let nwps = find(|k| matches!(k, FieldKind::LevelNwps(_)));
+        let entry = levels::LevelNwps {
+            level: 2,
+            granted: vec!["Swimming".into()],
+            pick_one: true,
+            modifications: vec![("Riding".into(), 5)],
+        };
+        nwps.set(&mut c, &Value::LevelNwps(vec![entry.clone()]), &sources);
+        assert_eq!(nwps.get(&c).level_nwps(), vec![entry]);
+
+        let abilities = find(|k| matches!(k, FieldKind::LevelAbilities(_)));
+        let pairs = vec![("Turn Undead".to_owned(), 4)];
+        abilities.set(&mut c, &Value::Pairs(pairs.clone()), &sources);
+        assert_eq!(abilities.get(&c).pairs(), pairs);
+
+        let fill = find(|k| matches!(k, FieldKind::AutoFill));
+        fill.set(&mut c, &Value::Text(String::new()), &sources);
+        assert_eq!(data(&c).unwrap().experience[2], 1234);
+        // Level Details' Auto Fill brings the other class's free spells too.
+        assert!(spells.get(&c).free_spells().is_empty());
     }
 }

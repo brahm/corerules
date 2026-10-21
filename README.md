@@ -152,8 +152,9 @@ the original programs wrote.
   totals, saved encounters and the 2-20 tables
 - **Table Rolls** on every table of the books, with the originals' dice
   and follow-up rolls
-- **Editors for every user database**: races, classes and allowed
-  combinations, parts (weapons, armor, kits and proficiencies, plus the
+- **Editors for every user database**: races, classes (with the free
+  spells, NWPs and class abilities each level grants, and Auto Fill from
+  another class) and allowed combinations, parts (weapons, armor, kits and proficiencies, plus the
   ten other types in Other Parts: racial and class abilities, languages,
   schools, spheres, traits, disadvantages, gems and art, currency and
   Count), spells, psionic powers, monsters (with their spells, their

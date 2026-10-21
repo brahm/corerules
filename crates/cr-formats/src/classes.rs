@@ -56,9 +56,9 @@ impl Class {
     pub fn drop_spell_points(&mut self) -> usize {
         let arrays: Vec<&mut Vec<Object>> = match self {
             Self::Expansion { data, .. } => [
-                &mut data.unknown_0x2f8c,
-                &mut data.unknown_0x3514,
-                &mut data.kit_bonuses,
+                &mut data.free_spells,
+                &mut data.bonus_nwps,
+                &mut data.nwp_modifications,
                 &mut data.unknown_0x4884,
             ]
             .into_iter()
@@ -237,7 +237,10 @@ record! {
         unknown_0x4a5c: [i32; 5],
         /// Class abilities offered by Skills & Powers.
         abilities: Vec<String>,
-        unknown_0x4870: Option<Vec<String>> = if v > 37,
+        /// The class ability granted at each level, indexed by level:
+        /// empty, or 101 names ("" for none). Edited with Level Details'
+        /// Class Abilities... (0x6f26d1).
+        level_abilities: Option<Vec<String>> = if v > 37,
         unknown_0x70: Vec<String>,
         /// Alignments the class allows.
         alignments: Vec<String>,
@@ -259,13 +262,18 @@ record! {
         unknown_0x302c: Vec<String>,
         unknown_0x4898: Vec<String>,
         unknown_0x48b0: Option<Vec<String>> = if v > 38,
-        unknown_0x2f8c: Vec<Object>,
-        /// Before version 36 the program converts the stored objects into
+        /// Free spells, a [`ClassFreeSpells`] per level (Level Details'
+        /// Free Spells..., IDD 144).
+        free_spells: Vec<Object>,
+        /// NWPs granted at a level ([`KitBonus`]: the NWP, the level, and
+        /// 1 when only one of the level's may be picked), edited with
+        /// Level Details' NWPs... (IDD 172). Before version 36 the program converts the stored objects into
         /// its newer form after loading; the file layout is the same.
-        unknown_0x3514: Vec<Object>,
-        /// Kit bonuses (`CPartKitBonusOb`); converted after loading below
-        /// version 37, same file layout.
-        kit_bonuses: Vec<Object>,
+        bonus_nwps: Vec<Object>,
+        /// NWP score modifications from a level on ([`KitBonus`]: the NWP,
+        /// the level, the modification 0 to 100), IDD 172's lower list;
+        /// converted after loading below version 37, same file layout.
+        nwp_modifications: Vec<Object>,
         unknown_0x4884: Vec<Object>,
         unknown_0x4acc: [Vec<Object>; 6],
     }
@@ -283,7 +291,7 @@ record! {
 }
 
 /// A spell-like ability a class gets at a level (`CClassFreeSpellsOb`,
-/// schema 96, `Serialize` at 0x6b70aa), in the class's `unknown_0x2f8c`.
+/// schema 96, `Serialize` at 0x6b70aa), in the class's `free_spells`.
 /// The shipped classes have none; community specialty priests use them
 /// ("Detect Evil", 1 "per day").
 #[derive(Debug, Clone, PartialEq)]
@@ -291,17 +299,19 @@ pub struct ClassFreeSpells {
     /// 4 when the Expansion writes it.
     pub version: i32,
     /// Level the ability comes at.
-    pub unknown_0x2c: i32,
+    pub level: i32,
     /// How many uses ("1" in "1 per day"); 1 for a new object.
-    pub unknown_0x30: i32,
+    pub uses: i32,
     /// The frequency text ("per day"); from version 3.
-    pub unknown_0x34: Option<String>,
-    pub flag_0x38: u8,
+    pub frequency: Option<String>,
+    /// "Must select one spell from the list".
+    pub pick_one: u8,
     pub unknown_0x4: Vec<String>,
-    /// From version 2: the spells (`CPartKitBonusOb`, `name` the spell).
-    /// Below version 4 the program converts the stored objects after
-    /// loading; the file layout is the same.
-    pub unknown_0x18: Option<Vec<Object>>,
+    /// From version 2: the spells (`CPartKitBonusOb`: the spell, its
+    /// uses, 0 for a wizard spell or 1 for a priest spell). Below version
+    /// 4 the second member is the type and the uses are the object's
+    /// `uses`, which the program converts after loading (0x6b7286).
+    pub spells: Option<Vec<Object>>,
 }
 
 impl Field for ClassFreeSpells {
@@ -309,12 +319,12 @@ impl Field for ClassFreeSpells {
         let version = i32::read(r)?;
         Ok(Self {
             version,
-            unknown_0x2c: Field::read(r)?,
-            unknown_0x30: Field::read(r)?,
-            unknown_0x34: (version > 2).then(|| r.read_string()).transpose()?,
-            flag_0x38: Field::read(r)?,
+            level: Field::read(r)?,
+            uses: Field::read(r)?,
+            frequency: (version > 2).then(|| r.read_string()).transpose()?,
+            pick_one: Field::read(r)?,
             unknown_0x4: Field::read(r)?,
-            unknown_0x18: (version > 1).then(|| Field::read(r)).transpose()?,
+            spells: (version > 1).then(|| Field::read(r)).transpose()?,
         })
     }
 
@@ -328,25 +338,17 @@ impl Field for ClassFreeSpells {
                 Err(crate::Error::FieldMismatch { field, expected })
             }
         };
-        gated(
-            self.unknown_0x34.is_some(),
-            self.version > 2,
-            "unknown_0x34",
-        )?;
-        gated(
-            self.unknown_0x18.is_some(),
-            self.version > 1,
-            "unknown_0x18",
-        )?;
+        gated(self.frequency.is_some(), self.version > 2, "frequency")?;
+        gated(self.spells.is_some(), self.version > 1, "spells")?;
         self.version.write(w)?;
-        self.unknown_0x2c.write(w)?;
-        self.unknown_0x30.write(w)?;
-        if let Some(text) = &self.unknown_0x34 {
+        self.level.write(w)?;
+        self.uses.write(w)?;
+        if let Some(text) = &self.frequency {
             w.write_string(text)?;
         }
-        self.flag_0x38.write(w)?;
+        self.pick_one.write(w)?;
         self.unknown_0x4.write(w)?;
-        if let Some(objects) = &self.unknown_0x18 {
+        if let Some(objects) = &self.spells {
             objects.write(w)?;
         }
         Ok(())
@@ -394,12 +396,12 @@ mod tests {
     fn free_spells_members_follow_the_version() {
         let mut free = ClassFreeSpells {
             version: 4,
-            unknown_0x2c: 1,
-            unknown_0x30: 1,
-            unknown_0x34: Some("per day".into()),
-            flag_0x38: 0,
+            level: 1,
+            uses: 1,
+            frequency: Some("per day".into()),
+            pick_one: 0,
             unknown_0x4: vec![],
-            unknown_0x18: Some(vec![]),
+            spells: Some(vec![]),
         };
         let v4 = round_trip(&free);
         // Version, level, uses, "per day", flag, two empty arrays (a count
@@ -408,8 +410,8 @@ mod tests {
 
         free.version = 1;
         assert!(free.write(&mut ArchiveWriter::new()).is_err());
-        free.unknown_0x34 = None;
-        free.unknown_0x18 = None;
+        free.frequency = None;
+        free.spells = None;
         assert_eq!(round_trip(&free).len(), 4 + 4 + 4 + 1 + 2);
     }
 
