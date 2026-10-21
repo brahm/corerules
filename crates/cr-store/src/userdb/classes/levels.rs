@@ -6,7 +6,7 @@
 
 use cr_formats::Object;
 use cr_formats::classes::{ClassData, ClassFreeSpells, KitBonus};
-use cr_i18n::{tr, tr_noop};
+use cr_i18n::{fill, tr, tr_noop};
 
 use super::super::slots;
 
@@ -149,6 +149,16 @@ pub fn set_free_spells(d: &mut ClassData, levels: Vec<FreeSpellLevel>) {
 /// per number of uses when the spells differ in it. "At level 3, Clerics
 /// are able to cast Bless or Light once a day".
 pub fn free_spell_lines(class: &str, level: &FreeSpellLevel) -> Vec<String> {
+    lines(class, level, cr_i18n::tr)
+}
+
+/// [`free_spell_lines`] in the original's words, as the character sheet
+/// prints them.
+pub fn free_spell_lines_untranslated(class: &str, level: &FreeSpellLevel) -> Vec<String> {
+    lines(class, level, |t| t)
+}
+
+fn lines(class: &str, level: &FreeSpellLevel, t: fn(&'static str) -> &'static str) -> Vec<String> {
     let Some(first) = level.spells.first() else {
         return Vec::new();
     };
@@ -174,32 +184,41 @@ pub fn free_spell_lines(class: &str, level: &FreeSpellLevel) -> Vec<String> {
                 .iter()
                 .map(|s| {
                     if s.wizard {
-                        tr!("{spell} as the Wizard Spell", spell = s.name)
+                        fill(
+                            t(tr_noop!("{spell} as the Wizard Spell")),
+                            &[("spell", &s.name)],
+                        )
                     } else {
                         s.name.clone()
                     }
                 })
                 .collect();
             let spells = match names.split_last() {
-                Some((last, rest)) if level.pick_one && !rest.is_empty() => {
-                    tr!("{list} or {last}", list = rest.join(", "), last)
-                }
+                Some((last, rest)) if level.pick_one && !rest.is_empty() => fill(
+                    t(tr_noop!("{list} or {last}")),
+                    &[("list", &rest.join(", ")), ("last", last)],
+                ),
                 _ => names.join(", "),
             };
-            let line = tr!(
-                "At level {level}, {classes} are able to cast {spells}",
-                level = level.level,
-                classes,
-                spells
+            let line = fill(
+                t(tr_noop!(
+                    "At level {level}, {classes} are able to cast {spells}"
+                )),
+                &[
+                    ("level", &level.level),
+                    ("classes", &classes),
+                    ("spells", &spells),
+                ],
             );
-            match (level.frequency.as_str(), uses) {
-                ("per day", 1) => tr!("{line} once a day", line),
-                ("per day", n) => tr!("{line} {n} times a day", line, n),
-                ("per week", 1) => tr!("{line} once a week", line),
-                ("per week", n) => tr!("{line} {n} times a week", line, n),
-                ("at will", _) => tr!("{line} at will", line),
-                (other, n) => format!("{line} {n} {other}"),
-            }
+            let template = match (level.frequency.as_str(), uses) {
+                ("per day", 1) => tr_noop!("{line} once a day"),
+                ("per day", _) => tr_noop!("{line} {n} times a day"),
+                ("per week", 1) => tr_noop!("{line} once a week"),
+                ("per week", _) => tr_noop!("{line} {n} times a week"),
+                ("at will", _) => tr_noop!("{line} at will"),
+                (other, n) => return format!("{line} {n} {other}"),
+            };
+            fill(t(template), &[("line", &line), ("n", &uses)])
         })
         .collect()
 }

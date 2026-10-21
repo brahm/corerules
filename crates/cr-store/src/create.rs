@@ -679,9 +679,6 @@ pub struct Draft {
     /// Update Character: the scores and subabilities the character has,
     /// in place of those [`Draft::scores`] give.
     pub held_scores: Option<[[u32; 3]; 6]>,
-    /// The nonweapon proficiencies chosen for a class at its levels
-    /// (+0x1e28), which cost nothing.
-    pub level_nonweapon: Vec<String>,
     /// Whether the kit's question about the proficiency to learn by a
     /// level was answered No (the byte of +0x1df0).
     pub by_level_declined: bool,
@@ -753,7 +750,6 @@ impl Draft {
             level: 1,
             class_levels: Vec::new(),
             held_scores: None,
-            level_nonweapon: Vec::new(),
             by_level_declined: false,
             updating: false,
         }
@@ -3070,6 +3066,28 @@ impl CreationRules {
                 .cloned()
                 .unwrap_or_default();
             d.unknown_0xac[5] = draft.picked(PickKind::PlusOne).to_vec();
+            // The proficiency picked for a class at each level (0x443bd5;
+            // 0x443d2b when none is).
+            if let Some(chosen) = d.unknown_0x1e28.as_mut() {
+                for pick in self.nonweapon_picks(draft) {
+                    let PickKind::Level { class, level } = pick.kind else {
+                        continue;
+                    };
+                    let at = |o: &Object| {
+                        matches!(o, Object::KitBonus(b)
+                            if b.unknown_0x8 == level as i32 && b.unknown_0xc == class as i32)
+                    };
+                    chosen.retain(|o| !at(o));
+                    if let Some(name) = draft.picked(pick.kind).first() {
+                        chosen.push(Object::KitBonus(cr_formats::classes::KitBonus {
+                            version: 1,
+                            name: name.clone(),
+                            unknown_0x8: level as i32,
+                            unknown_0xc: class as i32,
+                        }));
+                    }
+                }
+            }
             if let Some(flags) = d.flags_0x1dea.as_mut() {
                 flags[0] = u8::from(draft.barred_nonweapon_ignored);
             }
@@ -3283,6 +3301,7 @@ mod tests {
             nonweapon_groups: [false; 5],
             ability_groups: [false; 6],
             level_nonweapon: Vec::new(),
+            level_nonweapon_choices: Vec::new(),
             core_specialization: group == 0,
             weapon_rule: "Any".into(),
             weapon_list: Vec::new(),
@@ -3542,6 +3561,47 @@ mod tests {
         d.gold = 50;
         d.purchases = vec![("Dagger".into(), 1)];
         d
+    }
+
+    #[test]
+    fn a_class_level_offers_one_free_proficiency() {
+        let mut rules = rules(true);
+        let fighter = rules
+            .classes
+            .iter_mut()
+            .find(|c| c.name == "Fighter")
+            .unwrap();
+        fighter.level_nonweapon_choices = vec![
+            ("Swimming".into(), 1),
+            ("Riding".into(), 1),
+            ("Cooking".into(), 2),
+        ];
+        let mut d = draft(&rules);
+        let kind = PickKind::Level { class: 0, level: 1 };
+        let picks = rules.nonweapon_picks(&d);
+        let pick = picks.iter().find(|p| p.kind == kind).unwrap();
+        assert_eq!((pick.count, pick.names.len()), (1, 2));
+        // Level 2's list waits for level 2.
+        assert!(
+            !picks
+                .iter()
+                .any(|p| matches!(p.kind, PickKind::Level { level: 2, .. }))
+        );
+        assert!(!rules.free_nonweapon(&d, "Swimming"));
+        d.set_picked(kind, vec!["Swimming".into()]);
+        assert!(rules.free_nonweapon(&d, "Swimming"));
+        let c = rules.build(&d).unwrap();
+        let kept: Vec<(&str, i32, i32)> = c
+            .data
+            .unknown_0x1e28
+            .iter()
+            .flatten()
+            .filter_map(|o| match o {
+                Object::KitBonus(b) => Some((b.name.as_str(), b.unknown_0x8, b.unknown_0xc)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(kept, [("Swimming", 1, 0)]);
     }
 
     #[test]

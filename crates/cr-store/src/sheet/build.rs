@@ -1088,6 +1088,19 @@ fn class_text(ctx: &Ctx) -> String {
             text.push('\n');
         }
         text.push_str(&spells::spheres_text(ctx, g));
+        // Every free spell of the class, whatever the level (0x667936
+        // with 100).
+        if let Some(Class::Expansion { data, .. }) = class.class {
+            for level in crate::userdb::classes::levels::free_spells(data) {
+                for line in crate::userdb::classes::levels::free_spell_lines_untranslated(
+                    class.name, &level,
+                ) {
+                    text.push_str("\tFree Spell - ");
+                    text.push_str(&line);
+                    text.push('\n');
+                }
+            }
+        }
     }
     text
 }
