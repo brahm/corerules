@@ -31,6 +31,7 @@ use cr_i18n::tr;
 
 use crate::lists::pick;
 
+mod attacks;
 mod templates;
 mod widgets;
 
@@ -622,6 +623,7 @@ fn editor<K: UserKind, H: Host + 'static>(
                     | FieldKind::Groups(_)
                     | FieldKind::Grid { .. }
                     | FieldKind::Items
+                    | FieldKind::Attacks
             );
             let group_title = if own && field.group.is_empty() {
                 field.label
@@ -1096,6 +1098,9 @@ fn control<R: Clone + 'static, H: Host + 'static>(
             max,
         } => widgets::grid_control(columns, first, (min, max), value, emit(changed, index)),
         FieldKind::Items => items_control(index, value, changed, host),
+        FieldKind::Attacks => {
+            attacks::attacks_control(sources.attacks.clone(), value, emit(changed, index))
+        }
         FieldKind::Dice => {
             let spins: Vec<gtk::SpinButton> = [(0.0, 1000.0), (0.0, 1000.0), (-1000.0, 100_000.0)]
                 .iter()

@@ -156,6 +156,8 @@ pub enum Value {
     Grid(Vec<Vec<i64>>),
     /// Carried items (a monster's inventory).
     Items(crate::treasure::Bundle),
+    /// A monster's own attacks.
+    Attacks(Vec<cr_formats::monster::MonsterAttack>),
 }
 
 impl Value {
@@ -186,6 +188,11 @@ impl Value {
                 .items
                 .iter()
                 .map(|i| i.label())
+                .collect::<Vec<_>>()
+                .join(", "),
+            Self::Attacks(attacks) => attacks
+                .iter()
+                .map(|a| a.name.as_str())
                 .collect::<Vec<_>>()
                 .join(", "),
         }
@@ -234,6 +241,13 @@ impl Value {
         match self {
             Self::Items(bundle) => bundle.clone(),
             _ => crate::treasure::Bundle::default(),
+        }
+    }
+
+    pub fn attacks(&self) -> Vec<cr_formats::monster::MonsterAttack> {
+        match self {
+            Self::Attacks(attacks) => attacks.clone(),
+            _ => Vec::new(),
         }
     }
 
@@ -360,6 +374,10 @@ pub enum FieldKind {
     /// Items ([`Value::Items`]) edited as the Treasure Bundle Editor
     /// (IDD 290) edits a bundle.
     Items,
+    /// A monster's attacks ([`Value::Attacks`]) as its Attacks page
+    /// (IDD 271) edits them: added from the attack types, made new or
+    /// changed with the Monster Attack dialog (IDD 269).
+    Attacks,
 }
 
 /// A value an editor can work out from the record and offer: the
@@ -942,6 +960,7 @@ impl Sources {
                     options: Options::Source(n),
                     ..
                 } => Some(n),
+                FieldKind::Attacks => Some("attacks"),
                 _ => None,
             })
             .collect();

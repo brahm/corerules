@@ -157,7 +157,9 @@ the original programs wrote.
   ten other types in Other Parts: racial and class abilities, languages,
   schools, spheres, traits, disadvantages, gems and art, currency and
   Count), spells, psionic powers, monsters (with their spells, their
-  inventory in the Treasure Bundle Editor and Suggest XP Value), monster
+  inventory in the Treasure Bundle Editor, their attacks, each made or
+  changed in the Monster Attack editor the original has but hides, and
+  Suggest XP Value), monster
   types, traps, treasure
   tables and encounter templates (monsters, NPCs, items with their coins
   and escorts, traps, treasure types and the 2-20 table, with the
