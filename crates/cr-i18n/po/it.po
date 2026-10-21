@@ -7312,7 +7312,7 @@ msgstr "Punti esperienza"
 
 #: crates/cr-store/src/userdb/monsters.rs:369
 msgid "Suggest XP Value"
-msgstr ""
+msgstr "Suggerisci PE"
 
 #: crates/cr-store/src/userdb/monsters.rs:418
 msgid "Greatest"
@@ -7385,12 +7385,12 @@ msgstr "Varianti"
 
 #: crates/cr-store/src/userdb/monsters.rs:538
 msgid "Spells available to this Monster"
-msgstr ""
+msgstr "Incantesimi disponibili per questo mostro"
 
 #: crates/cr-store/src/userdb/monsters.rs:544
 #: crates/cr-store/src/userdb/monsters.rs:545
 msgid "Inventory"
-msgstr ""
+msgstr "Inventario"
 
 #: crates/cr-store/src/userdb/monsters.rs:600
 msgid "Defenses"
@@ -7446,7 +7446,7 @@ msgstr "Altre Classi d'Armatura (100 per nessuna)"
 
 #: crates/cr-store/src/userdb/monsters.rs:786
 msgid "This monster is worth approximately {xp} experience points. Would you like to set the experience point value to {xp}?"
-msgstr ""
+msgstr "Questo mostro vale circa {xp} punti esperienza. Vuoi impostare il valore di esperienza a {xp}?"
 
 #: crates/cr-store/src/userdb/parts/kit.rs:371
 msgid "Kit Alignment/Gender"
