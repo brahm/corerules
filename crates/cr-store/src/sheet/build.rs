@@ -15,6 +15,7 @@ use crate::Result;
 use crate::lists::BUNDLE_NAMES;
 
 pub(super) mod combat;
+pub(super) mod group;
 mod nwp;
 mod rogue;
 mod spells;

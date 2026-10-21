@@ -141,7 +141,9 @@ the original programs wrote.
   sections, their order and page breaks, and the printed border
 - **Parties**: Manage Parties… puts characters in a party, takes them out
   or deletes every member; a character can be deleted, with Undo; the list
-  filters by party
+  filters by party; in the Expansion, Group Encounter… makes an encounter
+  of a party's NPCs, or prints them as one in the original's full or
+  condensed format
 - **Convert to NPC** and **Convert to Character** move a character to the
   DM Toolkit's NPCs and back, writing the same files as the Expansion
 

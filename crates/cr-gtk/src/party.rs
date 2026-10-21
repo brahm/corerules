@@ -21,6 +21,9 @@ pub trait Host {
     fn parent(&self) -> gtk::Widget;
     /// The key of the entry on the detail page.
     fn current_key(&self) -> String;
+    /// Group Encounter on the NPCs of `party` (Chars/ files `members`),
+    /// over `parent`.
+    fn group_encounter(&self, parent: &gtk::Widget, party: &str, members: Vec<String>);
 }
 
 fn errors<T>(host: &impl Host, result: Option<Result<T>>) -> Option<T> {
@@ -248,6 +251,8 @@ impl<H: Host + 'static> Manager<H> {
             .title(tr("Without a Party"))
             .build();
         let (mut count, mut unassigned) = (0, 0);
+        // The party's NPCs, as the NPC screen lists them (0x44b5c2).
+        let mut npcs: Vec<(String, String)> = Vec::new();
         for entry in &index.entries {
             let in_party = party_of(entry);
             let (group, icon, tooltip, to) = if party.is_empty() || in_party.is_empty() {
@@ -263,6 +268,9 @@ impl<H: Host + 'static> Manager<H> {
                 )
             } else if in_party.eq_ignore_ascii_case(&party) {
                 count += 1;
+                if entry.unknown_0x24 != 0 {
+                    npcs.push((entry.name.clone(), entry.file.clone()));
+                }
                 (
                     &members,
                     "list-remove-symbolic",
@@ -309,6 +317,29 @@ impl<H: Host + 'static> Manager<H> {
         if party.is_empty() {
             others.set_description(Some(tr("Make a party to put characters in it.")));
         } else {
+            let buttons = gtk::Box::builder().spacing(6).build();
+            // Group Encounter (the NPC screen's button 1576), which only the
+            // Expansion has.
+            let expansion = self.host.with_install(|i| {
+                Ok(cr_store::encounter::flavor_of(i) == cr_store::sheet::Flavor::Expansion)
+            });
+            if matches!(expansion, Some(Ok(true))) {
+                let group = gtk::Button::builder()
+                    .label(tr("_Group Encounter…"))
+                    .use_underline(true)
+                    .tooltip_text(tr("Make or print an encounter of the party's NPCs"))
+                    .valign(gtk::Align::Center)
+                    .css_classes(["flat"])
+                    .build();
+                npcs.sort_by_cached_key(|(name, _)| cr_store::collate::sort_key(name));
+                let files: Vec<String> = npcs.into_iter().map(|(_, file)| file).collect();
+                let (manager, party) = (self.clone(), party.clone());
+                group.connect_clicked(move |_| {
+                    let parent = manager.dialog.clone().upcast();
+                    manager.host.group_encounter(&parent, &party, files.clone());
+                });
+                buttons.append(&group);
+            }
             if count == 0 {
                 members.set_description(Some(tr("Nobody is in this party yet.")));
             } else {
@@ -320,8 +351,9 @@ impl<H: Host + 'static> Manager<H> {
                     .build();
                 let manager = self.clone();
                 delete.connect_clicked(move |_| manager.confirm_delete());
-                members.set_header_suffix(Some(&delete));
+                buttons.append(&delete);
             }
+            members.set_header_suffix(Some(&buttons));
             self.page.add(&members);
             self.lists.borrow_mut().push(members);
         }
