@@ -4,7 +4,10 @@
 //!
 //! Attack types (`AttackU.dat`) are only read: a monster's Attacks page
 //! picks from `Attack.dat` and `AttackU.dat`, and the chosen attacks are
-//! stored in the monster as copies of those records. Its Spells page
+//! stored in the monster as copies of those records. Its New and Edit make
+//! or change the monster's own copies with the Monster Attack dialog
+//! (IDD 269), never the attack types; the original has the same buttons
+//! but hides them. Its Spells page
 //! (IDD 208) keeps copies of spells the same way, its Inventory page is
 //! the Treasure Bundle Editor (IDD 290), and Suggest XP Value works the
 //! experience out from the other pages.
@@ -493,9 +496,9 @@ impl UserKind for Monsters {
             FieldDesc::new(
                 ATTACKS,
                 tr_noop!("Attacks"),
-                FieldKind::Dual(Options::Source("attacks")),
-                |r, _| Value::List(attack_names(r)),
-                |r, _, v, sources| set_attacks(r, &v.list(), &sources.attacks),
+                FieldKind::Attacks,
+                |r, _| Value::Attacks(attacks(r)),
+                |r, _, v, _| set_attacks(r, v.attacks()),
             )
             .group(tr_noop!("Attacks")),
             udb_text!(ATTACKS, tr_noop!("No. of Attacks"), 0, arsenal.attacks)
@@ -681,35 +684,161 @@ fn other_ac(i: usize) -> FieldDesc<Monster> {
     .group(tr_noop!("Other Armor Classes (100 for None)"))
 }
 
-/// The names of a monster's attacks (the Attacks list of IDD 271).
-pub fn attack_names(m: &Monster) -> Vec<String> {
+/// A monster's own attacks (the Attacks list of IDD 271).
+pub fn attacks(m: &Monster) -> Vec<MonsterAttack> {
     m.arsenal
         .attack_list
         .iter()
         .filter_map(|o| match o {
-            Object::MonsterAttack(a) => Some(a.name.clone()),
+            Object::MonsterAttack(a) => Some((**a).clone()),
             _ => None,
         })
         .collect()
 }
 
-/// Sets a monster's attacks to `names`: attacks it already has are kept,
-/// new ones are copied from the attack types, as Add does.
-pub fn set_attacks(m: &mut Monster, names: &[String], types: &[MonsterAttack]) {
-    let old = std::mem::take(&mut m.arsenal.attack_list);
-    for name in names {
-        let kept = old
-            .iter()
-            .find(|o| matches!(o, Object::MonsterAttack(a) if &a.name == name));
-        let attack = match kept {
-            Some(o) => Some(o.clone()),
-            None => types
-                .iter()
-                .find(|a| &a.name == name)
-                .map(|a| Object::MonsterAttack(Box::new(a.clone()))),
-        };
-        m.arsenal.attack_list.extend(attack);
+/// Sets a monster's own attacks.
+pub fn set_attacks(m: &mut Monster, attacks: Vec<MonsterAttack>) {
+    m.arsenal.attack_list = attacks
+        .into_iter()
+        .map(|a| Object::MonsterAttack(Box::new(a)))
+        .collect();
+}
+
+/// The Monster Attack dialog's (IDD 269) "Must make a to hit roll
+/// against" choices, with the value each stores.
+pub const TO_HIT: [(i32, &str); 4] = [
+    (0, tr_noop!("Normal AC")),
+    (1, tr_noop!("Automatically Hits")),
+    (2, tr_noop!("AC Excluding Armor")),
+    (10, tr_noop!("Armor Class 10")),
+];
+
+/// Its Area of Effect choices, by value.
+pub const AREAS: [&str; 5] = [
+    tr_noop!("Single Target"),
+    tr_noop!("Cone"),
+    tr_noop!("Beam"),
+    tr_noop!("Rectangle"),
+    tr_noop!("Circle"),
+];
+
+/// Its "Save Against" choices, by value.
+pub const SAVES: [&str; 11] = [
+    tr_noop!("None"),
+    tr_noop!("Paralyzation"),
+    tr_noop!("Poison"),
+    tr_noop!("Death Magic"),
+    tr_noop!("Rod"),
+    tr_noop!("Staff"),
+    tr_noop!("Wand"),
+    tr_noop!("Petrification"),
+    tr_noop!("Polymorph"),
+    tr_noop!("Breath Weapon"),
+    tr_noop!("Spell"),
+];
+
+/// Its "to gain this" choices, by value.
+pub const SAVE_RESULTS: [&str; 3] = [
+    tr_noop!("Not Applicable"),
+    tr_noop!("Half Damage"),
+    tr_noop!("Negate Effect"),
+];
+
+/// The labels of an area's range, width, end width and length, `None` for
+/// those the area hides (0x6bb7a0).
+pub fn area_labels(area: i32) -> [Option<&'static str>; 4] {
+    let range = Some(tr_noop!("Range:"));
+    match area {
+        1 => [
+            range,
+            Some(tr_noop!("Start Width:")),
+            Some(tr_noop!("End Width:")),
+            Some(tr_noop!("Length:")),
+        ],
+        2 | 3 => [
+            range,
+            Some(tr_noop!("Width:")),
+            None,
+            Some(tr_noop!("Length:")),
+        ],
+        4 => [range, Some(tr_noop!("Diameter:")), None, None],
+        _ => [range, None, None, None],
     }
+}
+
+/// The heading of the message [`add_problem`] gives.
+pub const ADD_HEADING: &str = tr_noop!("Unable to add attack");
+
+/// Why the attack type `name` cannot be added to `attacks` (0x6fbe40): the
+/// monster has one by that name, in any case.
+pub fn add_problem(attacks: &[MonsterAttack], name: &str) -> Option<&'static str> {
+    let name = name.to_lowercase();
+    attacks
+        .iter()
+        .any(|a| a.name.to_lowercase() == name)
+        .then(|| tr("The monster already has an attack by that name."))
+}
+
+/// Why the Monster Attack dialog cannot close with the name `name`
+/// (0x6bbb25): it is blank, or names another of `attacks`. An edited
+/// attack (`editing`, its index) may not take another's name in any case
+/// (0x6fc00b); a new one only the same name exactly (0x6fc729).
+pub fn attack_problem(
+    attacks: &[MonsterAttack],
+    editing: Option<usize>,
+    name: &str,
+) -> Option<&'static str> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Some(tr("You need to supply a name for the attack."));
+    }
+    match editing {
+        Some(index) => attacks
+            .iter()
+            .enumerate()
+            .any(|(i, a)| i != index && a.name.to_lowercase() == name.to_lowercase())
+            .then(|| tr("The monster already has an attack by that name.")),
+        None => attacks
+            .iter()
+            .any(|a| a.name == name)
+            .then(|| tr("A monster attack by that name has already been added.")),
+    }
+}
+
+/// What an attack does, in a line: "1d8+2, Cone, save vs. Breath Weapon
+/// for Half Damage, Bonus Hit Dice: 1".
+pub fn attack_summary(a: &MonsterAttack) -> String {
+    let mut parts = Vec::new();
+    if a.damage_dice != 0 || a.damage_bonus != 0 {
+        parts.push(super::dice_text(
+            a.damage_dice.into(),
+            a.damage_sides.into(),
+            a.damage_bonus.into(),
+        ));
+    }
+    if let Some((_, to_hit)) = TO_HIT.iter().find(|(v, _)| *v == a.to_hit && *v != 0) {
+        parts.push(tr(to_hit).to_owned());
+    }
+    if a.area > 0
+        && let Some(area) = AREAS.get(a.area as usize)
+    {
+        parts.push(tr(area).to_owned());
+    }
+    if a.save_against > 0
+        && let Some(save) = SAVES.get(a.save_against as usize)
+    {
+        let save = tr(save);
+        parts.push(match SAVE_RESULTS.get(a.save_result as usize) {
+            Some(result) if a.save_result > 0 => {
+                tr!("save vs. {save} for {result}", save, result = tr(result))
+            }
+            _ => tr!("save vs. {save}", save),
+        });
+    }
+    if a.bonus_hit_dice != 0 {
+        parts.push(tr!("Bonus Hit Dice: {n}", n = a.bonus_hit_dice));
+    }
+    parts.join(", ")
 }
 
 /// The names of a monster's spells (the "Spells available to this
@@ -760,7 +889,7 @@ pub fn suggested_experience(m: &Monster) -> i64 {
         .attack_list
         .iter()
         .map(|o| match o {
-            Object::MonsterAttack(a) => i64::from(a.unknown_0x40),
+            Object::MonsterAttack(a) => i64::from(a.bonus_hit_dice),
             _ => 0,
         })
         .sum::<i64>();
@@ -912,6 +1041,56 @@ mod tests {
     }
 
     #[test]
+    fn attack_names_are_checked_as_the_original_does() {
+        let attack = |name: &str| MonsterAttack {
+            name: name.into(),
+            ..Default::default()
+        };
+        let list = [attack("Bite"), attack("Claw")];
+        assert!(add_problem(&list, "bite").is_some());
+        assert!(add_problem(&list, "Gaze").is_none());
+        // A blank name never closes the dialog.
+        assert!(attack_problem(&list, None, "  ").is_some());
+        assert!(attack_problem(&list, Some(0), "").is_some());
+        // New compares exactly, after trimming.
+        assert!(attack_problem(&list, None, " Bite ").is_some());
+        assert!(attack_problem(&list, None, "bite").is_none());
+        // Edit may keep its own name but not take another's.
+        assert!(attack_problem(&list, Some(0), "Bite").is_none());
+        assert!(attack_problem(&list, Some(0), "claw").is_some());
+    }
+
+    #[test]
+    fn the_area_decides_which_measures_show() {
+        let shown = |area| area_labels(area).map(|l| l.is_some());
+        assert_eq!(shown(0), [true, false, false, false]);
+        assert_eq!(shown(1), [true, true, true, true]);
+        assert_eq!(shown(2), shown(3));
+        assert_eq!(shown(3), [true, true, false, true]);
+        assert_eq!(shown(4), [true, true, false, false]);
+        assert_eq!(TO_HIT.map(|(v, _)| v), [0, 1, 2, 10]);
+        assert_eq!((AREAS.len(), SAVES.len(), SAVE_RESULTS.len()), (5, 11, 3));
+    }
+
+    #[test]
+    fn an_attack_summary_names_what_is_set() {
+        assert!(attack_summary(&MonsterAttack::default()).is_empty());
+        let a = MonsterAttack {
+            damage_dice: 2,
+            damage_sides: 6,
+            damage_bonus: 1,
+            area: 1,
+            save_against: 9,
+            save_result: 1,
+            bonus_hit_dice: 2,
+            ..Default::default()
+        };
+        let summary = attack_summary(&a);
+        assert!(summary.starts_with("2d6+1"));
+        assert_eq!(summary.matches(", ").count(), 3);
+    }
+
+    #[test]
     fn monster_fields_write_their_members() {
         let mut m = Monsters::new_record(&context("Udbtype"));
         assert_eq!(m.monster_type, "Udbtype");
@@ -920,13 +1099,8 @@ mod tests {
         let sources = Sources {
             attacks: vec![MonsterAttack {
                 name: "Poison".into(),
-                unknown_0xc: String::new(),
-                unknown_0x8: 0,
-                unknown_0x10: [0; 10],
-                unknown_0x3c: 0,
-                unknown_0x38: 0,
-                unknown_0x40: 2,
-                unknown_0x44: String::new(),
+                bonus_hit_dice: 2,
+                ..Default::default()
             }],
             ..Default::default()
         };
@@ -937,12 +1111,12 @@ mod tests {
         assert_eq!(m.frequency, 0);
         field("Hit Dice").set(&mut m, &Value::Dice([3, 8, 0]), &sources);
         field("Man-Sized").set(&mut m, &Value::Bool(true), &sources);
-        field("Attacks").set(&mut m, &Value::List(vec!["Poison".into()]), &sources);
+        field("Attacks").set(&mut m, &Value::Attacks(sources.attacks.clone()), &sources);
         field("Lair").set(&mut m, &Value::Text("c, Hx3".into()), &sources);
         assert_eq!(field("Lair").get(&m), Value::Text("C, Hx3".into()));
         assert_eq!((m.hit_dice, m.hit_die_size), (3, 8));
         assert_eq!(m.unknown_0x47c, [0, 0, 1, 0, 0, 0]);
-        assert_eq!(attack_names(&m), ["Poison"]);
+        assert_eq!(attacks(&m), sources.attacks);
         assert!(!field("Arctic").is_enabled(&m));
         m.climate_terrain = CUSTOM_TERRAIN.into();
         assert!(field("Arctic").is_enabled(&m));

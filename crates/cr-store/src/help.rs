@@ -45,6 +45,7 @@ pub mod topic {
     pub const ROLL_TREASURE: u32 = 260;
     pub const MONSTERS: u32 = 261;
     pub const TABLES: u32 = 265;
+    pub const MONSTER_ATTACK: u32 = 269;
     pub const ENCOUNTER: u32 = 288;
     /// The Encounter Template dialog and the dialogs its buttons open.
     pub const ENCOUNTER_TEMPLATE: u32 = 289;

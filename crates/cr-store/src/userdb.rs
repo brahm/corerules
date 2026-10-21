@@ -156,6 +156,8 @@ pub enum Value {
     Grid(Vec<Vec<i64>>),
     /// Carried items (a monster's inventory).
     Items(crate::treasure::Bundle),
+    /// A monster's own attacks.
+    Attacks(Vec<cr_formats::monster::MonsterAttack>),
     /// A class's free spells by level, with the class's name (the
     /// summary names it).
     FreeSpells(String, Vec<classes::levels::FreeSpellLevel>),
@@ -191,6 +193,11 @@ impl Value {
                 .items
                 .iter()
                 .map(|i| i.label())
+                .collect::<Vec<_>>()
+                .join(", "),
+            Self::Attacks(attacks) => attacks
+                .iter()
+                .map(|a| a.name.as_str())
                 .collect::<Vec<_>>()
                 .join(", "),
             Self::FreeSpells(class, levels) => levels
@@ -249,6 +256,13 @@ impl Value {
         match self {
             Self::Items(bundle) => bundle.clone(),
             _ => crate::treasure::Bundle::default(),
+        }
+    }
+
+    pub fn attacks(&self) -> Vec<cr_formats::monster::MonsterAttack> {
+        match self {
+            Self::Attacks(attacks) => attacks.clone(),
+            _ => Vec::new(),
         }
     }
 
@@ -389,6 +403,10 @@ pub enum FieldKind {
     /// Items ([`Value::Items`]) edited as the Treasure Bundle Editor
     /// (IDD 290) edits a bundle.
     Items,
+    /// A monster's attacks ([`Value::Attacks`]) as its Attacks page
+    /// (IDD 271) edits them: added from the attack types, made new or
+    /// changed with the Monster Attack dialog (IDD 269).
+    Attacks,
     /// A class's free spells by level ([`Value::FreeSpells`]), out of
     /// every spell: Level Details' Free Spells (IDD 144).
     FreeSpells,
@@ -988,6 +1006,7 @@ impl Sources {
                 }
                 | FieldKind::LevelNwps(Options::Source(n))
                 | FieldKind::LevelAbilities(Options::Source(n)) => Some(n),
+                FieldKind::Attacks => Some("attacks"),
                 FieldKind::FreeSpells => Some("spells"),
                 FieldKind::AutoFill => Some("class-records"),
                 _ => None,

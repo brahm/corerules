@@ -31,6 +31,7 @@ use cr_i18n::tr;
 
 use crate::lists::pick;
 
+mod attacks;
 mod levels;
 mod templates;
 mod widgets;
@@ -630,6 +631,7 @@ fn editor<K: UserKind, H: Host + 'static>(
                     | FieldKind::Groups(_)
                     | FieldKind::Grid { .. }
                     | FieldKind::Items
+                    | FieldKind::Attacks
                     | FieldKind::FreeSpells
                     | FieldKind::LevelNwps(_)
                     | FieldKind::LevelAbilities(_)
@@ -1108,6 +1110,9 @@ fn control<R: Clone + 'static, H: Host + 'static>(
             max,
         } => widgets::grid_control(columns, first, (min, max), value, emit(changed, index)),
         FieldKind::Items => items_control(index, value, changed, host),
+        FieldKind::Attacks => {
+            attacks::attacks_control(sources.attacks.clone(), value, emit(changed, index))
+        }
         FieldKind::FreeSpells => {
             let spells = sources
                 .spells

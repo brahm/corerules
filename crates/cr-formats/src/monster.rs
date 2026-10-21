@@ -149,19 +149,47 @@ record! {
 
 record! {
     /// One attack (`CMonsterAttackOb`, schema 88, size 0x48, Serialize
-    /// 0x6889ac). All integers but `unknown_0x40` are 0 in the shipped data.
+    /// 0x6889ac), edited by the Monster Attack dialog (IDD 269). All
+    /// integers but `bonus_hit_dice` are 0 in the shipped data.
+    #[derive(Default)]
     pub struct MonsterAttack {
         /// "Blood drain", "Employs psionic devotions".
         name: String,
+        /// No dialog shows it; empty in the shipped data.
         unknown_0xc: String,
-        unknown_0x8: i32,
-        /// Members +0x10 to +0x34.
-        unknown_0x10: [i32; 10],
-        unknown_0x3c: i32,
-        unknown_0x38: i32,
-        /// 1 or 2 (devotions 1, sciences 2).
-        unknown_0x40: i32,
-        unknown_0x44: String,
+        /// "Help ID".
+        help_id: i32,
+        /// Damage dice: how many, their sides and the bonus.
+        damage_dice: i32,
+        damage_sides: i32,
+        damage_bonus: i32,
+        /// 0 Single Target, 1 Cone, 2 Beam, 3 Rectangle, 4 Circle.
+        area: i32,
+        /// Feet.
+        range: i32,
+        /// The start width of a cone, the width of a beam or rectangle,
+        /// the diameter of a circle, in feet.
+        width: i32,
+        /// The end width of a cone, in feet.
+        end_width: i32,
+        /// The length of a cone, beam or rectangle, in feet.
+        length: i32,
+        /// 0 None, then Paralyzation, Poison, Death Magic, Rod, Staff,
+        /// Wand, Petrification, Polymorph, Breath Weapon, Spell.
+        save_against: i32,
+        /// What a save gains: 0 Not Applicable, 1 Half Damage, 2 Negate
+        /// Effect.
+        save_result: i32,
+        /// The roll to hit: 0 Normal AC, 1 Automatically Hits, 2 AC
+        /// Excluding Armor, 10 Armor Class 10.
+        to_hit: i32,
+        /// What the saving throw is modified by.
+        save_modifier: i32,
+        /// Hit dice the attack adds for experience: 1 to 3 in the shipped
+        /// data ("Energy drain" 3).
+        bonus_hit_dice: i32,
+        /// "Special Effect".
+        special_effect: String,
     }
 }
 
