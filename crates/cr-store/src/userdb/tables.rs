@@ -192,7 +192,7 @@ pub fn new_entry(item: &str, is_table: bool, weight: u32) -> TreasureTableEntry 
         sub_table_1: String::new(),
         sub_table_2_dice: [0, 0, 0],
         sub_table_2: String::new(),
-        unknown_0x54: 0,
+        intelligent_chance: 0,
         spell_min_level: 0,
         spell_max_level: 0,
         spell_count: 0,
@@ -227,6 +227,101 @@ pub fn push_entry(table: &mut TreasureTable, entry: TreasureTableEntry) {
     table
         .entries
         .push(Object::TreasureTableEntry(Box::new(entry)));
+}
+
+/// The table names a row's Random Contents can roll (IDD 262, 0x54d025):
+/// every table of the database, sorted.
+pub fn table_names(db: &TableDb) -> Vec<String> {
+    let mut names: Vec<String> = db.tables.iter().map(|t| t.name.clone()).collect();
+    names.sort_by_cached_key(|n| crate::collate::sort_key(n));
+    names.dedup();
+    names
+}
+
+/// Where Always Contains picks its parts: [`source_names`] without
+/// "Tables" (IDD 262's category combo, 1881).
+pub fn contents_sources() -> Vec<String> {
+    source_names()
+        .into_iter()
+        .filter(|s| s != "Tables")
+        .collect()
+}
+
+/// The Always Contains items of a row: the top level of its item's
+/// contents, in order.
+pub fn contained(entry: &TreasureTableEntry) -> &[InventoryItem] {
+    match entry.item.contents.as_deref() {
+        Some(Object::InventoryBundle(b)) => &b.items,
+        _ => &[],
+    }
+}
+
+/// How the Always Contains list shows an item (0x4aadba): its name, with
+/// " xN" when there are several.
+pub fn contained_line(item: &InventoryItem) -> String {
+    if item.quantity == 1 {
+        item.name.clone()
+    } else {
+        format!("{} x{}", item.name, item.quantity)
+    }
+}
+
+/// Add (0x54a794): one more of `name` in `items`, added to an item of the
+/// same name that holds nothing.
+pub fn add_contained(items: &mut Vec<InventoryItem>, name: &str) {
+    if let Some(item) = items
+        .iter_mut()
+        .find(|i| i.name == name && i.contents.is_none() && i.extra.is_none())
+    {
+        item.quantity = item.quantity.saturating_add(1);
+        return;
+    }
+    items.push(InventoryItem {
+        name: name.into(),
+        quantity: 1,
+        contents: None,
+        unknown_0x8: 999,
+        flag_0x4: 0,
+        extra: None,
+    });
+}
+
+/// Remove (0x54a5b5): `count` of the item at `index`, the item itself
+/// when that is all of it.
+pub fn remove_contained(items: &mut Vec<InventoryItem>, index: usize, count: u32) {
+    let Some(item) = items.get_mut(index) else {
+        return;
+    };
+    if count >= item.quantity {
+        items.remove(index);
+    } else {
+        item.quantity -= count;
+    }
+}
+
+/// OK on the entry details (0x54a84c): the item contains `items`. It gets
+/// a contents bundle even when that is empty, as in the original, which
+/// keeps rolled copies of it from merging.
+pub fn set_contained(entry: &mut TreasureTableEntry, items: Vec<InventoryItem>) {
+    entry.item.contents = Some(Box::new(Object::InventoryBundle(
+        cr_formats::inventory::InventoryBundle { items },
+    )));
+}
+
+/// The highest spell level of a scroll row: 9 for wizard spells, 7 for
+/// priest spells (IDD 365, 0x53e0f6).
+pub fn max_spell_level(wizard: bool) -> u32 {
+    if wizard { 9 } else { 7 }
+}
+
+/// Wizard or Priest in Scroll Details (0x53e1ee, 0x53e21d): choosing
+/// priest spells lowers both levels to 7 at most.
+pub fn set_spell_wizard(entry: &mut TreasureTableEntry, wizard: bool) {
+    entry.spell_wizard = u8::from(wizard);
+    if !wizard {
+        entry.spell_min_level = entry.spell_min_level.min(7);
+        entry.spell_max_level = entry.spell_max_level.min(7);
+    }
 }
 
 /// The roll ranges the editor shows for the weights: "1-3", "4", ...
@@ -354,5 +449,49 @@ mod tests {
         assert_eq!(reread.tables.len(), 2);
         assert_eq!(origin(&reread.tables[1]), Origin::Custom);
         assert_eq!(source_names().len(), 17);
+    }
+
+    #[test]
+    fn entry_details_edit_the_contents_and_the_scroll() {
+        let mut entry = new_entry("Bag", false, 1);
+        assert!(contained(&entry).is_empty());
+        assert!(!contents_sources().contains(&"Tables".to_string()));
+        assert_eq!(contents_sources().len(), source_names().len() - 1);
+
+        // Add merges by name; Remove takes some or all.
+        let mut items = Vec::new();
+        add_contained(&mut items, "Torch");
+        add_contained(&mut items, "Rope");
+        add_contained(&mut items, "Torch");
+        assert_eq!(items.len(), 2);
+        assert_eq!(contained_line(&items[0]), "Torch x2");
+        assert_eq!(contained_line(&items[1]), "Rope");
+        remove_contained(&mut items, 0, 1);
+        assert_eq!(items[0].quantity, 1);
+        remove_contained(&mut items, 0, 1);
+        assert_eq!(items.len(), 1);
+
+        // OK always leaves a contents bundle, even an empty one.
+        set_contained(&mut entry, Vec::new());
+        assert!(entry.item.contents.is_some());
+        assert!(contained(&entry).is_empty());
+        set_contained(&mut entry, items);
+        assert_eq!(contained(&entry).len(), 1);
+
+        // Priest spells go up to 7th level.
+        entry.spell_min_level = 4;
+        entry.spell_max_level = 9;
+        set_spell_wizard(&mut entry, true);
+        assert_eq!((entry.spell_wizard, entry.spell_max_level), (1, 9));
+        set_spell_wizard(&mut entry, false);
+        assert_eq!(
+            (
+                entry.spell_wizard,
+                entry.spell_min_level,
+                entry.spell_max_level
+            ),
+            (0, 4, 7)
+        );
+        assert_eq!((max_spell_level(true), max_spell_level(false)), (9, 7));
     }
 }

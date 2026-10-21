@@ -190,7 +190,7 @@ fn ask(parent: &impl IsA<gtk::Widget>, heading: &str, body: &str, yes: impl Fn()
 }
 
 /// The "How many?" dialog (IDD 291): a number from `min` to `max`.
-fn how_many(
+pub(crate) fn how_many(
     parent: &impl IsA<gtk::Widget>,
     heading: &str,
     action: &str,

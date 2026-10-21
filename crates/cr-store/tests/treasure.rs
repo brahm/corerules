@@ -221,7 +221,7 @@ fn row(weight: u32, name: &str, is_table: bool, quantity: [u32; 3]) -> Object {
         sub_table_1: String::new(),
         sub_table_2_dice: [0; 3],
         sub_table_2: String::new(),
-        unknown_0x54: 0,
+        intelligent_chance: 0,
         spell_min_level: 0,
         spell_max_level: 0,
         spell_count: 0,
