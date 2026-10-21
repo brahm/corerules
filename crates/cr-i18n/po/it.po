@@ -336,7 +336,7 @@ msgstr "Pacchetto razziale"
 #: crates/cr-gtk/src/encounter.rs:247
 #: crates/cr-gtk/src/kit_magic.rs:281
 #: crates/cr-gtk/src/lists.rs:36
-#: crates/cr-gtk/src/lists.rs:295
+#: crates/cr-gtk/src/lists.rs:305
 #: crates/cr-gtk/src/main.rs:2698
 #: crates/cr-gtk/src/npc.rs:475
 #: crates/cr-gtk/src/picture.rs:82
@@ -516,7 +516,7 @@ msgstr "_OK"
 #: crates/cr-gtk/src/bundle.rs:187
 #: crates/cr-gtk/src/create.rs:168
 #: crates/cr-gtk/src/create.rs:262
-#: crates/cr-gtk/src/userdb/levels.rs:699
+#: crates/cr-gtk/src/userdb/levels.rs:701
 #: crates/cr-gtk/src/userdb.rs:1246
 msgid "_No"
 msgstr "_No"
@@ -524,7 +524,7 @@ msgstr "_No"
 #: crates/cr-gtk/src/bundle.rs:187
 #: crates/cr-gtk/src/create.rs:168
 #: crates/cr-gtk/src/create.rs:262
-#: crates/cr-gtk/src/userdb/levels.rs:699
+#: crates/cr-gtk/src/userdb/levels.rs:701
 #: crates/cr-gtk/src/userdb.rs:1246
 msgid "_Yes"
 msgstr "_Sì"
@@ -569,7 +569,7 @@ msgid "Category"
 msgstr "Categoria"
 
 #: crates/cr-gtk/src/bundle.rs:256
-#: crates/cr-gtk/src/lists.rs:118
+#: crates/cr-gtk/src/lists.rs:128
 #: crates/cr-gtk/src/main.rs:1364
 #: crates/cr-gtk/src/picture.rs:461
 #: crates/cr-gtk/src/userdb/templates.rs:508
@@ -656,7 +656,7 @@ msgstr "Incantesimi selezionati (incantesimi rimasti: {left})"
 #: crates/cr-gtk/src/bundle.rs:606
 #: crates/cr-gtk/src/encounter.rs:546
 #: crates/cr-gtk/src/lists.rs:78
-#: crates/cr-gtk/src/lists.rs:341
+#: crates/cr-gtk/src/lists.rs:351
 #: crates/cr-gtk/src/main.rs:2535
 #: crates/cr-gtk/src/sheet_options.rs:129
 #: crates/cr-gtk/src/transfer.rs:708
@@ -2465,8 +2465,8 @@ msgid "Kit Spell Use"
 msgstr "Uso degli incantesimi del kit"
 
 #: crates/cr-gtk/src/lists.rs:27
-#: crates/cr-gtk/src/lists.rs:192
-#: crates/cr-gtk/src/lists.rs:286
+#: crates/cr-gtk/src/lists.rs:116
+#: crates/cr-gtk/src/lists.rs:296
 msgid "Add to {list}"
 msgstr "Aggiungi a {list}"
 
@@ -6673,7 +6673,10 @@ msgid ""
 "If you continue, the next screen will be filled with the information\n"
 "stored in the class {class} and any information you already entered for that screen will be over-written.\n"
 "Continue Anyway?"
-msgstr "Se continui, la schermata successiva sarà riempita con le informazioni"
+msgstr ""
+"Se continui, la schermata successiva sarà riempita con le informazioni\n"
+"salvate nella classe {class} e quanto hai già inserito in quella schermata sarà sovrascritto.\n"
+"Continuare comunque?"
 
 #: crates/cr-store/src/userdb/classes/pages.rs:89
 #: crates/cr-store/src/userdb/classes/pages.rs:491
