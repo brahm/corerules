@@ -507,19 +507,21 @@ msgstr "Bearbeiten"
 #: crates/cr-gtk/src/userdb/templates.rs:1708
 #: crates/cr-gtk/src/userdb/templates.rs:1933
 #: crates/cr-gtk/src/userdb/widgets.rs:546
-#: crates/cr-gtk/src/userdb.rs:834
+#: crates/cr-gtk/src/userdb.rs:835
 msgid "_OK"
 msgstr "_OK"
 
 #: crates/cr-gtk/src/bundle.rs:187
 #: crates/cr-gtk/src/create.rs:168
 #: crates/cr-gtk/src/create.rs:262
+#: crates/cr-gtk/src/userdb.rs:1209
 msgid "_No"
 msgstr "_Nein"
 
 #: crates/cr-gtk/src/bundle.rs:187
 #: crates/cr-gtk/src/create.rs:168
 #: crates/cr-gtk/src/create.rs:262
+#: crates/cr-gtk/src/userdb.rs:1209
 msgid "_Yes"
 msgstr "_Ja"
 
@@ -546,18 +548,18 @@ msgstr "Wie viele?"
 #: crates/cr-gtk/src/userdb/widgets.rs:542
 #: crates/cr-gtk/src/userdb.rs:358
 #: crates/cr-gtk/src/userdb.rs:498
-#: crates/cr-gtk/src/userdb.rs:678
-#: crates/cr-gtk/src/userdb.rs:1220
-#: crates/cr-gtk/src/userdb.rs:1248
-#: crates/cr-gtk/src/userdb.rs:1433
-#: crates/cr-gtk/src/userdb.rs:1705
+#: crates/cr-gtk/src/userdb.rs:679
+#: crates/cr-gtk/src/userdb.rs:1330
+#: crates/cr-gtk/src/userdb.rs:1358
+#: crates/cr-gtk/src/userdb.rs:1543
+#: crates/cr-gtk/src/userdb.rs:1815
 msgid "_Cancel"
 msgstr "_Abbrechen"
 
 #: crates/cr-gtk/src/bundle.rs:240
 #: crates/cr-gtk/src/userdb/templates.rs:1081
 #: crates/cr-gtk/src/userdb/templates.rs:1091
-#: crates/cr-store/src/userdb/monsters.rs:517
+#: crates/cr-store/src/userdb/monsters.rs:526
 msgid "Category"
 msgstr "Kategorie"
 
@@ -1171,9 +1173,9 @@ msgstr "Klassenfähigkeiten"
 #: crates/cr-gtk/src/encounter.rs:1187
 #: crates/cr-gtk/src/main.rs:2023
 #: crates/cr-gtk/src/treasure.rs:457
-#: crates/cr-gtk/src/userdb.rs:1284
+#: crates/cr-gtk/src/userdb.rs:1394
 #: crates/cr-store/src/userdb/classes/pages.rs:134
-#: crates/cr-store/src/userdb/monsters.rs:332
+#: crates/cr-store/src/userdb/monsters.rs:336
 #: crates/cr-store/src/userdb/parts/pages.rs:344
 #: crates/cr-store/src/userdb/parts/pages.rs:392
 #: crates/cr-store/src/userdb/powers.rs:85
@@ -1217,7 +1219,7 @@ msgstr "Geschlecht"
 #: crates/cr-store/src/catalog.rs:874
 #: crates/cr-store/src/catalog.rs:1135
 #: crates/cr-store/src/userdb/classes/pages.rs:85
-#: crates/cr-store/src/userdb/monsters.rs:394
+#: crates/cr-store/src/userdb/monsters.rs:403
 #: crates/cr-store/src/userdb/races.rs:552
 msgid "Alignment"
 msgstr "Gesinnung"
@@ -1264,7 +1266,7 @@ msgstr "Zoll"
 
 #: crates/cr-gtk/src/create.rs:1447
 #: crates/cr-gtk/src/main.rs:2028
-#: crates/cr-gtk/src/userdb.rs:1332
+#: crates/cr-gtk/src/userdb.rs:1442
 #: crates/cr-store/src/catalog.rs:888
 msgid "Weight"
 msgstr "Gewicht"
@@ -1291,7 +1293,7 @@ msgstr "Gewicht auswürfeln"
 #: crates/cr-gtk/src/main.rs:2926
 #: crates/cr-store/src/catalog.rs:885
 #: crates/cr-store/src/create.rs:373
-#: crates/cr-store/src/userdb/monsters.rs:522
+#: crates/cr-store/src/userdb/monsters.rs:531
 #: crates/cr-store/src/userdb/parts/kit.rs:447
 #: crates/cr-store/src/userdb/parts/pages.rs:523
 msgid "Appearance"
@@ -1571,9 +1573,9 @@ msgstr "Die Stile, die die Klassengruppen erlernen dürfen; die mit „(+2)“ s
 #: crates/cr-gtk/src/create.rs:3507
 #: crates/cr-gtk/src/main.rs:2290
 #: crates/cr-store/src/catalog.rs:1136
-#: crates/cr-store/src/userdb/monsters.rs:324
-#: crates/cr-store/src/userdb/monsters.rs:526
-#: crates/cr-store/src/userdb/monsters.rs:558
+#: crates/cr-store/src/userdb/monsters.rs:328
+#: crates/cr-store/src/userdb/monsters.rs:535
+#: crates/cr-store/src/userdb/monsters.rs:581
 #: crates/cr-store/src/userdb/parts/pages.rs:879
 #: crates/cr-store/src/userdb/parts/pages.rs:888
 #: crates/cr-store/src/userdb/parts/pages.rs:897
@@ -1649,6 +1651,7 @@ msgstr "Zauber des 1. Grades, die der Charakter kennt. Intelligenz {intelligence
 #: crates/cr-gtk/src/create.rs:3877
 #: crates/cr-gtk/src/main.rs:2309
 #: crates/cr-store/src/catalog.rs:896
+#: crates/cr-store/src/userdb/monsters.rs:537
 msgid "Spells"
 msgstr "Zauber"
 
@@ -1766,8 +1769,8 @@ msgstr "Vorlage"
 #: crates/cr-gtk/src/userdb/templates.rs:783
 #: crates/cr-store/src/catalog.rs:704
 #: crates/cr-store/src/catalog.rs:1179
-#: crates/cr-store/src/userdb/monsters.rs:26
-#: crates/cr-store/src/userdb/monsters.rs:68
+#: crates/cr-store/src/userdb/monsters.rs:30
+#: crates/cr-store/src/userdb/monsters.rs:72
 msgid "Monster Type"
 msgstr "Monstertyp"
 
@@ -1780,7 +1783,7 @@ msgstr "Begegnung"
 #: crates/cr-store/src/summary.rs:166
 #: crates/cr-store/src/userdb/classes/pages.rs:97
 #: crates/cr-store/src/userdb/classes/pages.rs:160
-#: crates/cr-store/src/userdb/monsters.rs:600
+#: crates/cr-store/src/userdb/monsters.rs:623
 #: crates/cr-store/src/userdb/parts/pages.rs:268
 #: crates/cr-store/src/userdb/parts/pages.rs:1491
 #: crates/cr-store/src/userdb/powers.rs:123
@@ -1819,9 +1822,9 @@ msgstr "Schatz-EP"
 #: crates/cr-gtk/src/transfer.rs:568
 #: crates/cr-gtk/src/treasure.rs:477
 #: crates/cr-gtk/src/userdb/templates.rs:885
-#: crates/cr-gtk/src/userdb.rs:682
-#: crates/cr-gtk/src/userdb.rs:1437
-#: crates/cr-gtk/src/userdb.rs:1709
+#: crates/cr-gtk/src/userdb.rs:683
+#: crates/cr-gtk/src/userdb.rs:1547
+#: crates/cr-gtk/src/userdb.rs:1819
 msgid "_Save"
 msgstr "_Speichern"
 
@@ -1966,8 +1969,8 @@ msgstr "_Bearbeiten…"
 #: crates/cr-gtk/src/party.rs:362
 #: crates/cr-gtk/src/treasure.rs:520
 #: crates/cr-gtk/src/userdb.rs:498
-#: crates/cr-gtk/src/userdb.rs:1220
-#: crates/cr-gtk/src/userdb.rs:1810
+#: crates/cr-gtk/src/userdb.rs:1330
+#: crates/cr-gtk/src/userdb.rs:1920
 msgid "_Delete"
 msgstr "_Löschen"
 
@@ -2033,14 +2036,14 @@ msgid "All"
 msgstr "Alle"
 
 #: crates/cr-gtk/src/encounter.rs:1199
-#: crates/cr-gtk/src/userdb.rs:1569
+#: crates/cr-gtk/src/userdb.rs:1679
 #: crates/cr-store/src/userdb.rs:69
 #: crates/cr-store/src/userdb.rs:116
 msgid "Standard"
 msgstr "Standard"
 
 #: crates/cr-gtk/src/encounter.rs:1200
-#: crates/cr-gtk/src/userdb.rs:1571
+#: crates/cr-gtk/src/userdb.rs:1681
 #: crates/cr-store/src/userdb.rs:69
 #: crates/cr-store/src/userdb.rs:117
 msgid "Custom"
@@ -2064,7 +2067,7 @@ msgstr "Umherziehend"
 
 #: crates/cr-gtk/src/encounter.rs:1210
 #: crates/cr-gtk/src/treasure.rs:120
-#: crates/cr-store/src/userdb/monsters.rs:417
+#: crates/cr-store/src/userdb/monsters.rs:426
 msgid "Lair"
 msgstr "Hort"
 
@@ -2144,14 +2147,14 @@ msgstr "{roll} gewürfelt, dafür gibt es keine Vorlage"
 #: crates/cr-gtk/src/encounter.rs:1428
 #: crates/cr-store/src/encounter.rs:363
 #: crates/cr-store/src/treasure.rs:1196
-#: crates/cr-store/src/userdb.rs:629
+#: crates/cr-store/src/userdb.rs:673
 msgid "A name must be supplied."
 msgstr "Ein Name muss angegeben werden."
 
 #: crates/cr-gtk/src/encounter.rs:1437
 #: crates/cr-store/src/encounter.rs:365
 #: crates/cr-store/src/treasure.rs:1198
-#: crates/cr-store/src/userdb.rs:630
+#: crates/cr-store/src/userdb.rs:674
 msgid "Name already used."
 msgstr "Name wird bereits verwendet."
 
@@ -2172,47 +2175,47 @@ msgid "Table deleted"
 msgstr "Tabelle gelöscht"
 
 #: crates/cr-gtk/src/encounter.rs:1491
-#: crates/cr-store/src/userdb/monsters.rs:172
+#: crates/cr-store/src/userdb/monsters.rs:176
 msgid "Arctic"
 msgstr "Arktisch"
 
 #: crates/cr-gtk/src/encounter.rs:1492
-#: crates/cr-store/src/userdb/monsters.rs:173
+#: crates/cr-store/src/userdb/monsters.rs:177
 msgid "Sub-Arctic"
 msgstr "Subarktisch"
 
 #: crates/cr-gtk/src/encounter.rs:1493
-#: crates/cr-store/src/userdb/monsters.rs:174
+#: crates/cr-store/src/userdb/monsters.rs:178
 msgid "Temperate"
 msgstr "Gemäßigt"
 
 #: crates/cr-gtk/src/encounter.rs:1494
-#: crates/cr-store/src/userdb/monsters.rs:175
+#: crates/cr-store/src/userdb/monsters.rs:179
 msgid "Sub-Tropical"
 msgstr "Subtropisch"
 
 #: crates/cr-gtk/src/encounter.rs:1495
-#: crates/cr-store/src/userdb/monsters.rs:176
+#: crates/cr-store/src/userdb/monsters.rs:180
 msgid "Tropical"
 msgstr "Tropisch"
 
 #: crates/cr-gtk/src/encounter.rs:1500
-#: crates/cr-store/src/userdb/monsters.rs:179
+#: crates/cr-store/src/userdb/monsters.rs:183
 msgid "Aerial"
 msgstr "Luft"
 
 #: crates/cr-gtk/src/encounter.rs:1501
-#: crates/cr-store/src/userdb/monsters.rs:180
+#: crates/cr-store/src/userdb/monsters.rs:184
 msgid "Bush"
 msgstr "Buschland"
 
 #: crates/cr-gtk/src/encounter.rs:1502
-#: crates/cr-store/src/userdb/monsters.rs:181
+#: crates/cr-store/src/userdb/monsters.rs:185
 msgid "Caves"
 msgstr "Höhlen"
 
 #: crates/cr-gtk/src/encounter.rs:1503
-#: crates/cr-store/src/userdb/monsters.rs:182
+#: crates/cr-store/src/userdb/monsters.rs:186
 msgid "Coastal"
 msgstr "Küste"
 
@@ -2221,7 +2224,7 @@ msgid "Deserts"
 msgstr "Wüsten"
 
 #: crates/cr-gtk/src/encounter.rs:1505
-#: crates/cr-store/src/userdb/monsters.rs:184
+#: crates/cr-store/src/userdb/monsters.rs:188
 msgid "Farmland"
 msgstr "Ackerland"
 
@@ -2234,7 +2237,7 @@ msgid "Glaciers"
 msgstr "Gletscher"
 
 #: crates/cr-gtk/src/encounter.rs:1508
-#: crates/cr-store/src/userdb/monsters.rs:187
+#: crates/cr-store/src/userdb/monsters.rs:191
 msgid "Grasslands"
 msgstr "Grasland"
 
@@ -2283,7 +2286,7 @@ msgid "Shallow Oceans"
 msgstr "Flache Ozeane"
 
 #: crates/cr-gtk/src/encounter.rs:1520
-#: crates/cr-store/src/userdb/monsters.rs:199
+#: crates/cr-store/src/userdb/monsters.rs:203
 msgid "Parkland"
 msgstr "Parklandschaft"
 
@@ -2316,7 +2319,7 @@ msgid "Steppes"
 msgstr "Steppen"
 
 #: crates/cr-gtk/src/encounter.rs:1528
-#: crates/cr-store/src/userdb/monsters.rs:207
+#: crates/cr-store/src/userdb/monsters.rs:211
 msgid "Subterranean"
 msgstr "Unterirdisch"
 
@@ -2654,7 +2657,7 @@ msgstr "Öffnen Sie eine Expansion-Installation und importieren Sie diese Inhalt
 
 #: crates/cr-gtk/src/main.rs:1510
 #: crates/cr-gtk/src/main.rs:1518
-#: crates/cr-gtk/src/userdb.rs:1295
+#: crates/cr-gtk/src/userdb.rs:1405
 #: crates/cr-store/src/catalog.rs:360
 msgid "Entries"
 msgstr "Einträge"
@@ -2937,7 +2940,7 @@ msgstr "Fitness"
 #: crates/cr-store/src/create.rs:67
 #: crates/cr-store/src/dual.rs:289
 #: crates/cr-store/src/userdb/classes.rs:47
-#: crates/cr-store/src/userdb/monsters.rs:387
+#: crates/cr-store/src/userdb/monsters.rs:396
 #: crates/cr-store/src/userdb/parts/kit.rs:439
 #: crates/cr-store/src/userdb/parts/pages.rs:503
 #: crates/cr-store/src/userdb/parts/pages.rs:505
@@ -3211,7 +3214,7 @@ msgid "~Random"
 msgstr "~Zufällig"
 
 #: crates/cr-gtk/src/npc.rs:516
-#: crates/cr-store/src/userdb/monsters.rs:401
+#: crates/cr-store/src/userdb/monsters.rs:410
 msgid "Fewest"
 msgstr "Wenigste"
 
@@ -3958,7 +3961,7 @@ msgid "Treasure types A to I"
 msgstr "Schatztypen A bis I"
 
 #: crates/cr-gtk/src/treasure.rs:121
-#: crates/cr-store/src/userdb/monsters.rs:430
+#: crates/cr-store/src/userdb/monsters.rs:439
 msgid "Individual"
 msgstr "Einzeln"
 
@@ -4059,7 +4062,7 @@ msgid "Standard records cannot be edited; copy them instead"
 msgstr "Standarddatensätze können nicht bearbeitet werden; kopieren Sie sie stattdessen"
 
 #: crates/cr-gtk/src/userdb/templates.rs:480
-#: crates/cr-gtk/src/userdb.rs:1822
+#: crates/cr-gtk/src/userdb.rs:1932
 msgid "Show Standard or Custom Records"
 msgstr "Standard- oder eigene Datensätze anzeigen"
 
@@ -4111,8 +4114,8 @@ msgstr "Gegenstände dieser Begegnungsvorlage"
 
 #: crates/cr-gtk/src/userdb/templates.rs:870
 #: crates/cr-gtk/src/userdb/templates.rs:1038
-#: crates/cr-store/src/userdb/monsters.rs:427
-#: crates/cr-store/src/userdb/monsters.rs:440
+#: crates/cr-store/src/userdb/monsters.rs:436
+#: crates/cr-store/src/userdb/monsters.rs:449
 msgid "Treasure Types"
 msgstr "Schatztypen"
 
@@ -4121,7 +4124,7 @@ msgid "2 - 20 Encounter Table"
 msgstr "Begegnungstabelle 2 - 20"
 
 #: crates/cr-gtk/src/userdb/templates.rs:956
-#: crates/cr-gtk/src/userdb.rs:719
+#: crates/cr-gtk/src/userdb.rs:720
 msgid "Pages"
 msgstr "Seiten"
 
@@ -4136,9 +4139,9 @@ msgstr "Angetroffen"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1065
 #: crates/cr-store/src/catalog.rs:706
-#: crates/cr-store/src/userdb/monsters.rs:342
-#: crates/cr-store/src/userdb/monsters.rs:353
-#: crates/cr-store/src/userdb/monsters.rs:355
+#: crates/cr-store/src/userdb/monsters.rs:346
+#: crates/cr-store/src/userdb/monsters.rs:357
+#: crates/cr-store/src/userdb/monsters.rs:359
 msgid "Frequency"
 msgstr "Häufigkeit"
 
@@ -4147,12 +4150,12 @@ msgid "Number Of Hit Dice"
 msgstr "Anzahl der Trefferwürfel"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1084
-#: crates/cr-gtk/src/userdb.rs:986
+#: crates/cr-gtk/src/userdb.rs:990
 msgid "Choose"
 msgstr "Wählen"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1091
-#: crates/cr-gtk/src/userdb.rs:991
+#: crates/cr-gtk/src/userdb.rs:995
 msgid "Choose {field}"
 msgstr "{field} wählen"
 
@@ -4199,8 +4202,8 @@ msgstr "Weitere Monster für die Begegnungsvorlage"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1525
 #: crates/cr-gtk/src/userdb/templates.rs:1973
-#: crates/cr-store/src/userdb/monsters.rs:222
-#: crates/cr-store/src/userdb/monsters.rs:322
+#: crates/cr-store/src/userdb/monsters.rs:226
+#: crates/cr-store/src/userdb/monsters.rs:326
 msgid "Monster"
 msgstr "Monster"
 
@@ -4270,8 +4273,8 @@ msgstr "Gegenstände zu einer Begegnungsvorlage hinzufügen"
 #: crates/cr-gtk/src/userdb/templates.rs:1963
 #: crates/cr-gtk/src/userdb/templates.rs:2042
 #: crates/cr-gtk/src/userdb/templates.rs:2149
-#: crates/cr-store/src/userdb/monsters.rs:406
-#: crates/cr-store/src/userdb/monsters.rs:414
+#: crates/cr-store/src/userdb/monsters.rs:415
+#: crates/cr-store/src/userdb/monsters.rs:423
 msgid "Number Appearing"
 msgstr "Anzahl"
 
@@ -4447,7 +4450,7 @@ msgid "New Part"
 msgstr "Neuer Bestandteil"
 
 #: crates/cr-gtk/src/userdb.rs:138
-#: crates/cr-gtk/src/userdb.rs:1280
+#: crates/cr-gtk/src/userdb.rs:1390
 msgid "New Treasure Table"
 msgstr "Neue Schatztabelle"
 
@@ -4547,125 +4550,125 @@ msgstr "Standarddatensätze können nicht gelöscht werden"
 msgid "Delete {name}?"
 msgstr "{name} löschen?"
 
-#: crates/cr-gtk/src/userdb.rs:798
-#: crates/cr-gtk/src/userdb.rs:1485
+#: crates/cr-gtk/src/userdb.rs:799
+#: crates/cr-gtk/src/userdb.rs:1595
 msgid "“{name}” saved"
 msgstr "„{name}“ gespeichert"
 
-#: crates/cr-gtk/src/userdb.rs:802
+#: crates/cr-gtk/src/userdb.rs:803
 msgid "Class Added"
 msgstr "Klasse hinzugefügt"
 
-#: crates/cr-gtk/src/userdb.rs:811
-#: crates/cr-gtk/src/userdb.rs:1487
+#: crates/cr-gtk/src/userdb.rs:812
+#: crates/cr-gtk/src/userdb.rs:1597
 msgid "Not Saved"
 msgstr "Nicht gespeichert"
 
-#: crates/cr-gtk/src/userdb.rs:1212
+#: crates/cr-gtk/src/userdb.rs:1322
 msgid "Standard tables can be restored, not deleted"
 msgstr "Standardtabellen können wiederhergestellt, aber nicht gelöscht werden"
 
-#: crates/cr-gtk/src/userdb.rs:1215
+#: crates/cr-gtk/src/userdb.rs:1325
 msgid "Are you sure?"
 msgstr "Sind Sie sicher?"
 
-#: crates/cr-gtk/src/userdb.rs:1243
+#: crates/cr-gtk/src/userdb.rs:1353
 msgid "Restore Table?"
 msgstr "Tabelle wiederherstellen?"
 
-#: crates/cr-gtk/src/userdb.rs:1248
-#: crates/cr-gtk/src/userdb.rs:1806
+#: crates/cr-gtk/src/userdb.rs:1358
+#: crates/cr-gtk/src/userdb.rs:1916
 msgid "_Restore"
 msgstr "_Wiederherstellen"
 
-#: crates/cr-gtk/src/userdb.rs:1260
+#: crates/cr-gtk/src/userdb.rs:1370
 msgid "“{name}” restored"
 msgstr "„{name}“ wiederhergestellt"
 
-#: crates/cr-gtk/src/userdb.rs:1291
+#: crates/cr-gtk/src/userdb.rs:1401
 msgid "Add Entry"
 msgstr "Eintrag hinzufügen"
 
-#: crates/cr-gtk/src/userdb.rs:1296
+#: crates/cr-gtk/src/userdb.rs:1406
 msgid "Each entry is rolled in proportion to its weight"
 msgstr "Jeder Eintrag wird im Verhältnis zu seiner Gewichtung gewürfelt"
 
-#: crates/cr-gtk/src/userdb.rs:1316
+#: crates/cr-gtk/src/userdb.rs:1426
 msgid "No entries"
 msgstr "Keine Einträge"
 
-#: crates/cr-gtk/src/userdb.rs:1323
+#: crates/cr-gtk/src/userdb.rs:1433
 #: crates/cr-store/src/catalog.rs:1208
 msgid "Table: {name}"
 msgstr "Tabelle: {name}"
 
-#: crates/cr-gtk/src/userdb.rs:1329
+#: crates/cr-gtk/src/userdb.rs:1439
 msgid "Roll {range}"
 msgstr "Wurf {range}"
 
-#: crates/cr-gtk/src/userdb.rs:1359
+#: crates/cr-gtk/src/userdb.rs:1469
 msgid "Quantity"
 msgstr "Menge"
 
-#: crates/cr-gtk/src/userdb.rs:1397
+#: crates/cr-gtk/src/userdb.rs:1507
 msgid "Remove Entry"
 msgstr "Eintrag entfernen"
 
-#: crates/cr-gtk/src/userdb.rs:1513
+#: crates/cr-gtk/src/userdb.rs:1623
 msgid "Nothing in this category"
 msgstr "Nichts in dieser Kategorie"
 
-#: crates/cr-gtk/src/userdb.rs:1585
+#: crates/cr-gtk/src/userdb.rs:1695
 msgid "Level Limit (0: none)"
 msgstr "Stufengrenze (0: keine)"
 
-#: crates/cr-gtk/src/userdb.rs:1617
+#: crates/cr-gtk/src/userdb.rs:1727
 msgid "Add _Class…"
 msgstr "_Klasse hinzufügen…"
 
-#: crates/cr-gtk/src/userdb.rs:1621
+#: crates/cr-gtk/src/userdb.rs:1731
 msgid "Add _Multi-Class…"
 msgstr "_Mehrfachklasse hinzufügen…"
 
-#: crates/cr-gtk/src/userdb.rs:1628
+#: crates/cr-gtk/src/userdb.rs:1738
 msgid "Classes Allowed"
 msgstr "Erlaubte Klassen"
 
-#: crates/cr-gtk/src/userdb.rs:1629
+#: crates/cr-gtk/src/userdb.rs:1739
 msgid "Standard entries are kept as shipped"
 msgstr "Standardeinträge bleiben wie ausgeliefert"
 
-#: crates/cr-gtk/src/userdb.rs:1660
+#: crates/cr-gtk/src/userdb.rs:1770
 msgid "Available Classes"
 msgstr "Verfügbare Klassen"
 
-#: crates/cr-gtk/src/userdb.rs:1683
-#: crates/cr-gtk/src/userdb.rs:1693
+#: crates/cr-gtk/src/userdb.rs:1793
+#: crates/cr-gtk/src/userdb.rs:1803
 #: crates/cr-store/src/userdb/races.rs:330
 msgid "Multi-Classes"
 msgstr "Mehrfachklassen"
 
-#: crates/cr-gtk/src/userdb.rs:1723
+#: crates/cr-gtk/src/userdb.rs:1833
 msgid "Allowed Classes for {race}"
 msgstr "Erlaubte Klassen für {race}"
 
-#: crates/cr-gtk/src/userdb.rs:1748
+#: crates/cr-gtk/src/userdb.rs:1858
 msgid "Allowed classes saved"
 msgstr "Erlaubte Klassen gespeichert"
 
-#: crates/cr-gtk/src/userdb.rs:1770
+#: crates/cr-gtk/src/userdb.rs:1880
 msgid "Copy"
 msgstr "Kopieren"
 
-#: crates/cr-gtk/src/userdb.rs:1776
+#: crates/cr-gtk/src/userdb.rs:1886
 msgid "More Actions"
 msgstr "Weitere Aktionen"
 
-#: crates/cr-gtk/src/userdb.rs:1799
+#: crates/cr-gtk/src/userdb.rs:1909
 msgid "New _Subrace…"
 msgstr "Neues _Untervolk…"
 
-#: crates/cr-gtk/src/userdb.rs:1800
+#: crates/cr-gtk/src/userdb.rs:1910
 msgid "_Allowed Classes…"
 msgstr "_Erlaubte Klassen…"
 
@@ -4715,7 +4718,7 @@ msgid "File"
 msgstr "Datei"
 
 #: crates/cr-store/src/books.rs:299
-#: crates/cr-store/src/userdb/monsters.rs:565
+#: crates/cr-store/src/userdb/monsters.rs:588
 msgid "Size"
 msgstr "Größe"
 
@@ -4838,7 +4841,7 @@ msgstr "Klima/Gelände"
 
 #: crates/cr-store/src/catalog.rs:707
 #: crates/cr-store/src/catalog.rs:1139
-#: crates/cr-store/src/userdb/monsters.rs:443
+#: crates/cr-store/src/userdb/monsters.rs:452
 msgid "Hit Dice"
 msgstr "Trefferwürfel"
 
@@ -4901,7 +4904,7 @@ msgstr "Anpassungen"
 
 #: crates/cr-store/src/catalog.rs:968
 #: crates/cr-store/src/catalog.rs:1138
-#: crates/cr-store/src/userdb/monsters.rs:325
+#: crates/cr-store/src/userdb/monsters.rs:329
 #: crates/cr-store/src/userdb/parts/pages.rs:987
 #: crates/cr-store/src/userdb/parts/pages.rs:990
 #: crates/cr-store/src/userdb/races.rs:506
@@ -4913,7 +4916,7 @@ msgid "Ability Requirements"
 msgstr "Attributsvoraussetzungen"
 
 #: crates/cr-store/src/catalog.rs:1016
-#: crates/cr-store/src/userdb/monsters.rs:126
+#: crates/cr-store/src/userdb/monsters.rs:130
 msgid "Other"
 msgstr "Sonstiges"
 
@@ -5042,31 +5045,31 @@ msgid "burrow {rate}"
 msgstr "Graben {rate}"
 
 #: crates/cr-store/src/catalog.rs:1129
-#: crates/cr-store/src/userdb/monsters.rs:323
-#: crates/cr-store/src/userdb/monsters.rs:524
+#: crates/cr-store/src/userdb/monsters.rs:327
+#: crates/cr-store/src/userdb/monsters.rs:533
 msgid "Ecology"
 msgstr "Ökologie"
 
 #: crates/cr-store/src/catalog.rs:1131
-#: crates/cr-store/src/userdb/monsters.rs:366
+#: crates/cr-store/src/userdb/monsters.rs:375
 msgid "Organization"
 msgstr "Organisation"
 
 #: crates/cr-store/src/catalog.rs:1132
-#: crates/cr-store/src/userdb/monsters.rs:373
+#: crates/cr-store/src/userdb/monsters.rs:382
 msgid "Activity Cycle"
 msgstr "Aktivitätszyklus"
 
 #: crates/cr-store/src/catalog.rs:1133
-#: crates/cr-store/src/userdb/monsters.rs:380
+#: crates/cr-store/src/userdb/monsters.rs:389
 msgid "Diet"
 msgstr "Nahrung"
 
 #: crates/cr-store/src/catalog.rs:1137
-#: crates/cr-store/src/userdb/monsters.rs:326
-#: crates/cr-store/src/userdb/monsters.rs:483
-#: crates/cr-store/src/userdb/monsters.rs:607
-#: crates/cr-store/src/userdb/monsters.rs:641
+#: crates/cr-store/src/userdb/monsters.rs:330
+#: crates/cr-store/src/userdb/monsters.rs:492
+#: crates/cr-store/src/userdb/monsters.rs:630
+#: crates/cr-store/src/userdb/monsters.rs:664
 #: crates/cr-store/src/userdb/parts/pages.rs:572
 #: crates/cr-store/src/userdb/parts/pages.rs:575
 msgid "Armor Class"
@@ -5074,15 +5077,15 @@ msgstr "Rüstungsklasse"
 
 #: crates/cr-store/src/catalog.rs:1140
 #: crates/cr-store/src/userdb/classes/pages.rs:761
-#: crates/cr-store/src/userdb/monsters.rs:459
+#: crates/cr-store/src/userdb/monsters.rs:468
 msgid "THAC0"
 msgstr "THAC0"
 
 #: crates/cr-store/src/catalog.rs:1141
 #: crates/cr-store/src/userdb/classes/pages.rs:763
-#: crates/cr-store/src/userdb/monsters.rs:327
-#: crates/cr-store/src/userdb/monsters.rs:486
-#: crates/cr-store/src/userdb/monsters.rs:491
+#: crates/cr-store/src/userdb/monsters.rs:331
+#: crates/cr-store/src/userdb/monsters.rs:495
+#: crates/cr-store/src/userdb/monsters.rs:500
 msgid "Attacks"
 msgstr "Angriffe"
 
@@ -5093,25 +5096,25 @@ msgid "Damage"
 msgstr "Schaden"
 
 #: crates/cr-store/src/catalog.rs:1143
-#: crates/cr-store/src/userdb/monsters.rs:498
+#: crates/cr-store/src/userdb/monsters.rs:507
 msgid "Special Attacks"
 msgstr "Besondere Angriffe"
 
 #: crates/cr-store/src/catalog.rs:1144
-#: crates/cr-store/src/userdb/monsters.rs:328
-#: crates/cr-store/src/userdb/monsters.rs:505
-#: crates/cr-store/src/userdb/monsters.rs:570
+#: crates/cr-store/src/userdb/monsters.rs:332
+#: crates/cr-store/src/userdb/monsters.rs:514
+#: crates/cr-store/src/userdb/monsters.rs:593
 msgid "Special Defenses"
 msgstr "Besondere Verteidigung"
 
 #: crates/cr-store/src/catalog.rs:1146
-#: crates/cr-store/src/userdb/monsters.rs:462
+#: crates/cr-store/src/userdb/monsters.rs:471
 msgid "Magic Resistance"
 msgstr "Magieresistenz"
 
 #: crates/cr-store/src/catalog.rs:1153
-#: crates/cr-store/src/userdb/monsters.rs:467
-#: crates/cr-store/src/userdb/monsters.rs:468
+#: crates/cr-store/src/userdb/monsters.rs:476
+#: crates/cr-store/src/userdb/monsters.rs:477
 msgid "Morale"
 msgstr "Moral"
 
@@ -5121,7 +5124,7 @@ msgid "XP Value"
 msgstr "EP-Wert"
 
 #: crates/cr-store/src/catalog.rs:1179
-#: crates/cr-store/src/userdb/monsters.rs:75
+#: crates/cr-store/src/userdb/monsters.rs:79
 msgid "Bitmap"
 msgstr "Bild"
 
@@ -7108,325 +7111,342 @@ msgstr "Klasse nicht hinzugefügt: Fehler. {reason}"
 msgid "Any character or NPC created from the deleted Class will no longer function correctly"
 msgstr "Charaktere und NSC, die mit der gelöschten Klasse erstellt wurden, funktionieren nicht mehr richtig"
 
-#: crates/cr-store/src/userdb/monsters.rs:70
+#: crates/cr-store/src/userdb/monsters.rs:74
 msgid "Name of Type"
 msgstr "Name des Typs"
 
-#: crates/cr-store/src/userdb/monsters.rs:96
+#: crates/cr-store/src/userdb/monsters.rs:100
 msgid "Monster Type not added: Error. {reason}"
 msgstr "Monstertyp nicht hinzugefügt: Fehler. {reason}"
 
-#: crates/cr-store/src/userdb/monsters.rs:115
-#: crates/cr-store/src/userdb/monsters.rs:122
+#: crates/cr-store/src/userdb/monsters.rs:119
+#: crates/cr-store/src/userdb/monsters.rs:126
 #: crates/cr-store/src/userdb/templates.rs:495
 msgid "Very Rare (4%)"
 msgstr "Sehr selten (4 %)"
 
-#: crates/cr-store/src/userdb/monsters.rs:116
-#: crates/cr-store/src/userdb/monsters.rs:123
+#: crates/cr-store/src/userdb/monsters.rs:120
+#: crates/cr-store/src/userdb/monsters.rs:127
 #: crates/cr-store/src/userdb/templates.rs:496
 msgid "Rare (11%)"
 msgstr "Selten (11 %)"
 
-#: crates/cr-store/src/userdb/monsters.rs:117
-#: crates/cr-store/src/userdb/monsters.rs:124
+#: crates/cr-store/src/userdb/monsters.rs:121
+#: crates/cr-store/src/userdb/monsters.rs:128
 #: crates/cr-store/src/userdb/templates.rs:497
 msgid "Uncommon (20%)"
 msgstr "Ungewöhnlich (20 %)"
 
-#: crates/cr-store/src/userdb/monsters.rs:118
-#: crates/cr-store/src/userdb/monsters.rs:125
+#: crates/cr-store/src/userdb/monsters.rs:122
+#: crates/cr-store/src/userdb/monsters.rs:129
 #: crates/cr-store/src/userdb/templates.rs:498
 msgid "Common (65%)"
 msgstr "Häufig (65 %)"
 
-#: crates/cr-store/src/userdb/monsters.rs:138
+#: crates/cr-store/src/userdb/monsters.rs:142
 msgid "Tiny"
 msgstr "Winzig"
 
-#: crates/cr-store/src/userdb/monsters.rs:139
+#: crates/cr-store/src/userdb/monsters.rs:143
 #: crates/cr-store/src/userdb/parts/pages.rs:616
 msgid "Small"
 msgstr "Klein"
 
-#: crates/cr-store/src/userdb/monsters.rs:140
+#: crates/cr-store/src/userdb/monsters.rs:144
 msgid "Man-Sized"
 msgstr "Mannsgroß"
 
-#: crates/cr-store/src/userdb/monsters.rs:141
+#: crates/cr-store/src/userdb/monsters.rs:145
 msgid "Large"
 msgstr "Groß"
 
-#: crates/cr-store/src/userdb/monsters.rs:142
+#: crates/cr-store/src/userdb/monsters.rs:146
 msgid "Huge"
 msgstr "Riesig"
 
-#: crates/cr-store/src/userdb/monsters.rs:143
+#: crates/cr-store/src/userdb/monsters.rs:147
 msgid "Gargantuan"
 msgstr "Gigantisch"
 
-#: crates/cr-store/src/userdb/monsters.rs:148
+#: crates/cr-store/src/userdb/monsters.rs:152
 msgid "Hit Only by Magical/Silver Weapons"
 msgstr "Nur durch magische/silberne Waffen verwundbar"
 
-#: crates/cr-store/src/userdb/monsters.rs:149
+#: crates/cr-store/src/userdb/monsters.rs:153
 msgid "Immunity to Any Spell"
 msgstr "Immun gegen beliebigen Zauber"
 
-#: crates/cr-store/src/userdb/monsters.rs:150
+#: crates/cr-store/src/userdb/monsters.rs:154
 msgid "Immunity to Any Weapon (Including ½ Damage)"
 msgstr "Immun gegen beliebige Waffe (auch ½ Schaden)"
 
-#: crates/cr-store/src/userdb/monsters.rs:151
+#: crates/cr-store/src/userdb/monsters.rs:155
 msgid "Invisible at Will"
 msgstr "Nach Belieben unsichtbar"
 
-#: crates/cr-store/src/userdb/monsters.rs:152
+#: crates/cr-store/src/userdb/monsters.rs:156
 msgid "Regeneration"
 msgstr "Regeneration"
 
-#: crates/cr-store/src/userdb/monsters.rs:153
+#: crates/cr-store/src/userdb/monsters.rs:157
 msgid "Special Defense Form"
 msgstr "Besondere Verteidigungsform"
 
-#: crates/cr-store/src/userdb/monsters.rs:183
+#: crates/cr-store/src/userdb/monsters.rs:187
 msgid "Desert"
 msgstr "Wüste"
 
-#: crates/cr-store/src/userdb/monsters.rs:185
+#: crates/cr-store/src/userdb/monsters.rs:189
 msgid "Forest"
 msgstr "Wald"
 
-#: crates/cr-store/src/userdb/monsters.rs:186
+#: crates/cr-store/src/userdb/monsters.rs:190
 msgid "Glacier"
 msgstr "Gletscher"
 
-#: crates/cr-store/src/userdb/monsters.rs:188
+#: crates/cr-store/src/userdb/monsters.rs:192
 msgid "Jungle"
 msgstr "Dschungel"
 
-#: crates/cr-store/src/userdb/monsters.rs:189
+#: crates/cr-store/src/userdb/monsters.rs:193
 msgid "Lake - Fresh Water"
 msgstr "See - Süßwasser"
 
-#: crates/cr-store/src/userdb/monsters.rs:190
+#: crates/cr-store/src/userdb/monsters.rs:194
 msgid "Lake - Salt Water"
 msgstr "See - Salzwasser"
 
-#: crates/cr-store/src/userdb/monsters.rs:191
+#: crates/cr-store/src/userdb/monsters.rs:195
 msgid "Mountains, high"
 msgstr "Gebirge, hoch"
 
-#: crates/cr-store/src/userdb/monsters.rs:192
+#: crates/cr-store/src/userdb/monsters.rs:196
 msgid "Mountains, high - Forest"
 msgstr "Gebirge, hoch - Wald"
 
-#: crates/cr-store/src/userdb/monsters.rs:193
+#: crates/cr-store/src/userdb/monsters.rs:197
 msgid "Mountains, high - Lake"
 msgstr "Gebirge, hoch - See"
 
-#: crates/cr-store/src/userdb/monsters.rs:194
+#: crates/cr-store/src/userdb/monsters.rs:198
 msgid "Mountains, low"
 msgstr "Gebirge, niedrig"
 
-#: crates/cr-store/src/userdb/monsters.rs:195
+#: crates/cr-store/src/userdb/monsters.rs:199
 msgid "Mountains, low - Forest"
 msgstr "Gebirge, niedrig - Wald"
 
-#: crates/cr-store/src/userdb/monsters.rs:196
+#: crates/cr-store/src/userdb/monsters.rs:200
 msgid "Mountains, low - Lake"
 msgstr "Gebirge, niedrig - See"
 
-#: crates/cr-store/src/userdb/monsters.rs:197
+#: crates/cr-store/src/userdb/monsters.rs:201
 msgid "Ocean Deep"
 msgstr "Ozean, tief"
 
-#: crates/cr-store/src/userdb/monsters.rs:198
+#: crates/cr-store/src/userdb/monsters.rs:202
 msgid "Ocean Shallows"
 msgstr "Ozean, flach"
 
-#: crates/cr-store/src/userdb/monsters.rs:200
+#: crates/cr-store/src/userdb/monsters.rs:204
 msgid "Plain/Scrub"
 msgstr "Ebene/Gestrüpp"
 
-#: crates/cr-store/src/userdb/monsters.rs:201
+#: crates/cr-store/src/userdb/monsters.rs:205
 msgid "Rain Forest"
 msgstr "Regenwald"
 
-#: crates/cr-store/src/userdb/monsters.rs:202
+#: crates/cr-store/src/userdb/monsters.rs:206
 msgid "River - Fresh"
 msgstr "Fluss - Süßwasser"
 
-#: crates/cr-store/src/userdb/monsters.rs:203
+#: crates/cr-store/src/userdb/monsters.rs:207
 msgid "River - Salt"
 msgstr "Fluss - Salzwasser"
 
-#: crates/cr-store/src/userdb/monsters.rs:204
+#: crates/cr-store/src/userdb/monsters.rs:208
 msgid "Rough/Hill"
 msgstr "Unwegsam/Hügel"
 
-#: crates/cr-store/src/userdb/monsters.rs:205
+#: crates/cr-store/src/userdb/monsters.rs:209
 msgid "Salt Marsh"
 msgstr "Salzmarsch"
 
-#: crates/cr-store/src/userdb/monsters.rs:206
+#: crates/cr-store/src/userdb/monsters.rs:210
 msgid "Steppe"
 msgstr "Steppe"
 
-#: crates/cr-store/src/userdb/monsters.rs:208
+#: crates/cr-store/src/userdb/monsters.rs:212
 msgid "Swamp - Fresh"
 msgstr "Sumpf - Süßwasser"
 
-#: crates/cr-store/src/userdb/monsters.rs:209
+#: crates/cr-store/src/userdb/monsters.rs:213
 msgid "Swamp - Salt"
 msgstr "Sumpf - Salzwasser"
 
-#: crates/cr-store/src/userdb/monsters.rs:210
+#: crates/cr-store/src/userdb/monsters.rs:214
 msgid "Tundra"
 msgstr "Tundra"
 
-#: crates/cr-store/src/userdb/monsters.rs:329
-#: crates/cr-store/src/userdb/monsters.rs:587
+#: crates/cr-store/src/userdb/monsters.rs:333
+#: crates/cr-store/src/userdb/monsters.rs:610
 msgid "Terrain"
 msgstr "Gelände"
 
-#: crates/cr-store/src/userdb/monsters.rs:330
+#: crates/cr-store/src/userdb/monsters.rs:334
 msgid "Text"
 msgstr "Text"
 
-#: crates/cr-store/src/userdb/monsters.rs:335
+#: crates/cr-store/src/userdb/monsters.rs:339
 #: crates/cr-store/src/userdb/powers.rs:95
 msgid "Type"
 msgstr "Typ"
 
-#: crates/cr-store/src/userdb/monsters.rs:354
+#: crates/cr-store/src/userdb/monsters.rs:358
 msgid "Percent"
 msgstr "Prozent"
 
-#: crates/cr-store/src/userdb/monsters.rs:359
+#: crates/cr-store/src/userdb/monsters.rs:363
 msgid "Experience Points"
 msgstr "Erfahrungspunkte"
 
-#: crates/cr-store/src/userdb/monsters.rs:409
+#: crates/cr-store/src/userdb/monsters.rs:369
+msgid "Suggest XP Value"
+msgstr ""
+
+#: crates/cr-store/src/userdb/monsters.rs:418
 msgid "Greatest"
 msgstr "Höchste"
 
-#: crates/cr-store/src/userdb/monsters.rs:467
+#: crates/cr-store/src/userdb/monsters.rs:476
 msgid "Highest"
 msgstr "Höchste"
 
-#: crates/cr-store/src/userdb/monsters.rs:468
+#: crates/cr-store/src/userdb/monsters.rs:477
 msgid "Lowest"
 msgstr "Niedrigste"
 
-#: crates/cr-store/src/userdb/monsters.rs:469
+#: crates/cr-store/src/userdb/monsters.rs:478
 msgid "On Land"
 msgstr "An Land"
 
-#: crates/cr-store/src/userdb/monsters.rs:470
+#: crates/cr-store/src/userdb/monsters.rs:479
 #: crates/cr-store/src/userdb/races.rs:515
 msgid "Flying"
 msgstr "Fliegen"
 
-#: crates/cr-store/src/userdb/monsters.rs:473
+#: crates/cr-store/src/userdb/monsters.rs:482
 msgid "Maneuverability Class"
 msgstr "Manövrierklasse"
 
-#: crates/cr-store/src/userdb/monsters.rs:479
+#: crates/cr-store/src/userdb/monsters.rs:488
 #: crates/cr-store/src/userdb/races.rs:512
 msgid "Swimming"
 msgstr "Schwimmen"
 
-#: crates/cr-store/src/userdb/monsters.rs:480
+#: crates/cr-store/src/userdb/monsters.rs:489
 msgid "Burrowing"
 msgstr "Graben"
 
-#: crates/cr-store/src/userdb/monsters.rs:481
+#: crates/cr-store/src/userdb/monsters.rs:490
 msgid "Climbing"
 msgstr "Klettern"
 
-#: crates/cr-store/src/userdb/monsters.rs:482
+#: crates/cr-store/src/userdb/monsters.rs:491
 msgid "Web"
 msgstr "Netz"
 
-#: crates/cr-store/src/userdb/monsters.rs:492
+#: crates/cr-store/src/userdb/monsters.rs:501
 msgid "No. of Attacks"
 msgstr "Anzahl der Angriffe"
 
-#: crates/cr-store/src/userdb/monsters.rs:493
-#: crates/cr-store/src/userdb/monsters.rs:495
 #: crates/cr-store/src/userdb/monsters.rs:502
-#: crates/cr-store/src/userdb/monsters.rs:509
+#: crates/cr-store/src/userdb/monsters.rs:504
+#: crates/cr-store/src/userdb/monsters.rs:511
+#: crates/cr-store/src/userdb/monsters.rs:518
 msgid "Combat Text"
 msgstr "Kampftext"
 
-#: crates/cr-store/src/userdb/monsters.rs:494
+#: crates/cr-store/src/userdb/monsters.rs:503
 msgid "Damage/Attack"
 msgstr "Schaden/Angriff"
 
-#: crates/cr-store/src/userdb/monsters.rs:512
+#: crates/cr-store/src/userdb/monsters.rs:521
 msgid "Defense Description"
 msgstr "Beschreibung der Verteidigung"
 
-#: crates/cr-store/src/userdb/monsters.rs:523
+#: crates/cr-store/src/userdb/monsters.rs:532
 msgid "Habitat/Society"
 msgstr "Lebensraum/Gesellschaft"
 
-#: crates/cr-store/src/userdb/monsters.rs:525
+#: crates/cr-store/src/userdb/monsters.rs:534
 msgid "Variants"
 msgstr "Varianten"
 
-#: crates/cr-store/src/userdb/monsters.rs:577
+#: crates/cr-store/src/userdb/monsters.rs:538
+msgid "Spells available to this Monster"
+msgstr ""
+
+#: crates/cr-store/src/userdb/monsters.rs:544
+#: crates/cr-store/src/userdb/monsters.rs:545
+msgid "Inventory"
+msgstr ""
+
+#: crates/cr-store/src/userdb/monsters.rs:600
 msgid "Defenses"
 msgstr "Verteidigung"
 
-#: crates/cr-store/src/userdb/monsters.rs:582
+#: crates/cr-store/src/userdb/monsters.rs:605
 msgid "Climates"
 msgstr "Klimazonen"
 
-#: crates/cr-store/src/userdb/monsters.rs:584
+#: crates/cr-store/src/userdb/monsters.rs:607
 msgid "Terrain Types"
 msgstr "Geländearten"
 
-#: crates/cr-store/src/userdb/monsters.rs:601
+#: crates/cr-store/src/userdb/monsters.rs:624
 msgid "Second Description"
 msgstr "Zweite Beschreibung"
 
-#: crates/cr-store/src/userdb/monsters.rs:602
+#: crates/cr-store/src/userdb/monsters.rs:625
 msgid "Third Description"
 msgstr "Dritte Beschreibung"
 
-#: crates/cr-store/src/userdb/monsters.rs:603
+#: crates/cr-store/src/userdb/monsters.rs:626
 msgid "Fourth Description"
 msgstr "Vierte Beschreibung"
 
-#: crates/cr-store/src/userdb/monsters.rs:604
+#: crates/cr-store/src/userdb/monsters.rs:627
 msgid "Fifth Description"
 msgstr "Fünfte Beschreibung"
 
-#: crates/cr-store/src/userdb/monsters.rs:622
+#: crates/cr-store/src/userdb/monsters.rs:645
 msgid "Descriptions"
 msgstr "Beschreibungen"
 
-#: crates/cr-store/src/userdb/monsters.rs:627
+#: crates/cr-store/src/userdb/monsters.rs:650
 msgid "Second"
 msgstr "Zweite"
 
-#: crates/cr-store/src/userdb/monsters.rs:628
+#: crates/cr-store/src/userdb/monsters.rs:651
 msgid "Third"
 msgstr "Dritte"
 
-#: crates/cr-store/src/userdb/monsters.rs:629
+#: crates/cr-store/src/userdb/monsters.rs:652
 msgid "Fourth"
 msgstr "Vierte"
 
-#: crates/cr-store/src/userdb/monsters.rs:630
+#: crates/cr-store/src/userdb/monsters.rs:653
 msgid "Fifth"
 msgstr "Fünfte"
 
-#: crates/cr-store/src/userdb/monsters.rs:658
+#: crates/cr-store/src/userdb/monsters.rs:681
 msgid "Other Armor Classes (100 for None)"
 msgstr "Weitere Rüstungsklassen (100 für keine)"
+
+#: crates/cr-store/src/userdb/monsters.rs:786
+msgid "This monster is worth approximately {xp} experience points. Would you like to set the experience point value to {xp}?"
+msgstr ""
 
 #: crates/cr-store/src/userdb/parts/kit.rs:371
 msgid "Kit Alignment/Gender"
@@ -9616,19 +9636,19 @@ msgstr "Name der Falle"
 msgid "Number of Characters Trapped"
 msgstr "Anzahl gefangener Charaktere"
 
-#: crates/cr-store/src/userdb.rs:603
+#: crates/cr-store/src/userdb.rs:647
 msgid "{noun} not added: Error. {reason}"
 msgstr "{noun} nicht hinzugefügt: Fehler. {reason}"
 
-#: crates/cr-store/src/userdb.rs:631
+#: crates/cr-store/src/userdb.rs:675
 msgid "The name can have at most {max} characters."
 msgstr "Der Name darf höchstens {max} Zeichen haben."
 
-#: crates/cr-store/src/userdb.rs:632
+#: crates/cr-store/src/userdb.rs:676
 msgid "The slash character is not allowed as a part of the class name.  Please choose a different character."
 msgstr "Der Schrägstrich ist im Klassennamen nicht erlaubt. Bitte wählen Sie ein anderes Zeichen."
 
-#: crates/cr-store/src/userdb.rs:637
+#: crates/cr-store/src/userdb.rs:681
 msgid ""
 "Monster Type names beginning with '~' are reserved.\n"
 " Please enter a different name"

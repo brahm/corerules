@@ -154,6 +154,8 @@ pub enum Value {
     Groups(Vec<(i64, Vec<String>)>),
     /// A table of numbers, one row per level.
     Grid(Vec<Vec<i64>>),
+    /// Carried items (a monster's inventory).
+    Items(crate::treasure::Bundle),
 }
 
 impl Value {
@@ -180,6 +182,12 @@ impl Value {
                 .map(|r| r.iter().map(i64::to_string).collect::<Vec<_>>().join(" "))
                 .collect::<Vec<_>>()
                 .join(" / "),
+            Self::Items(bundle) => bundle
+                .items
+                .iter()
+                .map(|i| i.label())
+                .collect::<Vec<_>>()
+                .join(", "),
         }
     }
 
@@ -219,6 +227,13 @@ impl Value {
         match self {
             Self::Grid(g) => g.clone(),
             _ => Vec::new(),
+        }
+    }
+
+    pub fn items(&self) -> crate::treasure::Bundle {
+        match self {
+            Self::Items(bundle) => bundle.clone(),
+            _ => crate::treasure::Bundle::default(),
         }
     }
 
@@ -342,6 +357,18 @@ pub enum FieldKind {
         min: i64,
         max: i64,
     },
+    /// Items ([`Value::Items`]) edited as the Treasure Bundle Editor
+    /// (IDD 290) edits a bundle.
+    Items,
+}
+
+/// A value an editor can work out from the record and offer: the
+/// button's label, and the question asked with it, whose Yes puts it in
+/// the control.
+pub struct Suggestion<R> {
+    pub label: &'static str,
+    pub value: fn(&R) -> i64,
+    pub question: fn(i64) -> String,
 }
 
 /// One control of an editor: where it goes, how it looks and which part
@@ -368,6 +395,8 @@ pub struct FieldDesc<R> {
     pub enabled_at: Option<fn(&R, usize) -> bool>,
     /// Evaluated when the editor opens (subrace pages, priest spheres).
     pub visible: Option<fn(&R) -> bool>,
+    /// A number's suggested value (a monster's XP Value).
+    pub suggest: Option<Suggestion<R>>,
 }
 
 impl<R> FieldDesc<R> {
@@ -390,6 +419,7 @@ impl<R> FieldDesc<R> {
             enabled: None,
             enabled_at: None,
             visible: None,
+            suggest: None,
         }
     }
 
@@ -436,6 +466,20 @@ impl<R> FieldDesc<R> {
 
     pub fn visible(mut self, rule: fn(&R) -> bool) -> Self {
         self.visible = Some(rule);
+        self
+    }
+
+    pub fn suggest(
+        mut self,
+        label: &'static str,
+        value: fn(&R) -> i64,
+        question: fn(i64) -> String,
+    ) -> Self {
+        self.suggest = Some(Suggestion {
+            label,
+            value,
+            question,
+        });
         self
     }
 
