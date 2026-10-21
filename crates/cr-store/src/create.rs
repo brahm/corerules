@@ -2307,6 +2307,22 @@ impl CreationRules {
 
     /// The class abilities the character file gets per class: those bought
     /// with Skills & Powers, the defaults with the Core Rules.
+    /// What the original's item check reads of the draft
+    /// ([`crate::npc::NpcRules::item_problem`]), at 1st level.
+    pub fn item_user(&self, draft: &Draft) -> crate::npc::ItemUser {
+        crate::npc::ItemUser {
+            race: draft.race.clone(),
+            classes: draft.classes.iter().map(|c| (c.clone(), 1)).collect(),
+            skills_and_powers: draft.skills_and_powers,
+            kit: draft.kit.clone(),
+            class_abilities: (0..draft.classes.len())
+                .map(|slot| self.chosen_class_abilities(draft, slot))
+                .collect(),
+            weapon_proficiencies: draft.weapon_proficiencies.clone(),
+            focus_weapon: draft.weapon_focus.clone().unwrap_or_default(),
+        }
+    }
+
     fn chosen_class_abilities(&self, draft: &Draft, slot: usize) -> Vec<String> {
         let mut chosen = if draft.skills_and_powers || draft.updating {
             draft.class_abilities.get(slot).cloned().unwrap_or_default()

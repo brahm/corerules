@@ -18,6 +18,7 @@ use cr_store::create::{
 };
 use cr_store::help::topic;
 use cr_store::kit_magic::KitMagicRules;
+use cr_store::npc::NpcRules;
 use cr_store::pictures::ItemIcons;
 use cr_store::settings::{SETTINGS, Setting};
 use gtk::glib;
@@ -48,6 +49,9 @@ type SetCheck = dyn Fn(&mut Draft, usize, bool);
 
 struct Inner {
     rules: CreationRules,
+    /// The item check of the Equipment page (0x43d7bc), when the
+    /// installation's program could be read.
+    items: Option<Rc<NpcRules>>,
     /// The installation, for the portraits and the items' icons.
     root: PathBuf,
     /// The items' icons, read when the Equipment step first needs them.
@@ -67,6 +71,7 @@ struct Wizard(Rc<Inner>);
 pub fn new_character(
     parent: &impl IsA<gtk::Widget>,
     rules: CreationRules,
+    items: Option<Rc<NpcRules>>,
     root: PathBuf,
     create: impl Fn(&Draft) -> Result<(), String> + 'static,
 ) {
@@ -79,6 +84,7 @@ pub fn new_character(
         .build();
     let wizard = Wizard(Rc::new(Inner {
         rules,
+        items,
         root,
         icons: Default::default(),
         draft: RefCell::new(Draft::new(&SETTINGS[0])),
@@ -234,6 +240,31 @@ pub(crate) fn ignorable(
     alert.add_responses(&[("ignore", tr("_Ignore")), ("ok", tr("_OK"))]);
     alert.connect_response(None, move |_, response| {
         if response == "ignore" {
+            ignore();
+        }
+    });
+    alert.present(Some(parent));
+}
+
+/// The original's "Error Message" about an item the character may not
+/// use (0x5e43f9): Yes ignores it and `ignore` goes on, No (the default)
+/// leaves the item out.
+pub(crate) fn item_error(parent: &impl IsA<gtk::Widget>, text: &str, ignore: Box<dyn FnOnce()>) {
+    let alert = adw::AlertDialog::builder()
+        .heading(tr("Error Message"))
+        .body(format!(
+            "{text}\n\n{}",
+            tr("Do you wish to ignore this message?")
+        ))
+        .default_response("no")
+        .close_response("no")
+        .build();
+    alert.add_responses(&[("no", tr("_No")), ("yes", tr("_Yes"))]);
+    let ignore = Cell::new(Some(ignore));
+    alert.connect_response(None, move |_, response| {
+        if response == "yes"
+            && let Some(ignore) = ignore.take()
+        {
             ignore();
         }
     });
@@ -3937,6 +3968,17 @@ impl Wizard {
             move |name| Some(spec(name, 1)),
         );
         items.show_icons(self.icons());
+        // Buying an item the character may not use asks first (5d9331).
+        if let Some(check) = self.0.items.clone() {
+            let this = self.clone();
+            items.connect_add(move |name, add| {
+                let user = this.rules().item_user(&this.0.draft.borrow());
+                match check.item_problem(&user, name, true) {
+                    Some(text) => item_error(&this.0.dialog, &text, add),
+                    None => add(),
+                }
+            });
+        }
         items.group.set_description(Some(tr(
             "Weapons go to the items readied, armor to the items worn, the rest to the \
              items carried",

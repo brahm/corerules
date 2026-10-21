@@ -809,3 +809,47 @@ fn the_kit_sets_prices_money_and_free_items() {
         "{priced} {funded} {equipped}"
     );
 }
+
+#[test]
+fn the_items_a_character_may_not_use_are_named() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(Path::new(&dir)).unwrap();
+    if install.is_core20() {
+        return;
+    }
+    let rules = install.creation_rules().unwrap();
+    let items = install.npc_rules().unwrap();
+    let armor = install.part_names("Armor").unwrap();
+    let weapons = install.part_names("Weapons").unwrap();
+    // A fighter wears any armor; a mage none.
+    let mut fighter = thief();
+    fighter.classes = vec!["Fighter".into()];
+    let mut mage = thief();
+    mage.classes = vec!["Mage".into()];
+    let (mut refused, mut by_kit) = (0, 0);
+    for name in &armor {
+        if items
+            .item_problem(&rules.item_user(&mage), name, true)
+            .is_some()
+        {
+            refused += 1;
+        }
+    }
+    assert!(refused > 0);
+    // Some kit forbids an item a plain fighter may use.
+    for kit in rules.kits_for(&fighter) {
+        let mut draft = fighter.clone();
+        draft.kit.clone_from(&kit);
+        let user = rules.item_user(&draft);
+        for name in armor.iter().chain(&weapons) {
+            let plain = items.item_problem(&rules.item_user(&fighter), name, true);
+            let with_kit = items.item_problem(&user, name, true);
+            if plain.is_none() && with_kit.is_some() {
+                by_kit += 1;
+            }
+        }
+    }
+    assert!(by_kit > 0);
+}

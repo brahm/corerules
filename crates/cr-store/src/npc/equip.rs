@@ -186,6 +186,13 @@ impl Gen<'_> {
         list.is_empty() || list.iter().any(|n| n == p.name())
     }
 
+    /// 0x4431cb: as 0x443326 (it reads +0x1a0 too, not +0x1b4), and no
+    /// armor better than the kit's heaviest starting armor (+0x98).
+    fn kit_armor_at_start(&self, p: &Part) -> bool {
+        let Some(kit) = self.kit() else { return true };
+        self.kit_armor_ok(p) && kit.i_or(0x98, i32::MIN) <= p.n(0x270)
+    }
+
     /// 0x43d7bc(char, part, 0x377): 0 = the character may own the part.
     /// 0x43d7bc's Player's Option tests after the class tests: `None`
     /// goes on with the common tail. `known`: the weapon is in the WP list
@@ -240,7 +247,10 @@ impl Gen<'_> {
         None
     }
 
-    fn restricted(&mut self, p: &Part) -> i32 {
+    /// 0x43d7bc(char, part, mode): 0 = the character may use the part, else
+    /// the code of 0x5e43f9's message. `create` is New Character's mode
+    /// (0x378), which also checks the kit's armor at the start.
+    pub(super) fn restricted(&mut self, p: &Part, create: bool) -> i32 {
         if p.s(0x1e0) == self.race.name {
             return 0x1f;
         }
@@ -267,12 +277,19 @@ impl Gen<'_> {
                 .any(|k| self.class_allows_armor(k, p.name()))
             {
                 let Some(kit) = kit else { return 0x1e };
+                // The +0x1b4 list only lets the +0x1a0 test run.
+                if create && !kit.sa(0x1b4).is_empty() && !self.kit_armor_ok(p) {
+                    return 0x29;
+                }
                 if kit.sa(0x1a0).is_empty() {
                     return 0x1e;
                 }
                 if !self.kit_armor_ok(p) {
                     return 0x29;
                 }
+            }
+            if create && !self.kit_armor_at_start(p) {
+                return 0x29;
             }
             if !self.kit_armor_ok(p) {
                 return 0x29;
@@ -289,6 +306,15 @@ impl Gen<'_> {
             return 0x1e;
         }
         if t == 0 && kit.is_some_and(|k| k.sa(0xbc).iter().any(|x| x == name0(p))) {
+            return 0x29;
+        }
+        // A kit limited to magical weapons of its focus weapon's kind
+        // refuses a plain one.
+        if t == 0
+            && kit.is_some_and(|k| k.flag(0x4ac) && k.flag(0x4b2))
+            && self.focus_weapon == name0(p)
+            && p.n(0x224) == 0
+        {
             return 0x29;
         }
         0
@@ -309,7 +335,7 @@ impl Gen<'_> {
         }) {
             free = true;
         }
-        if check && self.restricted(p) != 0 {
+        if check && self.restricted(p, false) != 0 {
             return false;
         }
         let list = match dest {
@@ -734,7 +760,7 @@ impl Gen<'_> {
                     continue;
                 }
             } else {
-                if self.restricted(a) != 0 {
+                if self.restricted(a, false) != 0 {
                     continue;
                 }
                 if l == 1 && a.n(0x228) != 0 && kflag(0x75) {
