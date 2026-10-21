@@ -7,6 +7,7 @@ mod bundle;
 mod combat;
 mod create;
 mod encounter;
+mod enter;
 mod extract;
 mod help;
 mod kit_magic;
@@ -54,8 +55,9 @@ use lists::{ListEditor, RowList, RowSpec, pick};
 const APP_ID: &str = "io.github.brahm.CoreRules";
 
 /// The actions that make or change content, off for Core Rules 2.0.
-const WRITE_ACTIONS: [&str; 19] = [
+const WRITE_ACTIONS: [&str; 20] = [
     "new-character",
+    "enter-character",
     "new-npc",
     "new-npc-group",
     "roll-treasure",
@@ -306,7 +308,13 @@ impl Window {
         let new_character = gio::ActionEntry::builder("new-character")
             .activate({
                 let this = this.clone();
-                move |_, _, _| this.new_character()
+                move |_, _, _| this.new_character(false)
+            })
+            .build();
+        let enter_character = gio::ActionEntry::builder("enter-character")
+            .activate({
+                let this = this.clone();
+                move |_, _, _| this.new_character(true)
             })
             .build();
         let new_npc = gio::ActionEntry::builder("new-npc")
@@ -464,6 +472,7 @@ impl Window {
             open,
             extract_data,
             new_character,
+            enter_character,
             new_npc,
             new_npc_group,
             roll_treasure,
@@ -577,6 +586,7 @@ impl Window {
     fn set_can_create(&self, enabled: bool) {
         for name in [
             "new-character",
+            "enter-character",
             "new-npc",
             "new-npc-group",
             "roll-treasure",
@@ -710,18 +720,32 @@ impl Window {
         Some(rules)
     }
 
-    /// Opens the New Character dialog.
-    fn new_character(&self) {
+    /// Opens the New Character dialog, or with `entering` the Enter
+    /// Character one (the original's Character Management button 1573).
+    fn new_character(&self, entering: bool) {
         let (rules, root) = match &*self.install.borrow() {
-            Some(install) => (install.creation_rules(), install.root().to_owned()),
+            Some(install) => (
+                install.creation_rules().and_then(|creation| {
+                    install
+                        .advance_rules()
+                        .map(|advance| (creation, Arc::new(advance)))
+                }),
+                install.root().to_owned(),
+            ),
             None => return,
         };
-        let rules = match rules {
+        let (rules, advance) = match rules {
             Ok(rules) => rules,
             Err(e) => return self.toast(&e.to_string()),
         };
         let this = self.clone();
-        create::new_character(&self.window, rules, self.item_rules(), root, move |draft| {
+        let mode = create::Mode {
+            entering,
+            advance,
+            items: self.item_rules(),
+            root,
+        };
+        create::new_character(&self.window, rules, mode, move |draft| {
             let install = this.install.borrow();
             let Some(install) = install.as_ref() else {
                 return Err(tr("The installation is no longer open").into());
@@ -732,7 +756,12 @@ impl Window {
                 .map_err(|e| e.to_string())?;
             this.browser.show_section("characters");
             this.browser.load(install.catalog(), Some(&file));
-            this.toast(tr("Character created"));
+            // Enter Character's "Character Saved" (0x496b0b).
+            this.toast(if draft.entered.is_some() {
+                tr("Character saved")
+            } else {
+                tr("Character created")
+            });
             Ok(())
         });
     }
@@ -1120,6 +1149,7 @@ fn template_name(key: &str) -> Option<&str> {
 fn open_menu() -> gtk::MenuButton {
     let menu = gio::Menu::new();
     menu.append(Some(tr("_New Character…")), Some("win.new-character"));
+    menu.append(Some(tr("E_nter Character…")), Some("win.enter-character"));
     menu.append(Some(tr("New N_PC…")), Some("win.new-npc"));
     menu.append(Some(tr("New NPC _Group…")), Some("win.new-npc-group"));
     let item = gio::MenuItem::new(Some(tr("Manage _Parties…")), Some("win.manage-parties"));
@@ -2627,33 +2657,7 @@ fn experience_group(
             match rules.levels(&character) {
                 Ok(levels) => {
                     for (row, class) in class_rows.iter().zip(levels) {
-                        let (level, xp) = (class.level, thousands(class.experience));
-                        let text = match (class.next, class.limit) {
-                            (_, Some(limit)) if class.level >= limit => {
-                                tr!(
-                                    "Level {level} · {xp} XP · level limit {limit}",
-                                    level,
-                                    xp,
-                                    limit
-                                )
-                            }
-                            (Some(next), _) => tr!(
-                                "Level {level} · {xp} XP · next level at {next}",
-                                level,
-                                xp,
-                                next = thousands(next)
-                            ),
-                            (None, Some(limit)) => {
-                                tr!(
-                                    "Level {level} · {xp} XP · level limit {limit}",
-                                    level,
-                                    xp,
-                                    limit
-                                )
-                            }
-                            (None, None) => tr!("Level {level} · {xp} XP", level, xp),
-                        };
-                        row.set_subtitle(&text);
+                        row.set_subtitle(&level_text(&class));
                     }
                 }
                 Err(e) => group_error(&class_rows, &e.to_string()),
@@ -2714,10 +2718,40 @@ fn experience_group(
         let (rules, advanced) = (rules.clone(), advanced.clone());
         move |button| {
             let refresh = refresh.clone();
-            experience_dialog(button, &rules, &advanced, move || refresh());
+            experience_dialog(button, &rules, &advanced, None, move || refresh());
         }
     });
     group
+}
+
+/// "Level 3 · 4,500 XP · next level at 9,000" for a class.
+pub(crate) fn level_text(class: &cr_store::advance::ClassLevel) -> String {
+    let (level, xp) = (class.level, thousands(class.experience));
+    match (class.next, class.limit) {
+        (_, Some(limit)) if class.level >= limit => {
+            tr!(
+                "Level {level} · {xp} XP · level limit {limit}",
+                level,
+                xp,
+                limit
+            )
+        }
+        (Some(next), _) => tr!(
+            "Level {level} · {xp} XP · next level at {next}",
+            level,
+            xp,
+            next = thousands(next)
+        ),
+        (None, Some(limit)) => {
+            tr!(
+                "Level {level} · {xp} XP · level limit {limit}",
+                level,
+                xp,
+                limit
+            )
+        }
+        (None, None) => tr!("Level {level} · {xp} XP", level, xp),
+    }
 }
 
 /// Callbacks run when the character's levels change.
@@ -2768,11 +2802,14 @@ fn thousands(n: u32) -> String {
     out
 }
 
-/// Asks how much experience to give to which classes, then gives it.
-fn experience_dialog(
+/// Asks how much experience to give to which classes, then gives it;
+/// `fixed` are the prime requisite bonus and the character points per
+/// level when the Levels dialog sets them.
+pub(crate) fn experience_dialog(
     parent: &impl IsA<gtk::Widget>,
     rules: &Arc<AdvanceRules>,
     advanced: &Rc<RefCell<Character>>,
+    fixed: Option<(bool, u32)>,
     changed: impl Fn() + 'static,
 ) {
     let character = advanced.borrow().clone();
@@ -2809,13 +2846,21 @@ fn experience_dialog(
         .subtitle(tr(
             "10% more for a class whose prime requisites are all 16 or more",
         ))
-        .active(true)
+        .active(fixed.is_none_or(|f| f.0))
+        .visible(fixed.is_none())
         .build();
     let points = adw::SpinRow::builder()
         .title(tr("Character Points per Level"))
         .numeric(true)
-        .adjustment(&gtk::Adjustment::new(3.0, 0.0, 10.0, 1.0, 1.0, 0.0))
-        .visible(character.skills_and_powers())
+        .adjustment(&gtk::Adjustment::new(
+            fixed.map_or(3.0, |f| f.1.into()),
+            0.0,
+            10.0,
+            1.0,
+            1.0,
+            0.0,
+        ))
+        .visible(character.skills_and_powers() && fixed.is_none())
         .build();
     let group = adw::PreferencesGroup::builder()
         .description(tr(

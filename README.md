@@ -48,6 +48,15 @@ the original programs wrote.
   rogue skill points, spells and starting equipment. The original has no
   campaign settings, so each setting only narrows what the installed
   databases offer, following its campaign book
+- **Enter Character**, the same wizard for a character that already exists
+  on paper, as the original's Enter Character button: scores typed in from
+  1 to 25 and kept as typed, exceptional Strength at 18 whatever the class,
+  any race and its classes with no minimums, All Classes… for any other
+  combination (one class of each group), a free alignment and gender, and
+  on the details page each class's level or experience in the Levels
+  dialog (prime requisite bonus, level limits, character points per level),
+  rolling hit points and PSPs for each level gained, with hit point and PSP
+  arrows in place of the rolls
 - **Kits** in New Character, as the Expansion offers them: only those the
   character's scores, gender, alignment and classes allow, with the
   original's warnings and the kit's information text. The kit's fixed rogue

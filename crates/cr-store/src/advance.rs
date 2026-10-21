@@ -435,6 +435,12 @@ impl AdvanceRules {
         })
     }
 
+    /// Whether the class named `name` is a psionicist (group 4), which
+    /// gains PSPs with its levels.
+    pub fn psionicist(&self, name: &str) -> bool {
+        self.classes.get(name).is_some_and(|c| c.group == 4)
+    }
+
     /// Whether the class named `name` casts priest spells and wizard
     /// spells.
     pub fn casts(&self, name: &str) -> (bool, bool) {
@@ -501,16 +507,73 @@ impl AdvanceRules {
             // C integer division truncates toward zero, as here.
             amount = amount * percent / 100;
         }
+        let xp = i64::from(character.data.unknown_0x1618[g]) + amount;
+        self.set_experience(character, g, xp, points_per_level, dice)
+    }
+
+    /// The Levels dialog's level arrows (0x619172): puts class `g` at
+    /// `level`, its experience at what the level takes (scaled by the kit,
+    /// with no prime requisite bonus), rolling as [`Self::add_experience`]
+    /// does. Past the highest level the limits or the class's table allow,
+    /// the class stops there and the original's message comes back.
+    pub fn set_level(
+        &self,
+        character: &mut Character,
+        g: usize,
+        level: u32,
+        points_per_level: u32,
+        dice: &mut Dice,
+    ) -> Result<Option<String>> {
+        let class = self.class(character, g)?;
+        let most = self
+            .limit(character, g, class)
+            .unwrap_or(100)
+            .min(class.max_level());
+        let (level, message) = if level > most {
+            (
+                most,
+                Some(
+                    tr("You have reached the maximum level for this race/class combination").into(),
+                ),
+            )
+        } else {
+            (level.max(1), None)
+        };
+        let mut xp = class.threshold(level);
+        if let Some(scale) = self.kit(character).scale {
+            xp = xp * (i64::from(scale) + 100) / 100;
+        }
+        self.set_experience(character, g, xp, points_per_level, dice)?;
+        Ok(message)
+    }
+
+    /// Gives class `g` `xp` experience (0x448090): a hit point roll for
+    /// each level gained, and PSPs if it is the psionicist; the PSPs of
+    /// each level lost go (0x448010); with Skills & Powers
+    /// `points_per_level` character points per level gained or lost.
+    fn set_experience(
+        &self,
+        character: &mut Character,
+        g: usize,
+        xp: i64,
+        points_per_level: u32,
+        dice: &mut Dice,
+    ) -> Result<()> {
         let old = self.level_of(character, g)?;
-        let xp = (i64::from(character.data.unknown_0x1618[g]) + amount).clamp(0, u32::MAX.into());
-        character.data.unknown_0x1618[g] = xp as u32;
+        character.data.unknown_0x1618[g] = xp.clamp(0, u32::MAX.into()) as u32;
         let new = self.level_of(character, g)?;
+        let psionicist = self.class(character, g)?.group == 4;
         for level in old + 1..=new {
             let roll = self.roll_hit_points(character, g, level, dice)?;
             character.data.unknown_0xc60[g][level as usize - 1] = roll;
-            if self.class(character, g)?.group == 4 {
+            if psionicist {
                 character.data.unknown_0x1430[level as usize - 1] =
                     psionic_points(character, level, dice);
+            }
+        }
+        if psionicist {
+            for level in new + 1..=old {
+                character.data.unknown_0x1430[level as usize - 1] = 0;
             }
         }
         if character.skills_and_powers() {
@@ -811,6 +874,19 @@ pub fn first_level_psionic_points(character: &Character, roll: u32) -> u32 {
     15 + roll + bonus(WIS, 1) + bonus(INT, 1) + bonus(CON, 2)
 }
 
+/// The PSPs, all levels together, as the sheet shows them.
+pub fn psionic_total(character: &Character) -> u32 {
+    character.data.unknown_0x1430.iter().sum()
+}
+
+/// The Name page's PSP arrows (0x5bf334): the change goes to the highest
+/// level with PSPs, or the 1st, which keeps 0 or more.
+pub fn adjust_psionic_points(character: &mut Character, delta: i32) {
+    let psionic = &mut character.data.unknown_0x1430;
+    let level = psionic.iter().rposition(|&p| p != 0).unwrap_or(0);
+    psionic[level] = (i64::from(psionic[level]) + i64::from(delta)).max(0) as u32;
+}
+
 /// The highest wizard spell level Intelligence allows.
 pub fn max_spell_level(int: i32) -> u32 {
     match int {
@@ -873,6 +949,73 @@ impl Advancement {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn class(group: i32) -> ClassAdvance {
+        // 1000 experience a level.
+        let mut experience = vec![0, 0];
+        experience.extend((2..=100).map(|l| (l - 1) * 1000));
+        ClassAdvance {
+            group,
+            prime: [false; 6],
+            experience,
+            hit_die: 8,
+            last_die_level: 9,
+            flat: 2,
+            slots: Vec::new(),
+            alternative_slots: Vec::new(),
+            warrior_constitution: false,
+            keep_first_roll: false,
+            double_wisdom: false,
+            casts: (false, false),
+            level_abilities: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn the_levels_dialog_sets_a_level_and_rolls_for_it() {
+        let mut rules = AdvanceRules {
+            expansion: true,
+            ..Default::default()
+        };
+        rules.classes.insert("Warrior".into(), class(0));
+        rules.classes.insert("Mind".into(), class(4));
+        let mut c = Character::blank(cr_formats::character::EXPANSION_VERSION).unwrap();
+        c.data.classes.names = vec!["Warrior".into(), "Mind".into()];
+        c.data.race = "Folk".into();
+        rules.limits.insert(("Folk".into(), "Warrior".into()), 8);
+        c.data.strength = [12; 3];
+        c.data.abilities = [[12; 3]; 5];
+        c.data.unknown_0xc60[0][0] = 8;
+        c.data.unknown_0x1430[0] = 20;
+        let mut dice = Dice::seeded(7);
+
+        assert_eq!(rules.set_level(&mut c, 0, 5, 0, &mut dice).unwrap(), None);
+        assert_eq!(rules.level_of(&c, 0).unwrap(), 5);
+        assert_eq!(c.data.unknown_0x1618[0], 4000);
+        assert!(c.data.unknown_0xc60[0][1..5].iter().all(|&r| r > 0));
+        assert!(c.data.unknown_0x1430[1..].iter().all(|&p| p == 0));
+
+        // Past the race's limit, when limits apply, the class stops there.
+        assert_eq!(rules.set_level(&mut c, 0, 30, 0, &mut dice).unwrap(), None);
+        assert_eq!(rules.level_of(&c, 0).unwrap(), 30);
+        c.data.unknown_0x1dc4 = 1;
+        assert!(
+            rules
+                .set_level(&mut c, 0, 30, 0, &mut dice)
+                .unwrap()
+                .is_some()
+        );
+        assert_eq!(rules.level_of(&c, 0).unwrap(), 8);
+
+        // A psionicist's PSPs come with its levels and go with them.
+        rules.set_level(&mut c, 1, 3, 0, &mut dice).unwrap();
+        assert!(c.data.unknown_0x1430[1..3].iter().all(|&p| p > 0));
+        let before = psionic_total(&c);
+        adjust_psionic_points(&mut c, 5);
+        assert_eq!(psionic_total(&c), before + 5);
+        rules.set_level(&mut c, 1, 1, 0, &mut dice).unwrap();
+        assert_eq!(psionic_total(&c), 20);
+    }
 
     #[test]
     fn levels_grant_their_class_abilities_once() {
