@@ -21,8 +21,8 @@ use cr_store::userdb::spells::Spells;
 use cr_store::userdb::tables::{self, TableDb};
 use cr_store::userdb::traps::Traps;
 use cr_store::userdb::{
-    self as udb, FieldDesc, FieldKind, Filter, Flavor, Options, Origin, Sources, UserDb, UserKind,
-    Value,
+    self as udb, FieldDesc, FieldKind, Filter, Flavor, Options, Origin, Sources, Suggestion,
+    UserDb, UserKind, Value,
 };
 use cr_store::{Installation, Result};
 use gtk::{gio, glib};
@@ -621,6 +621,7 @@ fn editor<K: UserKind, H: Host + 'static>(
                     | FieldKind::Pairs { .. }
                     | FieldKind::Groups(_)
                     | FieldKind::Grid { .. }
+                    | FieldKind::Items
             );
             let group_title = if own && field.group.is_empty() {
                 field.label
@@ -886,6 +887,9 @@ fn control<R: Clone + 'static, H: Host + 'static>(
                 .build();
             let changed = changed.clone();
             row.connect_value_notify(move |row| changed(index, Value::Int(row.value() as i64)));
+            if let Some(suggestion) = &field.suggest {
+                suggest_button(&row, suggestion, record);
+            }
             let load = {
                 let row = row.clone();
                 move || {
@@ -1091,6 +1095,7 @@ fn control<R: Clone + 'static, H: Host + 'static>(
             min,
             max,
         } => widgets::grid_control(columns, first, (min, max), value, emit(changed, index)),
+        FieldKind::Items => items_control(index, value, changed, host),
         FieldKind::Dice => {
             let spins: Vec<gtk::SpinButton> = [(0.0, 1000.0), (0.0, 1000.0), (-1000.0, 100_000.0)]
                 .iter()
@@ -1182,6 +1187,111 @@ fn control<R: Clone + 'static, H: Host + 'static>(
 }
 
 /// The change callback of one field.
+/// The button that offers a number's suggested value, which Yes puts in
+/// `row` (Suggest XP Value, 0x6d60fa).
+fn suggest_button<R: 'static>(
+    row: &adw::SpinRow,
+    suggestion: &Suggestion<R>,
+    record: &Rc<RefCell<R>>,
+) {
+    let button = gtk::Button::builder()
+        .label(tr(suggestion.label))
+        .valign(gtk::Align::Center)
+        .build();
+    let (value, question) = (suggestion.value, suggestion.question);
+    button.connect_clicked({
+        let (row, record) = (row.clone(), record.clone());
+        move |_| {
+            let suggested = value(&record.borrow());
+            let dialog = adw::AlertDialog::builder()
+                .body(question(suggested))
+                .build();
+            dialog.add_responses(&[("no", tr("_No")), ("yes", tr("_Yes"))]);
+            dialog.set_response_appearance("yes", adw::ResponseAppearance::Suggested);
+            dialog.set_default_response(Some("yes"));
+            dialog.set_close_response("no");
+            let row2 = row.clone();
+            dialog.connect_response(None, move |_, response| {
+                if response == "yes" {
+                    row2.set_value(suggested as f64);
+                }
+            });
+            dialog.present(Some(&row));
+        }
+    });
+    row.add_suffix(&button);
+}
+
+/// Items edited as the Treasure Bundle Editor edits a bundle
+/// ([`FieldKind::Items`]): a monster's Inventory.
+fn items_control<H: Host + 'static>(
+    index: usize,
+    value: impl Fn() -> Value + 'static,
+    changed: &Rc<dyn Fn(usize, Value)>,
+    host: &Shared<H>,
+) -> (gtk::Widget, Box<dyn Fn()>) {
+    let root = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(12)
+        .build();
+    let Some(rules) = errors(&**host, host.with_install(|i| i.treasure_rules())) else {
+        return (root.upcast(), Box::new(|| ()));
+    };
+    let list = gtk::ListBox::builder()
+        .selection_mode(gtk::SelectionMode::None)
+        .css_classes(["boxed-list"])
+        .build();
+    root.append(&list);
+    let value = Rc::new(value);
+    let edit: Rc<std::cell::OnceCell<crate::bundle::Edit>> = Rc::default();
+    let redraw: Rc<dyn Fn()> = Rc::new({
+        let (list, value, edit) = (list.clone(), value.clone(), Rc::downgrade(&edit));
+        move || {
+            while let Some(child) = list.first_child() {
+                list.remove(&child);
+            }
+            let bundle = value().items();
+            if let Some(edit) = edit.upgrade()
+                && let Some(edit) = edit.get()
+            {
+                for row in crate::bundle::rows(edit, &bundle) {
+                    list.append(&row);
+                }
+            }
+            list.set_visible(!bundle.is_empty());
+        }
+    });
+    let editing = Rc::new(crate::bundle::Editing {
+        rules: Rc::new(rules),
+        parent: root.clone().upcast(),
+        get: Box::new({
+            let value = value.clone();
+            move || Some(value().items())
+        }),
+        set: Box::new({
+            let (changed, redraw) = (changed.clone(), redraw.clone());
+            move |bundle| {
+                changed(index, Value::Items(bundle));
+                redraw();
+            }
+        }),
+    });
+    let add = crate::bundle::add_button(&editing);
+    add.set_css_classes(&["pill"]);
+    add.set_halign(gtk::Align::Center);
+    root.append(&add);
+    let _ = edit.set(editing);
+    // The editor keeps the editing alive.
+    let keep = edit.clone();
+    (
+        root.upcast(),
+        Box::new(move || {
+            let _ = &keep;
+            redraw()
+        }),
+    )
+}
+
 fn emit(changed: &Rc<dyn Fn(usize, Value)>, index: usize) -> Rc<dyn Fn(Value)> {
     let changed = changed.clone();
     Rc::new(move |v| changed(index, v))
