@@ -277,6 +277,20 @@ impl UserKind for Classes {
         )
     }
 
+    fn change_question(stored: &Class, edited: &Class) -> Option<&'static str> {
+        (group(stored) != group(edited)).then_some(GROUP_CHANGE_WARNING)
+    }
+
+    /// The original's Remove (0x6920dc) and group change (0x6cfbec) take
+    /// the class out of every race's allowed classes (0x47d777).
+    fn detach(install: &Installation, r: &Class) -> Result<()> {
+        let mut db = super::allowed::AllowedDb::load(install)?;
+        if db.remove_class(r.name()) {
+            db.save(install)?;
+        }
+        Ok(())
+    }
+
     fn summary(r: &Class) -> String {
         tr(GROUPS[group(r)]).into()
     }
@@ -321,6 +335,35 @@ mod tests {
                 "Fighter/Thief/Mage",
                 "Thief/Mage"
             ]
+        );
+    }
+
+    #[test]
+    fn a_group_change_asks_and_takes_the_class_out_of_the_races() {
+        use crate::userdb::allowed::{Allowed, AllowedDb};
+        let mut class = new_class();
+        Classes::set_name(&mut class, "UdbClass");
+        let mut rogue = class.clone();
+        data_mut(&mut rogue).unwrap().unknown_0x14[0] = 1;
+        assert_eq!(Classes::change_question(&class, &class), None);
+        assert_eq!(
+            Classes::change_question(&class, &rogue),
+            Some(GROUP_CHANGE_WARNING)
+        );
+        let mut allowed = AllowedDb::default();
+        let (i, _) = allowed.ensure("Dwarf");
+        let slots = ["UdbClass", "", "", "", ""].map(String::from);
+        allowed.records[i].classes = vec![Allowed::new(slots, 12).helper()];
+        let t = TempInstall::new(
+            "classes-detach",
+            &[("UserDbas/AllowedU.dat", allowed.to_bytes().unwrap())],
+        );
+        Classes::detach(&t.install, &class).unwrap();
+        assert!(
+            AllowedDb::load(&t.install)
+                .unwrap()
+                .entries("Dwarf")
+                .is_empty()
         );
     }
 

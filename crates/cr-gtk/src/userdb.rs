@@ -485,10 +485,13 @@ fn act<K: UserKind, H: Host + 'static>(
                 move || {
                     let result = host.with_install(|install| {
                         let mut db = UserDb::<K>::load(install)?;
-                        if let Some(i) = position(&db, Origin::Custom, scope, &name) {
-                            db.delete(i);
-                        }
-                        db.save(install)
+                        let Some(i) = position(&db, Origin::Custom, scope, &name) else {
+                            return Ok(());
+                        };
+                        let record = db.user[i].clone();
+                        db.delete(i);
+                        db.save(install)?;
+                        K::detach(install, &record)
                     });
                     if errors(&*host, result).is_some() {
                         host.toast(&tr!("“{name}” deleted", name));
@@ -542,6 +545,10 @@ fn editor<K: UserKind, H: Host + 'static>(
         return;
     };
     let sources = Rc::new(sources);
+    // The record as stored, for the questions about changing it.
+    let stored = Rc::new(editing.map(|_| record.clone()));
+    // Whether a change the original asks about was accepted.
+    let detach = Rc::new(Cell::new(false));
     let record = Rc::new(RefCell::new(record));
     let loading = Rc::new(Cell::new(false));
     let bound: Rc<RefCell<Vec<Bound>>> = Rc::default();
@@ -583,19 +590,55 @@ fn editor<K: UserKind, H: Host + 'static>(
         }
     });
     let changed: Rc<dyn Fn(usize, Value)> = Rc::new({
-        let (fields, record, loading, sources, refresh) = (
+        let (fields, record, loading, sources, refresh, detach, host) = (
             fields.clone(),
             record.clone(),
             loading.clone(),
             sources.clone(),
             refresh.clone(),
+            detach.clone(),
+            host.clone(),
         );
         move |field, value| {
             if loading.get() {
                 return;
             }
-            fields[field].set(&mut record.borrow_mut(), &value, &sources);
-            refresh(Some(field));
+            let mut edited = record.borrow().clone();
+            fields[field].set(&mut edited, &value, &sources);
+            let Some(question) = (*stored)
+                .as_ref()
+                .and_then(|stored| K::change_question(stored, &edited))
+            else {
+                *record.borrow_mut() = edited;
+                return refresh(Some(field));
+            };
+            // As in the original, No puts back the stored value.
+            let alert = adw::AlertDialog::builder()
+                .body(tr(question))
+                .default_response("no")
+                .close_response("no")
+                .build();
+            alert.add_responses(&[("no", tr("_No")), ("yes", tr("_Yes"))]);
+            alert.set_response_appearance("yes", adw::ResponseAppearance::Destructive);
+            let (fields, record, sources, refresh, detach, stored) = (
+                fields.clone(),
+                record.clone(),
+                sources.clone(),
+                refresh.clone(),
+                detach.clone(),
+                stored.clone(),
+            );
+            alert.connect_response(None, move |_, response| {
+                if response == "yes" {
+                    detach.set(true);
+                    *record.borrow_mut() = edited.clone();
+                } else if let Some(stored) = &*stored {
+                    let value = fields[field].get(stored);
+                    fields[field].set(&mut record.borrow_mut(), &value, &sources);
+                }
+                refresh(None);
+            });
+            alert.present(Some(&host.parent()));
         }
     });
 
@@ -753,11 +796,27 @@ fn editor<K: UserKind, H: Host + 'static>(
         dialog_breakpoint.add_setter(&split, "collapsed", Some(&true.to_value()));
         let dialog = dialog_for(&title, &view, many);
         dialog.add_breakpoint(dialog_breakpoint);
-        finish::<K, H>(host, dialog, section, editing, record, cancel, save);
+        finish::<K, H>(
+            host,
+            dialog,
+            section,
+            editing,
+            record,
+            (cancel, save),
+            detach,
+        );
     } else {
         view.set_content(Some(&stack));
         let dialog = dialog_for(&title, &view, many);
-        finish::<K, H>(host, dialog, section, editing, record, cancel, save);
+        finish::<K, H>(
+            host,
+            dialog,
+            section,
+            editing,
+            record,
+            (cancel, save),
+            detach,
+        );
     }
 }
 
@@ -772,15 +831,17 @@ fn dialog_for(title: &str, view: &adw::ToolbarView, many: bool) -> adw::Dialog {
         .build()
 }
 
-/// Wires Cancel and Save and shows the dialog.
+/// Wires Cancel and Save and shows the dialog; when `detach` is set (a
+/// change the original asks about was accepted), Save also takes the
+/// stored record out of the other files.
 fn finish<K: UserKind, H: Host + 'static>(
     host: &Shared<H>,
     dialog: adw::Dialog,
     section: &'static str,
     editing: Option<usize>,
     record: Rc<RefCell<K::Rec>>,
-    cancel: gtk::Button,
-    save: gtk::Button,
+    (cancel, save): (gtk::Button, gtk::Button),
+    detach: Rc<Cell<bool>>,
 ) {
     cancel.connect_clicked({
         let dialog = dialog.clone();
@@ -798,9 +859,13 @@ fn finish<K: UserKind, H: Host + 'static>(
                     Some(i) if i < db.user.len() => db.replace(i, r.clone()),
                     _ => db.add(r.clone()),
                 };
+                let before = editing.and_then(|i| db.user.get(i).cloned());
                 match stored {
                     Ok(i) => {
                         db.save(install)?;
+                        if let Some(before) = before.filter(|_| detach.get()) {
+                            K::detach(install, &before)?;
+                        }
                         Ok(Ok(K::name(&db.user[i]).to_owned()))
                     }
                     Err(error) => Ok(Err((error, r.clone()))),

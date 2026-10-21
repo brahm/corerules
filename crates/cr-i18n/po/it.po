@@ -346,7 +346,7 @@ msgstr "Pacchetto razziale"
 #: crates/cr-gtk/src/sheet.rs:335
 #: crates/cr-gtk/src/userdb/attacks.rs:62
 #: crates/cr-gtk/src/userdb/templates.rs:227
-#: crates/cr-gtk/src/userdb.rs:1808
+#: crates/cr-gtk/src/userdb.rs:1873
 #: crates/cr-store/src/userdb/monsters.rs:727
 #: crates/cr-store/src/userdb/parts/kit.rs:346
 msgid "None"
@@ -490,7 +490,7 @@ msgstr[1] "{n} pagine"
 
 #: crates/cr-gtk/src/bundle.rs:124
 #: crates/cr-gtk/src/bundle.rs:377
-#: crates/cr-gtk/src/userdb.rs:1932
+#: crates/cr-gtk/src/userdb.rs:2002
 msgid "_Remove"
 msgstr "_Rimuovi"
 
@@ -515,12 +515,12 @@ msgstr "Modifica"
 #: crates/cr-gtk/src/userdb/attacks.rs:201
 #: crates/cr-gtk/src/userdb/attacks.rs:368
 #: crates/cr-gtk/src/userdb/levels.rs:82
-#: crates/cr-gtk/src/userdb/templates.rs:1560
-#: crates/cr-gtk/src/userdb/templates.rs:1708
-#: crates/cr-gtk/src/userdb/templates.rs:1933
+#: crates/cr-gtk/src/userdb/templates.rs:1568
+#: crates/cr-gtk/src/userdb/templates.rs:1716
+#: crates/cr-gtk/src/userdb/templates.rs:1941
 #: crates/cr-gtk/src/userdb/widgets.rs:546
-#: crates/cr-gtk/src/userdb.rs:849
-#: crates/cr-gtk/src/userdb.rs:2058
+#: crates/cr-gtk/src/userdb.rs:914
+#: crates/cr-gtk/src/userdb.rs:2133
 msgid "_OK"
 msgstr "_OK"
 
@@ -528,7 +528,8 @@ msgstr "_OK"
 #: crates/cr-gtk/src/create.rs:209
 #: crates/cr-gtk/src/create.rs:303
 #: crates/cr-gtk/src/userdb/levels.rs:701
-#: crates/cr-gtk/src/userdb.rs:1258
+#: crates/cr-gtk/src/userdb.rs:621
+#: crates/cr-gtk/src/userdb.rs:1323
 msgid "_No"
 msgstr "_No"
 
@@ -536,7 +537,8 @@ msgstr "_No"
 #: crates/cr-gtk/src/create.rs:209
 #: crates/cr-gtk/src/create.rs:303
 #: crates/cr-gtk/src/userdb/levels.rs:701
-#: crates/cr-gtk/src/userdb.rs:1258
+#: crates/cr-gtk/src/userdb.rs:621
+#: crates/cr-gtk/src/userdb.rs:1323
 msgid "_Yes"
 msgstr "_Sì"
 
@@ -565,19 +567,20 @@ msgstr "Quanti?"
 #: crates/cr-gtk/src/userdb/templates.rs:881
 #: crates/cr-gtk/src/userdb/widgets.rs:542
 #: crates/cr-gtk/src/userdb.rs:367
-#: crates/cr-gtk/src/userdb.rs:507
-#: crates/cr-gtk/src/userdb.rs:693
-#: crates/cr-gtk/src/userdb.rs:1384
-#: crates/cr-gtk/src/userdb.rs:1412
-#: crates/cr-gtk/src/userdb.rs:1582
-#: crates/cr-gtk/src/userdb.rs:2054
-#: crates/cr-gtk/src/userdb.rs:2307
+#: crates/cr-gtk/src/userdb.rs:510
+#: crates/cr-gtk/src/userdb.rs:736
+#: crates/cr-gtk/src/userdb.rs:1449
+#: crates/cr-gtk/src/userdb.rs:1477
+#: crates/cr-gtk/src/userdb.rs:1647
+#: crates/cr-gtk/src/userdb.rs:2129
+#: crates/cr-gtk/src/userdb.rs:2382
 msgid "_Cancel"
 msgstr "_Annulla"
 
 #: crates/cr-gtk/src/bundle.rs:240
-#: crates/cr-gtk/src/userdb/templates.rs:1081
-#: crates/cr-gtk/src/userdb/templates.rs:1091
+#: crates/cr-gtk/src/userdb/templates.rs:1089
+#: crates/cr-gtk/src/userdb/templates.rs:1099
+#: crates/cr-gtk/src/userdb.rs:2026
 #: crates/cr-store/src/userdb/monsters.rs:529
 msgid "Category"
 msgstr "Categoria"
@@ -594,7 +597,7 @@ msgstr "Cerca"
 
 #: crates/cr-gtk/src/bundle.rs:316
 #: crates/cr-gtk/src/userdb/templates.rs:837
-#: crates/cr-gtk/src/userdb.rs:1876
+#: crates/cr-gtk/src/userdb.rs:1946
 msgid "Add Item"
 msgstr "Aggiungi oggetto"
 
@@ -605,7 +608,7 @@ msgstr "Quanti aggiungerne?"
 #: crates/cr-gtk/src/bundle.rs:344
 #: crates/cr-gtk/src/main.rs:2888
 #: crates/cr-gtk/src/transfer.rs:608
-#: crates/cr-gtk/src/userdb/templates.rs:1984
+#: crates/cr-gtk/src/userdb/templates.rs:1992
 msgid "_Add"
 msgstr "_Aggiungi"
 
@@ -678,10 +681,10 @@ msgstr "Incantesimi selezionati (incantesimi rimasti: {left})"
 #: crates/cr-gtk/src/userdb/attacks.rs:80
 #: crates/cr-gtk/src/userdb/levels.rs:162
 #: crates/cr-gtk/src/userdb/levels.rs:340
-#: crates/cr-gtk/src/userdb/templates.rs:1490
-#: crates/cr-gtk/src/userdb/templates.rs:1646
+#: crates/cr-gtk/src/userdb/templates.rs:1498
+#: crates/cr-gtk/src/userdb/templates.rs:1654
 #: crates/cr-gtk/src/userdb/widgets.rs:629
-#: crates/cr-gtk/src/userdb.rs:1910
+#: crates/cr-gtk/src/userdb.rs:1980
 msgid "Remove"
 msgstr "Rimuovi"
 
@@ -1238,7 +1241,7 @@ msgstr "Abilità di classe"
 #: crates/cr-gtk/src/main.rs:2063
 #: crates/cr-gtk/src/treasure.rs:457
 #: crates/cr-gtk/src/userdb/attacks.rs:257
-#: crates/cr-gtk/src/userdb.rs:1448
+#: crates/cr-gtk/src/userdb.rs:1513
 #: crates/cr-store/src/userdb/classes/pages.rs:135
 #: crates/cr-store/src/userdb/monsters.rs:339
 #: crates/cr-store/src/userdb/parts/pages.rs:344
@@ -1331,7 +1334,7 @@ msgstr "Pollici"
 
 #: crates/cr-gtk/src/create.rs:1705
 #: crates/cr-gtk/src/main.rs:2068
-#: crates/cr-gtk/src/userdb.rs:1497
+#: crates/cr-gtk/src/userdb.rs:1562
 #: crates/cr-store/src/catalog.rs:888
 msgid "Weight"
 msgstr "Peso"
@@ -1420,7 +1423,7 @@ msgstr "Il tuo kit modifica il costo delle competenze. Cambiare kit annullerà l
 #: crates/cr-gtk/src/main.rs:1296
 #: crates/cr-gtk/src/main.rs:1326
 #: crates/cr-gtk/src/main.rs:2318
-#: crates/cr-gtk/src/userdb.rs:1528
+#: crates/cr-gtk/src/userdb.rs:1593
 msgid "Details"
 msgstr "Dettagli"
 
@@ -1942,9 +1945,9 @@ msgstr "PE del tesoro"
 #: crates/cr-gtk/src/transfer.rs:568
 #: crates/cr-gtk/src/treasure.rs:477
 #: crates/cr-gtk/src/userdb/templates.rs:885
-#: crates/cr-gtk/src/userdb.rs:697
-#: crates/cr-gtk/src/userdb.rs:1586
-#: crates/cr-gtk/src/userdb.rs:2311
+#: crates/cr-gtk/src/userdb.rs:740
+#: crates/cr-gtk/src/userdb.rs:1651
+#: crates/cr-gtk/src/userdb.rs:2386
 msgid "_Save"
 msgstr "_Salva"
 
@@ -2071,7 +2074,7 @@ msgstr "_Aggiungi trappola…"
 #: crates/cr-gtk/src/encounter.rs:899
 #: crates/cr-gtk/src/userdb/templates.rs:858
 #: crates/cr-gtk/src/userdb/templates.rs:858
-#: crates/cr-gtk/src/userdb/templates.rs:1400
+#: crates/cr-gtk/src/userdb/templates.rs:1408
 #: crates/cr-store/src/catalog.rs:251
 #: crates/cr-store/src/catalog.rs:650
 msgid "Traps"
@@ -2082,7 +2085,7 @@ msgid "No traps"
 msgstr "Nessuna trappola"
 
 #: crates/cr-gtk/src/encounter.rs:912
-#: crates/cr-gtk/src/userdb/templates.rs:1310
+#: crates/cr-gtk/src/userdb/templates.rs:1318
 msgid "Remove Trap"
 msgstr "Rimuovi trappola"
 
@@ -2113,9 +2116,9 @@ msgstr "_Modifica…"
 #: crates/cr-gtk/src/encounter.rs:1689
 #: crates/cr-gtk/src/party.rs:394
 #: crates/cr-gtk/src/treasure.rs:520
-#: crates/cr-gtk/src/userdb.rs:507
-#: crates/cr-gtk/src/userdb.rs:1384
-#: crates/cr-gtk/src/userdb.rs:2412
+#: crates/cr-gtk/src/userdb.rs:510
+#: crates/cr-gtk/src/userdb.rs:1449
+#: crates/cr-gtk/src/userdb.rs:2487
 msgid "_Delete"
 msgstr "_Elimina"
 
@@ -2124,15 +2127,15 @@ msgid "Trap Menu"
 msgstr "Menu della trappola"
 
 #: crates/cr-gtk/src/encounter.rs:1048
-#: crates/cr-gtk/src/userdb/templates.rs:1404
+#: crates/cr-gtk/src/userdb/templates.rs:1412
 msgid "Unable to Add Trap"
 msgstr "Impossibile aggiungere la trappola"
 
 #: crates/cr-gtk/src/encounter.rs:1125
 #: crates/cr-gtk/src/userdb/templates.rs:835
-#: crates/cr-gtk/src/userdb/templates.rs:1467
-#: crates/cr-gtk/src/userdb/templates.rs:1808
-#: crates/cr-gtk/src/userdb/templates.rs:1879
+#: crates/cr-gtk/src/userdb/templates.rs:1475
+#: crates/cr-gtk/src/userdb/templates.rs:1816
+#: crates/cr-gtk/src/userdb/templates.rs:1887
 msgid "Add Monster"
 msgstr "Aggiungi mostro"
 
@@ -2147,7 +2150,7 @@ msgstr "Nuovo mostro"
 
 #: crates/cr-gtk/src/encounter.rs:1153
 #: crates/cr-gtk/src/userdb/templates.rs:836
-#: crates/cr-gtk/src/userdb/templates.rs:1620
+#: crates/cr-gtk/src/userdb/templates.rs:1628
 msgid "Add NPC"
 msgstr "Aggiungi PNG"
 
@@ -2186,14 +2189,14 @@ msgid "All"
 msgstr "Tutti"
 
 #: crates/cr-gtk/src/encounter.rs:1420
-#: crates/cr-gtk/src/userdb.rs:2171
+#: crates/cr-gtk/src/userdb.rs:2246
 #: crates/cr-store/src/userdb.rs:69
 #: crates/cr-store/src/userdb.rs:116
 msgid "Standard"
 msgstr "Standard"
 
 #: crates/cr-gtk/src/encounter.rs:1421
-#: crates/cr-gtk/src/userdb.rs:2173
+#: crates/cr-gtk/src/userdb.rs:2248
 #: crates/cr-store/src/userdb.rs:69
 #: crates/cr-store/src/userdb.rs:117
 msgid "Custom"
@@ -2230,8 +2233,8 @@ msgid "Most Hit Dice"
 msgstr "Dadi Vita massimi"
 
 #: crates/cr-gtk/src/encounter.rs:1458
-#: crates/cr-gtk/src/userdb/templates.rs:1099
-#: crates/cr-gtk/src/userdb/templates.rs:1144
+#: crates/cr-gtk/src/userdb/templates.rs:1107
+#: crates/cr-gtk/src/userdb/templates.rs:1152
 msgid "Climate and Terrain"
 msgstr "Clima e terreno"
 
@@ -2297,14 +2300,14 @@ msgstr "Tirato {roll}, che non ha alcun modello"
 #: crates/cr-gtk/src/encounter.rs:1649
 #: crates/cr-store/src/encounter.rs:415
 #: crates/cr-store/src/treasure.rs:1196
-#: crates/cr-store/src/userdb.rs:733
+#: crates/cr-store/src/userdb.rs:747
 msgid "A name must be supplied."
 msgstr "È necessario fornire un nome."
 
 #: crates/cr-gtk/src/encounter.rs:1658
 #: crates/cr-store/src/encounter.rs:417
 #: crates/cr-store/src/treasure.rs:1198
-#: crates/cr-store/src/userdb.rs:734
+#: crates/cr-store/src/userdb.rs:748
 msgid "Name already used."
 msgstr "Nome già in uso."
 
@@ -2926,7 +2929,7 @@ msgstr "Apri un'installazione di Expansion e importa questo contenuto con Import
 
 #: crates/cr-gtk/src/main.rs:1550
 #: crates/cr-gtk/src/main.rs:1558
-#: crates/cr-gtk/src/userdb.rs:1459
+#: crates/cr-gtk/src/userdb.rs:1524
 #: crates/cr-store/src/catalog.rs:360
 msgid "Entries"
 msgstr "Voci"
@@ -3335,7 +3338,7 @@ msgstr "Furfante"
 #: crates/cr-gtk/src/npc.rs:41
 #: crates/cr-gtk/src/userdb/levels.rs:325
 #: crates/cr-gtk/src/userdb/levels.rs:365
-#: crates/cr-gtk/src/userdb.rs:1983
+#: crates/cr-gtk/src/userdb.rs:2058
 #: crates/cr-store/src/npc.rs:221
 #: crates/cr-store/src/userdb/classes/pages.rs:239
 #: crates/cr-store/src/userdb/classes/pages.rs:663
@@ -3348,7 +3351,7 @@ msgstr "Sacerdote"
 
 #: crates/cr-gtk/src/npc.rs:42
 #: crates/cr-gtk/src/userdb/levels.rs:365
-#: crates/cr-gtk/src/userdb.rs:1983
+#: crates/cr-gtk/src/userdb.rs:2058
 #: crates/cr-store/src/npc.rs:222
 #: crates/cr-store/src/userdb/classes/pages.rs:285
 #: crates/cr-store/src/userdb/classes/pages.rs:662
@@ -3505,7 +3508,7 @@ msgstr[0] "{n} PNG è stato creato"
 msgstr[1] "{n} PNG sono stati creati"
 
 #: crates/cr-gtk/src/party.rs:45
-#: crates/cr-gtk/src/userdb.rs:494
+#: crates/cr-gtk/src/userdb.rs:497
 msgid "“{name}” deleted"
 msgstr "“{name}” eliminato"
 
@@ -3601,7 +3604,7 @@ msgid "Icon {number}"
 msgstr "Icona {number}"
 
 #: crates/cr-gtk/src/picture.rs:176
-#: crates/cr-gtk/src/userdb/templates.rs:2088
+#: crates/cr-gtk/src/userdb/templates.rs:2096
 msgid "_Choose…"
 msgstr "_Scegli…"
 
@@ -4378,7 +4381,7 @@ msgstr "Gli incantesimi possono essere lanciati con questa frequenza"
 
 #: crates/cr-gtk/src/userdb/levels.rs:278
 #: crates/cr-gtk/src/userdb/levels.rs:287
-#: crates/cr-gtk/src/userdb/templates.rs:1065
+#: crates/cr-gtk/src/userdb/templates.rs:1073
 #: crates/cr-store/src/catalog.rs:706
 #: crates/cr-store/src/userdb/monsters.rs:349
 #: crates/cr-store/src/userdb/monsters.rs:360
@@ -4387,8 +4390,8 @@ msgid "Frequency"
 msgstr "Frequenza"
 
 #: crates/cr-gtk/src/userdb/levels.rs:281
-#: crates/cr-gtk/src/userdb/templates.rs:1084
-#: crates/cr-gtk/src/userdb.rs:1004
+#: crates/cr-gtk/src/userdb/templates.rs:1092
+#: crates/cr-gtk/src/userdb.rs:1069
 msgid "Choose"
 msgstr "Scegli"
 
@@ -4486,7 +4489,7 @@ msgid "Standard records cannot be edited; copy them instead"
 msgstr "I record standard non possono essere modificati; copiali invece"
 
 #: crates/cr-gtk/src/userdb/templates.rs:480
-#: crates/cr-gtk/src/userdb.rs:2424
+#: crates/cr-gtk/src/userdb.rs:2499
 msgid "Show Standard or Custom Records"
 msgstr "Mostra record standard o personalizzati"
 
@@ -4532,7 +4535,7 @@ msgid "Items associated with this Encounter Template"
 msgstr "Oggetti associati a questo modello di incontro"
 
 #: crates/cr-gtk/src/userdb/templates.rs:870
-#: crates/cr-gtk/src/userdb/templates.rs:1038
+#: crates/cr-gtk/src/userdb/templates.rs:1046
 #: crates/cr-store/src/userdb/monsters.rs:439
 #: crates/cr-store/src/userdb/monsters.rs:452
 msgid "Treasure Types"
@@ -4543,180 +4546,180 @@ msgid "2 - 20 Encounter Table"
 msgstr "Tabella degli incontri 2 - 20"
 
 #: crates/cr-gtk/src/userdb/templates.rs:956
-#: crates/cr-gtk/src/userdb.rs:734
+#: crates/cr-gtk/src/userdb.rs:777
 msgid "Pages"
 msgstr "Pagine"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1039
+#: crates/cr-gtk/src/userdb/templates.rs:1047
 msgid "How many of each treasure type the lair holds"
 msgstr "Quanti di ciascun tipo di tesoro custodisce la tana"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1056
+#: crates/cr-gtk/src/userdb/templates.rs:1064
 #: crates/cr-store/src/catalog.rs:708
 msgid "Encountered"
 msgstr "Incontrato"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1075
+#: crates/cr-gtk/src/userdb/templates.rs:1083
 msgid "Number Of Hit Dice"
 msgstr "Numero di dadi vita"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1091
-#: crates/cr-gtk/src/userdb.rs:1009
+#: crates/cr-gtk/src/userdb/templates.rs:1099
+#: crates/cr-gtk/src/userdb.rs:1074
 msgid "Choose {field}"
 msgstr "Scegli {field}"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1100
+#: crates/cr-gtk/src/userdb/templates.rs:1108
 msgid "Chosen one by one in the ~Custom category"
 msgstr "Scelti uno per uno nella categoria ~Custom"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1136
+#: crates/cr-gtk/src/userdb/templates.rs:1144
 msgid "Select the category under which this Encounter Template will appear"
 msgstr "Scegli la categoria in cui apparirà questo modello di incontro"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1213
+#: crates/cr-gtk/src/userdb/templates.rs:1221
 msgid "Delete Monster"
 msgstr "Elimina mostro"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1247
+#: crates/cr-gtk/src/userdb/templates.rs:1255
 msgid "Delete NPC"
 msgstr "Elimina PNG"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1286
+#: crates/cr-gtk/src/userdb/templates.rs:1294
 msgid "Delete Item"
 msgstr "Elimina oggetto"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1341
+#: crates/cr-gtk/src/userdb/templates.rs:1349
 msgid "Monsters for this Encounter Template"
 msgstr "Mostri per questo modello di incontro"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1469
-#: crates/cr-gtk/src/userdb/templates.rs:1622
+#: crates/cr-gtk/src/userdb/templates.rs:1477
+#: crates/cr-gtk/src/userdb/templates.rs:1630
 msgid "Randomly selected from the following list"
 msgstr "Scelto a caso dal seguente elenco"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1470
+#: crates/cr-gtk/src/userdb/templates.rs:1478
 msgid "Each appearance picks one of these monsters"
 msgstr "Ogni apparizione sceglie uno di questi mostri"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1509
-#: crates/cr-gtk/src/userdb/templates.rs:1536
-#: crates/cr-gtk/src/userdb/templates.rs:1915
-#: crates/cr-gtk/src/userdb/templates.rs:1996
-#: crates/cr-gtk/src/userdb/templates.rs:2099
+#: crates/cr-gtk/src/userdb/templates.rs:1517
+#: crates/cr-gtk/src/userdb/templates.rs:1544
+#: crates/cr-gtk/src/userdb/templates.rs:1923
+#: crates/cr-gtk/src/userdb/templates.rs:2004
+#: crates/cr-gtk/src/userdb/templates.rs:2107
 msgid "More Monsters for the Encounter Template"
 msgstr "Altri mostri per il modello di incontro"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1525
-#: crates/cr-gtk/src/userdb/templates.rs:1973
+#: crates/cr-gtk/src/userdb/templates.rs:1533
+#: crates/cr-gtk/src/userdb/templates.rs:1981
 #: crates/cr-store/src/userdb/monsters.rs:229
 #: crates/cr-store/src/userdb/monsters.rs:329
 msgid "Monster"
 msgstr "Mostro"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1528
-#: crates/cr-gtk/src/userdb/templates.rs:1974
+#: crates/cr-gtk/src/userdb/templates.rs:1536
+#: crates/cr-gtk/src/userdb/templates.rs:1982
 msgid "_Monster…"
 msgstr "_Mostro…"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1558
+#: crates/cr-gtk/src/userdb/templates.rs:1566
 msgid "Monster Properties for Encounter Templates"
 msgstr "Proprietà del mostro nel modello di incontro"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1623
+#: crates/cr-gtk/src/userdb/templates.rs:1631
 msgid "Each appearance picks one of these NPCs"
 msgstr "Ogni apparizione sceglie uno di questi PNG"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1679
+#: crates/cr-gtk/src/userdb/templates.rs:1687
 msgid "NPC"
 msgstr "PNG"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1682
+#: crates/cr-gtk/src/userdb/templates.rs:1690
 msgid "_NPC…"
 msgstr "_PNG…"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1706
+#: crates/cr-gtk/src/userdb/templates.rs:1714
 msgid "Nonplayer Character Properties for Encounter Templates"
 msgstr "Proprietà del PNG nel modello di incontro"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1746
+#: crates/cr-gtk/src/userdb/templates.rs:1754
 msgid "Number of Items"
 msgstr "Numero di oggetti"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1790
+#: crates/cr-gtk/src/userdb/templates.rs:1798
 msgid "Containing"
 msgstr "Contenenti"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1795
-#: crates/cr-gtk/src/userdb/templates.rs:1800
+#: crates/cr-gtk/src/userdb/templates.rs:1803
+#: crates/cr-gtk/src/userdb/templates.rs:1808
 msgid "Coins"
 msgstr "Monete"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1801
+#: crates/cr-gtk/src/userdb/templates.rs:1809
 msgid "Coins each item holds"
 msgstr "Monete contenute in ciascun oggetto"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1811
+#: crates/cr-gtk/src/userdb/templates.rs:1819
 msgid "For each Item..."
 msgstr "Per ogni oggetto..."
 
-#: crates/cr-gtk/src/userdb/templates.rs:1813
+#: crates/cr-gtk/src/userdb/templates.rs:1821
 msgid "These Monsters will appear if the previous Item(s) appear..."
 msgstr "Questi mostri appaiono se appaiono gli oggetti precedenti..."
 
-#: crates/cr-gtk/src/userdb/templates.rs:1852
-#: crates/cr-gtk/src/userdb/templates.rs:1902
+#: crates/cr-gtk/src/userdb/templates.rs:1860
+#: crates/cr-gtk/src/userdb/templates.rs:1910
 msgid "Delete"
 msgstr "Elimina"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1880
+#: crates/cr-gtk/src/userdb/templates.rs:1888
 msgid "Double the number of these Monsters..."
 msgstr "Raddoppia il numero di questi mostri..."
 
-#: crates/cr-gtk/src/userdb/templates.rs:1931
+#: crates/cr-gtk/src/userdb/templates.rs:1939
 msgid "Adding Items to an Encounter Template"
 msgstr "Aggiungere oggetti a un modello di incontro"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1963
-#: crates/cr-gtk/src/userdb/templates.rs:2042
-#: crates/cr-gtk/src/userdb/templates.rs:2149
+#: crates/cr-gtk/src/userdb/templates.rs:1971
+#: crates/cr-gtk/src/userdb/templates.rs:2050
+#: crates/cr-gtk/src/userdb/templates.rs:2157
 #: crates/cr-store/src/userdb/monsters.rs:418
 #: crates/cr-store/src/userdb/monsters.rs:426
 msgid "Number Appearing"
 msgstr "Numero di individui"
 
-#: crates/cr-gtk/src/userdb/templates.rs:1982
+#: crates/cr-gtk/src/userdb/templates.rs:1990
 msgid "Select a Monster and the number appearing"
 msgstr "Scegli un mostro e il numero che appare"
 
-#: crates/cr-gtk/src/userdb/templates.rs:2046
+#: crates/cr-gtk/src/userdb/templates.rs:2054
 msgid "Percent Chance"
 msgstr "Probabilità percentuale"
 
-#: crates/cr-gtk/src/userdb/templates.rs:2047
+#: crates/cr-gtk/src/userdb/templates.rs:2055
 msgid "There is a percent chance that these appear"
 msgstr "C'è una probabilità percentuale che appaiano"
 
-#: crates/cr-gtk/src/userdb/templates.rs:2078
+#: crates/cr-gtk/src/userdb/templates.rs:2086
 msgid "Dependent on the following"
 msgstr "Dipendente da quanto segue"
 
-#: crates/cr-gtk/src/userdb/templates.rs:2081
+#: crates/cr-gtk/src/userdb/templates.rs:2089
 msgid "For every"
 msgstr "Ogni"
 
-#: crates/cr-gtk/src/userdb/templates.rs:2082
+#: crates/cr-gtk/src/userdb/templates.rs:2090
 msgid "Enter 0 for a one time addition"
 msgstr "Usa 0 per un'aggiunta unica"
 
-#: crates/cr-gtk/src/userdb/templates.rs:2083
+#: crates/cr-gtk/src/userdb/templates.rs:2091
 msgid "Beyond"
 msgstr "Oltre"
 
-#: crates/cr-gtk/src/userdb/templates.rs:2085
+#: crates/cr-gtk/src/userdb/templates.rs:2093
 msgid "Monster or Monster Type"
 msgstr "Mostro o tipo di mostro"
 
-#: crates/cr-gtk/src/userdb/templates.rs:2144
+#: crates/cr-gtk/src/userdb/templates.rs:2152
 msgid "These then"
 msgstr "Questi poi"
 
@@ -4842,7 +4845,7 @@ msgid "New Part"
 msgstr "Nuovo elemento"
 
 #: crates/cr-gtk/src/userdb.rs:140
-#: crates/cr-gtk/src/userdb.rs:1444
+#: crates/cr-gtk/src/userdb.rs:1509
 msgid "New Treasure Table"
 msgstr "Nuova tabella del tesoro"
 
@@ -4938,225 +4941,225 @@ msgstr "Nuova sottorazza di {race}"
 msgid "Standard records cannot be deleted"
 msgstr "I record standard non possono essere eliminati"
 
-#: crates/cr-gtk/src/userdb.rs:502
+#: crates/cr-gtk/src/userdb.rs:505
 msgid "Delete {name}?"
 msgstr "Eliminare {name}?"
 
-#: crates/cr-gtk/src/userdb.rs:813
-#: crates/cr-gtk/src/userdb.rs:1634
+#: crates/cr-gtk/src/userdb.rs:878
+#: crates/cr-gtk/src/userdb.rs:1699
 msgid "“{name}” saved"
 msgstr "“{name}” salvato"
 
-#: crates/cr-gtk/src/userdb.rs:817
+#: crates/cr-gtk/src/userdb.rs:882
 msgid "Class Added"
 msgstr "Classe aggiunta"
 
-#: crates/cr-gtk/src/userdb.rs:826
-#: crates/cr-gtk/src/userdb.rs:1636
+#: crates/cr-gtk/src/userdb.rs:891
+#: crates/cr-gtk/src/userdb.rs:1701
 msgid "Not Saved"
 msgstr "Non salvato"
 
-#: crates/cr-gtk/src/userdb.rs:1376
+#: crates/cr-gtk/src/userdb.rs:1441
 msgid "Standard tables can be restored, not deleted"
 msgstr "Le tabelle standard possono essere ripristinate, non eliminate"
 
-#: crates/cr-gtk/src/userdb.rs:1379
+#: crates/cr-gtk/src/userdb.rs:1444
 msgid "Are you sure?"
 msgstr "Confermi?"
 
-#: crates/cr-gtk/src/userdb.rs:1407
+#: crates/cr-gtk/src/userdb.rs:1472
 msgid "Restore Table?"
 msgstr "Ripristinare la tabella?"
 
-#: crates/cr-gtk/src/userdb.rs:1412
-#: crates/cr-gtk/src/userdb.rs:2408
+#: crates/cr-gtk/src/userdb.rs:1477
+#: crates/cr-gtk/src/userdb.rs:2483
 msgid "_Restore"
 msgstr "_Ripristina"
 
-#: crates/cr-gtk/src/userdb.rs:1424
+#: crates/cr-gtk/src/userdb.rs:1489
 msgid "“{name}” restored"
 msgstr "“{name}” ripristinato"
 
-#: crates/cr-gtk/src/userdb.rs:1455
+#: crates/cr-gtk/src/userdb.rs:1520
 msgid "Add Entry"
 msgstr "Aggiungi voce"
 
-#: crates/cr-gtk/src/userdb.rs:1460
+#: crates/cr-gtk/src/userdb.rs:1525
 msgid "Each entry is rolled in proportion to its weight"
 msgstr "Ogni voce viene estratta in proporzione al suo peso"
 
-#: crates/cr-gtk/src/userdb.rs:1481
+#: crates/cr-gtk/src/userdb.rs:1546
 msgid "No entries"
 msgstr "Nessuna voce"
 
-#: crates/cr-gtk/src/userdb.rs:1488
+#: crates/cr-gtk/src/userdb.rs:1553
 #: crates/cr-store/src/catalog.rs:1208
 msgid "Table: {name}"
 msgstr "Tabella: {name}"
 
-#: crates/cr-gtk/src/userdb.rs:1494
+#: crates/cr-gtk/src/userdb.rs:1559
 msgid "Roll {range}"
 msgstr "Tiro {range}"
 
-#: crates/cr-gtk/src/userdb.rs:1546
+#: crates/cr-gtk/src/userdb.rs:1611
 msgid "Remove Entry"
 msgstr "Rimuovi voce"
 
-#: crates/cr-gtk/src/userdb.rs:1647
+#: crates/cr-gtk/src/userdb.rs:1712
 msgid "{dice} found"
 msgstr "{dice} trovati"
 
-#: crates/cr-gtk/src/userdb.rs:1649
+#: crates/cr-gtk/src/userdb.rs:1714
 msgid "{percent}% intelligent"
 msgstr "{percent}% intelligente"
 
-#: crates/cr-gtk/src/userdb.rs:1659
+#: crates/cr-gtk/src/userdb.rs:1724
 msgid "{dice} on {table}"
 msgstr "{dice} su {table}"
 
-#: crates/cr-gtk/src/userdb.rs:1669
+#: crates/cr-gtk/src/userdb.rs:1734
 msgid "contains {items}"
 msgstr "contiene {items}"
 
-#: crates/cr-gtk/src/userdb.rs:1672
+#: crates/cr-gtk/src/userdb.rs:1737
 msgid "{n} spell"
 msgid_plural "{n} spells"
 msgstr[0] "{n} incantesimo"
 msgstr[1] "{n} incantesimi"
 
-#: crates/cr-gtk/src/userdb.rs:1756
+#: crates/cr-gtk/src/userdb.rs:1821
 msgid "Probability"
 msgstr "Probabilità"
 
-#: crates/cr-gtk/src/userdb.rs:1771
-#: crates/cr-gtk/src/userdb.rs:1835
+#: crates/cr-gtk/src/userdb.rs:1836
+#: crates/cr-gtk/src/userdb.rs:1905
 msgid "Number Found"
 msgstr "Quantità trovata"
 
-#: crates/cr-gtk/src/userdb.rs:1779
+#: crates/cr-gtk/src/userdb.rs:1844
 msgid "Chance Intelligent"
 msgstr "Probabilità di essere intelligente"
 
-#: crates/cr-gtk/src/userdb.rs:1780
+#: crates/cr-gtk/src/userdb.rs:1845
 msgid "Percent chance of an intelligent weapon"
 msgstr "Probabilità percentuale di un’arma intelligente"
 
-#: crates/cr-gtk/src/userdb.rs:1799
+#: crates/cr-gtk/src/userdb.rs:1864
 msgid "Random Contents"
 msgstr "Contenuto casuale"
 
-#: crates/cr-gtk/src/userdb.rs:1800
+#: crates/cr-gtk/src/userdb.rs:1865
 msgid "The item holds what these tables roll"
 msgstr "L’oggetto contiene ciò che tirano queste tabelle"
 
-#: crates/cr-gtk/src/userdb.rs:1824
+#: crates/cr-gtk/src/userdb.rs:1889
 msgid "First Table"
 msgstr "Prima tabella"
 
-#: crates/cr-gtk/src/userdb.rs:1826
+#: crates/cr-gtk/src/userdb.rs:1891
 msgid "Second Table"
 msgstr "Seconda tabella"
 
-#: crates/cr-gtk/src/userdb.rs:1880
+#: crates/cr-gtk/src/userdb.rs:1950
 msgid "Always Contains"
 msgstr "Contiene sempre"
 
-#: crates/cr-gtk/src/userdb.rs:1899
+#: crates/cr-gtk/src/userdb.rs:1969
 msgid "Nothing"
 msgstr "Niente"
 
-#: crates/cr-gtk/src/userdb.rs:1931
+#: crates/cr-gtk/src/userdb.rs:2001
 msgid "How many to remove?"
 msgstr "Quanti rimuovere?"
 
-#: crates/cr-gtk/src/userdb.rs:1963
-#: crates/cr-gtk/src/userdb.rs:2115
+#: crates/cr-gtk/src/userdb.rs:2037
+#: crates/cr-gtk/src/userdb.rs:2190
 msgid "Nothing in this category"
 msgstr "Niente in questa categoria"
 
-#: crates/cr-gtk/src/userdb.rs:1976
+#: crates/cr-gtk/src/userdb.rs:2051
 msgid "Scroll Spells"
 msgstr "Incantesimi della pergamena"
 
-#: crates/cr-gtk/src/userdb.rs:1977
+#: crates/cr-gtk/src/userdb.rs:2052
 msgid "Scrolls of protection should not have any of these set. This is only for spell scrolls."
 msgstr "Le pergamene di protezione non devono avere nulla di questo. È solo per le pergamene di incantesimi."
 
-#: crates/cr-gtk/src/userdb.rs:1982
+#: crates/cr-gtk/src/userdb.rs:2057
 msgid "Spell Category"
 msgstr "Categoria degli incantesimi"
 
-#: crates/cr-gtk/src/userdb.rs:1999
+#: crates/cr-gtk/src/userdb.rs:2074
 msgid "Lowest Level"
 msgstr "Livello minimo"
 
-#: crates/cr-gtk/src/userdb.rs:2000
+#: crates/cr-gtk/src/userdb.rs:2075
 msgid "Highest Level"
 msgstr "Livello massimo"
 
-#: crates/cr-gtk/src/userdb.rs:2002
+#: crates/cr-gtk/src/userdb.rs:2077
 msgid "Number of Spells"
 msgstr "Numero di incantesimi"
 
-#: crates/cr-gtk/src/userdb.rs:2003
+#: crates/cr-gtk/src/userdb.rs:2078
 msgid "0 for none"
 msgstr "0 per nessuno"
 
-#: crates/cr-gtk/src/userdb.rs:2072
+#: crates/cr-gtk/src/userdb.rs:2147
 msgid "Entry Details"
 msgstr "Dettagli della voce"
 
-#: crates/cr-gtk/src/userdb.rs:2187
+#: crates/cr-gtk/src/userdb.rs:2262
 msgid "Level Limit (0: none)"
 msgstr "Limite di livello (0: nessuno)"
 
-#: crates/cr-gtk/src/userdb.rs:2219
+#: crates/cr-gtk/src/userdb.rs:2294
 msgid "Add _Class…"
 msgstr "Aggiungi _classe…"
 
-#: crates/cr-gtk/src/userdb.rs:2223
+#: crates/cr-gtk/src/userdb.rs:2298
 msgid "Add _Multi-Class…"
 msgstr "Aggiungi _multiclasse…"
 
-#: crates/cr-gtk/src/userdb.rs:2230
+#: crates/cr-gtk/src/userdb.rs:2305
 msgid "Classes Allowed"
 msgstr "Classi consentite"
 
-#: crates/cr-gtk/src/userdb.rs:2231
+#: crates/cr-gtk/src/userdb.rs:2306
 msgid "Standard entries are kept as shipped"
 msgstr "Le voci standard restano come fornite"
 
-#: crates/cr-gtk/src/userdb.rs:2262
+#: crates/cr-gtk/src/userdb.rs:2337
 msgid "Available Classes"
 msgstr "Classi disponibili"
 
-#: crates/cr-gtk/src/userdb.rs:2285
-#: crates/cr-gtk/src/userdb.rs:2295
+#: crates/cr-gtk/src/userdb.rs:2360
+#: crates/cr-gtk/src/userdb.rs:2370
 #: crates/cr-store/src/userdb/races.rs:330
 msgid "Multi-Classes"
 msgstr "Multiclassi"
 
-#: crates/cr-gtk/src/userdb.rs:2325
+#: crates/cr-gtk/src/userdb.rs:2400
 msgid "Allowed Classes for {race}"
 msgstr "Classi consentite per {race}"
 
-#: crates/cr-gtk/src/userdb.rs:2350
+#: crates/cr-gtk/src/userdb.rs:2425
 msgid "Allowed classes saved"
 msgstr "Classi consentite salvate"
 
-#: crates/cr-gtk/src/userdb.rs:2372
+#: crates/cr-gtk/src/userdb.rs:2447
 msgid "Copy"
 msgstr "Copia"
 
-#: crates/cr-gtk/src/userdb.rs:2378
+#: crates/cr-gtk/src/userdb.rs:2453
 msgid "More Actions"
 msgstr "Altre azioni"
 
-#: crates/cr-gtk/src/userdb.rs:2401
+#: crates/cr-gtk/src/userdb.rs:2476
 msgid "New _Subrace…"
 msgstr "Nuova _sottorazza…"
 
-#: crates/cr-gtk/src/userdb.rs:2402
+#: crates/cr-gtk/src/userdb.rs:2477
 msgid "_Allowed Classes…"
 msgstr "Classi _consentite…"
 
@@ -10305,15 +10308,15 @@ msgstr "Numero di personaggi intrappolati"
 msgid "{noun} not added: Error. {reason}"
 msgstr "Impossibile aggiungere {noun}: errore. {reason}"
 
-#: crates/cr-store/src/userdb.rs:735
+#: crates/cr-store/src/userdb.rs:749
 msgid "The name can have at most {max} characters."
 msgstr "Il nome può avere al massimo {max} caratteri."
 
-#: crates/cr-store/src/userdb.rs:736
+#: crates/cr-store/src/userdb.rs:750
 msgid "The slash character is not allowed as a part of the class name.  Please choose a different character."
 msgstr "La barra non è consentita nel nome della classe. Scegli un carattere diverso."
 
-#: crates/cr-store/src/userdb.rs:741
+#: crates/cr-store/src/userdb.rs:755
 msgid ""
 "Monster Type names beginning with '~' are reserved.\n"
 " Please enter a different name"
