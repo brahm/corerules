@@ -254,10 +254,17 @@ pub fn edit<H: Host + 'static>(host: &Shared<H>, key: &str) {
     }
 }
 
-/// New, Copy, Edit or Delete on a trap from the Encounter dialog's Traps
-/// (IDD 295 has these buttons too); `action` is "new", "copy", "edit" or
-/// "delete".
-pub fn trap_action<H: Host + 'static>(host: &Shared<H>, action: &str, origin: Origin, name: &str) {
+/// New, Copy, Edit or Delete on a record of `section` from another
+/// dialog: the Encounter dialog's Traps (IDD 295 has these buttons too)
+/// and Create New Monsters… (0x64f291); `action` is "new", "copy", "edit"
+/// or "delete".
+pub fn record_action<H: Host + 'static>(
+    host: &Shared<H>,
+    section: &str,
+    action: &str,
+    origin: Origin,
+    name: &str,
+) {
     let action = match action {
         "new" => Action::New,
         "copy" => Action::Copy,
@@ -265,7 +272,7 @@ pub fn trap_action<H: Host + 'static>(host: &Shared<H>, action: &str, origin: Or
         "delete" => Action::Delete,
         _ => return,
     };
-    run(host, "traps", origin, name, action);
+    run(host, section, origin, name, action);
 }
 
 fn run<H: Host + 'static>(
