@@ -154,23 +154,28 @@ impl CreationRules {
                     .into_iter()
                     .collect(),
                 PickKind::PlusOne => d.unknown_0xac[5].clone(),
+                // Read from +0x1e28 below.
+                PickKind::Level { .. } => continue,
             };
             draft.set_picked(pick.kind, picked);
         }
-        draft.level_nonweapon = d
-            .unknown_0x1e28
-            .iter()
-            .flatten()
-            .filter_map(|o| match o {
-                Object::KitBonus(b) => Some(b),
-                _ => None,
-            })
-            .filter(|b| {
-                let level = draft.class_levels.get(b.unknown_0xc as usize).copied();
-                level.is_some_and(|l| b.unknown_0x8 >= 1 && b.unknown_0x8 as u32 <= l)
-            })
-            .map(|b| b.name.clone())
-            .collect();
+        // The first proficiency kept for each class and level (0x443af3).
+        for b in d.unknown_0x1e28.iter().flatten().filter_map(|o| match o {
+            Object::KitBonus(b) => Some(b),
+            _ => None,
+        }) {
+            let level = draft.class_levels.get(b.unknown_0xc as usize).copied();
+            if !level.is_some_and(|l| b.unknown_0x8 >= 1 && b.unknown_0x8 as u32 <= l) {
+                continue;
+            }
+            let kind = PickKind::Level {
+                class: b.unknown_0xc as usize,
+                level: b.unknown_0x8 as u32,
+            };
+            if draft.picked(kind).is_empty() {
+                draft.set_picked(kind, vec![b.name.clone()]);
+            }
+        }
         draft.barred_nonweapon_ignored = d.flags_0x1dea.is_some_and(|f| f[0] != 0);
         draft.kit_nonweapon_base = d.unknown_0x1df0.and_then(|(choice, _)| match choice {
             1 => Some(true),

@@ -1,20 +1,26 @@
 //! The New Character dialog: the original's creation wizard as a series of
 //! pages, starting from the campaign setting, which narrows the races and
-//! classes every later page offers.
+//! classes every later page offers. Enter Character is the same wizard in
+//! its other mode (0x379), for a character that exists on paper: the
+//! scores are typed in as they are, any race and classes may be chosen,
+//! and the details page gives the classes their levels.
 
 use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use adw::prelude::*;
 use cr_i18n::{tr, tr_noop, trn};
+use cr_store::advance::AdvanceRules;
 use cr_store::create::{
-    ABILITIES, CreationRules, DISADVANTAGE_POINTS, Dice, Draft, METHOD_VI_DICE, METHOD_VII_POINTS,
-    METHOD_VIII_DICE, METHOD_X_STRENGTH_STEP, MOST_DISADVANTAGES, MOST_FIGHTING_STYLES,
-    NonweaponPick, PickKind, Question, ROGUE_SKILLS, RollMethod, SHIELDS, STANDARD_PACK,
-    SUBABILITIES, SUBABILITY_SPREAD, UNARMED, max_spells_per_level, point_table, required_removal,
-    rogue_skill_of, roll_dice_pool, roll_seven_dice, seven_dice_scores,
+    ABILITIES, ALIGNMENTS, CreationRules, DISADVANTAGE_POINTS, Dice, Draft, ENTERED_DEFAULT_SCORE,
+    ENTERED_SCORES, Entered, METHOD_VI_DICE, METHOD_VII_POINTS, METHOD_VIII_DICE,
+    METHOD_X_STRENGTH_STEP, MOST_DISADVANTAGES, MOST_FIGHTING_STYLES, NonweaponPick, PickKind,
+    Question, ROGUE_SKILLS, RollMethod, SHIELDS, STANDARD_PACK, SUBABILITIES, SUBABILITY_SPREAD,
+    UNARMED, max_spells_per_level, point_table, required_removal, rogue_skill_of, roll_dice_pool,
+    roll_seven_dice, seven_dice_scores,
 };
 use cr_store::help::topic;
 use cr_store::kit_magic::KitMagicRules;
@@ -44,11 +50,19 @@ const SOCIAL_CLASSES: [&str; 4] = [
 
 type Create = dyn Fn(&Draft) -> Result<(), String>;
 
+/// The most points a rogue skill takes in Enter Character, which has no
+/// limits of its own (0x62b739): a skill's whole range.
+const ENTERED_ROGUE_POINTS: u32 = 100;
+
 /// What a check row sets on the draft: its index and whether it is on.
 type SetCheck = dyn Fn(&mut Draft, usize, bool);
 
 struct Inner {
     rules: CreationRules,
+    /// Levels, hit points and PSPs, for Enter Character's levels.
+    advance: Arc<AdvanceRules>,
+    /// Enter Character rather than New Character.
+    entering: bool,
     /// The item check of the Equipment page (0x43d7bc), when the
     /// installation's program could be read.
     items: Option<Rc<NpcRules>>,
@@ -66,28 +80,47 @@ struct Inner {
 #[derive(Clone)]
 struct Wizard(Rc<Inner>);
 
+/// Which of the original's two wizards to open, and what it needs besides
+/// the creation rules.
+pub struct Mode {
+    /// Enter Character (0x44aeab) rather than New Character.
+    pub entering: bool,
+    pub advance: Arc<AdvanceRules>,
+    /// The item check of the Equipment page, when the program was read.
+    pub items: Option<Rc<NpcRules>>,
+    /// The installation, for the portraits and the items' icons.
+    pub root: PathBuf,
+}
+
 /// Opens the dialog; `create` writes the finished character and returns
 /// why it could not, if it could not.
 pub fn new_character(
     parent: &impl IsA<gtk::Widget>,
     rules: CreationRules,
-    items: Option<Rc<NpcRules>>,
-    root: PathBuf,
+    mode: Mode,
     create: impl Fn(&Draft) -> Result<(), String> + 'static,
 ) {
     let nav = adw::NavigationView::new();
     let dialog = adw::Dialog::builder()
-        .title(tr("New Character"))
+        .title(title(mode.entering))
         .content_width(520)
         .content_height(640)
         .child(&nav)
         .build();
+    let mut draft = Draft::new(&SETTINGS[0]);
+    if mode.entering {
+        draft.entered = Some(Entered::default());
+        draft.scores = [ENTERED_DEFAULT_SCORE; 6];
+        draft.roll_method = RollMethod::Enter;
+    }
     let wizard = Wizard(Rc::new(Inner {
         rules,
-        items,
-        root,
+        advance: mode.advance,
+        entering: mode.entering,
+        items: mode.items,
+        root: mode.root,
         icons: Default::default(),
-        draft: RefCell::new(Draft::new(&SETTINGS[0])),
+        draft: RefCell::new(draft),
         dice: RefCell::new(Dice::default()),
         nav,
         dialog: dialog.clone(),
@@ -96,6 +129,14 @@ pub fn new_character(
     let first = wizard.setting_page();
     wizard.0.nav.add(&first);
     dialog.present(Some(parent));
+}
+
+fn title(entering: bool) -> &'static str {
+    if entering {
+        tr("Enter Character")
+    } else {
+        tr("New Character")
+    }
 }
 
 /// A page of the dialog: a header bar with `button` at the end and
@@ -580,11 +621,15 @@ impl Wizard {
                     d.setting = *chosen.borrow();
                     d.skills_and_powers = *skills_and_powers.borrow();
                 }
-                this.push(this.abilities_page());
+                if this.0.entering {
+                    this.push(this.entered_scores_page());
+                } else {
+                    this.push(this.abilities_page());
+                }
             }
         });
         step(
-            tr("New Character"),
+            title(self.0.entering),
             &[&rules_group, &group],
             &next,
             None,
@@ -924,9 +969,92 @@ impl Wizard {
         )
     }
 
+    /// Enter Character's scores (IDD 227 in mode 0x379): typed in from 1
+    /// to 25 and kept as typed, with exceptional Strength from 0 to 100 at
+    /// Strength 18 whatever the class, and no points to spend.
+    fn entered_scores_page(&self) -> adw::NavigationPage {
+        let d = self.0.draft.borrow().clone();
+        let (low, high) = ENTERED_SCORES;
+        let group = adw::PreferencesGroup::builder()
+            .title(tr("Set your ability scores"))
+            .description(tr(
+                "The scores are kept as entered, with no racial adjustments",
+            ))
+            .build();
+        let rows: Vec<adw::SpinRow> = ABILITIES
+            .iter()
+            .enumerate()
+            .map(|(a, name)| spin_row(tr(name), "", d.scores[a].clamp(low, high), low, high))
+            .collect();
+        let exceptional = spin_row(
+            tr("Exceptional Strength"),
+            tr("1 to 99 for 18/01 to 18/99, 100 for 18/00, 0 for none"),
+            d.exceptional_strength.min(100),
+            0,
+            100,
+        );
+        for (a, row) in rows.iter().enumerate() {
+            group.add(row);
+            if a == 0 {
+                group.add(&exceptional);
+            }
+        }
+        exceptional.set_visible(rows[0].value() as u32 == 18);
+        rows[0].connect_value_notify({
+            let exceptional = exceptional.clone();
+            move |row| exceptional.set_visible(row.value() as u32 == 18)
+        });
+        let next = next_button(tr("_Next"));
+        next.connect_clicked({
+            let this = self.clone();
+            move |_| {
+                {
+                    let mut d = this.0.draft.borrow_mut();
+                    d.scores = std::array::from_fn(|a| rows[a].value() as u32);
+                    d.exceptional_strength = if exceptional.is_visible() {
+                        exceptional.value() as u32
+                    } else {
+                        0
+                    };
+                }
+                this.push(this.race_page());
+            }
+        });
+        step(tr("Ability Scores"), &[&group], &next, None, || {
+            topic::of_roll_method(RollMethod::Enter)
+        })
+    }
+
+    /// The class page of the mode.
+    fn class_step(&self) -> adw::NavigationPage {
+        if self.0.entering {
+            self.entered_class_page()
+        } else {
+            self.class_page()
+        }
+    }
+
+    /// "Fighter/Mage" with "Multi-class · d10/d4" for a class choice.
+    fn class_choice(&self, classes: &[String]) -> (String, String) {
+        let dice: Vec<String> = classes
+            .iter()
+            .filter_map(|c| self.rules().class(c))
+            .map(|c| format!("d{}", c.hit_die))
+            .collect();
+        let dice = dice.join("/");
+        let subtitle = if classes.len() > 1 {
+            tr!("Multi-class · {dice}", dice)
+        } else {
+            tr!("Hit die · {dice}", dice)
+        };
+        (classes.join("/"), subtitle)
+    }
+
     /// The race, among those whose limits the scores meet; with Player's
-    /// Choice any race, the scores being rolled after the class.
+    /// Choice or Enter Character any race, the scores being rolled after
+    /// the class or kept as entered.
     fn race_page(&self) -> adw::NavigationPage {
+        let entering = self.0.entering;
         let (setting, scores, choice) = {
             let d = self.0.draft.borrow();
             (
@@ -947,6 +1075,11 @@ impl Wizard {
             .title(tr("Race"))
             .description(if choice {
                 tr("The scores are rolled after the class, to fit both").to_owned()
+            } else if entering {
+                tr!(
+                    "{scores} · kept as entered, with no racial adjustments",
+                    scores = scores_summary(&scores)
+                )
             } else {
                 tr!(
                     "{scores} · races whose ability limits these scores meet",
@@ -993,7 +1126,7 @@ impl Wizard {
                 for row in rows.borrow_mut().drain(..) {
                     races_group.remove(&row);
                 }
-                let races = if choice {
+                let races = if choice || entering {
                     this.rules().all_races(setting, standard_only)
                 } else {
                     this.rules().races(setting, &scores, standard_only)
@@ -1011,7 +1144,9 @@ impl Wizard {
                             .filter(|(_, v)| **v != 0)
                             .map(|(a, v)| format!("{} {v:+}", tr(SHORT[a])))
                             .collect();
-                        let subtitle = if adjustments.is_empty() {
+                        let subtitle = if entering {
+                            String::new()
+                        } else if adjustments.is_empty() {
                             tr("No ability adjustments").to_owned()
                         } else {
                             adjustments.join(" · ").replace('-', "−")
@@ -1066,7 +1201,7 @@ impl Wizard {
                 if skills_and_powers {
                     this.push(this.racial_page());
                 } else {
-                    this.push(this.class_page());
+                    this.push(this.class_step());
                 }
             }
         });
@@ -1107,23 +1242,7 @@ impl Wizard {
                 )
             })
             .build();
-        let choices: Vec<(String, String)> = options
-            .iter()
-            .map(|classes| {
-                let dice: Vec<String> = classes
-                    .iter()
-                    .filter_map(|c| self.rules().class(c))
-                    .map(|c| format!("d{}", c.hit_die))
-                    .collect();
-                let dice = dice.join("/");
-                let subtitle = if classes.len() > 1 {
-                    tr!("Multi-class · {dice}", dice)
-                } else {
-                    tr!("Hit die · {dice}", dice)
-                };
-                (classes.join("/"), subtitle)
-            })
-            .collect();
+        let choices: Vec<(String, String)> = options.iter().map(|c| self.class_choice(c)).collect();
         let selected = options.iter().position(|o| *o == previous).unwrap_or(0);
         let chosen = Rc::new(RefCell::new(selected));
         // Player's Choice: 3d6 in order, fitted to the race and class.
@@ -1196,7 +1315,9 @@ impl Wizard {
                 if choice {
                     this.0.draft.borrow_mut().scores = *rolled.borrow();
                 }
-                this.start_details(classes);
+                if !this.start_details(classes) {
+                    return;
+                }
                 if this.0.draft.borrow().skills_and_powers {
                     this.push(this.class_abilities_page());
                 } else {
@@ -1205,6 +1326,105 @@ impl Wizard {
             }
         });
         step(tr("Class"), &[&group, &scores_group], &next, None, || {
+            topic::RACE_AND_CLASS
+        })
+    }
+
+    /// Enter Character's classes (IDD 205 in mode 0x379): every
+    /// combination the race may take, the classes' minimums not checked,
+    /// and with "All Classes..." any other, one class of each group.
+    fn entered_class_page(&self) -> adw::NavigationPage {
+        let (setting, race, previous) = {
+            let d = self.0.draft.borrow();
+            (d.setting, d.race.clone(), d.classes.clone())
+        };
+        let mut options = self.rules().entered_class_options(setting, &race);
+        if !previous.is_empty() && !options.contains(&previous) {
+            options.push(previous.clone());
+        }
+        let selected = options.iter().position(|o| *o == previous).unwrap_or(0);
+        let options = Rc::new(RefCell::new(options));
+        let chosen = Rc::new(Cell::new(selected));
+        let all = gtk::Button::builder()
+            .label(tr("All Classes…"))
+            .tooltip_text(tr("Any combination, one class of each group"))
+            .valign(gtk::Align::Center)
+            .css_classes(["flat"])
+            .build();
+        let group = adw::PreferencesGroup::builder()
+            .title(tr("Class"))
+            .description(escape(&race))
+            .header_suffix(&all)
+            .build();
+        let next = next_button(tr("_Next"));
+        let rows: Rc<RefCell<Vec<adw::ActionRow>>> = Rc::default();
+        let fill = Rc::new({
+            let (this, group, rows, options, chosen, next) = (
+                self.clone(),
+                group.clone(),
+                rows.clone(),
+                options.clone(),
+                chosen.clone(),
+                next.clone(),
+            );
+            move |selected: usize| {
+                for row in rows.borrow_mut().drain(..) {
+                    group.remove(&row);
+                }
+                let choices: Vec<(String, String)> = options
+                    .borrow()
+                    .iter()
+                    .map(|c| this.class_choice(c))
+                    .collect();
+                chosen.set(selected);
+                *rows.borrow_mut() = radio_rows(&group, &choices, selected, {
+                    let chosen = chosen.clone();
+                    move |i| chosen.set(i)
+                });
+                next.set_sensitive(!choices.is_empty());
+            }
+        });
+        fill(selected);
+        all.connect_clicked({
+            let (this, options, fill) = (self.clone(), options.clone(), fill.clone());
+            move |button| {
+                let (options, fill) = (options.clone(), fill.clone());
+                crate::enter::all_classes(
+                    button,
+                    this.rules().classes_by_group(setting),
+                    move |classes| {
+                        let at = {
+                            let mut options = options.borrow_mut();
+                            match options.iter().position(|o| *o == classes) {
+                                Some(at) => at,
+                                None => {
+                                    options.push(classes);
+                                    options.len() - 1
+                                }
+                            }
+                        };
+                        fill(at);
+                    },
+                );
+            }
+        });
+        next.connect_clicked({
+            let this = self.clone();
+            move |_| {
+                let Some(classes) = options.borrow().get(chosen.get()).cloned() else {
+                    return;
+                };
+                if !this.start_details(classes) {
+                    return;
+                }
+                if this.0.draft.borrow().skills_and_powers {
+                    this.push(this.class_abilities_page());
+                } else {
+                    this.push(this.details_page());
+                }
+            }
+        });
+        step(tr("Class"), &[&group], &next, None, || {
             topic::RACE_AND_CLASS
         })
     }
@@ -1227,6 +1447,12 @@ impl Wizard {
             move || {
                 let mut probe = this.0.draft.borrow().clone();
                 probe.racial_abilities = chosen.borrow().clone();
+                // Enter Character charges no points (0x5b8181).
+                if this.0.entering {
+                    group
+                        .set_description(Some(tr("Free with Enter Character, as in the original")));
+                    return;
+                }
                 let left = this.rules().racial_points_left(&probe);
                 group.set_description(Some(&tr!(
                     "{left} of {total} left; up to {saved} kept for proficiencies",
@@ -1269,7 +1495,7 @@ impl Wizard {
             let this = self.clone();
             move |_| {
                 this.0.draft.borrow_mut().racial_abilities = chosen.borrow().clone();
-                this.push(this.class_page());
+                this.push(this.class_step());
             }
         });
         step(
@@ -1302,6 +1528,15 @@ impl Wizard {
             move || {
                 let mut probe = this.0.draft.borrow().clone();
                 probe.class_abilities = chosen.borrow().clone();
+                // Enter Character charges no points (0x5ba6f9).
+                if this.0.entering {
+                    for group in &groups {
+                        group.set_description(Some(tr(
+                            "Free with Enter Character, as in the original",
+                        )));
+                    }
+                    return;
+                }
                 let mut fine = true;
                 for (slot, group) in groups.iter().enumerate() {
                     let total = probe
@@ -1354,8 +1589,10 @@ impl Wizard {
     }
 
     /// Rolls what the details page starts with for the chosen classes, as
-    /// the original does when it reaches its name page.
-    fn start_details(&self, classes: Vec<String>) {
+    /// the original does when it reaches its name page; with Enter
+    /// Character new classes start at 1st level. Shows why not and
+    /// returns false when the character cannot be made.
+    fn start_details(&self, classes: Vec<String>) -> bool {
         let rules = self.rules();
         let mut dice = self.0.dice.borrow_mut();
         let mut d = self.0.draft.borrow_mut();
@@ -1363,8 +1600,13 @@ impl Wizard {
         d.classes = classes;
         let race = d.race.clone();
         let alignments = rules.alignments(&d.classes);
-        if !alignments.contains(&d.alignment) {
-            d.alignment = alignments.first().cloned().unwrap_or_default();
+        // Enter Character sets the alignment freely (0x5beb8f).
+        let free = self.0.entering && ALIGNMENTS.contains(&d.alignment.as_str());
+        if !free && !alignments.contains(&d.alignment) {
+            d.alignment = alignments
+                .first()
+                .cloned()
+                .unwrap_or_else(|| ALIGNMENTS[4].to_owned());
         }
         if !rules.kits_for(&d).contains(&d.kit) {
             d.kit = "None".into();
@@ -1375,7 +1617,8 @@ impl Wizard {
         d.weight = rules.roll_weight(&race, d.male, &mut dice);
         d.hit_dice = rules.roll_hit_dice(&d.classes, &mut dice);
         d.psionic_roll = rules.roll_psionic(&d.classes, &mut dice);
-        if d.roll_method != RollMethod::PointsAndStrength {
+        // Bought with Method X; typed in with Enter Character.
+        if d.roll_method != RollMethod::PointsAndStrength && !self.0.entering {
             d.exceptional_strength = dice.roll(1, 100);
         }
         d.gold = rules.roll_gold(&d, &mut dice);
@@ -1402,6 +1645,15 @@ impl Wizard {
             d.specializations.clear();
         }
         d.languages = rules.native_languages(&d);
+        if self.0.entering
+            && (changed || d.class_levels.len() != d.classes.len())
+            && let Err(e) = rules.start_entered(&mut d)
+        {
+            drop((d, dice));
+            message(&self.0.dialog, title(true), &e.to_string());
+            return false;
+        }
+        true
     }
 
     /// Name, player, gender, alignment, kit, social class, age, height,
@@ -1409,6 +1661,7 @@ impl Wizard {
     fn details_page(&self) -> adw::NavigationPage {
         let d = self.0.draft.borrow().clone();
         let rules = self.rules();
+        let entering = self.0.entering;
         let name = adw::EntryRow::builder()
             .title(tr("Name"))
             .text(&d.name)
@@ -1429,7 +1682,12 @@ impl Wizard {
             crate::picture::portrait_row(self.0.root.clone(), d.race.clone(), d.portrait.clone());
         who.add(&portrait_row);
 
-        let alignment = combo_row(tr("Alignment"), &rules.alignments(&d.classes), &d.alignment);
+        let alignments = if entering {
+            ALIGNMENTS.map(String::from).to_vec()
+        } else {
+            rules.alignments(&d.classes)
+        };
+        let alignment = combo_row(tr("Alignment"), &alignments, &d.alignment);
         let kit = combo_row(tr("Kit"), &rules.kits_for(&d), &d.kit);
         // The combo row shows the classes translated; the draft keeps them
         // in English, by position.
@@ -1467,6 +1725,8 @@ impl Wizard {
             .build();
         let hp_roll = roll_button(tr("Roll Hit Points"));
         hit_points.add_suffix(&hp_roll);
+        // Enter Character has the levels' hit points instead (0x5bc9dc).
+        hit_points.set_visible(!entering);
         let show_hit_dice = Rc::new({
             let (this, hit_points, hit_dice) = (self.clone(), hit_points.clone(), hit_dice.clone());
             let (classes, kit) = (d.classes.clone(), kit.clone());
@@ -1495,7 +1755,7 @@ impl Wizard {
             let show_hit_dice = show_hit_dice.clone();
             move |_| show_hit_dice()
         });
-        let strength = rules.adjusted(&d.race, &d.scores)[0];
+        let strength = rules.draft_scores(&d)[0];
         let exceptional = spin_row(
             tr("Exceptional Strength"),
             tr("18/01 to 18/00"),
@@ -1505,7 +1765,8 @@ impl Wizard {
         );
         let exceptional_roll = roll_button(tr("Roll Exceptional Strength"));
         exceptional.add_suffix(&exceptional_roll);
-        exceptional.set_visible(rules.has_exceptional_strength(&d.classes, strength));
+        // Enter Character types it in with the scores.
+        exceptional.set_visible(!entering && rules.has_exceptional_strength(&d.classes, strength));
         if d.roll_method == RollMethod::PointsAndStrength {
             // Bought with the ability points.
             exceptional.set_sensitive(false);
@@ -1515,6 +1776,7 @@ impl Wizard {
         let combat = adw::PreferencesGroup::new();
         combat.add(&hit_points);
         combat.add(&exceptional);
+        let levels = entering.then(|| self.levels_group(&kit));
 
         // Skills & Powers splits each score in two subabilities, up to
         // two points apart either way.
@@ -1649,7 +1911,8 @@ impl Wizard {
                 if now == shown_gender.get() {
                     return;
                 }
-                if !this.rules().kit_allows_gender(&combo_value(&kit), now) {
+                // Enter Character sets it freely.
+                if !entering && !this.rules().kit_allows_gender(&combo_value(&kit), now) {
                     message(
                         &this.0.dialog,
                         tr("Unable to change"),
@@ -1685,7 +1948,7 @@ impl Wizard {
                         refill_kits();
                     }
                 };
-                if this.rules().kit_allows_alignment(&combo_value(&kit), &chosen) {
+                if entering || this.rules().kit_allows_alignment(&combo_value(&kit), &chosen) {
                     accept();
                     return;
                 }
@@ -1795,7 +2058,7 @@ impl Wizard {
                     d.height = height.value() as u32;
                     d.weight = weight.value() as u32;
                     d.hit_dice = hit_dice.borrow().clone();
-                    if d.roll_method != RollMethod::PointsAndStrength {
+                    if d.roll_method != RollMethod::PointsAndStrength && !entering {
                         d.exceptional_strength = exceptional.value() as u32;
                     }
                     if d.skills_and_powers {
@@ -1805,13 +2068,53 @@ impl Wizard {
                 this.push(this.proficiencies_page());
             }
         });
-        step(
-            tr("Details"),
-            &[&who, &background, &appearance, &combat, &subabilities],
-            &next,
-            None,
-            || topic::CHARACTER_INFORMATION,
-        )
+        let mut groups = vec![&who, &background, &appearance];
+        groups.extend(levels.as_ref());
+        groups.extend([&combat, &subabilities]);
+        step(tr("Details"), &groups, &next, None, || {
+            topic::CHARACTER_INFORMATION
+        })
+    }
+
+    /// Enter Character's levels, hit points and PSPs on the details page,
+    /// on the character as it would be saved; the kit chosen may change
+    /// the experience its levels take.
+    fn levels_group(&self, kit: &adw::ComboRow) -> adw::PreferencesGroup {
+        let d = self.0.draft.borrow().clone();
+        let character = match self.rules().build(&d) {
+            Ok(character) => character,
+            Err(e) => {
+                let group = adw::PreferencesGroup::builder().title(tr("Levels")).build();
+                group.add(
+                    &adw::ActionRow::builder()
+                        .title(escape(&e.to_string()))
+                        .css_classes(["dim-label"])
+                        .build(),
+                );
+                return group;
+            }
+        };
+        let levels = Rc::new(crate::enter::Levels {
+            advance: self.0.advance.clone(),
+            character: Rc::new(RefCell::new(character)),
+            entered: RefCell::new(d.entered.clone().unwrap_or_default()),
+            changed: Box::new({
+                let this = self.clone();
+                move |entered, class_levels| {
+                    let mut d = this.0.draft.borrow_mut();
+                    d.entered = Some(entered.clone());
+                    d.level = class_levels.iter().copied().max().unwrap_or(1).max(1);
+                    d.class_levels = class_levels;
+                }
+            }),
+        });
+        let (group, refresh) = crate::enter::levels_group(levels.clone());
+        kit.connect_selected_notify(move |row| {
+            levels.character.borrow_mut().data.kit = combo_value(row);
+            levels.store();
+            refresh();
+        });
+        group
     }
 
     /// Nonweapon proficiencies, languages and weapon proficiencies; with
@@ -2476,6 +2779,15 @@ impl Wizard {
                     left = languages_left,
                     room
                 )));
+                // Enter Character's proficiencies take no slots or points
+                // (0x5c30df, 0x5cd21c).
+                if this.0.entering {
+                    let free = tr("Free with Enter Character, as in the original");
+                    nonweapon.group.set_description(Some(free));
+                    weapons.group.set_description(Some(free));
+                    next.set_sensitive(true);
+                    return;
+                }
                 if !sp {
                     let nonweapon_slots = rules.nonweapon_slots_for(&probe);
                     let spent = rules.nonweapon_spent(&probe);
@@ -2888,7 +3200,8 @@ impl Wizard {
             );
             return;
         }
-        if !rules.specialization_fits(&d, &name) {
+        // Enter Character's slots are free (0x5cd21c).
+        if !self.0.entering && !rules.specialization_fits(&d, &name) {
             message(
                 &self.0.dialog,
                 tr("Not Allowed"),
@@ -2931,6 +3244,15 @@ impl Wizard {
             PickKind::Free => (
                 tr("Free Proficiency"),
                 tr("Select a non-weapon proficiency that will be free.").into(),
+            ),
+            PickKind::Level { level, .. } => (
+                tr("Free Proficiency"),
+                tr!(
+                    "The class {class} lets you pick at level {level} one non-weapon proficiency \
+                     that will be free.",
+                    class = pick.source,
+                    level
+                ),
             ),
             PickKind::PlusOne => (
                 tr("+1 Proficiencies"),
@@ -3159,7 +3481,10 @@ impl Wizard {
                         },
                         || {},
                     );
-                } else if !probe.skills_and_powers && !rules.unarmed_fits(&probe) {
+                } else if !probe.skills_and_powers
+                    && !this.0.entering
+                    && !rules.unarmed_fits(&probe)
+                {
                     message(
                         &this.0.dialog,
                         tr("Not Allowed"),
@@ -3209,7 +3534,8 @@ impl Wizard {
                 points_label.set_label(&left.to_string().replace('-', "−"));
                 let problem = rules.combat_problem(&probe);
                 points_group.set_description(problem.as_deref());
-                next.set_sensitive(left >= 0 && problem.is_none());
+                // Enter Character charges no points (0x5d09e6).
+                next.set_sensitive((left >= 0 || this.0.entering) && problem.is_none());
             }
         });
 
@@ -3557,7 +3883,11 @@ impl Wizard {
                     "",
                     d.rogue_points[skill],
                     0,
-                    most,
+                    if self.0.entering {
+                        ENTERED_ROGUE_POINTS
+                    } else {
+                        most
+                    },
                 );
                 group.add(&row);
                 (skill, row)
@@ -3592,6 +3922,14 @@ impl Wizard {
                         score,
                         unarmored
                     ));
+                }
+                // Enter Character has no limits (0x62b739).
+                if this.0.entering {
+                    group.set_description(Some(tr(
+                        "Any points, as in the original's Enter Character; the race and \
+                         Dexterity adjust the scores",
+                    )));
+                    return;
                 }
                 let left = rules.rogue_points_left(&probe);
                 group.set_description(Some(&tr!(
@@ -3765,8 +4103,9 @@ impl Wizard {
     fn spells_page(&self) -> adw::NavigationPage {
         let d = self.0.draft.borrow().clone();
         let rules = self.rules();
-        let intelligence = rules.adjusted(&d.race, &d.scores)[3];
+        let intelligence = rules.draft_scores(&d)[3];
         let most = max_spells_per_level(intelligence);
+        let entering = self.0.entering;
         let spec = |name: String| RowSpec {
             value: name.clone(),
             title: name,
@@ -3848,7 +4187,11 @@ impl Wizard {
             let (spells, next, taken) = (spells.clone(), next.clone(), taken.clone());
             move || {
                 let names: Vec<String> = spells.values().into_iter().map(|(v, _)| v).collect();
-                let description = if most == usize::MAX {
+                let description = if entering {
+                    tr("Spells the character knows, of any level, as the original's Enter \
+                        Character takes them")
+                    .to_owned()
+                } else if most == usize::MAX {
                     tr("1st-level spells the character knows. Intelligence allows any number.")
                         .to_owned()
                 } else {
@@ -3859,7 +4202,7 @@ impl Wizard {
                     )
                 };
                 spells.group.set_description(Some(&description));
-                next.set_sensitive(names.len() <= most);
+                next.set_sensitive(entering || names.len() <= most);
                 *taken.borrow_mut() = names;
             }
         });
@@ -4049,10 +4392,12 @@ impl Wizard {
 
         let items_group = items.group.clone();
         // The kit's text and what it requires, as the page opens (494875,
-        // 5ea499).
+        // 5ea499); New Character only.
         {
+            let entering = self.0.entering;
             let mut notices: VecDeque<Question> = rules
                 .kit_equipment_text(&d.kit)
+                .filter(|_| !entering)
                 .map(|text| Question::notice(&d.kit, text.to_owned()))
                 .into_iter()
                 .collect();
@@ -4060,7 +4405,9 @@ impl Wizard {
             if let Some(notice) = rules.kit_price_notice(&d.kit) {
                 notices.push_back(Question::notice(&d.kit, notice.to_owned()));
             }
-            notices.extend(rules.kit_equipment_notices(&d));
+            if !entering {
+                notices.extend(rules.kit_equipment_notices(&d));
+            }
             let parent: gtk::Widget = items_group.clone().upcast();
             if !notices.is_empty() {
                 glib::idle_add_local_once(move || ask_each(&parent, notices, Rc::new(|| {})));

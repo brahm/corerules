@@ -25,12 +25,14 @@
 //! options, the fighting styles each class group may learn, the rogue
 //! skill tables) follows the books, as in the original.
 
+mod enter;
 mod group;
 mod kit;
 mod nonweapon;
 mod update;
 mod weapon;
 
+pub use enter::{ALIGNMENTS, ENTERED_DEFAULT_SCORE, ENTERED_SCORES, Entered};
 pub use group::GroupOffer;
 pub use nonweapon::{NonweaponPick, PickKind, required_removal};
 pub use update::KitPick;
@@ -679,15 +681,16 @@ pub struct Draft {
     /// Update Character: the scores and subabilities the character has,
     /// in place of those [`Draft::scores`] give.
     pub held_scores: Option<[[u32; 3]; 6]>,
-    /// The nonweapon proficiencies chosen for a class at its levels
-    /// (+0x1e28), which cost nothing.
-    pub level_nonweapon: Vec<String>,
     /// Whether the kit's question about the proficiency to learn by a
     /// level was answered No (the byte of +0x1df0).
     pub by_level_declined: bool,
     /// An existing character in Update Character, whose class abilities
     /// are those it holds and where the creation-only rules do not apply.
     pub updating: bool,
+    /// Enter Character (0x379): what the Levels dialog gives a character
+    /// entered at any level, whose scores, race and classes are taken as
+    /// chosen. None in New Character.
+    pub entered: Option<Entered>,
 }
 
 impl Draft {
@@ -753,10 +756,17 @@ impl Draft {
             level: 1,
             class_levels: Vec::new(),
             held_scores: None,
-            level_nonweapon: Vec::new(),
             by_level_declined: false,
             updating: false,
+            entered: None,
         }
+    }
+
+    /// A character that already exists, in Update or Enter Character,
+    /// where the rules the original keeps for New Character (mode 0x378)
+    /// do not apply.
+    pub fn existing(&self) -> bool {
+        self.updating || self.entered.is_some()
     }
 
     pub fn class_title(&self) -> String {
@@ -1886,7 +1896,7 @@ impl CreationRules {
         if let Some(held) = draft.held_scores {
             return held;
         }
-        let adjusted = self.adjusted(&draft.race, &draft.scores);
+        let adjusted = self.draft_scores(draft);
         std::array::from_fn(|a| {
             let score = adjusted[a] as i32;
             let spread = if draft.skills_and_powers {
@@ -2398,7 +2408,7 @@ impl CreationRules {
         let racial = self
             .race(&draft.race)
             .map_or(0, |r| r.thief_adjustments[skill]);
-        let dexterity = self.adjusted(&draft.race, &draft.scores)[1];
+        let dexterity = self.draft_scores(draft)[1];
         let dexterity = dexterity_skill_adjustments(dexterity)
             .get(skill)
             .copied()
@@ -2433,25 +2443,26 @@ impl CreationRules {
         else {
             return Vec::new();
         };
-        self.spells_of(&wizard.schools)
+        self.spells_of(&wizard.schools, false)
     }
 
     /// [`Self::spells`] of the schools the kit leaves the draft's wizard
     /// class ([`Self::kit_wizard_schools`]).
+    /// With Enter Character, spells of every level (0x62dd5e).
     pub fn draft_spells(&self, draft: &Draft) -> Vec<String> {
         self.kit_wizard_schools(draft)
-            .map(|schools| self.spells_of(&schools))
+            .map(|schools| self.spells_of(&schools, draft.entered.is_some()))
             .unwrap_or_default()
     }
 
-    /// The 1st-level wizard spells of `wizard` schools, every one with
-    /// none.
-    fn spells_of(&self, wizard: &[String]) -> Vec<String> {
+    /// The 1st-level wizard spells (of any level with `any_level`) of
+    /// `wizard` schools, every one with none.
+    fn spells_of(&self, wizard: &[String], any_level: bool) -> Vec<String> {
         let mut spells: Vec<String> = self
             .wizard_spells
             .iter()
             .filter(|(_, level, schools)| {
-                *level == 1
+                (*level == 1 || any_level)
                     && (wizard.is_empty()
                         || schools.is_empty()
                         || schools
@@ -2544,6 +2555,50 @@ impl CreationRules {
         if self.race(&draft.race).is_none() {
             return Some(tr("Choose a race").into());
         }
+        // Enter Character checks neither the race's limits nor the
+        // classes' minimums nor their alignments (0x5b3373, 0x5b5e56,
+        // 0x5beb8f).
+        if let Some(problem) = if draft.entered.is_some() {
+            self.entered_problem(draft)
+        } else {
+            self.choice_problem(draft)
+        } {
+            return Some(problem);
+        }
+        let adjusted = self.draft_scores(draft);
+        if draft.kit != "None"
+            && !self
+                .kits(&draft.race, &draft.subrace, &draft.classes)
+                .contains(&draft.kit)
+        {
+            return Some(tr!(
+                "The {kit} kit is not for this character",
+                kit = draft.kit
+            ));
+        }
+        // Enter Character saves with no completeness check (0x496b0b):
+        // the proficiencies, abilities, rogue skills and spells are free
+        // of their slots, points and limits.
+        if draft.entered.is_none()
+            && let Some(problem) = self.limits_problem(draft, &adjusted)
+        {
+            return Some(problem);
+        }
+        if let Some((name, _)) = draft.purchases.iter().find(|(n, _)| self.ware(n).is_none()) {
+            return Some(tr!("{name} is not for sale", name));
+        }
+        if self.spent(draft) > draft.gold * 100 {
+            return Some(tr!(
+                "The equipment costs more than the {gold} gold pieces there are",
+                gold = draft.gold
+            ));
+        }
+        None
+    }
+
+    /// New Character's race, class and alignment fit the scores and each
+    /// other.
+    fn choice_problem(&self, draft: &Draft) -> Option<String> {
         if !self
             .races(draft.setting, &draft.scores, false)
             .contains(&draft.race)
@@ -2577,16 +2632,12 @@ impl CreationRules {
                 alignment = tr(&draft.alignment)
             ));
         }
-        if draft.kit != "None"
-            && !self
-                .kits(&draft.race, &draft.subrace, &draft.classes)
-                .contains(&draft.kit)
-        {
-            return Some(tr!(
-                "The {kit} kit is not for this character",
-                kit = draft.kit
-            ));
-        }
+        None
+    }
+
+    /// New Character's slots, points and limits: the proficiencies,
+    /// languages, rogue skills and spells fit them.
+    fn limits_problem(&self, draft: &Draft, adjusted: &[u32; 6]) -> Option<String> {
         if let Some(problem) = if draft.skills_and_powers {
             self.points_problem(draft)
         } else {
@@ -2606,15 +2657,6 @@ impl CreationRules {
                 "Intelligence {score} allows {most} spells of a level",
                 score = adjusted[3],
                 most
-            ));
-        }
-        if let Some((name, _)) = draft.purchases.iter().find(|(n, _)| self.ware(n).is_none()) {
-            return Some(tr!("{name} is not for sale", name));
-        }
-        if self.spent(draft) > draft.gold * 100 {
-            return Some(tr!(
-                "The equipment costs more than the {gold} gold pieces there are",
-                gold = draft.gold
             ));
         }
         None
@@ -2692,7 +2734,8 @@ impl CreationRules {
                         .into(),
                 );
             }
-            if !draft.specializations.is_empty() {
+            // Update and Enter Character keep both once asked.
+            if !draft.specializations.is_empty() && !draft.existing() {
                 return Some(
                     tr("Unarmed combat and weapon specialization do not go together").into(),
                 );
@@ -2902,6 +2945,15 @@ impl CreationRules {
 
     /// The character file, filled in as the original's wizard fills it.
     pub fn build(&self, draft: &Draft) -> Result<Character> {
+        let mut character = self.build_new(draft)?;
+        if let Some(entered) = &draft.entered {
+            entered.apply(&mut character);
+        }
+        Ok(character)
+    }
+
+    /// The character as New Character makes it, at 1st level.
+    pub(crate) fn build_new(&self, draft: &Draft) -> Result<Character> {
         let format = |source| Error::Format {
             path: "new character".into(),
             source,
@@ -2912,7 +2964,7 @@ impl CreationRules {
             CORE20_VERSION
         };
         let mut character = Character::blank(version).map_err(format)?;
-        let adjusted = self.adjusted(&draft.race, &draft.scores);
+        let adjusted = self.draft_scores(draft);
         let race = self.race(&draft.race);
         {
             let d = &mut character.data;
@@ -2930,8 +2982,14 @@ impl CreationRules {
             d.unknown_0x163c = u32::from(draft.male);
             let scores = self.subability_scores(draft);
             d.strength = scores[0];
-            d.exceptional_strength = if !self.has_exceptional_strength(&draft.classes, adjusted[0])
-            {
+            d.exceptional_strength = if draft.entered.is_some() {
+                // Typed in at Strength 18, whatever the class (0x5b14c9).
+                if adjusted[0] == 18 {
+                    draft.exceptional_strength.min(100)
+                } else {
+                    0
+                }
+            } else if !self.has_exceptional_strength(&draft.classes, adjusted[0]) {
                 0
             } else if draft.roll_method == RollMethod::PointsAndStrength {
                 // Method X: only what was bought.
@@ -3070,6 +3128,28 @@ impl CreationRules {
                 .cloned()
                 .unwrap_or_default();
             d.unknown_0xac[5] = draft.picked(PickKind::PlusOne).to_vec();
+            // The proficiency picked for a class at each level (0x443bd5;
+            // 0x443d2b when none is).
+            if let Some(chosen) = d.unknown_0x1e28.as_mut() {
+                for pick in self.nonweapon_picks(draft) {
+                    let PickKind::Level { class, level } = pick.kind else {
+                        continue;
+                    };
+                    let at = |o: &Object| {
+                        matches!(o, Object::KitBonus(b)
+                            if b.unknown_0x8 == level as i32 && b.unknown_0xc == class as i32)
+                    };
+                    chosen.retain(|o| !at(o));
+                    if let Some(name) = draft.picked(pick.kind).first() {
+                        chosen.push(Object::KitBonus(cr_formats::classes::KitBonus {
+                            version: 1,
+                            name: name.clone(),
+                            unknown_0x8: level as i32,
+                            unknown_0xc: class as i32,
+                        }));
+                    }
+                }
+            }
             if let Some(flags) = d.flags_0x1dea.as_mut() {
                 flags[0] = u8::from(draft.barred_nonweapon_ignored);
             }
@@ -3154,7 +3234,7 @@ impl CreationRules {
             }
         }
         if self.expansion {
-            self.apply_kit(&mut character, &vec![1; draft.classes.len()]);
+            self.apply_kit(&mut character, &self.draft_levels(draft));
             self.write_kit_schools(draft, &mut character);
         }
         // A psionicist starts with the PSPs of the 1st level, from the
@@ -3175,7 +3255,12 @@ impl CreationRules {
 
     /// The character list entry the original writes for a new character.
     fn entry(&self, draft: &Draft, character: &Character, file: &str) -> CharacterEntry {
-        let level = vec!["1"; draft.classes.len().max(1)].join("/");
+        let level = self
+            .draft_levels(draft)
+            .iter()
+            .map(u32::to_string)
+            .collect::<Vec<_>>()
+            .join("/");
         let race = format!("Race: {}", draft.race);
         let class = format!("{CLASS_LINE}{}", character.data.class_title);
         let level = format!("{LEVEL_LINE}{level}");
@@ -3283,6 +3368,7 @@ mod tests {
             nonweapon_groups: [false; 5],
             ability_groups: [false; 6],
             level_nonweapon: Vec::new(),
+            level_nonweapon_choices: Vec::new(),
             core_specialization: group == 0,
             weapon_rule: "Any".into(),
             weapon_list: Vec::new(),
@@ -3542,6 +3628,100 @@ mod tests {
         d.gold = 50;
         d.purchases = vec![("Dagger".into(), 1)];
         d
+    }
+
+    #[test]
+    fn entered_characters_keep_what_was_typed_at_their_levels() {
+        let rules = rules(true);
+        let mut d = draft(&rules);
+        d.entered = Some(Entered::default());
+        d.scores = [18, 18, 25, 12, 12, 1];
+        d.exceptional_strength = 100;
+        d.classes = vec!["Paladin".into(), "Mage".into()];
+        d.alignment = "Neutral Evil".into();
+        // New Character refuses the scores, the classes and the alignment.
+        let mut created = d.clone();
+        created.entered = None;
+        assert!(rules.problem(&created).is_some());
+        assert_eq!(rules.draft_scores(&d), d.scores);
+        assert_eq!(rules.problem(&d), None);
+
+        rules.start_entered(&mut d).unwrap();
+        assert_eq!(d.class_levels, [1, 1]);
+        let entered = d.entered.as_mut().unwrap();
+        assert!(entered.rolls[0][0] > 0 && entered.rolls[1][0] > 0);
+        assert_eq!(entered.experience, [0; 5]);
+        entered.experience[..2].copy_from_slice(&[9000, 4000]);
+        entered.rolls[0][1] = 6;
+        d.class_levels = vec![5, 3];
+        let c = rules.build(&d).unwrap();
+        assert_eq!(c.data.unknown_0x1618[..2], [9000, 4000]);
+        assert_eq!(c.data.unknown_0xc60[0][1], 6);
+        assert_eq!(c.data.exceptional_strength, 100);
+        assert_eq!(c.data.abilities[1][0], 25);
+        let entry = rules.entry(&d, &c, "x.dat");
+        assert!(entry.details.iter().any(|l| l.ends_with("5/3")));
+
+        // Spells of any level, and no limits on the later pages.
+        assert!(rules.draft_spells(&d).iter().any(|s| s == "Fireball"));
+        let mut created = d.clone();
+        created.entered = None;
+        assert!(!rules.draft_spells(&created).iter().any(|s| s == "Fireball"));
+        d.spells = vec!["Magic Missile".into(); 20];
+        assert_eq!(rules.problem(&d), None);
+        assert!(rules.limits_problem(&d, &d.scores).is_some());
+
+        // One class of each group at most.
+        d.classes = vec!["Paladin".into(), "Fighter".into()];
+        assert!(rules.problem(&d).is_some());
+        let groups = rules.classes_by_group(&SETTINGS[0]);
+        assert_eq!(groups[0], ["Fighter", "Paladin"]);
+        assert_eq!(groups[3], ["Mage"]);
+        assert!(groups[2].is_empty());
+        // The race's own combinations, whatever the scores.
+        let options = rules.entered_class_options(&SETTINGS[0], "Dwarf");
+        assert_eq!(options.len(), 4);
+    }
+
+    #[test]
+    fn a_class_level_offers_one_free_proficiency() {
+        let mut rules = rules(true);
+        let fighter = rules
+            .classes
+            .iter_mut()
+            .find(|c| c.name == "Fighter")
+            .unwrap();
+        fighter.level_nonweapon_choices = vec![
+            ("Swimming".into(), 1),
+            ("Riding".into(), 1),
+            ("Cooking".into(), 2),
+        ];
+        let mut d = draft(&rules);
+        let kind = PickKind::Level { class: 0, level: 1 };
+        let picks = rules.nonweapon_picks(&d);
+        let pick = picks.iter().find(|p| p.kind == kind).unwrap();
+        assert_eq!((pick.count, pick.names.len()), (1, 2));
+        // Level 2's list waits for level 2.
+        assert!(
+            !picks
+                .iter()
+                .any(|p| matches!(p.kind, PickKind::Level { level: 2, .. }))
+        );
+        assert!(!rules.free_nonweapon(&d, "Swimming"));
+        d.set_picked(kind, vec!["Swimming".into()]);
+        assert!(rules.free_nonweapon(&d, "Swimming"));
+        let c = rules.build(&d).unwrap();
+        let kept: Vec<(&str, i32, i32)> = c
+            .data
+            .unknown_0x1e28
+            .iter()
+            .flatten()
+            .filter_map(|o| match o {
+                Object::KitBonus(b) => Some((b.name.as_str(), b.unknown_0x8, b.unknown_0xc)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(kept, [("Swimming", 1, 0)]);
     }
 
     #[test]

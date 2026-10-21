@@ -158,6 +158,11 @@ pub enum Value {
     Items(crate::treasure::Bundle),
     /// A monster's own attacks.
     Attacks(Vec<cr_formats::monster::MonsterAttack>),
+    /// A class's free spells by level, with the class's name (the
+    /// summary names it).
+    FreeSpells(String, Vec<classes::levels::FreeSpellLevel>),
+    /// A class's NWPs granted and modified by level.
+    LevelNwps(Vec<classes::levels::LevelNwps>),
 }
 
 impl Value {
@@ -195,6 +200,16 @@ impl Value {
                 .map(|a| a.name.as_str())
                 .collect::<Vec<_>>()
                 .join(", "),
+            Self::FreeSpells(class, levels) => levels
+                .iter()
+                .flat_map(|l| classes::levels::free_spell_lines(class, l))
+                .collect::<Vec<_>>()
+                .join("; "),
+            Self::LevelNwps(levels) => levels
+                .iter()
+                .map(|l| format!("{}: {}", l.level, classes::levels::level_nwps_summary(l)))
+                .collect::<Vec<_>>()
+                .join("; "),
         }
     }
 
@@ -247,6 +262,20 @@ impl Value {
     pub fn attacks(&self) -> Vec<cr_formats::monster::MonsterAttack> {
         match self {
             Self::Attacks(attacks) => attacks.clone(),
+            _ => Vec::new(),
+        }
+    }
+
+    pub fn free_spells(&self) -> Vec<classes::levels::FreeSpellLevel> {
+        match self {
+            Self::FreeSpells(_, levels) => levels.clone(),
+            _ => Vec::new(),
+        }
+    }
+
+    pub fn level_nwps(&self) -> Vec<classes::levels::LevelNwps> {
+        match self {
+            Self::LevelNwps(levels) => levels.clone(),
             _ => Vec::new(),
         }
     }
@@ -378,6 +407,19 @@ pub enum FieldKind {
     /// (IDD 271) edits them: added from the attack types, made new or
     /// changed with the Monster Attack dialog (IDD 269).
     Attacks,
+    /// A class's free spells by level ([`Value::FreeSpells`]), out of
+    /// every spell: Level Details' Free Spells (IDD 144).
+    FreeSpells,
+    /// A class's NWPs by level ([`Value::LevelNwps`]) out of the options:
+    /// Level Details' NWPs (IDD 172).
+    LevelNwps(Options),
+    /// The class ability each level grants ([`Value::Pairs`]: the ability
+    /// and its level) out of the options: Level Details' Class Abilities.
+    LevelAbilities(Options),
+    /// A button that copies a page from another class: Auto Fill (IDD
+    /// 224). The setter gets the class's name ([`Value::Text`]) and finds
+    /// it in [`Sources::class_records`].
+    AutoFill,
 }
 
 /// A value an editor can work out from the record and offer: the
@@ -924,6 +966,8 @@ pub struct Sources {
     /// Every spell (standard then user), for lists that keep copies of
     /// them (a kit's bonus spells).
     pub spells: Vec<cr_formats::spells::Spell>,
+    /// Every class, standard then user, for Auto Fill.
+    pub class_records: Vec<cr_formats::classes::Class>,
 }
 
 impl Sources {
@@ -959,8 +1003,12 @@ impl Sources {
                 | FieldKind::Pairs {
                     options: Options::Source(n),
                     ..
-                } => Some(n),
+                }
+                | FieldKind::LevelNwps(Options::Source(n))
+                | FieldKind::LevelAbilities(Options::Source(n)) => Some(n),
                 FieldKind::Attacks => Some("attacks"),
+                FieldKind::FreeSpells => Some("spells"),
+                FieldKind::AutoFill => Some("class-records"),
                 _ => None,
             })
             .collect();
@@ -1030,6 +1078,24 @@ impl Sources {
                     let mut names: Vec<String> =
                         sources.classes.iter().map(|c| c.name.clone()).collect();
                     names.extend(classes::multiclass_names(&sources.classes));
+                    names
+                }
+                "class-records" => {
+                    sources.class_records = install
+                        .list_objects("Class")?
+                        .into_iter()
+                        .filter_map(|o| match o {
+                            Object::Class(c) => Some(*c),
+                            _ => None,
+                        })
+                        .collect();
+                    let mut names: Vec<String> = sources
+                        .class_records
+                        .iter()
+                        .map(|c| c.name().to_owned())
+                        .collect();
+                    names.sort_by_cached_key(|n| crate::collate::sort_key(n));
+                    names.dedup();
                     names
                 }
                 "spells" => {

@@ -16,6 +16,7 @@ use cr_i18n::{tr, tr_noop};
 use super::{FieldDesc, Flavor, NameError, NewContext, UserKind};
 use crate::{Installation, Result};
 
+pub mod levels;
 mod pages;
 
 /// The class groups, by `unknown_0x14[0]` (and `id / 1000 - 1`).

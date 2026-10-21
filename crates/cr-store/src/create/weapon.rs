@@ -555,7 +555,7 @@ impl CreationRules {
             }
         };
         // Creation only: no missile weapons (+0x508).
-        if kit.flag(0x508) && weapon.missile && !draft.updating {
+        if kit.flag(0x508) && weapon.missile && !draft.existing() {
             warn(
                 WeaponCheck::Ranged,
                 tr!(
@@ -659,7 +659,7 @@ impl CreationRules {
                 ),
             );
         }
-        if kit.flag(0x76) && !draft.updating {
+        if kit.flag(0x76) && !draft.existing() {
             let mut allowed: Vec<String> = kit
                 .wp_options
                 .iter()
@@ -922,8 +922,8 @@ impl CreationRules {
                 )));
             }
         }
-        if !self.core_specializes(draft) && draft.updating {
-            // Update Character asks where New Character refuses.
+        if !self.core_specializes(draft) && draft.existing() {
+            // Update and Enter Character ask where New Character refuses.
             let abilities = self.ability_weapons(draft);
             if !abilities.specialize && !kit.is_some_and(|k| k.flag(0x518)) {
                 questions.push(Question::new(
@@ -955,7 +955,7 @@ impl CreationRules {
             }
         }
         if kit.is_some_and(|k| k.flag(0x538))
-            && !draft.updating
+            && !draft.existing()
             && self.weapon_part(name).is_some_and(|w| w.melee)
         {
             questions.push(Question::new(
@@ -1119,7 +1119,7 @@ impl CreationRules {
         specialized.then(|| {
             Question::new(
                 tr("Warning Message"),
-                if draft.updating {
+                if draft.existing() {
                     tr(
                         "You may not specialize in both a weapon and unarmed combat. Specialize \
                         in both anyway?",
@@ -1142,7 +1142,7 @@ impl CreationRules {
         (!draft.unarmed.is_empty()).then(|| {
             Question::new(
                 tr("Warning"),
-                if draft.updating {
+                if draft.existing() {
                     tr(
                         "You may not specialize in both a weapon and unarmed combat. Specialize \
                         in both anyway?",

@@ -206,6 +206,39 @@ fn hit_points_merge_in_first_order() {
     );
 }
 
+#[test]
+fn hit_points_given_by_hand() {
+    let (_t, rules) = rules("hp-hand", vec![], true);
+    let mut r = Rand::seeded(7);
+    let mut p = rules
+        .new_monster_package("Goblin, Leader", Some(1), &mut r)
+        .unwrap();
+    // HD 2+1 of d8: 3 to 17.
+    assert_eq!(p.hit_point_range(), (3, 17));
+    p.count = 4;
+    rules.roll_hit_points(&mut p, &mut r);
+    assert_eq!(p.unassigned(), 0);
+    let (first, n) = p.hit_points[0];
+    // Taking monsters off a value leaves them unassigned.
+    p.set_count_with(first, 0);
+    assert_eq!(p.count_with(first), 0);
+    assert_eq!(p.unassigned(), n);
+    // A value gets at most the unassigned ones, and goes at the end.
+    let new = if first == 17 { 3 } else { 17 };
+    let had = p.count_with(new);
+    p.set_count_with(new, 100);
+    assert_eq!(p.count_with(new), had + n);
+    assert_eq!(p.unassigned(), 0);
+    if had == 0 {
+        assert_eq!(p.hit_points.last(), Some(&(new, n)));
+    }
+    assert_eq!(p.most_with(first), 0);
+    // Re-roll gives every monster hit points again.
+    p.set_count_with(new, 0);
+    rules.roll_hit_points(&mut p, &mut r);
+    assert_eq!(p.hit_points.iter().map(|h| h.1).sum::<i32>(), 4);
+}
+
 /// A package as name, count and hit points.
 type Row<'a> = (&'a str, i32, Vec<(i32, i32)>);
 

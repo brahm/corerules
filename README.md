@@ -48,6 +48,17 @@ the original programs wrote.
   rogue skill points, spells and starting equipment. The original has no
   campaign settings, so each setting only narrows what the installed
   databases offer, following its campaign book
+- **Enter Character**, the same wizard for a character that already exists
+  on paper, as the original's Enter Character button: scores typed in from
+  1 to 25 and kept as typed, exceptional Strength at 18 whatever the class,
+  any race and its classes with no minimums, All Classes… for any other
+  combination (one class of each group), a free alignment and gender, and
+  on the details page each class's level or experience in the Levels
+  dialog (prime requisite bonus, level limits, character points per level),
+  rolling hit points and PSPs for each level gained, with hit point and PSP
+  arrows in place of the rolls. The later pages take what the sheet has:
+  racial and class abilities, proficiencies, rogue points and spells of any
+  level with no limits or totals checked, the kit's equipment not imposed
 - **Kits** in New Character, as the Expansion offers them: only those the
   character's scores, gender, alignment and classes allow, with the
   original's warnings and the kit's information text. The kit's fixed rogue
@@ -149,11 +160,14 @@ the original programs wrote.
   it saves the same bundles as both originals, byte for byte
 - **Encounter generator**: encounters from templates with the originals'
   dice, dependents, items and treasure, the Encounter dialog's editing and
-  totals, saved encounters and the 2-20 tables
+  totals (each monster's hit points set by hand or rolled again with
+  Re-roll, and New Monster from Add Monster), saved encounters and the
+  2-20 tables
 - **Table Rolls** on every table of the books, with the originals' dice
   and follow-up rolls
-- **Editors for every user database**: races, classes and allowed
-  combinations, parts (weapons, armor, kits and proficiencies, plus the
+- **Editors for every user database**: races, classes (with the free
+  spells, NWPs and class abilities each level grants, and Auto Fill from
+  another class) and allowed combinations, parts (weapons, armor, kits and proficiencies, plus the
   ten other types in Other Parts: racial and class abilities, languages,
   schools, spheres, traits, disadvantages, gems and art, currency and
   Count), spells, psionic powers, monsters (with their spells, their

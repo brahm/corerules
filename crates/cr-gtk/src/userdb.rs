@@ -32,6 +32,7 @@ use cr_i18n::tr;
 use crate::lists::pick;
 
 mod attacks;
+mod levels;
 mod templates;
 mod widgets;
 
@@ -254,10 +255,17 @@ pub fn edit<H: Host + 'static>(host: &Shared<H>, key: &str) {
     }
 }
 
-/// New, Copy, Edit or Delete on a trap from the Encounter dialog's Traps
-/// (IDD 295 has these buttons too); `action` is "new", "copy", "edit" or
-/// "delete".
-pub fn trap_action<H: Host + 'static>(host: &Shared<H>, action: &str, origin: Origin, name: &str) {
+/// New, Copy, Edit or Delete on a record of `section` from another
+/// dialog: the Encounter dialog's Traps (IDD 295 has these buttons too)
+/// and Create New Monsters… (0x64f291); `action` is "new", "copy", "edit"
+/// or "delete".
+pub fn record_action<H: Host + 'static>(
+    host: &Shared<H>,
+    section: &str,
+    action: &str,
+    origin: Origin,
+    name: &str,
+) {
     let action = match action {
         "new" => Action::New,
         "copy" => Action::Copy,
@@ -265,7 +273,7 @@ pub fn trap_action<H: Host + 'static>(host: &Shared<H>, action: &str, origin: Or
         "delete" => Action::Delete,
         _ => return,
     };
-    run(host, "traps", origin, name, action);
+    run(host, section, origin, name, action);
 }
 
 fn run<H: Host + 'static>(
@@ -624,6 +632,10 @@ fn editor<K: UserKind, H: Host + 'static>(
                     | FieldKind::Grid { .. }
                     | FieldKind::Items
                     | FieldKind::Attacks
+                    | FieldKind::FreeSpells
+                    | FieldKind::LevelNwps(_)
+                    | FieldKind::LevelAbilities(_)
+                    | FieldKind::AutoFill
             );
             let group_title = if own && field.group.is_empty() {
                 field.label
@@ -1101,6 +1113,38 @@ fn control<R: Clone + 'static, H: Host + 'static>(
         FieldKind::Attacks => {
             attacks::attacks_control(sources.attacks.clone(), value, emit(changed, index))
         }
+        FieldKind::FreeSpells => {
+            let spells = sources
+                .spells
+                .iter()
+                .map(|s| (s.name.clone(), s.priest != 0, s.level))
+                .collect::<Vec<_>>();
+            let mut spells = spells;
+            spells.sort_by_cached_key(|(n, _, _)| cr_store::collate::sort_key(n));
+            levels::free_spells_control(
+                Rc::new(spells),
+                value,
+                emit(changed, index),
+                parent_of(host),
+            )
+        }
+        FieldKind::LevelNwps(options) => levels::level_nwps_control(
+            sources.options(options),
+            value,
+            emit(changed, index),
+            parent_of(host),
+        ),
+        FieldKind::LevelAbilities(options) => levels::level_abilities_control(
+            sources.options(options),
+            value,
+            emit(changed, index),
+            parent_of(host),
+        ),
+        FieldKind::AutoFill => levels::auto_fill_control(
+            sources.list("class-records").to_vec(),
+            emit(changed, index),
+            parent_of(host),
+        ),
         FieldKind::Dice => {
             let spins: Vec<gtk::SpinButton> = [(0.0, 1000.0), (0.0, 1000.0), (-1000.0, 100_000.0)]
                 .iter()
@@ -1295,6 +1339,11 @@ fn items_control<H: Host + 'static>(
             redraw()
         }),
     )
+}
+
+fn parent_of<H: Host + 'static>(host: &Shared<H>) -> levels::Parent {
+    let host = host.clone();
+    Rc::new(move || host.parent())
 }
 
 fn emit(changed: &Rc<dyn Fn(usize, Value)>, index: usize) -> Rc<dyn Fn(Value)> {

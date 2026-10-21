@@ -106,8 +106,18 @@ impl ListEditor {
 }
 
 /// A dialog listing `choices` with a search entry; `chosen` gets the name
-/// the user activates.
+/// the user activates. The dialog is titled "Add to `list`".
 pub fn pick(
+    parent: &impl IsA<gtk::Widget>,
+    list: &str,
+    choices: Vec<String>,
+    chosen: impl Fn(String) + 'static,
+) {
+    pick_titled(parent, &tr!("Add to {list}", list), choices, chosen);
+}
+
+/// [`pick`] under a title of its own.
+pub fn pick_titled(
     parent: &impl IsA<gtk::Widget>,
     title: &str,
     choices: Vec<String>,
@@ -189,7 +199,7 @@ pub fn pick(
     view.add_top_bar(&search_bar);
     view.set_content(Some(&scroll));
     let dialog = adw::Dialog::builder()
-        .title(tr!("Add to {list}", list = title))
+        .title(title)
         .content_width(360)
         .content_height(480)
         .child(&view)
