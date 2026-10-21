@@ -1347,7 +1347,7 @@ impl Wizard {
         if d.roll_method != RollMethod::PointsAndStrength {
             d.exceptional_strength = dice.roll(1, 100);
         }
-        d.gold = rules.roll_gold(&d.classes, &mut dice);
+        d.gold = rules.roll_gold(&d, &mut dice);
         if changed {
             d.reset_proficiencies();
             d.spells.clear();
@@ -1438,14 +1438,19 @@ impl Wizard {
         hit_points.add_suffix(&hp_roll);
         let show_hit_dice = Rc::new({
             let (this, hit_points, hit_dice) = (self.clone(), hit_points.clone(), hit_dice.clone());
-            let classes = d.classes.clone();
+            let (classes, kit) = (d.classes.clone(), kit.clone());
             move || {
+                // The kit's hit points go on each roll (0x42d8f7).
+                let bonus = match this.rules().kit_hit_points(&combo_value(&kit)) {
+                    0 => String::new(),
+                    b => format!("{b:+}"),
+                };
                 let text: Vec<String> = classes
                     .iter()
                     .zip(hit_dice.borrow().iter())
                     .map(|(c, roll)| {
                         let die = this.rules().class(c).map_or(0, |c| c.hit_die);
-                        format!("{c} {roll} (d{die})")
+                        format!("{c} {roll}{bonus} (d{die}{bonus})")
                     })
                     .collect();
                 hit_points.set_subtitle(&tr!(
@@ -1455,6 +1460,10 @@ impl Wizard {
             }
         });
         show_hit_dice();
+        kit.connect_selected_notify({
+            let show_hit_dice = show_hit_dice.clone();
+            move |_| show_hit_dice()
+        });
         let strength = rules.adjusted(&d.race, &d.scores)[0];
         let exceptional = spin_row(
             tr("Exceptional Strength"),
@@ -1738,13 +1747,18 @@ impl Wizard {
                     d.male = male();
                     d.alignment = combo_value(&alignment);
                     let chosen = combo_value(&kit);
-                    if d.kit != chosen {
+                    let new_kit = d.kit != chosen;
+                    if new_kit {
                         d.barred_schools_ignored = false;
                         d.eliminated_schools.clear();
                     }
                     d.kit = chosen;
                     if let Some(class) = SOCIAL_CLASSES.get(social_class.selected() as usize) {
                         d.social_class = (*class).to_owned();
+                    }
+                    // The starting money follows the kit (0x4330ab).
+                    if new_kit {
+                        d.gold = this.rules().roll_gold(&d, &mut this.0.dice.borrow_mut());
                     }
                     d.age = age.value() as u32;
                     d.height = height.value() as u32;
@@ -3886,15 +3900,24 @@ impl Wizard {
                     .build(),
             );
         }
+        for item in rules.kit_free_items(&d.kit) {
+            money_group.add(
+                &adw::ActionRow::builder()
+                    .title(escape(&item))
+                    .subtitle(tr("Free from the kit"))
+                    .build(),
+            );
+        }
 
         let spec = {
-            let this = self.clone();
+            let (this, kit) = (self.clone(), d.kit.clone());
             move |name: String, quantity: u32| {
-                let ware = this.rules().ware(&name);
+                let rules = this.rules();
+                let ware = rules.ware(&name);
                 RowSpec {
                     value: name.clone(),
                     subtitle: ware.map_or(String::new(), |w| {
-                        format!("{} · {}", w.part_type, money(w.cost))
+                        format!("{} · {}", w.part_type, money(rules.price(&kit, &name, 1)))
                     }),
                     title: name,
                     number: Some((quantity, 1, 999)),
@@ -3973,10 +3996,10 @@ impl Wizard {
         money_roll.connect_clicked({
             let (this, gold, update) = (self.clone(), gold.clone(), update.clone());
             move |_| {
-                let classes = this.0.draft.borrow().classes.clone();
+                let draft = this.0.draft.borrow().clone();
                 *gold.borrow_mut() = this
                     .rules()
-                    .roll_gold(&classes, &mut this.0.dice.borrow_mut());
+                    .roll_gold(&draft, &mut this.0.dice.borrow_mut());
                 update();
             }
         });
@@ -3991,6 +4014,10 @@ impl Wizard {
                 .map(|text| Question::notice(&d.kit, text.to_owned()))
                 .into_iter()
                 .collect();
+            // Then that the kit changes what items cost (5e2ba2).
+            if let Some(notice) = rules.kit_price_notice(&d.kit) {
+                notices.push_back(Question::notice(&d.kit, notice.to_owned()));
+            }
             notices.extend(rules.kit_equipment_notices(&d));
             let parent: gtk::Widget = items_group.clone().upcast();
             if !notices.is_empty() {

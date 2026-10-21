@@ -134,14 +134,16 @@ impl ClassAdvance {
     }
 }
 
-/// What a kit does to experience.
+/// What a kit does to advancement.
 #[derive(Debug, Clone, Copy, Default)]
-struct KitExperience {
+struct KitAdvance {
     /// The percentage the experience of each level is changed by
     /// (+0x5ec, when +0x5de is set).
     scale: Option<i32>,
     /// The most the prime requisite bonus may add, in percent (+0x5e4).
     bonus_cap: Option<i32>,
+    /// The hit points added to every level's roll (+0x604; 0x42d8f7).
+    hit_points: i32,
 }
 
 /// The databases' view of advancement, loaded once per installation.
@@ -156,8 +158,8 @@ pub struct AdvanceRules {
     alternative_slots: HashSet<String>,
     specialist: HashSet<String>,
     warrior_abilities: HashSet<String>,
-    /// What each kit does to experience, by name.
-    kits: HashMap<String, KitExperience>,
+    /// What each kit does to advancement, by name.
+    kits: HashMap<String, KitAdvance>,
     /// The Expansion (level limits, Wisdom bonus only with Skills &
     /// Powers) rather than 2.0.
     expansion: bool,
@@ -219,11 +221,12 @@ impl Installation {
                     && let Some(data) = &kit.data
                 {
                     let kit = Kit::of(data);
-                    let experience = KitExperience {
+                    let advance = KitAdvance {
                         scale: kit.flag(0x5de).then(|| kit.i(0x5ec)),
                         bonus_cap: Some(kit.i_or(0x5e4, -1)).filter(|&c| c != -1),
+                        hit_points: kit.i(0x604),
                     };
-                    rules.kits.entry(p.head.name.clone()).or_insert(experience);
+                    rules.kits.entry(p.head.name.clone()).or_insert(advance);
                 }
             }
             for object in file.of_type("Class Abilities").unwrap_or_default() {
@@ -385,8 +388,8 @@ impl AdvanceRules {
         Some(limit.max(1) as u32)
     }
 
-    /// What the character's kit does to experience.
-    fn kit(&self, character: &Character) -> KitExperience {
+    /// What the character's kit does to advancement.
+    fn kit(&self, character: &Character) -> KitAdvance {
         self.kits
             .get(&character.data.kit)
             .copied()
@@ -495,7 +498,8 @@ impl AdvanceRules {
         Ok(())
     }
 
-    /// The hit point roll of `level` (2 or more) in class `g`.
+    /// The hit point roll of `level` (2 or more) in class `g`, with the
+    /// kit's hit points added to it, past the last die level too.
     fn roll_hit_points(
         &self,
         character: &Character,
@@ -505,8 +509,9 @@ impl AdvanceRules {
     ) -> Result<u32> {
         let class = self.class(character, g)?;
         let n = character.data.classes.names.len() as u32;
+        let kit = self.kit(character).hit_points;
         if level as i32 > class.last_die_level {
-            return Ok((class.flat.max(0) as u32 / n).max(1));
+            return Ok(((class.flat.max(0) as u32 / n).max(1) as i32 + kit) as u32);
         }
         let mut roll = dice
             .roll(1, class.hit_die.max(1) as u32)
@@ -514,7 +519,9 @@ impl AdvanceRules {
         if level > 1 && !self.dual_classed(character) {
             roll = (roll / n).max(1);
         }
-        Ok(roll)
+        // A kit that takes hit points away can leave a negative roll, kept
+        // as the original keeps it.
+        Ok((roll as i32 + kit) as u32)
     }
 
     fn constitution_adjustment(&self, character: &Character, g: usize) -> Result<i32> {

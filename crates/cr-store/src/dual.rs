@@ -97,6 +97,8 @@ pub struct ClassRules {
     /// Skills & Powers: buying a weapon group asks first, as the cleric's
     /// (+0x27a1).
     pub group_question: bool,
+    /// Starts with twice the money its dice give (+0x4865).
+    pub double_money: bool,
 }
 
 impl ClassRules {
@@ -150,6 +152,7 @@ impl ClassRules {
                 early_specialization: data.flag_0x2792.unwrap_or(0) != 0,
                 cheap_specialization: data.flag_0x2791.unwrap_or(0) != 0,
                 group_question: data.flag_0x27a1 == Some(1),
+                double_money: data.flags_0x4864.is_some_and(|f| f[1] != 0),
             },
             // The 2.0 layout keeps the same values in one array, and the
             // same lists in a fixed array of lists.
@@ -194,6 +197,7 @@ impl ClassRules {
                     early_specialization: false,
                     cheap_specialization: false,
                     group_question: false,
+                    double_money: false,
                 }
             }
         }

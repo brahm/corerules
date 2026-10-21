@@ -4,7 +4,8 @@
 use std::path::Path;
 
 use cr_store::Installation;
-use cr_store::create::{Draft, PickKind, ROGUE_SKILLS, WeaponCheck};
+use cr_store::create::{Dice, Draft, PickKind, ROGUE_SKILLS, WeaponCheck};
+use cr_store::lists::CharacterLists;
 use cr_store::settings::SETTINGS;
 
 fn thief() -> Draft {
@@ -63,6 +64,11 @@ fn leaving_the_name_page_applies_the_kit() {
         draft.kit = kit.clone();
         let character = rules.build(&draft).unwrap();
         let d = &character.data;
+        // The kit's hit points go on the 1st-level roll.
+        assert_eq!(
+            d.unknown_0xc60[0][0] as i32,
+            draft.hit_dice[0] as i32 + rules.kit_hit_points(&kit)
+        );
         let barred = rules.kit_barred_abilities(&kit);
         assert!(
             d.class_slots[0]
@@ -730,5 +736,76 @@ fn the_equipment_page_follows_the_kit() {
     assert!(
         texts > 0 && notices > 0 && funds > 0,
         "{texts} {notices} {funds}"
+    );
+}
+
+#[test]
+fn the_kit_sets_prices_money_and_free_items() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(Path::new(&dir)).unwrap();
+    if install.is_core20() {
+        return;
+    }
+    let rules = install.creation_rules().unwrap();
+    let mut dice = Dice::seeded(7);
+    let item = rules
+        .wares
+        .iter()
+        .find(|w| w.cost >= 100)
+        .unwrap()
+        .name
+        .clone();
+    let (mut priced, mut funded, mut equipped) = (0, 0, 0);
+    for kit in rules.all_kits() {
+        let mut draft = thief();
+        draft.kit.clone_from(&kit);
+        draft.pack = false;
+        draft.purchases = vec![(item.clone(), 2)];
+        draft.gold = 10_000;
+        // The kit's percentage of the price, and the notice that says so.
+        assert_eq!(rules.spent(&draft), rules.price(&kit, &item, 2));
+        let percent = rules.kit_price_percent(&kit);
+        if percent != 100 {
+            priced += 1;
+            assert_ne!(rules.price(&kit, &item, 2), rules.price("None", &item, 2));
+            assert!(rules.kit_price_notice(&kit).is_some());
+        } else {
+            assert!(rules.kit_price_notice(&kit).is_none());
+        }
+        // A thief's own money is 2d6 x 10 gold pieces; some kits change it.
+        if (0..20).any(|_| {
+            let gold = rules.roll_gold(&draft, &mut dice);
+            !(20..=120).contains(&gold) || !gold.is_multiple_of(10)
+        }) {
+            funded += 1;
+        }
+        // The free items are on the new character, and only those cost
+        // nothing.
+        let free = rules.kit_free_items(&kit);
+        let character = rules.build(&draft).unwrap();
+        let lists = CharacterLists::of(&character);
+        let carried: Vec<&str> = lists
+            .equipment
+            .iter()
+            .flatten()
+            .map(|i| i.name.as_str())
+            .collect();
+        for name in &free {
+            assert!(carried.contains(&name.as_str()), "{kit}: {name}");
+        }
+        if !free.is_empty() {
+            equipped += 1;
+        }
+        let spent = rules.spent(&draft);
+        assert_eq!(
+            lists.coins[3] * 100 + lists.coins[1] * 10 + lists.coins[0],
+            draft.gold * 100 - spent
+        );
+    }
+    assert!(
+        priced > 0 && funded > 0 && equipped > 0,
+        "{priced} {funded} {equipped}"
     );
 }

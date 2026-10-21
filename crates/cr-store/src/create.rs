@@ -1322,13 +1322,15 @@ pub fn max_spells_per_level(intelligence: u32) -> usize {
 
 /// Starting money per class group in gold pieces (Player's Handbook, Table
 /// 43): dice, sides, added, multiplier.
-fn starting_money(group: i32) -> (u32, u32, u32, u32) {
+/// The dice of a group's starting money (n, sides, added, times) and the
+/// fixed amount a kit with +0x84 gives instead (0x4330ab).
+fn starting_money(group: i32) -> (u32, u32, u32, u32, u32) {
     match group {
-        0 => (5, 4, 0, 10),
-        1 => (2, 6, 0, 10),
-        2 => (3, 6, 0, 10),
-        3 => (1, 4, 1, 10),
-        _ => (3, 4, 0, 10),
+        0 => (5, 4, 0, 10, 200),
+        1 => (2, 6, 0, 10, 120),
+        2 => (3, 6, 0, 10, 180),
+        3 => (1, 4, 1, 10, 50),
+        _ => (3, 4, 0, 10, 120),
     }
 }
 
@@ -1660,17 +1662,66 @@ impl CreationRules {
                 .any(|c| self.class(c).is_some_and(|c| c.group == 0))
     }
 
-    /// Starting money in gold pieces, by the most generous of the classes'
-    /// groups.
-    pub fn roll_gold(&self, classes: &[String], dice: &mut Dice) -> u32 {
-        let best = classes
+    /// Starting money in gold pieces (0x4330ab): the kit's own dice when it
+    /// has them (+0x618), else those of the classes' most generous group,
+    /// or that group's fixed amount when the kit says so (+0x84); either
+    /// way at the kit's percentage (+0x8c) plus its bonus percentage
+    /// (+0x88), and the class dice doubled for a class with +0x4865.
+    pub fn roll_gold(&self, draft: &Draft, dice: &mut Dice) -> u32 {
+        let kit = self.draft_kit(draft);
+        // f32 factors, as the original keeps them.
+        let percent = |p: i32| f64::from((f64::from(p) * f64::from(0.01f32)) as f32);
+        let factors = |kit: &Kit| {
+            let mut factor = percent(match kit.i(0x8c) {
+                0 => 100,
+                p => p,
+            });
+            if draft.kit == "Cavalier" && draft.social_class == "Lower class" {
+                factor = 1.0;
+            }
+            (factor, percent(kit.i(0x88)))
+        };
+        let scaled = |m: i32, (factor, bonus): (f64, f64)| {
+            (f64::from(m) * factor + f64::from(m) * bonus) as i32
+        };
+        if let Some(kit) = kit.filter(|k| k.flag(0x618)) {
+            let (n, sides) = (kit.i(0x608), kit.i(0x60c));
+            let m = if kit.flag(0x84) {
+                n.wrapping_mul(sides)
+            } else {
+                (0..n.max(0))
+                    .map(|_| dice.roll(1, sides.max(0) as u32) as i32)
+                    .sum()
+            };
+            let m = m.wrapping_mul(kit.i(0x610)).wrapping_add(kit.i(0x614));
+            return scaled(m, factors(kit)).max(0) as u32;
+        }
+        let best = draft
+            .classes
             .iter()
             .filter_map(|c| self.class(c))
             .map(|c| starting_money(c.group))
-            .max_by_key(|&(n, sides, add, times)| (n * (sides + 1) + 2 * add) * times)
-            .unwrap_or((0, 0, 0, 0));
-        let (n, sides, add, times) = best;
-        (dice.roll(n, sides) + add) * times
+            .max_by_key(|&(n, sides, add, times, _)| (n * (sides + 1) + 2 * add) * times)
+            .unwrap_or((0, 0, 0, 0, 0));
+        let (n, sides, add, times, fixed) = best;
+        let mut m = ((dice.roll(n, sides) + add) * times) as i32;
+        let mut gold = match kit {
+            Some(kit) => {
+                if kit.flag(0x84) {
+                    m = fixed as i32;
+                }
+                scaled(m, factors(kit))
+            }
+            None => m,
+        };
+        if draft
+            .classes
+            .iter()
+            .any(|c| self.class(c).is_some_and(|c| c.double_money))
+        {
+            gold = gold.wrapping_shl(1);
+        }
+        gold.max(0) as u32
     }
 
     /// Nonweapon proficiency slots: the best of the classes, plus the
@@ -2439,15 +2490,25 @@ impl CreationRules {
         self.wares.iter().find(|w| w.name == name)
     }
 
-    /// What the draft's purchases cost, in copper pieces.
+    /// What `quantity` of the ware costs a character of the kit, in copper
+    /// pieces: the kit's percentage of the price (5dda98), rounded as the
+    /// original rounds it.
+    pub fn price(&self, kit: &str, name: &str, quantity: u32) -> u32 {
+        let cost = self.ware(name).map_or(0, |w| w.cost) * quantity;
+        let scaled = f64::from(self.kit_price_percent(kit)) * f64::from(cost);
+        (scaled * f64::from(0.01f32) + f64::from(0.05f32)) as u32
+    }
+
+    /// What the draft's purchases cost, in copper pieces, each at the
+    /// kit's percentage of its price.
     pub fn spent(&self, draft: &Draft) -> u32 {
-        let price = |name: &str| self.ware(name).map_or(0, |w| w.cost);
+        let price = |name: &str, n: u32| self.price(&draft.kit, name, n);
         let pack = if draft.pack {
-            price(STANDARD_PACK.0)
+            price(STANDARD_PACK.0, 1)
                 + STANDARD_PACK
                     .1
                     .iter()
-                    .map(|(name, n)| price(name) * n)
+                    .map(|(name, n)| price(name, *n))
                     .sum::<u32>()
         } else {
             0
@@ -2455,7 +2516,7 @@ impl CreationRules {
         pack + draft
             .purchases
             .iter()
-            .map(|(name, n)| price(name) * n)
+            .map(|(name, n)| price(name, *n))
             .sum::<u32>()
     }
 
@@ -2904,7 +2965,10 @@ impl CreationRules {
                 s.unknown_0x270.clone_from(&class.schools);
                 s.unknown_0x2d4.clone_from(&class.minor_spheres);
                 s.unknown_0x338.clone_from(&class.major_spheres);
-                d.unknown_0xc60[slot][0] = draft.hit_dice.get(slot).copied().unwrap_or(1);
+                // The kit's hit points go on the roll as the kit chosen on
+                // the Name page has them.
+                let roll = draft.hit_dice.get(slot).copied().unwrap_or(1) as i32;
+                d.unknown_0xc60[slot][0] = (roll + self.kit_hit_points(&draft.kit)) as u32;
             }
             // Each rogue skill the classes give, with the points added at
             // 1st level.
@@ -2944,13 +3008,20 @@ impl CreationRules {
         if self.is_wizard(&draft.classes) && self.parts.pages(SPELLBOOK).is_some() {
             add(CARRIED, SPELLBOOK, 1);
         }
+        let bundle = |name: &str| match self.ware(name).map(|w| w.part_type) {
+            Some("Weapons") => READIED,
+            Some("Armor") => WORN,
+            _ if self.parts.is_armor(name) => WORN,
+            _ => CARRIED,
+        };
         for (name, quantity) in &draft.purchases {
-            let bundle = match self.ware(name).map(|w| w.part_type) {
-                Some("Weapons") => READIED,
-                Some("Armor") => WORN,
-                _ => CARRIED,
-            };
-            add(bundle, name, *quantity);
+            add(bundle(name), name, *quantity);
+        }
+        // The kit's free equipment, weapons and magic items, given at no
+        // cost as the original gives them to its generated NPCs (0x4d76b4);
+        // its New Character keeps them only in the kit.
+        for name in self.kit_free_items(&draft.kit) {
+            add(bundle(&name), &name, 1);
         }
         let left = (draft.gold * 100).saturating_sub(self.spent(draft));
         lists.coins = [left % 10, left / 10 % 10, 0, left / 100, 0];
@@ -3205,6 +3276,7 @@ mod tests {
             early_specialization: name == "Fighter",
             cheap_specialization: name == "Fighter",
             group_question: false,
+            double_money: false,
         }
     }
 
@@ -3533,8 +3605,10 @@ mod tests {
             }
         }
         let rules = rules(true);
+        let mut mage = Draft::new(&SETTINGS[0]);
+        mage.classes = vec!["Mage".into()];
         for _ in 0..50 {
-            let gold = rules.roll_gold(&["Mage".into()], &mut dice);
+            let gold = rules.roll_gold(&mage, &mut dice);
             assert!((20..=50).contains(&gold) && gold.is_multiple_of(10));
             let social = rules.roll_social_class("None", &mut dice);
             assert_eq!(social, "Upper class");
