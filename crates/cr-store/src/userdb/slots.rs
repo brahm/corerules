@@ -989,7 +989,7 @@ pub fn class(c: &ClassData, off: usize) -> Option<Slot<'_>> {
         0x27a3 => c.flags_0x27a0.as_ref().map(|a| Slot::U8(&a[2])),
         0x27a4 => c.flag_0x27a4.as_ref().map(Slot::U8),
         0x27a5 => c.flags_0x486e.as_ref().map(|a| Slot::U8(&a[3])),
-        0x2f8c => Some(Slot::Objs(&c.unknown_0x2f8c)),
+        0x2f8c => Some(Slot::Objs(&c.free_spells)),
         0x2fa0 => Some(Slot::List(&c.unknown_0x2fa0)),
         0x2fb4 => c.unknown_0x2fb4.as_ref().map(Slot::List),
         0x2fc8 => c.unknown_0x2fc8.as_ref().map(|a| Slot::I32(&a[0])),
@@ -1017,8 +1017,8 @@ pub fn class(c: &ClassData, off: usize) -> Option<Slot<'_>> {
             .unknown_0x3380
             .as_ref()
             .map(|a| Slot::I32(&a[(off - 0x3380) / 4])),
-        0x3514 => Some(Slot::Objs(&c.unknown_0x3514)),
-        0x3528 => Some(Slot::Objs(&c.kit_bonuses)),
+        0x3514 => Some(Slot::Objs(&c.bonus_nwps)),
+        0x3528 => Some(Slot::Objs(&c.nwp_modifications)),
         0x354c => Some(Slot::Str(&c.abbreviation)),
         0x353c..=0x3544 if (off - 0x353c).is_multiple_of(4) => {
             Some(Slot::Str(&c.unknown_0x353c[(off - 0x353c) / 4]))
@@ -1035,7 +1035,7 @@ pub fn class(c: &ClassData, off: usize) -> Option<Slot<'_>> {
         0x486c => c.flag_0x486c.as_ref().map(Slot::U8),
         0x486d => c.flags_0x486e.as_ref().map(|a| Slot::U8(&a[4])),
         0x486e => c.flags_0x486e.as_ref().map(|a| Slot::U8(&a[0])),
-        0x4870 => c.unknown_0x4870.as_ref().map(Slot::List),
+        0x4870 => c.level_abilities.as_ref().map(Slot::List),
         0x4884 => Some(Slot::Objs(&c.unknown_0x4884)),
         0x4898 => Some(Slot::List(&c.unknown_0x4898)),
         0x48ac => c.flags_0x486e.as_ref().map(|a| Slot::U8(&a[1])),
@@ -1145,7 +1145,7 @@ pub fn class_mut(c: &mut ClassData, off: usize) -> Option<SlotMut<'_>> {
         0x27a3 => c.flags_0x27a0.as_mut().map(|a| SlotMut::U8(&mut a[2])),
         0x27a4 => c.flag_0x27a4.as_mut().map(SlotMut::U8),
         0x27a5 => c.flags_0x486e.as_mut().map(|a| SlotMut::U8(&mut a[3])),
-        0x2f8c => Some(SlotMut::Objs(&mut c.unknown_0x2f8c)),
+        0x2f8c => Some(SlotMut::Objs(&mut c.free_spells)),
         0x2fa0 => Some(SlotMut::List(&mut c.unknown_0x2fa0)),
         0x2fb4 => c.unknown_0x2fb4.as_mut().map(SlotMut::List),
         0x2fc8 => c.unknown_0x2fc8.as_mut().map(|a| SlotMut::I32(&mut a[0])),
@@ -1179,8 +1179,8 @@ pub fn class_mut(c: &mut ClassData, off: usize) -> Option<SlotMut<'_>> {
             .unknown_0x3380
             .as_mut()
             .map(|a| SlotMut::I32(&mut a[(off - 0x3380) / 4])),
-        0x3514 => Some(SlotMut::Objs(&mut c.unknown_0x3514)),
-        0x3528 => Some(SlotMut::Objs(&mut c.kit_bonuses)),
+        0x3514 => Some(SlotMut::Objs(&mut c.bonus_nwps)),
+        0x3528 => Some(SlotMut::Objs(&mut c.nwp_modifications)),
         0x354c => Some(SlotMut::Str(&mut c.abbreviation)),
         0x353c..=0x3544 if (off - 0x353c).is_multiple_of(4) => {
             Some(SlotMut::Str(&mut c.unknown_0x353c[(off - 0x353c) / 4]))
@@ -1200,7 +1200,7 @@ pub fn class_mut(c: &mut ClassData, off: usize) -> Option<SlotMut<'_>> {
         0x486c => c.flag_0x486c.as_mut().map(SlotMut::U8),
         0x486d => c.flags_0x486e.as_mut().map(|a| SlotMut::U8(&mut a[4])),
         0x486e => c.flags_0x486e.as_mut().map(|a| SlotMut::U8(&mut a[0])),
-        0x4870 => c.unknown_0x4870.as_mut().map(SlotMut::List),
+        0x4870 => c.level_abilities.as_mut().map(SlotMut::List),
         0x4884 => Some(SlotMut::Objs(&mut c.unknown_0x4884)),
         0x4898 => Some(SlotMut::List(&mut c.unknown_0x4898)),
         0x48ac => c.flags_0x486e.as_mut().map(|a| SlotMut::U8(&mut a[1])),

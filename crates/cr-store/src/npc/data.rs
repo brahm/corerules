@@ -775,7 +775,7 @@ impl Klass {
                     s3000: d.unknown_0x3000.clone(),
                     lists,
                     level_profs: d
-                        .unknown_0x3514
+                        .bonus_nwps
                         .iter()
                         .filter_map(|o| match o {
                             Object::KitBonus(b) => {

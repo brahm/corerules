@@ -31,6 +31,7 @@ use cr_i18n::tr;
 
 use crate::lists::pick;
 
+mod levels;
 mod templates;
 mod widgets;
 
@@ -622,6 +623,10 @@ fn editor<K: UserKind, H: Host + 'static>(
                     | FieldKind::Groups(_)
                     | FieldKind::Grid { .. }
                     | FieldKind::Items
+                    | FieldKind::FreeSpells
+                    | FieldKind::LevelNwps(_)
+                    | FieldKind::LevelAbilities(_)
+                    | FieldKind::AutoFill
             );
             let group_title = if own && field.group.is_empty() {
                 field.label
@@ -1096,6 +1101,38 @@ fn control<R: Clone + 'static, H: Host + 'static>(
             max,
         } => widgets::grid_control(columns, first, (min, max), value, emit(changed, index)),
         FieldKind::Items => items_control(index, value, changed, host),
+        FieldKind::FreeSpells => {
+            let spells = sources
+                .spells
+                .iter()
+                .map(|s| (s.name.clone(), s.priest != 0, s.level))
+                .collect::<Vec<_>>();
+            let mut spells = spells;
+            spells.sort_by_cached_key(|(n, _, _)| cr_store::collate::sort_key(n));
+            levels::free_spells_control(
+                Rc::new(spells),
+                value,
+                emit(changed, index),
+                parent_of(host),
+            )
+        }
+        FieldKind::LevelNwps(options) => levels::level_nwps_control(
+            sources.options(options),
+            value,
+            emit(changed, index),
+            parent_of(host),
+        ),
+        FieldKind::LevelAbilities(options) => levels::level_abilities_control(
+            sources.options(options),
+            value,
+            emit(changed, index),
+            parent_of(host),
+        ),
+        FieldKind::AutoFill => levels::auto_fill_control(
+            sources.list("class-records").to_vec(),
+            emit(changed, index),
+            parent_of(host),
+        ),
         FieldKind::Dice => {
             let spins: Vec<gtk::SpinButton> = [(0.0, 1000.0), (0.0, 1000.0), (-1000.0, 100_000.0)]
                 .iter()
@@ -1290,6 +1327,11 @@ fn items_control<H: Host + 'static>(
             redraw()
         }),
     )
+}
+
+fn parent_of<H: Host + 'static>(host: &Shared<H>) -> levels::Parent {
+    let host = host.clone();
+    Rc::new(move || host.parent())
 }
 
 fn emit(changed: &Rc<dyn Fn(usize, Value)>, index: usize) -> Rc<dyn Fn(Value)> {

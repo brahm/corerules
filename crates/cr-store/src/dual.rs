@@ -134,7 +134,7 @@ impl ClassRules {
                 nonweapon_groups: data.flags_0x3044.unwrap_or_default().map(|f| f != 0),
                 ability_groups: data.flags_0x3049.unwrap_or_default().map(|f| f != 0),
                 level_nonweapon: data
-                    .unknown_0x3514
+                    .bonus_nwps
                     .iter()
                     .filter_map(|o| match o {
                         Object::KitBonus(b) if b.unknown_0xc == 0 => {

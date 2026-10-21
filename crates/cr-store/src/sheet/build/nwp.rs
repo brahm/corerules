@@ -54,7 +54,7 @@ impl<'a, 'c> Rules<'a, 'c> {
             klasses.push(c.class.map(Klass::of).unwrap_or_default());
             level_lists.push(match c.class {
                 Some(cr_formats::classes::Class::Expansion { data, .. }) => {
-                    [bonuses(&data.unknown_0x3514), bonuses(&data.kit_bonuses)]
+                    [bonuses(&data.bonus_nwps), bonuses(&data.nwp_modifications)]
                 }
                 _ => [Vec::new(), Vec::new()],
             });
