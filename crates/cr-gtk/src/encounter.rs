@@ -2,7 +2,7 @@
 //! Encounter dialog (monsters, NPCs, treasure, items, traps and totals),
 //! and the 2-20 table editor.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -31,8 +31,9 @@ pub trait Host {
     /// How the treasure roller saves and deletes bundles.
     fn treasure_store(&self) -> treasure::Store;
     fn parent(&self) -> gtk::Widget;
-    /// New ("new"), Copy, Edit or Delete on a trap of the user database.
-    fn trap_record(&self, action: &str, origin: Origin, name: &str);
+    /// New ("new"), Copy, Edit or Delete on a record of the user
+    /// database's `section` ("traps" or "monsters").
+    fn user_record(&self, section: &str, action: &str, origin: Origin, name: &str);
 }
 
 type Shared<H> = Rc<H>;
@@ -213,6 +214,10 @@ pub fn choose_template<H: Host + 'static>(host: &Shared<H>) {
 struct State<H: Host> {
     host: Shared<H>,
     rules: Rc<EncounterRules>,
+    /// The databases Add Monster offers, read again after New Monster.
+    monster_rules: RefCell<Rc<EncounterRules>>,
+    /// New Monster was used since: Add Monster reads the databases again.
+    monster_rules_stale: Cell<bool>,
     encounter: RefCell<Encounter>,
     /// The name the encounter is saved under.
     saved: RefCell<Option<String>>,
@@ -331,7 +336,9 @@ pub fn editor<H: Host + 'static>(
 
     let state = Rc::new(State {
         host: host.clone(),
+        monster_rules: RefCell::new(rules.clone()),
         rules,
+        monster_rules_stale: Cell::new(false),
         encounter: RefCell::new(encounter),
         saved: RefCell::new(saved),
         pending,
@@ -582,8 +589,68 @@ impl<H: Host + 'static> State<H> {
                 .margin_start(12)
                 .margin_end(12)
                 .build();
-            number.connect_value_notify({
+            // The Hit Points group of "Monsters for the Encounter" (IDD
+            // 292): a value, how many monsters have it, and Re-roll.
+            let hit_points = adw::SpinRow::builder()
+                .title(tr("Hit Points"))
+                .adjustment(&gtk::Adjustment::new(0.0, 0.0, 0.0, 1.0, 10.0, 0.0))
+                .build();
+            let with = adw::SpinRow::builder()
+                .title(tr("Monsters"))
+                .adjustment(&gtk::Adjustment::new(0.0, 0.0, 0.0, 1.0, 10.0, 0.0))
+                .build();
+            let reroll = gtk::Button::builder()
+                .label(tr("_Re-roll"))
+                .use_underline(true)
+                .tooltip_text(tr("Roll the hit points of every monster again"))
+                .valign(gtk::Align::Center)
+                .build();
+            let filling = Rc::new(Cell::new(false));
+            // Shows the package as it now is (0x64f8c9).
+            let show = {
                 let (state, row, stat) = (self.clone(), row.clone(), stat.clone());
+                let (hit_points, with, filling) =
+                    (hit_points.clone(), with.clone(), filling.clone());
+                move || {
+                    let Package::Monster(i) = package else {
+                        return;
+                    };
+                    let encounter = state.encounter.borrow();
+                    let Some(p) = encounter.monsters.get(i) else {
+                        return;
+                    };
+                    row.set_title(&glib::markup_escape_text(&format!(
+                        "{} × {}",
+                        p.count, p.monster.name
+                    )));
+                    row.set_subtitle(&glib::markup_escape_text(&tr!(
+                        "Hit points {hit_points}",
+                        hit_points = hit_point_text(&p.hit_points)
+                    )));
+                    stat.set_label(&state.rules.stat_line(p));
+                    filling.set(true);
+                    let (low, high) = p.hit_point_range();
+                    let value = hit_points.value() as i32;
+                    let value = if (low..=high).contains(&value) {
+                        value
+                    } else {
+                        low
+                    };
+                    hit_points.adjustment().set_lower(low.into());
+                    hit_points.adjustment().set_upper(high.into());
+                    hit_points.set_value(value.into());
+                    with.adjustment().set_upper(p.most_with(value).into());
+                    with.set_value(p.count_with(value).into());
+                    with.set_subtitle(&tr!(
+                        "With these hit points; {count} unassigned",
+                        count = p.unassigned().max(0)
+                    ));
+                    filling.set(false);
+                }
+            };
+            show();
+            number.connect_value_notify({
+                let (state, show) = (self.clone(), show.clone());
                 move |spin| {
                     let count = spin.value() as i32;
                     let rand = state.host.rand();
@@ -593,23 +660,51 @@ impl<H: Host + 'static> State<H> {
                         &state.rules,
                         &mut rand.borrow_mut(),
                     );
-                    if let Package::Monster(i) = package
-                        && let Some(p) = state.encounter.borrow().monsters.get(i)
-                    {
-                        row.set_title(&glib::markup_escape_text(&format!(
-                            "{} × {}",
-                            p.count, p.monster.name
-                        )));
-                        row.set_subtitle(&glib::markup_escape_text(&tr!(
-                            "Hit points {hit_points}",
-                            hit_points = hit_point_text(&p.hit_points)
-                        )));
-                        stat.set_label(&state.rules.stat_line(p));
-                    }
+                    show();
                     state.update_totals();
                 }
             });
+            hit_points.connect_value_notify({
+                let (show, filling) = (show.clone(), filling.clone());
+                move |_| {
+                    if !filling.get() {
+                        show();
+                    }
+                }
+            });
+            with.connect_value_notify({
+                let (state, show, filling) = (self.clone(), show.clone(), filling.clone());
+                let hit_points = hit_points.clone();
+                move |spin| {
+                    if filling.get() {
+                        return;
+                    }
+                    if let Package::Monster(i) = package
+                        && let Some(p) = state.encounter.borrow_mut().monsters.get_mut(i)
+                    {
+                        p.set_count_with(hit_points.value() as i32, spin.value() as i32);
+                    }
+                    show();
+                }
+            });
+            reroll.connect_clicked({
+                let (state, show) = (self.clone(), show.clone());
+                move |_| {
+                    if let Package::Monster(i) = package {
+                        let rand = state.host.rand();
+                        if let Some(p) = state.encounter.borrow_mut().monsters.get_mut(i) {
+                            state.rules.roll_hit_points(p, &mut rand.borrow_mut());
+                        }
+                    }
+                    show();
+                }
+            });
+            hit_points.add_suffix(&reroll);
             row.add_row(&number);
+            if matches!(package, Package::Monster(_)) {
+                row.add_row(&hit_points);
+                row.add_row(&with);
+            }
             row.add_row(&stat);
             group.add(&row);
         }
@@ -797,7 +892,7 @@ impl<H: Host + 'static> State<H> {
                 let (state, dialog) = (state.clone(), dialog.clone());
                 move || {
                     dialog.close();
-                    state.host.trap_record(action, origin, &name);
+                    state.host.user_record("traps", action, origin, &name);
                 }
             }
         };
@@ -908,27 +1003,41 @@ impl<H: Host + 'static> State<H> {
         );
     }
 
-    /// Add…: a monster from the database, with its number.
+    /// Add…: a monster from the database, with its number. After New
+    /// Monster the databases are read again, so the new monster is there.
     fn choose_monster(self: &Rc<Self>) {
-        let mut names: Vec<String> = self
-            .rules
-            .monsters()
-            .iter()
-            .map(|m| m.name.clone())
-            .collect();
+        if self.monster_rules_stale.get() {
+            let Some(rules) = errors(&*self.host, self.host.with_install(|i| i.encounter_rules()))
+            else {
+                return;
+            };
+            *self.monster_rules.borrow_mut() = Rc::new(rules);
+            self.monster_rules_stale.set(false);
+        }
+        let rules = self.monster_rules.borrow().clone();
+        let mut names: Vec<String> = rules.monsters().iter().map(|m| m.name.clone()).collect();
         names.sort_by_cached_key(|n| cr_store::collate::sort_key(n));
         names.dedup();
         let state = self.clone();
+        // Create New Monsters… (0x64f291): the custom monster editor.
+        let new = {
+            let state = self.clone();
+            move || {
+                state.monster_rules_stale.set(true);
+                state
+                    .host
+                    .user_record("monsters", "new", Origin::Custom, "")
+            }
+        };
         pick_from(
             &self.dialog,
             tr("Add Monster"),
             tr("Search Monsters"),
             names,
+            Some((tr("New Monster"), Box::new(new))),
             move |name| {
                 let rand = state.host.rand();
-                let package = state
-                    .rules
-                    .new_monster_package(&name, None, &mut rand.borrow_mut());
+                let package = rules.new_monster_package(&name, None, &mut rand.borrow_mut());
                 if let Some(package) = package {
                     state.encounter.borrow_mut().monsters.push(package);
                     state.refresh();
@@ -953,6 +1062,7 @@ impl<H: Host + 'static> State<H> {
             tr("Add NPC"),
             tr("Search Characters"),
             files.iter().map(|(n, _)| n.clone()).collect(),
+            None,
             move |name| {
                 let Some((_, file)) = files.iter().find(|(n, _)| *n == name) else {
                     return;
@@ -1075,11 +1185,15 @@ fn bundle_rows(group: &adw::PreferencesGroup, bundle: &Bundle) {
 }
 
 /// A searchable list of names; activating one closes it and calls `chosen`.
+/// A picker's New button: its tooltip and what it opens.
+type NewButton<'a> = (&'a str, Box<dyn Fn()>);
+
 fn pick_from(
     parent: &impl IsA<gtk::Widget>,
     title: &str,
     placeholder: &str,
     names: Vec<String>,
+    new: Option<NewButton>,
     chosen: impl Fn(String) + 'static,
 ) {
     let search = gtk::SearchEntry::builder()
@@ -1134,7 +1248,16 @@ fn pick_from(
     content.append(&list);
     content.append(&empty);
     let view = adw::ToolbarView::new();
-    view.add_top_bar(&adw::HeaderBar::new());
+    let header = adw::HeaderBar::new();
+    let new_button = new.map(|(tooltip, run)| {
+        let button = gtk::Button::builder()
+            .icon_name("list-add-symbolic")
+            .tooltip_text(tooltip)
+            .build();
+        header.pack_end(&button);
+        (button, run)
+    });
+    view.add_top_bar(&header);
     view.add_top_bar(
         &gtk::SearchBar::builder()
             .child(&search)
@@ -1156,6 +1279,13 @@ fn pick_from(
         .height_request(294)
         .child(&view)
         .build();
+    if let Some((button, run)) = new_button {
+        let dialog = dialog.clone();
+        button.connect_clicked(move |_| {
+            dialog.close();
+            run();
+        });
+    }
     list.connect_row_activated({
         let dialog = dialog.clone();
         move |_, row| {

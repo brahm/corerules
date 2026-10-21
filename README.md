@@ -160,7 +160,9 @@ the original programs wrote.
   it saves the same bundles as both originals, byte for byte
 - **Encounter generator**: encounters from templates with the originals'
   dice, dependents, items and treasure, the Encounter dialog's editing and
-  totals, saved encounters and the 2-20 tables
+  totals (each monster's hit points set by hand or rolled again with
+  Re-roll, and New Monster from Add Monster), saved encounters and the
+  2-20 tables
 - **Table Rolls** on every table of the books, with the originals' dice
   and follow-up rolls
 - **Editors for every user database**: races, classes (with the free

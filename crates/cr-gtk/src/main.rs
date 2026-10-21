@@ -1130,8 +1130,14 @@ impl encounter::Host for Window {
         Window::treasure_store(self)
     }
 
-    fn trap_record(&self, action: &str, origin: cr_store::userdb::Origin, name: &str) {
-        userdb::trap_action(&Rc::new(self.clone()), action, origin, name)
+    fn user_record(
+        &self,
+        section: &str,
+        action: &str,
+        origin: cr_store::userdb::Origin,
+        name: &str,
+    ) {
+        userdb::record_action(&Rc::new(self.clone()), section, action, origin, name)
     }
 
     fn parent(&self) -> gtk::Widget {

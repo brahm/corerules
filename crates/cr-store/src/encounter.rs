@@ -258,6 +258,56 @@ pub struct NpcPackage {
     pub hit_points: Vec<PartId>,
 }
 
+impl MonsterPackage {
+    /// The values the Hit Points spinner of "Monsters for the Encounter"
+    /// (IDD 292) walks over (0x64f8c9): every result of the hit dice, from
+    /// `dice + bonus` to `dice × sides + bonus`.
+    pub fn hit_point_range(&self) -> (i32, i32) {
+        let m = &self.monster;
+        let (dice, bonus, sides) = (m.hit_dice, m.unknown_0x438, m.hit_die_size);
+        (
+            dice.wrapping_add(bonus),
+            dice.wrapping_mul(sides).wrapping_add(bonus),
+        )
+    }
+
+    /// How many monsters have `hit_points`.
+    pub fn count_with(&self, hit_points: i32) -> i32 {
+        self.hit_points
+            .iter()
+            .find(|(hp, _)| *hp == hit_points)
+            .map_or(0, |(_, n)| *n)
+    }
+
+    /// "Unassigned Monsters": those no hit point value counts.
+    pub fn unassigned(&self) -> i32 {
+        self.count
+            .wrapping_sub(self.hit_points.iter().map(|(_, n)| *n).sum::<i32>())
+    }
+
+    /// The most monsters the "Monsters" spinner may give `hit_points`: those
+    /// that have them and the unassigned ones (0x64f8c9).
+    pub fn most_with(&self, hit_points: i32) -> i32 {
+        self.count_with(hit_points)
+            .wrapping_add(self.unassigned().max(0))
+    }
+
+    /// The "Monsters" spinner (0x64fa96): `count` monsters have
+    /// `hit_points`. None removes the value; a new one goes at the end.
+    pub fn set_count_with(&mut self, hit_points: i32, count: i32) {
+        let count = count.clamp(0, self.most_with(hit_points));
+        let at = self.hit_points.iter().position(|(hp, _)| *hp == hit_points);
+        match (at, count) {
+            (Some(i), 0) => {
+                self.hit_points.remove(i);
+            }
+            (Some(i), n) => self.hit_points[i].1 = n,
+            (None, 0) => {}
+            (None, n) => self.hit_points.push((hit_points, n)),
+        }
+    }
+}
+
 impl NpcPackage {
     /// The Add NPC… button (0x63e814): a saved character, once, with no
     /// hit points rolled.
