@@ -26,6 +26,7 @@
 //! ```
 
 mod generate;
+mod group;
 mod tables;
 mod text;
 
@@ -43,6 +44,7 @@ use cr_formats::traps::Trap;
 
 pub use crate::treasure::{Bundle, Flavor, Item, Prices, Rand};
 pub use generate::{Generated, PendingNpc};
+pub use group::group_job_title;
 pub use tables::{
     CATEGORY_ROLLS, FREQUENCY_VERSION_20, FREQUENCY_VERSION_EXPANSION, FrequencyTable,
     FrequencyTables, LairMode, Source, TableFilter, frequency_version, roll_2_to_20, roll_and_pick,

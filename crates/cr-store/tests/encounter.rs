@@ -1009,3 +1009,139 @@ fn traps_add_and_remove() {
     remove_trap(&mut traps, "Pit").unwrap();
     assert_eq!(traps[0].name, "Dart");
 }
+
+/// Group Encounter: the NPCs of a party as an encounter, and its printout
+/// in both formats, with a real Expansion installation (`CORERULES_DIR`).
+#[test]
+fn group_encounter_printout() {
+    use cr_store::encounter::group_job_title;
+    use cr_store::sheet::{Block, SectionContent, SheetBox};
+
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(Path::new(&dir)).unwrap();
+    let rules = install.encounter_rules().unwrap();
+    if rules.flavor() != Flavor::Expansion {
+        return;
+    }
+    let fixture = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/fixtures/characters/90688519.dat"
+    );
+    let character = Character::parse(&fs::read(fixture).unwrap()).unwrap();
+    let name = character.data.name.clone();
+
+    // One package of one per member, no hit points, no name.
+    let mut e = Encounter::of_group(vec![character.clone(), character.clone()]);
+    assert_eq!(e.npcs.len(), 2);
+    assert!(
+        e.npcs
+            .iter()
+            .all(|p| p.count == 1 && p.hit_points.is_empty())
+    );
+    assert!(e.name.is_empty() && e.monsters.is_empty() && e.treasure.is_empty());
+    e.name = "The Company of the Long Road".into();
+
+    let title = group_job_title(&e.name);
+    assert!(title.starts_with("Group Encounter ["));
+    assert_eq!(title.chars().count(), 31);
+    assert_eq!(group_job_title("Few"), "Group Encounter [Few]");
+
+    let boxes = |condensed: bool| -> Vec<SheetBox> {
+        let sheet = rules.group_sheet(&e, condensed);
+        assert_eq!(sheet.title, title);
+        sheet
+            .sections
+            .into_iter()
+            .flat_map(|s| match s.content {
+                SectionContent::Columns(c) => c.into_iter().flatten().collect(),
+                SectionContent::PageBreak => Vec::new(),
+            })
+            .collect()
+    };
+    let full = boxes(false);
+    let titles: Vec<&str> = full.iter().map(|b| b.title.as_str()).collect();
+    assert_eq!(
+        &titles[..4],
+        [e.name.as_str(), "Group", "Treasure", "NPC's"]
+    );
+    // The Group table: a row per NPC, then TOTAL counting the rows.
+    let Block::Table(group) = &full[1].body[0] else {
+        panic!("Group is a table")
+    };
+    assert_eq!(group.rows.len(), 4);
+    assert_eq!(group.rows[1][2].text, name);
+    assert_eq!(group.rows[3][0].text, "2");
+    assert_eq!(group.rows[3][2].text, "TOTAL");
+    // Each NPC in full, under its name: the titled lines in five columns.
+    assert!(full[3].body.is_empty());
+    assert_eq!(full.len(), 7, "the treasure list comes last");
+    for npc in &full[4..6] {
+        assert_eq!(npc.title, name);
+        let [Block::Table(t)] = &npc.body[..] else {
+            panic!("an NPC is a table")
+        };
+        assert_eq!(t.columns, 5);
+        let heads: Vec<&str> = t
+            .rows
+            .iter()
+            .map(|r| r[0].text.as_str())
+            .filter(|s| !s.is_empty())
+            .collect();
+        assert_eq!(
+            heads,
+            [
+                "        Personal Information:",
+                "        Ability Scores:",
+                "        Combat:",
+                "        Armor:",
+                "        Weapons:",
+                "        Movement and Encumbrance:",
+            ][..heads.len()]
+        );
+        assert!(heads.len() >= 5);
+        assert!(t.rows.iter().all(|r| r.len() == 5 || r[0].colspan == 5));
+        let cells: Vec<&str> = t.rows.iter().flatten().map(|c| c.text.as_str()).collect();
+        for prefix in [
+            "Race: ",
+            "Str:",
+            "Hit Points:",
+            "Armor Class: ",
+            "Movement:",
+        ] {
+            assert!(cells.iter().any(|c| c.starts_with(prefix)), "{prefix}");
+        }
+    }
+
+    // Condensed: one stat line per NPC, a blank line between them.
+    let condensed = boxes(true);
+    let Block::Paragraph(text) = &condensed[3].body[0] else {
+        panic!("the condensed NPCs are a paragraph")
+    };
+    let lines: Vec<&str> = text.split("\n\n").collect();
+    assert_eq!(lines.len(), 2);
+    for line in &lines {
+        assert!(line.starts_with(&format!("{name} ")), "{line}");
+        assert!(line.ends_with(')'), "{line}");
+        let at = |s: &str| line.find(s).unwrap_or_else(|| panic!("{s} in {line}"));
+        let order = [
+            "(S ", ", D ", ", Ch ", "; AL ", "; AC ", "; MV ", "; hp ", "; THAC0 ", "; XP ",
+        ]
+        .map(at);
+        assert!(order.windows(2).all(|w| w[0] < w[1]), "{line}");
+    }
+    // A package of several starts with the count, without the name, and
+    // lists each individual's hit points.
+    let mut package = NpcPackage::of_character(character);
+    package.count = 3;
+    package.hit_points = e.npcs[0].hit_points.clone();
+    for hp in [5, 6, 7] {
+        let mut id: cr_formats::parts::PartId = blank();
+        id.part_type = hp;
+        package.hit_points.push(id);
+    }
+    let line = rules.npc_stat_line(&package);
+    assert!(line.starts_with("3 ") && !line.contains(&name), "{line}");
+    assert!(line.contains("; hp 5, 6, 7, ; THAC0 "), "{line}");
+}

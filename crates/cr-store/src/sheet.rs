@@ -558,6 +558,24 @@ impl SheetRules {
             .join("/")
     }
 
+    /// An NPC as the group encounter printout shows it in full (0x638c1c),
+    /// under its name: a few lines of its sheet in five columns.
+    pub fn group_npc_table(&self, character: &Character) -> Result<Table> {
+        build::group::full(self, character)
+    }
+
+    /// The NPC stat line (Expansion 0x43b59b) of `count` individuals of
+    /// `character` with the hit points `hit_points`, as the condensed
+    /// group encounter printout prints it.
+    pub fn npc_stat_line(
+        &self,
+        character: &Character,
+        count: i32,
+        hit_points: &[i32],
+    ) -> Result<String> {
+        build::group::stat_line(self, character, count, hit_points)
+    }
+
     /// What `character` is worth as a monster in an encounter: the
     /// experience of the hit dice it counts as (Expansion 0x43b133, 2.0
     /// 0x41ff10), shown as the NPC stat line's XP and added to the

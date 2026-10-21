@@ -293,6 +293,10 @@ fn box_widget(sheet_box: &SheetBox) -> gtk::Widget {
                 .build(),
         );
     }
+    // A heading alone, as the group encounter printout's title.
+    if sheet_box.body.is_empty() {
+        return outer.upcast();
+    }
     let card = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
         .spacing(6)

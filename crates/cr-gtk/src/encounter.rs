@@ -211,6 +211,97 @@ pub fn choose_template<H: Host + 'static>(host: &Shared<H>) {
     search.grab_focus();
 }
 
+/// Group Encounter (0x44e30b): asks whether to make an encounter of the
+/// NPCs of `party` (Chars/ files `members`, in order) or to print them as
+/// one, then opens the Encounter dialog on it, or prints it.
+pub fn group_encounter<H: Host + 'static>(
+    host: &Shared<H>,
+    parent: &gtk::Widget,
+    party: &str,
+    members: Vec<String>,
+) {
+    let create = gtk::CheckButton::builder().active(true).build();
+    let print = gtk::CheckButton::builder().group(&create).build();
+    let choice = |button: &gtk::CheckButton, title: &str| {
+        let row = adw::ActionRow::builder()
+            .title(title)
+            .use_underline(true)
+            .activatable_widget(button)
+            .build();
+        row.add_prefix(button);
+        row
+    };
+    let condensed = adw::SwitchRow::builder()
+        .title(tr("Co_ndensed Format"))
+        .subtitle(tr("One stat line for each NPC"))
+        .use_underline(true)
+        .sensitive(false)
+        .build();
+    let preview = adw::SwitchRow::builder()
+        .title(tr("Print P_review"))
+        .use_underline(true)
+        .sensitive(false)
+        .build();
+    print.connect_toggled({
+        let (condensed, preview) = (condensed.clone(), preview.clone());
+        move |b| {
+            condensed.set_sensitive(b.is_active());
+            preview.set_sensitive(b.is_active());
+        }
+    });
+    let list = gtk::ListBox::builder()
+        .selection_mode(gtk::SelectionMode::None)
+        .css_classes(["boxed-list"])
+        .build();
+    list.append(&choice(&create, tr("_Create and Save NPC Group Encounter")));
+    list.append(&choice(&print, tr("_Print Group Encounter")));
+    list.append(&condensed);
+    list.append(&preview);
+    let alert = adw::AlertDialog::builder()
+        .heading(tr("Group Encounter"))
+        .body(tr!(
+            "Create or print an encounter of the NPCs of “{party}”.",
+            party
+        ))
+        .extra_child(&list)
+        .default_response("ok")
+        .close_response("cancel")
+        .build();
+    alert.add_responses(&[("cancel", tr("_Cancel")), ("ok", tr("_OK"))]);
+    alert.set_response_appearance("ok", adw::ResponseAppearance::Suggested);
+    let (host, party, under) = (host.clone(), party.to_owned(), parent.clone());
+    alert.connect_response(Some("ok"), move |_, _| {
+        let loaded = host.with_install(|install| {
+            let members = members
+                .iter()
+                .map(|file| install.character(file))
+                .collect::<Result<Vec<_>>>()?;
+            Ok((install.encounter_rules()?, members))
+        });
+        let Some((rules, members)) = errors(&*host, loaded) else {
+            return;
+        };
+        let mut encounter = Encounter::of_group(members);
+        if create.is_active() {
+            // The name is left for the user to give (0x44e759).
+            editor(&host, Rc::new(rules), encounter, None, Vec::new());
+            return;
+        }
+        encounter.name = party.clone();
+        let sheet = rules.group_sheet(&encounter, condensed.is_active());
+        let toast = {
+            let host = host.clone();
+            move |m: &str| host.toast(m)
+        };
+        if preview.is_active() {
+            crate::sheet::preview(&under, sheet, toast);
+        } else {
+            crate::sheet::print_sheet(&under, &Rc::new(sheet), None, &toast);
+        }
+    });
+    alert.present(Some(parent));
+}
+
 struct State<H: Host> {
     host: Shared<H>,
     rules: Rc<EncounterRules>,
@@ -539,7 +630,7 @@ impl<H: Host + 'static> State<H> {
                     (
                         format!("{} × {}", p.count, self.rules.npc_name(p).trim()),
                         tr("Nonplayer character").to_owned(),
-                        self.rules.npc_line(p),
+                        self.rules.npc_stat_line(p),
                         p.count,
                     )
                 }

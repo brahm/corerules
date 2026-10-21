@@ -205,19 +205,25 @@ fn missile_adjustment(ctx: &Ctx) -> i32 {
     at(&tables::MISSILE_ADJUSTMENT, ctx.scores.sub(super::DEX, AIM))
 }
 
-/// The Combat box (0x5a4323).
-pub(in crate::sheet) fn combat_box(ctx: &Ctx) -> SheetBox {
+/// The Combat box's values: hit points (0x42e0ab), base, melee and
+/// missile THAC0, with their labels.
+pub(in crate::sheet) fn combat_values(ctx: &Ctx) -> [(&'static str, i32); 4] {
     let hp = ctx.rules.advance.hit_points(ctx.ch).unwrap_or(0);
     let base = thac0(ctx, ctx.expansion());
-    let rows = [
+    [
         ("Hit Points:", hp),
         ("Base THAC0:", base),
         ("Melee THAC0:", base - attack_adjustment(ctx)),
         ("Missile THAC0:", base - missile_adjustment(ctx)),
     ]
-    .into_iter()
-    .map(|(label, v)| vec![Cell::new(label), ctx.value(v.to_string())])
-    .collect();
+}
+
+/// The Combat box (0x5a4323).
+pub(in crate::sheet) fn combat_box(ctx: &Ctx) -> SheetBox {
+    let rows = combat_values(ctx)
+        .into_iter()
+        .map(|(label, v)| vec![Cell::new(label), ctx.value(v.to_string())])
+        .collect();
     SheetBox {
         title: "Combat".into(),
         body: vec![table(2, rows)],
@@ -312,7 +318,7 @@ fn ac_of(p: &Part) -> Option<i32> {
 
 /// The armor class worked out (0x429ac5): its `label:value` lines and
 /// the final value, kept within -10 to 10.
-fn armor(ctx: &Ctx) -> (Vec<String>, i32) {
+pub(in crate::sheet) fn armor(ctx: &Ctx) -> (Vec<String>, i32) {
     let d = &ctx.ch.data;
     let mut lines: Vec<String> = Vec::new();
     let mut natural = ctx.race().map_or(10, |r| r.unknown_0x16c[0]);
@@ -1243,6 +1249,24 @@ fn weapon_cells(ctx: &Ctx, row: &WeaponRow, hand: Hand) -> Vec<Cell> {
     ]
 }
 
+/// Each row of the weapon list as the group encounter printout reads it
+/// (0x5fc5b0, 0x5fc667, 0x5fc783, 0x5fcabd, 0x5fcdf4): the name (ammunition
+/// indented), melee and missile THAC0, damage against small to medium and
+/// against large.
+pub(in crate::sheet) fn weapon_texts(ctx: &Ctx) -> Vec<[String; 5]> {
+    weapon_rows(ctx)
+        .iter()
+        .map(|row| {
+            let mut cells = weapon_cells(ctx, row, None).into_iter().map(|c| c.text);
+            let mut next = || cells.next().unwrap_or_default();
+            let (name, melee, missile) = (next(), next(), next());
+            let (_attacks, _speed) = (next(), next());
+            let (small, large) = (next(), next());
+            [name, melee, missile, small, large]
+        })
+        .collect()
+}
+
 /// Weapons (0x5a4b5b) or Weapons - Primary and Offhand (0x5a5515).
 pub(in crate::sheet) fn weapons(ctx: &Ctx, primary_offhand: bool) -> Section {
     let mut rows = vec![
@@ -1485,8 +1509,12 @@ fn base_movement(ctx: &Ctx) -> i32 {
 }
 
 /// The movement rate of each category, Unencumbered to Severe.
-fn rates(ctx: &Ctx) -> [i32; 5] {
-    let b = base_movement(ctx) as f32;
+pub(in crate::sheet) fn rates(ctx: &Ctx) -> [i32; 5] {
+    rates_from(ctx, base_movement(ctx))
+}
+
+fn rates_from(ctx: &Ctx, base: i32) -> [i32; 5] {
+    let b = base as f32;
     let (light, heavy) = if ctx.sp {
         (0.75, 0.25)
     } else {
@@ -1499,6 +1527,24 @@ fn rates(ctx: &Ctx) -> [i32; 5] {
         (b * heavy) as i32,
         1,
     ]
+}
+
+/// The movement at the current encumbrance (0x42b801): on land (`kind`
+/// 0), swimming (1) or flying (2), the last two from the race's rates
+/// (+0x178, +0x17c), 0 when it has none. Excessive encumbrance gives 0,
+/// as the Movement section shows it.
+pub(in crate::sheet) fn current_movement(ctx: &Ctx, kind: usize) -> i32 {
+    let base = match kind {
+        0 => base_movement(ctx),
+        _ => ctx.race().map_or(0, |r| r.unknown_0x178[kind - 1]),
+    };
+    if base == 0 {
+        return 0;
+    }
+    rates_from(ctx, base)
+        .get(encumbrance(ctx))
+        .copied()
+        .unwrap_or(0)
 }
 
 /// Movement and Encumbrance (0x5a9cb4).

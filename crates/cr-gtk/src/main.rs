@@ -1066,6 +1066,10 @@ impl party::Host for Window {
     fn current_key(&self) -> String {
         self.browser.current_key.borrow().clone()
     }
+
+    fn group_encounter(&self, parent: &gtk::Widget, party: &str, members: Vec<String>) {
+        encounter::group_encounter(&Rc::new(self.clone()), parent, party, members)
+    }
 }
 
 impl userdb::Host for Window {
