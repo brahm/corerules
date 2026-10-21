@@ -368,7 +368,7 @@ impl Entry {
                 (e.sub_table_1_dice, e.sub_table_1.clone()),
                 (e.sub_table_2_dice, e.sub_table_2.clone()),
             ],
-            intelligent: e.unknown_0x54,
+            intelligent: e.intelligent_chance,
             spell_levels: (e.spell_min_level, e.spell_max_level),
             spell_count: e.spell_count,
             wizard: e.spell_wizard != 0,

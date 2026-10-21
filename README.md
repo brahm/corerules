@@ -177,7 +177,9 @@ the original programs wrote.
   changed in the Monster Attack editor the original has but hides, and
   Suggest XP Value), monster
   types, traps, treasure
-  tables and encounter templates (monsters, NPCs, items with their coins
+  tables (each entry with its number found, chance of being intelligent,
+  random contents from two tables, what it always contains and, for a
+  scroll, its spells) and encounter templates (monsters, NPCs, items with their coins
   and escorts, traps, treasure types and the 2-20 table, with the
   original's dependents and "and"/"or" second groups). A monster type's picture is chosen among those in
   `Bitmaps/Monsters` and `UserBMP`, a race's among the portraits, or made

@@ -43,6 +43,8 @@ pub mod topic {
     pub const TREASURE_TABLES: u32 = 257;
     pub const TREASURE_TABLE: u32 = 258;
     pub const ROLL_TREASURE: u32 = 260;
+    /// Treasure Table Entry Details and its Scroll Details (365).
+    pub const TREASURE_ENTRY: u32 = 262;
     pub const MONSTERS: u32 = 261;
     pub const TABLES: u32 = 265;
     pub const MONSTER_ATTACK: u32 = 269;
@@ -168,7 +170,7 @@ pub mod topic {
     }
 
     /// Every topic above, for the tests.
-    pub const ALL: [u32; 67] = [
+    pub const ALL: [u32; 68] = [
         MAIN_MENU,
         BOOKS,
         PARTS,
@@ -195,6 +197,7 @@ pub mod topic {
         EQUIPMENT,
         TREASURE_TABLES,
         TREASURE_TABLE,
+        TREASURE_ENTRY,
         ROLL_TREASURE,
         MONSTERS,
         TABLES,

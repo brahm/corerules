@@ -27,7 +27,7 @@ use cr_store::userdb::{
 use cr_store::{Installation, Result};
 use gtk::{gio, glib};
 
-use cr_i18n::tr;
+use cr_i18n::{tr, trn};
 
 use crate::lists::pick;
 
@@ -1467,7 +1467,8 @@ fn table_editor<H: Host + 'static>(
     rows_group.add(&rows_box);
     let draw: Redraw = Rc::default();
     let render: Rc<dyn Fn()> = Rc::new({
-        let (table, rows_box, draw) = (table.clone(), rows_box.clone(), draw.clone());
+        let (host, table, rows_box, draw) =
+            (host.clone(), table.clone(), rows_box.clone(), draw.clone());
         move || {
             while let Some(child) = rows_box.first_child() {
                 rows_box.remove(&child);
@@ -1520,42 +1521,26 @@ fn table_editor<H: Host + 'static>(
                     });
                 });
                 row.add_row(&weight);
-                let dice = adw::ActionRow::builder().title(tr("Quantity")).build();
-                let quantity = gtk::Box::builder().spacing(6).build();
-                let spins: Vec<gtk::SpinButton> = (0..3)
-                    .map(|k| {
-                        gtk::SpinButton::builder()
-                            .adjustment(&gtk::Adjustment::new(
-                                entry.quantity_dice[k].into(),
-                                0.0,
-                                100_000.0,
-                                1.0,
-                                5.0,
-                                0.0,
-                            ))
-                            .numeric(true)
-                            .width_chars(4)
-                            .valign(gtk::Align::Center)
-                            .build()
-                    })
-                    .collect();
-                for (k, spin) in spins.iter().enumerate() {
-                    quantity.append(spin);
-                    if k < 2 {
-                        quantity.append(&gtk::Label::new(Some(if k == 0 { "d" } else { "+" })));
-                    }
-                    let table2 = table.clone();
-                    spin.connect_value_changed(move |s| {
-                        if let Some(e) = tables::entries_mut(&mut table2.borrow_mut())
-                            .into_iter()
-                            .nth(i)
-                        {
-                            e.quantity_dice[k] = s.value() as u32;
-                        }
+                // Rows naming another table have only a weight; the others
+                // open the entry details (Special, IDD 262).
+                if entry.is_table == 0 {
+                    let details = adw::ActionRow::builder()
+                        .title(tr("Details"))
+                        .subtitle(glib::markup_escape_text(&details_summary(entry)).as_str())
+                        .activatable(true)
+                        .build();
+                    details.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+                    let (host2, table2, draw2) = (host.clone(), table.clone(), draw.clone());
+                    details.connect_activated(move |_| {
+                        let draw2 = draw2.clone();
+                        entry_details(&host2, &table2, i, move || {
+                            if let Some(d) = draw2.borrow().clone() {
+                                d();
+                            }
+                        });
                     });
+                    row.add_row(&details);
                 }
-                dice.add_suffix(&quantity);
-                row.add_row(&dice);
                 let remove = gtk::Button::builder()
                     .icon_name("user-trash-symbolic")
                     .tooltip_text(tr("Remove Entry"))
@@ -1651,6 +1636,469 @@ fn table_editor<H: Host + 'static>(
                 Some(Err(text)) => message(&dialog, tr("Not Saved"), &text),
                 None => {}
             }
+        }
+    });
+    dialog.present(Some(&host.parent()));
+}
+
+/// What the details of a row set, in a line: "1d4+2 found; 25%
+/// intelligent; …".
+fn details_summary(entry: &cr_formats::treasure::TreasureTableEntry) -> String {
+    let mut parts = vec![tr!("{dice} found", dice = dice_text(entry.quantity_dice))];
+    if entry.intelligent_chance != 0 {
+        parts.push(tr!(
+            "{percent}% intelligent",
+            percent = entry.intelligent_chance
+        ));
+    }
+    for (name, dice) in [
+        (&entry.sub_table_1, entry.sub_table_1_dice),
+        (&entry.sub_table_2, entry.sub_table_2_dice),
+    ] {
+        if !name.is_empty() {
+            parts.push(tr!(
+                "{dice} on {table}",
+                dice = dice_text(dice),
+                table = name
+            ));
+        }
+    }
+    let contained = tables::contained(entry);
+    if !contained.is_empty() {
+        let names: Vec<String> = contained.iter().map(tables::contained_line).collect();
+        parts.push(tr!("contains {items}", items = names.join(", ")));
+    }
+    if entry.spell_count != 0 {
+        parts.push(trn!("{n} spell", "{n} spells", entry.spell_count as usize));
+    }
+    parts.join("; ")
+}
+
+/// Dice as the details write them: "1d4+2", "1" for 0d0+1.
+fn dice_text([count, sides, bonus]: [u32; 3]) -> String {
+    if count == 0 || sides == 0 {
+        return bonus.to_string();
+    }
+    if bonus == 0 {
+        format!("{count}d{sides}")
+    } else {
+        format!("{count}d{sides}+{bonus}")
+    }
+}
+
+/// Three spin buttons for X d Y + Z, each 0 to 1000 as the original's
+/// fields allow.
+fn dice_box(
+    dice: [u32; 3],
+    changed: impl Fn([u32; 3]) + 'static,
+) -> (gtk::Box, Vec<gtk::SpinButton>) {
+    let row = gtk::Box::builder()
+        .spacing(6)
+        .valign(gtk::Align::Center)
+        .build();
+    let spins: Vec<gtk::SpinButton> = dice
+        .iter()
+        .map(|&v| {
+            gtk::SpinButton::builder()
+                .adjustment(&gtk::Adjustment::new(v.into(), 0.0, 1000.0, 1.0, 5.0, 0.0))
+                .numeric(true)
+                .width_chars(4)
+                .valign(gtk::Align::Center)
+                .build()
+        })
+        .collect();
+    let changed = Rc::new(changed);
+    for (k, spin) in spins.iter().enumerate() {
+        row.append(spin);
+        if k < 2 {
+            row.append(&gtk::Label::new(Some(if k == 0 { "d" } else { "+" })));
+        }
+        let (spins2, changed) = (spins.clone(), changed.clone());
+        spin.connect_value_changed(move |_| {
+            let v: Vec<u32> = spins2.iter().map(|s| s.value() as u32).collect();
+            changed([v[0], v[1], v[2]]);
+        });
+    }
+    (row, spins)
+}
+
+/// Treasure Table Entry Details (IDD 262, with its Scroll Details, IDD
+/// 365) for row `index` of `table`: probability, number found, the chance
+/// of being intelligent, the random contents, what the item always
+/// contains and the spells of a scroll. OK writes them back and calls
+/// `done`; Cancel drops them all (the original keeps what Scroll Details
+/// set even then).
+fn entry_details<H: Host + 'static>(
+    host: &Shared<H>,
+    table: &Rc<RefCell<cr_formats::treasure::TreasureTable>>,
+    index: usize,
+    done: impl Fn() + 'static,
+) {
+    let Some(start) = tables::entries(&table.borrow())
+        .get(index)
+        .map(|e| (*e).clone())
+    else {
+        return;
+    };
+    let Some(names) = errors(
+        &**host,
+        host.with_install(|install| Ok(tables::table_names(&TableDb::load(install)?))),
+    ) else {
+        return;
+    };
+    let entry = Rc::new(RefCell::new(start.clone()));
+    let contained = Rc::new(RefCell::new(tables::contained(&start).to_vec()));
+
+    let found = adw::PreferencesGroup::builder()
+        .title(glib::markup_escape_text(&start.item.name).as_str())
+        .build();
+    let weight = adw::SpinRow::builder()
+        .title(tr("Probability"))
+        .adjustment(&gtk::Adjustment::new(
+            start.weight.into(),
+            0.0,
+            5000.0,
+            1.0,
+            10.0,
+            0.0,
+        ))
+        .build();
+    weight.connect_value_notify({
+        let entry = entry.clone();
+        move |w| entry.borrow_mut().weight = w.value() as u32
+    });
+    found.add(&weight);
+    let number = adw::ActionRow::builder().title(tr("Number Found")).build();
+    let (dice, _) = dice_box(start.quantity_dice, {
+        let entry = entry.clone();
+        move |d| entry.borrow_mut().quantity_dice = d
+    });
+    number.add_suffix(&dice);
+    found.add(&number);
+    let intelligent = adw::SpinRow::builder()
+        .title(tr("Chance Intelligent"))
+        .subtitle(tr("Percent chance of an intelligent weapon"))
+        .adjustment(&gtk::Adjustment::new(
+            start.intelligent_chance.into(),
+            0.0,
+            100.0,
+            1.0,
+            5.0,
+            0.0,
+        ))
+        .build();
+    intelligent.connect_value_notify({
+        let entry = entry.clone();
+        move |s| entry.borrow_mut().intelligent_chance = s.value() as u8
+    });
+    found.add(&intelligent);
+
+    // Random Contents: two tables, each rolled the number of times its
+    // dice give.
+    let random = adw::PreferencesGroup::builder()
+        .title(tr("Random Contents"))
+        .description(tr("The item holds what these tables roll"))
+        .build();
+    for k in 0..2 {
+        let (name, dice) = if k == 0 {
+            (start.sub_table_1.clone(), start.sub_table_1_dice)
+        } else {
+            (start.sub_table_2.clone(), start.sub_table_2_dice)
+        };
+        let mut choices: Vec<String> = vec![tr("None").to_owned()];
+        choices.extend(names.iter().cloned());
+        // A table that is gone stays listed, so that it is not lost.
+        let selected = if name.is_empty() {
+            0
+        } else {
+            match names.iter().position(|n| n.eq_ignore_ascii_case(&name)) {
+                Some(p) => p + 1,
+                None => {
+                    choices.push(name.clone());
+                    choices.len() - 1
+                }
+            }
+        };
+        let combo = adw::ComboRow::builder()
+            .title(if k == 0 {
+                tr("First Table")
+            } else {
+                tr("Second Table")
+            })
+            .model(&gtk::StringList::new(
+                &choices.iter().map(String::as_str).collect::<Vec<_>>(),
+            ))
+            .selected(selected as u32)
+            .enable_search(true)
+            .expression(gtk::PropertyExpression::new(
+                gtk::StringObject::static_type(),
+                None::<gtk::Expression>,
+                "string",
+            ))
+            .build();
+        let number = adw::ActionRow::builder()
+            .title(tr("Number Found"))
+            .sensitive(selected != 0)
+            .build();
+        let (dice, _) = dice_box(dice, {
+            let entry = entry.clone();
+            move |d| {
+                let mut e = entry.borrow_mut();
+                if k == 0 {
+                    e.sub_table_1_dice = d;
+                } else {
+                    e.sub_table_2_dice = d;
+                }
+            }
+        });
+        number.add_suffix(&dice);
+        combo.connect_selected_notify({
+            let (entry, number) = (entry.clone(), number.clone());
+            move |c| {
+                let i = c.selected() as usize;
+                // The dice stay as they are while no table is chosen.
+                number.set_sensitive(i != 0);
+                let name = if i == 0 {
+                    String::new()
+                } else {
+                    choices.get(i).cloned().unwrap_or_default()
+                };
+                let mut e = entry.borrow_mut();
+                if k == 0 {
+                    e.sub_table_1 = name;
+                } else {
+                    e.sub_table_2 = name;
+                }
+            }
+        });
+        random.add(&combo);
+        random.add(&number);
+    }
+
+    // Always Contains: parts with a count.
+    let add = gtk::Button::builder()
+        .icon_name("list-add-symbolic")
+        .tooltip_text(tr("Add Item"))
+        .css_classes(["flat"])
+        .build();
+    let always = adw::PreferencesGroup::builder()
+        .title(tr("Always Contains"))
+        .header_suffix(&add)
+        .build();
+    let always_list = gtk::ListBox::builder()
+        .selection_mode(gtk::SelectionMode::None)
+        .css_classes(["boxed-list"])
+        .build();
+    always.add(&always_list);
+    let draw_always: Redraw = Rc::default();
+    let render_always: Rc<dyn Fn()> = Rc::new({
+        let (contained, list, draw) = (contained.clone(), always_list.clone(), draw_always.clone());
+        move || {
+            while let Some(child) = list.first_child() {
+                list.remove(&child);
+            }
+            let items = contained.borrow().clone();
+            if items.is_empty() {
+                list.append(
+                    &adw::ActionRow::builder()
+                        .title(tr("Nothing"))
+                        .css_classes(["dim-label"])
+                        .build(),
+                );
+            }
+            for (i, item) in items.iter().enumerate() {
+                let row = adw::ActionRow::builder()
+                    .title(glib::markup_escape_text(&tables::contained_line(item)).as_str())
+                    .build();
+                let remove = gtk::Button::builder()
+                    .icon_name("list-remove-symbolic")
+                    .tooltip_text(tr("Remove"))
+                    .valign(gtk::Align::Center)
+                    .css_classes(["flat"])
+                    .build();
+                let (contained, draw, quantity) = (contained.clone(), draw.clone(), item.quantity);
+                remove.connect_clicked(move |b| {
+                    let redraw = {
+                        let draw = draw.clone();
+                        move || {
+                            if let Some(d) = draw.borrow().clone() {
+                                d();
+                            }
+                        }
+                    };
+                    if quantity <= 1 {
+                        tables::remove_contained(&mut contained.borrow_mut(), i, 1);
+                        return redraw();
+                    }
+                    let contained = contained.clone();
+                    crate::bundle::how_many(
+                        b,
+                        tr("How many to remove?"),
+                        tr("_Remove"),
+                        (0, quantity, quantity),
+                        move |n| {
+                            if n > 0 {
+                                tables::remove_contained(&mut contained.borrow_mut(), i, n);
+                                redraw();
+                            }
+                        },
+                    );
+                });
+                row.add_suffix(&remove);
+                list.append(&row);
+            }
+        }
+    });
+    *draw_always.borrow_mut() = Some(render_always.clone());
+    render_always();
+    add.connect_clicked({
+        let (host, contained, render) = (host.clone(), contained.clone(), render_always.clone());
+        move |b| {
+            let (host2, contained, render) = (host.clone(), contained.clone(), render.clone());
+            let parent = b.clone();
+            crate::lists::pick_titled(
+                b,
+                tr("Category"),
+                tables::contents_sources(),
+                move |source| {
+                    let items = host2.with_install(|install| {
+                        let db = TableDb::load(install)?;
+                        tables::source_items(install, &db, &source)
+                    });
+                    let Some((items, _)) = errors(&*host2, items) else {
+                        return;
+                    };
+                    if items.is_empty() {
+                        return host2.toast(tr("Nothing in this category"));
+                    }
+                    let (contained, render) = (contained.clone(), render.clone());
+                    pick(&parent, &source, items, move |item| {
+                        tables::add_contained(&mut contained.borrow_mut(), &item);
+                        render();
+                    });
+                },
+            );
+        }
+    });
+
+    // Scroll Details (IDD 365).
+    let spells = adw::PreferencesGroup::builder()
+        .title(tr("Scroll Spells"))
+        .description(tr(
+            "Scrolls of protection should not have any of these set. This is only for spell scrolls.",
+        ))
+        .build();
+    let category = adw::ComboRow::builder()
+        .title(tr("Spell Category"))
+        .model(&gtk::StringList::new(&[tr("Wizard"), tr("Priest")]))
+        .selected(if start.spell_wizard != 0 { 0 } else { 1 })
+        .build();
+    let level = |title: &str, value: u32| {
+        adw::SpinRow::builder()
+            .title(title)
+            .adjustment(&gtk::Adjustment::new(
+                value.into(),
+                0.0,
+                tables::max_spell_level(start.spell_wizard != 0).into(),
+                1.0,
+                1.0,
+                0.0,
+            ))
+            .build()
+    };
+    let lowest = level(tr("Lowest Level"), start.spell_min_level);
+    let highest = level(tr("Highest Level"), start.spell_max_level);
+    let count = adw::SpinRow::builder()
+        .title(tr("Number of Spells"))
+        .subtitle(tr("0 for none"))
+        .adjustment(&gtk::Adjustment::new(
+            start.spell_count.into(),
+            0.0,
+            100.0,
+            1.0,
+            5.0,
+            0.0,
+        ))
+        .build();
+    category.connect_selected_notify({
+        let (entry, lowest, highest) = (entry.clone(), lowest.clone(), highest.clone());
+        move |c| {
+            let wizard = c.selected() == 0;
+            let top = tables::max_spell_level(wizard);
+            let mut e = entry.borrow_mut();
+            tables::set_spell_wizard(&mut e, wizard);
+            let (low, high) = (e.spell_min_level, e.spell_max_level);
+            drop(e);
+            for (spin, value) in [(&lowest, low), (&highest, high)] {
+                spin.adjustment().set_upper(top.into());
+                spin.set_value(value.into());
+            }
+        }
+    });
+    lowest.connect_value_notify({
+        let entry = entry.clone();
+        move |s| entry.borrow_mut().spell_min_level = s.value() as u32
+    });
+    highest.connect_value_notify({
+        let entry = entry.clone();
+        move |s| entry.borrow_mut().spell_max_level = s.value() as u32
+    });
+    count.connect_value_notify({
+        let entry = entry.clone();
+        move |s| entry.borrow_mut().spell_count = s.value() as u32
+    });
+    for row in [
+        category.upcast_ref::<gtk::Widget>(),
+        lowest.upcast_ref(),
+        highest.upcast_ref(),
+        count.upcast_ref(),
+    ] {
+        spells.add(row);
+    }
+
+    let page = adw::PreferencesPage::new();
+    for group in [&found, &random, &always, &spells] {
+        page.add(group);
+    }
+    let cancel = gtk::Button::builder()
+        .label(tr("_Cancel"))
+        .use_underline(true)
+        .build();
+    let ok = gtk::Button::builder()
+        .label(tr("_OK"))
+        .use_underline(true)
+        .css_classes(["suggested-action"])
+        .build();
+    let header = adw::HeaderBar::builder()
+        .show_start_title_buttons(false)
+        .show_end_title_buttons(false)
+        .build();
+    header.pack_start(&cancel);
+    header.pack_end(&ok);
+    let view = adw::ToolbarView::new();
+    crate::help::add_button(&header, &view, || topic::TREASURE_ENTRY);
+    view.add_top_bar(&header);
+    view.set_content(Some(&page));
+    let dialog = dialog_for(tr("Entry Details"), &view, false);
+    cancel.connect_clicked({
+        let dialog = dialog.clone();
+        move |_| {
+            dialog.close();
+        }
+    });
+    ok.connect_clicked({
+        let (table, dialog) = (table.clone(), dialog.clone());
+        move |_| {
+            let mut e = entry.borrow().clone();
+            tables::set_contained(&mut e, contained.borrow().clone());
+            if let Some(row) = tables::entries_mut(&mut table.borrow_mut())
+                .into_iter()
+                .nth(index)
+            {
+                *row = e;
+            }
+            dialog.close();
+            done();
         }
     });
     dialog.present(Some(&host.parent()));

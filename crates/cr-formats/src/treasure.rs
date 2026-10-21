@@ -48,7 +48,7 @@ record! {
         sub_table_2: String,
         /// 25 on swords, 5 on other weapons, else 0: the percent chance of
         /// an intelligent weapon (0x5462c7).
-        unknown_0x54: u8,
+        intelligent_chance: u8,
         /// Spell scrolls: lowest and highest spell level (1..4, 4..9) and
         /// the number of spells (1..7).
         spell_min_level: u32,
@@ -94,7 +94,7 @@ mod tests {
             sub_table_1: String::new(),
             sub_table_2_dice: [1, 4, 2],
             sub_table_2: "Beads".into(),
-            unknown_0x54: 0,
+            intelligent_chance: 0,
             spell_min_level: 0,
             spell_max_level: 0,
             spell_count: 0,
