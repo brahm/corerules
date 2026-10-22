@@ -485,7 +485,7 @@ fn spin_row(title: &str, subtitle: &str, value: u32, min: u32, max: u32) -> adw:
 }
 
 /// "34 gp 6 sp 7 cp" for an amount in copper pieces.
-fn money(copper: u32) -> String {
+pub(crate) fn money(copper: u32) -> String {
     let parts: Vec<String> = [copper / 100, copper / 10 % 10, copper % 10]
         .into_iter()
         .enumerate()
