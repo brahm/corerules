@@ -24,6 +24,7 @@ use cr_store::create::{
 };
 use cr_store::help::topic;
 use cr_store::kit_magic::KitMagicRules;
+use cr_store::learn::{ALREADY_KNOWN, LearnRules, Learner, Learning, WARNING};
 use cr_store::npc::NpcRules;
 use cr_store::pictures::ItemIcons;
 use cr_store::settings::{SETTINGS, Setting};
@@ -61,6 +62,8 @@ struct Inner {
     rules: CreationRules,
     /// Levels, hit points and PSPs, for Enter Character's levels.
     advance: Arc<AdvanceRules>,
+    /// The spell picker's checks.
+    learn: Arc<LearnRules>,
     /// Enter Character rather than New Character.
     entering: bool,
     /// The item check of the Equipment page (0x43d7bc), when the
@@ -86,6 +89,7 @@ pub struct Mode {
     /// Enter Character (0x44aeab) rather than New Character.
     pub entering: bool,
     pub advance: Arc<AdvanceRules>,
+    pub learn: Arc<LearnRules>,
     /// The item check of the Equipment page, when the program was read.
     pub items: Option<Rc<NpcRules>>,
     /// The installation, for the portraits and the items' icons.
@@ -116,6 +120,7 @@ pub fn new_character(
     let wizard = Wizard(Rc::new(Inner {
         rules,
         advance: mode.advance,
+        learn: mode.learn,
         entering: mode.entering,
         items: mode.items,
         root: mode.root,
@@ -215,6 +220,34 @@ fn question(
         }
     });
     alert.present(Some(parent));
+}
+
+/// Learning a spell picked from a list: the original's checks
+/// (0x62dc71), each limit passed over asked in turn; `add` runs once all
+/// are answered Yes.
+pub(crate) fn learn_spell(
+    parent: &gtk::Widget,
+    rules: &LearnRules,
+    learner: &Learner,
+    (name, wizard): (&str, bool),
+    dice: &mut Dice,
+    add: Box<dyn FnOnce()>,
+) {
+    match rules.learn_rolled(learner, name, wizard, dice) {
+        Learning::Known => message(parent, tr(WARNING), tr(ALREADY_KNOWN)),
+        Learning::Ask(questions) => {
+            let add = RefCell::new(Some(add));
+            ask_each(
+                parent,
+                questions.into(),
+                Rc::new(move || {
+                    if let Some(add) = add.borrow_mut().take() {
+                        add();
+                    }
+                }),
+            );
+        }
+    }
 }
 
 /// A message with OK that runs `then` once closed.
@@ -4182,9 +4215,35 @@ impl Wizard {
                 },
             ));
         }
+        // Each spell picked is checked as the original's Learn does,
+        // for the wizard class at 1st level.
+        spells.connect_add({
+            let (this, taken, group) = (self.clone(), taken.clone(), spells.group.clone());
+            move |name, add| {
+                let learner = this.learner(&taken.borrow());
+                let mut dice = this.0.dice.borrow_mut();
+                learn_spell(
+                    group.upcast_ref(),
+                    &this.0.learn,
+                    &learner,
+                    (name, true),
+                    &mut dice,
+                    add,
+                );
+            }
+        });
+        // The chance to learn each spell offered (0x630052).
+        spells.set_detail({
+            let (this, taken) = (self.clone(), taken.clone());
+            move |name| {
+                this.0
+                    .learn
+                    .chance_text(&this.learner(&taken.borrow()), name, true)
+            }
+        });
         let next = next_button(tr("_Next"));
         spells.connect_changed({
-            let (spells, next, taken) = (spells.clone(), next.clone(), taken.clone());
+            let (spells, taken) = (spells.clone(), taken.clone());
             move || {
                 let names: Vec<String> = spells.values().into_iter().map(|(v, _)| v).collect();
                 let description = if entering {
@@ -4202,7 +4261,6 @@ impl Wizard {
                     )
                 };
                 spells.group.set_description(Some(&description));
-                next.set_sensitive(entering || names.len() <= most);
                 *taken.borrow_mut() = names;
             }
         });
@@ -4223,6 +4281,32 @@ impl Wizard {
             None,
             || topic::CHARACTER_SPELLS,
         )
+    }
+
+    /// The draft's wizard class learning spells at 1st level, knowing
+    /// `known`.
+    fn learner(&self, known: &[String]) -> Learner {
+        let d = self.0.draft.borrow();
+        let rules = self.rules();
+        let slot = d
+            .classes
+            .iter()
+            .position(|c| rules.is_wizard(std::slice::from_ref(c)))
+            .unwrap_or(0);
+        let class = d.classes.get(slot).cloned().unwrap_or_default();
+        let abilities = d.class_abilities.get(slot).cloned().unwrap_or_default();
+        let scores = rules.subability_scores(&d);
+        Learner {
+            castable: self.0.advance.castable(&class, 1, &abilities),
+            class,
+            abilities,
+            kit: d.kit.clone(),
+            reason: scores[3][1],
+            knowledge: scores[3][2],
+            wizard_spells: known.to_vec(),
+            priest_spells: Vec::new(),
+            entering: self.0.entering,
+        }
     }
 
     /// Starting money and what it buys; the last page.

@@ -16,6 +16,8 @@ pub struct ListEditor {
     items: Rc<RefCell<Vec<String>>>,
     rows: Rc<RefCell<Vec<adw::ActionRow>>>,
     empty: adw::ActionRow,
+    add_check: AddCheck,
+    detail: Rc<RefCell<Option<Detail>>>,
 }
 
 impl ListEditor {
@@ -42,6 +44,8 @@ impl ListEditor {
             items: Rc::default(),
             rows: Rc::default(),
             empty,
+            add_check: Rc::default(),
+            detail: Rc::default(),
         };
         for item in items {
             editor.push(item.clone());
@@ -58,10 +62,21 @@ impl ListEditor {
                     .filter(|c| !taken.contains(c))
                     .cloned()
                     .collect();
+                let detail = editor.detail.borrow().clone();
                 let editor = editor.clone();
-                pick(button, &title, offered, move |name| {
-                    editor.push(name);
-                    editor.update_empty();
+                let title = tr!("Add to {list}", list = title);
+                pick_detailed(button, &title, offered, detail, move |name| {
+                    let add: Box<dyn FnOnce()> = {
+                        let (editor, name) = (editor.clone(), name.clone());
+                        Box::new(move || {
+                            editor.push(name);
+                            editor.update_empty();
+                        })
+                    };
+                    match &*editor.add_check.borrow() {
+                        Some(check) => check(&name, add),
+                        None => add(),
+                    }
                 });
             }
         });
@@ -70,6 +85,17 @@ impl ListEditor {
 
     pub fn items(&self) -> Vec<String> {
         self.items.borrow().clone()
+    }
+
+    /// Asks `f` before a name picked with Add joins the list, with the
+    /// name and what adds it.
+    pub fn connect_add(&self, f: impl Fn(&str, Box<dyn FnOnce()>) + 'static) {
+        *self.add_check.borrow_mut() = Some(Box::new(f));
+    }
+
+    /// Shows `f`'s line under each name Add offers.
+    pub fn set_detail(&self, f: impl Fn(&str) -> String + 'static) {
+        *self.detail.borrow_mut() = Some(Rc::new(f));
     }
 
     fn push(&self, name: String) {
@@ -123,6 +149,20 @@ pub fn pick_titled(
     choices: Vec<String>,
     chosen: impl Fn(String) + 'static,
 ) {
+    pick_detailed(parent, title, choices, None, chosen);
+}
+
+/// A line under each name the picker shows, from the name.
+pub type Detail = Rc<dyn Fn(&str) -> String>;
+
+/// [`pick_titled`] with `detail` under each name.
+fn pick_detailed(
+    parent: &impl IsA<gtk::Widget>,
+    title: &str,
+    choices: Vec<String>,
+    detail: Option<Detail>,
+    chosen: impl Fn(String) + 'static,
+) {
     let model = gtk::StringList::new(&choices.iter().map(String::as_str).collect::<Vec<_>>());
     let search = gtk::SearchEntry::builder()
         .placeholder_text(tr("Search"))
@@ -164,20 +204,38 @@ pub fn pick_titled(
     factory.connect_setup(|_, item| {
         let label = gtk::Label::builder()
             .xalign(0.0)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .build();
+        let detail = gtk::Label::builder()
+            .xalign(0.0)
+            .visible(false)
+            .css_classes(["dim-label", "caption"])
+            .build();
+        let column = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
             .margin_top(8)
             .margin_bottom(8)
             .margin_start(6)
-            .ellipsize(gtk::pango::EllipsizeMode::End)
             .build();
+        column.append(&label);
+        column.append(&detail);
         item.downcast_ref::<gtk::ListItem>()
             .unwrap()
-            .set_child(Some(&label));
+            .set_child(Some(&column));
     });
-    factory.connect_bind(|_, item| {
+    factory.connect_bind(move |_, item| {
         let item = item.downcast_ref::<gtk::ListItem>().unwrap();
         let text = item.item().and_downcast::<gtk::StringObject>().unwrap();
-        let label = item.child().and_downcast::<gtk::Label>().unwrap();
+        let column = item.child().and_downcast::<gtk::Box>().unwrap();
+        let label = column.first_child().and_downcast::<gtk::Label>().unwrap();
+        let line = column.last_child().and_downcast::<gtk::Label>().unwrap();
         label.set_label(&text.string());
+        let below = detail
+            .as_ref()
+            .map(|d| d(&text.string()))
+            .unwrap_or_default();
+        line.set_visible(!below.is_empty());
+        line.set_label(&below);
     });
     let list = gtk::ListView::builder()
         .model(&gtk::SingleSelection::new(Some(filtered)))
@@ -264,6 +322,7 @@ pub struct RowList<T: 'static> {
     changed: Callback,
     remove_check: RemoveCheck<T>,
     add_check: AddCheck,
+    detail: Rc<RefCell<Option<Detail>>>,
     /// The icons drawn at the start of the rows, by title (item name).
     icons: Rc<RefCell<Option<Rc<ItemIcons>>>>,
 }
@@ -277,6 +336,7 @@ impl<T: Clone + 'static> Clone for RowList<T> {
             changed: self.changed.clone(),
             remove_check: self.remove_check.clone(),
             add_check: self.add_check.clone(),
+            detail: self.detail.clone(),
             icons: self.icons.clone(),
         }
     }
@@ -313,6 +373,7 @@ impl<T: Clone + 'static> RowList<T> {
             changed: Rc::default(),
             remove_check: Rc::default(),
             add_check: Rc::default(),
+            detail: Rc::default(),
             icons: Rc::default(),
         };
         for row in rows {
@@ -325,7 +386,9 @@ impl<T: Clone + 'static> RowList<T> {
             let list = list.clone();
             move |button| {
                 let (list, make) = (list.clone(), make.clone());
-                pick(button, &title, choices(), move |name| {
+                let detail = list.detail.borrow().clone();
+                let heading = tr!("Add to {list}", list = title);
+                pick_detailed(button, &heading, choices(), detail, move |name| {
                     let add: Box<dyn FnOnce()> = {
                         let (list, make, name) = (list.clone(), make.clone(), name.clone());
                         Box::new(move || {
@@ -468,6 +531,11 @@ impl<T: Clone + 'static> RowList<T> {
     /// removes it.
     pub fn connect_remove(&self, f: impl Fn(&T, Box<dyn FnOnce()>) + 'static) {
         *self.remove_check.borrow_mut() = Some(Box::new(f));
+    }
+
+    /// Shows `f`'s line under each name Add offers.
+    pub fn set_detail(&self, f: impl Fn(&str) -> String + 'static) {
+        *self.detail.borrow_mut() = Some(Rc::new(f));
     }
 
     /// Asks `f` before a name picked with Add becomes a row, with the name

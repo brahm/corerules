@@ -42,6 +42,7 @@ use cr_store::choices::{Caster, caster};
 use cr_store::dual::ClassChoice;
 use cr_store::edit::{ABILITY_RANGE, CharacterDetails};
 use cr_store::help::topic;
+use cr_store::learn::{LearnRules, Learner};
 use cr_store::lists::{
     BUNDLE_NAMES, COINS, CharacterLists, ITEM_TYPES, Item, MONEY, Memorized, Spellbook,
 };
@@ -738,15 +739,15 @@ impl Window {
         let (rules, root) = match &*self.install.borrow() {
             Some(install) => (
                 install.creation_rules().and_then(|creation| {
-                    install
-                        .advance_rules()
-                        .map(|advance| (creation, Arc::new(advance)))
+                    let advance = Arc::new(install.advance_rules()?);
+                    let learn = Arc::new(install.learn_rules()?);
+                    Ok((creation, advance, learn))
                 }),
                 install.root().to_owned(),
             ),
             None => return,
         };
-        let (rules, advance) = match rules {
+        let (rules, advance, learn) = match rules {
             Ok(rules) => rules,
             Err(e) => return self.toast(&e.to_string()),
         };
@@ -754,6 +755,7 @@ impl Window {
         let mode = create::Mode {
             entering,
             advance,
+            learn,
             items: self.item_rules(),
             root,
         };
@@ -2278,6 +2280,79 @@ fn character_editor(
         move || editor.levels_changed()
     }));
     let skills_editor = skills::SkillsEditor::new(choices.skills.clone(), &choices.character);
+    // A spell picked is checked as the original's Learn does (0x62dc71),
+    // for the first class that casts spells of its kind.
+    let dice = Rc::new(RefCell::new(cr_store::create::Dice::default()));
+    for (list, wizard) in [
+        (&editors.wizard_spells, true),
+        (&editors.priest_spells, false),
+    ] {
+        let learner = Rc::new({
+            let (advanced, levels, kit) = (advanced.clone(), levels.clone(), kit.clone());
+            let (rules, ids, abilities) = (
+                choices.advance.clone(),
+                choices.class_ids.clone(),
+                ability_editor.clone(),
+            );
+            let (wizard_spells, priest_spells) =
+                (editors.wizard_spells.clone(), editors.priest_spells.clone());
+            move || {
+                let character = advanced.borrow();
+                let kind = if wizard {
+                    Caster::Wizard
+                } else {
+                    Caster::Priest
+                };
+                let names = &character.data.classes.names;
+                let slot = names
+                    .iter()
+                    .position(|n| ids.get(n).copied().map(caster) == Some(kind));
+                let (class, level, class_abilities) = match slot {
+                    Some(g) => (
+                        names[g].clone(),
+                        levels().get(g).copied().unwrap_or(1),
+                        abilities
+                            .abilities()
+                            .classes
+                            .get(g)
+                            .map(|c| c.abilities.clone())
+                            .unwrap_or_default(),
+                    ),
+                    None => (String::new(), 0, Vec::new()),
+                };
+                let (reason, knowledge) = Learner::intelligence(&character);
+                Learner {
+                    castable: rules.castable(&class, level, &class_abilities),
+                    class,
+                    abilities: class_abilities,
+                    kit: create::combo_value(&kit),
+                    reason,
+                    knowledge,
+                    wizard_spells: wizard_spells.items(),
+                    priest_spells: priest_spells.items(),
+                    entering: false,
+                }
+            }
+        });
+        // The chance to learn each spell offered (0x630052).
+        list.set_detail({
+            let (rules, learner) = (choices.learn.clone(), learner.clone());
+            move |name| rules.chance_text(&learner(), name, wizard)
+        });
+        list.connect_add({
+            let (rules, dice, group) = (choices.learn.clone(), dice.clone(), list.group.clone());
+            move |name, add| {
+                create::learn_spell(
+                    group.upcast_ref(),
+                    &rules,
+                    &learner(),
+                    (name, wizard),
+                    &mut dice.borrow_mut(),
+                    add,
+                );
+            }
+        });
+    }
     // Buying an item the character may not use asks first, as the
     // original's Update Character does (0x43d7bc in its mode).
     if let Some(check) = choices.item_rules.clone() {
@@ -3023,6 +3098,8 @@ struct Choices {
     skills: Rc<cr_store::skills::SkillRules>,
     /// The kit's schools, spheres and spell use.
     kit_magic: Rc<cr_store::kit_magic::KitMagicRules>,
+    /// The spell pickers' checks.
+    learn: Rc<LearnRules>,
     /// The item check of the Equipment page, when the program was read.
     item_rules: Option<Rc<NpcRules>>,
 }
@@ -3060,6 +3137,7 @@ impl Choices {
             abilities: Rc::new(install.ability_rules()?),
             skills: Rc::new(install.skill_rules()?),
             kit_magic: Rc::new(install.kit_magic_rules()?),
+            learn: Rc::new(install.learn_rules()?),
             item_rules: None,
         })
     }
