@@ -48,6 +48,7 @@ use cr_store::lists::{
 };
 use cr_store::npc::NpcRules;
 use cr_store::pictures::{ICON_SIZE, ItemIcons};
+use cr_store::purse;
 use cr_store::treasure::Rand;
 use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES, other_type};
 use gtk::{gio, glib};
@@ -2394,7 +2395,7 @@ fn character_editor(
     }
     // Buying an item the character may not use asks first, as the
     // original's Update Character does (0x43d7bc in its mode).
-    if let Some(check) = choices.item_rules.clone() {
+    let item_check = if let Some(check) = choices.item_rules.clone() {
         let user = Rc::new({
             let (advanced, levels, kit) = (advanced.clone(), levels.clone(), kit.clone());
             let (ability_editor, combat_editor) = (ability_editor.clone(), combat_editor.clone());
@@ -2427,16 +2428,18 @@ fn character_editor(
                 }
             }
         });
-        for (_, list) in &editors.equipment {
-            let (check, user, group) = (check.clone(), user.clone(), list.group.clone());
-            list.connect_add(
-                move |name, add| match check.item_problem(&user(), name, false) {
-                    Some(text) => create::item_error(&group, &text, add),
+        Some(
+            Rc::new(move |group: &adw::PreferencesGroup, name: &str, add| {
+                match check.item_problem(&user(), name, false) {
+                    Some(text) => create::item_error(group, &text, add),
                     None => add(),
-                },
-            );
-        }
-    }
+                }
+            }) as ItemCheck,
+        )
+    } else {
+        None
+    };
+    editors.connect_trade(choices.creation.clone(), kit.clone(), item_check);
     let stack = adw::ViewStack::new();
     stack.add_titled_with_icon(
         &page,
@@ -3234,6 +3237,24 @@ struct ListEditors {
     /// One per bundle but the spending money.
     equipment: Vec<(usize, RowList<Item>)>,
     coins: [adw::SpinRow; 5],
+    /// Whether adding and removing items buys and sells them (the
+    /// original's Buy/Sell mode, Free when Update opens).
+    trading: adw::SwitchRow,
+}
+
+/// Asked before an item is added, with the list's group, the item and
+/// what adds it.
+type ItemCheck = Rc<dyn Fn(&adw::PreferencesGroup, &str, Box<dyn FnOnce()>)>;
+
+/// A list's items and how many of each.
+type Stock = Vec<(String, u32)>;
+
+/// What `list` holds now.
+fn stock(list: &RowList<Item>) -> Stock {
+    list.values()
+        .into_iter()
+        .map(|(item, n)| (item.name, n.unwrap_or(item.quantity)))
+        .collect()
 }
 
 /// Ordinal for a spell level ("1st").
@@ -3373,6 +3394,23 @@ impl ListEditors {
             memorized.push((slot, wizard, list));
         }
 
+        let trading = adw::SwitchRow::builder()
+            .title(tr("Buy and Sell"))
+            .subtitle(tr(
+                "Items added are paid for with the spending money, items removed are sold",
+            ))
+            .build();
+        // What can be bought: no magical items, gems or coins (5d9331).
+        let wares: Rc<Vec<String>> = Rc::new({
+            let mut names: Vec<String> = choices
+                .creation
+                .wares
+                .iter()
+                .map(|w| w.name.clone())
+                .collect();
+            names.sort_by_cached_key(|n| cr_store::collate::sort_key(n));
+            names
+        });
         let equipment = (0..9)
             .filter(|&b| b != MONEY)
             .map(|b| {
@@ -3389,11 +3427,18 @@ impl ListEditors {
                         value: item.clone(),
                     })
                     .collect();
-                let items = choices.items.clone();
+                let (items, wares, trading) =
+                    (choices.items.clone(), wares.clone(), trading.clone());
                 let list = RowList::new(
                     tr(BUNDLE_NAMES[b]),
                     rows,
-                    move || items.to_vec(),
+                    move || {
+                        if trading.is_active() {
+                            wares.to_vec()
+                        } else {
+                            items.to_vec()
+                        }
+                    },
                     |name| {
                         Some(RowSpec {
                             value: Item::new(&name),
@@ -3450,6 +3495,7 @@ impl ListEditors {
             original_memorized: lists.memorized.clone(),
             equipment,
             coins,
+            trading,
         }
     }
 
@@ -3475,6 +3521,7 @@ impl ListEditors {
         let money = adw::PreferencesGroup::builder()
             .title(tr("Spending Money"))
             .build();
+        money.add(&self.trading);
         for row in &self.coins {
             money.add(row);
         }
@@ -3483,6 +3530,140 @@ impl ListEditors {
             page.add(&list.group);
         }
         page
+    }
+
+    /// Has the equipment lists ask `check` before an item is added and,
+    /// while Buy and Sell is on, pay for what is added and give back the
+    /// price of what is removed or lessened, at the kit's percentage
+    /// (5d9331, 5dde7f, 5ddd19).
+    fn connect_trade(
+        &self,
+        rules: Arc<cr_store::create::CreationRules>,
+        kit: adw::ComboRow,
+        check: Option<ItemCheck>,
+    ) {
+        let lists: Rc<Vec<RowList<Item>>> =
+            Rc::new(self.equipment.iter().map(|(_, l)| l.clone()).collect());
+        let paid: Rc<RefCell<Vec<Stock>>> =
+            Rc::new(RefCell::new(lists.iter().map(stock).collect()));
+        let coins = Rc::new(self.coins.clone());
+        let price = Rc::new({
+            let (rules, kit) = (rules.clone(), kit.clone());
+            move |name: &str, n: u32| rules.price(&create::combo_value(&kit), name, n)
+        });
+        // Why `cost` cannot be paid, if it cannot (5d9705): the spending
+        // money is short, but maybe not the money kept elsewhere.
+        let short = Rc::new({
+            let (coins, lists) = (coins.clone(), lists.clone());
+            move |cost: u64| -> Option<&'static str> {
+                let spending = purse::worth(&std::array::from_fn(|c| coins[c].value() as u32));
+                if spending >= cost {
+                    return None;
+                }
+                let kept: u64 = lists
+                    .iter()
+                    .flat_map(stock)
+                    .filter_map(|(name, n)| {
+                        COINS
+                            .iter()
+                            .find(|c| c.0 == name)
+                            .map(|c| u64::from(n) * u64::from(c.1))
+                    })
+                    .sum();
+                Some(if spending + kept >= cost {
+                    tr(
+                        "You must move some of your money into Spending Money before you can \
+                        purchase this item.",
+                    )
+                } else {
+                    tr("This item is too expensive.")
+                })
+            }
+        });
+        for (i, list) in lists.iter().enumerate() {
+            // What each item costs, as the picker offers it.
+            list.set_detail({
+                let (trading, price) = (self.trading.clone(), price.clone());
+                move |name| {
+                    if trading.is_active() {
+                        create::money(price(name, 1))
+                    } else {
+                        String::new()
+                    }
+                }
+            });
+            list.connect_add({
+                let (check, group, trading) =
+                    (check.clone(), list.group.clone(), self.trading.clone());
+                let (price, short) = (price.clone(), short.clone());
+                move |name, add| {
+                    let buy: Box<dyn FnOnce()> = if trading.is_active() {
+                        let (group, short) = (group.clone(), short.clone());
+                        let cost = price(name, 1);
+                        Box::new(move || match short(cost.into()) {
+                            Some(text) => create::message(&group, tr("Error Message!"), text),
+                            None => add(),
+                        })
+                    } else {
+                        add
+                    };
+                    match &check {
+                        Some(check) => check(&group, name, buy),
+                        None => buy(),
+                    }
+                }
+            });
+            list.also_connect_changed({
+                let (list, paid, trading) = (list.clone(), paid.clone(), self.trading.clone());
+                let (coins, price, short) = (coins.clone(), price.clone(), short.clone());
+                move || {
+                    let now = stock(&list);
+                    let before = std::mem::replace(&mut paid.borrow_mut()[i], now.clone());
+                    if !trading.is_active() {
+                        return;
+                    }
+                    let cost = |rows: &[(String, u32)]| -> u64 {
+                        rows.iter()
+                            .map(|(name, n)| u64::from(price(name, *n)))
+                            .sum()
+                    };
+                    let (was, is) = (cost(&before), cost(&now));
+                    let mut purse: purse::Coins = std::array::from_fn(|c| coins[c].value() as u32);
+                    if is > was {
+                        let more = u32::try_from(is - was).unwrap_or(u32::MAX);
+                        if !purse::pay(&mut purse, more) {
+                            let text = short(more.into())
+                                .unwrap_or_else(|| tr("This item is too expensive."));
+                            // Only more of an item gets here: it goes back
+                            // to what was paid for.
+                            paid.borrow_mut()[i] = before.clone();
+                            let changed =
+                                (0..now.len().min(before.len())).find(|&j| now[j] != before[j]);
+                            if let Some(j) = changed {
+                                list.set_number(j, before[j].1);
+                            }
+                            create::message(&list.group, tr("Error Message!"), text);
+                            return;
+                        }
+                    } else if was > is {
+                        purse::refund(&mut purse, u32::try_from(was - is).unwrap_or(u32::MAX));
+                    }
+                    for (row, n) in coins.iter().zip(purse) {
+                        row.set_value(n.into());
+                    }
+                }
+            });
+        }
+        // That the kit changes what items cost, as the mode is chosen
+        // (5e2ba2).
+        self.trading.connect_active_notify(move |row| {
+            let name = create::combo_value(&kit);
+            if row.is_active()
+                && let Some(text) = rules.kit_price_notice(&name)
+            {
+                create::message(row, &name, text);
+            }
+        });
     }
 
     fn lists(&self) -> CharacterLists {

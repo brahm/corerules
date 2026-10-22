@@ -140,7 +140,10 @@ the original programs wrote.
   the kit's notes on the schools and spheres of the Abilities page), the
   nine equipment groups with quantities (with the kit's text, and the
   original's question about an item the character may not use), and
-  Spending Money
+  Spending Money, with the original's Buy and Sell mode: an item added is
+  paid for with the spending money at the kit's percentage of its price
+  (or refused with the original's messages), and one removed or lessened
+  gives its price back
 - **Experience and levels** per class, all classes or split, with the prime
   requisite bonus, hit point rolls, PSPs, character points and the
   Expansion's racial level limits, and the kit's own experience per level,

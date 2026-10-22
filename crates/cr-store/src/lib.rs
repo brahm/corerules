@@ -28,6 +28,7 @@ pub mod npc;
 pub mod party;
 pub mod pictures;
 pub mod proficiencies;
+pub mod purse;
 pub mod settings;
 pub mod sheet;
 pub mod skills;

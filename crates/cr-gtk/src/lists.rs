@@ -510,6 +510,14 @@ impl<T: Clone + 'static> RowList<T> {
             .collect()
     }
 
+    /// Sets the number of the row at `index`, which counts as a change.
+    pub fn set_number(&self, index: usize, number: u32) {
+        let spin = self.rows.borrow().get(index).and_then(|r| r.2.clone());
+        if let Some(spin) = spin {
+            spin.set_value(number.into());
+        }
+    }
+
     /// The row titles (names), in order.
     pub fn rows_titles(&self) -> Vec<String> {
         self.rows

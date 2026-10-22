@@ -435,7 +435,7 @@ msgid "_Reset Zoom"
 msgstr "_Restaurar zoom"
 
 #: crates/cr-gtk/src/books.rs:336
-#: crates/cr-gtk/src/main.rs:1221
+#: crates/cr-gtk/src/main.rs:1222
 msgid "Main Menu"
 msgstr "Menu principal"
 
@@ -453,7 +453,7 @@ msgstr "Não foi possível abrir o livro"
 
 #: crates/cr-gtk/src/books.rs:970
 #: crates/cr-gtk/src/encounter.rs:1310
-#: crates/cr-gtk/src/main.rs:1531
+#: crates/cr-gtk/src/main.rs:1532
 msgid "No Results"
 msgstr "Nenhum resultado"
 
@@ -498,7 +498,7 @@ msgid "_Copy To…"
 msgstr "_Copiar para…"
 
 #: crates/cr-gtk/src/bundle.rs:163
-#: crates/cr-gtk/src/main.rs:1353
+#: crates/cr-gtk/src/main.rs:1354
 #: crates/cr-gtk/src/userdb/attacks.rs:74
 #: crates/cr-gtk/src/userdb/levels.rs:159
 #: crates/cr-gtk/src/userdb/widgets.rs:621
@@ -551,9 +551,9 @@ msgstr "Quantos?"
 #: crates/cr-gtk/src/encounter.rs:1218
 #: crates/cr-gtk/src/encounter.rs:1689
 #: crates/cr-gtk/src/extract.rs:30
-#: crates/cr-gtk/src/main.rs:816
-#: crates/cr-gtk/src/main.rs:2505
-#: crates/cr-gtk/src/main.rs:3046
+#: crates/cr-gtk/src/main.rs:817
+#: crates/cr-gtk/src/main.rs:2508
+#: crates/cr-gtk/src/main.rs:3048
 #: crates/cr-gtk/src/party.rs:394
 #: crates/cr-gtk/src/sheet_options.rs:167
 #: crates/cr-gtk/src/transfer.rs:53
@@ -586,7 +586,7 @@ msgstr "Categoria"
 
 #: crates/cr-gtk/src/bundle.rs:256
 #: crates/cr-gtk/src/lists.rs:168
-#: crates/cr-gtk/src/main.rs:1425
+#: crates/cr-gtk/src/main.rs:1426
 #: crates/cr-gtk/src/picture.rs:461
 #: crates/cr-gtk/src/userdb/templates.rs:508
 #: crates/cr-gtk/src/userdb/templates.rs:661
@@ -605,7 +605,7 @@ msgid "How many to add?"
 msgstr "Quantos adicionar?"
 
 #: crates/cr-gtk/src/bundle.rs:344
-#: crates/cr-gtk/src/main.rs:3048
+#: crates/cr-gtk/src/main.rs:3050
 #: crates/cr-gtk/src/transfer.rs:696
 #: crates/cr-gtk/src/userdb/templates.rs:1992
 msgid "_Add"
@@ -674,7 +674,7 @@ msgstr "Magias selecionadas (magias restantes: {left})"
 #: crates/cr-gtk/src/encounter.rs:644
 #: crates/cr-gtk/src/lists.rs:104
 #: crates/cr-gtk/src/lists.rs:426
-#: crates/cr-gtk/src/main.rs:2701
+#: crates/cr-gtk/src/main.rs:2704
 #: crates/cr-gtk/src/sheet_options.rs:129
 #: crates/cr-gtk/src/transfer.rs:796
 #: crates/cr-gtk/src/userdb/attacks.rs:80
@@ -906,8 +906,8 @@ msgid "Enter Character"
 msgstr "Inserir personagem"
 
 #: crates/cr-gtk/src/create.rs:153
-#: crates/cr-gtk/src/main.rs:1548
-#: crates/cr-gtk/src/main.rs:1621
+#: crates/cr-gtk/src/main.rs:1549
+#: crates/cr-gtk/src/main.rs:1622
 msgid "New Character"
 msgstr "Novo personagem"
 
@@ -1061,7 +1061,7 @@ msgstr "Cada dado é somado à habilidade escolhida para ele"
 #: crates/cr-gtk/src/create.rs:743
 #: crates/cr-gtk/src/create.rs:1033
 #: crates/cr-gtk/src/create.rs:1883
-#: crates/cr-gtk/src/main.rs:2129
+#: crates/cr-gtk/src/main.rs:2130
 #: crates/cr-gtk/src/npc.rs:219
 msgid "Exceptional Strength"
 msgstr "Força excepcional"
@@ -1251,7 +1251,7 @@ msgstr "Habilidades de classe"
 #: crates/cr-gtk/src/create.rs:1773
 #: crates/cr-gtk/src/encounter.rs:337
 #: crates/cr-gtk/src/encounter.rs:1408
-#: crates/cr-gtk/src/main.rs:2084
+#: crates/cr-gtk/src/main.rs:2085
 #: crates/cr-gtk/src/treasure.rs:457
 #: crates/cr-gtk/src/userdb/attacks.rs:257
 #: crates/cr-gtk/src/userdb.rs:1513
@@ -1270,14 +1270,14 @@ msgid "Random Name"
 msgstr "Nome aleatório"
 
 #: crates/cr-gtk/src/create.rs:1793
-#: crates/cr-gtk/src/main.rs:2085
+#: crates/cr-gtk/src/main.rs:2086
 #: crates/cr-store/src/catalog.rs:503
 #: crates/cr-store/src/catalog.rs:870
 msgid "Player"
 msgstr "Jogador"
 
 #: crates/cr-gtk/src/create.rs:1796
-#: crates/cr-gtk/src/main.rs:2155
+#: crates/cr-gtk/src/main.rs:2156
 #: crates/cr-store/src/userdb/parts/kit.rs:488
 #: crates/cr-store/src/userdb/races.rs:270
 #: crates/cr-store/src/userdb/races.rs:274
@@ -1285,7 +1285,7 @@ msgid "Male"
 msgstr "Masculino"
 
 #: crates/cr-gtk/src/create.rs:1796
-#: crates/cr-gtk/src/main.rs:2155
+#: crates/cr-gtk/src/main.rs:2156
 #: crates/cr-store/src/userdb/parts/kit.rs:489
 #: crates/cr-store/src/userdb/races.rs:271
 #: crates/cr-store/src/userdb/races.rs:275
@@ -1293,13 +1293,13 @@ msgid "Female"
 msgstr "Feminino"
 
 #: crates/cr-gtk/src/create.rs:1797
-#: crates/cr-gtk/src/main.rs:2156
+#: crates/cr-gtk/src/main.rs:2157
 #: crates/cr-store/src/userdb/classes/pages.rs:680
 msgid "Gender"
 msgstr "Sexo"
 
 #: crates/cr-gtk/src/create.rs:1813
-#: crates/cr-gtk/src/main.rs:2158
+#: crates/cr-gtk/src/main.rs:2159
 #: crates/cr-gtk/src/npc.rs:564
 #: crates/cr-store/src/catalog.rs:874
 #: crates/cr-store/src/catalog.rs:1135
@@ -1310,7 +1310,7 @@ msgid "Alignment"
 msgstr "Tendência"
 
 #: crates/cr-gtk/src/create.rs:1814
-#: crates/cr-gtk/src/main.rs:2163
+#: crates/cr-gtk/src/main.rs:2164
 #: crates/cr-gtk/src/npc.rs:561
 #: crates/cr-store/src/catalog.rs:873
 #: crates/cr-store/src/userdb/parts/kit.rs:369
@@ -1318,7 +1318,7 @@ msgid "Kit"
 msgstr "Kit"
 
 #: crates/cr-gtk/src/create.rs:1818
-#: crates/cr-gtk/src/main.rs:2086
+#: crates/cr-gtk/src/main.rs:2087
 #: crates/cr-store/src/catalog.rs:875
 msgid "Social Class"
 msgstr "Classe social"
@@ -1328,36 +1328,36 @@ msgid "Roll Social Class"
 msgstr "Rolar classe social"
 
 #: crates/cr-gtk/src/create.rs:1826
-#: crates/cr-gtk/src/main.rs:2087
+#: crates/cr-gtk/src/main.rs:2088
 #: crates/cr-store/src/catalog.rs:886
 msgid "Age"
 msgstr "Idade"
 
 #: crates/cr-gtk/src/create.rs:1826
-#: crates/cr-gtk/src/main.rs:2087
+#: crates/cr-gtk/src/main.rs:2088
 msgid "Years"
 msgstr "Anos"
 
 #: crates/cr-gtk/src/create.rs:1827
-#: crates/cr-gtk/src/main.rs:2088
+#: crates/cr-gtk/src/main.rs:2089
 #: crates/cr-store/src/catalog.rs:887
 msgid "Height"
 msgstr "Altura"
 
 #: crates/cr-gtk/src/create.rs:1827
-#: crates/cr-gtk/src/main.rs:2088
+#: crates/cr-gtk/src/main.rs:2089
 msgid "Inches"
 msgstr "Polegadas"
 
 #: crates/cr-gtk/src/create.rs:1828
-#: crates/cr-gtk/src/main.rs:2089
+#: crates/cr-gtk/src/main.rs:2090
 #: crates/cr-gtk/src/userdb.rs:1562
 #: crates/cr-store/src/catalog.rs:888
 msgid "Weight"
 msgstr "Peso"
 
 #: crates/cr-gtk/src/create.rs:1828
-#: crates/cr-gtk/src/main.rs:2089
+#: crates/cr-gtk/src/main.rs:2090
 msgid "Pounds"
 msgstr "Libras"
 
@@ -1374,8 +1374,8 @@ msgid "Roll Weight"
 msgstr "Rolar peso"
 
 #: crates/cr-gtk/src/create.rs:1838
-#: crates/cr-gtk/src/main.rs:2210
-#: crates/cr-gtk/src/main.rs:3141
+#: crates/cr-gtk/src/main.rs:2211
+#: crates/cr-gtk/src/main.rs:3143
 #: crates/cr-store/src/catalog.rs:885
 #: crates/cr-store/src/create.rs:375
 #: crates/cr-store/src/userdb/monsters.rs:534
@@ -1437,9 +1437,9 @@ msgid "Your kit adjusts the cost of proficiencies. Changing your kit will reset 
 msgstr "Seu kit ajusta o custo das perícias. Mudar de kit desfaz as escolhas de perícias com armas e sem armas. Deseja continuar?"
 
 #: crates/cr-gtk/src/create.rs:2203
-#: crates/cr-gtk/src/main.rs:1317
-#: crates/cr-gtk/src/main.rs:1347
-#: crates/cr-gtk/src/main.rs:2444
+#: crates/cr-gtk/src/main.rs:1318
+#: crates/cr-gtk/src/main.rs:1348
+#: crates/cr-gtk/src/main.rs:2447
 #: crates/cr-gtk/src/userdb.rs:1593
 msgid "Details"
 msgstr "Detalhes"
@@ -1476,7 +1476,7 @@ msgid "Kit Non-Weapon Proficiency Requirements"
 msgstr "Exigências do kit para perícias comuns"
 
 #: crates/cr-gtk/src/create.rs:2441
-#: crates/cr-gtk/src/main.rs:3443
+#: crates/cr-gtk/src/main.rs:3487
 msgid "Native Languages"
 msgstr "Idiomas nativos"
 
@@ -1578,7 +1578,7 @@ msgid "Your kit specifies using a starting base of {slots} NWP slots. Do you wan
 msgstr "Seu kit define uma base inicial de {slots} espaços de perícias comuns. Deseja usar o valor do kit?"
 
 #: crates/cr-gtk/src/create.rs:3184
-#: crates/cr-gtk/src/main.rs:2462
+#: crates/cr-gtk/src/main.rs:2465
 #: crates/cr-store/src/catalog.rs:177
 #: crates/cr-store/src/catalog.rs:889
 msgid "Proficiencies"
@@ -1674,7 +1674,7 @@ msgid "The styles the class groups may learn; the “(+2)” ones are specializa
 msgstr "Os estilos que os grupos da classe podem aprender; os “(+2)” são especializações neles"
 
 #: crates/cr-gtk/src/create.rs:3962
-#: crates/cr-gtk/src/main.rs:2456
+#: crates/cr-gtk/src/main.rs:2459
 #: crates/cr-store/src/catalog.rs:1136
 #: crates/cr-store/src/userdb/monsters.rs:331
 #: crates/cr-store/src/userdb/monsters.rs:538
@@ -1812,7 +1812,7 @@ msgid "1st-level spells the character knows. Intelligence {intelligence} allows 
 msgstr "Magias de 1º nível que o personagem conhece. Inteligência {intelligence} permite {most}."
 
 #: crates/cr-gtk/src/create.rs:4627
-#: crates/cr-gtk/src/main.rs:2475
+#: crates/cr-gtk/src/main.rs:2478
 #: crates/cr-gtk/src/userdb/levels.rs:308
 #: crates/cr-store/src/catalog.rs:896
 #: crates/cr-store/src/userdb/monsters.rs:540
@@ -1856,7 +1856,7 @@ msgstr "Grátis pelo kit"
 
 #: crates/cr-gtk/src/create.rs:4735
 #: crates/cr-gtk/src/create.rs:4883
-#: crates/cr-gtk/src/main.rs:2481
+#: crates/cr-gtk/src/main.rs:2484
 #: crates/cr-gtk/src/picture.rs:403
 #: crates/cr-store/src/catalog.rs:165
 #: crates/cr-store/src/catalog.rs:897
@@ -1919,7 +1919,7 @@ msgstr "Adicione monstros e personagens você mesmo"
 
 #: crates/cr-gtk/src/encounter.rs:190
 #: crates/cr-gtk/src/encounter.rs:420
-#: crates/cr-gtk/src/main.rs:1622
+#: crates/cr-gtk/src/main.rs:1623
 msgid "New Encounter"
 msgstr "Novo encontro"
 
@@ -1971,7 +1971,7 @@ msgid "Encounter"
 msgstr "Encontro"
 
 #: crates/cr-gtk/src/encounter.rs:370
-#: crates/cr-gtk/src/main.rs:2035
+#: crates/cr-gtk/src/main.rs:2036
 #: crates/cr-store/src/summary.rs:166
 #: crates/cr-store/src/userdb/classes/pages.rs:98
 #: crates/cr-store/src/userdb/classes/pages.rs:161
@@ -2009,7 +2009,7 @@ msgstr "XP de tesouro"
 
 #: crates/cr-gtk/src/encounter.rs:394
 #: crates/cr-gtk/src/encounter.rs:1600
-#: crates/cr-gtk/src/main.rs:2507
+#: crates/cr-gtk/src/main.rs:2510
 #: crates/cr-gtk/src/sheet_options.rs:169
 #: crates/cr-gtk/src/transfer.rs:656
 #: crates/cr-gtk/src/treasure.rs:477
@@ -2081,7 +2081,7 @@ msgstr "Alterá-lo rola os pontos de vida novamente"
 
 #: crates/cr-gtk/src/encounter.rs:686
 #: crates/cr-gtk/src/enter.rs:184
-#: crates/cr-gtk/src/main.rs:2775
+#: crates/cr-gtk/src/main.rs:2778
 #: crates/cr-store/src/userdb/parts/pages.rs:1124
 msgid "Hit Points"
 msgstr "Pontos de vida"
@@ -2113,7 +2113,7 @@ msgid "The template also calls for these nonplayer characters, but the NPC gener
 msgstr "O modelo também pede estes personagens do mestre, mas o gerador de PdMs não conseguiu criá-los, pelo motivo indicado em cada um. Em vez disso, adicione personagens salvos com Adicionar PdM."
 
 #: crates/cr-gtk/src/encounter.rs:838
-#: crates/cr-gtk/src/main.rs:1191
+#: crates/cr-gtk/src/main.rs:1192
 msgid "_Roll Treasure…"
 msgstr "_Rolar tesouro…"
 
@@ -2358,7 +2358,7 @@ msgid "Delete Table"
 msgstr "Excluir tabela"
 
 #: crates/cr-gtk/src/encounter.rs:1617
-#: crates/cr-gtk/src/main.rs:1623
+#: crates/cr-gtk/src/main.rs:1624
 msgid "New Encounter Table"
 msgstr "Nova tabela de encontros"
 
@@ -2598,7 +2598,7 @@ msgid "Allowed Multiclasses"
 msgstr "Multiclasses permitidas"
 
 #: crates/cr-gtk/src/enter.rs:154
-#: crates/cr-gtk/src/main.rs:2740
+#: crates/cr-gtk/src/main.rs:2743
 msgid "Levels…"
 msgstr "Níveis…"
 
@@ -2607,12 +2607,12 @@ msgid "Changes the rolls of the highest level"
 msgstr "Muda as jogadas do nível mais alto"
 
 #: crates/cr-gtk/src/enter.rs:186
-#: crates/cr-gtk/src/main.rs:2782
+#: crates/cr-gtk/src/main.rs:2785
 msgid "PSPs"
 msgstr "PPS"
 
 #: crates/cr-gtk/src/enter.rs:187
-#: crates/cr-gtk/src/main.rs:2783
+#: crates/cr-gtk/src/main.rs:2786
 msgid "Changes those of the highest level that has them"
 msgstr "Muda os do nível mais alto que os tenha"
 
@@ -2621,8 +2621,8 @@ msgid "Add Experience…"
 msgstr "Adicionar experiência…"
 
 #: crates/cr-gtk/src/enter.rs:309
-#: crates/cr-gtk/src/main.rs:2661
-#: crates/cr-gtk/src/main.rs:2696
+#: crates/cr-gtk/src/main.rs:2664
+#: crates/cr-gtk/src/main.rs:2699
 #: crates/cr-gtk/src/npc.rs:533
 #: crates/cr-store/src/catalog.rs:116
 msgid "Classes"
@@ -2637,7 +2637,7 @@ msgid "Apply Prime Requisite Experience Bonuses"
 msgstr "Aplicar os bônus de experiência dos requisitos primários"
 
 #: crates/cr-gtk/src/enter.rs:332
-#: crates/cr-gtk/src/main.rs:3016
+#: crates/cr-gtk/src/main.rs:3018
 msgid "10% more for a class whose prime requisites are all 16 or more"
 msgstr "10% a mais para uma classe cujos requisitos principais são todos 16 ou mais"
 
@@ -2656,7 +2656,7 @@ msgid "Racial Limits and Prime Requisite Bonus"
 msgstr "Limites raciais e bônus de requisito principal"
 
 #: crates/cr-gtk/src/enter.rs:350
-#: crates/cr-gtk/src/main.rs:2796
+#: crates/cr-gtk/src/main.rs:2799
 #: crates/cr-store/src/userdb/classes/pages.rs:148
 #: crates/cr-store/src/userdb/parts/pages.rs:737
 #: crates/cr-store/src/userdb/parts/pages.rs:740
@@ -2669,12 +2669,12 @@ msgid "Character Points"
 msgstr "Pontos de personagem"
 
 #: crates/cr-gtk/src/enter.rs:351
-#: crates/cr-gtk/src/main.rs:2797
+#: crates/cr-gtk/src/main.rs:2800
 msgid "Unspent"
 msgstr "Não gastos"
 
 #: crates/cr-gtk/src/enter.rs:358
-#: crates/cr-gtk/src/main.rs:3023
+#: crates/cr-gtk/src/main.rs:3025
 msgid "Character Points per Level"
 msgstr "Pontos de personagem por nível"
 
@@ -2800,236 +2800,236 @@ msgstr "Uso de magias do kit"
 msgid "Add to {list}"
 msgstr "Adicionar a {list}"
 
-#: crates/cr-gtk/src/main.rs:497
+#: crates/cr-gtk/src/main.rs:498
 msgid "Open Core Rules Folder"
 msgstr "Abrir pasta do Core Rules"
 
-#: crates/cr-gtk/src/main.rs:519
-#: crates/cr-gtk/src/main.rs:1206
+#: crates/cr-gtk/src/main.rs:520
+#: crates/cr-gtk/src/main.rs:1207
 msgid "_Open Folder…"
 msgstr "_Abrir pasta…"
 
-#: crates/cr-gtk/src/main.rs:526
-#: crates/cr-gtk/src/main.rs:1207
+#: crates/cr-gtk/src/main.rs:527
+#: crates/cr-gtk/src/main.rs:1208
 msgid "Extract Data from _CD…"
 msgstr "Extrair dados do _CD…"
 
-#: crates/cr-gtk/src/main.rs:541
+#: crates/cr-gtk/src/main.rs:542
 msgid "No Core Rules Installation"
 msgstr "Nenhuma instalação do Core Rules"
 
-#: crates/cr-gtk/src/main.rs:544
+#: crates/cr-gtk/src/main.rs:545
 msgid "Extract the data from your Core Rules 2.0 or Expansion CD (its ISO image or the mounted CD), or open the folder where AD&amp;D Core Rules 2.0 is installed or a data package"
 msgstr "Extraia os dados do seu CD do Core Rules 2.0 ou da Expansion (a imagem ISO ou o CD montado), ou abra a pasta onde o AD&amp;D Core Rules 2.0 está instalado ou um pacote de dados"
 
-#: crates/cr-gtk/src/main.rs:676
-#: crates/cr-gtk/src/main.rs:694
-#: crates/cr-gtk/src/main.rs:772
-#: crates/cr-gtk/src/main.rs:915
+#: crates/cr-gtk/src/main.rs:677
+#: crates/cr-gtk/src/main.rs:695
+#: crates/cr-gtk/src/main.rs:773
+#: crates/cr-gtk/src/main.rs:916
 msgid "The installation is no longer open"
 msgstr "A instalação não está mais aberta"
 
-#: crates/cr-gtk/src/main.rs:782
-#: crates/cr-gtk/src/main.rs:921
+#: crates/cr-gtk/src/main.rs:783
+#: crates/cr-gtk/src/main.rs:922
 msgid "Character saved"
 msgstr "Personagem salvo"
 
-#: crates/cr-gtk/src/main.rs:784
+#: crates/cr-gtk/src/main.rs:785
 msgid "Character created"
 msgstr "Personagem criado"
 
-#: crates/cr-gtk/src/main.rs:799
+#: crates/cr-gtk/src/main.rs:800
 msgid "Converted to a character"
 msgstr "Convertido em personagem"
 
-#: crates/cr-gtk/src/main.rs:809
+#: crates/cr-gtk/src/main.rs:810
 msgid "Convert to NPC?"
 msgstr "Converter em PdM?"
 
-#: crates/cr-gtk/src/main.rs:810
+#: crates/cr-gtk/src/main.rs:811
 msgid "This will move the selected Player Character to the NPC List in the DM Toolkit."
 msgstr "Isto vai mover o personagem do jogador selecionado para a lista de PdMs do DM Toolkit."
 
-#: crates/cr-gtk/src/main.rs:816
+#: crates/cr-gtk/src/main.rs:817
 msgid "_Convert"
 msgstr "_Converter"
 
-#: crates/cr-gtk/src/main.rs:828
+#: crates/cr-gtk/src/main.rs:829
 msgid "Converted to an NPC"
 msgstr "Convertido em PdM"
 
-#: crates/cr-gtk/src/main.rs:952
+#: crates/cr-gtk/src/main.rs:953
 msgid "Open a Core Rules folder to read its help"
 msgstr "Abra uma pasta do Core Rules para ler sua ajuda"
 
-#: crates/cr-gtk/src/main.rs:1182
+#: crates/cr-gtk/src/main.rs:1183
 msgid "_New Character…"
 msgstr "_Novo personagem…"
 
-#: crates/cr-gtk/src/main.rs:1183
+#: crates/cr-gtk/src/main.rs:1184
 msgid "E_nter Character…"
 msgstr "_Inserir personagem…"
 
-#: crates/cr-gtk/src/main.rs:1184
+#: crates/cr-gtk/src/main.rs:1185
 msgid "New N_PC…"
 msgstr "Novo P_dM…"
 
-#: crates/cr-gtk/src/main.rs:1185
+#: crates/cr-gtk/src/main.rs:1186
 msgid "New NPC _Group…"
 msgstr "Novo _grupo de PdMs…"
 
-#: crates/cr-gtk/src/main.rs:1186
+#: crates/cr-gtk/src/main.rs:1187
 msgid "Manage _Parties…"
 msgstr "Gerenciar _companhias…"
 
-#: crates/cr-gtk/src/main.rs:1189
+#: crates/cr-gtk/src/main.rs:1190
 msgid "New _Encounter…"
 msgstr "Novo _encontro…"
 
-#: crates/cr-gtk/src/main.rs:1190
+#: crates/cr-gtk/src/main.rs:1191
 msgid "New Encounter _Table…"
 msgstr "Nova _tabela de encontros…"
 
-#: crates/cr-gtk/src/main.rs:1192
+#: crates/cr-gtk/src/main.rs:1193
 msgid "Roll on a _Table…"
 msgstr "Rolar em uma _tabela…"
 
-#: crates/cr-gtk/src/main.rs:1194
+#: crates/cr-gtk/src/main.rs:1195
 msgid "_Import…"
 msgstr "_Importar…"
 
-#: crates/cr-gtk/src/main.rs:1196
+#: crates/cr-gtk/src/main.rs:1197
 msgid "Import Core _Rules 2.0…"
 msgstr "Importar Core _Rules 2.0…"
 
-#: crates/cr-gtk/src/main.rs:1201
+#: crates/cr-gtk/src/main.rs:1202
 msgid "E_xport…"
 msgstr "E_xportar…"
 
-#: crates/cr-gtk/src/main.rs:1202
+#: crates/cr-gtk/src/main.rs:1203
 msgid "New P_ackage…"
 msgstr "Novo p_acote…"
 
-#: crates/cr-gtk/src/main.rs:1203
+#: crates/cr-gtk/src/main.rs:1204
 msgid "E_dit Package…"
 msgstr "E_ditar pacote…"
 
-#: crates/cr-gtk/src/main.rs:1208
+#: crates/cr-gtk/src/main.rs:1209
 msgid "_Preferences"
 msgstr "_Preferências"
 
-#: crates/cr-gtk/src/main.rs:1211
+#: crates/cr-gtk/src/main.rs:1212
 #: crates/cr-gtk/src/userdb.rs:2534
 msgid "_Help"
 msgstr "_Ajuda"
 
-#: crates/cr-gtk/src/main.rs:1215
+#: crates/cr-gtk/src/main.rs:1216
 msgid "_Online Manual"
 msgstr "_Manual online"
 
-#: crates/cr-gtk/src/main.rs:1216
+#: crates/cr-gtk/src/main.rs:1217
 msgid "_Tome of Help"
 msgstr "_Tomo de Ajuda"
 
-#: crates/cr-gtk/src/main.rs:1217
+#: crates/cr-gtk/src/main.rs:1218
 msgid "_About Core Rules"
 msgstr "_Sobre o Core Rules"
 
-#: crates/cr-gtk/src/main.rs:1306
+#: crates/cr-gtk/src/main.rs:1307
 msgid "Roll and Create Encounter"
 msgstr "Rolar e criar encontro"
 
-#: crates/cr-gtk/src/main.rs:1308
-#: crates/cr-gtk/src/main.rs:1378
+#: crates/cr-gtk/src/main.rs:1309
+#: crates/cr-gtk/src/main.rs:1379
 msgid "Create Encounter"
 msgstr "Criar encontro"
 
-#: crates/cr-gtk/src/main.rs:1358
+#: crates/cr-gtk/src/main.rs:1359
 msgid "Character Sheet"
 msgstr "Ficha de personagem"
 
-#: crates/cr-gtk/src/main.rs:1363
+#: crates/cr-gtk/src/main.rs:1364
 msgid "Convert to Character"
 msgstr "Converter em personagem"
 
-#: crates/cr-gtk/src/main.rs:1368
+#: crates/cr-gtk/src/main.rs:1369
 msgid "Convert to NPC"
 msgstr "Converter em PdM"
 
-#: crates/cr-gtk/src/main.rs:1373
+#: crates/cr-gtk/src/main.rs:1374
 msgid "Delete Character"
 msgstr "Excluir personagem"
 
-#: crates/cr-gtk/src/main.rs:1383
+#: crates/cr-gtk/src/main.rs:1384
 msgid "View"
 msgstr "Ver"
 
-#: crates/cr-gtk/src/main.rs:1388
+#: crates/cr-gtk/src/main.rs:1389
 #: crates/cr-gtk/src/print.rs:345
 #: crates/cr-gtk/src/sheet.rs:42
 msgid "Print"
 msgstr "Imprimir"
 
-#: crates/cr-gtk/src/main.rs:1403
-#: crates/cr-gtk/src/main.rs:1667
+#: crates/cr-gtk/src/main.rs:1404
+#: crates/cr-gtk/src/main.rs:1668
 msgid "Nothing Selected"
 msgstr "Nada selecionado"
 
-#: crates/cr-gtk/src/main.rs:1430
+#: crates/cr-gtk/src/main.rs:1431
 msgid "Show a Party"
 msgstr "Mostrar uma companhia"
 
-#: crates/cr-gtk/src/main.rs:1437
+#: crates/cr-gtk/src/main.rs:1438
 msgid "All Types"
 msgstr "Todos os tipos"
 
-#: crates/cr-gtk/src/main.rs:1441
+#: crates/cr-gtk/src/main.rs:1442
 msgid "Show a Part Type"
 msgstr "Mostrar um tipo de parte"
 
-#: crates/cr-gtk/src/main.rs:1528
-#: crates/cr-gtk/src/main.rs:1665
+#: crates/cr-gtk/src/main.rs:1529
+#: crates/cr-gtk/src/main.rs:1666
 msgid "No {section}"
 msgstr "Sem {section}"
 
-#: crates/cr-gtk/src/main.rs:1558
+#: crates/cr-gtk/src/main.rs:1559
 msgid "Core Rules 2.0 is read-only"
 msgstr "O Core Rules 2.0 é somente leitura"
 
-#: crates/cr-gtk/src/main.rs:1559
+#: crates/cr-gtk/src/main.rs:1560
 msgid "Open an Expansion installation and import this content with Import Core Rules 2.0…"
 msgstr "Abra uma instalação do Expansion e importe este conteúdo com Importar Core Rules 2.0…"
 
-#: crates/cr-gtk/src/main.rs:1571
-#: crates/cr-gtk/src/main.rs:1579
+#: crates/cr-gtk/src/main.rs:1572
+#: crates/cr-gtk/src/main.rs:1580
 #: crates/cr-gtk/src/userdb.rs:1524
 #: crates/cr-store/src/catalog.rs:360
 msgid "Entries"
 msgstr "Entradas"
 
-#: crates/cr-gtk/src/main.rs:1624
+#: crates/cr-gtk/src/main.rs:1625
 #: crates/cr-gtk/src/treasure.rs:244
 msgid "Roll Treasure"
 msgstr "Rolar tesouro"
 
-#: crates/cr-gtk/src/main.rs:1662
+#: crates/cr-gtk/src/main.rs:1663
 msgid "Could Not Read"
 msgstr "Não foi possível ler"
 
-#: crates/cr-gtk/src/main.rs:1810
+#: crates/cr-gtk/src/main.rs:1811
 msgid "All Parties"
 msgstr "Todas as companhias"
 
-#: crates/cr-gtk/src/main.rs:1811
+#: crates/cr-gtk/src/main.rs:1812
 msgid "No Party"
 msgstr "Sem companhia"
 
-#: crates/cr-gtk/src/main.rs:1987
+#: crates/cr-gtk/src/main.rs:1988
 msgid "Icon"
 msgstr "Ícone"
 
-#: crates/cr-gtk/src/main.rs:2095
-#: crates/cr-gtk/src/main.rs:2450
+#: crates/cr-gtk/src/main.rs:2096
+#: crates/cr-gtk/src/main.rs:2453
 #: crates/cr-store/src/catalog.rs:847
 #: crates/cr-store/src/catalog.rs:971
 #: crates/cr-store/src/catalog.rs:1025
@@ -3037,116 +3037,116 @@ msgstr "Ícone"
 msgid "Abilities"
 msgstr "Habilidades"
 
-#: crates/cr-gtk/src/main.rs:2130
+#: crates/cr-gtk/src/main.rs:2131
 msgid "18/01 to 18/00, 0 for none"
 msgstr "18/01 a 18/00, 0 para nenhum"
 
-#: crates/cr-gtk/src/main.rs:2183
+#: crates/cr-gtk/src/main.rs:2184
 msgid "Background Event"
 msgstr "Evento de origem"
 
-#: crates/cr-gtk/src/main.rs:2200
+#: crates/cr-gtk/src/main.rs:2201
 msgid "Background"
 msgstr "Origem"
 
-#: crates/cr-gtk/src/main.rs:2206
+#: crates/cr-gtk/src/main.rs:2207
 msgid "History"
 msgstr "História"
 
-#: crates/cr-gtk/src/main.rs:2468
+#: crates/cr-gtk/src/main.rs:2471
 #: crates/cr-store/src/userdb/parts/pages.rs:264
 msgid "Skills"
 msgstr "Habilidades"
 
-#: crates/cr-gtk/src/main.rs:2540
+#: crates/cr-gtk/src/main.rs:2543
 msgid "Edit Character"
 msgstr "Editar personagem"
 
-#: crates/cr-gtk/src/main.rs:2656
+#: crates/cr-gtk/src/main.rs:2659
 msgid "Add Class"
 msgstr "Adicionar classe"
 
-#: crates/cr-gtk/src/main.rs:2679
+#: crates/cr-gtk/src/main.rs:2682
 msgid "No class meets the dual-class requirements of these abilities"
 msgstr "Nenhuma classe atende aos requisitos de classe dupla destas habilidades"
 
-#: crates/cr-gtk/src/main.rs:2687
+#: crates/cr-gtk/src/main.rs:2690
 msgid "Dual-classing: the new class starts at level 1 and the earlier class stops advancing"
 msgstr "Classe dupla: a nova classe começa no nível 1 e a classe anterior para de avançar"
 
-#: crates/cr-gtk/src/main.rs:2707
+#: crates/cr-gtk/src/main.rs:2710
 msgid "New, level 1"
 msgstr "Nova, nível 1"
 
-#: crates/cr-gtk/src/main.rs:2745
+#: crates/cr-gtk/src/main.rs:2748
 #: crates/cr-gtk/src/userdb/attacks.rs:130
 msgid "Add…"
 msgstr "Adicionar…"
 
-#: crates/cr-gtk/src/main.rs:2746
+#: crates/cr-gtk/src/main.rs:2749
 msgid "Add or take away experience"
 msgstr "Adicionar ou retirar experiência"
 
-#: crates/cr-gtk/src/main.rs:2754
-#: crates/cr-gtk/src/main.rs:2988
+#: crates/cr-gtk/src/main.rs:2757
+#: crates/cr-gtk/src/main.rs:2990
 msgid "Experience"
 msgstr "Experiência"
 
-#: crates/cr-gtk/src/main.rs:2902
-#: crates/cr-gtk/src/main.rs:2916
+#: crates/cr-gtk/src/main.rs:2904
+#: crates/cr-gtk/src/main.rs:2918
 msgid "Level {level} · {xp} XP · level limit {limit}"
 msgstr "Nível {level} · {xp} XP · limite de nível {limit}"
 
-#: crates/cr-gtk/src/main.rs:2909
+#: crates/cr-gtk/src/main.rs:2911
 msgid "Level {level} · {xp} XP · next level at {next}"
 msgstr "Nível {level} · {xp} XP · próximo nível em {next}"
 
-#: crates/cr-gtk/src/main.rs:2923
+#: crates/cr-gtk/src/main.rs:2925
 msgid "Level {level} · {xp} XP"
 msgstr "Nível {level} · {xp} XP"
 
-#: crates/cr-gtk/src/main.rs:2943
+#: crates/cr-gtk/src/main.rs:2945
 msgid "{level}: {used} of {have} (too many)"
 msgstr "{level}: {used} de {have} (demais)"
 
-#: crates/cr-gtk/src/main.rs:2945
+#: crates/cr-gtk/src/main.rs:2947
 msgid "{level}: {used} of {have}"
 msgstr "{level}: {used} de {have}"
 
-#: crates/cr-gtk/src/main.rs:2950
+#: crates/cr-gtk/src/main.rs:2952
 msgid "No spell slots at this level"
 msgstr "Sem espaços de magia neste nível"
 
-#: crates/cr-gtk/src/main.rs:2989
+#: crates/cr-gtk/src/main.rs:2991
 msgid "Negative to take experience away"
 msgstr "Negativo para retirar experiência"
 
-#: crates/cr-gtk/src/main.rs:3002
+#: crates/cr-gtk/src/main.rs:3004
 #: crates/cr-gtk/src/npc.rs:169
 msgid "All Classes"
 msgstr "Todas as classes"
 
-#: crates/cr-gtk/src/main.rs:3003
+#: crates/cr-gtk/src/main.rs:3005
 msgid "Split Between Classes"
 msgstr "Dividir entre as classes"
 
-#: crates/cr-gtk/src/main.rs:3006
+#: crates/cr-gtk/src/main.rs:3008
 msgid "Give To"
 msgstr "Dar a"
 
-#: crates/cr-gtk/src/main.rs:3015
+#: crates/cr-gtk/src/main.rs:3017
 msgid "Prime Requisite Bonus"
 msgstr "Bônus de requisito principal"
 
-#: crates/cr-gtk/src/main.rs:3036
+#: crates/cr-gtk/src/main.rs:3038
 msgid "Each level gained rolls its hit points. Levels lost keep their rolls, as in the original."
 msgstr "Cada nível ganho rola seus pontos de vida. Níveis perdidos mantêm suas rolagens, como no original."
 
-#: crates/cr-gtk/src/main.rs:3065
+#: crates/cr-gtk/src/main.rs:3067
 msgid "Add Experience"
 msgstr "Adicionar experiência"
 
-#: crates/cr-gtk/src/main.rs:3118
+#: crates/cr-gtk/src/main.rs:3120
 #: crates/cr-gtk/src/npc.rs:29
 #: crates/cr-store/src/catalog.rs:837
 #: crates/cr-store/src/create.rs:66
@@ -3161,21 +3161,21 @@ msgstr "Adicionar experiência"
 msgid "Strength"
 msgstr "Força"
 
-#: crates/cr-gtk/src/main.rs:3119
+#: crates/cr-gtk/src/main.rs:3121
 #: crates/cr-store/src/create.rs:370
 #: crates/cr-store/src/userdb/parts/kit.rs:431
 #: crates/cr-store/src/userdb/parts/pages.rs:482
 msgid "Stamina"
 msgstr "Vigor"
 
-#: crates/cr-gtk/src/main.rs:3120
+#: crates/cr-gtk/src/main.rs:3122
 #: crates/cr-store/src/create.rs:370
 #: crates/cr-store/src/userdb/parts/kit.rs:432
 #: crates/cr-store/src/userdb/parts/pages.rs:483
 msgid "Muscle"
 msgstr "Músculos"
 
-#: crates/cr-gtk/src/main.rs:3122
+#: crates/cr-gtk/src/main.rs:3124
 #: crates/cr-gtk/src/npc.rs:30
 #: crates/cr-store/src/catalog.rs:838
 #: crates/cr-store/src/create.rs:67
@@ -3188,21 +3188,21 @@ msgstr "Músculos"
 msgid "Dexterity"
 msgstr "Destreza"
 
-#: crates/cr-gtk/src/main.rs:3122
+#: crates/cr-gtk/src/main.rs:3124
 #: crates/cr-store/src/create.rs:371
 #: crates/cr-store/src/userdb/parts/kit.rs:434
 #: crates/cr-store/src/userdb/parts/pages.rs:490
 msgid "Aim"
 msgstr "Pontaria"
 
-#: crates/cr-gtk/src/main.rs:3122
+#: crates/cr-gtk/src/main.rs:3124
 #: crates/cr-store/src/create.rs:371
 #: crates/cr-store/src/userdb/parts/kit.rs:435
 #: crates/cr-store/src/userdb/parts/pages.rs:491
 msgid "Balance"
 msgstr "Equilíbrio"
 
-#: crates/cr-gtk/src/main.rs:3124
+#: crates/cr-gtk/src/main.rs:3126
 #: crates/cr-gtk/src/npc.rs:31
 #: crates/cr-store/src/catalog.rs:839
 #: crates/cr-store/src/create.rs:68
@@ -3215,21 +3215,21 @@ msgstr "Equilíbrio"
 msgid "Constitution"
 msgstr "Constituição"
 
-#: crates/cr-gtk/src/main.rs:3125
+#: crates/cr-gtk/src/main.rs:3127
 #: crates/cr-store/src/create.rs:372
 #: crates/cr-store/src/userdb/parts/kit.rs:437
 #: crates/cr-store/src/userdb/parts/pages.rs:498
 msgid "Health"
 msgstr "Saúde"
 
-#: crates/cr-gtk/src/main.rs:3126
+#: crates/cr-gtk/src/main.rs:3128
 #: crates/cr-store/src/create.rs:372
 #: crates/cr-store/src/userdb/parts/kit.rs:438
 #: crates/cr-store/src/userdb/parts/pages.rs:499
 msgid "Fitness"
 msgstr "Forma física"
 
-#: crates/cr-gtk/src/main.rs:3129
+#: crates/cr-gtk/src/main.rs:3131
 #: crates/cr-gtk/src/npc.rs:32
 #: crates/cr-store/src/catalog.rs:840
 #: crates/cr-store/src/catalog.rs:1134
@@ -3244,21 +3244,21 @@ msgstr "Forma física"
 msgid "Intelligence"
 msgstr "Inteligência"
 
-#: crates/cr-gtk/src/main.rs:3130
+#: crates/cr-gtk/src/main.rs:3132
 #: crates/cr-store/src/create.rs:373
 #: crates/cr-store/src/userdb/parts/kit.rs:440
 #: crates/cr-store/src/userdb/parts/pages.rs:506
 msgid "Reason"
 msgstr "Raciocínio"
 
-#: crates/cr-gtk/src/main.rs:3131
+#: crates/cr-gtk/src/main.rs:3133
 #: crates/cr-store/src/create.rs:373
 #: crates/cr-store/src/userdb/parts/kit.rs:441
 #: crates/cr-store/src/userdb/parts/pages.rs:507
 msgid "Knowledge"
 msgstr "Conhecimento"
 
-#: crates/cr-gtk/src/main.rs:3134
+#: crates/cr-gtk/src/main.rs:3136
 #: crates/cr-gtk/src/npc.rs:33
 #: crates/cr-store/src/catalog.rs:841
 #: crates/cr-store/src/create.rs:70
@@ -3271,21 +3271,21 @@ msgstr "Conhecimento"
 msgid "Wisdom"
 msgstr "Sabedoria"
 
-#: crates/cr-gtk/src/main.rs:3135
+#: crates/cr-gtk/src/main.rs:3137
 #: crates/cr-store/src/create.rs:374
 #: crates/cr-store/src/userdb/parts/kit.rs:443
 #: crates/cr-store/src/userdb/parts/pages.rs:514
 msgid "Intuition"
 msgstr "Intuição"
 
-#: crates/cr-gtk/src/main.rs:3136
+#: crates/cr-gtk/src/main.rs:3138
 #: crates/cr-store/src/create.rs:374
 #: crates/cr-store/src/userdb/parts/kit.rs:444
 #: crates/cr-store/src/userdb/parts/pages.rs:515
 msgid "Willpower"
 msgstr "Força de vontade"
 
-#: crates/cr-gtk/src/main.rs:3139
+#: crates/cr-gtk/src/main.rs:3141
 #: crates/cr-gtk/src/npc.rs:34
 #: crates/cr-store/src/catalog.rs:842
 #: crates/cr-store/src/create.rs:71
@@ -3298,81 +3298,103 @@ msgstr "Força de vontade"
 msgid "Charisma"
 msgstr "Carisma"
 
-#: crates/cr-gtk/src/main.rs:3140
+#: crates/cr-gtk/src/main.rs:3142
 #: crates/cr-store/src/create.rs:375
 #: crates/cr-store/src/userdb/parts/kit.rs:446
 #: crates/cr-store/src/userdb/parts/pages.rs:522
 msgid "Leadership"
 msgstr "Liderança"
 
-#: crates/cr-gtk/src/main.rs:3243
+#: crates/cr-gtk/src/main.rs:3263
 msgid "{level}st"
 msgstr "{level}º"
 
-#: crates/cr-gtk/src/main.rs:3244
+#: crates/cr-gtk/src/main.rs:3264
 msgid "{level}nd"
 msgstr "{level}º"
 
-#: crates/cr-gtk/src/main.rs:3245
+#: crates/cr-gtk/src/main.rs:3265
 msgid "{level}rd"
 msgstr "{level}º"
 
-#: crates/cr-gtk/src/main.rs:3246
+#: crates/cr-gtk/src/main.rs:3266
 msgid "{level}th"
 msgstr "{level}º"
 
-#: crates/cr-gtk/src/main.rs:3260
+#: crates/cr-gtk/src/main.rs:3280
 msgid "Wizard Spells Known"
 msgstr "Magias de mago conhecidas"
 
-#: crates/cr-gtk/src/main.rs:3265
+#: crates/cr-gtk/src/main.rs:3285
 msgid "Priest Spells Known"
 msgstr "Magias de sacerdote conhecidas"
 
-#: crates/cr-gtk/src/main.rs:3307
+#: crates/cr-gtk/src/main.rs:3327
 msgid "{used} of {total} pages used"
 msgstr "{used} de {total} páginas usadas"
 
-#: crates/cr-gtk/src/main.rs:3335
-#: crates/cr-gtk/src/main.rs:3364
+#: crates/cr-gtk/src/main.rs:3355
+#: crates/cr-gtk/src/main.rs:3384
 msgid "{ordinal} level"
 msgstr "{ordinal} nível"
 
-#: crates/cr-gtk/src/main.rs:3354
+#: crates/cr-gtk/src/main.rs:3374
 msgid "Memorized ({class})"
 msgstr "Memorizadas ({class})"
 
-#: crates/cr-gtk/src/main.rs:3387
+#: crates/cr-gtk/src/main.rs:3398
+msgid "Buy and Sell"
+msgstr "Comprar e Vender"
+
+#: crates/cr-gtk/src/main.rs:3399
+msgid "Items added are paid for with the spending money, items removed are sold"
+msgstr "Os itens adicionados são pagos com o dinheiro para gastos, os removidos são vendidos"
+
+#: crates/cr-gtk/src/main.rs:3424
 msgid "Holds {items}"
 msgstr "Contém {items}"
 
-#: crates/cr-gtk/src/main.rs:3416
+#: crates/cr-gtk/src/main.rs:3460
 msgid "Copper"
 msgstr "Cobre"
 
-#: crates/cr-gtk/src/main.rs:3417
+#: crates/cr-gtk/src/main.rs:3461
 msgid "Silver"
 msgstr "Prata"
 
-#: crates/cr-gtk/src/main.rs:3418
+#: crates/cr-gtk/src/main.rs:3462
 #: crates/cr-gtk/src/treasure.rs:130
 msgid "Electrum"
 msgstr "Electrum"
 
-#: crates/cr-gtk/src/main.rs:3419
+#: crates/cr-gtk/src/main.rs:3463
 #: crates/cr-store/src/userdb/classes/pages.rs:214
 msgid "Gold"
 msgstr "Ouro"
 
-#: crates/cr-gtk/src/main.rs:3420
+#: crates/cr-gtk/src/main.rs:3464
 #: crates/cr-gtk/src/treasure.rs:130
 msgid "Platinum"
 msgstr "Platina"
 
-#: crates/cr-gtk/src/main.rs:3477
+#: crates/cr-gtk/src/main.rs:3522
 #: crates/cr-store/src/lists.rs:68
 msgid "Spending Money"
 msgstr "Dinheiro para gastos"
+
+#: crates/cr-gtk/src/main.rs:3574
+msgid "You must move some of your money into Spending Money before you can purchase this item."
+msgstr "Você precisa passar parte do seu dinheiro para o Dinheiro para gastos antes de comprar este item."
+
+#: crates/cr-gtk/src/main.rs:3579
+#: crates/cr-gtk/src/main.rs:3636
+msgid "This item is too expensive."
+msgstr "Este item é caro demais."
+
+#: crates/cr-gtk/src/main.rs:3604
+#: crates/cr-gtk/src/main.rs:3645
+msgid "Error Message!"
+msgstr "Mensagem de Erro!"
 
 #: crates/cr-gtk/src/nonweapon.rs:60
 msgid "{cost}, {n} rank"
@@ -6530,7 +6552,7 @@ msgstr "Falhou"
 msgid "The character failed to learn the spell.  Learn anyway?"
 msgstr "O personagem não conseguiu aprender a magia.  Aprender mesmo assim?"
 
-#: crates/cr-store/src/lib.rs:61
+#: crates/cr-store/src/lib.rs:62
 msgid "{path} is not a Core Rules installation (no Database folder)"
 msgstr "{path} não é uma instalação do Core Rules (não há pasta Database)"
 
