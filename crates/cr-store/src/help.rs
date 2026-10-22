@@ -40,6 +40,7 @@ pub mod topic {
     pub const SUBRACE: u32 = 214;
     pub const CLASS_ABILITIES: u32 = 215;
     pub const EQUIPMENT: u32 = 229;
+    pub const NAME_CONFLICT: u32 = 246;
     pub const TREASURE_TABLES: u32 = 257;
     pub const TREASURE_TABLE: u32 = 258;
     pub const ROLL_TREASURE: u32 = 260;
@@ -170,7 +171,7 @@ pub mod topic {
     }
 
     /// Every topic above, for the tests.
-    pub const ALL: [u32; 68] = [
+    pub const ALL: [u32; 69] = [
         MAIN_MENU,
         BOOKS,
         PARTS,
@@ -195,6 +196,7 @@ pub mod topic {
         SUBRACE,
         CLASS_ABILITIES,
         EQUIPMENT,
+        NAME_CONFLICT,
         TREASURE_TABLES,
         TREASURE_TABLE,
         TREASURE_ENTRY,

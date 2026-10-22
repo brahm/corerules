@@ -4,6 +4,7 @@
 //! installation's content into the Expansion as a 2.0 package would.
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -13,6 +14,8 @@ use cr_i18n::{tr, trn};
 use cr_store::Installation;
 use cr_store::export::{Category, Clash, Content, Exportable, ImportReport, contents, remove};
 use cr_store::help::topic;
+use cr_store::userdb::UserDb;
+use cr_store::userdb::parts::{Parts, name_taken};
 use gtk::{gio, glib};
 
 /// What the dialogs need from the window.
@@ -430,6 +433,7 @@ fn choose_imports<H: Host + 'static>(host: &Rc<H>, file: ExportFile, expansion: 
         );
     }
     let dialog = dialog(tr("Import"), &button, &groups, topic::IMPORT);
+    let (file, preview) = (Rc::new(file), Rc::new(preview));
     button.connect_clicked({
         let (host, dialog) = (host.clone(), dialog.clone());
         move |_| {
@@ -439,24 +443,108 @@ fn choose_imports<H: Host + 'static>(host: &Rc<H>, file: ExportFile, expansion: 
                 .filter(|(_, c)| c.is_active())
                 .map(|(n, _)| *n)
                 .collect();
-            let report = {
+            let parts = {
                 let install = host.installation();
                 let Some(install) = install.as_ref() else {
                     return;
                 };
-                install.import(&file, Some(&chosen))
-            };
-            match report {
-                Ok(report) => {
-                    dialog.close();
-                    host.reloaded();
-                    report_alert(&*host, &report);
+                match UserDb::<Parts>::load(install) {
+                    Ok(parts) => Rc::new(parts),
+                    Err(e) => return alert(&*host, tr("Import Failed"), &e.to_string()),
                 }
-                Err(e) => alert(&*host, tr("Import Failed"), &e.to_string()),
-            }
+            };
+            let names = Rename {
+                host: host.clone(),
+                dialog: dialog.clone(),
+                file: file.clone(),
+                preview: preview.clone(),
+                parts,
+                chosen: Rc::new(chosen),
+            };
+            names.next(0, HashMap::new());
         }
     });
     dialog.present(Some(&host.parent()));
+}
+
+/// The names the parts a standard part's name hides take, asked one by one
+/// in the original's order before the import runs (0x49d704): the name
+/// with a "*", or what Name Conflict asks for when a part (a standard one,
+/// one of the user's or one imported before it) has that name.
+struct Rename<H: Host> {
+    host: Rc<H>,
+    dialog: adw::Dialog,
+    file: Rc<ExportFile>,
+    preview: Rc<Vec<Content>>,
+    parts: Rc<UserDb<Parts>>,
+    chosen: Rc<Vec<usize>>,
+}
+
+impl<H: Host> Clone for Rename<H> {
+    fn clone(&self) -> Self {
+        Self {
+            host: self.host.clone(),
+            dialog: self.dialog.clone(),
+            file: self.file.clone(),
+            preview: self.preview.clone(),
+            parts: self.parts.clone(),
+            chosen: self.chosen.clone(),
+        }
+    }
+}
+
+impl<H: Host + 'static> Rename<H> {
+    /// Asks for the name of the `at`th chosen item, when it needs one,
+    /// with `names` given so far.
+    fn next(self, at: usize, names: HashMap<usize, String>) {
+        let Some(&n) = self.chosen.get(at) else {
+            return self.run(&names);
+        };
+        let item = &self.preview[n];
+        // Only the Expansion renames (the preview says so).
+        if item.clash != Clash::Standard {
+            return self.next(at + 1, names);
+        }
+        // The parts imported before this one, under their new names.
+        let before: Vec<String> = self.chosen[..at]
+            .iter()
+            .filter(|m| matches!(self.preview[**m].category, Category::Part(_)))
+            .map(|m| names.get(m).unwrap_or(&self.preview[*m].name).clone())
+            .collect();
+        let name = format!("{}*", item.name);
+        let taken = {
+            let (parts, before) = (self.parts.clone(), before.clone());
+            move |name: &str| name_taken(&parts, name, &before)
+        };
+        if !taken(&name) {
+            return self.next(at + 1, names);
+        }
+        let parent = self.host.parent();
+        let done = Rc::new(move |name: String| {
+            let mut names = names.clone();
+            names.insert(n, name);
+            self.clone().next(at + 1, names);
+        });
+        crate::userdb::name_conflict(&parent, &name, Rc::new(taken), done);
+    }
+
+    fn run(&self, names: &HashMap<usize, String>) {
+        let report = {
+            let install = self.host.installation();
+            let Some(install) = install.as_ref() else {
+                return;
+            };
+            install.import_named(&self.file, Some(&self.chosen), names)
+        };
+        match report {
+            Ok(report) => {
+                self.dialog.close();
+                self.host.reloaded();
+                report_alert(&*self.host, &report);
+            }
+            Err(e) => alert(&*self.host, tr("Import Failed"), &e.to_string()),
+        }
+    }
 }
 
 fn report_alert(host: &impl Host, report: &ImportReport) {

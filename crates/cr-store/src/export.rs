@@ -20,7 +20,8 @@
 //!   share a standard one's name. Core Rules 2.0 keeps the user record
 //!   and drops the imported one, though its dialog lists both as done.
 //! * In the Expansion a part named like a standard part gets "*" appended
-//!   until no part has the name.
+//!   (0x49d704); when a part already has that name, the original's Name
+//!   Conflict asks for another until none has it (`Installation::import_named`).
 //! * In the Expansion an imported race replaces its `AllowedU.dat` record
 //!   with the one the file carries; a file without combinations (from
 //!   Core Rules 2.0) gives a race without a record one built from the
@@ -35,6 +36,7 @@
 //! do not exist: in both programs those buttons only point at the DM
 //! Toolkit, so monsters travel in these packages.
 
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -860,6 +862,19 @@ impl Installation {
     /// Imports the items of `file` whose indexes into [`contents`] are in
     /// `chosen` (all with `None`).
     pub fn import(&self, file: &ExportFile, chosen: Option<&[usize]>) -> Result<ImportReport> {
+        self.import_named(file, chosen, &HashMap::new())
+    }
+
+    /// [`import`](Self::import), with the names `names` gives (by index
+    /// into [`contents`]) for the parts a standard part's name hides,
+    /// asked in the original's Name Conflict; the others get "*"
+    /// appended until no part has their name.
+    pub fn import_named(
+        &self,
+        file: &ExportFile,
+        chosen: Option<&[usize]>,
+        names: &HashMap<usize, String>,
+    ) -> Result<ImportReport> {
         let flavor = flavor_of(self);
         let expansion = flavor == Flavor::Expansion;
         if file.is_expansion() && !expansion {
@@ -897,7 +912,8 @@ impl Installation {
                     if upgrade {
                         upgrade_part(&mut object, &mut image, self)?;
                     }
-                    match import_record(&mut stores, category, &mut object, expansion)? {
+                    let name = names.get(&n).map(String::as_str);
+                    match import_record(&mut stores, category, &mut object, expansion, name)? {
                         Outcome::Added => {}
                         Outcome::Replaced(category, name) => report.replaced.push((category, name)),
                         Outcome::Renamed(name) => report.renamed.push((item.clone(), name)),
@@ -1244,13 +1260,14 @@ enum Outcome {
 
 /// Adds `object` to its user file: the Expansion (`replace`) replaces the
 /// record of the same name and renames a part a standard part's name
-/// would hide; Core Rules 2.0 skips a record a user record's name clashes
-/// with.
+/// would hide (to `renamed` when given); Core Rules 2.0 skips a record a
+/// user record's name clashes with.
 fn import_record(
     stores: &mut Stores,
     category: Category,
     object: &mut Object,
     replace: bool,
+    renamed: Option<&str>,
 ) -> Result<Outcome> {
     let name = object_name(object).unwrap_or_default().to_owned();
     match category {
@@ -1261,6 +1278,9 @@ fn import_record(
             if replace && is_standard(&name) {
                 let mut new_name = format!("{name}*");
                 let parts = stores.parts()?;
+                if let Some(renamed) = renamed {
+                    renamed.clone_into(&mut new_name);
+                }
                 while is_standard(&new_name)
                     || parts.arrays.iter().any(|a| named(a, &new_name).is_some())
                 {
