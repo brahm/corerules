@@ -741,13 +741,19 @@ impl Window {
                 install.creation_rules().and_then(|creation| {
                     let advance = Arc::new(install.advance_rules()?);
                     let learn = Arc::new(install.learn_rules()?);
-                    Ok((creation, advance, learn))
+                    // Without the Expansion's psionics there is no Wild
+                    // Talents step.
+                    let skills = creation
+                        .expansion
+                        .then(|| install.skill_rules().ok().map(Rc::new))
+                        .flatten();
+                    Ok((creation, advance, learn, skills))
                 }),
                 install.root().to_owned(),
             ),
             None => return,
         };
-        let (rules, advance, learn) = match rules {
+        let (rules, advance, learn, skills) = match rules {
             Ok(rules) => rules,
             Err(e) => return self.toast(&e.to_string()),
         };
@@ -757,6 +763,7 @@ impl Window {
             advance,
             learn,
             items: self.item_rules(),
+            skills,
             root,
         };
         create::new_character(&self.window, rules, mode, move |draft| {

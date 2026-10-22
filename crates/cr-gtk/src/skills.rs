@@ -10,6 +10,7 @@ use adw::prelude::*;
 use cr_formats::character::Character;
 use cr_i18n::tr;
 use cr_store::create::Dice;
+use cr_store::skills::wild::WildMode;
 use cr_store::skills::{CharacterSkills, SkillRules};
 
 use crate::abilities::described_list;
@@ -89,7 +90,7 @@ pub struct SkillsEditor {
 }
 
 /// "Telepathic devotion, from level 3", for a power.
-fn power_text(rules: &SkillRules, name: &str) -> String {
+pub(crate) fn power_text(rules: &SkillRules, name: &str) -> String {
     let Some(power) = rules.power(name) else {
         return String::new();
     };
@@ -389,7 +390,7 @@ impl SkillsEditor {
 }
 
 /// Asks the questions in turn, then runs `then` once.
-fn ask_then(
+pub(crate) fn ask_then(
     parent: &gtk::Widget,
     questions: Vec<cr_store::create::Question>,
     then: Box<dyn FnOnce()>,
@@ -493,7 +494,9 @@ fn wild_group(
             let (rules, list, dice) = (rules.clone(), list.clone(), dice.clone());
             ask_then(
                 &parent.clone(),
-                rules.roll_questions(&list.rows_titles()),
+                rules
+                    .roll_questions(&list.rows_titles(), WildMode::Update)
+                    .unwrap_or_default(),
                 Box::new(move || {
                     let (names, notices) = rules.roll_wild_talents(&mut dice.borrow_mut());
                     list.clear();

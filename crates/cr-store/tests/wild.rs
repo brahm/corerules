@@ -3,6 +3,7 @@
 
 use cr_store::Installation;
 use cr_store::create::Dice;
+use cr_store::skills::wild::{WildDraft, WildMode};
 
 #[test]
 fn rolled_wild_talents_are_powers_and_the_chance_is_small() {
@@ -52,4 +53,69 @@ fn rolled_wild_talents_are_powers_and_the_chance_is_small() {
             assert!(bad > 0);
         }
     }
+}
+
+#[test]
+fn new_characters_roll_once_and_keep_what_they_rolled() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(dir).unwrap();
+    let rules = install.skill_rules().unwrap();
+    let taken = vec!["x".to_owned()];
+    for mode in [WildMode::Create, WildMode::Enter, WildMode::Update] {
+        assert_eq!(
+            rules.roll_questions(&[], mode).ok().map(|q| q.len()),
+            Some(0)
+        );
+    }
+    assert!(rules.roll_questions(&taken, WildMode::Create).is_err());
+    assert_eq!(
+        rules
+            .roll_questions(&taken, WildMode::Enter)
+            .ok()
+            .map(|q| q.len()),
+        Some(0)
+    );
+    assert_eq!(
+        rules
+            .roll_questions(&taken, WildMode::Update)
+            .ok()
+            .map(|q| q.len()),
+        Some(1)
+    );
+
+    let mut dice = Dice::seeded(5);
+    let mut checked = 0;
+    for entry in std::fs::read_dir(install.root().join("Chars")).unwrap() {
+        let name = entry.unwrap().file_name().to_string_lossy().into_owned();
+        if !name.ends_with(".dat") {
+            continue;
+        }
+        let mut character = install.character(&name).unwrap();
+        if character.data.unknown_0x1430.iter().sum::<u32>() > 0 {
+            continue;
+        }
+        let (talents, _) = rules.roll_wild_talents(&mut dice);
+        let a = &character.data.abilities;
+        let wild = WildDraft {
+            talents: talents.clone(),
+            attacks: vec!["Mind Thrust (MT)".into()],
+            defenses: Vec::new(),
+            wild_talent: true,
+            tested: true,
+            abilities: Some([a[1], a[2], a[3]]),
+        };
+        rules.apply_wild(&mut character, &wild, &mut dice);
+        let d = &character.data;
+        assert_eq!((d.unknown_0x186c, d.unknown_0x1874), (1, 1));
+        let [_, sciences, devotions] = &d.unknown_0x196c;
+        assert_eq!(sciences.len() + devotions.len(), talents.len());
+        assert!(devotions.iter().all(|n| rules.power(n).unwrap().devotion));
+        assert!(sciences.iter().all(|n| !rules.power(n).unwrap().devotion));
+        assert_eq!(d.unknown_0xac[6], wild.attacks);
+        assert_eq!(d.unknown_0x1430[0] > 0, !talents.is_empty());
+        checked += 1;
+    }
+    assert!(checked > 0);
 }

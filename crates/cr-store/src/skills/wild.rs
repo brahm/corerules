@@ -1,6 +1,8 @@
 //! The Wild Talents dialog's Test for Wild Talents, Roll for Wild Talents
-//! and Add (IDD 358), as Update Character offers them (Skills & Powers,
-//! chapter 9).
+//! and Add (IDD 358), as Update Character, New Character and Enter
+//! Character offer them (Skills & Powers, chapter 9). New Character's
+//! Skills page (IDD 353, 0x5d73ef) opens it for a character without a
+//! psionicist class.
 //!
 //! * Test (0x6366b7) asks again when the character has tested before
 //!   (+0x1874), then shows the chance (0x6368bb): 1, plus 3 for each of
@@ -19,7 +21,11 @@
 //!   and 100 a devotion and then as 99. A power is the first whose
 //!   chance on the table (`unknown_0x40`), added up in the database's
 //!   order, reaches the roll; the shipped sciences reach only 88.
-//! * Add (0x6363c7) asks before taking a talent that was not rolled.
+//!   New Character rolls only once (0x635aa3); Update Character asks
+//!   before rolling again; Enter Character does not ask.
+//! * Add (0x6363c7) asks before taking a talent that was not rolled. New
+//!   Character has no list to add from: its talents are only rolled, once
+//!   the character is a wild talent by a test or by a trait (0x635177).
 
 use cr_formats::character::Character;
 use cr_i18n::{tr, tr_noop};
@@ -38,6 +44,28 @@ const SCIENCES: u32 = 92;
 
 /// The class groups that halve the chance of a human: priest and wizard.
 const HALVING_GROUPS: [i32; 2] = [2, 3];
+
+/// Where the dialog is open (its +0x60).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WildMode {
+    Create,
+    Enter,
+    Update,
+}
+
+/// The wild talents of a character being created or entered, written
+/// when it is saved.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct WildDraft {
+    pub talents: Vec<String>,
+    pub attacks: Vec<String>,
+    pub defenses: Vec<String>,
+    /// Made a wild talent by a test, and tested at all.
+    pub wild_talent: bool,
+    pub tested: bool,
+    /// Constitution, Intelligence and Wisdom after a test's loss.
+    pub abilities: Option<[[u32; 3]; 3]>,
+}
 
 /// What a test did.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -262,15 +290,59 @@ impl SkillRules {
     }
 
     /// What Roll asks first: a character with wild talents may roll only
-    /// once.
-    pub fn roll_questions(&self, taken: &[String]) -> Vec<Question> {
+    /// once. New Character refuses (the error), Update Character asks.
+    pub fn roll_questions(
+        &self,
+        taken: &[String],
+        mode: WildMode,
+    ) -> Result<Vec<Question>, Question> {
         if taken.is_empty() {
-            return Vec::new();
+            return Ok(Vec::new());
         }
-        vec![Question::new(
-            tr(WARNING_MESSAGE),
-            tr("You may only roll once for your Wild Talent.\nRoll again anyway?").to_owned(),
-        )]
+        match mode {
+            WildMode::Create => Err(notice(
+                tr("You may only roll once for your Wild Talent").to_owned(),
+            )),
+            WildMode::Enter => Ok(Vec::new()),
+            WildMode::Update => Ok(vec![Question::new(
+                tr(WARNING_MESSAGE),
+                tr("You may only roll once for your Wild Talent.\nRoll again anyway?").to_owned(),
+            )]),
+        }
+    }
+
+    /// Writes the wild talents of a new character (as the dialog's OK,
+    /// 0x635645): the powers as sciences and devotions, the PSPs they give,
+    /// the attack and defense modes, the test and its losses.
+    pub fn apply_wild(&self, character: &mut Character, wild: &WildDraft, dice: &mut Dice) {
+        let d = &mut character.data;
+        if let Some(abilities) = wild.abilities {
+            d.abilities[1..4].copy_from_slice(&abilities);
+        }
+        d.unknown_0x186c = wild.wild_talent.into();
+        d.unknown_0x1874 = wild.tested.into();
+        let (devotions, sciences): (Vec<String>, Vec<String>) = wild
+            .talents
+            .iter()
+            .cloned()
+            .partition(|n| self.power(n).is_some_and(|p| p.devotion));
+        self.wild_points(d, &[], &wild.talents, dice);
+        d.unknown_0x196c[1] = sciences;
+        d.unknown_0x196c[2] = devotions;
+        d.unknown_0xac[6].clone_from(&wild.attacks);
+        d.unknown_0x19c4.clone_from(&wild.defenses);
+    }
+
+    /// New Character's text on the Wild Talents dialog (0x635177), for a
+    /// Skills & Powers character not yet a wild talent.
+    pub fn wild_instructions(&self) -> &'static str {
+        tr(
+            "If you wish to purchase Wild Talents, you need to return to the Non-Weapon \
+            Proficiencies Screen. There, you may purchase Wild Talents for 9 character \
+            points. Here, you may Test for Wild Talents instead of purchasing them. Testing \
+            for Wild Talents involves risk. Testing for Wild Talents should only be done once \
+            per character. For more information please consult Chapter 9 of Skills & Powers.",
+        )
     }
 
     /// What Add asks before a talent that was not rolled.

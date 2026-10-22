@@ -47,7 +47,9 @@ the original programs wrote.
   Choice), race and subrace, class, details, proficiencies and languages,
   rogue skill points, spells (each learned as the original learns it:
   the chance to learn rolled, and a question before passing over a limit
-  of level, Intelligence, spells per level or barred school) and starting
+  of level, Intelligence, spells per level or barred school), wild talents
+  for a character who is not a psionicist (with the Expansion: Test for Wild
+  Talents, and one roll on Table 83 for a wild talent) and starting
   equipment. The original has no campaign settings, so each setting only narrows what the installed
   databases offer, following its campaign book
 - **Enter Character**, the same wizard for a character that already exists
@@ -60,7 +62,8 @@ the original programs wrote.
   rolling hit points and PSPs for each level gained, with hit point and PSP
   arrows in place of the rolls. The later pages take what the sheet has:
   racial and class abilities, proficiencies, rogue points and spells of any
-  level with no limits or totals checked, the kit's equipment not imposed
+  level with no limits or totals checked, wild talents rolled as often as
+  wanted or chosen from the list, the kit's equipment not imposed
 - **Kits** in New Character, as the Expansion offers them: only those the
   character's scores, gender, alignment and classes allow, with the
   original's warnings and the kit's information text. The kit's fixed rogue

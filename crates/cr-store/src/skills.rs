@@ -46,7 +46,7 @@
 use std::collections::{HashMap, HashSet};
 
 use cr_formats::Object;
-use cr_formats::character::Character;
+use cr_formats::character::{Character, CharacterData};
 use cr_formats::classes::Class;
 use cr_formats::parts::PartsFile;
 use cr_i18n::tr;
@@ -900,6 +900,35 @@ impl SkillRules {
         None
     }
 
+    /// A wild talent's 1st-level PSPs for `powers` instead of `old`: a
+    /// character without PSPs first rolls them.
+    fn wild_points(
+        &self,
+        d: &mut CharacterData,
+        old: &[String],
+        powers: &[String],
+        dice: &mut Dice,
+    ) {
+        let psp = |names: &[String]| -> u32 {
+            names
+                .iter()
+                .filter_map(|n| self.power(n))
+                .map(|p| p.psp)
+                .sum()
+        };
+        let total: u32 = d.unknown_0x1430.iter().sum();
+        if !powers.is_empty() && total < 1 {
+            let [_, constitution, intelligence, wisdom, _] = d.abilities;
+            let bonus = |v: u32| bonus16(v as i32) as u32;
+            d.unknown_0x1430[0] = 10
+                + bonus(wisdom[1])
+                + bonus(constitution[2])
+                + bonus(intelligence[1])
+                + dice.roll(1, 4);
+        }
+        d.unknown_0x1430[0] = d.unknown_0x1430[0].saturating_sub(psp(old)) + psp(powers);
+    }
+
     /// Writes `new` into the character, as the dialogs do when closed:
     /// only what changed is rewritten. A wild talent without PSPs rolls
     /// them with `dice`.
@@ -915,13 +944,6 @@ impl SkillRules {
         let old = self.skills_of(character);
         let psionicist = self.psionic_level(character).is_some();
         let column = self.rogue_level(character).map(|(_, l)| l as usize - 1);
-        let wild_psp = |names: &[String]| -> u32 {
-            names
-                .iter()
-                .filter_map(|n| self.power(n))
-                .map(|p| p.psp)
-                .sum()
-        };
         let level = column.map_or(1, |c| c as u32 + 1);
         let d = &mut character.data;
         if let Some(column) = column {
@@ -963,18 +985,7 @@ impl SkillRules {
                     new.sciences.iter().chain(&new.devotions).cloned().collect();
                 let old_powers: Vec<String> =
                     old.sciences.iter().chain(&old.devotions).cloned().collect();
-                let total: u32 = d.unknown_0x1430.iter().sum();
-                if !powers.is_empty() && total < 1 {
-                    let [_, constitution, intelligence, wisdom, _] = d.abilities;
-                    let bonus = |v: u32| bonus16(v as i32) as u32;
-                    d.unknown_0x1430[0] = 10
-                        + bonus(wisdom[1])
-                        + bonus(constitution[2])
-                        + bonus(intelligence[1])
-                        + dice.roll(1, 4);
-                }
-                d.unknown_0x1430[0] =
-                    d.unknown_0x1430[0].saturating_sub(wild_psp(&old_powers)) + wild_psp(&powers);
+                self.wild_points(d, &old_powers, &powers, dice);
             }
             d.unknown_0x196c[1].clone_from(&new.sciences);
             d.unknown_0x196c[2].clone_from(&new.devotions);

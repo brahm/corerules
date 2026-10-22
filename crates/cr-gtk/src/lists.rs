@@ -1,7 +1,7 @@
 //! Editing a list of names chosen from a rules database: a group of rows
 //! with remove buttons, and an Add button that opens a searchable picker.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
@@ -316,6 +316,12 @@ const ROW_ICON_SIZE: i32 = 40;
 /// `make` turns into rows.
 pub struct RowList<T: 'static> {
     pub group: adw::PreferencesGroup,
+    /// The Add button in the header.
+    add: gtk::Button,
+    /// Whether rows may be added and removed, and the rows' Remove
+    /// buttons.
+    editable: Rc<Cell<bool>>,
+    removes: Rc<RefCell<Vec<gtk::Button>>>,
     rows: Rows<T>,
     empty: adw::ActionRow,
     /// Called after every change.
@@ -331,6 +337,9 @@ impl<T: Clone + 'static> Clone for RowList<T> {
     fn clone(&self) -> Self {
         Self {
             group: self.group.clone(),
+            add: self.add.clone(),
+            editable: self.editable.clone(),
+            removes: self.removes.clone(),
             rows: self.rows.clone(),
             empty: self.empty.clone(),
             changed: self.changed.clone(),
@@ -368,6 +377,9 @@ impl<T: Clone + 'static> RowList<T> {
         group.add(&empty);
         let list = Self {
             group,
+            add: add.clone(),
+            editable: Rc::new(Cell::new(true)),
+            removes: Rc::default(),
             rows: Rc::default(),
             empty,
             changed: Rc::default(),
@@ -414,7 +426,9 @@ impl<T: Clone + 'static> RowList<T> {
             .tooltip_text(tr("Remove"))
             .valign(gtk::Align::Center)
             .css_classes(["flat"])
+            .visible(self.editable.get())
             .build();
+        self.removes.borrow_mut().push(remove.clone());
         let (row, spin) = match spec.number {
             Some((value, min, max)) => {
                 let spin = adw::SpinRow::builder()
@@ -510,6 +524,7 @@ impl<T: Clone + 'static> RowList<T> {
         for (_, row, _) in self.rows.borrow_mut().drain(..) {
             self.group.remove(&row);
         }
+        self.removes.borrow_mut().clear();
         self.update();
     }
 
@@ -531,6 +546,16 @@ impl<T: Clone + 'static> RowList<T> {
     /// removes it.
     pub fn connect_remove(&self, f: impl Fn(&T, Box<dyn FnOnce()>) + 'static) {
         *self.remove_check.borrow_mut() = Some(Box::new(f));
+    }
+
+    /// Without Add and Remove, rows change only by [`add`](Self::add)
+    /// and [`clear`](Self::clear).
+    pub fn set_editable(&self, editable: bool) {
+        self.editable.set(editable);
+        self.add.set_visible(editable);
+        for remove in self.removes.borrow().iter() {
+            remove.set_visible(editable);
+        }
     }
 
     /// Shows `f`'s line under each name Add offers.
