@@ -228,6 +228,20 @@ impl Window {
             }
         });
 
+        // Copy on a saved encounter or treasure bundle, as the original's
+        // Encounters tab and List of Treasure Bundles have it.
+        this.browser.copy_button.connect_clicked({
+            let this = this.clone();
+            move |_| {
+                let key = this.browser.current_key.borrow().clone();
+                if let Some(name) = key.strip_prefix(TREASURE_KEY) {
+                    this.copy_treasure(name)
+                } else if let Some(name) = key.strip_prefix(ENCOUNTER_KEY) {
+                    encounter::copy_saved(&Rc::new(this.clone()), name)
+                }
+            }
+        });
+
         this.browser.delete_button.connect_clicked({
             let this = this.clone();
             move |_| {
@@ -627,6 +641,16 @@ impl Window {
 
     /// Opens the treasure roller, on the saved bundle `saved` if given.
     fn roll_treasure(&self, saved: Option<&str>) {
+        self.open_treasure(saved, false);
+    }
+
+    /// The original's Copy… of a saved bundle (0x53f028): the roller on
+    /// its items with no name, so that saving adds a new bundle.
+    fn copy_treasure(&self, name: &str) {
+        self.open_treasure(Some(name), true);
+    }
+
+    fn open_treasure(&self, saved: Option<&str>, copy: bool) {
         let loaded = match &*self.install.borrow() {
             Some(install) => install.treasure_rules().and_then(|rules| {
                 let bundle = match saved {
@@ -657,7 +681,7 @@ impl Window {
                 ..Default::default()
             },
             treasure::Mode::Free {
-                saved: saved.map(str::to_owned),
+                saved: saved.filter(|_| !copy).map(str::to_owned),
             },
             store,
             move |message| this.toast(message),
@@ -1238,6 +1262,8 @@ struct Browser {
     detail: DetailPane,
     /// Shown on the detail page of entries that can be edited.
     edit_button: gtk::Button,
+    /// Copies a saved encounter or treasure bundle.
+    copy_button: gtk::Button,
     sheet_button: gtk::Button,
     /// Clears the NPC mark of a generated character.
     convert_button: gtk::Button,
@@ -1266,6 +1292,7 @@ struct DetailPane {
     page: adw::NavigationPage,
     view: adw::ToolbarView,
     edit_button: gtk::Button,
+    copy_button: gtk::Button,
     sheet_button: gtk::Button,
     convert_button: gtk::Button,
     npc_button: gtk::Button,
@@ -1295,6 +1322,12 @@ impl DetailPane {
                         .iter()
                         .any(|p| key.starts_with(p))),
         );
+        self.copy_button.set_visible(
+            writable
+                && [TREASURE_KEY, ENCOUNTER_KEY]
+                    .iter()
+                    .any(|p| key.starts_with(p)),
+        );
         self.udb_actions.update(if writable { key } else { "" });
         self.sheet_button.set_visible(character);
         self.convert_button
@@ -1320,6 +1353,7 @@ impl DetailPane {
         self.page.set_title(tr("Details"));
         self.view.set_content(Some(widget));
         self.edit_button.set_visible(false);
+        self.copy_button.set_visible(false);
         self.sheet_button.set_visible(false);
         self.convert_button.set_visible(false);
         self.npc_button.set_visible(false);
@@ -1376,6 +1410,11 @@ impl Browser {
             .tooltip_text(tr("Delete Character"))
             .visible(false)
             .build();
+        let copy_button = gtk::Button::builder()
+            .icon_name("edit-copy-symbolic")
+            .tooltip_text(tr("Copy"))
+            .visible(false)
+            .build();
         let generate_button = gtk::Button::builder()
             .icon_name("media-playlist-shuffle-symbolic")
             .tooltip_text(tr("Create Encounter"))
@@ -1396,6 +1435,7 @@ impl Browser {
         detail_header.pack_end(&monster_print_button);
         detail_header.pack_end(&monster_view_button);
         detail_header.pack_end(&generate_button);
+        detail_header.pack_end(&copy_button);
         detail_header.pack_end(&edit_button);
         detail_header.pack_end(&sheet_button);
         detail_header.pack_end(&convert_button);
@@ -1410,6 +1450,7 @@ impl Browser {
             page: detail_page.clone(),
             view: detail_view,
             edit_button: edit_button.clone(),
+            copy_button: copy_button.clone(),
             sheet_button: sheet_button.clone(),
             convert_button: convert_button.clone(),
             npc_button: npc_button.clone(),
@@ -1702,6 +1743,7 @@ impl Browser {
             selection,
             detail,
             edit_button,
+            copy_button,
             sheet_button,
             convert_button,
             npc_button,
