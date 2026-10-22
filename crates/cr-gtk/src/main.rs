@@ -581,6 +581,18 @@ impl Window {
             }
         }
         self.browser.set_read_only(read_only);
+        if !read_only && let Some(install) = self.install.borrow().as_ref() {
+            let this = self.clone();
+            let reload = Rc::new(move || {
+                if let Some(install) = this.install.borrow().as_ref() {
+                    this.browser.load(install.catalog(), None);
+                }
+            });
+            let parent = self.window.clone().upcast();
+            if let Err(e) = userdb::rename_hidden_parts(&parent, install, reload) {
+                self.toast(&e.to_string());
+            }
+        }
     }
 
     fn set_can_create(&self, enabled: bool) {

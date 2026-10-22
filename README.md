@@ -192,7 +192,11 @@ the original programs wrote.
 - **Packages**: Export, Import, New Package and Edit Package for `.xpx`
   packages with characters and any user record, byte for byte as the
   Expansion writes them; Core Rules 2.0 `.xpt` packages are imported and
-  converted. Monsters travel in these packages (there is no `.mon` file)
+  converted. Monsters travel in these packages (there is no `.mon` file).
+  An imported part named like a standard one gets a "*", and Name
+  Conflict asks for another name when a part has that one too; as in the
+  Expansion, opening the folder renames the kits, nonweapon proficiencies,
+  schools and magical items of yours that a standard one's name hides
 
 <p>
   <img src="docs/screenshots/npc.png" width="49%" alt="The New NPC dialog">

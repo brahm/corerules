@@ -2508,3 +2508,93 @@ pub fn passes(filter: &gtk::DropDown, origin: Option<Origin>) -> bool {
         None => true,
     }
 }
+
+// ---- Name Conflict ----
+
+/// The original's Name Conflict (IDD 246): asks for another name for a
+/// user part, starting from `name`, until `taken` accepts one, then gives
+/// it to `done`. As in the original, there is no way out but a free name.
+pub(crate) fn name_conflict(
+    parent: &gtk::Widget,
+    name: &str,
+    taken: Rc<dyn Fn(&str) -> bool>,
+    done: Rc<dyn Fn(String)>,
+) {
+    let entry = gtk::Entry::builder()
+        .text(name)
+        .activates_default(true)
+        .build();
+    let alert = adw::AlertDialog::builder()
+        .heading(tr("Name Conflict"))
+        .body(tr(parts::NAME_CONFLICT))
+        .extra_child(&entry)
+        .default_response("close")
+        .close_response("close")
+        .build();
+    alert.add_responses(&[("help", tr("_Help")), ("close", tr("_Close"))]);
+    let owner = parent.clone();
+    alert.connect_response(None, move |_, response| {
+        let text = entry.text().to_string();
+        if response == "help" {
+            crate::help::show(&owner, topic::NAME_CONFLICT);
+        } else if !taken(&text) {
+            return done(text);
+        }
+        name_conflict(&owner, &text, taken.clone(), done.clone());
+    });
+    alert.present(Some(parent));
+}
+
+/// What the Expansion does to the user parts each time it opens the
+/// database (0x472b7b): renames the ones a standard part's name hides,
+/// asking in Name Conflict when the new name is taken, and saves them;
+/// `done` runs once they are saved. Nothing happens when none is hidden.
+pub(crate) fn rename_hidden_parts(
+    parent: &gtk::Widget,
+    install: &Installation,
+    done: Rc<dyn Fn()>,
+) -> Result<()> {
+    let db = UserDb::<Parts>::load(install)?;
+    let renames = parts::open_renames(&db);
+    if !renames.is_empty() {
+        let root = install.root().to_owned();
+        rename_next(parent, Rc::new(RefCell::new(db)), renames, root, done);
+    }
+    Ok(())
+}
+
+fn rename_next(
+    parent: &gtk::Widget,
+    db: Rc<RefCell<UserDb<Parts>>>,
+    mut renames: Vec<(usize, String)>,
+    root: std::path::PathBuf,
+    done: Rc<dyn Fn()>,
+) {
+    if renames.is_empty() {
+        let result = Installation::open(&root).and_then(|install| db.borrow().save(&install));
+        if let Err(e) = result {
+            message(parent, tr("Not Saved"), &e.to_string());
+        }
+        return done();
+    }
+    let (index, name) = renames.remove(0);
+    let next: Rc<dyn Fn(String)> = Rc::new({
+        let (parent, db) = (parent.clone(), db.clone());
+        move |name| {
+            Parts::set_name(&mut db.borrow_mut().user[index], &name);
+            rename_next(
+                &parent,
+                db.clone(),
+                renames.clone(),
+                root.clone(),
+                done.clone(),
+            );
+        }
+    });
+    if parts::name_taken(&db.borrow(), &name, &[]) {
+        let taken = Rc::new(move |n: &str| parts::name_taken(&db.borrow(), n, &[]));
+        name_conflict(parent, &name, taken, next);
+    } else {
+        next(name);
+    }
+}

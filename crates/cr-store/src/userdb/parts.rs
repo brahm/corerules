@@ -40,6 +40,59 @@ pub const EQUIPMENT: usize = 7;
 pub const MAGICAL_ITEMS: usize = 8;
 pub const CLASS_ABILITIES: usize = 14;
 pub const KITS: usize = 15;
+pub const NONWEAPON_PROFICIENCIES: usize = 4;
+pub const SCHOOLS: usize = 9;
+
+/// The types whose user parts the Expansion checks against the standard
+/// ones of the same type each time it opens the database (0x472b7b), in
+/// its order.
+pub const CHECKED_ON_OPEN: [usize; 4] = [NONWEAPON_PROFICIENCIES, KITS, SCHOOLS, MAGICAL_ITEMS];
+
+/// The text of the original's Name Conflict (IDD 246).
+pub const NAME_CONFLICT: &str = tr_noop!(
+    "There is a conflict between the name of a Custom Item and the name of a Standard Item.  \
+     You must enter a new name for your custom item before you may continue."
+);
+
+/// The user parts the Expansion renames when it opens the database
+/// (0x47dffe): those of a [`CHECKED_ON_OPEN`] type with the name of a
+/// standard part of that type, ignoring case and outer spaces. Each is
+/// given its name trimmed, in capitals, with a "*" (the original
+/// capitalizes the name it compares and keeps it). The index into the
+/// user list and that name; when [`name_taken`] says it is taken, the
+/// original's Name Conflict asks for another.
+pub fn open_renames(db: &super::UserDb<Parts>) -> Vec<(usize, String)> {
+    let key = |r: &PartRec| r.part.head.name.trim().to_uppercase();
+    let mut renames = Vec::new();
+    for t in CHECKED_ON_OPEN {
+        for (i, r) in db.user.iter().enumerate() {
+            if r.part_type == t
+                && db
+                    .standard
+                    .iter()
+                    .any(|s| s.part_type == t && key(s) == key(r))
+            {
+                renames.push((i, format!("{}*", key(r))));
+            }
+        }
+    }
+    renames
+}
+
+/// Whether the original's check (0x47e2f6) refuses `name` for a user part:
+/// it is empty once trimmed, or a standard or user part of any type, or
+/// one of `also`, has it, ignoring case and outer spaces.
+pub fn name_taken(db: &super::UserDb<Parts>, name: &str, also: &[String]) -> bool {
+    let key = |n: &str| n.trim().to_uppercase();
+    let name = key(name);
+    name.is_empty()
+        || db
+            .standard
+            .iter()
+            .chain(&db.user)
+            .any(|r| key(&r.part.head.name) == name)
+        || also.iter().any(|n| key(n) == name)
+}
 
 /// The part types the app lists together in one section, the ones without
 /// a section of their own: the id their records' keys carry, their array
@@ -452,6 +505,31 @@ mod tests {
             scope,
             parent: String::new(),
         }
+    }
+
+    #[test]
+    fn user_parts_named_like_standard_ones_are_renamed_on_open() {
+        let part = |t: usize, name: &str| {
+            let mut r = Parts::new_record(&context(Flavor::Expansion, t));
+            Parts::set_name(&mut r, name);
+            r
+        };
+        let db = UserDb::<Parts>::new(
+            Flavor::Expansion,
+            vec![part(KITS, "Gladiator"), part(WEAPONS, "Dagger")],
+            vec![
+                part(WEAPONS, "dagger"),
+                part(KITS, " gladiator "),
+                part(KITS, "GLADIATOR*"),
+                part(MAGICAL_ITEMS, "Gladiator"),
+            ],
+        );
+        // Only a type checked on open, against the same type.
+        assert_eq!(open_renames(&db), [(1, "GLADIATOR*".to_owned())]);
+        assert!(name_taken(&db, "gladiator*", &[]));
+        assert!(name_taken(&db, "  ", &[]));
+        assert!(name_taken(&db, "Brute", &["brute".to_owned()]));
+        assert!(!name_taken(&db, "Brute", &[]));
     }
 
     #[test]
