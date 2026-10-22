@@ -215,6 +215,61 @@ impl AllowedDb {
         }
     }
 
+    /// Takes the class `name` out of every race (`6817a7`, each race at
+    /// `689b06`), as the original does when a class is deleted or its group
+    /// changes: an entry of that class alone goes, a combination loses that
+    /// class, and an entry left equal to an earlier one of the same race
+    /// (same classes and the same shipped flag) goes too (`689c32`).
+    /// Whether anything changed.
+    pub fn remove_class(&mut self, name: &str) -> bool {
+        let mut changed = false;
+        for record in &mut self.records {
+            let before = record.classes.clone();
+            record.classes.retain_mut(|o| {
+                let Object::ClassesAllowedHelper(h) = o else {
+                    return true;
+                };
+                let d = &mut h.data;
+                let mut slots = [
+                    &mut d.warrior,
+                    &mut d.rogue,
+                    &mut d.priest,
+                    &mut d.wizard,
+                    &mut d.psionicist,
+                ];
+                if slots.iter().filter(|s| !s.is_empty()).count() == 1 {
+                    return !slots.iter().any(|s| **s == name);
+                }
+                for slot in &mut slots {
+                    if **slot == name {
+                        slot.clear();
+                    }
+                }
+                true
+            });
+            let mut kept: Vec<Object> = Vec::with_capacity(record.classes.len());
+            for o in std::mem::take(&mut record.classes) {
+                let same = |k: &Object| match (helper_data(k), helper_data(&o)) {
+                    (Some(a), Some(b)) => {
+                        a.warrior == b.warrior
+                            && a.rogue == b.rogue
+                            && a.priest == b.priest
+                            && a.wizard == b.wizard
+                            && a.psionicist == b.psionicist
+                            && a.flag_0x4 == b.flag_0x4
+                    }
+                    _ => false,
+                };
+                if !kept.iter().any(same) {
+                    kept.push(o);
+                }
+            }
+            record.classes = kept;
+            changed |= record.classes != before;
+        }
+        changed
+    }
+
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
         list_bytes(
             self.records
@@ -300,6 +355,37 @@ mod tests {
             },
             db
         );
+    }
+
+    #[test]
+    fn a_removed_class_leaves_every_race() {
+        let mut db = AllowedDb::default();
+        let (i, _) = db.ensure("Dwarf");
+        db.records[i].classes = [
+            Allowed::new(class("UdbClass", "Thief"), 0),
+            Allowed::new(class("", "Thief"), 12),
+            Allowed::new(class("UdbClass", ""), 12),
+            Allowed::new(class("Fighter", "Thief"), 0),
+        ]
+        .iter()
+        .map(Allowed::helper)
+        .collect();
+        let (j, _) = db.ensure("Elf");
+        db.records[j].classes = vec![Allowed::new(class("Fighter", ""), 12).helper()];
+        assert!(db.remove_class("UdbClass"));
+        // The combination becomes a Thief entry equal to the one after it,
+        // which goes; the class alone goes.
+        let names: Vec<_> = db
+            .entries("Dwarf")
+            .iter()
+            .map(|a| (a.name.clone(), a.level_limit))
+            .collect();
+        assert_eq!(
+            names,
+            [("Thief".to_owned(), 0), ("Fighter/Thief".to_owned(), 0)]
+        );
+        assert_eq!(db.entries("Elf").len(), 1);
+        assert!(!db.remove_class("UdbClass"));
     }
 
     #[test]

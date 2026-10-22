@@ -1003,7 +1003,15 @@ fn editor<H: Host + 'static>(
         move |_| editor.add_trap()
     });
     editor.redraw();
-    finish::<Templates, H>(host, dialog, TEMPLATES, editing, record, cancel, save);
+    finish::<Templates, H>(
+        host,
+        dialog,
+        TEMPLATES,
+        editing,
+        record,
+        (cancel, save),
+        Rc::default(),
+    );
 }
 
 /// IDD 276 in template mode: the lair treasure, 0 to 100 of each letter.

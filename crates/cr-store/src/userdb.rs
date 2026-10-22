@@ -716,6 +716,20 @@ pub trait UserKind: 'static {
         None
     }
 
+    /// The question the original asks when the editor changes an existing
+    /// record from `stored` to `edited` (a class's group); the change is
+    /// undone unless it is answered yes.
+    fn change_question(_stored: &Self::Rec, _edited: &Self::Rec) -> Option<&'static str> {
+        None
+    }
+
+    /// What the original changes in other files when `record` is deleted,
+    /// or saved after a change [`change_question`](Self::change_question)
+    /// asked about (a class leaves the races' allowed classes).
+    fn detach(_install: &Installation, _record: &Self::Rec) -> Result<()> {
+        Ok(())
+    }
+
     /// Why the original refuses to copy `record`, when it does.
     fn copy_refusal(_record: &Self::Rec) -> Option<String> {
         None
