@@ -698,6 +698,18 @@ impl NpcRules {
         })
     }
 
+    /// A name for a character of the subrace (or race) and sex, as the
+    /// Name page of New Character makes one (0x4b9da3): when it opens with
+    /// no name (0x5bc584), and from the button beside the name (0x5beac5,
+    /// with the sex the page shows).
+    pub fn random_name(&self, rand: &mut Rand, subrace: &str, male: bool) -> String {
+        names::Namer {
+            program: &self.data.program,
+            r: rand,
+        }
+        .make_name(subrace, male)
+    }
+
     /// Create NPC (0x4bf418) for a race (or subrace) and classes with
     /// their levels.
     pub fn generate(
