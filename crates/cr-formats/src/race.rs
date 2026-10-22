@@ -54,6 +54,9 @@ record! {
         unknown_0x158: [i32; 5],
         unknown_0x18c: i32,
         unknown_0x1e0: [i32; 3],
+        /// Nonzero when New Character lets the player add one point to
+        /// any ability score (IDD 393, shown at 0x5b54d0); only the
+        /// Mongrelman has it.
         unknown_0x5c: i32,
         unknown_0x21c: [i32; 5],
         unknown_0x230: [String; 5],

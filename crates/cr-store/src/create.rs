@@ -502,6 +502,9 @@ pub struct RaceRules {
     abilities: Vec<String>,
     /// What the abilities cost as a package (`Race.unknown_0xe0`).
     package_cost: i64,
+    /// New Character adds one point to an ability score of the player's
+    /// choice (`Race.unknown_0x5c`, the Mongrelman).
+    pub any_point: bool,
 }
 
 /// A subrace record: its movement, its Skills & Powers points, ability
@@ -569,6 +572,9 @@ pub struct Draft {
     pub skills_and_powers: bool,
     /// Str, Dex, Con, Int, Wis and Cha before the racial adjustments.
     pub scores: [u32; 6],
+    /// The ability a race such as the Mongrelman raises by one point
+    /// (IDD 393, the character's +0x2194), 0 for Strength.
+    pub raised: Option<usize>,
     /// 1 to 100 for 18/01 to 18/00; only warriors with Strength 18.
     pub exceptional_strength: u32,
     pub race: String,
@@ -700,6 +706,7 @@ impl Draft {
         Self {
             setting,
             scores: [10; 6],
+            raised: None,
             exceptional_strength: 0,
             race: String::new(),
             subrace: String::new(),
@@ -880,6 +887,7 @@ impl Installation {
                 saved: r.unknown_0xac.max(0) as u32,
                 abilities: r.abilities.clone(),
                 package_cost: r.unknown_0xe0.into(),
+                any_point: r.unknown_0x5c != 0,
                 multi_classes: r
                     .multi_classes
                     .iter()
@@ -1470,8 +1478,20 @@ impl CreationRules {
 
     /// Scores after the race's adjustments.
     pub fn adjusted(&self, race: &str, scores: &[u32; 6]) -> [u32; 6] {
-        let adjustments = self.race(race).map_or([0; 6], |r| r.adjustments);
-        std::array::from_fn(|a| (scores[a] as i32 + adjustments[a]).clamp(3, 25) as u32)
+        self.raised(race, scores, None)
+    }
+
+    /// Scores after the race's adjustments and the point a race such as
+    /// the Mongrelman adds to `raised` (0x59eb9e and its siblings add it to
+    /// the ability the character's +0x2194 names).
+    pub fn raised(&self, race: &str, scores: &[u32; 6], raised: Option<usize>) -> [u32; 6] {
+        let (adjustments, any_point) = self
+            .race(race)
+            .map_or(([0; 6], false), |r| (r.adjustments, r.any_point));
+        std::array::from_fn(|a| {
+            let point = i32::from(any_point && raised == Some(a));
+            (scores[a] as i32 + adjustments[a] + point).clamp(3, 25) as u32
+        })
     }
 
     /// Every class combination the race may take in the setting.
@@ -2620,7 +2640,7 @@ impl CreationRules {
                     }),
             );
         }
-        let adjusted = self.adjusted(&draft.race, &draft.scores);
+        let adjusted = self.draft_scores(draft);
         if !self
             .class_options(draft.setting, &draft.race, &adjusted)
             .contains(&draft.classes)
@@ -3421,6 +3441,7 @@ mod tests {
             saved: if name == "Dwarf" { 5 } else { 10 },
             abilities: Vec::new(),
             package_cost: 0,
+            any_point: name == "Mongrelman",
         }
     }
 

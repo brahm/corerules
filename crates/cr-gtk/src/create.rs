@@ -1174,9 +1174,8 @@ impl Wizard {
                 let choices: Vec<(String, String)> = races
                     .iter()
                     .map(|r| {
-                        let adjustments: Vec<String> = this
-                            .rules()
-                            .race(r)
+                        let race = this.rules().race(r);
+                        let mut adjustments: Vec<String> = race
                             .map(|r| r.adjustments)
                             .unwrap_or_default()
                             .iter()
@@ -1184,6 +1183,9 @@ impl Wizard {
                             .filter(|(_, v)| **v != 0)
                             .map(|(a, v)| format!("{} {v:+}", tr(SHORT[a])))
                             .collect();
+                        if race.is_some_and(|r| r.any_point) {
+                            adjustments.push(tr("+1 to any ability").to_owned());
+                        }
                         let subtitle = if entering {
                             String::new()
                         } else if adjustments.is_empty() {
@@ -1222,26 +1224,31 @@ impl Wizard {
         });
         next.connect_clicked({
             let this = self.clone();
-            move |_| {
+            move |button| {
                 let race = chosen.borrow().clone();
                 let subraces = this.rules().subraces(setting, &race);
                 let subrace = subraces
                     .get(subrace_row.selected() as usize)
                     .cloned()
                     .unwrap_or_else(|| race.clone());
-                let skills_and_powers = {
+                {
                     let mut d = this.0.draft.borrow_mut();
                     if d.race != race || d.subrace != subrace {
                         d.racial_abilities = this.rules().racial_package(&race, &subrace);
                     }
                     d.race = race;
                     d.subrace = subrace;
-                    d.skills_and_powers
-                };
-                if skills_and_powers {
-                    this.push(this.racial_page());
+                    d.raised = None;
+                }
+                let any_point = this
+                    .rules()
+                    .race(&this.0.draft.borrow().race)
+                    .is_some_and(|r| r.any_point);
+                // New Character only (0x5b54d0 runs in mode 0x378).
+                if any_point && !this.0.entering {
+                    this.raise_one(button);
                 } else {
-                    this.push(this.class_step());
+                    this.after_race();
                 }
             }
         });
@@ -1254,11 +1261,61 @@ impl Wizard {
         )
     }
 
+    /// The page after the race: Skills & Powers racial abilities, or the
+    /// class.
+    fn after_race(&self) {
+        if self.0.draft.borrow().skills_and_powers {
+            self.push(self.racial_page());
+        } else {
+            self.push(self.class_step());
+        }
+    }
+
+    /// The original's "Add one point to any ability score" (IDD 393) for a
+    /// race such as the Mongrelman: one button per ability, the current
+    /// score beside it.
+    fn raise_one(&self, parent: &gtk::Button) {
+        let d = self.0.draft.borrow().clone();
+        let scores = self.rules().adjusted(&d.race, &d.scores);
+        let dialog = adw::AlertDialog::new(
+            Some(tr("Add one point to any ability score")),
+            Some(tr(
+                "The race you have selected allows you to add one point to any ability \
+                 score. Please select the ability score you wish to have increased.",
+            )),
+        );
+        // A stacked dialog shows its last response on top.
+        for (a, name) in ABILITIES.iter().enumerate().rev() {
+            // Player's Choice rolls the scores after the class.
+            let label = if d.roll_method == RollMethod::PlayersChoice {
+                tr(name).to_owned()
+            } else {
+                format!("{} {}", tr(name), scores[a])
+            };
+            dialog.add_response(&a.to_string(), &label);
+        }
+        // The original's dialog has no Cancel button.
+        dialog.set_can_close(false);
+        dialog.connect_response(None, {
+            let this = self.clone();
+            move |dialog, response| {
+                let Ok(a) = response.parse::<usize>() else {
+                    return;
+                };
+                // A dialog that cannot close stays up after a response.
+                dialog.force_close();
+                this.0.draft.borrow_mut().raised = Some(a);
+                this.after_race();
+            }
+        });
+        dialog.present(Some(parent));
+    }
+
     /// The class or multi-class combination. With Player's Choice the
     /// classes are those the race's best scores reach, and the scores are
     /// rolled here to fit the class chosen.
     fn class_page(&self) -> adw::NavigationPage {
-        let (setting, race, scores, previous, choice) = {
+        let (setting, race, scores, previous, choice, raised) = {
             let d = self.0.draft.borrow();
             let choice = d.roll_method == RollMethod::PlayersChoice;
             let scores = if choice {
@@ -1266,9 +1323,16 @@ impl Wizard {
             } else {
                 d.scores
             };
-            (d.setting, d.race.clone(), scores, d.classes.clone(), choice)
+            (
+                d.setting,
+                d.race.clone(),
+                scores,
+                d.classes.clone(),
+                choice,
+                d.raised,
+            )
         };
-        let adjusted = self.rules().adjusted(&race, &scores);
+        let adjusted = self.rules().raised(&race, &scores, raised);
         let options = self.rules().class_options(setting, &race, &adjusted);
         let group = adw::PreferencesGroup::builder()
             .title(tr("Class"))
@@ -1314,7 +1378,7 @@ impl Wizard {
                 scores_row.set_title(&scores_summary(&scores));
                 scores_row.set_subtitle(&tr!(
                     "{scores} after racial adjustments",
-                    scores = scores_summary(&this.rules().adjusted(&race, &scores))
+                    scores = scores_summary(&this.rules().raised(&race, &scores, raised))
                 ));
                 *rolled.borrow_mut() = scores;
             }

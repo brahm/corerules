@@ -28,3 +28,32 @@ fn a_subrace_package_costs_its_price() {
     draft.racial_abilities.push("Elf, Less sleep (5)".into());
     assert_eq!(rules.racial_points_left(&draft), 0);
 }
+
+#[test]
+fn a_race_may_add_one_point_to_the_ability_chosen() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(Path::new(&dir)).unwrap();
+    if install.is_core20() {
+        return;
+    }
+    let rules = install.creation_rules().unwrap();
+    let mut with_point = 0;
+    for race in rules.all_races(&SETTINGS[0], false) {
+        let any_point = rules.race(&race).unwrap().any_point;
+        with_point += usize::from(any_point);
+        let mut draft = Draft::new(&SETTINGS[0]);
+        draft.race = race;
+        let before = rules.draft_scores(&draft);
+        for a in 0..6 {
+            draft.raised = Some(a);
+            let after = rules.draft_scores(&draft);
+            for b in 0..6 {
+                let point = u32::from(any_point && a == b);
+                assert_eq!(after[b], before[b] + point);
+            }
+        }
+    }
+    assert!(with_point > 0);
+}
