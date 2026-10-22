@@ -2,9 +2,9 @@
 //! concatenating syllables from the program's tables, read from the
 //! installation's program ([`super::program`]).
 
-use super::Gen;
-use super::program::{BUP, NORM};
+use super::program::{BUP, NORM, Program, Tx};
 use super::texts::{DAVID, GRINKA, LOUISE, MUGWORT, NORMA, THE_SEP};
+use super::{Gen, Rand};
 
 /// The generators by race keyword (0x4b9da3 tests the keywords in the
 /// program's order; Evermore's 0x536600 has the same order).
@@ -67,12 +67,39 @@ const KEYWORDS: [By; 31] = [
     By::Halfling,
 ];
 
-impl<'a> Gen<'a> {
+/// The name generators' inputs: the program's tables and texts, and the
+/// stream they draw from.
+pub(super) struct Namer<'a, 'r> {
+    pub program: &'a Program,
+    pub r: &'r mut Rand,
+}
+
+impl Gen<'_> {
+    /// 0x4b9da3 on the generation's stream.
+    pub(super) fn make_name(&mut self, race: &str, male: bool) -> String {
+        Namer {
+            program: &self.d.program,
+            r: &mut *self.r,
+        }
+        .make_name(race, male)
+    }
+}
+
+impl<'a> Namer<'a, '_> {
+    fn t(&self, tx: Tx) -> &'a str {
+        self.program.text(tx)
+    }
+
+    /// `mod(n)` (0x554d70).
+    fn modn(&mut self, n: i32) -> i32 {
+        if n == 0 { 0 } else { self.r.rand() % n }
+    }
+
     /// 0x4b8eda: `table[mod(n)]` of the table `local` of the Tsrp3.exe
     /// name generator `f`.
     fn pick(&mut self, f: u32, local: u32) -> &'a str {
-        let d = self.d;
-        let table = d.program.table(f, local);
+        let program = self.program;
+        let table = program.table(f, local);
         if table.is_empty() {
             return "";
         }
@@ -382,8 +409,7 @@ impl<'a> Gen<'a> {
     /// contains picks the generator.
     pub(super) fn make_name(&mut self, race: &str, male: bool) -> String {
         let u = race.to_uppercase();
-        let d = self.d;
-        let found = d
+        let found = self
             .program
             .name_keys
             .iter()

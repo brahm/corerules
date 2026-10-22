@@ -46,7 +46,9 @@ the original programs wrote.
   setting, ability rolls (Methods I to VI, entered scores or Player's
   Choice), race and subrace (with the original's question for the point a
   race such as the Mongrelman adds to an ability of the player's choice),
-  class, details, proficiencies and languages,
+  class, details (with a name from the NPC generator for the subrace,
+  given when the character has none and again from the button beside the
+  name), proficiencies and languages,
   rogue skill points, spells (each learned as the original learns it:
   the chance to learn rolled, and a question before passing over a limit
   of level, Intelligence, spells per level or barred school), wild talents

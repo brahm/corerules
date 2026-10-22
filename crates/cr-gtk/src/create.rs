@@ -25,7 +25,7 @@ use cr_store::create::{
 use cr_store::help::topic;
 use cr_store::kit_magic::KitMagicRules;
 use cr_store::learn::{ALREADY_KNOWN, LearnRules, Learner, Learning, WARNING};
-use cr_store::npc::NpcRules;
+use cr_store::npc::{NpcRules, Rand};
 use cr_store::pictures::ItemIcons;
 use cr_store::settings::{SETTINGS, Setting};
 use cr_store::skills::SkillRules;
@@ -79,6 +79,8 @@ struct Inner {
     icons: std::cell::OnceCell<Rc<ItemIcons>>,
     draft: RefCell<Draft>,
     dice: RefCell<Dice>,
+    /// The name generator's stream.
+    names: RefCell<Rand>,
     nav: adw::NavigationView,
     dialog: adw::Dialog,
     create: Box<Create>,
@@ -134,6 +136,7 @@ pub fn new_character(
         icons: Default::default(),
         draft: RefCell::new(draft),
         dice: RefCell::new(Dice::default()),
+        names: RefCell::new(Rand::default()),
         nav,
         dialog: dialog.clone(),
         create: Box::new(create),
@@ -1770,6 +1773,22 @@ impl Wizard {
             .title(tr("Name"))
             .text(&d.name)
             .build();
+        // The name generator by the subrace (0x4b9da3); the page opens with
+        // a name when the character has none (0x5bc584).
+        let subrace = if d.subrace.is_empty() {
+            &d.race
+        } else {
+            &d.subrace
+        }
+        .clone();
+        let random_name = self.0.items.clone().map(|npc| {
+            if d.name.trim().is_empty() {
+                name.set_text(&npc.random_name(&mut self.0.names.borrow_mut(), &subrace, d.male));
+            }
+            let button = roll_button(tr("Random Name"));
+            name.add_suffix(&button);
+            (npc, button)
+        });
         let player = adw::EntryRow::builder()
             .title(tr("Player"))
             .text(&d.player)
@@ -1939,6 +1958,12 @@ impl Wizard {
             let gender = gender.clone();
             move || gender.selected() == 0
         });
+        if let Some((npc, button)) = random_name {
+            let (this, name, male) = (self.clone(), name.clone(), male.clone());
+            button.connect_clicked(move |_| {
+                name.set_text(&npc.random_name(&mut this.0.names.borrow_mut(), &subrace, male()));
+            });
+        }
         social_roll.connect_clicked({
             let (this, social_class, kit) = (self.clone(), social_class.clone(), kit.clone());
             move |_| {
@@ -2129,7 +2154,7 @@ impl Wizard {
         });
 
         let next = next_button(tr("_Next"));
-        next.set_sensitive(!d.name.trim().is_empty());
+        next.set_sensitive(!name.text().trim().is_empty());
         name.connect_changed({
             let next = next.clone();
             move |name| next.set_sensitive(!name.text().trim().is_empty())
