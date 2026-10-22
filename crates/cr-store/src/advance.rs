@@ -827,16 +827,9 @@ impl AdvanceRules {
         if !class.casts.0 && !class.casts.1 {
             return Ok(None);
         }
-        let level = self.level_of(character, g)? as usize;
+        let level = self.level_of(character, g)?;
         let abilities = &character.data.class_slots[g].abilities;
-        let alternative = abilities.iter().any(|a| self.alternative_slots.contains(a))
-            || class.slots.iter().flatten().all(|&s| s <= 0);
-        let table = if alternative {
-            &class.alternative_slots
-        } else {
-            &class.slots
-        };
-        let row = table.get(level).copied().unwrap_or_default();
+        let row = self.slot_row(class, level, abilities);
         let wisdom = if class.group == 2 && (!self.expansion || character.skills_and_powers()) {
             // Intuition with Skills & Powers.
             wisdom_bonus(ability(character, WIS, 1))
@@ -853,6 +846,32 @@ impl AdvanceRules {
             let bonus = wisdom.get(i).copied().unwrap_or(0) * factor;
             base + bonus + u32::from(specialist)
         })))
+    }
+}
+
+impl AdvanceRules {
+    /// The row of the table [`Self::spell_slots`] reads: the alternative
+    /// one when an ability selects it or the main one has no slots.
+    fn slot_row(&self, class: &ClassAdvance, level: u32, abilities: &[String]) -> [i32; 11] {
+        let alternative = abilities.iter().any(|a| self.alternative_slots.contains(a))
+            || class.slots.iter().flatten().all(|&s| s <= 0);
+        let table = if alternative {
+            &class.alternative_slots
+        } else {
+            &class.slots
+        };
+        table.get(level as usize).copied().unwrap_or_default()
+    }
+
+    /// Whether `class` at `level`, with `abilities`, has slots for each
+    /// spell level (0x431639 above 0), indexed by spell level; level 0
+    /// never. Nothing for a class the databases lack.
+    pub fn castable(&self, class: &str, level: u32, abilities: &[String]) -> [bool; 10] {
+        let Some(class) = self.classes.get(class) else {
+            return [false; 10];
+        };
+        let row = self.slot_row(class, level, abilities);
+        std::array::from_fn(|l| l > 0 && row[l] > 0)
     }
 }
 

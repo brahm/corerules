@@ -22,6 +22,7 @@ pub mod groups;
 pub mod help;
 mod iso9660;
 pub mod kit_magic;
+pub mod learn;
 pub mod lists;
 pub mod npc;
 pub mod party;

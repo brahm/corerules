@@ -2565,7 +2565,6 @@ impl CreationRules {
         } {
             return Some(problem);
         }
-        let adjusted = self.draft_scores(draft);
         if draft.kit != "None"
             && !self
                 .kits(&draft.race, &draft.subrace, &draft.classes)
@@ -2580,7 +2579,7 @@ impl CreationRules {
         // the proficiencies, abilities, rogue skills and spells are free
         // of their slots, points and limits.
         if draft.entered.is_none()
-            && let Some(problem) = self.limits_problem(draft, &adjusted)
+            && let Some(problem) = self.limits_problem(draft)
         {
             return Some(problem);
         }
@@ -2636,8 +2635,9 @@ impl CreationRules {
     }
 
     /// New Character's slots, points and limits: the proficiencies,
-    /// languages, rogue skills and spells fit them.
-    fn limits_problem(&self, draft: &Draft, adjusted: &[u32; 6]) -> Option<String> {
+    /// languages and rogue skills fit them. The spells' limits are asked
+    /// about as each is learned ([`crate::learn`]), and may be overridden.
+    fn limits_problem(&self, draft: &Draft) -> Option<String> {
         if let Some(problem) = if draft.skills_and_powers {
             self.points_problem(draft)
         } else {
@@ -2650,14 +2650,6 @@ impl CreationRules {
         }
         if let Some(problem) = self.rogue_problem(draft) {
             return Some(problem);
-        }
-        let most = max_spells_per_level(adjusted[3]);
-        if draft.spells.len() > most {
-            return Some(tr!(
-                "Intelligence {score} allows {most} spells of a level",
-                score = adjusted[3],
-                most
-            ));
         }
         None
     }
@@ -3669,7 +3661,9 @@ mod tests {
         assert!(!rules.draft_spells(&created).iter().any(|s| s == "Fireball"));
         d.spells = vec!["Magic Missile".into(); 20];
         assert_eq!(rules.problem(&d), None);
-        assert!(rules.limits_problem(&d, &d.scores).is_some());
+        // New Character asks as each spell is learned, and saves what the
+        // user kept.
+        assert_eq!(rules.limits_problem(&d), None);
 
         // One class of each group at most.
         d.classes = vec!["Paladin".into(), "Fighter".into()];

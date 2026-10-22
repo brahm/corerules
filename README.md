@@ -45,8 +45,10 @@ the original programs wrote.
 - **New Character** (Ctrl+N), following the original wizard: campaign
   setting, ability rolls (Methods I to VI, entered scores or Player's
   Choice), race and subrace, class, details, proficiencies and languages,
-  rogue skill points, spells and starting equipment. The original has no
-  campaign settings, so each setting only narrows what the installed
+  rogue skill points, spells (each learned as the original learns it:
+  the chance to learn rolled, and a question before passing over a limit
+  of level, Intelligence, spells per level or barred school) and starting
+  equipment. The original has no campaign settings, so each setting only narrows what the installed
   databases offer, following its campaign book
 - **Enter Character**, the same wizard for a character that already exists
   on paper, as the original's Enter Character button: scores typed in from
@@ -122,7 +124,8 @@ the original programs wrote.
   psionic attack and defense modes (with Update Character's limits), nonweapon
   proficiencies (ranks, costs as New Character charges them, the kit's free
   ones at their levels, the Core Rules slots left, and the kit's warnings
-  and questions), languages, spells known, spellbooks and memorized spells
+  and questions), languages, spells known (learned with New Character's
+  roll and questions), spellbooks and memorized spells
   (with the kit's barred schools, the schools beyond five to eliminate, the
   spheres to keep, its free sphere and its warning for a kit that never
   uses spells, as Update Character's Spells and Memorize pages ask, and

@@ -16,6 +16,7 @@ pub struct ListEditor {
     items: Rc<RefCell<Vec<String>>>,
     rows: Rc<RefCell<Vec<adw::ActionRow>>>,
     empty: adw::ActionRow,
+    add_check: AddCheck,
 }
 
 impl ListEditor {
@@ -42,6 +43,7 @@ impl ListEditor {
             items: Rc::default(),
             rows: Rc::default(),
             empty,
+            add_check: Rc::default(),
         };
         for item in items {
             editor.push(item.clone());
@@ -60,8 +62,17 @@ impl ListEditor {
                     .collect();
                 let editor = editor.clone();
                 pick(button, &title, offered, move |name| {
-                    editor.push(name);
-                    editor.update_empty();
+                    let add: Box<dyn FnOnce()> = {
+                        let (editor, name) = (editor.clone(), name.clone());
+                        Box::new(move || {
+                            editor.push(name);
+                            editor.update_empty();
+                        })
+                    };
+                    match &*editor.add_check.borrow() {
+                        Some(check) => check(&name, add),
+                        None => add(),
+                    }
                 });
             }
         });
@@ -70,6 +81,12 @@ impl ListEditor {
 
     pub fn items(&self) -> Vec<String> {
         self.items.borrow().clone()
+    }
+
+    /// Asks `f` before a name picked with Add joins the list, with the
+    /// name and what adds it.
+    pub fn connect_add(&self, f: impl Fn(&str, Box<dyn FnOnce()>) + 'static) {
+        *self.add_check.borrow_mut() = Some(Box::new(f));
     }
 
     fn push(&self, name: String) {
