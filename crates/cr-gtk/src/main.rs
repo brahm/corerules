@@ -737,7 +737,7 @@ impl Window {
     /// Opens the New Character dialog, or with `entering` the Enter
     /// Character one (the original's Character Management button 1573).
     fn new_character(&self, entering: bool) {
-        let (rules, root) = match &*self.install.borrow() {
+        let (rules, root, backgrounds) = match &*self.install.borrow() {
             Some(install) => (
                 install.creation_rules().and_then(|creation| {
                     let advance = Arc::new(install.advance_rules()?);
@@ -751,6 +751,7 @@ impl Window {
                     Ok((creation, advance, learn, skills))
                 }),
                 install.root().to_owned(),
+                cr_store::edit::backgrounds(install).unwrap_or_default(),
             ),
             None => return,
         };
@@ -766,6 +767,7 @@ impl Window {
             items: self.item_rules(),
             skills,
             root,
+            backgrounds,
         };
         create::new_character(&self.window, rules, mode, move |draft| {
             let install = this.install.borrow();
@@ -2180,22 +2182,8 @@ fn character_editor(
             create::kit_information(kit, &rules, &chosen);
         }
     });
-    let event = create::combo_row(
-        tr("Background Event"),
-        &with(choices.backgrounds.clone(), &details.background),
-        &details.background,
-    );
-    let history = gtk::TextView::builder()
-        .wrap_mode(gtk::WrapMode::WordChar)
-        .top_margin(8)
-        .bottom_margin(8)
-        .left_margin(8)
-        .right_margin(8)
-        .accepts_tab(false)
-        .height_request(96)
-        .css_classes(["card"])
-        .build();
-    history.buffer().set_text(&details.history);
+    let (event, history) =
+        create::background_rows(&choices.backgrounds, &details.background, &details.history);
     character.add(&sex);
     let background = adw::PreferencesGroup::builder()
         .title(tr("Background"))
@@ -2594,11 +2582,7 @@ fn character_editor(
                 male: sex.selected() == 0,
                 kit: create::combo_value(&kit),
                 background: create::combo_value(&event),
-                history: {
-                    let buffer = history.buffer();
-                    let (start, end) = buffer.bounds();
-                    buffer.text(&start, &end, false).to_string()
-                },
+                history: create::text_of(&history),
             };
             let mut lists = editors.lists();
             lists.new_classes = new_classes.borrow().clone();

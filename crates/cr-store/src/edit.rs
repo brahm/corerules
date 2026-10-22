@@ -17,6 +17,7 @@ use cr_formats::character::{Character, CharacterIndex};
 use cr_i18n::tr;
 
 use crate::lists::CharacterLists;
+use crate::treasure::Rand;
 use crate::{Error, Installation, Result};
 
 /// The editable details of a character.
@@ -304,6 +305,17 @@ pub fn backgrounds(install: &Installation) -> Result<Vec<String>> {
 
 /// "NONE" and the 20 events.
 const BACKGROUNDS: usize = 21;
+
+/// The event the Background… dialog's Select Randomly picks from
+/// [`backgrounds`]: one of the 20, never "NONE" (0x616249).
+pub fn random_background<'a>(rand: &mut Rand, backgrounds: &'a [String]) -> Option<&'a str> {
+    let last = backgrounds.len().min(BACKGROUNDS) as i32 - 1;
+    if last < 1 {
+        return None;
+    }
+    let pick = crate::tables::range(rand, 1, last);
+    backgrounds.get(pick as usize).map(String::as_str)
+}
 
 /// `Chars/<file>`, refusing names that would leave the folder.
 pub(crate) fn character_path(file: &str) -> Result<String> {

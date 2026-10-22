@@ -654,6 +654,11 @@ pub struct Draft {
     /// [`crate::pictures::stored_portrait`]); empty for none, as the
     /// original's wizard leaves it.
     pub portrait: [String; 2],
+    /// The background event the Name page's Background… dialog picks,
+    /// `NONE` for none.
+    pub background: String,
+    /// The character history written in that dialog.
+    pub history: String,
     /// The proficiencies page was reached, so a new kit resets its
     /// choices (the original's +0x2236 and +0x2237).
     pub proficiencies_started: bool,
@@ -753,6 +758,8 @@ impl Draft {
             armor_proficiencies: Vec::new(),
             fighting_styles: Vec::new(),
             portrait: Default::default(),
+            background: "NONE".into(),
+            history: String::new(),
             proficiencies_started: false,
             nonweapon_picks: Vec::new(),
             kit_nonweapon_base: None,
@@ -2991,7 +2998,12 @@ impl CreationRules {
             d.name = draft.name.trim().to_owned();
             d.unknown_0x1db8.clone_from(&draft.portrait);
             d.class_title = draft.class_title();
-            d.unknown_0x90 = "NONE".into();
+            d.unknown_0x90 = if draft.background.is_empty() {
+                "NONE".into()
+            } else {
+                draft.background.clone()
+            };
+            d.unknown_0x94.clone_from(&draft.history);
             d.social_class.clone_from(&draft.social_class);
             d.height = draft.height;
             d.weight = draft.weight;
@@ -3889,6 +3901,22 @@ mod tests {
         let c = install.character(&file).unwrap();
         assert_eq!(c.data.unknown_0x1db8, [String::new(), String::new()]);
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn the_background_event_and_history_are_written() {
+        let rules = rules(true);
+        let mut d = draft(&rules);
+        let c = rules.build(&d).unwrap();
+        assert_eq!(
+            (c.data.unknown_0x90.as_str(), c.data.unknown_0x94.as_str()),
+            ("NONE", "")
+        );
+        d.background = "Event".into();
+        d.history = "Born far away.".into();
+        let c = rules.build(&d).unwrap();
+        assert_eq!(c.data.unknown_0x90, d.background);
+        assert_eq!(c.data.unknown_0x94, d.history);
     }
 
     #[test]
