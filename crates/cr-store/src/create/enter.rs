@@ -112,13 +112,13 @@ impl Entered {
 
 impl CreationRules {
     /// The scores the character has: as typed with Enter Character, else
-    /// after the race's adjustments.
+    /// after the race's adjustments and any point it adds.
     pub fn draft_scores(&self, draft: &Draft) -> [u32; 6] {
         if draft.entered.is_some() {
             let (low, high) = ENTERED_SCORES;
             draft.scores.map(|s| s.clamp(low, high))
         } else {
-            self.adjusted(&draft.race, &draft.scores)
+            self.raised(&draft.race, &draft.scores, draft.raised)
         }
     }
 
