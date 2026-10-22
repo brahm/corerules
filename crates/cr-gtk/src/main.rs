@@ -36,7 +36,7 @@ use adw::prelude::*;
 use cr_formats::character::Character;
 use cr_i18n::{tr, tr_noop};
 use cr_store::Installation;
-use cr_store::advance::{AdvanceRules, Advancement};
+use cr_store::advance::{AdvanceRules, Advancement, adjust_psionic_points, psionic_total};
 use cr_store::catalog::{ENCOUNTER_KEY, Entry, Section, TABLE_KEY, TEMPLATES, TREASURE_KEY};
 use cr_store::choices::{Caster, caster};
 use cr_store::dual::ClassChoice;
@@ -2726,24 +2726,33 @@ fn classes_group(
     (group, added)
 }
 
-/// Experience, levels and hit points, with a button to give or take away
-/// experience as the original's Level... dialog does. Changes go to
-/// `advanced`, a copy of the character that the save compares with the
+/// Experience, levels, hit points and PSPs, with the Name page's
+/// "Level..." button (1613), which opens the original's Levels dialog in
+/// Update too, and a button to give or take away experience. Changes go
+/// to `advanced`, a copy of the character that the save compares with the
 /// character as read.
 fn experience_group(
     rules: &Arc<AdvanceRules>,
     advanced: &Rc<RefCell<Character>>,
     listeners: &Listeners,
 ) -> adw::PreferencesGroup {
+    let levels = gtk::Button::builder()
+        .label(tr("Levels…"))
+        .valign(gtk::Align::Center)
+        .css_classes(["flat"])
+        .build();
     let add = gtk::Button::builder()
         .label(tr("Add…"))
         .tooltip_text(tr("Add or take away experience"))
         .valign(gtk::Align::Center)
         .css_classes(["flat"])
         .build();
+    let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+    buttons.append(&levels);
+    buttons.append(&add);
     let group = adw::PreferencesGroup::builder()
         .title(tr("Experience"))
-        .header_suffix(&add)
+        .header_suffix(&buttons)
         .build();
     let character = advanced.borrow().clone();
     let class_rows: Vec<adw::ActionRow> = character
@@ -2767,8 +2776,17 @@ fn experience_group(
         .numeric(true)
         .adjustment(&gtk::Adjustment::new(0.0, 0.0, 99_999.0, 1.0, 10.0, 0.0))
         .build();
+    // The Name page's PSP arrows (2373, 0 to 999): a change goes to the
+    // highest level that has PSPs.
+    let psionic = adw::SpinRow::builder()
+        .title(tr("PSPs"))
+        .subtitle(tr("Changes those of the highest level that has them"))
+        .numeric(true)
+        .adjustment(&gtk::Adjustment::new(0.0, 0.0, 999.0, 1.0, 10.0, 0.0))
+        .build();
     let showing = Rc::new(std::cell::Cell::new(false));
     group.add(&hit_points);
+    group.add(&psionic);
     let points = character.skills_and_powers().then(|| {
         let label = gtk::Label::builder()
             .css_classes(["numeric"])
@@ -2784,7 +2802,7 @@ fn experience_group(
     });
     let refresh = Rc::new({
         let (rules, advanced, listeners) = (rules.clone(), advanced.clone(), listeners.clone());
-        let (hit_points, showing) = (hit_points.clone(), showing.clone());
+        let (hit_points, psionic, showing) = (hit_points.clone(), psionic.clone(), showing.clone());
         move || {
             for listener in listeners.borrow().iter() {
                 listener();
@@ -2806,7 +2824,17 @@ fn experience_group(
                 }
                 Err(_) => hit_points.set_sensitive(false),
             }
+            psionic.set_value(f64::from(psionic_total(&character)));
             showing.set(false);
+            psionic.set_visible(
+                character
+                    .data
+                    .classes
+                    .names
+                    .iter()
+                    .any(|c| rules.psionicist(c))
+                    || psionic_total(&character) > 0,
+            );
             if let Some(points) = &points {
                 points.set_label(&character.data.unknown_0x1778[0].to_string());
             }
@@ -2815,6 +2843,7 @@ fn experience_group(
     refresh();
     hit_points.connect_value_notify({
         let (rules, advanced, refresh) = (rules.clone(), advanced.clone(), refresh.clone());
+        let showing = showing.clone();
         move |row| {
             if showing.get() {
                 return;
@@ -2831,25 +2860,29 @@ fn experience_group(
             }
         }
     });
-    if rules.expansion() {
-        let limits = adw::ComboRow::builder()
-            .title(tr("Level Limits"))
-            .model(&gtk::StringList::new(&[
-                tr("None"),
-                tr("Racial Limits"),
-                tr("Racial Limits and Prime Requisite Bonus"),
-            ]))
-            .selected(character.data.unknown_0x1dc4.min(2))
-            .build();
-        limits.connect_selected_notify({
-            let (advanced, refresh) = (advanced.clone(), refresh.clone());
-            move |limits| {
-                advanced.borrow_mut().data.unknown_0x1dc4 = limits.selected();
-                refresh();
+    psionic.connect_value_notify({
+        let (advanced, refresh) = (advanced.clone(), refresh.clone());
+        move |row| {
+            if showing.get() {
+                return;
             }
-        });
-        group.add(&limits);
-    }
+            {
+                let mut character = advanced.borrow_mut();
+                let delta = row.value() as i64 - i64::from(psionic_total(&character));
+                adjust_psionic_points(&mut character, delta as i32);
+            }
+            refresh();
+        }
+    });
+    // The Levels dialog opens with the prime requisite bonus on (0x617a71)
+    // and 3 character points a level, every time.
+    levels.connect_clicked({
+        let (rules, advanced, refresh) = (rules.clone(), advanced.clone(), refresh.clone());
+        move |button| {
+            let refresh = refresh.clone();
+            enter::levels_dialog(button, &rules, &advanced, (true, 3), move |_, _| refresh());
+        }
+    });
     add.connect_clicked({
         let (rules, advanced) = (rules.clone(), advanced.clone());
         move |button| {

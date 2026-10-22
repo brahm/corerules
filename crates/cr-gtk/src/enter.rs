@@ -255,27 +255,50 @@ pub(crate) fn levels_group(levels: Rc<Levels>) -> (adw::PreferencesGroup, Rc<dyn
     });
     open.connect_clicked({
         let refresh = refresh.clone();
-        move |button| levels_dialog(button, levels.clone(), refresh.clone())
+        move |button| {
+            let options = {
+                let entered = levels.entered.borrow();
+                (entered.prime_bonus, entered.points_per_level)
+            };
+            let closed = {
+                let (levels, refresh) = (levels.clone(), refresh.clone());
+                move |prime, per_level| {
+                    {
+                        let mut entered = levels.entered.borrow_mut();
+                        entered.prime_bonus = prime;
+                        entered.points_per_level = per_level;
+                    }
+                    levels.store();
+                    refresh();
+                }
+            };
+            levels_dialog(button, &levels.advance, &levels.character, options, closed);
+        }
     });
     (group, refresh)
 }
 
-/// The Levels dialog (0x616c00): each class's level from 1 to 100 or its
+/// The Levels dialog (0x616c00), which Enter Character's and Update's
+/// Name pages open alike: each class's level from 1 to 100 or its
 /// experience, the prime requisite bonus, the level limits and, with
-/// Skills & Powers, the character points; `closed` runs once it closes,
-/// with the abilities the levels grant given (0x61990a).
-fn levels_dialog(parent: &impl IsA<gtk::Widget>, levels: Rc<Levels>, closed: Rc<dyn Fn()>) {
+/// Skills & Powers, the character points. `options` are the prime
+/// requisite bonus and the character points per level it opens with;
+/// `closed` gets them once it closes, with the abilities the levels grant
+/// given (0x61990a).
+pub(crate) fn levels_dialog(
+    parent: &impl IsA<gtk::Widget>,
+    advance: &Arc<AdvanceRules>,
+    character: &Rc<RefCell<Character>>,
+    (prime, per_level): (bool, u32),
+    closed: impl Fn(bool, u32) + 'static,
+) {
     let (names, skills_and_powers, limits) = {
-        let character = levels.character.borrow();
+        let character = character.borrow();
         (
             character.data.classes.names.clone(),
             character.skills_and_powers(),
             character.data.unknown_0x1dc4.min(2),
         )
-    };
-    let (prime, per_level) = {
-        let entered = levels.entered.borrow();
-        (entered.prime_bonus, entered.points_per_level)
     };
     let add = gtk::Button::builder()
         .label(tr("Add Experience…"))
@@ -320,7 +343,7 @@ fn levels_dialog(parent: &impl IsA<gtk::Widget>, levels: Rc<Levels>, closed: Rc<
             tr("Racial Limits and Prime Requisite Bonus"),
         ]))
         .selected(limits)
-        .visible(levels.advance.expansion())
+        .visible(advance.expansion())
         .build();
     options.add(&limits_row);
     let points_row = adw::SpinRow::builder()
@@ -348,16 +371,17 @@ fn levels_dialog(parent: &impl IsA<gtk::Widget>, levels: Rc<Levels>, closed: Rc<
 
     let showing = Rc::new(Cell::new(false));
     let refresh = Rc::new({
-        let (levels, level_rows, points_row, showing) = (
-            levels.clone(),
+        let (advance, character, level_rows, points_row, showing) = (
+            advance.clone(),
+            character.clone(),
             level_rows.clone(),
             points_row.clone(),
             showing.clone(),
         );
         move || {
-            let character = levels.character.borrow();
+            let character = character.borrow();
             showing.set(true);
-            if let Ok(classes) = levels.advance.levels(&character) {
+            if let Ok(classes) = advance.levels(&character) {
                 for (row, class) in level_rows.iter().zip(classes) {
                     row.set_value(class.level.into());
                     row.set_subtitle(&crate::level_text(&class));
@@ -376,14 +400,15 @@ fn levels_dialog(parent: &impl IsA<gtk::Widget>, levels: Rc<Levels>, closed: Rc<
         .build();
     let dialog = dialog(tr("Levels"), &[&classes, &options], &close, topic::LEVELS);
     for (g, row) in level_rows.iter().enumerate() {
-        let (levels, refresh, showing) = (levels.clone(), refresh.clone(), showing.clone());
+        let (advance, character) = (advance.clone(), character.clone());
+        let (refresh, showing) = (refresh.clone(), showing.clone());
         let (dialog, per_level_row) = (dialog.clone(), per_level_row.clone());
         row.connect_value_notify(move |row| {
             if showing.get() {
                 return;
             }
-            let result = levels.advance.set_level(
-                &mut levels.character.borrow_mut(),
+            let result = advance.set_level(
+                &mut character.borrow_mut(),
                 g,
                 row.value() as u32,
                 per_level_row.value() as u32,
@@ -398,29 +423,29 @@ fn levels_dialog(parent: &impl IsA<gtk::Widget>, levels: Rc<Levels>, closed: Rc<
         });
     }
     limits_row.connect_selected_notify({
-        let (levels, refresh) = (levels.clone(), refresh.clone());
+        let (character, refresh) = (character.clone(), refresh.clone());
         move |row| {
-            levels.character.borrow_mut().data.unknown_0x1dc4 = row.selected();
+            character.borrow_mut().data.unknown_0x1dc4 = row.selected();
             refresh();
         }
     });
     points_row.connect_value_notify({
-        let (levels, showing) = (levels.clone(), showing.clone());
+        let (character, showing) = (character.clone(), showing.clone());
         move |row| {
             if !showing.get() {
-                levels.character.borrow_mut().data.unknown_0x1778[0] = row.value() as u32;
+                character.borrow_mut().data.unknown_0x1778[0] = row.value() as u32;
             }
         }
     });
     add.connect_clicked({
-        let (levels, refresh) = (levels.clone(), refresh.clone());
+        let (advance, character, refresh) = (advance.clone(), character.clone(), refresh.clone());
         let (prime_row, per_level_row) = (prime_row.clone(), per_level_row.clone());
         move |button| {
             let refresh = refresh.clone();
             crate::experience_dialog(
                 button,
-                &levels.advance,
-                &levels.character,
+                &advance,
+                &character,
                 Some((prime_row.is_active(), per_level_row.value() as u32)),
                 move || refresh(),
             );
@@ -432,17 +457,11 @@ fn levels_dialog(parent: &impl IsA<gtk::Widget>, levels: Rc<Levels>, closed: Rc<
             dialog.close();
         }
     });
+    let advance = advance.clone();
+    let character = character.clone();
     dialog.connect_closed(move |_| {
-        levels
-            .advance
-            .grant_level_abilities(&mut levels.character.borrow_mut());
-        {
-            let mut entered = levels.entered.borrow_mut();
-            entered.prime_bonus = prime_row.is_active();
-            entered.points_per_level = per_level_row.value() as u32;
-        }
-        levels.store();
-        closed();
+        advance.grant_level_abilities(&mut character.borrow_mut());
+        closed(prime_row.is_active(), per_level_row.value() as u32);
     });
     dialog.present(Some(parent));
 }

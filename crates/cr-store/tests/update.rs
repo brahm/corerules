@@ -12,6 +12,8 @@ use std::path::{Path, PathBuf};
 
 use cr_formats::character::Character;
 use cr_store::Installation;
+use cr_store::advance::Advancement;
+use cr_store::create::Dice;
 use cr_store::edit::CharacterDetails;
 
 const BORIN: &str = "90688519.dat";
@@ -138,4 +140,51 @@ fn the_hit_point_arrows_change_the_rolls_as_the_original_does() {
     // Up goes to the highest level's roll.
     rules.adjust_hit_points(&mut level3, 5).unwrap();
     assert_eq!(rolls(&level3), [1, 1, 6]);
+}
+
+/// The Levels dialog Update opens from its Name page: the level arrows put
+/// Borin at level 3 with the experience the original's Level... gave him,
+/// rolling the new levels' hit points, and the character points typed in
+/// reach the save with them.
+#[test]
+fn the_levels_dialog_saves_the_level_and_the_points() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(Path::new(&dir)).unwrap();
+    if install.is_core20() {
+        return;
+    }
+    let rules = install.advance_rules().unwrap();
+    let borin = read(&fixtures().join(BORIN));
+    let theirs = read(&fixtures().join("update/level-3.dat"));
+    let mut advanced = borin.clone();
+    rules
+        .set_level(&mut advanced, 0, 3, 3, &mut Dice::seeded(628))
+        .unwrap();
+    advanced.data.unknown_0x1778[0] += 7;
+
+    let mut saved = borin.clone();
+    Advancement::between(&borin, &advanced).apply(&mut saved);
+    assert_eq!(saved.data.unknown_0x1618, theirs.data.unknown_0x1618);
+    let levels: Vec<u32> = rules
+        .levels(&saved)
+        .unwrap()
+        .iter()
+        .map(|c| c.level)
+        .collect();
+    assert_eq!(levels, [3]);
+    assert_eq!(
+        saved.data.unknown_0xc60[0][0],
+        borin.data.unknown_0xc60[0][0]
+    );
+    assert!(
+        saved.data.unknown_0xc60[0][1..3]
+            .iter()
+            .all(|&roll| roll > 0)
+    );
+    assert_eq!(
+        saved.data.unknown_0x1778[0],
+        borin.data.unknown_0x1778[0] + 7
+    );
 }
