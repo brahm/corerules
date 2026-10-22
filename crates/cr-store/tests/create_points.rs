@@ -86,3 +86,20 @@ fn a_new_character_gets_a_name_of_its_subrace() {
     }
     assert!(names.len() > 1);
 }
+
+#[test]
+fn select_randomly_picks_one_of_the_twenty_events() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(Path::new(&dir)).unwrap();
+    let events = cr_store::edit::backgrounds(&install).unwrap();
+    let mut rand = Rand::seeded(628);
+    let mut picked = std::collections::HashSet::new();
+    for _ in 0..200 {
+        let event = cr_store::edit::random_background(&mut rand, &events).unwrap();
+        assert_ne!(event, events[0]);
+        picked.insert(event.to_owned());
+    }
+    assert_eq!(picked.len(), events.len() - 1);
+}

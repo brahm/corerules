@@ -48,7 +48,8 @@ the original programs wrote.
   race such as the Mongrelman adds to an ability of the player's choice),
   class, details (with a name from the NPC generator for the subrace,
   given when the character has none and again from the button beside the
-  name), proficiencies and languages,
+  name, and the Background… dialog's event, with Select Randomly, and
+  history), proficiencies and languages,
   rogue skill points, spells (each learned as the original learns it:
   the chance to learn rolled, and a question before passing over a limit
   of level, Intelligence, spells per level or barred school), wild talents
@@ -117,7 +118,8 @@ the original programs wrote.
   it too
 - **Editing** a character: name, player, gender, alignment, kit (which
   rolls the social class again, as Update Character does), social class,
-  background event and history, portrait, age, height, weight, hit points
+  background event (with Select Randomly, which picks one of the 20 events)
+  and history, portrait, age, height, weight, hit points
   (moving the rolls as the original's arrows do), ability scores, subrace,
   racial and class abilities, schools and spheres, weapon proficiencies,
   weapon groups, weapon of choice, expertise, specializations, mastery, unarmed combat,

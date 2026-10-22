@@ -81,6 +81,9 @@ struct Inner {
     dice: RefCell<Dice>,
     /// The name generator's stream.
     names: RefCell<Rand>,
+    /// The Background… dialog's events, "NONE" first; empty when the
+    /// program could not be read.
+    backgrounds: Vec<String>,
     nav: adw::NavigationView,
     dialog: adw::Dialog,
     create: Box<Create>,
@@ -102,6 +105,9 @@ pub struct Mode {
     pub skills: Option<Rc<SkillRules>>,
     /// The installation, for the portraits and the items' icons.
     pub root: PathBuf,
+    /// The Background… dialog's events, "NONE" first; empty when the
+    /// program could not be read.
+    pub backgrounds: Vec<String>,
 }
 
 /// Opens the dialog; `create` writes the finished character and returns
@@ -137,6 +143,7 @@ pub fn new_character(
         draft: RefCell::new(draft),
         dice: RefCell::new(Dice::default()),
         names: RefCell::new(Rand::default()),
+        backgrounds: mode.backgrounds,
         nav,
         dialog: dialog.clone(),
         create: Box::new(create),
@@ -396,13 +403,59 @@ fn next_button(label: &str) -> gtk::Button {
         .build()
 }
 
-fn roll_button(tooltip: &str) -> gtk::Button {
+pub(crate) fn roll_button(tooltip: &str) -> gtk::Button {
     gtk::Button::builder()
         .icon_name("view-refresh-symbolic")
         .tooltip_text(tooltip)
         .valign(gtk::Align::Center)
         .css_classes(["flat"])
         .build()
+}
+
+/// The Background… dialog's event and history (IDD 210, on the Name page
+/// of both wizards and of Update Character): the events, with Select
+/// Randomly, which picks one of the 20 (0x616249), and the history.
+pub(crate) fn background_rows(
+    events: &[String],
+    event: &str,
+    history: &str,
+) -> (adw::ComboRow, gtk::TextView) {
+    let mut events = events.to_vec();
+    if !events.iter().any(|e| e == event) {
+        events.push(event.to_owned());
+    }
+    let row = combo_row(tr("Background Event"), &events, event);
+    let random = roll_button(tr("Select Randomly"));
+    row.add_suffix(&random);
+    let rand = RefCell::new(Rand::default());
+    random.connect_clicked({
+        let row = row.clone();
+        move |_| {
+            if let Some(event) = cr_store::edit::random_background(&mut rand.borrow_mut(), &events)
+            {
+                select(&row, event);
+            }
+        }
+    });
+    let text = gtk::TextView::builder()
+        .wrap_mode(gtk::WrapMode::WordChar)
+        .top_margin(8)
+        .bottom_margin(8)
+        .left_margin(8)
+        .right_margin(8)
+        .accepts_tab(false)
+        .height_request(96)
+        .css_classes(["card"])
+        .build();
+    text.buffer().set_text(history);
+    (row, text)
+}
+
+/// The text of a history view.
+pub(crate) fn text_of(view: &gtk::TextView) -> String {
+    let buffer = view.buffer();
+    let (start, end) = buffer.bounds();
+    buffer.text(&start, &end, false).to_string()
 }
 
 fn escape(text: &str) -> String {
@@ -1822,6 +1875,16 @@ impl Wizard {
         background.add(&alignment);
         background.add(&kit);
         background.add(&social_class);
+        // Background… on the Name page, as New Character's has it too.
+        let event = (!self.0.backgrounds.is_empty()).then(|| {
+            let (row, history) = background_rows(&self.0.backgrounds, &d.background, &d.history);
+            background.add(&row);
+            let group = adw::PreferencesGroup::builder()
+                .title(tr("History"))
+                .build();
+            group.add(&history);
+            (row, history, group)
+        });
 
         let age = spin_row(tr("Age"), tr("Years"), d.age, 1, 9999);
         let height = spin_row(tr("Height"), tr("Inches"), d.height, 1, 999);
@@ -2160,13 +2223,17 @@ impl Wizard {
             move |name| next.set_sensitive(!name.text().trim().is_empty())
         });
         next.connect_clicked({
-            let this = self.clone();
+            let (this, event) = (self.clone(), event.clone());
             move |_| {
                 {
                     let mut d = this.0.draft.borrow_mut();
                     d.name = name.text().trim().to_owned();
                     d.player = player.text().trim().to_owned();
                     d.portrait = portrait.borrow().clone();
+                    if let Some((event, history, _)) = &event {
+                        d.background = combo_value(event);
+                        d.history = text_of(history);
+                    }
                     d.male = male();
                     d.alignment = combo_value(&alignment);
                     let chosen = combo_value(&kit);
@@ -2200,6 +2267,7 @@ impl Wizard {
         let mut groups = vec![&who, &background, &appearance];
         groups.extend(levels.as_ref());
         groups.extend([&combat, &subabilities]);
+        groups.extend(event.as_ref().map(|e| &e.2));
         step(tr("Details"), &groups, &next, None, || {
             topic::CHARACTER_INFORMATION
         })
