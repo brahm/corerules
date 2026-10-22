@@ -38,15 +38,15 @@
 //!   psionicist's sciences and devotions. Saving them gives the 1st-level
 //!   PSPs their initial costs (`unknown_0x48`) instead of the old ones'; a
 //!   character without PSPs first rolls 10 + 1d4 + the bonuses of
-//!   Intuition, Fitness and Reason above 15. The original's Test and Roll
-//!   buttons are not offered.
+//!   Intuition, Fitness and Reason above 15. Test and Roll are the
+//!   original's buttons, in [`wild`].
 //! * Attack and defense modes are lists of the program's own names; their
 //!   limits by level only ask, so the app leaves them to the player.
 
 use std::collections::{HashMap, HashSet};
 
 use cr_formats::Object;
-use cr_formats::character::Character;
+use cr_formats::character::{Character, CharacterData};
 use cr_formats::classes::Class;
 use cr_formats::parts::PartsFile;
 use cr_i18n::tr;
@@ -58,6 +58,8 @@ use crate::npc::magic::{bonus16, psi_dev, psi_disc, psi_sci};
 use crate::sheet::SheetRules;
 use crate::userdb::powers::DISCIPLINES;
 use crate::{Error, Installation, Result};
+
+pub mod wild;
 
 /// The most a rogue skill may reach without the original asking.
 const MOST_ROGUE_SCORE: i32 = 95;
@@ -146,8 +148,13 @@ pub struct SkillRules {
     sheet: SheetRules,
     classes: HashMap<String, ClassEntry>,
     powers: Vec<Power>,
+    /// The wild talent table in the database's order: devotion, chance,
+    /// name and the powers required first.
+    wild_table: Vec<(bool, u32, String, Vec<String>)>,
     /// Class abilities that make a psychic adept.
     adept_abilities: HashSet<String>,
+    /// Traits that make a wild talent (+0x744).
+    wild_traits: HashSet<String>,
     kits: HashMap<String, KitRogue>,
     attacks: Vec<String>,
     defenses: Vec<String>,
@@ -170,12 +177,21 @@ impl Installation {
             }
         }
         let mut powers: Vec<Power> = Vec::new();
+        let mut wild_table = Vec::new();
         if self.path("Database/Psionic.dat").is_some() {
             for object in self.list_objects("Psionic")? {
                 if let Object::PsionicPower(p) = object
                     && !p.name.is_empty()
                     && !powers.iter().any(|q| q.name == p.name)
                 {
+                    if p.unknown_0x40 > 0 {
+                        wild_table.push((
+                            p.unknown_0x2c != 0,
+                            p.unknown_0x40,
+                            p.name.clone(),
+                            p.prerequisites.clone(),
+                        ));
+                    }
                     powers.push(Power {
                         discipline: DISCIPLINES
                             .get(p.unknown_0x28 as usize)
@@ -190,7 +206,7 @@ impl Installation {
             }
         }
         powers.sort_by_cached_key(|p| sort_key(&p.name));
-        let mut adept_abilities = HashSet::new();
+        let (mut adept_abilities, mut wild_traits) = (HashSet::new(), HashSet::new());
         for relative in ["Database/Parts.dat", "UserDbas/PartsU.dat"] {
             if self.path(relative).is_none() {
                 continue;
@@ -204,6 +220,13 @@ impl Installation {
                     && p.data.flags_0x780[5] != 0
                 {
                     adept_abilities.insert(p.head.name.clone());
+                }
+            }
+            for object in file.of_type("Traits").unwrap_or_default() {
+                if let Object::Part(p) = object
+                    && p.data.unknown_0x744 != 0
+                {
+                    wild_traits.insert(p.head.name.clone());
                 }
             }
         }
@@ -233,7 +256,9 @@ impl Installation {
             sheet: self.sheet_rules()?,
             classes,
             powers,
+            wild_table,
             adept_abilities,
+            wild_traits,
             kits,
             attacks: texts(&ATTACK_TEXTS),
             defenses: texts(&DEFENSE_TEXTS),
@@ -259,6 +284,10 @@ pub struct CharacterSkills {
     /// one yet) and the skills it had chosen.
     pub kit_bonuses: Vec<Option<KitBonus>>,
     pub kit_chosen: Vec<KitBonus>,
+    /// Made a wild talent by a test (+0x186c), and tested at all
+    /// (+0x1874).
+    pub wild_talent: bool,
+    pub tested: bool,
 }
 
 /// One rogue skill as the dialog shows it.
@@ -763,6 +792,8 @@ impl SkillRules {
                 .as_ref()
                 .map(|l| l[1].iter().flatten().filter_map(|o| kit_bonus(o)).collect())
                 .unwrap_or_default(),
+            wild_talent: d.unknown_0x186c != 0,
+            tested: d.unknown_0x1874 != 0,
         }
     }
 
@@ -869,6 +900,35 @@ impl SkillRules {
         None
     }
 
+    /// A wild talent's 1st-level PSPs for `powers` instead of `old`: a
+    /// character without PSPs first rolls them.
+    fn wild_points(
+        &self,
+        d: &mut CharacterData,
+        old: &[String],
+        powers: &[String],
+        dice: &mut Dice,
+    ) {
+        let psp = |names: &[String]| -> u32 {
+            names
+                .iter()
+                .filter_map(|n| self.power(n))
+                .map(|p| p.psp)
+                .sum()
+        };
+        let total: u32 = d.unknown_0x1430.iter().sum();
+        if !powers.is_empty() && total < 1 {
+            let [_, constitution, intelligence, wisdom, _] = d.abilities;
+            let bonus = |v: u32| bonus16(v as i32) as u32;
+            d.unknown_0x1430[0] = 10
+                + bonus(wisdom[1])
+                + bonus(constitution[2])
+                + bonus(intelligence[1])
+                + dice.roll(1, 4);
+        }
+        d.unknown_0x1430[0] = d.unknown_0x1430[0].saturating_sub(psp(old)) + psp(powers);
+    }
+
     /// Writes `new` into the character, as the dialogs do when closed:
     /// only what changed is rewritten. A wild talent without PSPs rolls
     /// them with `dice`.
@@ -884,13 +944,6 @@ impl SkillRules {
         let old = self.skills_of(character);
         let psionicist = self.psionic_level(character).is_some();
         let column = self.rogue_level(character).map(|(_, l)| l as usize - 1);
-        let wild_psp = |names: &[String]| -> u32 {
-            names
-                .iter()
-                .filter_map(|n| self.power(n))
-                .map(|p| p.psp)
-                .sum()
-        };
         let level = column.map_or(1, |c| c as u32 + 1);
         let d = &mut character.data;
         if let Some(column) = column {
@@ -932,18 +985,7 @@ impl SkillRules {
                     new.sciences.iter().chain(&new.devotions).cloned().collect();
                 let old_powers: Vec<String> =
                     old.sciences.iter().chain(&old.devotions).cloned().collect();
-                let total: u32 = d.unknown_0x1430.iter().sum();
-                if !powers.is_empty() && total < 1 {
-                    let [_, constitution, intelligence, wisdom, _] = d.abilities;
-                    let bonus = |v: u32| bonus16(v as i32) as u32;
-                    d.unknown_0x1430[0] = 10
-                        + bonus(wisdom[1])
-                        + bonus(constitution[2])
-                        + bonus(intelligence[1])
-                        + dice.roll(1, 4);
-                }
-                d.unknown_0x1430[0] =
-                    d.unknown_0x1430[0].saturating_sub(wild_psp(&old_powers)) + wild_psp(&powers);
+                self.wild_points(d, &old_powers, &powers, dice);
             }
             d.unknown_0x196c[1].clone_from(&new.sciences);
             d.unknown_0x196c[2].clone_from(&new.devotions);
@@ -953,6 +995,12 @@ impl SkillRules {
         }
         if new.defenses != old.defenses {
             d.unknown_0x19c4.clone_from(&new.defenses);
+        }
+        if new.wild_talent != old.wild_talent {
+            d.unknown_0x186c = new.wild_talent.into();
+        }
+        if new.tested != old.tested {
+            d.unknown_0x1874 = new.tested.into();
         }
         Ok(())
     }

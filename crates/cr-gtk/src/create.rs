@@ -28,6 +28,8 @@ use cr_store::learn::{ALREADY_KNOWN, LearnRules, Learner, Learning, WARNING};
 use cr_store::npc::NpcRules;
 use cr_store::pictures::ItemIcons;
 use cr_store::settings::{SETTINGS, Setting};
+use cr_store::skills::SkillRules;
+use cr_store::skills::wild::WildMode;
 use gtk::glib;
 
 use crate::lists::{RowList, RowSpec};
@@ -69,6 +71,8 @@ struct Inner {
     /// The item check of the Equipment page (0x43d7bc), when the
     /// installation's program could be read.
     items: Option<Rc<NpcRules>>,
+    /// The Wild Talents step's rules.
+    skills: Option<Rc<SkillRules>>,
     /// The installation, for the portraits and the items' icons.
     root: PathBuf,
     /// The items' icons, read when the Equipment step first needs them.
@@ -92,6 +96,8 @@ pub struct Mode {
     pub learn: Arc<LearnRules>,
     /// The item check of the Equipment page, when the program was read.
     pub items: Option<Rc<NpcRules>>,
+    /// The Wild Talents step's rules, when the Expansion's were read.
+    pub skills: Option<Rc<SkillRules>>,
     /// The installation, for the portraits and the items' icons.
     pub root: PathBuf,
 }
@@ -123,6 +129,7 @@ pub fn new_character(
         learn: mode.learn,
         entering: mode.entering,
         items: mode.items,
+        skills: mode.skills,
         root: mode.root,
         icons: Default::default(),
         draft: RefCell::new(draft),
@@ -3893,8 +3900,261 @@ impl Wizard {
         if self.rules().is_wizard(&self.0.draft.borrow().classes) {
             self.push(self.spells_page());
         } else {
-            self.push(self.equipment_page());
+            self.before_equipment();
         }
+    }
+
+    /// The Wild Talents step for a character without a psionicist class
+    /// (the Skills page's button, 0x5d73ef), then equipment.
+    fn before_equipment(&self) {
+        let psionicist = self.rules().is_psionicist(&self.0.draft.borrow().classes);
+        match &self.0.skills {
+            Some(skills) if self.rules().expansion && !psionicist => {
+                self.push(self.wild_page(skills.clone()));
+            }
+            _ => {
+                self.0.draft.borrow_mut().wild = Default::default();
+                self.push(self.equipment_page());
+            }
+        }
+    }
+
+    /// The Wild Talents dialog (IDD 358) as a step: New Character tests
+    /// and, for a wild talent, rolls once; Enter Character also takes any
+    /// talent from the table.
+    fn wild_page(&self, skills: Rc<SkillRules>) -> adw::NavigationPage {
+        let mode = if self.0.entering {
+            WildMode::Enter
+        } else {
+            WildMode::Create
+        };
+        let Ok(base) = self.rules().build(&self.0.draft.borrow()) else {
+            return self.equipment_page();
+        };
+        // The character as tested so far.
+        let current = Rc::new({
+            let this = self.clone();
+            move || {
+                let mut character = base.clone();
+                if let Some(abilities) = this.0.draft.borrow().wild.abilities {
+                    character.data.abilities[1..4].copy_from_slice(&abilities);
+                }
+                character
+            }
+        });
+        let is_wild = {
+            let (skills, current, this) = (skills.clone(), current.clone(), self.clone());
+            move || skills.is_wild_talent(&current(), this.0.draft.borrow().wild.wild_talent)
+        };
+        let wild_at_start = is_wild();
+        // New Character starts a character not yet a wild talent over
+        // (0x635177).
+        if mode == WildMode::Create && !wild_at_start {
+            let mut d = self.0.draft.borrow_mut();
+            d.wild.talents.clear();
+            d.wild.attacks.clear();
+            d.wild.defenses.clear();
+        }
+        let d = self.0.draft.borrow().clone();
+
+        let group = adw::PreferencesGroup::builder()
+            .title(tr("Wild Talents"))
+            .build();
+        if mode == WildMode::Create && d.skills_and_powers && !wild_at_start {
+            group.set_description(Some(&escape(skills.wild_instructions())));
+        }
+        let button = |label: &str| {
+            gtk::Button::builder()
+                .label(label)
+                .valign(gtk::Align::Center)
+                .build()
+        };
+        let (test, roll) = (button(tr("Test")), button(tr("Roll")));
+        let test_row = adw::ActionRow::builder()
+            .title(tr("Test for Wild Talents"))
+            .build();
+        test_row.add_suffix(&test);
+        test_row.set_visible(!wild_at_start);
+        let roll_row = adw::ActionRow::builder()
+            .title(tr("Roll for Wild Talents"))
+            .subtitle(tr("Table 83: Wild Talents"))
+            .build();
+        roll_row.add_suffix(&roll);
+        roll.set_sensitive(mode == WildMode::Enter || wild_at_start);
+        group.add(&test_row);
+        group.add(&roll_row);
+        let show_chance = {
+            let (skills, current, row) = (skills.clone(), current.clone(), test_row.clone());
+            move || {
+                let chance = skills.wild_chance(&current());
+                row.set_subtitle(&tr!("A {chance}% chance to become a wild talent", chance));
+            }
+        };
+        show_chance();
+
+        // New Character's talents are only rolled; Enter Character's may
+        // also be added and removed.
+        let text = skills.clone();
+        let talents = crate::abilities::described_list(
+            tr("Your Wild Talents"),
+            &d.wild.talents,
+            move |name| crate::skills::power_text(&text, name),
+            {
+                let offer = skills.wild_talent_choices();
+                move |_| {
+                    if mode == WildMode::Enter {
+                        offer.clone()
+                    } else {
+                        Vec::new()
+                    }
+                }
+            },
+        );
+        talents.connect_add({
+            let (skills, group) = (skills.clone(), talents.group.clone());
+            move |_, add| {
+                crate::skills::ask_then(group.upcast_ref(), vec![skills.add_question()], add)
+            }
+        });
+        let modes = |title: &str, names: &[String], offer: &[String]| {
+            let offer = offer.to_vec();
+            crate::abilities::described_list(
+                title,
+                names,
+                |_| String::new(),
+                move |_| offer.clone(),
+            )
+        };
+        let attacks = modes(
+            tr("Psionic Attack Modes"),
+            &d.wild.attacks,
+            skills.attack_names(),
+        );
+        let defenses = modes(
+            tr("Psionic Defense Modes"),
+            &d.wild.defenses,
+            skills.defense_names(),
+        );
+        // Psionic Attacks and Defenses opens for a wild talent (0x6366b7).
+        let show_modes = {
+            let (attacks, defenses) = (attacks.group.clone(), defenses.group.clone());
+            move |shown: bool| {
+                attacks.set_visible(shown);
+                defenses.set_visible(shown);
+            }
+        };
+        show_modes(mode == WildMode::Enter || wild_at_start);
+        let store = Rc::new({
+            let (this, talents, attacks, defenses) = (
+                self.clone(),
+                talents.clone(),
+                attacks.clone(),
+                defenses.clone(),
+            );
+            move || {
+                let mut d = this.0.draft.borrow_mut();
+                d.wild.talents = talents.rows_titles();
+                d.wild.attacks = attacks.rows_titles();
+                d.wild.defenses = defenses.rows_titles();
+            }
+        });
+        for list in [&talents, &attacks, &defenses] {
+            let store = store.clone();
+            list.connect_changed(move || store());
+        }
+        if mode == WildMode::Create {
+            // No list to add from, as in the original (0x635177).
+            talents.set_editable(false);
+        }
+
+        test.connect_clicked({
+            let (this, skills, current) = (self.clone(), skills.clone(), current.clone());
+            let (roll, show_modes) = (roll.clone(), Rc::new(show_modes));
+            move |button| {
+                let character = current();
+                let tested = this.0.draft.borrow().wild.tested;
+                let parent = button.clone().upcast::<gtk::Widget>();
+                let (this, skills, roll, show_modes, button, show_chance) = (
+                    this.clone(),
+                    skills.clone(),
+                    roll.clone(),
+                    show_modes.clone(),
+                    button.clone(),
+                    show_chance.clone(),
+                );
+                crate::skills::ask_then(
+                    &parent.clone(),
+                    skills.test_questions(&character, tested),
+                    Box::new(move || {
+                        let test =
+                            skills.test_wild_talent(&character, &mut this.0.dice.borrow_mut());
+                        crate::skills::ask_then(
+                            &parent,
+                            test.notices.clone(),
+                            Box::new(move || {
+                                {
+                                    let mut d = this.0.draft.borrow_mut();
+                                    d.wild.tested = true;
+                                    d.wild.wild_talent |= test.wild_talent;
+                                    d.wild.abilities = Some(test.abilities);
+                                }
+                                if test.wild_talent {
+                                    button.set_sensitive(false);
+                                    roll.set_sensitive(true);
+                                    show_modes(true);
+                                }
+                                show_chance();
+                            }),
+                        );
+                    }),
+                );
+            }
+        });
+
+        roll.connect_clicked({
+            let (this, skills, talents) = (self.clone(), skills.clone(), talents.clone());
+            move |button| {
+                let parent = button.clone().upcast::<gtk::Widget>();
+                let questions = match skills.roll_questions(&talents.rows_titles(), mode) {
+                    Ok(questions) => questions,
+                    Err(refusal) => {
+                        return message(&parent, &refusal.title, &refusal.text);
+                    }
+                };
+                let (this, skills, talents) = (this.clone(), skills.clone(), talents.clone());
+                crate::skills::ask_then(
+                    &parent.clone(),
+                    questions,
+                    Box::new(move || {
+                        let (names, notices) =
+                            skills.roll_wild_talents(&mut this.0.dice.borrow_mut());
+                        talents.clear();
+                        for name in names {
+                            talents.add(RowSpec {
+                                value: (),
+                                subtitle: crate::skills::power_text(&skills, &name),
+                                title: name,
+                                number: None,
+                            });
+                        }
+                        crate::skills::ask_then(&parent, notices, Box::new(|| {}));
+                    }),
+                );
+            }
+        });
+
+        let next = next_button(tr("_Next"));
+        next.connect_clicked({
+            let this = self.clone();
+            move |_| this.push(this.equipment_page())
+        });
+        step(
+            tr("Wild Talents"),
+            &[&group, &talents.group, &attacks.group, &defenses.group],
+            &next,
+            None,
+            || topic::SKILLS,
+        )
     }
 
     /// The discretionary points added to the rogue skills, with the scores
@@ -4270,7 +4530,7 @@ impl Wizard {
             move |_| {
                 this.0.draft.borrow_mut().spells =
                     spells.values().into_iter().map(|(v, _)| v).collect();
-                this.push(this.equipment_page());
+                this.before_equipment();
             }
         });
         groups.push(group);

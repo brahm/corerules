@@ -530,6 +530,12 @@ impl SheetRules {
         build::build(self, character)
     }
 
+    /// The saving throw against death magic, as the sheet prints it
+    /// (0x433de9).
+    pub fn death_save(&self, character: &Character) -> Result<i32> {
+        build::death_save(self, character)
+    }
+
     /// Each rogue skill's score without armor, by its entry's name.
     pub fn rogue_scores(&self, character: &Character) -> Result<Vec<(String, i32)>> {
         build::rogue_scores(self, character)

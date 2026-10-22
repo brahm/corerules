@@ -587,6 +587,8 @@ pub struct Draft {
     pub hit_dice: Vec<u32>,
     /// The die (1d6) of a psionicist's 1st-level PSPs; 0 for others.
     pub psionic_roll: u32,
+    /// Anyone else's wild talents.
+    pub wild: crate::skills::wild::WildDraft,
     pub nonweapon_proficiencies: Vec<String>,
     /// Native languages.
     pub languages: Vec<String>,
@@ -713,6 +715,7 @@ impl Draft {
             weight: 0,
             hit_dice: Vec::new(),
             psionic_roll: 0,
+            wild: Default::default(),
             nonweapon_proficiencies: Vec::new(),
             languages: Vec::new(),
             weapon_proficiencies: Vec::new(),
@@ -1176,7 +1179,11 @@ impl Installation {
         if let Some(problem) = rules.problem(draft) {
             return Err(Error::Invalid(problem));
         }
-        let character = rules.build(draft)?;
+        let mut character = rules.build(draft)?;
+        if draft.wild != Default::default() {
+            self.skill_rules()?
+                .apply_wild(&mut character, &draft.wild, &mut Dice::default());
+        }
         let format = |path: &str| {
             let path = path.to_owned();
             move |source| Error::Format {
@@ -1658,7 +1665,7 @@ impl CreationRules {
     }
 
     /// Whether one of `classes` is of the psionicist group.
-    fn is_psionicist(&self, classes: &[String]) -> bool {
+    pub fn is_psionicist(&self, classes: &[String]) -> bool {
         classes
             .iter()
             .any(|c| self.class(c).is_some_and(|c| c.group == 4))

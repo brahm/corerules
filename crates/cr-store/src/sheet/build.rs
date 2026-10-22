@@ -371,6 +371,11 @@ pub(super) fn rogue_scores(rules: &SheetRules, ch: &Character) -> Result<Vec<(St
         .collect())
 }
 
+pub(super) fn death_save(rules: &SheetRules, ch: &Character) -> Result<i32> {
+    let ctx = Ctx::new(rules, ch)?;
+    Ok(combat::death_save(&ctx))
+}
+
 /// The Expansion's default sections (0x598347), for a character that has
 /// never been through the sheet options.
 pub(super) fn default_sections(rules: &SheetRules, ch: &Character) -> Result<Vec<u32>> {
