@@ -120,8 +120,9 @@ the original programs wrote.
   weapons at their levels, the kit's focus weapon, and the Cavalier's sword
   at 3rd level and horseman's weapon at 5th), rogue skill points
   at the current level (with the kit's own points, its bonus of each level
-  and the skills it has the character choose, none of them spent), psionic disciplines and powers, wild talents and
-  psionic attack and defense modes (with Update Character's limits), nonweapon
+  and the skills it has the character choose, none of them spent), psionic disciplines and powers, wild talents (with
+  the original's Test for Wild Talents, its risks and saving throws, and Roll
+  for Wild Talents on Table 83) and psionic attack and defense modes (with Update Character's limits), nonweapon
   proficiencies (ranks, costs as New Character charges them, the kit's free
   ones at their levels, the Core Rules slots left, and the kit's warnings
   and questions), languages, spells known (learned with New Character's

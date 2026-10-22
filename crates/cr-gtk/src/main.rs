@@ -2279,7 +2279,39 @@ fn character_editor(
         let editor = combat_editor.clone();
         move || editor.levels_changed()
     }));
-    let skills_editor = skills::SkillsEditor::new(choices.skills.clone(), &choices.character);
+    // Test for Wild Talents reads the abilities as edited and may lower
+    // Constitution, Intelligence or Wisdom (`data.abilities[1..4]`, rows 2
+    // to 4).
+    let wild_hooks = skills::WildHooks {
+        character: Rc::new({
+            let (advanced, rows) = (advanced.clone(), ability_rows.clone());
+            let skills_and_powers = details.skills_and_powers;
+            move || {
+                let mut character = advanced.borrow().clone();
+                for (slot, [score, first, second]) in rows.iter().enumerate().skip(1) {
+                    let score = score.value() as u32;
+                    character.data.abilities[slot - 1] = if skills_and_powers {
+                        [score, first.value() as u32, second.value() as u32]
+                    } else {
+                        [score; 3]
+                    };
+                }
+                character
+            }
+        }),
+        set_abilities: Rc::new({
+            let rows = ability_rows.clone();
+            move |abilities| {
+                for (rows, values) in rows[2..5].iter().zip(abilities) {
+                    for (row, value) in rows.iter().zip(values) {
+                        row.set_value(f64::from(value));
+                    }
+                }
+            }
+        }),
+    };
+    let skills_editor =
+        skills::SkillsEditor::new(choices.skills.clone(), &choices.character, wild_hooks);
     // A spell picked is checked as the original's Learn does (0x62dc71),
     // for the first class that casts spells of its kind.
     let dice = Rc::new(RefCell::new(cr_store::create::Dice::default()));

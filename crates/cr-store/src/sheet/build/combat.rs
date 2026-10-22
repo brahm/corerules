@@ -106,6 +106,13 @@ fn save_bonuses(ctx: &Ctx) -> [i32; 10] {
     bonus
 }
 
+/// The saving throw against death magic (0x433de9): the base of its
+/// category less its bonus.
+pub(in crate::sheet) fn death_save(ctx: &Ctx) -> i32 {
+    let (_, category, slot) = SAVES[2];
+    base_saves(ctx)[category] - save_bonuses(ctx)[slot]
+}
+
 /// Saving Throws (0x5a403e): two rows of five.
 pub(in crate::sheet) fn saves(ctx: &Ctx) -> Section {
     let base = base_saves(ctx);

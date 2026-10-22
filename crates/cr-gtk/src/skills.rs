@@ -2,17 +2,28 @@
 //! Update Character, with its Rogue Skills, Psionics, Wild Talents and
 //! Psionic Attacks and Defenses dialogs as groups.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
+use std::collections::VecDeque;
 use std::rc::Rc;
 
 use adw::prelude::*;
 use cr_formats::character::Character;
 use cr_i18n::tr;
+use cr_store::create::Dice;
 use cr_store::skills::{CharacterSkills, SkillRules};
 
 use crate::abilities::described_list;
 use crate::combat::WeaponCombo;
-use crate::lists::RowList;
+use crate::create::ask_each;
+use crate::lists::{RowList, RowSpec};
+
+/// What Test needs from the rest of the editor: the character as edited
+/// (its levels and abilities), and a way to change Constitution,
+/// Intelligence and Wisdom (`data.abilities[1..4]`).
+pub struct WildHooks {
+    pub character: Rc<dyn Fn() -> Character>,
+    pub set_abilities: Rc<dyn Fn([[u32; 3]; 3])>,
+}
 
 /// The page's widgets, cheap to clone into callbacks.
 #[derive(Clone)]
@@ -29,6 +40,8 @@ struct State {
     wild_talents: Option<RowList<()>>,
     attacks: RowList<()>,
     defenses: RowList<()>,
+    /// Made a wild talent by a test, and tested at all.
+    wild: Rc<Cell<(bool, bool)>>,
 }
 
 impl State {
@@ -64,6 +77,8 @@ impl State {
             devotions,
             attacks: self.attacks.rows_titles(),
             defenses: self.defenses.rows_titles(),
+            wild_talent: self.wild.get().0,
+            tested: self.wild.get().1,
         }
     }
 }
@@ -96,8 +111,9 @@ fn power_text(rules: &SkillRules, name: &str) -> String {
 }
 
 impl SkillsEditor {
-    pub fn new(rules: Rc<SkillRules>, character: &Character) -> Self {
+    pub fn new(rules: Rc<SkillRules>, character: &Character, hooks: WildHooks) -> Self {
         let original = Rc::new(rules.skills_of(character));
+        let wild = Rc::new(Cell::new((original.wild_talent, original.tested)));
         let page = adw::PreferencesPage::new();
         let character = Rc::new(character.clone());
 
@@ -216,7 +232,7 @@ impl SkillsEditor {
                 .cloned()
                 .collect();
             let list = described_list(
-                tr("Wild Talents"),
+                tr("Your Wild Talents"),
                 &taken,
                 move |name| power_text(&text, name),
                 move |_| offer.clone(),
@@ -225,6 +241,9 @@ impl SkillsEditor {
                 "Any character but a psionicist may have wild talents. A character \
                  without PSPs rolls them when the first is taken.",
             )));
+            page.add(&wild_group(
+                &rules, &character, &original, &list, &wild, hooks,
+            ));
             page.add(&list.group);
             wild_talents = Some(list);
         }
@@ -258,6 +277,7 @@ impl SkillsEditor {
             wild_talents,
             attacks,
             defenses,
+            wild,
         };
         let refresh = Rc::new({
             let state = state.clone();
@@ -366,6 +386,136 @@ impl SkillsEditor {
     pub fn skills(&self) -> CharacterSkills {
         self.state.skills()
     }
+}
+
+/// Asks the questions in turn, then runs `then` once.
+fn ask_then(
+    parent: &gtk::Widget,
+    questions: Vec<cr_store::create::Question>,
+    then: Box<dyn FnOnce()>,
+) {
+    let then = RefCell::new(Some(then));
+    ask_each(
+        parent,
+        VecDeque::from(questions),
+        Rc::new(move || {
+            if let Some(then) = then.borrow_mut().take() {
+                then();
+            }
+        }),
+    );
+}
+
+/// The Wild Talents dialog's Test and Roll buttons (IDD 358, 0x6366b7 and
+/// 0x635aa3), and its question before Add (0x6363c7).
+fn wild_group(
+    rules: &Rc<SkillRules>,
+    character: &Rc<Character>,
+    original: &CharacterSkills,
+    list: &RowList<()>,
+    wild: &Rc<Cell<(bool, bool)>>,
+    hooks: WildHooks,
+) -> adw::PreferencesGroup {
+    let dice = Rc::new(RefCell::new(Dice::default()));
+    let group = adw::PreferencesGroup::builder()
+        .title(tr("Wild Talents"))
+        .build();
+    let button = |label: &str| {
+        gtk::Button::builder()
+            .label(label)
+            .valign(gtk::Align::Center)
+            .build()
+    };
+    let (test, roll) = (button(tr("Test")), button(tr("Roll")));
+    let test_row = adw::ActionRow::builder()
+        .title(tr("Test for Wild Talents"))
+        .build();
+    test_row.add_suffix(&test);
+    // A wild talent already does not test, as in the original.
+    test_row.set_visible(!rules.is_wild_talent(character, original.wild_talent));
+    let roll_row = adw::ActionRow::builder()
+        .title(tr("Roll for Wild Talents"))
+        .subtitle(tr("Table 83: Wild Talents"))
+        .build();
+    roll_row.add_suffix(&roll);
+    group.add(&test_row);
+    group.add(&roll_row);
+    let hooks = Rc::new(hooks);
+    let show_chance = {
+        let (rules, hooks, row) = (rules.clone(), hooks.clone(), test_row.clone());
+        move || {
+            let chance = rules.wild_chance(&(hooks.character)());
+            row.set_subtitle(&tr!("A {chance}% chance to become a wild talent", chance));
+        }
+    };
+    show_chance();
+    // The abilities change on another page.
+    test_row.connect_map(move |_| show_chance());
+
+    test.connect_clicked({
+        let (rules, wild, dice, hooks) = (rules.clone(), wild.clone(), dice.clone(), hooks.clone());
+        move |button| {
+            let character = (hooks.character)();
+            let questions = rules.test_questions(&character, wild.get().1);
+            let parent = button.clone().upcast::<gtk::Widget>();
+            let (rules, wild, dice, hooks, button) = (
+                rules.clone(),
+                wild.clone(),
+                dice.clone(),
+                hooks.clone(),
+                button.clone(),
+            );
+            ask_then(
+                &parent.clone(),
+                questions,
+                Box::new(move || {
+                    let test = rules.test_wild_talent(&character, &mut dice.borrow_mut());
+                    ask_then(
+                        &parent,
+                        test.notices.clone(),
+                        Box::new(move || {
+                            wild.set((wild.get().0 || test.wild_talent, true));
+                            if test.wild_talent {
+                                button.set_sensitive(false);
+                            }
+                            (hooks.set_abilities)(test.abilities);
+                        }),
+                    );
+                }),
+            );
+        }
+    });
+
+    roll.connect_clicked({
+        let (rules, list, dice) = (rules.clone(), list.clone(), dice.clone());
+        move |button| {
+            let parent = button.clone().upcast::<gtk::Widget>();
+            let (rules, list, dice) = (rules.clone(), list.clone(), dice.clone());
+            ask_then(
+                &parent.clone(),
+                rules.roll_questions(&list.rows_titles()),
+                Box::new(move || {
+                    let (names, notices) = rules.roll_wild_talents(&mut dice.borrow_mut());
+                    list.clear();
+                    for name in names {
+                        list.add(RowSpec {
+                            value: (),
+                            subtitle: power_text(&rules, &name),
+                            title: name,
+                            number: None,
+                        });
+                    }
+                    ask_then(&parent, notices, Box::new(|| {}));
+                }),
+            );
+        }
+    });
+
+    list.connect_add({
+        let (rules, group) = (rules.clone(), group.clone());
+        move |_, add| ask_then(group.upcast_ref(), vec![rules.add_question()], add)
+    });
+    group
 }
 
 /// The kit's bonus of each level still to go to a skill, and the skills
