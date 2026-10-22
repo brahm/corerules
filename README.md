@@ -144,7 +144,10 @@ the original programs wrote.
 - **Experience and levels** per class, all classes or split, with the prime
   requisite bonus, hit point rolls, PSPs, character points and the
   Expansion's racial level limits, and the kit's own experience per level,
-  cap on the bonus and hit points per level; **dual-classing** for humans
+  cap on the bonus and hit points per level; the original's Levels dialog
+  (each class's level from 1 to 100, which puts its experience at what the
+  level takes, and the unspent character points to adjust), and hit point
+  and PSP arrows; **dual-classing** for humans
 - **Character sheet**: every section the originals export, shown in the
   app, printed, saved as PDF, or exported as the originals' TXT and HTML,
   matching their exports line for line, or as Markdown (in place of the
