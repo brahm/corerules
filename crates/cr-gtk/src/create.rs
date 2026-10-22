@@ -4232,6 +4232,15 @@ impl Wizard {
                 );
             }
         });
+        // The chance to learn each spell offered (0x630052).
+        spells.set_detail({
+            let (this, taken) = (self.clone(), taken.clone());
+            move |name| {
+                this.0
+                    .learn
+                    .chance_text(&this.learner(&taken.borrow()), name, true)
+            }
+        });
         let next = next_button(tr("_Next"));
         spells.connect_changed({
             let (spells, taken) = (spells.clone(), taken.clone());

@@ -2287,7 +2287,7 @@ fn character_editor(
         (&editors.wizard_spells, true),
         (&editors.priest_spells, false),
     ] {
-        let learner = {
+        let learner = Rc::new({
             let (advanced, levels, kit) = (advanced.clone(), levels.clone(), kit.clone());
             let (rules, ids, abilities) = (
                 choices.advance.clone(),
@@ -2333,7 +2333,12 @@ fn character_editor(
                     entering: false,
                 }
             }
-        };
+        });
+        // The chance to learn each spell offered (0x630052).
+        list.set_detail({
+            let (rules, learner) = (choices.learn.clone(), learner.clone());
+            move |name| rules.chance_text(&learner(), name, wizard)
+        });
         list.connect_add({
             let (rules, dice, group) = (choices.learn.clone(), dice.clone(), list.group.clone());
             move |name, add| {

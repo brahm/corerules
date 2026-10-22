@@ -325,6 +325,13 @@ impl LearnRules {
         }
     }
 
+    /// The chance to learn `name` as the original's spell picker shows it
+    /// for the spell selected (" List 55%"; 0x630052).
+    pub fn chance_text(&self, learner: &Learner, name: &str, wizard: bool) -> String {
+        let chance = self.chance(learner, name, wizard);
+        tr!("Chance to learn: {chance}%", chance)
+    }
+
     /// What learning `name` takes, with `roll` the d100 against the
     /// chance (0x62dc71).
     pub fn learn(&self, learner: &Learner, name: &str, wizard: bool, roll: u32) -> Learning {
