@@ -96,22 +96,31 @@ pub fn roll_and_generate<H: Host + 'static>(host: &Shared<H>, table: &str) {
 
 /// Opens the saved encounter `name`.
 pub fn open_saved<H: Host + 'static>(host: &Shared<H>, name: &str) {
+    open(host, name, false);
+}
+
+/// The original's Copy on the Encounters tab (0x694117): the saved
+/// encounter `name` opened with no name, so that OK adds a new one once
+/// it is named.
+pub fn copy_saved<H: Host + 'static>(host: &Shared<H>, name: &str) {
+    open(host, name, true);
+}
+
+fn open<H: Host + 'static>(host: &Shared<H>, name: &str, copy: bool) {
     let Some((rules, saved)) = errors(
         &**host,
         host.with_install(|i| Ok((i.encounter_rules()?, i.saved_encounters()?))),
     ) else {
         return;
     };
-    let Some(encounter) = saved.into_iter().find(|e| e.name == name) else {
+    let Some(mut encounter) = saved.into_iter().find(|e| e.name == name) else {
         return;
     };
-    editor(
-        host,
-        Rc::new(rules),
-        encounter,
-        Some(name.to_owned()),
-        Vec::new(),
-    );
+    if copy {
+        encounter.name.clear();
+    }
+    let saved = (!copy).then(|| name.to_owned());
+    editor(host, Rc::new(rules), encounter, saved, Vec::new());
 }
 
 /// New Encounter: the original's "Select an Encounter Template", with an

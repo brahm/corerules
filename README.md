@@ -177,13 +177,14 @@ the original programs wrote.
   Option NPCs with kits, proficiencies, equipment, spells, psionics and
   rogue skills; with the same seed it saves the same NPCs as the Expansion
 - **Treasure generator**: treasure types A to Z, table rolls, intelligent
-  weapons, spell scrolls, Calculate and saved bundles; with the same seed
+  weapons, spell scrolls, Calculate and saved bundles (opened again or
+  copied into a new one); with the same seed
   it saves the same bundles as both originals, byte for byte
 - **Encounter generator**: encounters from templates with the originals'
   dice, dependents, items and treasure, the Encounter dialog's editing and
   totals (each monster's hit points set by hand or rolled again with
-  Re-roll, and New Monster from Add Monster), saved encounters and the
-  2-20 tables
+  Re-roll, and New Monster from Add Monster), saved encounters (edited or
+  copied into a new one) and the 2-20 tables
 - **Table Rolls** on every table of the books, with the originals' dice
   and follow-up rolls
 - **Editors for every user database**: races, classes (with the free
