@@ -15,6 +15,14 @@
 //! character's file and its entry; the party's Delete (0x5abffd) does so for
 //! every member. Here the file is kept as `<file>.bak` until
 //! [`Installation::forget_deleted`], so a deletion can be undone.
+//!
+//! When the list cannot be read, or a character it lists is missing or
+//! cannot be opened (0x478fe4, 0x44ba37, 0x44b7cf), the original offers to
+//! rebuild it (0x47a87f): 0x5a1671 empties the list and adds an entry for
+//! every `*.dat` file in `Chars/`, made from the character the way an
+//! import makes one (0x5a08fc), then saves it. EVERMORE.EXE does the same
+//! (0x4ab1b0, 0x42c100). A file that cannot be read is left out here and
+//! reported, where the original would list an empty character for it.
 
 use cr_i18n::tr;
 use std::fs;
@@ -38,6 +46,15 @@ pub const MAX_NAME: usize = 50;
 /// The party of a list entry; empty for none (and in Core Rules 2.0).
 pub fn party_of(entry: &CharacterEntry) -> &str {
     entry.extra.as_ref().map_or("", |e| e.unknown_0x2c.as_str())
+}
+
+/// What [`Installation::rebuild_characters`] did.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Rebuilt {
+    /// How many characters the list has now.
+    pub characters: usize,
+    /// The files in `Chars/` that could not be read, left out.
+    pub unreadable: Vec<String>,
 }
 
 /// A character [`Installation::delete_character`] removed, for
@@ -240,6 +257,57 @@ impl Installation {
             })?;
         }
         Ok(())
+    }
+
+    /// Whether the character list needs [`Self::rebuild_characters`]: it
+    /// cannot be read, or a character it lists is missing or cannot be read.
+    pub fn characters_damaged(&self) -> bool {
+        self.characters().map_or(true, |index| {
+            index
+                .entries
+                .iter()
+                .any(|e| self.character(&e.file).is_err())
+        })
+    }
+
+    /// Makes `Chars/index.chr` again from the character files (0x5a1671),
+    /// in file name order; the old list is kept as `index.chr.bak`.
+    pub fn rebuild_characters(&self) -> Result<Rebuilt> {
+        let chars = self.chars_folder()?;
+        let kits = all_names(self)?.get(KITS).cloned().unwrap_or_default();
+        let rules = self.advance_rules().ok();
+        let mut index = CharacterIndex {
+            schema: crate::create::INDEX_SCHEMA,
+            entries: Vec::new(),
+        };
+        let mut unreadable = Vec::new();
+        for path in self.data_files("Chars")? {
+            let Some(file) = path.file_name().map(|n| n.to_string_lossy().into_owned()) else {
+                continue;
+            };
+            let Ok(character) = self.character(&file) else {
+                unreadable.push(file);
+                continue;
+            };
+            let levels = rules
+                .as_ref()
+                .and_then(|r| r.levels(&character).ok())
+                .map(|l| l.iter().map(|c| c.level.to_string()).collect::<Vec<_>>())
+                .unwrap_or_else(|| vec!["1".into(); character.data.classes.names.len().max(1)])
+                .join("/");
+            index
+                .entries
+                .push(expansion_entry(&character, &file, &kits, Some(&levels)));
+        }
+        let index_bytes = self.index_bytes(&index)?;
+        match self.path("Chars/index.chr") {
+            Some(path) => replace(&path, &index_bytes)?,
+            None => write_new(&chars.join("index.chr"), &index_bytes)?,
+        }
+        Ok(Rebuilt {
+            characters: index.entries.len(),
+            unreadable,
+        })
     }
 
     pub(crate) fn chars_folder(&self) -> Result<PathBuf> {

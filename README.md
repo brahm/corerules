@@ -163,6 +163,9 @@ the original programs wrote.
   filters by party; in the Expansion, Group Encounter… makes an encounter
   of a party's NPCs, or prints them as one in the original's full or
   condensed format
+- **Rebuild the character list**: when `Chars/index.chr` cannot be read, or
+  lists a character whose file is missing or damaged, the app offers to
+  rebuild it from the character files, as the original does
 - **Convert to NPC** and **Convert to Character** move a character to the
   DM Toolkit's NPCs and back, writing the same files as the Expansion
 
