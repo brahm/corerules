@@ -56,7 +56,10 @@ the original programs wrote.
   for a character who is not a psionicist (with the Expansion: Test for Wild
   Talents, and one roll on Table 83 for a wild talent) and starting
   equipment. The original has no campaign settings, so each setting only narrows what the installed
-  databases offer, following its campaign book
+  databases offer, following its campaign book. Once the rules are chosen,
+  the Expansion's "Core Rules Vs Player's Option" message says which kind
+  of character is being made, until "Do not show this window again" is
+  ticked; Preferences turns it back on, as the original's User Options do
 - **Enter Character**, the same wizard for a character that already exists
   on paper, as the original's Enter Character button: scores typed in from
   1 to 25 and kept as typed, exceptional Strength at 18 whatever the class,

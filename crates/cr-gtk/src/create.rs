@@ -202,6 +202,44 @@ pub(crate) fn message(parent: &impl IsA<gtk::Widget>, heading: &str, body: &str)
     alert.present(Some(parent));
 }
 
+/// The Expansion's "Core Rules Vs Player's Option" window (IDD 403,
+/// `CoreVsOptionDlg.cpp`), which Create Character shows before the wizard
+/// (0x44ac31) unless `Flags\CoreVsOptionOff` is set; Enter Character does
+/// not show it. Its "Do not show this window again" sets the flag, and
+/// Preferences turns the message back on, as User Options does. `then`
+/// runs when it is closed.
+fn core_vs_option(
+    parent: &impl IsA<gtk::Widget>,
+    skills_and_powers: bool,
+    then: impl Fn() + 'static,
+) {
+    let off = gtk::CheckButton::with_mnemonic(tr("_Do not show this window again"));
+    let alert = adw::AlertDialog::builder()
+        .heading(tr("Core Rules Vs Player's Option"))
+        .body(if skills_and_powers {
+            tr("You are about to create a Player's Option character.")
+        } else {
+            tr("You are about to create a Core Rules character.")
+        })
+        .extra_child(&off)
+        .default_response("close")
+        .close_response("close")
+        .build();
+    alert.add_response("close", tr("_Close"));
+    let widget = parent.clone().upcast::<gtk::Widget>();
+    let parent = widget.clone();
+    alert.connect_response(None, move |_, _| {
+        if off.is_active()
+            && let Err(e) = crate::prefs::set_core_vs_option_shown(false)
+        {
+            let error = tr!("Could not save the preferences: {error}", error = e);
+            message(&parent, &error, "");
+        }
+        then();
+    });
+    alert.present(Some(&widget));
+}
+
 /// A Yes/No question, No the default as in the original.
 pub(crate) fn ask(
     parent: &impl IsA<gtk::Widget>,
@@ -719,6 +757,10 @@ impl Wizard {
                 }
                 if this.0.entering {
                     this.push(this.entered_scores_page());
+                } else if this.rules().expansion && crate::prefs::core_vs_option_shown() {
+                    let sp = *skills_and_powers.borrow();
+                    let then = this.clone();
+                    core_vs_option(&this.0.dialog, sp, move || then.push(then.abilities_page()));
                 } else {
                     this.push(this.abilities_page());
                 }
