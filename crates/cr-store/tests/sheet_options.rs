@@ -104,3 +104,25 @@ fn stored_borders_map_like_the_original() {
     }
     assert_eq!(Border::from_stored(7), Border::Normal);
 }
+
+#[test]
+fn an_encounter_npc_is_viewed_with_the_default_sections() {
+    let Some(s) = scratch("npc") else {
+        return;
+    };
+    let ids_of = |c: &cr_formats::character::Character| -> Vec<u32> {
+        let sheet = s.install.npc_sheet(c).unwrap();
+        assert_eq!(sheet.border, Some(Border::Normal));
+        sheet.sections.iter().map(|s| s.id).collect()
+    };
+    let before = ids_of(&s.install.character(&s.file).unwrap());
+    let choice = SheetChoice {
+        sections: vec![ids::SAVES, ids::PERSONAL],
+        border: Border::Thin,
+    };
+    s.install.save_sheet_choice(&s.file, &choice).unwrap();
+    // The stored choice changes the sheet, not what View NPC shows.
+    let character = s.install.character(&s.file).unwrap();
+    assert_eq!(ids_of(&character), before);
+    assert_ne!(before, choice.sections);
+}

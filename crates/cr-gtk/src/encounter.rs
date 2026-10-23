@@ -662,6 +662,26 @@ impl<H: Host + 'static> State<H> {
                 }
             });
             row.add_suffix(&remove);
+            if let Package::Npc(i) = package {
+                // View NPC… and Print NPC… (0x63EA49, 0x63EB3A): the
+                // NPC's character sheet. Each suffix goes before the last.
+                for (icon, tip, print) in [
+                    ("printer-symbolic", tr("Print NPC"), true),
+                    ("document-print-preview-symbolic", tr("View NPC"), false),
+                ] {
+                    let button = gtk::Button::builder()
+                        .icon_name(icon)
+                        .tooltip_text(tip)
+                        .valign(gtk::Align::Center)
+                        .css_classes(["flat"])
+                        .build();
+                    button.connect_clicked({
+                        let state = self.clone();
+                        move |_| state.npc_sheet(i, print)
+                    });
+                    row.add_suffix(&button);
+                }
+            }
             let number = adw::SpinRow::builder()
                 .title(tr("Number"))
                 .subtitle(if matches!(package, Package::Monster(_)) {
@@ -1240,6 +1260,34 @@ impl<H: Host + 'static> State<H> {
             }
         });
         alert.present(Some(&self.dialog));
+    }
+
+    /// Shows or prints the sheet of the encounter's NPC `i`.
+    fn npc_sheet(&self, i: usize, print: bool) {
+        let Some(character) = self
+            .encounter
+            .borrow()
+            .npcs
+            .get(i)
+            .map(|p| p.character.clone())
+        else {
+            return;
+        };
+        let result = self
+            .host
+            .with_install(|install| install.npc_sheet(&character));
+        let Some(sheet) = errors(&*self.host, result) else {
+            return;
+        };
+        let toast = {
+            let host = self.host.clone();
+            move |m: &str| host.toast(m)
+        };
+        if print {
+            crate::sheet::print_sheet(&self.dialog, &Rc::new(sheet), None, &toast);
+        } else {
+            crate::sheet::preview(&self.dialog, sheet, toast);
+        }
     }
 
     /// The encounter as a printable page (the original's View/Print).
