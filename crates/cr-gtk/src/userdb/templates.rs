@@ -77,6 +77,7 @@ pub(super) fn action<H: Host + 'static>(host: &Shared<H>, target: &Target, actio
     let found = position(&db, target.origin, 0, &target.name);
     let record = found.and_then(|i| db.get(target.origin, i)).cloned();
     match action {
+        Action::Schools => {}
         Action::New | Action::NewSubrace => {
             // The original starts from the monster type selected in its
             // list; here, the shown template's.

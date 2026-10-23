@@ -57,7 +57,7 @@ use lists::{ListEditor, RowList, RowSpec, pick};
 const APP_ID: &str = "io.github.brahm.CoreRules";
 
 /// The actions that make or change content, off for Core Rules 2.0.
-const WRITE_ACTIONS: [&str; 20] = [
+const WRITE_ACTIONS: [&str; 21] = [
     "new-character",
     "enter-character",
     "new-npc",
@@ -76,6 +76,7 @@ const WRITE_ACTIONS: [&str; 20] = [
     "udb-edit",
     "udb-delete",
     "udb-subrace",
+    "udb-schools",
     "udb-allowed",
     "udb-restore",
 ];
