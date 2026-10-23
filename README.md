@@ -175,7 +175,10 @@ the original programs wrote.
 
 - **NPC generator** (New NPC, New NPC Group): Core Rules and Player's
   Option NPCs with kits, proficiencies, equipment, spells, psionics and
-  rogue skills; with the same seed it saves the same NPCs as the Expansion
+  rogue skills; New NPC Group lists the standard races, the kits and the
+  alignments the line allows, as the original's Standard and Allowed
+  choices (All Races, All Kits and Any Alignment list every one); with the
+  same seed it saves the same NPCs as the Expansion
 - **Treasure generator**: treasure types A to Z, table rolls, intelligent
   weapons, spell scrolls, Calculate and saved bundles (opened again or
   copied into a new one); with the same seed

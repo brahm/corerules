@@ -751,3 +751,96 @@ fn golden_players_option_kit_languages() {
     assert_eq!(npc.strength, g.data.strength, "{file}");
     assert_eq!(npc.abilities, g.data.abilities, "{file}");
 }
+
+/// Group NPCs' Standard/All race and kit lists and Allowed/Any
+/// alignments: each filter only narrows what the dialog lists.
+#[test]
+fn group_filters_only_narrow_the_lists() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let Ok(install) = Installation::open(PathBuf::from(dir)) else {
+        return;
+    };
+    let Ok(rules) = install.npc_rules() else {
+        return;
+    };
+    let races = rules.races();
+    for po in [false, true] {
+        let standard = rules.group_standard_races(po);
+        assert!(!standard.is_empty());
+        assert!(standard.iter().all(|r| races.contains(r)));
+        let mut unique = standard.clone();
+        unique.dedup();
+        assert_eq!(unique.len(), standard.len());
+    }
+    assert_eq!(rules.group_standard_races(true), rules.standard_races());
+
+    let kits = rules.kits();
+    let alignments = rules.alignments();
+    let mut line = GroupOptions::default();
+    // An allowed combination leaves the classes to chance: any alignment.
+    assert_eq!(rules.group_alignments(&line), alignments);
+    for po in [false, true] {
+        line.players_option = po;
+        let all = rules.group_kits(false, &line);
+        assert!(all.iter().all(|k| kits.contains(k)));
+        assert!(
+            rules
+                .group_kits(true, &line)
+                .iter()
+                .all(|k| all.contains(k))
+        );
+    }
+    line.players_option = false;
+    line.allowed_combination = false;
+    let class = |name: &str| {
+        let mut l = line.clone();
+        l.classes[0] = None;
+        let g = (0..5).find(|&g| rules.group_classes(g).iter().any(|c| c == name))?;
+        l.classes[g] = Some(Choice::Name(name.into()));
+        Some(l)
+    };
+    for name in rules.classes().iter().take(6) {
+        let Some(one) = class(name) else { continue };
+        let allowed = rules.group_alignments(&one);
+        assert!(allowed.iter().all(|a| alignments.contains(a)));
+        let standard = rules.group_kits(true, &one);
+        for race in rules.group_standard_races(false) {
+            let mut l = one.clone();
+            l.race = Some(race);
+            let narrowed = rules.group_alignments(&l);
+            assert!(narrowed.iter().all(|a| allowed.contains(a)));
+            assert!(
+                rules
+                    .group_kits(true, &l)
+                    .iter()
+                    .all(|k| standard.contains(k))
+            );
+        }
+        if let Some(a) = allowed.first() {
+            let mut l = one.clone();
+            l.alignment = Choice::Name(a.clone());
+            assert!(
+                rules
+                    .group_kits(true, &l)
+                    .iter()
+                    .all(|k| standard.contains(k))
+            );
+        }
+        if let Some(k) = standard.iter().find(|k| *k != "None") {
+            let mut l = one.clone();
+            l.kit = Choice::Name(k.clone());
+            assert!(
+                rules
+                    .group_alignments(&l)
+                    .iter()
+                    .all(|a| allowed.contains(a))
+            );
+        }
+        // A random class in any group opens every alignment again.
+        let mut l = one.clone();
+        l.classes[4] = Some(Choice::Random);
+        assert_eq!(rules.group_alignments(&l), alignments);
+    }
+}

@@ -301,7 +301,7 @@ msgstr "Punti personaggio rimasti"
 #: crates/cr-gtk/src/create.rs:1171
 #: crates/cr-gtk/src/create.rs:1312
 #: crates/cr-gtk/src/npc.rs:165
-#: crates/cr-gtk/src/npc.rs:515
+#: crates/cr-gtk/src/npc.rs:530
 #: crates/cr-store/src/catalog.rs:871
 #: crates/cr-store/src/catalog.rs:966
 #: crates/cr-store/src/tables/data.rs:784
@@ -1308,7 +1308,7 @@ msgstr "Sesso"
 
 #: crates/cr-gtk/src/create.rs:1866
 #: crates/cr-gtk/src/main.rs:2241
-#: crates/cr-gtk/src/npc.rs:564
+#: crates/cr-gtk/src/npc.rs:588
 #: crates/cr-store/src/catalog.rs:874
 #: crates/cr-store/src/catalog.rs:1135
 #: crates/cr-store/src/userdb/classes/pages.rs:86
@@ -1319,7 +1319,7 @@ msgstr "Allineamento"
 
 #: crates/cr-gtk/src/create.rs:1867
 #: crates/cr-gtk/src/main.rs:2246
-#: crates/cr-gtk/src/npc.rs:561
+#: crates/cr-gtk/src/npc.rs:580
 #: crates/cr-store/src/catalog.rs:873
 #: crates/cr-store/src/userdb/parts/kit.rs:369
 msgid "Kit"
@@ -1463,7 +1463,7 @@ msgstr "Dettagli"
 #: crates/cr-gtk/src/enter.rs:419
 #: crates/cr-gtk/src/enter.rs:421
 #: crates/cr-gtk/src/npc.rs:184
-#: crates/cr-gtk/src/npc.rs:569
+#: crates/cr-gtk/src/npc.rs:601
 #: crates/cr-store/src/userdb/classes/pages.rs:95
 #: crates/cr-store/src/userdb/classes/pages.rs:979
 msgid "Levels"
@@ -2644,7 +2644,7 @@ msgstr "Aggiungi esperienza…"
 #: crates/cr-gtk/src/enter.rs:309
 #: crates/cr-gtk/src/main.rs:2728
 #: crates/cr-gtk/src/main.rs:2763
-#: crates/cr-gtk/src/npc.rs:533
+#: crates/cr-gtk/src/npc.rs:553
 #: crates/cr-store/src/catalog.rs:116
 msgid "Classes"
 msgstr "Classi"
@@ -3486,10 +3486,12 @@ msgid "Psionicist"
 msgstr "Psionico"
 
 #: crates/cr-gtk/src/npc.rs:161
+#: crates/cr-gtk/src/npc.rs:532
 msgid "All Races"
 msgstr "Tutte le razze"
 
 #: crates/cr-gtk/src/npc.rs:162
+#: crates/cr-gtk/src/npc.rs:533
 msgid "Include races that are not standard"
 msgstr "Includi le razze non standard"
 
@@ -3526,7 +3528,7 @@ msgid "Add to _Template"
 msgstr "Aggiungi al _modello"
 
 #: crates/cr-gtk/src/npc.rs:239
-#: crates/cr-gtk/src/npc.rs:668
+#: crates/cr-gtk/src/npc.rs:807
 msgid "_Create"
 msgstr "_Crea"
 
@@ -3543,78 +3545,94 @@ msgid "{name} was created"
 msgstr "{name} è stato creato"
 
 #: crates/cr-gtk/src/npc.rs:473
-#: crates/cr-store/src/npc.rs:266
+#: crates/cr-store/src/npc.rs:308
 msgid "~Random"
 msgstr "~Casuale"
 
-#: crates/cr-gtk/src/npc.rs:516
+#: crates/cr-gtk/src/npc.rs:535
 #: crates/cr-store/src/userdb/monsters.rs:413
 msgid "Fewest"
 msgstr "Minimo"
 
-#: crates/cr-gtk/src/npc.rs:517
+#: crates/cr-gtk/src/npc.rs:536
 msgid "Most"
 msgstr "Massimo"
 
-#: crates/cr-gtk/src/npc.rs:519
+#: crates/cr-gtk/src/npc.rs:538
 msgid "Group Name"
 msgstr "Nome del gruppo"
 
-#: crates/cr-gtk/src/npc.rs:520
+#: crates/cr-gtk/src/npc.rs:539
 #: crates/cr-store/src/catalog.rs:1020
 #: crates/cr-store/src/userdb/classes/pages.rs:142
 msgid "Group"
 msgstr "Gruppo"
 
-#: crates/cr-gtk/src/npc.rs:528
+#: crates/cr-gtk/src/npc.rs:548
 msgid "Allowed Combination"
 msgstr "Combinazione consentita"
 
-#: crates/cr-gtk/src/npc.rs:529
+#: crates/cr-gtk/src/npc.rs:549
 msgid "Each NPC takes a class combination its race allows"
 msgstr "Ogni PNG prende una combinazione di classi consentita dalla sua razza"
 
-#: crates/cr-gtk/src/npc.rs:534
+#: crates/cr-gtk/src/npc.rs:554
 msgid "A class of each group, or none"
 msgstr "Una classe per ogni gruppo, o nessuna"
 
-#: crates/cr-gtk/src/npc.rs:570
+#: crates/cr-gtk/src/npc.rs:582
+msgid "All Kits"
+msgstr "Tutti i kit"
+
+#: crates/cr-gtk/src/npc.rs:583
+msgid "Include kits the race, classes or alignment may not take"
+msgstr "Includi i kit che la razza, le classi o l'allineamento non consentono"
+
+#: crates/cr-gtk/src/npc.rs:590
+msgid "Any Alignment"
+msgstr "Qualsiasi allineamento"
+
+#: crates/cr-gtk/src/npc.rs:591
+msgid "Include alignments the classes, race or kit do not allow"
+msgstr "Includi gli allineamenti che le classi, la razza o il kit non consentono"
+
+#: crates/cr-gtk/src/npc.rs:602
 msgid "Lowest and highest level for each class group"
 msgstr "Livello minimo e massimo per ogni gruppo di classi"
 
-#: crates/cr-gtk/src/npc.rs:578
+#: crates/cr-gtk/src/npc.rs:610
 msgid "Lowest {name} Level"
 msgstr "Livello minimo di {name}"
 
-#: crates/cr-gtk/src/npc.rs:582
+#: crates/cr-gtk/src/npc.rs:614
 msgid "Highest {name} Level"
 msgstr "Livello massimo di {name}"
 
-#: crates/cr-gtk/src/npc.rs:586
+#: crates/cr-gtk/src/npc.rs:618
 msgid "to"
 msgstr "a"
 
-#: crates/cr-gtk/src/npc.rs:600
+#: crates/cr-gtk/src/npc.rs:632
 msgid "Lines"
 msgstr "Righe"
 
-#: crates/cr-gtk/src/npc.rs:601
+#: crates/cr-gtk/src/npc.rs:633
 msgid "Without lines, Create makes the line above"
 msgstr "Senza righe, Crea genera la riga qui sopra"
 
-#: crates/cr-gtk/src/npc.rs:604
+#: crates/cr-gtk/src/npc.rs:636
 msgid "_Add Line"
 msgstr "_Aggiungi riga"
 
-#: crates/cr-gtk/src/npc.rs:669
+#: crates/cr-gtk/src/npc.rs:808
 msgid "New NPC Group"
 msgstr "Nuovo gruppo di PNG"
 
-#: crates/cr-gtk/src/npc.rs:692
+#: crates/cr-gtk/src/npc.rs:831
 msgid "A group name must be supplied."
 msgstr "È necessario fornire un nome per il gruppo."
 
-#: crates/cr-gtk/src/npc.rs:715
+#: crates/cr-gtk/src/npc.rs:854
 msgid "{n} NPC was created"
 msgid_plural "{n} NPCs were created"
 msgstr[0] "{n} PNG è stato creato"
@@ -6404,21 +6422,21 @@ msgid "Exceptional strength goes up to 100"
 msgstr "La Forza eccezionale arriva fino a 100"
 
 #: crates/cr-store/src/edit.rs:243
-#: crates/cr-store/src/npc.rs:395
-#: crates/cr-store/src/npc.rs:432
+#: crates/cr-store/src/npc.rs:437
+#: crates/cr-store/src/npc.rs:474
 msgid "The character list is missing"
 msgstr "Manca l'elenco dei personaggi"
 
 #: crates/cr-store/src/edit.rs:249
-#: crates/cr-store/src/npc.rs:404
-#: crates/cr-store/src/npc.rs:438
+#: crates/cr-store/src/npc.rs:446
+#: crates/cr-store/src/npc.rs:480
 #: crates/cr-store/src/party.rs:273
 msgid "{file} is not in the character list"
 msgstr "{file} non è nell'elenco dei personaggi"
 
 #: crates/cr-store/src/edit.rs:276
-#: crates/cr-store/src/npc.rs:413
-#: crates/cr-store/src/npc.rs:445
+#: crates/cr-store/src/npc.rs:455
+#: crates/cr-store/src/npc.rs:487
 #: crates/cr-store/src/sheet.rs:499
 msgid "{file} not found"
 msgstr "{file} non trovato"
@@ -6632,75 +6650,75 @@ msgid "no class named {name}"
 msgstr "nessuna classe chiamata {name}"
 
 #: crates/cr-store/src/npc/state.rs:1058
-#: crates/cr-store/src/npc.rs:844
+#: crates/cr-store/src/npc.rs:1011
 msgid "no race named {name}"
 msgstr "nessuna razza chiamata {name}"
 
-#: crates/cr-store/src/npc.rs:271
+#: crates/cr-store/src/npc.rs:313
 msgid "{low} to {high}"
 msgstr "da {low} a {high}"
 
-#: crates/cr-store/src/npc.rs:281
+#: crates/cr-store/src/npc.rs:323
 msgid "~Random {group}"
 msgstr "~Casuale {group}"
 
-#: crates/cr-store/src/npc.rs:294
+#: crates/cr-store/src/npc.rs:336
 msgid "{number} Race: {race}   Class: {class}   Kit: {kit}   Alignment: {alignment}"
 msgstr "{number} Razza: {race}   Classe: {class}   Kit: {kit}   Allineamento: {alignment}"
 
-#: crates/cr-store/src/npc.rs:321
+#: crates/cr-store/src/npc.rs:363
 msgid "Core Rules 2.0 installations are read-only: NPCs are made in the Expansion"
 msgstr "Le installazioni di Core Rules 2.0 sono in sola lettura: i PNG si creano in Expansion"
 
-#: crates/cr-store/src/npc.rs:619
+#: crates/cr-store/src/npc.rs:786
 msgid "This item cannot be used by this character class."
 msgstr "Questo oggetto non può essere usato da questa classe di personaggio."
 
-#: crates/cr-store/src/npc.rs:620
+#: crates/cr-store/src/npc.rs:787
 msgid "This item cannot be used by this race."
 msgstr "Questo oggetto non può essere usato da questa razza."
 
-#: crates/cr-store/src/npc.rs:621
+#: crates/cr-store/src/npc.rs:788
 msgid "Only melee weapons can be used by this character."
 msgstr "Questo personaggio può usare solo armi da mischia."
 
-#: crates/cr-store/src/npc.rs:622
+#: crates/cr-store/src/npc.rs:789
 msgid "Only weapons available to clerics can be used by this character."
 msgstr "Questo personaggio può usare solo armi consentite ai chierici."
 
-#: crates/cr-store/src/npc.rs:623
+#: crates/cr-store/src/npc.rs:790
 msgid "Only weapons available to thieves can be used by this character."
 msgstr "Questo personaggio può usare solo armi consentite ai ladri."
 
-#: crates/cr-store/src/npc.rs:624
+#: crates/cr-store/src/npc.rs:791
 msgid "No miscellaneous magic can be used by this character."
 msgstr "Questo personaggio non può usare oggetti magici vari."
 
-#: crates/cr-store/src/npc.rs:625
+#: crates/cr-store/src/npc.rs:792
 msgid "No poitions, oils or scrolls can be used by this character."
 msgstr "Questo personaggio non può usare pozioni, oli o pergamene."
 
-#: crates/cr-store/src/npc.rs:626
+#: crates/cr-store/src/npc.rs:793
 msgid "No magic armor or weapons can be used by this character."
 msgstr "Questo personaggio non può usare armature o armi magiche."
 
-#: crates/cr-store/src/npc.rs:627
+#: crates/cr-store/src/npc.rs:794
 msgid "No magic armor can be used by this character."
 msgstr "Questo personaggio non può usare armature magiche."
 
-#: crates/cr-store/src/npc.rs:628
+#: crates/cr-store/src/npc.rs:795
 msgid "This armor cannot be used by this character."
 msgstr "Questo personaggio non può usare questa armatura."
 
-#: crates/cr-store/src/npc.rs:629
+#: crates/cr-store/src/npc.rs:796
 msgid "Your kit does not allow the use of this item."
 msgstr "Il tuo kit non consente l'uso di questo oggetto."
 
-#: crates/cr-store/src/npc.rs:833
+#: crates/cr-store/src/npc.rs:1000
 msgid "the databases have no races or classes"
 msgstr "i database non hanno razze né classi"
 
-#: crates/cr-store/src/npc.rs:911
+#: crates/cr-store/src/npc.rs:1078
 msgid "Race/Class combination information unavailable for race: {race}"
 msgstr "Informazioni sulle combinazioni razza/classe non disponibili per la razza: {race}"
 

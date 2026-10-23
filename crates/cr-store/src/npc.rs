@@ -57,7 +57,7 @@ use crate::lists::PartTable;
 pub use crate::treasure::{Flavor, Rand};
 use crate::{Error, Installation, Result};
 use cr_formats::race::Race;
-use data::Data;
+use data::{Data, PartExt};
 use state::{Gen, Opt};
 
 /// What lasts between the NPCs of one session: the kit lists the spell
@@ -223,7 +223,49 @@ const GROUP_NAMES: [&str; 5] = [
     tr_noop!("Psionicist"),
 ];
 
+/// A class combo's "~Random" in Group NPCs.
+const GROUP_RANDOM: &str = "~Random";
+
+/// 0x4e3e6a: whether a kit's classes fit the dialog's class texts (in
+/// the order of [`GroupOptions::classes`]). A kit that names class
+/// combinations takes one of them; otherwise it must not bar every
+/// chosen class. As in the original, a "~Random" warrior class counts
+/// as no class chosen.
+fn kit_fits_classes(barred: &[String], kit: &data::Kit, classes: &[&str; 5]) -> bool {
+    if !kit.combinations.is_empty() {
+        let title = classes
+            .iter()
+            .copied()
+            .filter(|c| !c.is_empty() && *c != GROUP_RANDOM)
+            .collect::<Vec<_>>()
+            .join("/");
+        return kit
+            .combinations
+            .iter()
+            .any(|t| *t == title || classes.contains(&t.as_str()));
+    }
+    if barred.is_empty() {
+        return true;
+    }
+    let random = classes[0] == GROUP_RANDOM;
+    classes
+        .iter()
+        .filter(|c| !c.is_empty() && !random)
+        .any(|c| !barred.iter().any(|b| b == c))
+}
+
 impl GroupOptions {
+    /// The class combos' texts (0x4e2bc4): "~Random" in all of them for
+    /// an allowed combination, empty for a group without a class.
+    fn class_texts(&self) -> [&str; 5] {
+        self.classes.each_ref().map(|c| match c {
+            _ if self.allowed_combination => GROUP_RANDOM,
+            None => "",
+            Some(Choice::Random) => GROUP_RANDOM,
+            Some(Choice::Name(n)) => n.as_str(),
+        })
+    }
+
     /// Sorts lines as the dialog's list holds them (by [`Self::label`]).
     pub fn sort(lines: &mut [GroupOptions]) {
         lines.sort_by_cached_key(|l| crate::collate::sort_key(&l.label()));
@@ -547,6 +589,131 @@ impl NpcRules {
             .iter()
             .filter(|r| r.unknown_0x1e0[1] != 0)
             .map(|r| r.name.clone())
+            .collect()
+    }
+
+    /// The races Group NPCs' "Standard" choice offers (0x4e09ad, filled
+    /// by 0x4790c1): under Player's Option the standard races; under the
+    /// Core Rules the races marked for them, a subrace by its parent
+    /// race's name.
+    pub fn group_standard_races(&self, players_option: bool) -> Vec<String> {
+        let mut out: Vec<String> = Vec::new();
+        for r in &self.data.races {
+            let name = if players_option {
+                if r.unknown_0x1e0[1] == 0 {
+                    continue;
+                }
+                &r.name
+            } else if r.unknown_0x1e0[0] == 0 {
+                continue;
+            } else if r.unknown_0x184 != 0 {
+                &r.unknown_0x188
+            } else {
+                &r.name
+            };
+            if !out.contains(name) {
+                out.push(name.clone());
+            }
+        }
+        out
+    }
+
+    /// The kits Group NPCs offers for a line (0x4e15d3): those of its
+    /// rules, and with `standard` only those its alignment, race and
+    /// classes may take.
+    pub fn group_kits(&self, standard: bool, options: &GroupOptions) -> Vec<String> {
+        let d = &self.data;
+        let align_flag = match &options.alignment {
+            Choice::Random => None,
+            Choice::Name(a) => Some(
+                state::ALIGNMENTS
+                    .iter()
+                    .find(|x| d.t(x.0) == a)
+                    .map_or(99, |x| x.1),
+            ),
+        };
+        let classes = options.class_texts();
+        d.parts[data::KITS]
+            .iter()
+            .zip(&d.kits)
+            .filter(|(p, kit)| {
+                let Some(kit) = kit else { return false };
+                if !kit.flag(if options.players_option { 0x74 } else { 0x73 }) {
+                    return false;
+                }
+                if !standard {
+                    return true;
+                }
+                if align_flag.is_some_and(|f| !kit.flag(f)) {
+                    return false;
+                }
+                if let Some(race) = &options.race {
+                    let allowed = kit.sa(0x10);
+                    if !allowed.is_empty() && !allowed.contains(race) {
+                        return false;
+                    }
+                    if kit.sa(0xa8).contains(race) {
+                        return false;
+                    }
+                }
+                p.head.name == "None" || kit_fits_classes(p.sa(0x82c), kit, &classes)
+            })
+            .map(|(p, _)| p.head.name.clone())
+            .collect()
+    }
+
+    /// The alignments Group NPCs' "Allowed" choice offers for a line
+    /// (0x4e1cc3): those every chosen class allows, less those its race
+    /// or kit bars; all nine when a class is "~Random".
+    pub fn group_alignments(&self, options: &GroupOptions) -> Vec<String> {
+        let d = &self.data;
+        let names = self.alignments();
+        let classes = options.class_texts();
+        let chosen: Vec<&str> = classes.iter().copied().filter(|c| !c.is_empty()).collect();
+        if chosen.contains(&GROUP_RANDOM) {
+            return names;
+        }
+        let mut count = [0i32; 9];
+        for name in &chosen {
+            let Some(k) = d.class(name).map(|i| &d.classes[i]) else {
+                continue;
+            };
+            for a in k.sa(0xa0) {
+                if let Some(i) = names.iter().position(|n| n == a) {
+                    count[i] += 1;
+                }
+            }
+        }
+        // The race's Alignment page by index of `unknown_0x190` (0 is
+        // "Any"), in the order of the alignments.
+        const RACE: [usize; 9] = [5, 6, 4, 8, 9, 7, 1, 3, 2];
+        if let Some(r) = options
+            .race
+            .as_deref()
+            .and_then(|r| d.race(r))
+            .map(|i| &d.races[i])
+            && r.unknown_0x190[0] == 0
+        {
+            for (n, &i) in count.iter_mut().zip(&RACE) {
+                if r.unknown_0x190[i] == 0 {
+                    *n = 0;
+                }
+            }
+        }
+        if let Choice::Name(kit) = &options.kit
+            && let Some(kit) = d.find_kit(kit)
+        {
+            for (n, a) in count.iter_mut().zip(&state::ALIGNMENTS) {
+                if !kit.flag(a.1) {
+                    *n -= 1;
+                }
+            }
+        }
+        names
+            .into_iter()
+            .zip(count)
+            .filter(|&(_, n)| n == chosen.len() as i32)
+            .map(|(a, _)| a)
             .collect()
     }
 
