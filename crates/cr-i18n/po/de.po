@@ -301,7 +301,7 @@ msgstr "Verbleibende Charakterpunkte"
 #: crates/cr-gtk/src/create.rs:1171
 #: crates/cr-gtk/src/create.rs:1312
 #: crates/cr-gtk/src/npc.rs:165
-#: crates/cr-gtk/src/npc.rs:515
+#: crates/cr-gtk/src/npc.rs:530
 #: crates/cr-store/src/catalog.rs:871
 #: crates/cr-store/src/catalog.rs:966
 #: crates/cr-store/src/tables/data.rs:784
@@ -1308,7 +1308,7 @@ msgstr "Geschlecht"
 
 #: crates/cr-gtk/src/create.rs:1866
 #: crates/cr-gtk/src/main.rs:2241
-#: crates/cr-gtk/src/npc.rs:564
+#: crates/cr-gtk/src/npc.rs:588
 #: crates/cr-store/src/catalog.rs:874
 #: crates/cr-store/src/catalog.rs:1135
 #: crates/cr-store/src/userdb/classes/pages.rs:86
@@ -1319,7 +1319,7 @@ msgstr "Gesinnung"
 
 #: crates/cr-gtk/src/create.rs:1867
 #: crates/cr-gtk/src/main.rs:2246
-#: crates/cr-gtk/src/npc.rs:561
+#: crates/cr-gtk/src/npc.rs:580
 #: crates/cr-store/src/catalog.rs:873
 #: crates/cr-store/src/userdb/parts/kit.rs:369
 msgid "Kit"
@@ -1463,7 +1463,7 @@ msgstr "Details"
 #: crates/cr-gtk/src/enter.rs:419
 #: crates/cr-gtk/src/enter.rs:421
 #: crates/cr-gtk/src/npc.rs:184
-#: crates/cr-gtk/src/npc.rs:569
+#: crates/cr-gtk/src/npc.rs:601
 #: crates/cr-store/src/userdb/classes/pages.rs:95
 #: crates/cr-store/src/userdb/classes/pages.rs:979
 msgid "Levels"
@@ -2644,7 +2644,7 @@ msgstr "Erfahrung hinzufügen…"
 #: crates/cr-gtk/src/enter.rs:309
 #: crates/cr-gtk/src/main.rs:2728
 #: crates/cr-gtk/src/main.rs:2763
-#: crates/cr-gtk/src/npc.rs:533
+#: crates/cr-gtk/src/npc.rs:553
 #: crates/cr-store/src/catalog.rs:116
 msgid "Classes"
 msgstr "Klassen"
@@ -3486,10 +3486,12 @@ msgid "Psionicist"
 msgstr "Psioniker"
 
 #: crates/cr-gtk/src/npc.rs:161
+#: crates/cr-gtk/src/npc.rs:532
 msgid "All Races"
 msgstr "Alle Völker"
 
 #: crates/cr-gtk/src/npc.rs:162
+#: crates/cr-gtk/src/npc.rs:533
 msgid "Include races that are not standard"
 msgstr "Auch Völker einbeziehen, die nicht Standard sind"
 
@@ -3526,7 +3528,7 @@ msgid "Add to _Template"
 msgstr "Zur _Vorlage hinzufügen"
 
 #: crates/cr-gtk/src/npc.rs:239
-#: crates/cr-gtk/src/npc.rs:668
+#: crates/cr-gtk/src/npc.rs:807
 msgid "_Create"
 msgstr "_Erstellen"
 
@@ -3543,78 +3545,94 @@ msgid "{name} was created"
 msgstr "{name} wurde erstellt"
 
 #: crates/cr-gtk/src/npc.rs:473
-#: crates/cr-store/src/npc.rs:266
+#: crates/cr-store/src/npc.rs:308
 msgid "~Random"
 msgstr "~Zufällig"
 
-#: crates/cr-gtk/src/npc.rs:516
+#: crates/cr-gtk/src/npc.rs:535
 #: crates/cr-store/src/userdb/monsters.rs:413
 msgid "Fewest"
 msgstr "Wenigste"
 
-#: crates/cr-gtk/src/npc.rs:517
+#: crates/cr-gtk/src/npc.rs:536
 msgid "Most"
 msgstr "Meiste"
 
-#: crates/cr-gtk/src/npc.rs:519
+#: crates/cr-gtk/src/npc.rs:538
 msgid "Group Name"
 msgstr "Gruppenname"
 
-#: crates/cr-gtk/src/npc.rs:520
+#: crates/cr-gtk/src/npc.rs:539
 #: crates/cr-store/src/catalog.rs:1020
 #: crates/cr-store/src/userdb/classes/pages.rs:142
 msgid "Group"
 msgstr "Gruppe"
 
-#: crates/cr-gtk/src/npc.rs:528
+#: crates/cr-gtk/src/npc.rs:548
 msgid "Allowed Combination"
 msgstr "Erlaubte Kombination"
 
-#: crates/cr-gtk/src/npc.rs:529
+#: crates/cr-gtk/src/npc.rs:549
 msgid "Each NPC takes a class combination its race allows"
 msgstr "Jeder NSC erhält eine Klassenkombination, die sein Volk erlaubt"
 
-#: crates/cr-gtk/src/npc.rs:534
+#: crates/cr-gtk/src/npc.rs:554
 msgid "A class of each group, or none"
 msgstr "Eine Klasse jeder Gruppe oder keine"
 
-#: crates/cr-gtk/src/npc.rs:570
+#: crates/cr-gtk/src/npc.rs:582
+msgid "All Kits"
+msgstr "Alle Kits"
+
+#: crates/cr-gtk/src/npc.rs:583
+msgid "Include kits the race, classes or alignment may not take"
+msgstr "Kits einschließen, die Volk, Klassen oder Gesinnung nicht erlauben"
+
+#: crates/cr-gtk/src/npc.rs:590
+msgid "Any Alignment"
+msgstr "Beliebige Gesinnung"
+
+#: crates/cr-gtk/src/npc.rs:591
+msgid "Include alignments the classes, race or kit do not allow"
+msgstr "Gesinnungen einschließen, die Klassen, Volk oder Kit nicht erlauben"
+
+#: crates/cr-gtk/src/npc.rs:602
 msgid "Lowest and highest level for each class group"
 msgstr "Niedrigste und höchste Stufe für jede Klassengruppe"
 
-#: crates/cr-gtk/src/npc.rs:578
+#: crates/cr-gtk/src/npc.rs:610
 msgid "Lowest {name} Level"
 msgstr "Niedrigste Stufe: {name}"
 
-#: crates/cr-gtk/src/npc.rs:582
+#: crates/cr-gtk/src/npc.rs:614
 msgid "Highest {name} Level"
 msgstr "Höchste Stufe: {name}"
 
-#: crates/cr-gtk/src/npc.rs:586
+#: crates/cr-gtk/src/npc.rs:618
 msgid "to"
 msgstr "bis"
 
-#: crates/cr-gtk/src/npc.rs:600
+#: crates/cr-gtk/src/npc.rs:632
 msgid "Lines"
 msgstr "Zeilen"
 
-#: crates/cr-gtk/src/npc.rs:601
+#: crates/cr-gtk/src/npc.rs:633
 msgid "Without lines, Create makes the line above"
 msgstr "Ohne Zeilen erstellt »Erstellen« die obige Zeile"
 
-#: crates/cr-gtk/src/npc.rs:604
+#: crates/cr-gtk/src/npc.rs:636
 msgid "_Add Line"
 msgstr "Zeile _hinzufügen"
 
-#: crates/cr-gtk/src/npc.rs:669
+#: crates/cr-gtk/src/npc.rs:808
 msgid "New NPC Group"
 msgstr "Neue NSC-Gruppe"
 
-#: crates/cr-gtk/src/npc.rs:692
+#: crates/cr-gtk/src/npc.rs:831
 msgid "A group name must be supplied."
 msgstr "Ein Gruppenname muss angegeben werden."
 
-#: crates/cr-gtk/src/npc.rs:715
+#: crates/cr-gtk/src/npc.rs:854
 msgid "{n} NPC was created"
 msgid_plural "{n} NPCs were created"
 msgstr[0] "{n} NSC wurde erstellt"
@@ -6404,21 +6422,21 @@ msgid "Exceptional strength goes up to 100"
 msgstr "Außergewöhnliche Stärke reicht bis 100"
 
 #: crates/cr-store/src/edit.rs:243
-#: crates/cr-store/src/npc.rs:395
-#: crates/cr-store/src/npc.rs:432
+#: crates/cr-store/src/npc.rs:437
+#: crates/cr-store/src/npc.rs:474
 msgid "The character list is missing"
 msgstr "Die Charakterliste fehlt"
 
 #: crates/cr-store/src/edit.rs:249
-#: crates/cr-store/src/npc.rs:404
-#: crates/cr-store/src/npc.rs:438
+#: crates/cr-store/src/npc.rs:446
+#: crates/cr-store/src/npc.rs:480
 #: crates/cr-store/src/party.rs:273
 msgid "{file} is not in the character list"
 msgstr "{file} ist nicht in der Charakterliste"
 
 #: crates/cr-store/src/edit.rs:276
-#: crates/cr-store/src/npc.rs:413
-#: crates/cr-store/src/npc.rs:445
+#: crates/cr-store/src/npc.rs:455
+#: crates/cr-store/src/npc.rs:487
 #: crates/cr-store/src/sheet.rs:499
 msgid "{file} not found"
 msgstr "{file} nicht gefunden"
@@ -6632,75 +6650,75 @@ msgid "no class named {name}"
 msgstr "keine Klasse namens {name}"
 
 #: crates/cr-store/src/npc/state.rs:1058
-#: crates/cr-store/src/npc.rs:844
+#: crates/cr-store/src/npc.rs:1011
 msgid "no race named {name}"
 msgstr "kein Volk namens {name}"
 
-#: crates/cr-store/src/npc.rs:271
+#: crates/cr-store/src/npc.rs:313
 msgid "{low} to {high}"
 msgstr "{low} bis {high}"
 
-#: crates/cr-store/src/npc.rs:281
+#: crates/cr-store/src/npc.rs:323
 msgid "~Random {group}"
 msgstr "~Zufällig {group}"
 
-#: crates/cr-store/src/npc.rs:294
+#: crates/cr-store/src/npc.rs:336
 msgid "{number} Race: {race}   Class: {class}   Kit: {kit}   Alignment: {alignment}"
 msgstr "{number} Volk: {race}   Klasse: {class}   Kit: {kit}   Gesinnung: {alignment}"
 
-#: crates/cr-store/src/npc.rs:321
+#: crates/cr-store/src/npc.rs:363
 msgid "Core Rules 2.0 installations are read-only: NPCs are made in the Expansion"
 msgstr "Core-Rules-2.0-Installationen sind schreibgeschützt: NSC werden in der Expansion erstellt"
 
-#: crates/cr-store/src/npc.rs:619
+#: crates/cr-store/src/npc.rs:786
 msgid "This item cannot be used by this character class."
 msgstr "Dieser Gegenstand kann von dieser Charakterklasse nicht benutzt werden."
 
-#: crates/cr-store/src/npc.rs:620
+#: crates/cr-store/src/npc.rs:787
 msgid "This item cannot be used by this race."
 msgstr "Dieser Gegenstand kann von diesem Volk nicht benutzt werden."
 
-#: crates/cr-store/src/npc.rs:621
+#: crates/cr-store/src/npc.rs:788
 msgid "Only melee weapons can be used by this character."
 msgstr "Dieser Charakter kann nur Nahkampfwaffen benutzen."
 
-#: crates/cr-store/src/npc.rs:622
+#: crates/cr-store/src/npc.rs:789
 msgid "Only weapons available to clerics can be used by this character."
 msgstr "Dieser Charakter kann nur Waffen benutzen, die Klerikern erlaubt sind."
 
-#: crates/cr-store/src/npc.rs:623
+#: crates/cr-store/src/npc.rs:790
 msgid "Only weapons available to thieves can be used by this character."
 msgstr "Dieser Charakter kann nur Waffen benutzen, die Dieben erlaubt sind."
 
-#: crates/cr-store/src/npc.rs:624
+#: crates/cr-store/src/npc.rs:791
 msgid "No miscellaneous magic can be used by this character."
 msgstr "Dieser Charakter kann keine sonstigen magischen Gegenstände benutzen."
 
-#: crates/cr-store/src/npc.rs:625
+#: crates/cr-store/src/npc.rs:792
 msgid "No poitions, oils or scrolls can be used by this character."
 msgstr "Dieser Charakter kann keine Tränke, Öle oder Schriftrollen benutzen."
 
-#: crates/cr-store/src/npc.rs:626
+#: crates/cr-store/src/npc.rs:793
 msgid "No magic armor or weapons can be used by this character."
 msgstr "Dieser Charakter kann keine magischen Rüstungen oder Waffen benutzen."
 
-#: crates/cr-store/src/npc.rs:627
+#: crates/cr-store/src/npc.rs:794
 msgid "No magic armor can be used by this character."
 msgstr "Dieser Charakter kann keine magischen Rüstungen benutzen."
 
-#: crates/cr-store/src/npc.rs:628
+#: crates/cr-store/src/npc.rs:795
 msgid "This armor cannot be used by this character."
 msgstr "Dieser Charakter kann diese Rüstung nicht benutzen."
 
-#: crates/cr-store/src/npc.rs:629
+#: crates/cr-store/src/npc.rs:796
 msgid "Your kit does not allow the use of this item."
 msgstr "Dein Kit erlaubt die Benutzung dieses Gegenstands nicht."
 
-#: crates/cr-store/src/npc.rs:833
+#: crates/cr-store/src/npc.rs:1000
 msgid "the databases have no races or classes"
 msgstr "die Datenbanken enthalten keine Völker oder Klassen"
 
-#: crates/cr-store/src/npc.rs:911
+#: crates/cr-store/src/npc.rs:1078
 msgid "Race/Class combination information unavailable for race: {race}"
 msgstr "Keine Informationen zu Volk/Klasse-Kombinationen für das Volk: {race}"
 

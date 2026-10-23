@@ -503,6 +503,20 @@ fn choice(row: &adw::ComboRow, items: &[String]) -> Choice {
     }
 }
 
+/// Puts `items` in a choice row as [`shown`] does, keeping the chosen
+/// name when it is still there and "~Random" (the first) otherwise.
+fn refill(row: &adw::ComboRow, list: &RefCell<Vec<String>>, items: Vec<String>, fixed: usize) {
+    let old = list.borrow().get(row.selected() as usize).cloned();
+    let at = old
+        .and_then(|o| items.iter().position(|i| *i == o))
+        .unwrap_or(0);
+    let texts = shown(&items, fixed);
+    let texts: Vec<&str> = texts.iter().map(String::as_str).collect();
+    *list.borrow_mut() = items;
+    row.set_model(Some(&gtk::StringList::new(&texts)));
+    row.set_selected(at as u32);
+}
+
 /// Opens the New NPC Group dialog: one or more lines (number, race,
 /// classes, kit, alignment and levels), made in the order of the sorted
 /// list as Create Group does.
@@ -510,9 +524,14 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
     let Some(rules) = host.npc_rules() else {
         return;
     };
-    let mut races = vec![RANDOM.to_owned()];
-    races.extend(rules.races());
-    let race = combo_row(tr("Race"), &shown(&races, 1));
+    // Race, kit and alignment take the original's Standard/All,
+    // Standard/All and Allowed/Any choices; their lists follow the rest.
+    let races: Rc<RefCell<Vec<String>>> = Rc::default();
+    let race = combo_row(tr("Race"), &[]);
+    let all_races = adw::SwitchRow::builder()
+        .title(tr("All Races"))
+        .subtitle(tr("Include races that are not standard"))
+        .build();
     let fewest = spin_row(tr("Fewest"), 1, 1, 100);
     let most = spin_row(tr("Most"), 1, 1, 100);
     let rules_choice = rules_row();
@@ -520,6 +539,7 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
     let group = adw::PreferencesGroup::builder().title(tr("Group")).build();
     group.add(&party);
     group.add(&race);
+    group.add(&all_races);
     group.add(&fewest);
     group.add(&most);
     group.add(&rules_choice);
@@ -556,14 +576,26 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
             }
         }
     });
-    let mut kits = vec![RANDOM.to_owned(), NO_KIT.to_owned()];
-    kits.extend(rules.kits());
-    let kit = combo_row(tr("Kit"), &shown(&kits, 1));
-    let mut alignments = vec![RANDOM.to_owned()];
-    alignments.extend(rules.alignments());
-    let alignment = combo_row(tr("Alignment"), &shown(&alignments, 1));
+    let kits: Rc<RefCell<Vec<String>>> = Rc::default();
+    let kit = combo_row(tr("Kit"), &[]);
+    let all_kits = adw::SwitchRow::builder()
+        .title(tr("All Kits"))
+        .subtitle(tr(
+            "Include kits the race, classes or alignment may not take",
+        ))
+        .build();
+    let alignments: Rc<RefCell<Vec<String>>> = Rc::default();
+    let alignment = combo_row(tr("Alignment"), &[]);
+    let any_alignment = adw::SwitchRow::builder()
+        .title(tr("Any Alignment"))
+        .subtitle(tr(
+            "Include alignments the classes, race or kit do not allow",
+        ))
+        .build();
     classes_group.add(&kit);
+    classes_group.add(&all_kits);
     classes_group.add(&alignment);
+    classes_group.add(&any_alignment);
 
     let levels_group = adw::PreferencesGroup::builder()
         .title(tr("Levels"))
@@ -608,20 +640,23 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
     lines_group.set_header_suffix(Some(&add));
     let line_rows: Rc<RefCell<Vec<adw::ActionRow>>> = Rc::default();
 
+    let class_rows_view: Vec<adw::ComboRow> = class_rows.iter().map(|r| r.0.clone()).collect();
     let current = {
-        let (fewest, most, race, races) = (fewest.clone(), most.clone(), race.clone(), races);
+        let (fewest, most) = (fewest.clone(), most.clone());
+        let (race, races) = (race.clone(), races.clone());
         let (rules_choice, allowed) = (rules_choice.clone(), allowed.clone());
-        let (kit, alignment) = (kit.clone(), alignment.clone());
+        let (kit, kits) = (kit.clone(), kits.clone());
+        let (alignment, alignments) = (alignment.clone(), alignments.clone());
         move || {
             let mut options = GroupOptions {
                 number: (fewest.value() as i32, most.value() as i32),
                 race: match race.selected() {
                     0 => None,
-                    i => races.get(i as usize).cloned(),
+                    i => races.borrow().get(i as usize).cloned(),
                 },
                 allowed_combination: allowed.is_active(),
-                kit: choice(&kit, &kits),
-                alignment: choice(&alignment, &alignments),
+                kit: choice(&kit, &kits.borrow()),
+                alignment: choice(&alignment, &alignments.borrow()),
                 players_option: rules_choice.selected() == 1,
                 ..Default::default()
             };
@@ -639,6 +674,110 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
         }
     };
     let current = Rc::new(current);
+
+    // 0x4e1cc3: the alignments, which a "~Random" kit holds at "~Random"
+    // under Allowed (0x4e3721).
+    let fill_alignments = {
+        let (rules, current) = (rules.clone(), current.clone());
+        let (alignment, alignments) = (alignment.clone(), alignments.clone());
+        let any_alignment = any_alignment.clone();
+        move || {
+            let options = current();
+            let mut items = vec![RANDOM.to_owned()];
+            items.extend(if any_alignment.is_active() {
+                rules.alignments()
+            } else {
+                rules.group_alignments(&options)
+            });
+            let locked = !any_alignment.is_active() && matches!(options.kit, Choice::Random);
+            refill(&alignment, &alignments, items, 1);
+            if locked {
+                alignment.set_selected(0);
+            }
+            alignment.set_sensitive(!locked && alignments.borrow().len() > 1);
+        }
+    };
+    let fill_alignments = Rc::new(fill_alignments);
+    // 0x4e15d3, then the alignments.
+    let fill_kits = {
+        let (rules, current) = (rules.clone(), current.clone());
+        let (kit, kits, all_kits) = (kit.clone(), kits.clone(), all_kits.clone());
+        let fill_alignments = fill_alignments.clone();
+        move || {
+            let mut items = vec![RANDOM.to_owned(), NO_KIT.to_owned()];
+            items.extend(rules.group_kits(!all_kits.is_active(), &current()));
+            refill(&kit, &kits, items, 1);
+            fill_alignments();
+        }
+    };
+    let fill_kits = Rc::new(fill_kits);
+    // 0x4e095e and 0x4e09ad, then the kits.
+    let fill_races = {
+        let rules = rules.clone();
+        let (race, races, all_races) = (race.clone(), races.clone(), all_races.clone());
+        let rules_choice = rules_choice.clone();
+        let fill_kits = fill_kits.clone();
+        move || {
+            let mut items = vec![RANDOM.to_owned()];
+            items.extend(if all_races.is_active() {
+                rules.races()
+            } else {
+                rules.group_standard_races(rules_choice.selected() == 1)
+            });
+            refill(&race, &races, items, 1);
+            fill_kits();
+        }
+    };
+    let fill_races = Rc::new(fill_races);
+    // Refilling a list notifies its row: the rows follow the person only.
+    let filling = Rc::new(std::cell::Cell::new(false));
+    let guarded = |fill: Rc<dyn Fn()>| {
+        let filling = filling.clone();
+        move || {
+            if !filling.replace(true) {
+                fill();
+                filling.set(false);
+            }
+        }
+    };
+    let races_changed = guarded(fill_races.clone());
+    let kits_changed = guarded(fill_kits.clone());
+    let alignments_changed = guarded(fill_alignments.clone());
+    races_changed();
+    all_races.connect_active_notify({
+        let f = races_changed.clone();
+        move |_| f()
+    });
+    rules_choice.connect_selected_notify({
+        let f = races_changed.clone();
+        move |_| f()
+    });
+    race.connect_selected_notify({
+        let f = kits_changed.clone();
+        move |_| f()
+    });
+    all_kits.connect_active_notify({
+        let f = kits_changed.clone();
+        move |_| f()
+    });
+    allowed.connect_active_notify({
+        let f = kits_changed.clone();
+        move |_| f()
+    });
+    for row in &class_rows_view {
+        row.connect_selected_notify({
+            let f = kits_changed.clone();
+            move |_| f()
+        });
+    }
+    kit.connect_selected_notify({
+        let f = alignments_changed.clone();
+        move |_| f()
+    });
+    any_alignment.connect_active_notify({
+        let f = alignments_changed.clone();
+        move |_| f()
+    });
     add.connect_clicked({
         let (lines, line_rows, lines_group) =
             (lines.clone(), line_rows.clone(), lines_group.clone());
