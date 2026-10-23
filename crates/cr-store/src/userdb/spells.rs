@@ -7,8 +7,8 @@ use cr_formats::spells::{Spell, SpellsFile};
 use cr_i18n::{tr, tr_noop};
 
 use super::{
-    FieldDesc, FieldKind, Flavor, NameError, NewContext, Options, UserKind, Value, default_reason,
-    udb_check, udb_combo, udb_list, udb_multiline, udb_text,
+    FieldDesc, FieldKind, Flavor, NameError, NewContext, Options, Origin, UserKind, Value,
+    default_reason, udb_check, udb_combo, udb_list, udb_multiline, udb_text,
 };
 use crate::{Error, Installation, Result};
 
@@ -182,6 +182,44 @@ impl UserKind for Spells {
     }
 }
 
+/// The fields Schools... leaves open (0x6a40ae disables the others).
+pub const SCHOOL_FIELDS: [&str; 2] = ["Schools", "Spheres"];
+
+/// Schools... on the spell list (0x4feac0): the editor opens on any spell,
+/// standard or custom, with only its schools and spheres open, and OK
+/// copies them into the spell where it is (0x4fc842). A standard spell's
+/// go to `Database/Spells.dat`, whose old contents are kept as
+/// `Spells.dat.bak`.
+pub fn set_schools(install: &Installation, origin: Origin, edited: &Spell) -> Result<()> {
+    let relative = match origin {
+        Origin::Standard => "Database/Spells.dat",
+        Origin::Custom => Spells::FILE,
+    };
+    let not_found = || Error::Invalid(tr("Spell not found: Error").into());
+    let path = install.path(relative).ok_or_else(not_found)?;
+    let format = |source| Error::Format {
+        path: path.clone(),
+        source,
+    };
+    let mut file = SpellsFile::parse(&install.read(relative)?).map_err(format)?;
+    let list = if is_priest(edited) {
+        &mut file.priest
+    } else {
+        &mut file.wizard
+    };
+    let spell = list
+        .iter_mut()
+        .find_map(|o| match o {
+            Object::Spell(s) if s.name == edited.name => Some(s),
+            _ => None,
+        })
+        .ok_or_else(not_found)?;
+    spell.schools.clone_from(&edited.schools);
+    spell.spheres.clone_from(&edited.spheres);
+    let bytes = file.to_bytes().map_err(format)?;
+    crate::edit::replace(&path, &bytes)
+}
+
 /// Every spell, standard (`Database/Spells.dat`) then user, in file order.
 pub fn all_spells(install: &Installation) -> Result<Vec<Spell>> {
     let mut spells = Spells::standard(install)?;
@@ -291,6 +329,39 @@ mod tests {
         edited.wizard = 0;
         edited.priest = 1;
         assert_eq!(db.replace(1, edited), Err(NameError::UsedByStandard));
+    }
+
+    #[test]
+    fn schools_change_only_the_schools_and_spheres_where_the_spell_is() {
+        let t = TempInstall::new(
+            "spell-schools",
+            &[
+                ("Database/Spells.dat", standard()),
+                ("UserDbas/SpellsU.dat", vec![0; 4]),
+            ],
+        );
+        let before = UserDb::<Spells>::load(&t.install).unwrap();
+        let mut bless = before.standard[1].clone();
+        bless.schools = vec!["Alteration".into()];
+        bless.spheres = vec!["All".into()];
+        // Everything else the editor kept closed stays as stored.
+        bless.level = 9;
+        set_schools(&t.install, Origin::Standard, &bless).unwrap();
+        let after = UserDb::<Spells>::load(&t.install).unwrap();
+        assert_eq!(after.standard[1].schools, bless.schools);
+        assert_eq!(after.standard[1].spheres, bless.spheres);
+        assert_eq!(after.standard[1].level, before.standard[1].level);
+        assert_eq!(after.standard[0], before.standard[0]);
+        assert!(after.user.is_empty());
+        assert!(t.root.join("Database/Spells.dat.bak").exists());
+        // A custom spell is looked for in the user file only.
+        assert!(set_schools(&t.install, Origin::Custom, &bless).is_err());
+        let fields = Spells::fields(Flavor::Expansion);
+        assert!(
+            SCHOOL_FIELDS
+                .iter()
+                .all(|l| fields.iter().any(|f| f.label == *l))
+        );
     }
 
     #[test]

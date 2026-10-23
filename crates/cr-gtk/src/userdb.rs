@@ -17,7 +17,7 @@ use cr_store::userdb::monsters::{MonsterTypes, Monsters};
 use cr_store::userdb::parts::{self, Parts};
 use cr_store::userdb::powers::Powers;
 use cr_store::userdb::races::Races;
-use cr_store::userdb::spells::Spells;
+use cr_store::userdb::spells::{self, Spells};
 use cr_store::userdb::tables::{self, TableDb};
 use cr_store::userdb::traps::Traps;
 use cr_store::userdb::{
@@ -206,6 +206,8 @@ enum Action {
     Edit,
     Delete,
     NewSubrace,
+    /// Schools... on a spell (0x4feac0).
+    Schools,
 }
 
 /// Adds the `win.udb-*` actions; they act on the entry on the detail page
@@ -226,6 +228,7 @@ pub fn add_actions<H: Host + 'static>(window: &adw::ApplicationWindow, host: Sha
         entry("udb-edit", |h| on_key(h, Action::Edit)),
         entry("udb-delete", |h| on_key(h, Action::Delete)),
         entry("udb-subrace", |h| on_key(h, Action::NewSubrace)),
+        entry("udb-schools", |h| on_key(h, Action::Schools)),
         entry("udb-allowed", |h| {
             let key = h.current_key();
             if let Some((_, _, name)) = udb::parse_key(&key) {
@@ -299,6 +302,8 @@ fn run<H: Host + 'static>(
         name: name.to_owned(),
     };
     match kind {
+        Kind::Spells(scope) if action == Action::Schools => spell_schools(host, &target, scope),
+        _ if action == Action::Schools => {}
         Kind::Spells(scope) => act::<Spells, H>(host, &target, scope, action),
         Kind::Traps => act::<Traps, H>(host, &target, 0, action),
         Kind::Powers => act::<Powers, H>(host, &target, 0, action),
@@ -424,6 +429,7 @@ fn act<K: UserKind, H: Host + 'static>(
                 None,
                 new_title(target.kind).to_owned(),
                 record,
+                None,
             );
         }
         Action::NewSubrace => {
@@ -438,6 +444,7 @@ fn act<K: UserKind, H: Host + 'static>(
                 None,
                 tr!("New Subrace of {race}", race = parent),
                 record,
+                None,
             );
         }
         Action::Copy => {
@@ -453,6 +460,7 @@ fn act<K: UserKind, H: Host + 'static>(
                 None,
                 tr!("Copy of {name}", name = target.name),
                 copy,
+                None,
             );
         }
         Action::Edit => {
@@ -469,8 +477,11 @@ fn act<K: UserKind, H: Host + 'static>(
                 Some(index),
                 target.name.clone(),
                 record,
+                None,
             );
         }
+        // Only spells have it (see `run`).
+        Action::Schools => {}
         Action::Delete => {
             let Some(record) = record else {
                 return;
@@ -519,6 +530,45 @@ fn act<K: UserKind, H: Host + 'static>(
     }
 }
 
+/// Schools... on a spell (0x4feac0): the spell's editor, standard or
+/// custom, with only Schools and Spheres open (0x6a40ae); Save writes them
+/// into the spell where it is.
+fn spell_schools<H: Host + 'static>(host: &Shared<H>, target: &Target, scope: usize) {
+    let Some(db) = errors(&**host, host.with_install(UserDb::<Spells>::load)) else {
+        return;
+    };
+    let origin = target.origin;
+    let Some(record) = position(&db, origin, scope, &target.name)
+        .and_then(|i| db.get(origin, i))
+        .cloned()
+    else {
+        return host.toast(tr("Spell not found: Error"));
+    };
+    editor::<Spells, H>(
+        host,
+        target.section,
+        db.flavor,
+        None,
+        tr!("Schools of {spell}", spell = target.name),
+        record,
+        Some(Only {
+            labels: &spells::SCHOOL_FIELDS,
+            origin,
+            save: Rc::new(move |install, r| spells::set_schools(install, origin, r)),
+        }),
+    );
+}
+
+/// An editor that leaves only some fields open and saves them its own way.
+struct Only<K: UserKind> {
+    labels: &'static [&'static str],
+    /// Where the record is, for the entry shown after saving.
+    origin: Origin,
+    save: SaveOnly<K>,
+}
+
+type SaveOnly<K> = Rc<dyn Fn(&Installation, &<K as UserKind>::Rec) -> Result<()>>;
+
 // ---- the generic editor ----
 
 /// One control of the editor.
@@ -531,7 +581,8 @@ struct Bound {
 }
 
 /// Opens the editor on `record`; `editing` is its index in the user list
-/// when it is changed rather than added.
+/// when it is changed rather than added, and `only` keeps all but some
+/// fields closed.
 fn editor<K: UserKind, H: Host + 'static>(
     host: &Shared<H>,
     section: &'static str,
@@ -539,7 +590,9 @@ fn editor<K: UserKind, H: Host + 'static>(
     editing: Option<usize>,
     title: String,
     record: K::Rec,
+    only: Option<Only<K>>,
 ) {
+    let open: Option<&'static [&'static str]> = only.as_ref().map(|o| o.labels);
     let fields = Rc::new(K::fields(flavor));
     let Some(sources) = errors(&**host, host.with_install(|i| Sources::load(i, &fields))) else {
         return;
@@ -575,7 +628,9 @@ fn editor<K: UserKind, H: Host + 'static>(
                 let field = &fields[b.field];
                 visible[i] = field.is_visible(&r);
                 b.widget.set_visible(visible[i]);
-                b.widget.set_sensitive(field.is_enabled(&r));
+                b.widget.set_sensitive(
+                    field.is_enabled(&r) && open.is_none_or(|o| o.contains(&field.label)),
+                );
                 if Some(b.field) != skip {
                     (b.load)();
                 }
@@ -751,7 +806,7 @@ fn editor<K: UserKind, H: Host + 'static>(
     crate::help::add_button(&header, &view, move || topic::of_editor(section));
     view.add_top_bar(&header);
     let many = page_names.len() > 1;
-    if many {
+    let dialog = if many {
         let split = adw::OverlaySplitView::builder()
             .sidebar(
                 &gtk::ScrolledWindow::builder()
@@ -771,7 +826,12 @@ fn editor<K: UserKind, H: Host + 'static>(
                 }
             }
         });
-        sidebar.select_row(sidebar.row_at_index(0).as_ref());
+        // An editor with only some fields open starts on the first of them.
+        let first = open
+            .and_then(|o| fields.iter().find(|f| o.contains(&f.label)))
+            .and_then(|f| page_names.iter().position(|p| *p == f.page))
+            .unwrap_or(0);
+        sidebar.select_row(sidebar.row_at_index(first as i32).as_ref());
         let toggle = gtk::ToggleButton::builder()
             .icon_name("sidebar-show-symbolic")
             .tooltip_text(tr("Pages"))
@@ -796,19 +856,14 @@ fn editor<K: UserKind, H: Host + 'static>(
         dialog_breakpoint.add_setter(&split, "collapsed", Some(&true.to_value()));
         let dialog = dialog_for(&title, &view, many);
         dialog.add_breakpoint(dialog_breakpoint);
-        finish::<K, H>(
-            host,
-            dialog,
-            section,
-            editing,
-            record,
-            (cancel, save),
-            detach,
-        );
+        dialog
     } else {
         view.set_content(Some(&stack));
-        let dialog = dialog_for(&title, &view, many);
-        finish::<K, H>(
+        dialog_for(&title, &view, many)
+    };
+    match only {
+        Some(only) => finish_only::<K, H>(host, dialog, section, record, (cancel, save), only),
+        None => finish::<K, H>(
             host,
             dialog,
             section,
@@ -816,7 +871,7 @@ fn editor<K: UserKind, H: Host + 'static>(
             record,
             (cancel, save),
             detach,
-        );
+        ),
     }
 }
 
@@ -897,6 +952,37 @@ fn finish<K: UserKind, H: Host + 'static>(
                     );
                 }
                 None => {}
+            }
+        }
+    });
+    dialog.present(Some(&host.parent()));
+}
+
+/// Cancel and Save of an editor with only some fields open: Save hands
+/// the record to the editor's own save.
+fn finish_only<K: UserKind, H: Host + 'static>(
+    host: &Shared<H>,
+    dialog: adw::Dialog,
+    section: &'static str,
+    record: Rc<RefCell<K::Rec>>,
+    (cancel, save): (gtk::Button, gtk::Button),
+    only: Only<K>,
+) {
+    cancel.connect_clicked({
+        let dialog = dialog.clone();
+        move |_| {
+            dialog.close();
+        }
+    });
+    save.connect_clicked({
+        let (host, dialog) = (host.clone(), dialog.clone());
+        move |_| {
+            let r = record.borrow().clone();
+            if errors(&*host, host.with_install(|i| (only.save)(i, &r))).is_some() {
+                let name = K::name(&r).to_owned();
+                dialog.close();
+                host.reload(section, Some(udb::key(section, only.origin, &name)));
+                host.toast(&tr!("“{name}” saved", name));
             }
         }
     });
@@ -1424,6 +1510,7 @@ fn table_action<H: Host + 'static>(host: &Shared<H>, target: &Target, action: Ac
     };
     let index = db.position(&target.name);
     match action {
+        Action::Schools => {}
         Action::New | Action::NewSubrace => table_editor(host, None, TableDb::new_table()),
         Action::Copy => {
             if let Some(i) = index {
@@ -2477,6 +2564,9 @@ impl DetailActions {
             let item = gio::MenuItem::new(Some(tr("_Allowed Classes…")), Some("win.udb-allowed"));
             item.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
             menu.append_item(&item);
+        }
+        if matches!(kind, Some(Kind::Spells(_))) {
+            menu.append(Some(tr("_Schools…")), Some("win.udb-schools"));
         }
         let tables = kind == Some(Kind::Tables);
         if tables && origin == Origin::Standard {

@@ -204,7 +204,9 @@ the original programs wrote.
   takes it out of every race's combinations) and allowed combinations, parts (weapons, armor, kits and proficiencies, plus the
   ten other types in Other Parts: racial and class abilities, languages,
   schools, spheres, traits, disadvantages, gems and art, currency and
-  Count), spells, psionic powers, monsters (with their spells, their
+  Count), spells (with Schools…, which changes only a spell's schools
+  and spheres, a standard spell's included, as the original's does),
+  psionic powers, monsters (with their spells, their
   inventory in the Treasure Bundle Editor, their attacks, each made or
   changed in the Monster Attack editor the original has but hides, and
   Suggest XP Value), monster
