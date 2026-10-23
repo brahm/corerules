@@ -1,8 +1,10 @@
 //! The app's own settings, kept in a key file in the user's configuration
-//! folder, and the Preferences dialog. The only setting so far is the
-//! interface language.
+//! folder, and the Preferences dialog: the interface language, and whether
+//! New Character shows the original's "Core Rules Vs Player's Option"
+//! message.
 
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::OnceLock;
 
 use adw::prelude::*;
@@ -11,6 +13,10 @@ use gtk::glib;
 
 const GROUP: &str = "interface";
 const LANGUAGE: &str = "language";
+/// The original's `Flags\CoreVsOptionOff`, set by the message's "Do not
+/// show this window again" and cleared by User Options' "Turn 'Core Rules
+/// Vs Player's Option' message back on".
+const CORE_VS_OPTION_OFF: &str = "core-vs-option-off";
 
 /// The system's language, read before a chosen one overrides `LANGUAGE`.
 static SYSTEM: OnceLock<Language> = OnceLock::new();
@@ -33,6 +39,14 @@ pub fn chosen_language() -> Option<Language> {
     Language::from_code(&code)
 }
 
+fn save(file: &glib::KeyFile) -> Result<(), glib::Error> {
+    let path = path();
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    file.save_to_file(path)
+}
+
 fn save_language(language: Option<Language>) -> Result<(), glib::Error> {
     let file = load();
     match language {
@@ -41,11 +55,24 @@ fn save_language(language: Option<Language>) -> Result<(), glib::Error> {
             let _ = file.remove_key(GROUP, LANGUAGE);
         }
     }
-    let path = path();
-    if let Some(dir) = path.parent() {
-        let _ = std::fs::create_dir_all(dir);
+    save(&file)
+}
+
+/// Whether New Character shows the "Core Rules Vs Player's Option"
+/// message: until "Do not show this window again" is ticked, as in the
+/// original.
+pub fn core_vs_option_shown() -> bool {
+    !load().boolean(GROUP, CORE_VS_OPTION_OFF).unwrap_or(false)
+}
+
+pub fn set_core_vs_option_shown(shown: bool) -> Result<(), glib::Error> {
+    let file = load();
+    if shown {
+        let _ = file.remove_key(GROUP, CORE_VS_OPTION_OFF);
+    } else {
+        file.set_boolean(GROUP, CORE_VS_OPTION_OFF, true);
     }
-    file.save_to_file(path)
+    save(&file)
 }
 
 /// Picks the interface language before any text is shown: the one chosen
@@ -90,18 +117,39 @@ pub fn show(parent: &impl IsA<gtk::Widget>, notify: impl Fn(&str) + 'static) {
         .and_then(|l| Language::ALL.iter().position(|&x| x == l))
         .map_or(0, |i| i + 1);
     row.set_selected(selected as u32);
-    row.connect_selected_notify(move |row| {
-        let choice = match row.selected() {
-            0 => None,
-            i => Language::ALL.get(i as usize - 1).copied(),
-        };
-        match save_language(choice) {
-            Ok(()) => notify(tr("Restart Core Rules to use the new language")),
-            Err(e) => notify(&tr!("Could not save the preferences: {error}", error = e)),
+    let notify = Rc::new(notify);
+    row.connect_selected_notify({
+        let notify = notify.clone();
+        move |row| {
+            let choice = match row.selected() {
+                0 => None,
+                i => Language::ALL.get(i as usize - 1).copied(),
+            };
+            match save_language(choice) {
+                Ok(()) => notify(tr("Restart Core Rules to use the new language")),
+                Err(e) => notify(&tr!("Could not save the preferences: {error}", error = e)),
+            }
         }
     });
     group.add(&row);
     page.add(&group);
+
+    // User Options' "Turn 'Core Rules Vs Player's Option' message back on".
+    let creation = adw::PreferencesGroup::builder()
+        .title(tr("Character Creation"))
+        .build();
+    let message = adw::SwitchRow::builder()
+        .title(tr("Core Rules Vs Player's Option Message"))
+        .subtitle(tr("Shown in New Character after the rules are chosen"))
+        .active(core_vs_option_shown())
+        .build();
+    message.connect_active_notify(move |row| {
+        if let Err(e) = set_core_vs_option_shown(row.is_active()) {
+            notify(&tr!("Could not save the preferences: {error}", error = e));
+        }
+    });
+    creation.add(&message);
+    page.add(&creation);
     dialog.add(&page);
     dialog.present(Some(parent));
 }
