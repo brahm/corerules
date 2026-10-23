@@ -318,3 +318,54 @@ fn other_parts_carry_their_type() {
     // class abilities.
     assert!(types.len() >= 9, "{types:?}");
 }
+
+/// A monster type with other pictures has them as squares of its picture
+/// page; its monsters, templates and encounters show the same pictures,
+/// and the Full Screen background is there.
+#[test]
+fn monster_types_with_frames_have_them_in_their_page() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = cr_store::Installation::open(dir).unwrap();
+    if install.is_core20() {
+        return;
+    }
+    assert!(install.full_screen_background().is_some());
+    let catalog = install.catalog();
+    let section = |id: &str| catalog.iter().find(|s| s.id == id).unwrap();
+    let types = section("monster-types");
+    let with_frames: Vec<_> = types
+        .entries
+        .iter()
+        .filter(|e| e.frames.is_some())
+        .collect();
+    assert!(!with_frames.is_empty());
+    for e in &with_frames {
+        let f = e.frames.as_ref().unwrap();
+        assert!(f.first < f.last, "{}", e.title);
+        let page = cr_formats::bmp::decode(&std::fs::read(&f.page).unwrap()).unwrap();
+        assert_eq!(page.width % page.height, 0, "{}", e.title);
+        assert!(f.last < page.width / page.height, "{}", e.title);
+    }
+    let by_type = |name: &str| {
+        types
+            .entries
+            .iter()
+            .find(|t| t.title.eq_ignore_ascii_case(name))
+            .map(|t| (t.picture.clone(), t.frames.clone()))
+    };
+    for e in &section(cr_store::catalog::TEMPLATES).entries {
+        let Some((_, ty)) = e.groups[0].rows.iter().find(|(k, _)| k == "Monster Type") else {
+            continue;
+        };
+        if let Some(pictures) = by_type(ty) {
+            assert_eq!(
+                (e.picture.clone(), e.frames.clone()),
+                pictures,
+                "{}",
+                e.title
+            );
+        }
+    }
+}

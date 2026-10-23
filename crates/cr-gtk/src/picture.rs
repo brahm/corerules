@@ -696,3 +696,165 @@ fn alert(parent: &impl IsA<gtk::Widget>, heading: &str, body: &str) {
     alert.add_response("close", tr("_Close"));
     alert.present(Some(parent));
 }
+
+/// Square `index` of a strip of squares as tall as the strip (a monster
+/// type's picture page), as a texture.
+fn frame_texture(page: &Path, index: u32) -> Option<gdk::MemoryTexture> {
+    let image = cr_formats::bmp::decode(&std::fs::read(page).ok()?)?;
+    let (width, side) = (image.width as usize, image.height as usize);
+    let x = index as usize * side;
+    if side == 0 || x + side > width {
+        return None;
+    }
+    let mut rgba = Vec::with_capacity(side * side * 4);
+    for row in image.rgba.chunks_exact(width * 4) {
+        rgba.extend_from_slice(&row[x * 4..(x + side) * 4]);
+    }
+    // The pages key the background in magenta; the single pictures have
+    // it white.
+    for px in rgba.as_chunks_mut::<4>().0 {
+        if px[..3] == [255, 0, 255] {
+            px[..3].copy_from_slice(&[255, 255, 255]);
+        }
+    }
+    Some(gdk::MemoryTexture::new(
+        side as i32,
+        side as i32,
+        gdk::MemoryFormat::R8g8b8a8,
+        &glib::Bytes::from_owned(rgba),
+        side * 4,
+    ))
+}
+
+/// A monster type's picture on the detail page of the type, its monsters,
+/// templates and encounters, with the Monsters screen's two buttons: Next
+/// Image, its Alternate Image(s) (0x6d2e79), going through the type's
+/// frames and back to the first; and Full Screen (0x6d395e), which shows
+/// the picture shown in the frame of the Monster Full Screen dialog.
+pub fn monster_group(
+    picture: &Path,
+    frames: Option<&cr_store::catalog::Frames>,
+    background: Option<PathBuf>,
+) -> Option<adw::PreferencesGroup> {
+    // As the Monsters screen (0x6d2390), a type with frames starts at its
+    // first one, which need not be its own picture.
+    let first: gdk::Texture = frames
+        .and_then(|f| frame_texture(&f.page, f.first))
+        .or_else(|| texture(picture))?
+        .upcast();
+    let shown = Rc::new(RefCell::new(first.clone()));
+    let widget = gtk::Picture::builder()
+        .halign(gtk::Align::Start)
+        .height_request(240.min(first.height()))
+        .paintable(&first)
+        .can_shrink(true)
+        .build();
+    let buttons = gtk::Box::builder().spacing(6).build();
+    if let Some(frames) = frames.cloned() {
+        let next = gtk::Button::builder()
+            .icon_name("go-next-symbolic")
+            .tooltip_text(tr("Next Image"))
+            .css_classes(["flat"])
+            .build();
+        let at = std::cell::Cell::new(0);
+        let (widget, shown) = (widget.clone(), shown.clone());
+        next.connect_clicked(move |_| {
+            let mut k = at.get() + 1;
+            if frames.first + k > frames.last {
+                k = 0;
+            }
+            let Some(texture) = frame_texture(&frames.page, frames.first + k) else {
+                return;
+            };
+            at.set(k);
+            let texture: gdk::Texture = texture.upcast();
+            widget.set_paintable(Some(&texture));
+            *shown.borrow_mut() = texture;
+        });
+        buttons.append(&next);
+    }
+    let full = gtk::Button::builder()
+        .icon_name("view-fullscreen-symbolic")
+        .tooltip_text(tr("Full Screen"))
+        .css_classes(["flat"])
+        .build();
+    let background: Option<gdk::Texture> = background.and_then(|p| texture(&p)).map(|t| t.upcast());
+    full.connect_clicked(move |button| {
+        full_screen(button, shown.borrow().clone(), background.clone());
+    });
+    buttons.append(&full);
+    let group = adw::PreferencesGroup::builder()
+        .header_suffix(&buttons)
+        .build();
+    group.add(&widget);
+    Some(group)
+}
+
+/// Where the Monster Full Screen dialog (IDD 282, 0x6fb7d0) draws the
+/// picture on its 794 by 550 background: at 174, 49, 450 pixels square.
+const FULL_SCREEN: (f64, f64, f64, f64, f64) = (794.0, 550.0, 174.0, 49.0, 450.0);
+
+/// Shows `picture` over the whole screen, in the original's frame when
+/// its background is there, until a click or a key.
+fn full_screen(parent: &gtk::Button, picture: gdk::Texture, background: Option<gdk::Texture>) {
+    let area = gtk::DrawingArea::new();
+    area.set_draw_func(move |_, cr, width, height| {
+        let (w, h) = (f64::from(width), f64::from(height));
+        cr.set_source_rgb(0.0, 0.0, 0.0);
+        let _ = cr.paint();
+        let (bw, bh, px, py, side) = FULL_SCREEN;
+        match &background {
+            Some(background) => {
+                let scale = (w / bw).min(h / bh);
+                let (x, y) = ((w - bw * scale) / 2.0, (h - bh * scale) / 2.0);
+                crate::print::draw_texture(cr, background, x, y, bw * scale, bh * scale);
+                let (px, py, side) = (x + px * scale, y + py * scale, side * scale);
+                crate::print::draw_texture(cr, &picture, px, py, side, side);
+            }
+            None => {
+                let side = w.min(h);
+                crate::print::draw_texture(
+                    cr,
+                    &picture,
+                    (w - side) / 2.0,
+                    (h - side) / 2.0,
+                    side,
+                    side,
+                );
+            }
+        }
+    });
+    let window = gtk::Window::builder()
+        .modal(true)
+        .decorated(false)
+        .title(tr("Full Screen"))
+        .child(&area)
+        .build();
+    if let Some(root) = parent.root().and_downcast::<gtk::Window>() {
+        window.set_transient_for(Some(&root));
+        // The whole monitor even where nothing makes the window full screen.
+        if let Some(surface) = root.surface()
+            && let Some(monitor) = surface.display().monitor_at_surface(&surface)
+        {
+            let area = monitor.geometry();
+            window.set_default_size(area.width(), area.height());
+        }
+    }
+    let click = gtk::GestureClick::new();
+    click.connect_released({
+        let window = window.clone();
+        move |_, _, _, _| window.close()
+    });
+    area.add_controller(click);
+    let keys = gtk::EventControllerKey::new();
+    keys.connect_key_pressed({
+        let window = window.clone();
+        move |_, _, _, _| {
+            window.close();
+            glib::Propagation::Stop
+        }
+    });
+    window.add_controller(keys);
+    window.fullscreen();
+    window.present();
+}
