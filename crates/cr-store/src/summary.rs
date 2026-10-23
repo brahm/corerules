@@ -45,7 +45,7 @@ impl Installation {
             }
             topic::ENCOUNTER_TEMPLATES => {
                 let rules = self.encounter_rules().ok()?;
-                let entry = crate::catalog::template_entries(&rules)
+                let entry = crate::catalog::template_entries(&rules, &Default::default())
                     .into_iter()
                     .find(|e| comparable(&e.title) == comparable(name))?;
                 Some(Summary::Page(entry_sheet(&entry, rules.flavor())))
@@ -101,7 +101,7 @@ impl Installation {
         let (section, origin, name) = crate::userdb::parse_key(key)?;
         if section == TEMPLATES {
             let rules = self.encounter_rules().ok()?;
-            let entry = crate::catalog::template_entries(&rules)
+            let entry = crate::catalog::template_entries(&rules, &Default::default())
                 .into_iter()
                 .find(|e| e.key == key)?;
             return Some(entry_sheet(&entry, rules.flavor()));

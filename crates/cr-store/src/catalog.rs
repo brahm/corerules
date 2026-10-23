@@ -49,10 +49,28 @@ pub struct Entry {
     /// The picture of a monster, monster type, race or character, when
     /// its file is in the installation.
     pub picture: Option<std::path::PathBuf>,
+    /// The other pictures of a monster type, for Next Image.
+    pub frames: Option<Frames>,
     /// The icon of an item (weapon, armor, equipment or magical item),
     /// when its bitmap is in the installation.
     pub icon: Option<crate::pictures::Icon>,
 }
+
+/// A monster type's pictures for the Monsters screen's Alternate
+/// Image(s) (0x6d2e79): frames `first..=last` of its picture page, a strip
+/// of squares as tall as the page ("5to34.bmp" holds 24). The screen
+/// starts at the first, which need not be the type's own picture (the
+/// beholders' is their last); the button is there only when `last` is set
+/// and differs (0x6d230e).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Frames {
+    pub page: std::path::PathBuf,
+    pub first: u32,
+    pub last: u32,
+}
+
+/// The picture and frames of each monster type, by name in lower case.
+pub(crate) type TypePictures = HashMap<String, (Option<std::path::PathBuf>, Option<Frames>)>;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Group {
@@ -263,7 +281,10 @@ impl Installation {
             TEMPLATES,
             tr("Encounter Templates"),
             "view-list-bullet-symbolic",
-            rules.as_ref().map(template_entries).map_err(Clone::clone),
+            rules
+                .as_ref()
+                .map(|rules| template_entries(rules, &self.type_pictures()))
+                .map_err(Clone::clone),
         ));
         sections.push(section(
             "tables",
@@ -302,16 +323,9 @@ impl Installation {
     ) -> std::result::Result<Vec<Entry>, String> {
         let mut entries = Vec::new();
         let mut finder = Finder::new(self.root());
-        // A monster shows its type's picture.
-        let types: HashMap<String, String> = if name == "Monster" {
-            self.list_objects("MonType")
-                .unwrap_or_default()
-                .into_iter()
-                .filter_map(|o| match o {
-                    Object::MonsterType(t) => Some((t.name.to_lowercase(), t.picture)),
-                    _ => None,
-                })
-                .collect()
+        // A monster shows its type's pictures.
+        let types = if name == "Monster" {
+            self.type_pictures()
         } else {
             HashMap::new()
         };
@@ -327,20 +341,44 @@ impl Installation {
                 .map_err(|source| Error::Format { path, source }.to_string())?;
             entries.extend(list.objects.iter().filter_map(|object| {
                 let mut e = entry(object)?;
-                e.picture = match object {
-                    Object::MonsterType(t) => finder.picture(&t.picture, Kind::Monster),
+                (e.picture, e.frames) = match object {
+                    Object::MonsterType(t) => type_pictures(&mut finder, t),
                     Object::Monster(m) => types
                         .get(&m.monster_type.to_lowercase())
-                        .and_then(|p| finder.picture(p, Kind::Monster)),
-                    Object::Race(r) => {
-                        finder.picture(&joined(&r.portrait_folder, &r.portrait), Kind::Portrait)
-                    }
-                    _ => None,
+                        .cloned()
+                        .unwrap_or_default(),
+                    Object::Race(r) => (
+                        finder.picture(&joined(&r.portrait_folder, &r.portrait), Kind::Portrait),
+                        None,
+                    ),
+                    _ => (None, None),
                 };
                 Some(udb_mark(e, id, origin))
             }));
         }
         Ok(sorted(entries))
+    }
+
+    /// Each monster type's picture and frames, by name in lower case,
+    /// which its monsters, templates and encounters show too.
+    pub(crate) fn type_pictures(&self) -> TypePictures {
+        let mut finder = Finder::new(self.root());
+        self.list_objects("MonType")
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|o| match o {
+                Object::MonsterType(t) => {
+                    Some((t.name.to_lowercase(), type_pictures(&mut finder, &t)))
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// The background the Monster Full Screen dialog (IDD 282, 0x6fb7d0)
+    /// draws its picture on, when it is there.
+    pub fn full_screen_background(&self) -> Option<std::path::PathBuf> {
+        Finder::new(self.root()).find("Bitmaps/Required/MonFSdef.bmp")
     }
 
     /// The treasure tables (`UserDbas/Treasure.dat`, else the shipped
@@ -401,8 +439,19 @@ impl Installation {
         rules: Option<&EncounterRules>,
     ) -> std::result::Result<Vec<Entry>, String> {
         let saved = self.saved_encounters().map_err(|e| e.to_string())?;
+        let pictures = self.type_pictures();
         Ok(sorted(
-            saved.iter().map(|e| encounter_entry(e, rules)).collect(),
+            saved
+                .iter()
+                .map(|e| {
+                    let mut entry = encounter_entry(e, rules);
+                    (entry.picture, entry.frames) = pictures
+                        .get(&e.monster_type.to_lowercase())
+                        .cloned()
+                        .unwrap_or_default();
+                    entry
+                })
+                .collect(),
         ))
     }
 
@@ -417,6 +466,7 @@ impl Installation {
                     npc: false,
                     party: String::new(),
                     picture: None,
+                    frames: None,
                     icon: None,
                     key: format!("{TABLE_KEY}{}", t.name),
                     title: t.name.clone(),
@@ -450,6 +500,7 @@ impl Installation {
                         npc: false,
                         party: String::new(),
                         picture: None,
+                        frames: None,
                         icon: None,
                         key: format!("{TREASURE_KEY}{}", t.name),
                         title: t.name.clone(),
@@ -490,6 +541,7 @@ impl Installation {
                             npc: e.unknown_0x24 != 0,
                             party: crate::party::party_of(e).to_owned(),
                             picture: finder.picture(&portrait(&c), Kind::Portrait),
+                            frames: None,
                             icon: None,
                             ..character_entry(&c)
                         };
@@ -597,6 +649,25 @@ impl Installation {
 /// Entry keys of saved encounters and 2-20 tables start with these;
 /// templates have user database keys ([`crate::userdb::key`], section
 /// "templates").
+/// A monster type's picture and, when it has others, its frames
+/// (0x6d22e9: `unknown_0x18` and `unknown_0x1c`).
+fn type_pictures(
+    finder: &mut Finder,
+    t: &cr_formats::monster::MonsterType,
+) -> (Option<std::path::PathBuf>, Option<Frames>) {
+    let picture = finder.picture(&t.picture, Kind::Monster);
+    let (first, last) = (t.unknown_0x18, t.unknown_0x1c);
+    let frames = (first >= 0 && last > first)
+        .then(|| finder.picture(&t.page_picture, Kind::Monster))
+        .flatten()
+        .map(|page| Frames {
+            page,
+            first: first as u32,
+            last: last as u32,
+        });
+    (picture, frames)
+}
+
 pub const ENCOUNTER_KEY: &str = "encounter:";
 pub const TABLE_KEY: &str = "table:";
 
@@ -659,6 +730,7 @@ fn encounter_entry(e: &Encounter, rules: Option<&EncounterRules>) -> Entry {
         npc: false,
         party: String::new(),
         picture: None,
+        frames: None,
         icon: None,
         key: format!("{ENCOUNTER_KEY}{}", e.name),
         title: e.name.clone(),
@@ -675,7 +747,7 @@ fn encounter_entry(e: &Encounter, rules: Option<&EncounterRules>) -> Entry {
 /// The id of the encounter templates' section.
 pub const TEMPLATES: &str = "templates";
 
-pub(crate) fn template_entries(rules: &EncounterRules) -> Vec<Entry> {
+pub(crate) fn template_entries(rules: &EncounterRules, pictures: &TypePictures) -> Vec<Entry> {
     sorted(
         rules
             .templates()
@@ -715,10 +787,15 @@ pub(crate) fn template_entries(rules: &EncounterRules) -> Vec<Entry> {
                 let text = rules.template_text(t);
                 // The printout repeats the name and type on its first lines.
                 let text = text.splitn(3, '\n').nth(2).unwrap_or("").trim().to_owned();
+                let (picture, frames) = pictures
+                    .get(&t.monster_type.to_lowercase())
+                    .cloned()
+                    .unwrap_or_default();
                 Entry {
                     npc: false,
                     party: String::new(),
-                    picture: None,
+                    picture,
+                    frames,
                     icon: None,
                     key: crate::userdb::key(
                         TEMPLATES,
@@ -861,6 +938,7 @@ fn character_entry(c: &Character) -> Entry {
         npc: false,
         party: String::new(),
         picture: None,
+        frames: None,
         icon: None,
         key: String::new(),
         title: d.name.clone(),
@@ -958,6 +1036,7 @@ fn race_entry(object: &Object) -> Option<Entry> {
         npc: false,
         party: String::new(),
         picture: None,
+        frames: None,
         icon: None,
         key: String::new(),
         title: r.name.clone(),
@@ -1036,6 +1115,7 @@ fn part_entry(object: &Object) -> Option<Entry> {
         npc: false,
         party: String::new(),
         picture: None,
+        frames: None,
         icon: None,
         key: String::new(),
         title: p.head.name.clone(),
@@ -1053,6 +1133,7 @@ fn spell_entry(object: &Object) -> Option<Entry> {
         npc: false,
         party: String::new(),
         picture: None,
+        frames: None,
         icon: None,
         key: String::new(),
         title: s.name.clone(),
@@ -1083,6 +1164,7 @@ fn psionic_entry(object: &Object) -> Option<Entry> {
         npc: false,
         party: String::new(),
         picture: None,
+        frames: None,
         icon: None,
         key: String::new(),
         title: p.name.clone(),
@@ -1121,6 +1203,7 @@ pub(crate) fn monster_entry(object: &Object) -> Option<Entry> {
         npc: false,
         party: String::new(),
         picture: None,
+        frames: None,
         icon: None,
         key: String::new(),
         title: m.name.clone(),

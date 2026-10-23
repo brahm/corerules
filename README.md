@@ -190,7 +190,10 @@ the original programs wrote.
   its NPCs' sheets), saved encounters (edited or
   copied into a new one) and the 2-20 tables; View and Print on monsters,
   encounters, templates, 2-20 tables, saved treasure and treasure tables,
-  each as the original's page
+  each as the original's page; monster types, monsters, templates and
+  encounters show the type's picture with Next Image (the original's
+  Alternate Image(s)) and Full Screen, which shows it to the players in
+  the original's frame
 - **Table Rolls** on every table of the books, with the originals' dice
   and follow-up rolls
 - **Editors for every user database**: races, classes (with the free

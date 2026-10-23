@@ -596,6 +596,7 @@ impl Window {
         // Core Rules 2.0 content is only imported into the Expansion:
         // a 2.0 installation is browsed, never changed.
         let read_only = install.is_core20();
+        *self.browser.detail.full_screen.borrow_mut() = install.full_screen_background();
         *self.install.borrow_mut() = Some(install);
         self.npc_rules.borrow_mut().take();
         self.set_can_create(true);
@@ -1218,6 +1219,16 @@ fn monster_key(key: &str) -> Option<(&str, bool)> {
         .map(|(_, origin, name)| (name, origin == cr_store::userdb::Origin::Custom))
 }
 
+/// Whether the record with detail key `key` shows a monster type's
+/// picture: a monster type, monster, template or saved encounter, the
+/// records of the original's Monsters screen.
+fn is_monster(key: &str) -> bool {
+    key.starts_with(ENCOUNTER_KEY)
+        || cr_store::userdb::parse_key(key).is_some_and(|(section, ..)| {
+            ["monsters", "monster-types", TEMPLATES].contains(&section)
+        })
+}
+
 /// Whether the record with detail key `key` has a page to view and print
 /// ([`cr_store::Installation::page`]).
 fn has_page(key: &str) -> bool {
@@ -1337,12 +1348,15 @@ struct DetailPane {
     udb_actions: userdb::DetailActions,
     /// Core Rules 2.0: entries are shown, not edited.
     read_only: Rc<std::cell::Cell<bool>>,
+    /// The Monster Full Screen dialog's background.
+    full_screen: Rc<RefCell<Option<std::path::PathBuf>>>,
 }
 
 impl DetailPane {
     fn show(&self, entry: &Entry) {
         self.page.set_title(&entry.title);
-        self.view.set_content(Some(&detail(entry)));
+        self.view
+            .set_content(Some(&detail(entry, self.full_screen.borrow().clone())));
         let key = &entry.key;
         let character = !key.is_empty() && !key.contains(':');
         let writable = !self.read_only.get();
@@ -1499,6 +1513,7 @@ impl Browser {
             current_key: current_key.clone(),
             udb_actions,
             read_only: Rc::default(),
+            full_screen: Rc::default(),
         };
 
         // Entries.
@@ -2033,7 +2048,7 @@ fn clean_text(text: &str) -> String {
         .to_owned()
 }
 
-fn detail(entry: &Entry) -> gtk::Widget {
+fn detail(entry: &Entry, full_screen: Option<std::path::PathBuf>) -> gtk::Widget {
     let page = adw::PreferencesPage::new();
 
     let heading = adw::PreferencesGroup::new();
@@ -2077,7 +2092,14 @@ fn detail(entry: &Entry) -> gtk::Widget {
         None => heading.add(&column),
     }
     page.add(&heading);
-    if let Some(picture) = entry
+    if is_monster(&entry.key)
+        && let Some(group) = entry
+            .picture
+            .as_deref()
+            .and_then(|p| picture::monster_group(p, entry.frames.as_ref(), full_screen))
+    {
+        page.add(&group);
+    } else if let Some(picture) = entry
         .picture
         .as_deref()
         .and_then(|p| sheet::picture(p, 240))
