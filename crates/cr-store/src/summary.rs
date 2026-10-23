@@ -2,19 +2,20 @@
 //! the original summarizes (the list-box handler 0x4B3B22): a box of
 //! text for a character, an NPC or a trap, and a printable page for an
 //! encounter, an encounter template, a saved treasure bundle or a monster
-//! of the user database.
+//! of the user database; and the pages View and Print show.
 
 use cr_formats::Object;
 use cr_formats::database::ObjectList;
 use cr_i18n::tr;
 
 use crate::Installation;
-use crate::catalog::Entry;
+use crate::catalog::{ENCOUNTER_KEY, Entry, TABLE_KEY, TEMPLATES, TREASURE_KEY};
 use crate::encounter::{Encounter, EncounterRules, hit_point_text};
 use crate::help::{comparable, topic};
 use crate::sheet::{self, Block, Cell, Flavor, ListItem, Sheet, SheetBox, Table};
 use crate::treasure::{Bundle, TreasureRules};
 use crate::userdb::Origin;
+use crate::userdb::tables::{self, TableDb};
 
 /// A record's summary.
 #[derive(Debug, Clone, PartialEq)]
@@ -60,6 +61,74 @@ impl Installation {
             }
             _ => None,
         }
+    }
+
+    /// The page that View and Print on the record with detail key `key`
+    /// show: a saved encounter (0x694A25, 0x694B67), an encounter template
+    /// (0x696BC0, 0x696D05: the summary's page 0x64CA5C), a 2-20 table
+    /// (0x649C35, 0x649B34: 0x657916), a saved treasure bundle (0x53F8CF)
+    /// or a treasure table (0x54C878, 0x54C7B7: 0x54BD86).
+    pub fn page(&self, key: &str) -> Option<Sheet> {
+        if let Some(name) = key.strip_prefix(ENCOUNTER_KEY) {
+            let Some(Summary::Page(sheet)) = self.summary(topic::ENCOUNTERS, name) else {
+                return None;
+            };
+            return Some(sheet);
+        }
+        if let Some(name) = key.strip_prefix(TREASURE_KEY) {
+            let Some(Summary::Page(sheet)) = self.summary(topic::TREASURE_BUNDLES, name) else {
+                return None;
+            };
+            return Some(sheet);
+        }
+        if let Some(name) = key.strip_prefix(TABLE_KEY) {
+            let tables = self.frequency_tables().ok()?;
+            let table = tables.tables.iter().find(|t| t.name == name)?;
+            let rows = (2..=20)
+                .map(|roll| {
+                    vec![
+                        Cell::new(roll.to_string()).right(),
+                        Cell::new(table.slot(roll).unwrap_or("")),
+                    ]
+                })
+                .collect();
+            return Some(table_page(
+                &table.name,
+                crate::encounter::flavor_of(self),
+                rows,
+            ));
+        }
+        let (section, origin, name) = crate::userdb::parse_key(key)?;
+        if section == TEMPLATES {
+            let rules = self.encounter_rules().ok()?;
+            let entry = crate::catalog::template_entries(&rules)
+                .into_iter()
+                .find(|e| e.key == key)?;
+            return Some(entry_sheet(&entry, rules.flavor()));
+        }
+        if section == "treasure-tables" {
+            let db = TableDb::load(self).ok()?;
+            let table = db
+                .tables
+                .iter()
+                .find(|t| t.name == name && tables::origin(t) == origin)?;
+            // Each row's range, then the item, or "->" and the table it
+            // rolls on.
+            let rows = tables::entries(table)
+                .iter()
+                .zip(tables::ranges(table))
+                .map(|(e, range)| {
+                    let arrow = if e.is_table != 0 { "->" } else { "" };
+                    vec![
+                        Cell::new(range),
+                        Cell::new(format!("{arrow}{}", e.item.name)),
+                    ]
+                })
+                .collect();
+            let flavor = self.treasure_rules().ok()?.flavor();
+            return Some(table_page(&table.name, flavor, rows));
+        }
+        None
     }
 
     /// A monster of the user database as the original prints it (0x69DB64):
@@ -168,6 +237,18 @@ fn entry_sheet(entry: &Entry, flavor: Flavor) -> Sheet {
         });
     }
     page(&entry.title, flavor, boxes)
+}
+
+/// A table's page: its name over its rows, two columns each.
+fn table_page(title: &str, flavor: Flavor, rows: Vec<Vec<Cell>>) -> Sheet {
+    page(
+        title,
+        flavor,
+        vec![SheetBox {
+            title: title.to_owned(),
+            body: vec![Block::Table(Table { columns: 2, rows })],
+        }],
+    )
 }
 
 /// A sheet of `boxes`, one under the other.

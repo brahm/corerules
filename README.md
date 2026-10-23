@@ -184,7 +184,9 @@ the original programs wrote.
   dice, dependents, items and treasure, the Encounter dialog's editing and
   totals (each monster's hit points set by hand or rolled again with
   Re-roll, and New Monster from Add Monster), saved encounters (edited or
-  copied into a new one) and the 2-20 tables
+  copied into a new one) and the 2-20 tables; View and Print on monsters,
+  encounters, templates, 2-20 tables, saved treasure and treasure tables,
+  each as the original's page
 - **Table Rolls** on every table of the books, with the originals' dice
   and follow-up rolls
 - **Editors for every user database**: races, classes (with the free
