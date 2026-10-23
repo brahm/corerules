@@ -18,6 +18,11 @@ pub const FREQUENCY_VERSION_20: &str = "TSRP2/FreqDoc/0001";
 /// uncommon, 2 rare, 3 very rare.
 pub const CATEGORY_ROLLS: [usize; 19] = [3, 3, 2, 2, 2, 1, 1, 0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 3, 3];
 
+/// The frequency category whose list opens when a roll 2 to 20 is picked
+/// in the table dialog (0x655f71 to 0x656121): unlike Fill, 4 and 18 open
+/// on very rare.
+pub const PICK_ROLLS: [usize; 19] = [3, 3, 3, 2, 2, 1, 1, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 3];
+
 const FILE: &str = "UserDbas/EncTabU.dat";
 
 /// Which templates a table draws from (filter +0x268).
@@ -299,6 +304,19 @@ impl EncounterRules {
             buckets[bucket].push(t);
         }
         buckets
+    }
+
+    /// The list of a frequency category in the table dialog (0x6559bd,
+    /// category 4 being "Never"): its candidates' names, sorted.
+    pub fn candidate_names(&self, filter: &TableFilter, category: usize) -> Vec<String> {
+        let mut names: Vec<String> = self
+            .candidates(filter)
+            .get(category)
+            .map(|b| b.iter().map(|t| t.name.clone()).collect())
+            .unwrap_or_default();
+        names.sort_by_cached_key(|n| crate::collate::sort_key(n));
+        names.dedup();
+        names
     }
 }
 

@@ -188,7 +188,9 @@ the original programs wrote.
   totals (each monster's hit points set by hand or rolled again with
   Re-roll, New Monster from Add Monster, and View NPC and Print NPC on
   its NPCs' sheets), saved encounters (edited or
-  copied into a new one) and the 2-20 tables; View and Print on monsters,
+  copied into a new one) and the 2-20 tables (each roll's template picked
+  from those of one frequency that pass the table's filter, opening on the
+  roll's own frequency as the original does); View and Print on monsters,
   encounters, templates, 2-20 tables, saved treasure and treasure tables,
   each as the original's page; monster types, monsters, templates and
   encounters show the type's picture with Next Image (the original's

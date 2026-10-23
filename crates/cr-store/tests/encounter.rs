@@ -22,10 +22,10 @@ use cr_formats::race::Race;
 use cr_formats::{ArchiveReader, Field, Object};
 use cr_store::Installation;
 use cr_store::encounter::{
-    Dice, Encounter, EncounterRules, Flavor, FrequencyTable, FrequencyTables, LairMode, NameError,
-    NpcPackage, Package, Prices, Rand, TableFilter, check_name, dice_text, encounters_to_bytes,
-    experience_for_hit_dice, hit_point_text, parse_encounters, roll_2_to_20, roll_and_pick,
-    store_encounter,
+    CATEGORY_ROLLS, Dice, Encounter, EncounterRules, Flavor, FrequencyTable, FrequencyTables,
+    LairMode, NameError, NpcPackage, PICK_ROLLS, Package, Prices, Rand, TableFilter, check_name,
+    dice_text, encounters_to_bytes, experience_for_hit_dice, hit_point_text, parse_encounters,
+    roll_2_to_20, roll_and_pick, store_encounter,
 };
 
 // ---- synthetic installation ----
@@ -732,8 +732,19 @@ fn frequency_tables() {
     filter.lair = LairMode::Wandering.raw();
     assert!(names(&filter)[0].is_empty());
 
-    let mut table = FrequencyTable::new("Hills");
     filter.lair = LairMode::LairOrWandering.raw();
+    // A picked roll's list is one category's candidates, sorted.
+    for (category, bucket) in names(&filter).iter().enumerate() {
+        let mut sorted = bucket.clone();
+        sorted.sort_by_cached_key(|n| cr_store::collate::sort_key(n));
+        assert_eq!(rules.candidate_names(&filter, category), sorted);
+    }
+    assert!(rules.candidate_names(&filter, 5).is_empty());
+    // It opens on Fill's category or a rarer one, the same on both ends.
+    assert!(PICK_ROLLS.iter().zip(&CATEGORY_ROLLS).all(|(p, f)| p >= f));
+    assert!(PICK_ROLLS.iter().eq(PICK_ROLLS.iter().rev()));
+
+    let mut table = FrequencyTable::new("Hills");
     table.filter = filter;
     let mut r = Rand::seeded(3);
     table.fill(&rules.candidates(&table.filter), &mut r);

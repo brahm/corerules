@@ -47,7 +47,8 @@ pub use generate::{Generated, PendingNpc};
 pub use group::group_job_title;
 pub use tables::{
     CATEGORY_ROLLS, FREQUENCY_VERSION_20, FREQUENCY_VERSION_EXPANSION, FrequencyTable,
-    FrequencyTables, LairMode, Source, TableFilter, frequency_version, roll_2_to_20, roll_and_pick,
+    FrequencyTables, LairMode, PICK_ROLLS, Source, TableFilter, frequency_version, roll_2_to_20,
+    roll_and_pick,
 };
 pub use text::{dice_text, hit_dice_text, hit_point_text, npc_line, stat_line};
 

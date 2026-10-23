@@ -8,8 +8,9 @@ use std::rc::Rc;
 use adw::prelude::*;
 use cr_i18n::{tr, tr_noop, trn};
 use cr_store::encounter::{
-    Encounter, EncounterRules, FrequencyTable, LairMode, NameError, Package, PendingNpc, Source,
-    add_trap, check_name, hit_point_text, remove_trap, roll_2_to_20, roll_and_pick,
+    Encounter, EncounterRules, FrequencyTable, LairMode, NameError, PICK_ROLLS, Package,
+    PendingNpc, Source, TableFilter, add_trap, check_name, hit_point_text, remove_trap,
+    roll_2_to_20, roll_and_pick,
 };
 use cr_store::help::topic;
 use cr_store::sheet::Sheet;
@@ -1446,6 +1447,119 @@ fn pick_from(
     search.grab_focus();
 }
 
+/// The frequency categories of a roll's list (0x6559bd).
+const FREQUENCIES: [&str; 5] = [
+    tr_noop!("Common"),
+    tr_noop!("Uncommon"),
+    tr_noop!("Rare"),
+    tr_noop!("Very Rare"),
+    tr_noop!("Never"),
+];
+
+/// Picking roll `index` + 2 in the table dialog (0x6556a9): the templates of
+/// one frequency, the roll's own first ([`PICK_ROLLS`]), that pass
+/// `filter`. `chosen` gets the name, or "" for (None).
+fn pick_for_roll(
+    parent: &impl IsA<gtk::Widget>,
+    index: usize,
+    rules: &Rc<EncounterRules>,
+    filter: TableFilter,
+    chosen: impl Fn(String) + 'static,
+) {
+    let frequency = adw::ComboRow::builder()
+        .title(tr("Frequency"))
+        .model(&gtk::StringList::new(&FREQUENCIES.map(tr)))
+        .selected(PICK_ROLLS[index] as u32)
+        .build();
+    let top = gtk::ListBox::builder()
+        .css_classes(["boxed-list"])
+        .selection_mode(gtk::SelectionMode::None)
+        .build();
+    top.append(&frequency);
+    let none = adw::ActionRow::builder()
+        .title(tr("(None)"))
+        .activatable(true)
+        .build();
+    top.append(&none);
+    let list = gtk::ListBox::builder()
+        .css_classes(["boxed-list"])
+        .selection_mode(gtk::SelectionMode::None)
+        .build();
+    let empty = adw::StatusPage::builder()
+        .title(tr("No Templates"))
+        .description(tr("None of this frequency pass the filter"))
+        .icon_name("edit-find-symbolic")
+        .css_classes(["compact"])
+        .build();
+    let names: Rc<RefCell<Vec<String>>> = Rc::default();
+    let show = {
+        let (rules, list, empty, names) =
+            (rules.clone(), list.clone(), empty.clone(), names.clone());
+        move |category: usize| {
+            list.remove_all();
+            let found = rules.candidate_names(&filter, category);
+            for name in &found {
+                list.append(
+                    &adw::ActionRow::builder()
+                        .title(glib::markup_escape_text(name).as_str())
+                        .activatable(true)
+                        .build(),
+                );
+            }
+            list.set_visible(!found.is_empty());
+            empty.set_visible(found.is_empty());
+            *names.borrow_mut() = found;
+        }
+    };
+    show(PICK_ROLLS[index]);
+    frequency.connect_selected_notify(move |row| show(row.selected() as usize));
+    let content = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(18)
+        .margin_top(12)
+        .margin_bottom(24)
+        .margin_start(12)
+        .margin_end(12)
+        .build();
+    content.append(&top);
+    content.append(&list);
+    content.append(&empty);
+    let view = adw::ToolbarView::new();
+    view.add_top_bar(&adw::HeaderBar::new());
+    view.set_content(Some(
+        &gtk::ScrolledWindow::builder()
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .vexpand(true)
+            .child(&adw::Clamp::builder().child(&content).build())
+            .build(),
+    ));
+    let dialog = adw::Dialog::builder()
+        .title(tr!("Roll {roll}", roll = index + 2))
+        .content_width(480)
+        .content_height(600)
+        .width_request(360)
+        .height_request(294)
+        .child(&view)
+        .build();
+    let chosen = Rc::new(chosen);
+    none.connect_activated({
+        let (dialog, chosen) = (dialog.clone(), chosen.clone());
+        move |_| {
+            dialog.close();
+            chosen(String::new());
+        }
+    });
+    list.connect_row_activated({
+        let dialog = dialog.clone();
+        move |_, row| {
+            let name = names.borrow()[row.index() as usize].clone();
+            dialog.close();
+            chosen(name);
+        }
+    });
+    dialog.present(Some(parent));
+}
+
 /// The 2-20 table editor: name, filter, the 19 rolls, Fill, Roll and
 /// Generate. `saved` is the table's name when it is already saved.
 pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
@@ -1561,13 +1675,6 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
     };
 
     // Rolls.
-    let mut names: Vec<String> = rules.templates().iter().map(|t| t.name.clone()).collect();
-    names.sort_by_cached_key(|n| cr_store::collate::sort_key(n));
-    names.dedup();
-    let mut choices = vec![tr("(None)").to_owned()];
-    choices.extend(names);
-    let choices = Rc::new(choices);
-    let model = gtk::StringList::new(&choices.iter().map(String::as_str).collect::<Vec<_>>());
     let fill = gtk::Button::builder()
         .label(tr("_Fill"))
         .use_underline(true)
@@ -1585,43 +1692,54 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
     buttons.append(&roll);
     let slots_group = adw::PreferencesGroup::builder()
         .title(tr("Rolls"))
+        .description(tr(
+            "Pick a roll to choose its template from those that pass the filter",
+        ))
         .header_suffix(&buttons)
         .build();
-    let slot_rows: Vec<adw::ComboRow> = (0..19)
+    let slot_rows: Vec<adw::ActionRow> = (0..19)
         .map(|i| {
-            let row = adw::ComboRow::builder()
+            let row = adw::ActionRow::builder()
                 .title((i + 2).to_string())
-                .model(&model)
-                .enable_search(true)
+                .activatable(true)
                 .build();
+            row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
             slots_group.add(&row);
             row
         })
         .collect();
     let show_slots = {
-        let (rows, table, choices) = (slot_rows.clone(), table.clone(), choices.clone());
+        let (rows, table) = (slot_rows.clone(), table.clone());
         move || {
-            // Selecting writes back to the table.
-            let slots = table.borrow().slots.clone();
-            for (row, slot) in rows.iter().zip(&slots) {
-                let index = choices.iter().position(|c| c == slot).unwrap_or(0);
-                row.set_selected(index as u32);
+            let t = table.borrow();
+            for (i, row) in rows.iter().enumerate() {
+                let name = t.slots.get(i).filter(|s| !s.is_empty());
+                row.set_subtitle(&glib::markup_escape_text(
+                    name.map_or(tr("(None)"), String::as_str),
+                ));
             }
         }
     };
+    let show_slots = Rc::new(show_slots);
     show_slots();
     for (i, row) in slot_rows.iter().enumerate() {
-        let (table, choices) = (table.clone(), choices.clone());
-        row.connect_selected_notify(move |row| {
-            let index = row.selected() as usize;
-            let value = if index == 0 {
-                String::new()
-            } else {
-                choices[index].clone()
-            };
-            let mut t = table.borrow_mut();
-            t.slots.resize(19, String::new());
-            t.slots[i] = value;
+        let (rules, table, read_filter, show_slots) = (
+            rules.clone(),
+            table.clone(),
+            read_filter.clone(),
+            show_slots.clone(),
+        );
+        row.connect_activated(move |row| {
+            read_filter();
+            let filter = table.borrow().filter.clone();
+            let (table, show_slots) = (table.clone(), show_slots.clone());
+            pick_for_roll(row, i, &rules, filter, move |name| {
+                let mut t = table.borrow_mut();
+                t.slots.resize(19, String::new());
+                t.slots[i] = name;
+                drop(t);
+                show_slots();
+            });
         });
     }
     fill.connect_clicked({
