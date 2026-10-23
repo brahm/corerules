@@ -369,3 +369,31 @@ fn monster_types_with_frames_have_them_in_their_page() {
         }
     }
 }
+
+#[test]
+fn only_parts_are_marked_magic() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = cr_store::Installation::open(dir).unwrap();
+    let catalog = install.catalog();
+    let parts = [
+        "kits",
+        "weapons",
+        "armor",
+        "equipment",
+        "magic-items",
+        "nonweapon",
+        cr_store::userdb::parts::OTHER_SECTION,
+    ];
+    for section in &catalog {
+        let magic = section.entries.iter().filter(|e| e.magic).count();
+        if !parts.contains(&section.id) {
+            assert_eq!(magic, 0, "{}", section.id);
+        }
+    }
+    let section = |id: &str| catalog.iter().find(|s| s.id == id).unwrap();
+    // Magic Only keeps some magical items and leaves some weapons out.
+    assert!(section("magic-items").entries.iter().any(|e| e.magic));
+    assert!(section("weapons").entries.iter().any(|e| !e.magic));
+}

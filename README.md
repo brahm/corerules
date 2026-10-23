@@ -201,7 +201,8 @@ the original programs wrote.
 - **Editors for every user database**: races, classes (with the free
   spells, NWPs and class abilities each level grants, and Auto Fill from
   another class; changing a class's group, after asking, or deleting it
-  takes it out of every race's combinations) and allowed combinations, parts (weapons, armor, kits and proficiencies, plus the
+  takes it out of every race's combinations) and allowed combinations, parts (weapons, armor, kits and proficiencies, whose lists
+  have the original's Magic Only, plus the
   ten other types in Other Parts: racial and class abilities, languages,
   schools, spheres, traits, disadvantages, gems and art, currency and
   Count), spells (with Schools…, which changes only a spell's schools

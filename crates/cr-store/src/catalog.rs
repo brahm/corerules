@@ -54,6 +54,9 @@ pub struct Entry {
     /// The icon of an item (weapon, armor, equipment or magical item),
     /// when its bitmap is in the installation.
     pub icon: Option<crate::pictures::Icon>,
+    /// A part checked Magic (+0x224), which the Parts list's Magic Only
+    /// keeps (0x68fe59).
+    pub magic: bool,
 }
 
 /// A monster type's pictures for the Monsters screen's Alternate
@@ -467,6 +470,7 @@ impl Installation {
                     party: String::new(),
                     picture: None,
                     frames: None,
+                    magic: false,
                     icon: None,
                     key: format!("{TABLE_KEY}{}", t.name),
                     title: t.name.clone(),
@@ -501,6 +505,7 @@ impl Installation {
                         party: String::new(),
                         picture: None,
                         frames: None,
+                        magic: false,
                         icon: None,
                         key: format!("{TREASURE_KEY}{}", t.name),
                         title: t.name.clone(),
@@ -542,6 +547,7 @@ impl Installation {
                             party: crate::party::party_of(e).to_owned(),
                             picture: finder.picture(&portrait(&c), Kind::Portrait),
                             frames: None,
+                            magic: false,
                             icon: None,
                             ..character_entry(&c)
                         };
@@ -731,6 +737,7 @@ fn encounter_entry(e: &Encounter, rules: Option<&EncounterRules>) -> Entry {
         party: String::new(),
         picture: None,
         frames: None,
+        magic: false,
         icon: None,
         key: format!("{ENCOUNTER_KEY}{}", e.name),
         title: e.name.clone(),
@@ -796,6 +803,7 @@ pub(crate) fn template_entries(rules: &EncounterRules, pictures: &TypePictures) 
                     party: String::new(),
                     picture,
                     frames,
+                    magic: false,
                     icon: None,
                     key: crate::userdb::key(
                         TEMPLATES,
@@ -939,6 +947,7 @@ fn character_entry(c: &Character) -> Entry {
         party: String::new(),
         picture: None,
         frames: None,
+        magic: false,
         icon: None,
         key: String::new(),
         title: d.name.clone(),
@@ -1037,6 +1046,7 @@ fn race_entry(object: &Object) -> Option<Entry> {
         party: String::new(),
         picture: None,
         frames: None,
+        magic: false,
         icon: None,
         key: String::new(),
         title: r.name.clone(),
@@ -1116,6 +1126,7 @@ fn part_entry(object: &Object) -> Option<Entry> {
         party: String::new(),
         picture: None,
         frames: None,
+        magic: p.head.unknown_0x224 != 0,
         icon: None,
         key: String::new(),
         title: p.head.name.clone(),
@@ -1134,6 +1145,7 @@ fn spell_entry(object: &Object) -> Option<Entry> {
         party: String::new(),
         picture: None,
         frames: None,
+        magic: false,
         icon: None,
         key: String::new(),
         title: s.name.clone(),
@@ -1165,6 +1177,7 @@ fn psionic_entry(object: &Object) -> Option<Entry> {
         party: String::new(),
         picture: None,
         frames: None,
+        magic: false,
         icon: None,
         key: String::new(),
         title: p.name.clone(),
@@ -1204,6 +1217,7 @@ pub(crate) fn monster_entry(object: &Object) -> Option<Entry> {
         party: String::new(),
         picture: None,
         frames: None,
+        magic: false,
         icon: None,
         key: String::new(),
         title: m.name.clone(),
