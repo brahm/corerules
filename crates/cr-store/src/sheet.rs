@@ -455,6 +455,17 @@ impl Installation {
         self.sheet_rules()?.sheet(character)
     }
 
+    /// The sheet of an encounter's NPC as View NPC and Print NPC show it
+    /// (0x63EA49, 0x63EB3A): its stored sheet options are set aside first
+    /// (0x63EE20), so it gets the default sections.
+    pub fn npc_sheet(&self, character: &Character) -> Result<Sheet> {
+        let mut character = character.clone();
+        if let Some(options) = &mut character.data.sheet_options {
+            options.unknown_0x260 = 0;
+        }
+        self.sheet(&character)
+    }
+
     /// Saves `choice` as the sheet options of the character in
     /// `Chars/<file>`, as the dialog's OK does (0x599d5e): the sections as
     /// (name, id) pairs in order, the border, and the flag that the list
