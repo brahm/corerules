@@ -9,7 +9,7 @@ written in Rust with GTK4 and libadwaita. It reads and writes the data files
 of the original Windows 95 program, so characters made in either program
 open in the other.
 
-> **Beta.** Version 0.8.1 is a beta: every feature below works against real
+> **Beta.** Version 0.9.0 is a beta: every feature below works against real
 > installations and was checked against the original programs, but it has
 > had little use outside those checks. Keep a copy of your `Chars` and
 > `UserDbas` folders, and [report](https://github.com/brahm/corerules/issues)
@@ -293,6 +293,27 @@ Map Maker II, the Campaign Mapper and the dice roller are out of scope.
 Campaign Mapper drawings inside a package are kept but not offered or
 imported. Core Rules 1.0 files are not supported. Only Linux is supported
 for now; macOS and Windows are postponed.
+
+### Differences from the original
+
+A few things work differently on purpose. None of them changes what is
+saved in a way the original cannot read.
+
+- **Rebuilding the character list** leaves out a character file that
+  cannot be read, and says which one, where the original lists it as an
+  empty character
+- **Schools…** on a standard spell writes `Spells.dat` when the spell is
+  saved, keeping the previous file as `Spells.dat.bak`; the original
+  writes it only from its internal Save Options screen
+- **The NPC generator** finishes an NPC whose kit names an item missing
+  from the database, or who has no priest spells to choose from, and says
+  what was left out, where the original stops with an error
+- **Table Rolls** lines its columns up; the text is the same as the
+  original's
+- **The first Table Roll** after the app starts begins from the value the
+  original has under Wine (44), where the original's comes from Windows
+- **Packages** target Ubuntu 26.04 and Fedora 44 or newer; the AppImage
+  and the Flatpak use the GNOME 51 libraries
 
 ## Installing
 

@@ -3,21 +3,49 @@ checked against the original programs, but the app has had little use
 outside those checks. Keep a copy of your `Chars` and `UserDbas` folders,
 and report anything that differs from the original.
 
-What's new in 0.8.1:
+What's new in 0.9.0, which brings the rest of the original's screens:
 
-- Monster types, monsters (through their type), races and characters show
-  their picture when its file is in the data folder, as the community
-  add-ons' pictures now are. The app reads the BMP files itself. The
-  character sheet finds the portrait the same way, and reads its folder
-  and file in the right order
-- An encounter's Characters Not Generated group shows, under each NPC, why
-  the generator could not make it, instead of saying it is not available
-- The app's description lists the six languages it speaks, and the package
-  tests start the app in each one
-- The Core Rules Community Add-ons Collection (`corerules-community-addons`
-  on GitHub Packages) leaves out Evermore's monthly goodies, installs the
-  668 pictures that came with the add-ons and shows their authors' texts
-  on request (see `addons/README.md`)
+- **Update Character**: gender, alignment, kit, background, hit points,
+  subrace, racial and class abilities, schools and spheres, weapon and
+  nonweapon proficiencies, weapon groups, combat options, traits and
+  disadvantages, rogue skills, psionics and wild talents, all charged and
+  checked as the original does; the Levels dialog with hit point and PSP
+  arrows; buying and selling equipment with the spending money
+- **Enter Character**, for a character that already exists on paper:
+  typed-in scores, any race and classes, levels set in the Levels dialog,
+  and later pages with no limits checked
+- **Kits** followed everywhere: the Name page's filter and warnings,
+  nonweapon and weapon proficiencies (with Core Rules specialization and
+  Player's Option weapon groups), rogue skills, schools, spheres and
+  spells, experience, hit points, starting money and equipment, in New
+  Character and in Update
+- **New Character**: a psionicist's 1st-level PSPs, a subrace's package at
+  its price, a random name, the Background step with Select Randomly, the
+  Mongrelman's point to any ability, the chance to learn each spell with
+  the original's questions, Test for Wild Talents and the Table 83 roll,
+  and the Expansion's "Core Rules Vs Player's Option" message, which
+  Preferences turns back on
+- **Editors**: the ten remaining part types in Other Parts, the encounter
+  template editor, a class's free spells, NWPs and abilities by level with
+  Auto Fill, a monster's spells, inventory, attacks and Suggest XP Value,
+  a treasure table entry's details, item icons on General Info, Schools…
+  on any spell, and the parts lists' Magic Only filter
+- **DM Toolkit**: Group Encounter from a party, hit points by hand,
+  Re-roll and New Monster in an encounter, View NPC and Print NPC, View
+  and Print on templates, 2-20 tables and treasure tables, copies of saved
+  encounters and treasure bundles, Next Image and Full Screen on monster
+  pictures, the 2-20 table's template chosen by frequency as the original
+  does, and New NPC Group's Standard and Allowed races, kits and alignments
+- **Help** on every screen (Help button and F1), right-click help and
+  summaries, the help window's printing, the Online Manual, the Tome of
+  Help and About
+- **Character sheet** options (sections, order, page breaks and border),
+  Markdown export, and Convert to NPC and back
+- **Name Conflict** asks for another name when an imported part's name is
+  taken, and the app offers to rebuild a damaged character list
+
+The README lists the few things that work differently from the original
+on purpose.
 
 What the app does: it opens a Core Rules 2.0 Expansion installation (or its
 CD, or a data package), creates and edits characters with the Core Rules or
