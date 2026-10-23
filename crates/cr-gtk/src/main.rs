@@ -1539,8 +1539,14 @@ impl Browser {
             .tooltip_text(tr("Show a Part Type"))
             .visible(false)
             .build();
+        // The Parts list's Magic Only (ctl 1277, 0x68fe59).
+        let magic_filter = gtk::ToggleButton::builder()
+            .icon_name("starred-symbolic")
+            .tooltip_text(tr("Magic Only"))
+            .visible(false)
+            .build();
         let filter = gtk::CustomFilter::new({
-            let type_filter = type_filter.clone();
+            let (type_filter, magic_filter) = (type_filter.clone(), magic_filter.clone());
             let (search, origin_filter) = (search.clone(), origin_filter.clone());
             let (party_filter, party_choices) = (party_filter.clone(), party_choices.clone());
             move |item| {
@@ -1563,6 +1569,7 @@ impl Browser {
                 userdb::passes(&origin_filter, row.origin)
                     && in_party
                     && of_type
+                    && (row.magic || !magic_filter.is_active() || !magic_filter.is_visible())
                     && (needle.is_empty()
                         || row.title.to_lowercase().contains(&needle)
                         || row.subtitle.to_lowercase().contains(&needle))
@@ -1577,6 +1584,10 @@ impl Browser {
             move |_| filter.changed(gtk::FilterChange::Different)
         });
         type_filter.connect_selected_notify({
+            let filter = filter.clone();
+            move |_| filter.changed(gtk::FilterChange::Different)
+        });
+        magic_filter.connect_toggled({
             let filter = filter.clone();
             move |_| filter.changed(gtk::FilterChange::Different)
         });
@@ -1652,6 +1663,7 @@ impl Browser {
         entries_header.pack_end(&origin_filter);
         entries_header.pack_end(&party_filter);
         entries_header.pack_end(&type_filter);
+        entries_header.pack_end(&magic_filter);
         let read_only_banner = adw::Banner::builder()
             .title(tr("Core Rules 2.0 is read-only"))
             .tooltip_text(tr(
@@ -1732,6 +1744,7 @@ impl Browser {
                 party_filter
                     .set_visible(section.id == "characters" && party_choices.borrow().len() > 1);
                 type_filter.set_visible(section.id == OTHER_SECTION);
+                magic_filter.set_visible(is_parts(section.id));
                 entries_page.set_title(section.title);
                 inner_page.set_title(section.title);
                 search.set_text("");
@@ -1749,6 +1762,7 @@ impl Browser {
                             part_type: cr_store::userdb::parse_key(&e.key).and_then(|(id, ..)| {
                                 OTHER_TYPES.iter().map(|(i, ..)| *i).find(|i| *i == id)
                             }),
+                            magic: e.magic,
                         })
                     })
                     .collect();
@@ -1956,6 +1970,22 @@ struct Row {
     party: Option<String>,
     /// The type of one of the other parts (an [`OTHER_TYPES`] id).
     part_type: Option<&'static str>,
+    /// A part checked Magic, for Magic Only.
+    magic: bool,
+}
+
+/// Whether section `id` lists parts, as the original's Parts list does.
+fn is_parts(id: &str) -> bool {
+    id == OTHER_SECTION
+        || [
+            "kits",
+            "weapons",
+            "armor",
+            "equipment",
+            "magic-items",
+            "nonweapon",
+        ]
+        .contains(&id)
 }
 
 fn row_factory() -> gtk::SignalListItemFactory {

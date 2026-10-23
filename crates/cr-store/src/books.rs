@@ -306,6 +306,7 @@ impl Installation {
                 party: String::new(),
                 picture: None,
                 frames: None,
+                magic: false,
                 icon: None,
             })
             .collect()
