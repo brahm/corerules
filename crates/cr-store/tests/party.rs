@@ -207,3 +207,70 @@ fn deletes_can_be_undone() {
     assert!(index.entries.iter().all(|e| party_of(e) == party));
     assert_eq!(dat_files(&s.chars()), files.len());
 }
+
+/// A copy of the installation's `Chars` next to links to its databases.
+fn chars_copy(test: &str) -> Option<(PathBuf, Installation)> {
+    let dir = PathBuf::from(std::env::var_os("CORERULES_DIR")?);
+    let original = Installation::open(&dir).ok()?;
+    if !original.has_parties() {
+        return None;
+    }
+    let root = std::env::temp_dir().join(format!("cr-index-{test}-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&root);
+    fs::create_dir_all(&root).unwrap();
+    std::os::unix::fs::symlink(original.path("Database")?, root.join("Database")).unwrap();
+    std::os::unix::fs::symlink(original.path("UserDbas")?, root.join("UserDbas")).unwrap();
+    copy_dir(&original.path("Chars")?, &root.join("Chars"));
+    let install = Installation::open(&root).unwrap();
+    Some((root, install))
+}
+
+#[test]
+fn a_damaged_list_is_rebuilt_from_the_character_files() {
+    let Some((root, install)) = chars_copy("rebuild") else {
+        return;
+    };
+    let chars = root.join("Chars");
+    let listed: Vec<String> = install
+        .characters()
+        .unwrap()
+        .entries
+        .into_iter()
+        .map(|e| e.file.to_ascii_lowercase())
+        .collect();
+    fs::write(chars.join("index.chr"), b"damaged").unwrap();
+    fs::write(chars.join("00000000.dat"), b"not a character").unwrap();
+    assert!(install.characters_damaged());
+
+    let rebuilt = install.rebuild_characters().unwrap();
+    assert!(chars.join("index.chr.bak").exists());
+    assert_eq!(rebuilt.unreadable, ["00000000.dat"]);
+    assert!(!install.characters_damaged());
+    let index = install.characters().unwrap();
+    assert_eq!(index.entries.len(), rebuilt.characters);
+    assert_eq!(index.entries.len(), dat_files(&chars) - 1);
+    let mut files: Vec<String> = index.entries.iter().map(|e| e.file.clone()).collect();
+    let in_order = files.clone();
+    files.sort_by_key(|f| f.to_ascii_lowercase());
+    assert_eq!(files, in_order);
+    for file in &listed {
+        assert!(in_order.iter().any(|f| f.eq_ignore_ascii_case(file)));
+    }
+    for e in &index.entries {
+        let character = install.character(&e.file).unwrap();
+        assert_eq!(e.name, character.data.name);
+        assert_eq!(e.race, character.data.race);
+        assert_eq!(party_of(e), {
+            let party = character.data.unknown_0x1e68.as_ref();
+            party.map_or("", |p| p[3].as_str())
+        });
+        assert!(e.details.iter().any(|d| d.starts_with("Race: ")));
+        assert!(e.details.iter().any(|d| d.starts_with("Level: ")));
+    }
+
+    if let Some(first) = index.entries.first() {
+        fs::remove_file(chars.join(&first.file)).unwrap();
+        assert!(install.characters_damaged());
+    }
+    let _ = fs::remove_dir_all(&root);
+}

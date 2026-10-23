@@ -34,7 +34,7 @@ use std::sync::Arc;
 
 use adw::prelude::*;
 use cr_formats::character::Character;
-use cr_i18n::{tr, tr_noop};
+use cr_i18n::{tr, tr_noop, trn};
 use cr_store::Installation;
 use cr_store::advance::{AdvanceRules, Advancement, adjust_psionic_points, psionic_total};
 use cr_store::catalog::{ENCOUNTER_KEY, Entry, Section, TABLE_KEY, TEMPLATES, TREASURE_KEY};
@@ -611,6 +611,15 @@ impl Window {
             }
         }
         self.browser.set_read_only(read_only);
+        if !read_only
+            && self
+                .install
+                .borrow()
+                .as_ref()
+                .is_some_and(Installation::characters_damaged)
+        {
+            self.offer_rebuild();
+        }
         if !read_only && let Some(install) = self.install.borrow().as_ref() {
             let this = self.clone();
             let reload = Rc::new(move || {
@@ -623,6 +632,52 @@ impl Window {
                 self.toast(&e.to_string());
             }
         }
+    }
+
+    /// Offers to rebuild a damaged character list from the character files,
+    /// as the original does (0x47a87f).
+    fn offer_rebuild(&self) {
+        let alert = adw::AlertDialog::builder()
+            .heading(tr("Rebuild the Character List?"))
+            .body(tr(
+                "The list of your characters and NPCs cannot be read, or it lists a \
+                 character whose file is missing or damaged. It can be rebuilt from \
+                 the character files; with many characters this may take a while.",
+            ))
+            .default_response("rebuild")
+            .close_response("cancel")
+            .build();
+        alert.add_responses(&[("cancel", tr("_Not Now")), ("rebuild", tr("_Rebuild"))]);
+        alert.set_response_appearance("rebuild", adw::ResponseAppearance::Suggested);
+        let this = self.clone();
+        alert.connect_response(Some("rebuild"), move |_, _| {
+            let result = this
+                .install
+                .borrow()
+                .as_ref()
+                .map(Installation::rebuild_characters);
+            match result {
+                Some(Ok(rebuilt)) => {
+                    let mut message = trn!(
+                        "The list was rebuilt with {n} character",
+                        "The list was rebuilt with {n} characters",
+                        rebuilt.characters
+                    );
+                    if !rebuilt.unreadable.is_empty() {
+                        message = tr!(
+                            "{message}; these files could not be read: {files}",
+                            message,
+                            files = rebuilt.unreadable.join(", ")
+                        );
+                    }
+                    this.toast(&message);
+                    this.reload("characters", None);
+                }
+                Some(Err(e)) => this.toast(&e.to_string()),
+                None => {}
+            }
+        });
+        alert.present(Some(&self.window));
     }
 
     fn set_can_create(&self, enabled: bool) {
