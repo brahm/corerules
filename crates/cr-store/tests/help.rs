@@ -304,6 +304,43 @@ fn a_user_monster_shows_as_the_original_prints_it() {
 }
 
 #[test]
+fn view_and_print_have_a_page_for_each_record_of_their_screens() {
+    use cr_store::sheet::{Block, SectionContent};
+    let Some(install) = install() else { return };
+    let sections = install.catalog();
+    let entries = |id: &str| &sections.iter().find(|s| s.id == id).unwrap().entries;
+    for (id, most) in [
+        ("encounters", usize::MAX),
+        ("templates", 20),
+        ("tables", usize::MAX),
+        ("treasure", usize::MAX),
+        ("treasure-tables", 20),
+    ] {
+        for entry in entries(id).iter().take(most) {
+            let page = install.page(&entry.key);
+            let Some(page) = page else {
+                panic!("{id} {}: no page", entry.title);
+            };
+            assert_eq!(page.title, entry.title);
+            if !matches!(id, "tables" | "treasure-tables") {
+                continue;
+            }
+            // A table's page: one row per roll, or per entry, as the
+            // detail pane lists them.
+            let SectionContent::Columns(columns) = &page.sections[0].content else {
+                panic!("{id} {}: {:?}", entry.title, page.sections[0].content);
+            };
+            let Block::Table(table) = &columns[0][0].body[0] else {
+                panic!("{id} {}: no table", entry.title);
+            };
+            assert_eq!(table.rows.len(), entry.groups[0].rows.len());
+        }
+    }
+    // Records of other screens have none.
+    assert_eq!(install.page(&entries("races")[0].key), None);
+}
+
+#[test]
 fn the_summarized_screens_show_their_records_summaries() {
     use cr_store::help::topic;
     use cr_store::summary::Summary;
