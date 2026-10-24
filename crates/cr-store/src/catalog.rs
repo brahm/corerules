@@ -140,9 +140,14 @@ impl Installation {
             ),
         ];
         // The parts of one type, standard then user, keyed for section `id`.
+        let fields = crate::userdb::parts::shown_fields(crate::encounter::flavor_of(self));
         let mut part_entries = |part_type: &str, id: &str| match (&parts, &user_parts) {
             (Ok(parts), Ok(user)) => {
                 let has_icon = crate::pictures::ICON_PART_TYPES.contains(&part_type);
+                let index = cr_formats::parts::PART_TYPES
+                    .iter()
+                    .position(|t| *t == Some(part_type))
+                    .unwrap_or_default();
                 Ok([
                     (Origin::Standard, Some(parts)),
                     (Origin::Custom, user.as_ref()),
@@ -154,7 +159,7 @@ impl Installation {
                         .unwrap_or_default()
                         .iter()
                         .filter_map(|object| {
-                            let mut e = part_entry(object)?;
+                            let mut e = part_entry(&fields, index, object)?;
                             if has_icon && let Object::Part(p) = object {
                                 e.icon = finder.icon(&p.head.unknown_0x234);
                             }
@@ -602,12 +607,14 @@ impl Installation {
         use crate::help::ItemKind;
         let mut records = Vec::new();
         if let Ok(Some(parts)) = self.load_user_parts() {
+            let fields = crate::userdb::parts::shown_fields(crate::encounter::flavor_of(self));
             records.extend(
                 parts
                     .arrays
                     .iter()
-                    .flatten()
-                    .filter_map(part_entry)
+                    .enumerate()
+                    .flat_map(|(t, objects)| objects.iter().map(move |o| (t, o)))
+                    .filter_map(|(t, o)| part_entry(&fields, t, o))
                     .map(|e| (ItemKind::Part, e)),
             );
         }
@@ -840,7 +847,8 @@ pub(crate) fn template_entries(rules: &EncounterRules, pictures: &TypePictures) 
 pub const TREASURE_KEY: &str = "treasure:";
 
 /// A bundle as groups: the loose items, then one group per item that holds
-/// others ("Gems and Art"), then the Calculate summary.
+/// others ("Gems and Art", and an art object inside it, at any depth,
+/// titled with the items around it), then the Calculate summary.
 pub fn treasure_groups(
     bundle: &crate::treasure::Bundle,
     summary: Option<&crate::treasure::Summary>,
@@ -849,7 +857,7 @@ pub fn treasure_groups(
         bundle
             .items
             .iter()
-            .filter(|i| i.contents.is_none())
+            .filter(|i| i.contents.as_ref().is_none_or(|c| c.items.is_empty()))
             .map(|i| {
                 let spells: Vec<String> = i
                     .spells()
@@ -864,14 +872,27 @@ pub fn treasure_groups(
         title: tr("Treasure").into(),
         rows: rows(bundle),
     }];
-    for item in &bundle.items {
-        if let Some(contents) = &item.contents {
-            groups.push(Group {
-                title: item.label(),
-                rows: rows(contents),
-            });
+    fn holders(
+        bundle: &crate::treasure::Bundle,
+        around: &str,
+        rows: &dyn Fn(&crate::treasure::Bundle) -> Vec<(String, String)>,
+        groups: &mut Vec<Group>,
+    ) {
+        for item in &bundle.items {
+            if let Some(contents) = item.contents.as_ref().filter(|c| !c.items.is_empty()) {
+                let title = match around {
+                    "" => item.label(),
+                    around => format!("{around} › {}", item.label()),
+                };
+                groups.push(Group {
+                    title: title.clone(),
+                    rows: rows(contents),
+                });
+                holders(contents, &title, rows, groups);
+            }
         }
     }
+    holders(bundle, "", &rows, &mut groups);
     if let Some(summary) = summary {
         groups.push(Group {
             title: tr("Summary").into(),
@@ -1116,11 +1137,18 @@ fn class_entry(object: &Object) -> Option<Entry> {
     Some(entry)
 }
 
-fn part_entry(object: &Object) -> Option<Entry> {
+/// A part's page: its description and what the part editor's pages hold
+/// for it (`fields`, from [`crate::userdb::parts::shown_fields`]).
+fn part_entry(
+    fields: &[crate::userdb::FieldDesc<crate::userdb::parts::PartRec>],
+    part_type: usize,
+    object: &Object,
+) -> Option<Entry> {
     let Object::Part(p) = object else { return None };
     if p.head.name.is_empty() {
         return None;
     }
+    let shown = crate::userdb::parts::shown_values(fields, part_type, p);
     Some(Entry {
         npc: false,
         party: String::new(),
@@ -1131,7 +1159,10 @@ fn part_entry(object: &Object) -> Option<Entry> {
         key: String::new(),
         title: p.head.name.clone(),
         subtitle: String::new(),
-        groups: Vec::new(),
+        groups: shown
+            .into_iter()
+            .map(|(title, rows)| Group { title, rows })
+            .collect(),
         text: p.head.description.clone(),
     })
 }

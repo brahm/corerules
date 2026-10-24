@@ -4556,10 +4556,13 @@ impl Wizard {
             );
             row.connect_value_notify(move |row| {
                 let (before, wanted) = (values.borrow()[index], row.value());
-                // Points past what is left are refused.
+                // Points past what is left, or a score past 95%, are
+                // refused.
                 if wanted > before
                     && !this.0.entering
-                    && this.rules().rogue_points_left(&current()) < 0
+                    && (this.rules().rogue_points_left(&current()) < 0
+                        || this.rules().rogue_skill_score(&current(), skill).0
+                            > cr_store::skills::MOST_ROGUE_SCORE)
                 {
                     row.set_value(before);
                     row.error_bell();
@@ -5033,6 +5036,30 @@ impl Wizard {
             let update = update.clone();
             move || update()
         });
+        // An item the money does not cover is refused, as Edit Character
+        // does (Enter Character's are free).
+        items.set_limit(
+            {
+                let (this, items, pack, gold) =
+                    (self.clone(), items.clone(), pack.clone(), gold.clone());
+                move || {
+                    let mut probe = this.0.draft.borrow().clone();
+                    probe.pack = pack.is_active();
+                    probe.purchases = purchases(&items);
+                    this.0.entering || this.rules().spent(&probe) <= *gold.borrow() * 100
+                }
+            },
+            {
+                let this = self.clone();
+                move || {
+                    message(
+                        &this.0.dialog,
+                        tr("Error Message!"),
+                        tr("This item is too expensive."),
+                    )
+                }
+            },
+        );
         pack.connect_active_notify({
             let update = update.clone();
             move |_| update()
@@ -5084,13 +5111,22 @@ impl Wizard {
                 };
                 let finish = {
                     let (this, banner, draft) = (this.clone(), banner.clone(), draft.clone());
-                    move || match (this.0.create)(&draft) {
-                        Ok(()) => {
-                            this.0.dialog.close();
+                    let create = create.clone();
+                    move || {
+                        // Clicks made while it saves create nothing more.
+                        if !create.is_sensitive() {
+                            return;
                         }
-                        Err(message) => {
-                            banner.set_title(&escape(&message));
-                            banner.set_revealed(true);
+                        create.set_sensitive(false);
+                        match (this.0.create)(&draft) {
+                            Ok(()) => {
+                                this.0.dialog.close();
+                            }
+                            Err(message) => {
+                                create.set_sensitive(true);
+                                banner.set_title(&escape(&message));
+                                banner.set_revealed(true);
+                            }
                         }
                     }
                 };

@@ -228,6 +228,9 @@ fn art_values_are_rolled() {
     let out = t.roll(dmg(87), &[], &mut Session::default(), &mut Rand::seeded(9));
     let value = &out.blocks[0].rows[0][1];
     assert!(value.ends_with("gp (2d6 x 100)"), "{value}");
+    // A rolled table can be read in its book too.
+    assert_eq!(out.reference, Some((TableBook::Dmg, 87)));
+    assert_eq!(out.book_table, None);
 }
 
 #[test]
@@ -743,6 +746,7 @@ fn text_layout_aligns_columns() {
     let r = RollResult {
         blocks: vec![block],
         book_table: None,
+        reference: None,
         treasure: false,
     };
     assert_eq!(

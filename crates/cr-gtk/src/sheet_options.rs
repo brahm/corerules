@@ -192,17 +192,38 @@ pub fn choose(
             dialog.close();
         }
     });
+    let save = Rc::new(move |sections: Vec<u32>, border: u32| {
+        save(SheetChoice {
+            sections,
+            border: Border::ALL
+                .get(border as usize)
+                .copied()
+                .unwrap_or(Border::Normal),
+        });
+    });
     ok.connect_clicked({
         let dialog = dialog.clone();
         move |_| {
-            save(SheetChoice {
-                sections: sections.borrow().clone(),
-                border: Border::ALL
-                    .get(border.selected() as usize)
-                    .copied()
-                    .unwrap_or(Border::Normal),
+            let (chosen, style) = (sections.borrow().clone(), border.selected());
+            if !chosen.is_empty() {
+                save(chosen, style);
+                dialog.close();
+                return;
+            }
+            // An empty sheet is asked about first.
+            let alert = adw::AlertDialog::builder()
+                .heading(tr("No Sections"))
+                .body(tr("No sections: the sheet will be empty"))
+                .build();
+            alert.add_responses(&[("cancel", tr("_Cancel")), ("save", tr("_Save"))]);
+            alert.set_response_appearance("save", adw::ResponseAppearance::Destructive);
+            let (dialog, save) = (dialog.clone(), save.clone());
+            alert.choose(&dialog.clone(), gtk::gio::Cancellable::NONE, move |r| {
+                if r == "save" {
+                    save(chosen, style);
+                    dialog.close();
+                }
             });
-            dialog.close();
         }
     });
     dialog.present(Some(parent));

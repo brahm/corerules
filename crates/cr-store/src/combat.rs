@@ -919,7 +919,7 @@ impl CombatRules {
     }
 
     /// The points `new` costs compared with what the character has.
-    fn spent(&self, character: &Character, new: &CharacterCombat) -> i64 {
+    pub fn spent(&self, character: &Character, new: &CharacterCombat) -> i64 {
         let old = self.combat_of(character);
         let bought = |name: &str| new.bought.iter().rev().find(|b| b.0 == name).map(|b| b.1);
         let (added, _) = changes(&old.weapons, &new.weapons);

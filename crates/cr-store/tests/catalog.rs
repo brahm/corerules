@@ -397,3 +397,73 @@ fn only_parts_are_marked_magic() {
     assert!(section("magic-items").entries.iter().any(|e| e.magic));
     assert!(section("weapons").entries.iter().any(|e| !e.magic));
 }
+
+/// A part's page shows what the part editor holds for it, not only its
+/// name: a weapon its damage and cost, armor its armor class.
+#[test]
+fn part_pages_show_the_part_s_data() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = cr_store::Installation::open(dir).unwrap();
+    let catalog = install.catalog();
+    let entry = |section: &str, name: &str| {
+        catalog
+            .iter()
+            .find(|s| s.id == section)
+            .unwrap()
+            .entries
+            .iter()
+            .find(|e| e.title == name)
+            .unwrap()
+            .clone()
+    };
+    let rows = |e: &cr_store::catalog::Entry| {
+        e.groups
+            .iter()
+            .flat_map(|g| g.rows.iter().cloned())
+            .collect::<Vec<_>>()
+    };
+    let dagger = rows(&entry("weapons", "Dagger"));
+    assert!(
+        dagger
+            .iter()
+            .any(|(l, v)| l == "Damage, Small-Medium" && v == "1d4"),
+        "{dagger:?}"
+    );
+    assert!(dagger.iter().any(|(l, _)| l == "Gold Pieces"), "{dagger:?}");
+    for section in ["armor", "equipment", "magic-items", "nonweapon"] {
+        let catalog_section = catalog.iter().find(|s| s.id == section).unwrap();
+        let with_data = catalog_section
+            .entries
+            .iter()
+            .filter(|e| !e.groups.is_empty())
+            .count();
+        assert!(with_data * 2 > catalog_section.entries.len(), "{section}");
+    }
+}
+
+/// Coins moved into an art object inside Gems and Art keep showing, in a
+/// group of their own under both holders.
+#[test]
+fn nested_treasure_is_shown() {
+    use cr_store::treasure::{Bundle, Item};
+    let mut art = Item::new("Silver comb", 1);
+    art.contents = Some(Bundle {
+        items: vec![Item::new("Gold Pieces", 20)],
+    });
+    let mut gems = Item::new("Gems and Art", 1);
+    gems.contents = Some(Bundle {
+        items: vec![art, Item::new("Pearl", 2)],
+    });
+    let bundle = Bundle {
+        items: vec![gems, Item::new("Copper Pieces", 5)],
+    };
+    let groups = cr_store::catalog::treasure_groups(&bundle, None);
+    let titles: Vec<&str> = groups.iter().map(|g| g.title.as_str()).collect();
+    assert_eq!(
+        titles,
+        ["Treasure", "Gems and Art", "Gems and Art › Silver comb"]
+    );
+    assert_eq!(groups[2].rows[0].0, "Gold Pieces x20");
+}

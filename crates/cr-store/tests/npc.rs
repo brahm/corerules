@@ -844,3 +844,25 @@ fn group_filters_only_narrow_the_lists() {
         assert_eq!(rules.group_alignments(&l), alignments);
     }
 }
+
+/// New NPC's typed scores stay within the race's limits, and only a race
+/// that rolls exceptional Strength gets it.
+#[test]
+fn typed_scores_follow_the_race() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(PathBuf::from(dir)).unwrap();
+    let Ok(rules) = install.npc_rules() else {
+        return;
+    };
+    let dwarf = rules.ability_range("Dwarf");
+    assert!(
+        dwarf
+            .iter()
+            .all(|(lo, hi)| 1 <= *lo && lo <= hi && *hi <= 19)
+    );
+    assert!(dwarf[0].1 < 25);
+    assert_eq!(rules.ability_range("No such race"), [(1, 25); 6]);
+    assert!(!rules.exceptional_strength("No such race"));
+}

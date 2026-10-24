@@ -279,6 +279,28 @@ pub fn record_action<H: Host + 'static>(
     run(host, section, origin, name, action);
 }
 
+/// What a saved record's name is handed to.
+type Saved = Rc<dyn Fn(&str)>;
+
+thread_local! {
+    /// What the editor [`new_record_then`] opens does with the name it
+    /// saves; taken when that editor is built.
+    static AFTER_NEW: RefCell<Option<Saved>> = RefCell::new(None);
+}
+
+/// New on `section`, as [`record_action`]; once the new record is saved,
+/// `saved` gets its name (the "+" of Add Monster and Add Trap puts it in
+/// the encounter).
+pub fn new_record_then<H: Host + 'static>(
+    host: &Shared<H>,
+    section: &str,
+    saved: impl Fn(&str) + 'static,
+) {
+    AFTER_NEW.set(Some(Rc::new(saved)));
+    run(host, section, Origin::Custom, "", Action::New);
+    AFTER_NEW.take();
+}
+
 fn run<H: Host + 'static>(
     host: &Shared<H>,
     section: &str,
@@ -898,6 +920,8 @@ fn finish<K: UserKind, H: Host + 'static>(
     (cancel, save): (gtk::Button, gtk::Button),
     detach: Rc<Cell<bool>>,
 ) {
+    ask_before_discarding(&dialog, &record);
+    let after_new = AFTER_NEW.take().filter(|_| editing.is_none());
     cancel.connect_clicked({
         let dialog = dialog.clone();
         move |_| {
@@ -928,9 +952,12 @@ fn finish<K: UserKind, H: Host + 'static>(
             });
             match errors(&*host, result) {
                 Some(Ok(name)) => {
-                    dialog.close();
+                    dialog.force_close();
                     host.reload(section, Some(udb::key(section, Origin::Custom, &name)));
                     host.toast(&tr!("“{name}” saved", name));
+                    if let Some(after_new) = &after_new {
+                        after_new(&name);
+                    }
                     if editing.is_none() && K::NOUN == "Class" {
                         message(
                             &host.parent(),
@@ -968,6 +995,7 @@ fn finish_only<K: UserKind, H: Host + 'static>(
     (cancel, save): (gtk::Button, gtk::Button),
     only: Only<K>,
 ) {
+    ask_before_discarding(&dialog, &record);
     cancel.connect_clicked({
         let dialog = dialog.clone();
         move |_| {
@@ -980,13 +1008,44 @@ fn finish_only<K: UserKind, H: Host + 'static>(
             let r = record.borrow().clone();
             if errors(&*host, host.with_install(|i| (only.save)(i, &r))).is_some() {
                 let name = K::name(&r).to_owned();
-                dialog.close();
+                dialog.force_close();
                 host.reload(section, Some(udb::key(section, only.origin, &name)));
                 host.toast(&tr!("“{name}” saved", name));
             }
         }
     });
     dialog.present(Some(&host.parent()));
+}
+
+/// Has closing the editor (Cancel, Escape or the close button) ask before
+/// it drops changes to the record, as the original's "Not Saved" does.
+fn ask_before_discarding<R: Clone + PartialEq + 'static>(
+    dialog: &adw::Dialog,
+    record: &Rc<RefCell<R>>,
+) {
+    let original = record.borrow().clone();
+    let record = record.clone();
+    dialog.connect_close_attempt(move |dialog| {
+        if *record.borrow() == original {
+            dialog.force_close();
+            return;
+        }
+        let alert = adw::AlertDialog::builder()
+            .heading(tr("Not Saved"))
+            .body(tr(
+                "The record has changes that are not saved. Discard them?",
+            ))
+            .build();
+        alert.add_responses(&[("cancel", tr("_Cancel")), ("discard", tr("_Discard"))]);
+        alert.set_response_appearance("discard", adw::ResponseAppearance::Destructive);
+        let dialog = dialog.clone();
+        alert.choose(&dialog.clone(), gtk::gio::Cancellable::NONE, move |r| {
+            if r == "discard" {
+                dialog.force_close();
+            }
+        });
+    });
+    dialog.set_can_close(false);
 }
 
 /// A message with an OK button.
@@ -1109,6 +1168,11 @@ fn control<R: Clone + 'static, H: Host + 'static>(
                 .title(glib::markup_escape_text(label).as_str())
                 .model(&gtk::StringList::new(&shown))
                 .enable_search(choices.len() > 12)
+                .expression(gtk::PropertyExpression::new(
+                    gtk::StringObject::static_type(),
+                    None::<gtk::Expression>,
+                    "string",
+                ))
                 .build();
             {
                 let (changed, choices) = (changed.clone(), choices.clone());

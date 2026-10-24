@@ -734,23 +734,38 @@ impl Viewer {
         let query = self.search.text().to_lowercase();
         let mut rows = Vec::new();
         if !query.is_empty() {
-            for (i, topic) in help.topics.iter().enumerate() {
-                let title = topic.display_title();
-                let found = title.to_lowercase().contains(&query)
-                    || topic
-                        .paragraphs
-                        .iter()
-                        .any(|p| p.text().to_lowercase().contains(&query));
-                if found && !title.is_empty() {
-                    rows.push(Row {
-                        level: 1,
-                        title,
-                        context: None,
-                        place: Some(Place {
-                            file: file.clone(),
-                            topic: i,
-                        }),
-                    });
+            // The files the contents include are searched too: the Tome
+            // of Help's search covers every book.
+            let mut files = vec![(file.clone(), help.clone())];
+            if let Some(contents) = self.install.help_contents(&file) {
+                for name in contents.entries.iter().filter_map(|e| e.file.as_deref()) {
+                    let name = name.to_ascii_lowercase();
+                    if files.iter().all(|(f, _)| !f.eq_ignore_ascii_case(&name))
+                        && let Some(other) = self.file(&name)
+                    {
+                        files.push((name, other));
+                    }
+                }
+            }
+            for (file, help) in files {
+                for (i, topic) in help.topics.iter().enumerate() {
+                    let title = topic.display_title();
+                    let found = title.to_lowercase().contains(&query)
+                        || topic
+                            .paragraphs
+                            .iter()
+                            .any(|p| p.text().to_lowercase().contains(&query));
+                    if found && !title.is_empty() {
+                        rows.push(Row {
+                            level: 1,
+                            title,
+                            context: None,
+                            place: Some(Place {
+                                file: file.clone(),
+                                topic: i,
+                            }),
+                        });
+                    }
                 }
             }
         } else if let Some(contents) = self.install.help_contents(&file) {

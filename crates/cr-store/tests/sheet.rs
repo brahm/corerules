@@ -181,3 +181,22 @@ fn markdown_exports_are_well_formed() {
         assert!(text.ends_with("on 10/19/2026 03:05 PM*\n"));
     }
 }
+
+/// A psionicist's sheet lists the attack and defense modes taken.
+#[test]
+fn psionic_modes_are_listed() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(Path::new(&dir)).expect("installation");
+    if install.is_core20() {
+        return;
+    }
+    let fixture = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/fixtures/characters/update/psionics.dat");
+    let character =
+        cr_formats::character::Character::parse(&std::fs::read(fixture).unwrap()).unwrap();
+    let text = install.sheet(&character).unwrap().to_markdown("");
+    assert!(text.contains("Attacks: Mind Thrust (MT)"), "{text}");
+    assert!(text.contains("Defenses: Mind Blank (MBk)"), "{text}");
+}

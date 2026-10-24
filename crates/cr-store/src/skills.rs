@@ -62,7 +62,8 @@ use crate::{Error, Installation, Result};
 pub mod wild;
 
 /// The most a rogue skill may reach without the original asking.
-const MOST_ROGUE_SCORE: i32 = 95;
+/// The highest a rogue skill's score may go.
+pub const MOST_ROGUE_SCORE: i32 = 95;
 
 /// Where the Psionic Attacks and Defenses dialog's names are in
 /// `Program/Tsrp3.exe` (the strings its list boxes are filled with).

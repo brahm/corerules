@@ -125,11 +125,20 @@ fn create_button(label: &str) -> gtk::Button {
         .build()
 }
 
-/// Logs the generator's notes: fallbacks for paths of the original that
-/// are not decoded, and the original's own messages.
-fn log_messages(npc: &Npc) {
-    for message in &npc.messages {
-        eprintln!("{}: {message}", npc.character.data.name);
+/// Shows the generator's notes on what it could not do (an item of the
+/// kit missing from the database, no spellbook part), as the original's
+/// messages do.
+fn show_messages<'a>(parent: &gtk::Widget, npcs: impl IntoIterator<Item = &'a Npc>) {
+    let lines: Vec<String> = npcs
+        .into_iter()
+        .flat_map(|npc| {
+            npc.messages
+                .iter()
+                .map(move |m| format!("{}: {m}", npc.character.data.name))
+        })
+        .collect();
+    if !lines.is_empty() {
+        crate::create::message(parent, tr("NPC Generator"), &lines.join("\n"));
     }
 }
 
@@ -373,6 +382,38 @@ fn npc_dialog<H: Host + 'static>(host: &Rc<H>, template: Option<Chosen>, parent:
             clear.set_visible(a.is_some());
         }
     };
+    // The scores typed stay within the race's limits, and 18 Strength
+    // brings exceptional Strength for a race that rolls it.
+    let fit_abilities = Rc::new({
+        let (rules, ability_rows, exceptional, rolled, selected_race) = (
+            rules.clone(),
+            ability_rows.clone(),
+            exceptional.clone(),
+            rolled.clone(),
+            selected_race.clone(),
+        );
+        move || {
+            let race = selected_race();
+            for (row, (lo, hi)) in ability_rows.iter().zip(rules.ability_range(&race)) {
+                row.set_range(f64::from(lo), f64::from(hi));
+            }
+            let strong = rolled.borrow().is_some()
+                && ability_rows[0].value() as i32 == 18
+                && rules.exceptional_strength(&race);
+            if strong && exceptional.value() == 0.0 {
+                exceptional.set_value(1.0);
+            }
+            exceptional.set_visible(strong);
+        }
+    });
+    ability_rows[0].connect_value_notify({
+        let fit_abilities = fit_abilities.clone();
+        move |_| fit_abilities()
+    });
+    race.connect_selected_notify({
+        let fit_abilities = fit_abilities.clone();
+        move |_| fit_abilities()
+    });
     roll.connect_clicked({
         let (rules, host, rules_choice, rolled) = (
             rules.clone(),
@@ -415,7 +456,7 @@ fn npc_dialog<H: Host + 'static>(host: &Rc<H>, template: Option<Chosen>, parent:
 
     create.connect_clicked({
         let (host, dialog) = (host.clone(), dialog.clone());
-        move |_| {
+        move |create| {
             let classes = chosen();
             if classes.is_empty() {
                 return host.toast(&rules.no_class_message());
@@ -446,15 +487,19 @@ fn npc_dialog<H: Host + 'static>(host: &Rc<H>, template: Option<Chosen>, parent:
                 Ok(npc) => npc,
                 Err(e) => return host.toast(&e.to_string()),
             };
-            log_messages(&npc);
             if let Some(chosen) = &template {
+                // Clicks made meanwhile create nothing more.
+                create.set_sensitive(false);
                 dialog.close();
+                show_messages(&host.parent(), [&npc]);
                 return chosen(&npc);
             }
             let party = party.text().trim().to_owned();
             match host.with_install(|install| install.save_npc(&npc, &party)) {
                 Some(Ok(file)) => {
+                    create.set_sensitive(false);
                     dialog.close();
+                    show_messages(&host.parent(), [&npc]);
                     host.reload("characters", Some(file));
                     host.toast(&tr!(
                         "{name} was created",
@@ -825,7 +870,7 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
 
     create.connect_clicked({
         let (host, dialog) = (host.clone(), dialog.clone());
-        move |_| {
+        move |create| {
             let name = party.text().trim().to_owned();
             if name.is_empty() {
                 return host.toast(tr("A group name must be supplied."));
@@ -842,14 +887,15 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
             let saved = host.with_install(|install| {
                 let mut last = None;
                 for npc in &npcs {
-                    log_messages(npc);
                     last = Some(install.save_npc(npc, &name)?);
                 }
                 Ok(last)
             });
             match saved {
                 Some(Ok(last)) => {
+                    create.set_sensitive(false);
                     dialog.close();
+                    show_messages(&host.parent(), &npcs);
                     host.reload("characters", last);
                     host.toast(&trn!(
                         "{n} NPC was created",

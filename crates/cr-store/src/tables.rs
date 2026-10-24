@@ -454,6 +454,8 @@ pub struct RollResult {
     /// The book and table number to read instead, for tables that are not
     /// rolled here.
     pub book_table: Option<(TableBook, u16)>,
+    /// The book and table number the roll comes from, for Read in Book.
+    pub reference: Option<(TableBook, u16)>,
     /// The original opens the treasure generator for this entry.
     pub treasure: bool,
 }
@@ -942,6 +944,7 @@ impl TableRolls {
             depth: 0,
             missing_text: false,
         };
+        run.out.reference = entry.number.map(|n| (entry.book, n));
         if entry.steps.is_empty() {
             let number = entry.number.unwrap_or(0);
             run.out.book_table = Some((entry.book, number));

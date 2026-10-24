@@ -853,3 +853,28 @@ fn the_items_a_character_may_not_use_are_named() {
     }
     assert!(by_kit > 0);
 }
+
+/// A Gladiator must always take weapon proficiencies from the kit's
+/// list: a long sword, off it, is warned about.
+#[test]
+fn a_kit_s_weapon_list_is_enforced() {
+    let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+        return;
+    };
+    let install = Installation::open(Path::new(&dir)).unwrap();
+    if install.is_core20() {
+        return;
+    }
+    let rules = install.creation_rules().unwrap();
+    let mut draft = thief();
+    draft.classes = vec!["Fighter".into()];
+    draft.skills_and_powers = true;
+    draft.kit = "Gladiator".into();
+    let warnings = rules.weapon_warnings(&draft, &[], "Sword, long");
+    assert!(
+        warnings
+            .iter()
+            .any(|w| w.check == WeaponCheck::AlwaysFromList),
+        "{warnings:?}"
+    );
+}

@@ -13,6 +13,27 @@ mod party;
 mod transfer;
 mod userdb;
 
+/// The commands, extract-data among them.
+const COMMANDS: [&str; 17] = [
+    "extract-data",
+    "survey",
+    "chars",
+    "edit",
+    "sheet",
+    "treasure",
+    "encounter",
+    "npc",
+    "books",
+    "book",
+    "table",
+    "userdb",
+    "export",
+    "import",
+    "package",
+    "party",
+    "delete",
+];
+
 const USAGE: &str = "usage:
   cr extract-data SOURCE [DEST_DIR]
                             copy what the app uses out of a Core Rules 2.0
@@ -206,6 +227,16 @@ fn main() -> ExitCode {
         eprintln!("{USAGE}");
         return ExitCode::FAILURE;
     };
+    // Help needs no data; an unknown command is an error before any is
+    // looked for.
+    if matches!(command.as_str(), "--help" | "-h" | "help") {
+        out!("{USAGE}\n");
+        return ExitCode::SUCCESS;
+    }
+    if !COMMANDS.contains(&command.as_str()) {
+        eprintln!("cr: unknown command {command}\n{USAGE}");
+        return ExitCode::FAILURE;
+    }
     if command == "extract-data" {
         return match cmd_extract_data(&args[1..]) {
             Ok(()) => ExitCode::SUCCESS,
@@ -217,6 +248,14 @@ fn main() -> ExitCode {
     }
     // INSTALL_DIR may be left out whenever the next argument is not a
     // folder: the data package or the Wine installation is used.
+    // A path that is not there is an error, not a reason to use the
+    // default data.
+    if let Some(dir) = args.get(1).filter(|d| d.contains('/'))
+        && !std::path::Path::new(dir).exists()
+    {
+        eprintln!("cr: {dir}: no such folder");
+        return ExitCode::FAILURE;
+    }
     let (install, rest) = match args.get(1).filter(|d| std::path::Path::new(d).is_dir()) {
         Some(dir) => (Installation::open(dir), &args[2..]),
         None => (
@@ -269,10 +308,7 @@ fn main() -> ExitCode {
         "package" => transfer::cmd_package(&install, rest),
         "party" => party::cmd_party(&install, rest),
         "delete" => party::cmd_delete(&install, rest),
-        _ => {
-            eprintln!("{USAGE}");
-            Ok(())
-        }
+        _ => unreachable!("commands are checked first"),
     });
     // What is still buffered goes out before the exit status is decided.
     if let Err(e) = std::io::stdout().flush() {

@@ -63,6 +63,11 @@ impl Gen<'_> {
             let k = i + 1;
             *a = [u(self.ab[k]), s[k][0], s[k][1]];
         }
+        // A Player's Option NPC is a Skills & Powers character, with its
+        // subabilities.
+        if expansion && self.po {
+            d.skills_and_powers = 1;
+        }
         d.race.clone_from(&self.race.name);
         d.subrace.clone_from(&self.subrace.name);
         d.kit = if self.kit_name.is_empty() {

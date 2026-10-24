@@ -477,6 +477,88 @@ impl UserKind for Parts {
     }
 }
 
+/// The part editor's fields, for [`shown_values`].
+pub fn shown_fields(flavor: Flavor) -> Vec<FieldDesc<PartRec>> {
+    Parts::fields(flavor)
+}
+
+/// What the part editor's pages hold for `part`, as its catalog page lists
+/// it: the set values of the fields its type shows, by page and group.
+/// Names, pictures, icons, the description and the values that need the
+/// installation's lists are left out.
+pub fn shown_values(
+    fields: &[FieldDesc<PartRec>],
+    part_type: usize,
+    part: &Part,
+) -> Vec<(String, Vec<(String, String)>)> {
+    use super::{FieldKind, Options};
+    let r = PartRec {
+        part_type,
+        part: part.clone(),
+    };
+    let mut shown: Vec<(String, Vec<(String, String)>)> = Vec::new();
+    for f in fields {
+        if f.page == pages::DESCRIPTION
+            || f.source_getter.is_some()
+            || f.visible.is_some_and(|v| !v(&r))
+            || f.enabled.is_some_and(|e| !e(&r))
+            || f.enabled_at.is_some_and(|e| !e(&r, f.arg))
+        {
+            continue;
+        }
+        let value = (f.getter)(&r, f.arg);
+        let text = match f.kind {
+            FieldKind::MultiLine | FieldKind::Picture(_) | FieldKind::Icon => continue,
+            FieldKind::Text { .. } if value.text() == part.head.name => continue,
+            FieldKind::Check => {
+                if !value.bool() {
+                    continue;
+                }
+                tr("Yes").to_owned()
+            }
+            FieldKind::Choice(Options::Fixed(options)) => match value.int() {
+                i @ 1.. => options
+                    .get(i as usize)
+                    .map(|o| tr(o).to_owned())
+                    .unwrap_or_default(),
+                _ => continue,
+            },
+            FieldKind::Choice(_) => continue,
+            FieldKind::Int { .. } if value.int() == 0 => continue,
+            FieldKind::OptInt { none, inverted, .. } => {
+                let n = value.int();
+                let is_none = n == none || (none < 0 && n < 0);
+                match (inverted, is_none) {
+                    (true, true) => tr("Yes").to_owned(),
+                    (false, true) => continue,
+                    (_, false) if n == 0 => continue,
+                    (_, false) => n.to_string(),
+                }
+            }
+            FieldKind::Real { none, .. } => match (none, value) {
+                (Some((x, label)), Value::Real(v)) if v == x => tr(label).to_owned(),
+                (_, Value::Real(0.0)) => continue,
+                (_, v) => v.text(),
+            },
+            FieldKind::Dice if value.dice() == [0; 3] => continue,
+            _ => value.text(),
+        };
+        if text.is_empty() {
+            continue;
+        }
+        let title = match f.group {
+            "" => tr(f.page).to_owned(),
+            group => format!("{} – {}", tr(f.page), tr(group)),
+        };
+        let row = (tr(f.label).to_owned(), text);
+        match shown.iter_mut().find(|(t, _)| *t == title) {
+            Some((_, rows)) => rows.push(row),
+            None => shown.push((title, vec![row])),
+        }
+    }
+    shown
+}
+
 fn records_of(file: PartsFile) -> Vec<PartRec> {
     file.arrays
         .into_iter()

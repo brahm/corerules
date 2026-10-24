@@ -324,6 +324,13 @@ impl Book {
             path: self.path.clone(),
             source,
         })?;
+        // Anything but RTF would parse as an empty book.
+        if !data.trim_ascii_start().starts_with(b"{\\rtf") {
+            return Err(Error::Invalid(tr!(
+                "{path} is not an RTF document",
+                path = self.path.display()
+            )));
+        }
         Ok(Document::parse(&data))
     }
 }

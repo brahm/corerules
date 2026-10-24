@@ -442,7 +442,7 @@ impl AbilityRules {
     }
 
     /// The points `new` costs compared with what the character has.
-    fn spent(&self, character: &Character, new: &CharacterAbilities) -> i64 {
+    pub fn spent(&self, character: &Character, new: &CharacterAbilities) -> i64 {
         let d = &character.data;
         let skills_and_powers = d.skills_and_powers != 0;
         let old = self.abilities_of(character);

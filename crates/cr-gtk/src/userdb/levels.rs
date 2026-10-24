@@ -653,6 +653,11 @@ fn ability_dialog(
         .title(tr("Class Ability"))
         .model(&gtk::StringList::new(&names))
         .enable_search(names.len() > 12)
+        .expression(gtk::PropertyExpression::new(
+            gtk::StringObject::static_type(),
+            None::<gtk::Expression>,
+            "string",
+        ))
         .build();
     if let Some(i) = available.iter().position(|n| n == name) {
         ability.set_selected(i as u32);

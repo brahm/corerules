@@ -335,8 +335,20 @@ pub(in crate::sheet) fn psionics(ctx: &Ctx) -> Section {
     }
     // 2.0 has no attack and defense mode rows.
     if ctx.expansion() {
-        rows.push(vec![Cell::new("Attacks: None").span(5)]);
-        rows.push(vec![Cell::new("Defenses: None").span(5)]);
+        let modes = |names: &[String]| {
+            if names.is_empty() {
+                "None".to_owned()
+            } else {
+                names.join(", ")
+            }
+        };
+        let d = &ctx.ch.data;
+        rows.push(vec![
+            Cell::new(format!("Attacks: {}", modes(&d.unknown_0xac[6]))).span(5),
+        ]);
+        rows.push(vec![
+            Cell::new(format!("Defenses: {}", modes(&d.unknown_0x19c4))).span(5),
+        ]);
     }
     rows.push(
         ["Power", "PSPs", "Range", "Area of Effect", "MAC"]

@@ -339,7 +339,7 @@ impl Ui {
         let dialog = self.dialog.clone();
         read.connect_clicked(move |_| {
             let Some(r) = weak.upgrade() else { return };
-            let found = r.result.borrow().as_ref().and_then(|x| x.book_table);
+            let found = r.result.borrow().as_ref().and_then(|x| x.reference);
             if let Some((book, number)) = found {
                 dialog.close();
                 open_book(book.short_name(), Some(&format!("Table {number}:")));
@@ -470,7 +470,7 @@ impl Roller {
             &mut self.rand.borrow_mut(),
         );
         self.show(&result);
-        self.read.set_visible(result.book_table.is_some());
+        self.read.set_visible(result.reference.is_some());
         self.treasure.set_visible(result.treasure);
         self.again
             .set_sensitive(result.book_table.is_none() && !result.treasure);
