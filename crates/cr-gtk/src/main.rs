@@ -2438,6 +2438,31 @@ fn character_editor(
         show();
         list.connect_changed(show.clone());
         level_listeners.borrow_mut().push(Box::new(show));
+        // A spell past the level's slots is refused.
+        list.set_limit(
+            {
+                let (list, rules, advanced, slot) = (
+                    list.clone(),
+                    choices.advance.clone(),
+                    advanced.clone(),
+                    *slot,
+                );
+                move || {
+                    let slots = rules.spell_slots(&advanced.borrow(), slot).ok().flatten();
+                    slots_fit(slots, &list.values())
+                }
+            },
+            {
+                let group = list.group.clone();
+                move || {
+                    create::message(
+                        &group,
+                        tr("Not Allowed"),
+                        tr("There are no more spell slots of this level to memorize it in."),
+                    )
+                }
+            },
+        );
     }
     let ability_editor = Rc::new(abilities::AbilityEditor::new(
         choices.abilities.clone(),
@@ -3100,6 +3125,17 @@ pub(crate) fn level_text(class: &cr_store::advance::ClassLevel) -> String {
 
 /// Callbacks run when the character's levels change.
 type Listeners = Rc<RefCell<Vec<Box<dyn Fn()>>>>;
+
+/// Whether the memorized spells (values are their spell levels) fit the
+/// slots; with no slots known, they do.
+fn slots_fit(slots: Option<[u32; 9]>, memorized: &[(u32, Option<u32>)]) -> bool {
+    slots.is_none_or(|slots| {
+        (1..=9u32).all(|level| {
+            let used = memorized.iter().filter(|(l, _)| *l == level).count() as u32;
+            used <= slots[level as usize - 1]
+        })
+    })
+}
 
 /// "1st: 2 of 3 · 2nd: 0 of 1" for the memorized spells (values are their
 /// spell levels) against the slots, marking levels over the limit.

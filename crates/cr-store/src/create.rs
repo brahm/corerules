@@ -595,6 +595,9 @@ pub struct Draft {
     pub psionic_roll: u32,
     /// Anyone else's wild talents.
     pub wild: crate::skills::wild::WildDraft,
+    /// A psionicist's disciplines, powers and modes, as the Psionics step
+    /// leaves them.
+    pub psionics: Option<crate::skills::CharacterSkills>,
     pub nonweapon_proficiencies: Vec<String>,
     /// Native languages.
     pub languages: Vec<String>,
@@ -728,6 +731,7 @@ impl Draft {
             hit_dice: Vec::new(),
             psionic_roll: 0,
             wild: Default::default(),
+            psionics: None,
             nonweapon_proficiencies: Vec::new(),
             languages: Vec::new(),
             weapon_proficiencies: Vec::new(),
@@ -873,9 +877,13 @@ impl Installation {
                 records.push(*race);
             }
         }
-        // A main race has ability limits; a subrace has none and names its
-        // race ("Hill dwarf", "Dark (drow) elf", "Half-Stout Halfling").
-        let is_main = |r: &cr_formats::race::Race| r.ability_limits.iter().any(|l| l[1] > 0);
+        // A subrace is marked one and names its parent race (+0x184,
+        // +0x188); the standard ones also name it in theirs ("Hill
+        // dwarf", "Dark (drow) elf", "Half-Stout Halfling"), and an old
+        // record unmarked but without ability limits is taken for one.
+        let is_main = |r: &cr_formats::race::Race| {
+            r.unknown_0x184 == 0 && r.ability_limits.iter().any(|l| l[1] > 0)
+        };
         let mut races: Vec<RaceRules> = records
             .iter()
             .filter(|r| is_main(r))
@@ -911,10 +919,19 @@ impl Installation {
                 .split_whitespace()
                 .map(|w| w.trim_matches(['(', ')']).to_lowercase())
                 .collect();
-            if let Some(race) = races
-                .iter_mut()
-                .find(|r| words.contains(&r.name.to_lowercase()))
-            {
+            let parent = (sub.unknown_0x184 != 0)
+                .then(|| {
+                    races
+                        .iter()
+                        .position(|r| r.name.eq_ignore_ascii_case(&sub.unknown_0x188))
+                })
+                .flatten()
+                .or_else(|| {
+                    races
+                        .iter()
+                        .position(|r| words.contains(&r.name.to_lowercase()))
+                });
+            if let Some(race) = parent.map(|i| &mut races[i]) {
                 let entry = SubraceRules {
                     name: sub.name.clone(),
                     movement: sub.movement,
@@ -1198,6 +1215,10 @@ impl Installation {
         if draft.wild != Default::default() {
             self.skill_rules()?
                 .apply_wild(&mut character, &draft.wild, &mut Dice::default());
+        }
+        if let Some(psionics) = &draft.psionics {
+            self.skill_rules()?
+                .apply(&mut character, psionics, &mut Dice::default())?;
         }
         let format = |path: &str| {
             let path = path.to_owned();
@@ -1559,14 +1580,21 @@ impl CreationRules {
         singles
     }
 
-    /// The class combinations the race may take in the setting with these
+    /// The class combinations the race (and subrace, when it has
+    /// Allowed Classes of its own) may take in the setting with these
     /// (adjusted) scores, as the race page lists them.
     pub fn class_options(
         &self,
         setting: &Setting,
         race: &str,
+        subrace: &str,
         adjusted: &[u32; 6],
     ) -> Vec<Vec<String>> {
+        let race = if subrace != race && self.combinations.contains_key(subrace) {
+            subrace
+        } else {
+            race
+        };
         let mut options: Vec<Vec<String>> = self
             .combinations_of(setting, race)
             .into_iter()
@@ -2140,6 +2168,20 @@ impl CreationRules {
             - i64::from(traits)
     }
 
+    /// Whether the proficiencies page's choices fit the slots (Core Rules)
+    /// or the points (Skills & Powers) and the languages' room: what the
+    /// page refuses to go past.
+    pub fn proficiencies_fit(&self, draft: &Draft) -> bool {
+        let languages = draft.learned_languages.len() <= self.language_slots(draft);
+        if draft.skills_and_powers {
+            languages && self.proficiency_points_left(draft) >= 0 && self.points_left(draft) >= 0
+        } else {
+            languages
+                && self.nonweapon_spent(draft) <= self.nonweapon_slots_for(draft)
+                && self.weapon_spent(draft) <= self.weapon_slots_for(draft)
+        }
+    }
+
     /// What a weapon proficiency costs a Skills & Powers character: the
     /// cheapest of the classes' (2 points for warriors, 3 for the others).
     pub fn weapon_cost(&self, classes: &[String]) -> u32 {
@@ -2649,7 +2691,7 @@ impl CreationRules {
         }
         let adjusted = self.draft_scores(draft);
         if !self
-            .class_options(draft.setting, &draft.race, &adjusted)
+            .class_options(draft.setting, &draft.race, &draft.subrace, &adjusted)
             .contains(&draft.classes)
         {
             return Some(tr!(
@@ -3774,7 +3816,7 @@ mod tests {
         let adjusted = rules.adjusted("Dwarf", &[16, 14, 15, 12, 10, 9]);
         assert_eq!(adjusted, [16, 14, 16, 12, 10, 8]);
         assert_eq!(
-            rules.class_options(generic, "Dwarf", &adjusted),
+            rules.class_options(generic, "Dwarf", "Dwarf", &adjusted),
             [
                 vec!["Fighter".to_owned()],
                 vec!["Thief".into()],
@@ -3783,12 +3825,12 @@ mod tests {
             ]
         );
         // The paladin needs Charisma 17; the psionicist Wisdom 15.
-        let human = rules.class_options(generic, "Human", &[16, 14, 15, 12, 10, 9]);
+        let human = rules.class_options(generic, "Human", "Human", &[16, 14, 15, 12, 10, 9]);
         assert_eq!(human, [vec!["Fighter".to_owned()], vec!["Mage".into()]]);
         let dragonlance = Setting::by_id("dragonlance").unwrap();
         assert!(
             rules
-                .class_options(dragonlance, "Human", &[16, 14, 15, 12, 15, 9])
+                .class_options(dragonlance, "Human", "Human", &[16, 14, 15, 12, 15, 9])
                 .iter()
                 .all(|c| c[0] != "Psionicist")
         );

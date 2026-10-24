@@ -34,7 +34,7 @@ fn rules() -> Option<SkillRules> {
     Some(install.skill_rules().unwrap())
 }
 
-fn rogue_points(rules: &SkillRules, character: &Character, points: &[(&str, u32)]) -> Vec<u32> {
+fn rogue_points(rules: &SkillRules, character: &Character, points: &[(&str, i32)]) -> Vec<i32> {
     let mut rogue = rules.skills_of(character).rogue;
     for (skill, amount) in points {
         let at = rules
@@ -173,9 +173,9 @@ fn the_kit_gives_rogue_points_that_are_not_spent() {
             let at = skills.iter().position(|s| s.name == pick.names[0]).unwrap();
             let before = new.rogue[at];
             rules.set_rogue_bonus(&character, &mut new, 1, Some(&pick.names[0]));
-            assert_eq!(new.rogue[at] as i32, before as i32 + pick.amount);
+            assert_eq!(new.rogue[at], before + pick.amount);
             assert_eq!(rules.rogue_points_left(&character, &new), left);
-            assert!(rules.rogue_minimums(&character, &new)[at] as i32 >= pick.amount);
+            assert!(rules.rogue_minimums(&character, &new)[at] >= pick.amount);
             rules.set_rogue_bonus(&character, &mut new, 1, None);
             assert_eq!(new.rogue[at], before);
             rules.set_rogue_bonus(&character, &mut new, 1, Some(&pick.names[0]));
@@ -196,4 +196,32 @@ fn the_kit_gives_rogue_points_that_are_not_spent() {
         }
     }
     assert!(own_points > 0 && bonuses > 0 && chosen > 0);
+}
+
+#[test]
+fn a_kit_s_negative_modifier_is_kept_as_a_negative_number() {
+    let Some(rules) = rules() else { return };
+    let install =
+        Installation::open(Path::new(&std::env::var_os("CORERULES_DIR").unwrap())).unwrap();
+    let kits = install.creation_rules().unwrap().all_kits();
+    let beggar = kits.iter().find(|k| k.starts_with("Beggar")).unwrap();
+    // A Beggar thief as the New Character wizard leaves him: the kit's
+    // modifiers in his 1st-level points, some of them negative.
+    let mut thief = read("thief.dat");
+    thief.data.kit = beggar.clone();
+    let mut new = rules.skills_of(&thief);
+    let modifiers = rules.rogue_kit_points(&thief, &new);
+    assert!(modifiers.iter().any(|(m, _)| *m < 0), "{modifiers:?}");
+    for (points, (modifier, _)) in new.rogue.iter_mut().zip(&modifiers) {
+        *points = *modifier;
+    }
+    let left = rules.rogue_points_left(&thief, &new);
+    rules.apply(&mut thief, &new, &mut Dice::seeded(1)).unwrap();
+    // Read back, the modifiers are the same small negative numbers, and
+    // the points left and the Save do not change.
+    let again = rules.skills_of(&thief);
+    assert_eq!(again.rogue, new.rogue);
+    assert_eq!(rules.rogue_points_left(&thief, &again), left);
+    assert!(left >= 0);
+    assert_eq!(rules.problem(&thief, &again), None);
 }
