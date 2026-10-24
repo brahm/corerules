@@ -4,21 +4,61 @@
 
 # Core Rules
 
-A modern Linux replica of **AD&D Core Rules 2.0** (TSR/Evermore, 1998-1999),
-written in Rust with GTK4 and libadwaita. It reads and writes the data files
-of the original Windows 95 program, so characters made in either program
-open in the other.
+**Core Rules** is a complete Linux version of **AD&D Core Rules 2.0** and
+its **Expansion** (TSR/Evermore, 1998-1999), the character manager and
+Dungeon Master's toolkit for Advanced Dungeons & Dragons 2nd Edition. It is
+written in Rust with GTK 4 and libadwaita and runs natively, with no Wine
+and no Windows.
 
-> **Beta.** Version 0.9.0 is a beta: every feature below works against real
-> installations and was checked against the original programs, but it has
-> had little use outside those checks. Keep a copy of your `Chars` and
-> `UserDbas` folders, and [report](https://github.com/brahm/corerules/issues)
-> anything that differs from the original.
+Every screen of the original program is here: the Character Generator with
+Create, Enter and Update Character, kits and Player's Option, the character
+sheet, parties, the NPC, treasure and encounter generators, Table Rolls,
+editors for every user database, DM Toolkit packages, the rule books and
+the help. The app reads and writes the original's own data files, so
+characters, monsters, encounters and packages made in either program open
+in the other.
 
-> This project contains no TSR or Wizards of the Coast content. It reads the
-> rules data from a Core Rules installation you already own.
+> **Release candidate.** Version 1.0.0-rc1 is the release candidate for
+> 1.0. Every feature was checked against the original programs and went
+> through a full round of manual tests. It now needs real use: keep a copy
+> of your `Chars` and `UserDbas` folders, and
+> [report](https://github.com/brahm/corerules/issues) anything that is
+> wrong or that works differently from the original.
 
 ![The character list with a character made in the original program](docs/screenshots/character.png)
+
+## You need the original discs
+
+This project contains no TSR or Wizards of the Coast content. The rules,
+books, monsters, pictures and help all come from a copy of AD&D Core Rules
+2.0 (and, for everything the app creates and edits, the Expansion) that you
+already own. The app copies what it needs from the CD, its ISO image or an
+installation once, and then works without them (see
+[Getting the rules data](#getting-the-rules-data)).
+
+If your discs are lost, scratched or unreadable, disc images have been
+preserved by the Internet Archive:
+
+- [AD&D Core Rules 2.0](https://archive.org/details/adndcore2rules) (1998)
+- [AD&D Core Rules 2.0 Expansion](https://archive.org/details/add-core-rules-2.0-expansion) (1999)
+
+> **Copyright notice.** AD&D Core Rules and its contents are copyrighted
+> by Wizards of the Coast, and these images are not covered by this
+> project's license. Download an image only if you own the original disc
+> it replaces, and keep the data the app extracts for your own use; do not
+> redistribute it. This project does not host these files and is not
+> responsible for them. The links above are the archive's item pages, where
+> you can read about each item before choosing whether to download it.
+
+## Status and roadmap
+
+1. **Release candidate (now).** 1.0.0-rc1 goes to real users. Problems
+   found are fixed in further release candidates.
+2. **1.0.** After the testing period, the last release candidate becomes
+   the final 1.0: a faithful replacement for the original program.
+3. **After 1.0.** The app starts improving on the original and moving away
+   from it, step by step, until it no longer needs the original program's
+   files to work.
 
 ## Features
 
@@ -50,7 +90,8 @@ the original programs wrote.
   given when the character has none and again from the button beside the
   name, and the Background… dialog's event, with Select Randomly, and
   history), proficiencies and languages,
-  rogue skill points, spells (each learned as the original learns it:
+  rogue skill points, psionics for a psionicist (disciplines, powers and
+  modes, with the 1st-level PSPs rolled), spells (each learned as the original learns it:
   the chance to learn rolled, and a question before passing over a limit
   of level, Intelligence, spells per level or barred school), wild talents
   for a character who is not a psionicist (with the Expansion: Test for Wild
@@ -240,16 +281,17 @@ the original programs wrote.
 
 <p>
   <img src="docs/screenshots/npc.png" width="49%" alt="The New NPC dialog">
-  <img src="docs/screenshots/encounter.png" width="49%" alt="An encounter generated from a template">
+  <img src="docs/screenshots/encounter.png" width="49%" alt="An orc lair encounter generated from its template">
 </p>
 
 <p>
-  <img src="docs/screenshots/treasure.png" width="49%" alt="Treasure rolled for treasure type A">
+  <img src="docs/screenshots/treasure.png" width="49%" alt="Treasure rolled for treasure types A and H">
   <img src="docs/screenshots/editor.png" width="49%" alt="The editor for a new wizard spell">
 </p>
 
 <p>
   <img src="docs/screenshots/package.png" width="49%" alt="A new package with two characters and an encounter">
+  <img src="docs/screenshots/monster.png" width="49%" alt="A monster's page in the library">
 </p>
 
 ### Core Rules 2.0 and the Expansion
@@ -265,7 +307,7 @@ Expansion converts a 2.0 package, and leaves the 2.0 folder untouched.
 - Interface in English (US), Português (Brasil), Español, Italiano,
   Français and Deutsch (see [Languages](#languages))
 - Runs without Wine from a data package (see
-  [Running without Wine](#running-without-wine))
+  [Getting the rules data](#getting-the-rules-data))
 - The `cr` command does the same from a terminal: `cr chars`, `cr sheet`,
   `cr npc`, `cr treasure`, `cr encounter`, `cr table`, `cr userdb`,
   `cr export`, `cr import`, `cr package`, `cr party`, `cr delete`,
@@ -283,42 +325,112 @@ Expansion converts a 2.0 package, and leaves the 2.0 folder untouched.
 - Every file the app reads or writes is specified in
   [`docs/formats`](docs/formats/README.md)
 
-<p>
-  <img src="docs/screenshots/portuguese.png" width="49%" alt="The app in Brazilian Portuguese">
-</p>
+## Differences from the original
+
+The app aims to do what the original does, the way it does it, and saves
+nothing the original cannot read. This is the complete list of where it
+differs, each one on purpose.
+
+### Platform and setup
+
+- **Linux only, no Wine.** The app is a native GTK 4 program. macOS and
+  Windows versions are postponed; the backend crates have no GTK
+  dependency so they can be built later.
+- **No installation of the original needed.** Extract Data from CD… copies
+  what the app uses from the CD, its ISO image (read directly, with no
+  mounting) or an existing installation into a local data folder. The
+  original has to be installed from its CD.
+- **Core Rules 2.0 without the Expansion opens read-only.** Everything new
+  follows the Expansion. A 2.0 installation's characters and records are
+  brought into an Expansion installation with Import Core Rules 2.0…,
+  converted the way the Expansion converts a 2.0 package.
+- **Six interface languages.** The original is in English only; the app's
+  interface is also in Português (Brasil), Español, Italiano, Français and
+  Deutsch. Rules texts from the original files stay in English.
+- **Preferences in place of User Options.** The only User Options setting
+  within scope, turning the "Core Rules Vs Player's Option" message back
+  on, is in Preferences, together with the interface language.
+- **Its own help window.** The original's WinHelp files are read and shown
+  by the app, since Linux has no WinHelp.
+- **Campaign settings in New Character.** The original has none. Choosing
+  Forgotten Realms, Greyhawk, Dragonlance and the others only narrows the
+  races and classes the installed databases offer, following each
+  setting's campaign book; Generic offers everything, as the original does.
+- **A `cr` command-line tool** does most of what the app does from a
+  terminal. The original has nothing like it.
+
+### Features added
+
+- **Character sheet as PDF and Markdown.** Besides printing and the
+  original's TXT and HTML exports (identical line for line), the sheet can
+  be saved as PDF, and exported as Markdown in place of the Expansion's
+  RTF.
+- **The Monster Attack editor.** The original has this editor but hides its
+  New and Edit buttons, so monster attacks can only arrive by import; the
+  app offers it.
+- **Packages made with the patched Expansion import.** The CD's
+  `TSRP3.EXE` rejects packages written by the later patched Expansion
+  (many community add-ons were); the app reads both.
+- **Large packages import in the background**, and the Import dialog folds
+  a category of more than 200 items into one row.
+- **The Core Rules Community Add-ons Collection** (see
+  [Community add-ons](#community-add-ons)), 672 community add-ons converted
+  to the Expansion's format, with their own installer.
+
+### Behavior that differs
+
+- **Re-roll keeps hand-set hit points.** In an encounter, Re-roll rolls
+  only the monsters whose hit points were not set by hand, as the
+  original's later patch does (the unpatched program rolls them all). The
+  encounter file has no place for that mark, so it holds while the
+  encounter is open.
+- **Rebuilding the character list** leaves out a character file that
+  cannot be read, and says which one, where the original lists it as an
+  empty character.
+- **Schools…** on a standard spell writes `Spells.dat` when the spell is
+  saved, keeping the previous file as `Spells.dat.bak`; the original
+  writes it only from its internal Save Options screen.
+- **The NPC generator** finishes an NPC whose kit names an item missing
+  from the database, or who has no priest spells to choose from, and says
+  what was left out, where the original stops with an error.
+- **Table Rolls** lines its columns up; the text is the same as the
+  original's.
+- **The first Table Roll** after the app starts begins from the value the
+  original has under Wine (44), where the original's comes from Windows
+  memory.
 
 ### Not included
 
-Map Maker II, the Campaign Mapper and the dice roller are out of scope.
-Campaign Mapper drawings inside a package are kept but not offered or
-imported. Core Rules 1.0 files are not supported. Only Linux is supported
-for now; macOS and Windows are postponed.
+- Map Maker II, the Campaign Mapper and the dice roller. Campaign Mapper
+  drawings inside a package are kept but not offered or imported.
+- Core Rules 1.0 files.
+- The original's animations and sounds (including the animated assistant
+  of the Help menu) and its links to TSR's update and web pages.
+- Analyze and Repair Database and Delete User Data: the original deletes
+  its own Database menu when it starts, so no user reaches them there
+  either.
 
-### Differences from the original
+### Same as the original, although it may surprise
 
-A few things work differently on purpose. None of them changes what is
-saved in a way the original cannot read.
+These were reported in testing and kept, because the original does the
+same:
 
-- **Rebuilding the character list** leaves out a character file that
-  cannot be read, and says which one, where the original lists it as an
-  empty character
-- **Schools…** on a standard spell writes `Spells.dat` when the spell is
-  saved, keeping the previous file as `Spells.dat.bak`; the original
-  writes it only from its internal Save Options screen
-- **The NPC generator** finishes an NPC whose kit names an item missing
-  from the database, or who has no priest spells to choose from, and says
-  what was left out, where the original stops with an error
-- **Table Rolls** lines its columns up; the text is the same as the
-  original's
-- **The first Table Roll** after the app starts begins from the value the
-  original has under Wine (44), where the original's comes from Windows
-- **Packages** target Ubuntu 26.04 and Fedora 44 or newer; the AppImage
-  and the Flatpak use the GNOME 51 libraries
+- **Roll Again** in Table Rolls replaces the previous result instead of
+  adding to it; only the follow-up rolls of one roll are listed together.
+- A new Proficiency starts with **MAC Bonus** turned on.
+- **Move Into** in a treasure bundle offers any item.
+
+### Packages
+
+- Packages target Ubuntu 26.04 and Fedora 44 or newer. The `.deb` refuses
+  to install on Ubuntu 24.04 and older; the Flatpak runs there. The
+  AppImage and the Flatpak use the GNOME 51 libraries.
 
 ## Installing
 
 Every [release](https://github.com/brahm/corerules/releases) has
-packages for x86-64 Linux:
+packages for x86-64 Linux. Release candidates are marked as pre-releases
+on that page.
 
 | System | Package | Install |
 | --- | --- | --- |
@@ -337,14 +449,15 @@ write your home folder, where Wine keeps Core Rules, and CDs under `/media`
 and `/run/media`. The AppImage bundles the GNOME 51 libraries (GTK,
 libadwaita and the rest).
 
-## Running without Wine
+## Getting the rules data
 
-The app needs the rules data of a Core Rules CD you own. Instead of
-keeping the CD or Wine around, copy what the app uses into a local data
-package once with **Extract Data from CD…** in the main menu (also offered
-when the app finds no data). Choose the CD's ISO image, read directly with
-no mounting or other tools, or the folder of the mounted CD, of an
-installation or of a Wine prefix. The same from the command line:
+The app needs the rules data of a Core Rules CD you own (see
+[You need the original discs](#you-need-the-original-discs)). Copy what the
+app uses into a local data package once with **Extract Data from CD…** in
+the main menu, which the app also offers when it finds no data. Choose the
+CD's ISO image, read directly with no mounting or other tools, or the
+folder of the mounted CD, of an installation or of a Wine prefix. The same
+from the command line:
 
 ```sh
 cr extract-data add_core_rules_2_expansion.iso   # the CD's ISO image
@@ -357,8 +470,14 @@ look first. If that folder is taken, the package goes next to it as
 `corerules-data-core20` or `corerules-data-expansion`; the Expansion takes
 the data folder over from Core Rules 2.0 data, which moves aside, since the
 Expansion is where the app makes and changes things (2.0 content is brought
-in with Import Core Rules 2.0…). The package holds TSR/Wizards of the Coast
-content: keep it for your own use and do not redistribute it.
+in with Import Core Rules 2.0…). Use the Expansion disc for everything the
+app creates and edits. The package holds TSR/Wizards of the Coast content:
+keep it for your own use and do not redistribute it.
+
+The app can also work directly on an existing installation: **Open
+Folder…** (Ctrl+O) takes any folder with a `Database/` folder, such as
+`$WINEPREFIX/drive_c/Program Files/AD&D Core Rules 2.0`, and saves there,
+so the original program sees the changes.
 
 ## Community add-ons
 
@@ -375,7 +494,18 @@ whether it came as the Flatpak, the .deb or .rpm package or an AppImage,
 and speaks the app's six languages. Its [README](addons/README.md) says
 what is inside, how it was built and how to install it.
 
-## Testing against your own installation
+## Reporting problems
+
+This is a release candidate, and real use is what it needs now. Please
+[open an issue](https://github.com/brahm/corerules/issues) for anything
+that crashes, saves something the original cannot open, or works
+differently from the original in a way the list above does not mention.
+Say which package you installed, which disc your data came from, and
+attach the character or package file when one is involved.
+
+## Development
+
+### Testing against your own installation
 
 The rules databases are copyrighted and are not part of this repository.
 To check the readers against them, point `CORERULES_DIR` at an installed
@@ -385,7 +515,7 @@ copy (the folder that holds `Database/`):
 CORERULES_DIR="$HOME/.wine/drive_c/Program Files/AD&D Core Rules 2.0" cargo test
 ```
 
-## Layout
+### Layout
 
 | Crate | Purpose |
 | --- | --- |
@@ -399,7 +529,7 @@ CORERULES_DIR="$HOME/.wine/drive_c/Program Files/AD&D Core Rules 2.0" cargo test
 The backend crates have no GTK dependency so macOS and Windows front ends
 can reuse them later.
 
-## Languages
+### Languages
 
 The app speaks the system's language when it is one of English (US),
 Português (Brasil), Español, Italiano, Français or Deutsch, and English
@@ -421,7 +551,7 @@ cargo run -p cr-i18n --example update-po
 to update `crates/cr-i18n/po/corerules.pot` and add the new entries to every
 catalog, then translate them in each `.po`.
 
-## Building
+### Building
 
 You need Rust 1.88 or newer, GTK 4.14 or newer and libadwaita 1.5 or newer.
 
@@ -446,7 +576,7 @@ cargo test
 To install a build system-wide, run `packaging/install.sh / /usr/local`
 as root after `cargo build --release`.
 
-### Packages
+#### Packages
 
 `packaging/` builds every package (the `.rpm` and Flatpak compile from source,
 the others package `target/release`):
@@ -465,17 +595,20 @@ containers and starts the app there once in each of its six languages,
 checking that every text on screen is in that language
 (`packaging/smoke-test.sh`). Pushing a `v*` tag, or running the workflow
 with a tag, publishes them as a release; `packaging/release-notes.md` is its
-description. Releases before 1.0 are published as betas.
+description. A tag with a suffix, such as `v1.0.0-rc1`, is published as
+a pre-release (a release candidate for `-rc` tags); the `.deb` and `.rpm`
+write the suffix with a tilde (`1.0.0~rc1`) so that 1.0.0 sorts after it.
 
-## Using an original installation
+### Running from a source checkout
 
-Install Core Rules 2.0 (and the Expansion) with Wine. The tools look in
-`$WINEPREFIX/drive_c/Program Files/AD&D Core Rules 2.0`, or take a folder:
+Without a folder, the tools use the data package, then a Core Rules
+installation in `$WINEPREFIX/drive_c/Program Files/AD&D Core Rules 2.0`;
+they also take a folder:
 
 ```sh
 cargo run -p cr-cli -- chars
 cargo run -p cr-cli -- survey "/path/to/AD&D Core Rules 2.0"
-cargo run -p cr-gtk                                # the Wine prefix
+cargo run -p cr-gtk                                # the data package or the Wine prefix
 cargo run -p cr-gtk -- "/media/cdrom"               # or any folder with Database/
 ```
 
