@@ -1,6 +1,6 @@
 name: Packages
 
-# Builds the .deb, .rpm, Flatpak and AppImage packages, installs each one on
+# Builds the .deb, .rpm, pacman, Flatpak and AppImage packages, installs each one on
 # a clean system and starts the app there. Pushing a v* tag (or running the
 # workflow by hand with a tag) also publishes them as a GitHub release.
 on:
@@ -97,6 +97,27 @@ jobs:
           name: rpm
           path: dist/*.rpm
 
+  # Arch Linux is a rolling release, so the package is built on the current
+  # Arch and installs on it and on the distributions that follow it
+  # (CachyOS, Omarchy). makepkg refuses to run as root.
+  arch:
+    needs: version
+    runs-on: ubuntu-24.04
+    container: archlinux:latest
+    steps:
+      - run: pacman -Syu --noconfirm --needed base-devel git cargo gtk4 libadwaita desktop-file-utils appstream-glib
+      - uses: actions/checkout@v4
+      - run: |
+          useradd -m builder
+          chown -R builder "$PWD"
+          su builder -c "git config --global --add safe.directory '$PWD' && packaging/arch/build.sh ${{ needs.version.outputs.version }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arch
+          path: |
+            dist/*.pkg.tar.zst
+            dist/PKGBUILD
+
   flatpak:
     needs: version
     runs-on: ubuntu-24.04
@@ -170,6 +191,28 @@ jobs:
       - run: packaging/smoke-test.sh corerules
       - run: test -f /usr/share/icons/hicolor/256x256/apps/io.github.brahm.CoreRules.png
 
+  # Omarchy is Arch Linux with its own desktop setup, so the Arch container
+  # stands for it.
+  test-arch:
+    needs: arch
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['archlinux:latest', 'cachyos/cachyos:latest']
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: arch
+      - run: pacman -Syu --noconfirm --needed xorg-server-xvfb xorg-xauth dbus mesa
+      - run: pacman -U --noconfirm ./corerules-*.pkg.tar.zst
+      # The release candidate has to sort before the release.
+      - run: test "$(vercmp 1.0.0rc1 1.0.0)" = -1
+      - run: packaging/smoke-test.sh corerules
+      - run: command -v cr && test -f /usr/share/icons/hicolor/256x256/apps/io.github.brahm.CoreRules.png
+
   # The AppImage brings GTK and libadwaita; the systems get only the
   # libraries AppImages leave to the host because every desktop has them
   # (linuxdeploy's excludelist: X, OpenGL, Wayland, fonts and text shaping).
@@ -212,7 +255,7 @@ jobs:
       - run: packaging/smoke-test.sh flatpak run io.github.brahm.CoreRules
 
   release:
-    needs: [version, test-deb, refuse-deb, test-rpm, test-appimage, test-flatpak]
+    needs: [version, test-deb, refuse-deb, test-rpm, test-arch, test-appimage, test-flatpak]
     if: needs.version.outputs.tag != ''
     runs-on: ubuntu-24.04
     permissions:
