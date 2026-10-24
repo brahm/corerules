@@ -16,7 +16,9 @@ O que é preciso:
 
 ## Onde baixar
 
-O instalador é publicado no GitHub Packages do projeto, como [`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons). É um artefato OCI, e não uma imagem de contêiner: o `docker pull` que a página do GitHub mostra não serve. Baixe com o [ORAS](https://oras.land):
+**[Baixe o instalador aqui](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage).** O link sempre traz a versão mais nova. A [release addons](https://github.com/brahm/corerules/releases/tag/addons) também guarda cada versão.
+
+O mesmo arquivo é publicado no GitHub Packages do projeto, como [`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons). É um artefato OCI, e não uma imagem de contêiner: o `docker pull` que a página do GitHub mostra não serve. Para baixar de lá, use o [ORAS](https://oras.land):
 
 ```sh
 oras pull ghcr.io/brahm/corerules-community-addons:latest
@@ -42,8 +44,8 @@ Além de `latest`, cada versão do app tem a sua tag, como `1.0.0-rc1`.
 1. Torne o arquivo executável e abra-o:
 
    ```sh
-   chmod +x CoreRules-Community-Addons-*-x86_64.AppImage
-   ./CoreRules-Community-Addons-*-x86_64.AppImage
+   chmod +x CoreRules-Community-Addons*x86_64.AppImage
+   ./CoreRules-Community-Addons*x86_64.AppImage
    ```
 
    Sem FUSE, rode com `APPIMAGE_EXTRACT_AND_RUN=1`.

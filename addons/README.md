@@ -79,15 +79,24 @@ that carries the add-ons inside and installs them itself. It needs:
 * Your Expansion data in the app; if it is not there yet, open Core Rules
   and use **Extract Data from CD…**
 
-It is published on GitHub Packages as
+**[Download the installer](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage)**
+(the link always gives the newest build; the
+[addons release](https://github.com/brahm/corerules/releases/tag/addons)
+also keeps each version), then:
+
+```sh
+chmod +x CoreRules-Community-Addons-x86_64.AppImage
+./CoreRules-Community-Addons-x86_64.AppImage
+```
+
+The same file is published on GitHub Packages as
 [`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons),
-an OCI artifact rather than a container image, so `docker pull` does not
-apply. Download it with [ORAS](https://oras.land):
+an OCI artifact rather than a container image, so the `docker pull` that
+page shows does not apply. Download it from there with
+[ORAS](https://oras.land):
 
 ```sh
 oras pull ghcr.io/brahm/corerules-community-addons:latest
-chmod +x CoreRules-Community-Addons-*-x86_64.AppImage
-./CoreRules-Community-Addons-*-x86_64.AppImage
 ```
 
 The [Portuguese guide](GUIA.md) also shows how to download it with
