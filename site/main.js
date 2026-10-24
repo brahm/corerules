@@ -1,6 +1,6 @@
 // Opens a screenshot in a viewer instead of leaving the page.
 const viewer = document.getElementById("viewer");
-document.querySelectorAll(".gallery a, .pair a").forEach((link) => {
+document.querySelectorAll(".gallery a, .pair a, .box a").forEach((link) => {
   link.addEventListener("click", (event) => {
     if (!viewer.showModal) return;
     event.preventDefault();

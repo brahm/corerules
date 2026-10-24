@@ -112,22 +112,6 @@ def credit_list(credits):
     return "\n".join(items)
 
 
-def boxes(page, out):
-    """Shows a photo of a box when one is in site/boxes, else a placeholder."""
-    def figure(m):
-        name, caption = m.group(1), m.group(2)
-        if (SITE / "boxes" / name).exists():
-            shutil.copy(SITE / "boxes" / name, out / "boxes" / name)
-            return (f'<figure class="box"><img src="boxes/{name}" '
-                    f'alt="The box of {caption}" loading="lazy">'
-                    f"<figcaption>{caption}</figcaption></figure>")
-        return (f'<figure class="box empty"><div class="box-placeholder">'
-                f"<span>Photo of the box<br>coming soon</span></div>"
-                f"<figcaption>{caption}</figcaption></figure>")
-    (out / "boxes").mkdir(parents=True, exist_ok=True)
-    return re.sub(r"<!--BOX:([\w.-]+)\|(.+?)-->", figure, page)
-
-
 def main():
     args = [a for a in sys.argv[1:] if a != "--no-art"]
     out = Path(args[0] if args else "_site").resolve()
@@ -138,6 +122,7 @@ def main():
     shutil.copy(SITE / "style.css", out / "style.css")
     shutil.copy(SITE / "main.js", out / "main.js")
     shutil.copytree(SITE / "original", out / "original")
+    shutil.copytree(SITE / "boxes", out / "boxes")
     shutil.copytree(ROOT / "docs" / "screenshots", out / "screenshots")
     shutil.copytree(ROOT / "addons" / "screenshots", out / "addons")
     icons = out / "icons"
@@ -152,7 +137,6 @@ def main():
     page = (SITE / "index.html").read_text()
     credits = [] if "--no-art" in sys.argv else fetch_art(out)
     page = page.replace("<!--ART_CREDITS-->", credit_list(credits))
-    page = boxes(page, out)
     (out / "index.html").write_text(page)
     print("Built", out)
 

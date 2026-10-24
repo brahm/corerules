@@ -131,15 +131,19 @@ th { font-family: var(--display); font-size: .85rem; letter-spacing: .1em; color
 
 /* Boxes */
 .boxes-section { background: var(--leather); padding-top: 40px; }
-.boxes { display: flex; gap: 40px; justify-content: center; flex-wrap: wrap; margin-top: 40px; }
-.box { margin: 0; width: min(340px, 100%); text-align: center; }
-.box img { width: 100%; border-radius: 4px; box-shadow: 0 25px 50px rgba(0,0,0,.6); }
-.box-placeholder {
-  aspect-ratio: 3 / 4; border: 2px dashed var(--gold); border-radius: 6px;
-  display: grid; place-items: center; font-family: var(--display); color: var(--gold);
-  background: repeating-linear-gradient(45deg, rgba(212,169,78,.05) 0 14px, transparent 14px 28px);
+.boxes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; align-items: end; margin-top: 50px; }
+.box { margin: 0; text-align: center; }
+.box img {
+  width: 100%; border-radius: 3px;
+  box-shadow: 0 2px 0 rgba(255,255,255,.06), 0 28px 45px rgba(0,0,0,.7), 0 0 50px rgba(212,169,78,.12);
+  transition: transform .3s;
 }
-.box figcaption { margin-top: .8em; color: var(--text-soft); }
+.box a:hover img { transform: translateY(-6px) rotate(-1deg); }
+.box.disc img { border-radius: 50%; box-shadow: 0 25px 45px rgba(0,0,0,.7), 0 0 40px rgba(212,169,78,.2); }
+.box.disc a:hover img { transform: rotate(25deg); transition: transform 1.2s ease-out; }
+.box figcaption { margin-top: 1em; color: var(--text-soft); font-size: .98rem; }
+.box figcaption b { color: var(--gold-soft); font-weight: 600; }
+.note.center { text-align: center; }
 
 /* Screens */
 .screens { background: linear-gradient(var(--leather), var(--night)); }
@@ -212,7 +216,7 @@ dialog p { color: var(--text); text-align: center; font-size: 1rem; }
 
 @media (max-width: 900px) {
   .two, .two.reverse, .pair { grid-template-columns: 1fr; gap: 28px; }
-  .gallery, .cards { grid-template-columns: 1fr 1fr; }
+  .gallery, .cards, .boxes { grid-template-columns: 1fr 1fr; }
   .stats { grid-template-columns: 1fr 1fr; }
   section { padding: 70px 0; }
   .top .links { gap: 14px; }
