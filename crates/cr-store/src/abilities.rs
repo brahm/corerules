@@ -274,7 +274,8 @@ impl AbilityRules {
 
     /// The subraces the race page offers, sorted: a Skills & Powers
     /// character's race and all its subraces, a Core Rules character's
-    /// standard subraces (or the race when it has none).
+    /// standard subraces (or the race when it has none). The character's
+    /// own subrace is always offered, so saving keeps it.
     pub fn subraces(&self, character: &Character) -> Vec<String> {
         let d = &character.data;
         let skills_and_powers = d.skills_and_powers != 0;
@@ -287,6 +288,9 @@ impl AbilityRules {
             .collect();
         if skills_and_powers || names.is_empty() {
             names.push(d.race.clone());
+        }
+        if !d.subrace.is_empty() && !names.contains(&d.subrace) {
+            names.push(d.subrace.clone());
         }
         sorted(names)
     }

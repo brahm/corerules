@@ -390,7 +390,8 @@ fn choose_imports<H: Host + 'static>(host: &Rc<H>, file: ExportFile, expansion: 
             tr("This package was made by the Expansion, which Core Rules 2.0 cannot import."),
         );
     }
-    let checks: Rc<RefCell<Vec<(usize, gtk::CheckButton)>>> = Rc::default();
+    // Whether each item of the preview is imported.
+    let chosen: Rc<RefCell<Vec<bool>>> = Rc::new(RefCell::new(vec![true; preview.len()]));
     let button = gtk::Button::builder()
         .label(tr("_Import"))
         .use_underline(true)
@@ -400,24 +401,20 @@ fn choose_imports<H: Host + 'static>(host: &Rc<H>, file: ExportFile, expansion: 
     let mut categories: Vec<Category> = preview.iter().map(|c| c.category).collect();
     categories.sort_by_key(|c| c.label());
     categories.dedup();
+    let preview = Rc::new(preview);
     for category in categories {
         let group = adw::PreferencesGroup::builder()
             .title(category.label())
             .build();
-        for (n, item) in preview
-            .iter()
-            .enumerate()
-            .filter(|(_, c)| c.category == category)
-        {
-            let note = match (item.clash, expansion) {
-                (Clash::None, _) => "",
-                (Clash::Standard, _) => tr("Renamed with a * as a standard part has this name"),
-                (Clash::Custom, true) => tr("Replaces your record of this name"),
-                (Clash::Custom, false) => tr("Not imported: you have a record of this name"),
-            };
-            let (row, check) = row(&item.name, note, true);
-            group.add(&row);
-            checks.borrow_mut().push((n, check));
+        let items: Vec<usize> = (0..preview.len())
+            .filter(|n| preview[*n].category == category)
+            .collect();
+        if items.len() <= ROWS_SHOWN {
+            for n in items {
+                group.add(&import_row(&preview, n, expansion, &chosen));
+            }
+        } else {
+            group.add(&many_imports(&preview, items, expansion, &chosen));
         }
         groups.append(&group);
     }
@@ -433,15 +430,16 @@ fn choose_imports<H: Host + 'static>(host: &Rc<H>, file: ExportFile, expansion: 
         );
     }
     let dialog = dialog(tr("Import"), &button, &groups, topic::IMPORT);
-    let (file, preview) = (Rc::new(file), Rc::new(preview));
+    let file = Rc::new(file);
     button.connect_clicked({
         let (host, dialog) = (host.clone(), dialog.clone());
         move |_| {
-            let chosen: Vec<usize> = checks
+            let chosen: Vec<usize> = chosen
                 .borrow()
                 .iter()
-                .filter(|(_, c)| c.is_active())
-                .map(|(n, _)| *n)
+                .enumerate()
+                .filter(|(_, c)| **c)
+                .map(|(n, _)| n)
                 .collect();
             let parts = {
                 let install = host.installation();
@@ -461,10 +459,103 @@ fn choose_imports<H: Host + 'static>(host: &Rc<H>, file: ExportFile, expansion: 
                 parts,
                 chosen: Rc::new(chosen),
             };
-            names.next(0, HashMap::new());
+            names.next(0, HashMap::new(), Vec::new());
         }
     });
     dialog.present(Some(&host.parent()));
+}
+
+/// The most items of one category the Import dialog lists as they are;
+/// a category with more (a large package holds tens of thousands) is one
+/// row that lists them when opened.
+const ROWS_SHOWN: usize = 200;
+
+/// The row of the `n`th item of `preview`, its check kept in `chosen`.
+fn import_row(
+    preview: &[Content],
+    n: usize,
+    expansion: bool,
+    chosen: &Rc<RefCell<Vec<bool>>>,
+) -> adw::ActionRow {
+    let item = &preview[n];
+    let note = match (item.clash, expansion) {
+        (Clash::None, _) => "",
+        (Clash::Standard, _) => tr("Renamed with a * as a standard part has this name"),
+        (Clash::Custom, true) => tr("Replaces your record of this name"),
+        (Clash::Custom, false) => tr("Not imported: you have a record of this name"),
+    };
+    let (row, check) = row(&item.name, note, chosen.borrow()[n]);
+    check.connect_toggled({
+        let chosen = chosen.clone();
+        move |check| chosen.borrow_mut()[n] = check.is_active()
+    });
+    row
+}
+
+/// One row for the `items` of a large category: its check takes or leaves
+/// them all, and opening it lists them, a hundred at a time while the
+/// window stays responsive.
+fn many_imports(
+    preview: &Rc<Vec<Content>>,
+    items: Vec<usize>,
+    expansion: bool,
+    chosen: &Rc<RefCell<Vec<bool>>>,
+) -> adw::ExpanderRow {
+    let expander = adw::ExpanderRow::builder()
+        .title(trn!("{n} item", "{n} items", items.len() as u64))
+        .build();
+    let all = gtk::CheckButton::builder()
+        .active(true)
+        .valign(gtk::Align::Center)
+        .build();
+    expander.add_prefix(&all);
+    let items = Rc::new(items);
+    let checks: Rc<RefCell<Vec<gtk::CheckButton>>> = Rc::default();
+    all.connect_toggled({
+        let (items, chosen, checks) = (items.clone(), chosen.clone(), checks.clone());
+        move |all| {
+            let active = all.is_active();
+            for n in items.iter() {
+                chosen.borrow_mut()[*n] = active;
+            }
+            for check in checks.borrow().iter() {
+                check.set_active(active);
+            }
+        }
+    });
+    let listed = Rc::new(std::cell::Cell::new(false));
+    expander.connect_expanded_notify({
+        let (preview, chosen) = (preview.clone(), chosen.clone());
+        move |expander| {
+            if !expander.is_expanded() || listed.replace(true) {
+                return;
+            }
+            let (expander, preview, chosen, items, checks) = (
+                expander.clone(),
+                preview.clone(),
+                chosen.clone(),
+                items.clone(),
+                checks.clone(),
+            );
+            let mut at = 0;
+            glib::idle_add_local(move || {
+                for &n in items.iter().skip(at).take(100) {
+                    let row = import_row(&preview, n, expansion, &chosen);
+                    if let Some(check) = row.activatable_widget().and_downcast() {
+                        checks.borrow_mut().push(check);
+                    }
+                    expander.add_row(&row);
+                }
+                at += 100;
+                if at < items.len() {
+                    glib::ControlFlow::Continue
+                } else {
+                    glib::ControlFlow::Break
+                }
+            });
+        }
+    });
+    expander
 }
 
 /// The names the parts a standard part's name hides take, asked one by one
@@ -494,56 +585,91 @@ impl<H: Host> Clone for Rename<H> {
 }
 
 impl<H: Host + 'static> Rename<H> {
-    /// Asks for the name of the `at`th chosen item, when it needs one,
-    /// with `names` given so far.
-    fn next(self, at: usize, names: HashMap<usize, String>) {
-        let Some(&n) = self.chosen.get(at) else {
-            return self.run(&names);
-        };
-        let item = &self.preview[n];
-        // Only the Expansion renames (the preview says so).
-        if item.clash != Clash::Standard {
-            return self.next(at + 1, names);
+    /// Asks for the names of the chosen items from the `at`th on, when
+    /// they need one, with `names` given so far and `before` the names of
+    /// the parts chosen ahead of the `at`th. A loop, not a recursion: a
+    /// package holds tens of thousands of items, and only a Name Conflict
+    /// question stops it until the user answers.
+    fn next(self, mut at: usize, names: HashMap<usize, String>, mut before: Vec<String>) {
+        while let Some(&n) = self.chosen.get(at) {
+            let item = &self.preview[n];
+            let part = matches!(item.category, Category::Part(_));
+            // Only the Expansion renames (the preview says so).
+            if item.clash != Clash::Standard {
+                if part {
+                    before.push(item.name.clone());
+                }
+                at += 1;
+                continue;
+            }
+            let name = format!("{}*", item.name);
+            if !name_taken(&self.parts, &name, &before) {
+                if part {
+                    before.push(item.name.clone());
+                }
+                at += 1;
+                continue;
+            }
+            let taken = {
+                let (parts, before) = (self.parts.clone(), before.clone());
+                move |name: &str| name_taken(&parts, name, &before)
+            };
+            let parent = self.host.parent();
+            let this = self.clone();
+            let done = Rc::new(move |name: String| {
+                let (mut names, mut before) = (names.clone(), before.clone());
+                if part {
+                    before.push(name.clone());
+                }
+                names.insert(n, name);
+                this.clone().next(at + 1, names, before);
+            });
+            return crate::userdb::name_conflict(&parent, &name, Rc::new(taken), done);
         }
-        // The parts imported before this one, under their new names.
-        let before: Vec<String> = self.chosen[..at]
-            .iter()
-            .filter(|m| matches!(self.preview[**m].category, Category::Part(_)))
-            .map(|m| names.get(m).unwrap_or(&self.preview[*m].name).clone())
-            .collect();
-        let name = format!("{}*", item.name);
-        let taken = {
-            let (parts, before) = (self.parts.clone(), before.clone());
-            move |name: &str| name_taken(&parts, name, &before)
-        };
-        if !taken(&name) {
-            return self.next(at + 1, names);
-        }
-        let parent = self.host.parent();
-        let done = Rc::new(move |name: String| {
-            let mut names = names.clone();
-            names.insert(n, name);
-            self.clone().next(at + 1, names);
-        });
-        crate::userdb::name_conflict(&parent, &name, Rc::new(taken), done);
+        self.run(&names);
     }
 
+    /// Imports on a worker thread, the dialog dimmed meanwhile: a large
+    /// package takes a while to write.
     fn run(&self, names: &HashMap<usize, String>) {
-        let report = {
+        let root = {
             let install = self.host.installation();
             let Some(install) = install.as_ref() else {
                 return;
             };
-            install.import_named(&self.file, Some(&self.chosen), names)
+            install.root().to_path_buf()
         };
-        match report {
-            Ok(report) => {
-                self.dialog.close();
-                self.host.reloaded();
-                report_alert(&*self.host, &report);
+        let (file, chosen, names) = ((*self.file).clone(), (*self.chosen).clone(), names.clone());
+        self.dialog.set_sensitive(false);
+        self.dialog.set_can_close(false);
+        self.dialog.set_title(tr("Importing…"));
+        let this = self.clone();
+        glib::spawn_future_local(async move {
+            let report = gio::spawn_blocking(move || {
+                Installation::open(root)?.import_named(&file, Some(&chosen), &names)
+            })
+            .await;
+            this.dialog.set_can_close(true);
+            match report {
+                Ok(Ok(report)) => {
+                    this.dialog.close();
+                    this.host.reloaded();
+                    report_alert(&*this.host, &report);
+                }
+                Ok(Err(e)) => {
+                    this.dialog.close();
+                    alert(&*this.host, tr("Import Failed"), &e.to_string());
+                }
+                Err(_) => {
+                    this.dialog.close();
+                    alert(
+                        &*this.host,
+                        tr("Import Failed"),
+                        tr("The import stopped unexpectedly."),
+                    );
+                }
             }
-            Err(e) => alert(&*self.host, tr("Import Failed"), &e.to_string()),
-        }
+        });
     }
 }
 

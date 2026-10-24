@@ -557,7 +557,7 @@ msgstr "¿Cuántos?"
 #: crates/cr-gtk/src/party.rs:394
 #: crates/cr-gtk/src/sheet_options.rs:167
 #: crates/cr-gtk/src/transfer.rs:53
-#: crates/cr-gtk/src/transfer.rs:742
+#: crates/cr-gtk/src/transfer.rs:866
 #: crates/cr-gtk/src/treasure.rs:477
 #: crates/cr-gtk/src/treasure.rs:520
 #: crates/cr-gtk/src/userdb/attacks.rs:365
@@ -606,7 +606,7 @@ msgstr "¿Cuántos añadir?"
 
 #: crates/cr-gtk/src/bundle.rs:344
 #: crates/cr-gtk/src/main.rs:3222
-#: crates/cr-gtk/src/transfer.rs:696
+#: crates/cr-gtk/src/transfer.rs:820
 #: crates/cr-gtk/src/userdb/templates.rs:1993
 msgid "_Add"
 msgstr "_Añadir"
@@ -676,7 +676,7 @@ msgstr "Conjuros seleccionados (quedan: {left})"
 #: crates/cr-gtk/src/lists.rs:426
 #: crates/cr-gtk/src/main.rs:2876
 #: crates/cr-gtk/src/sheet_options.rs:129
-#: crates/cr-gtk/src/transfer.rs:796
+#: crates/cr-gtk/src/transfer.rs:920
 #: crates/cr-gtk/src/userdb/attacks.rs:80
 #: crates/cr-gtk/src/userdb/levels.rs:162
 #: crates/cr-gtk/src/userdb/levels.rs:340
@@ -937,7 +937,7 @@ msgstr "Está a punto de crear un personaje Core Rules."
 msgid "_Close"
 msgstr "_Cerrar"
 
-#: crates/cr-gtk/src/create.rs:234
+#: crates/cr-gtk/src/create.rs:235
 #: crates/cr-gtk/src/prefs.rs:130
 #: crates/cr-gtk/src/prefs.rs:148
 msgid "Could not save the preferences: {error}"
@@ -2056,7 +2056,7 @@ msgstr "PX de tesoro"
 #: crates/cr-gtk/src/encounter.rs:1775
 #: crates/cr-gtk/src/main.rs:2686
 #: crates/cr-gtk/src/sheet_options.rs:169
-#: crates/cr-gtk/src/transfer.rs:656
+#: crates/cr-gtk/src/transfer.rs:780
 #: crates/cr-gtk/src/treasure.rs:477
 #: crates/cr-gtk/src/userdb/templates.rs:886
 #: crates/cr-gtk/src/userdb.rs:795
@@ -4306,120 +4306,135 @@ msgstr "Paquete de Expansion"
 msgid "This package was made by the Expansion, which Core Rules 2.0 cannot import."
 msgstr "Este paquete lo creó Expansion, y Core Rules 2.0 no puede importarlo."
 
-#: crates/cr-gtk/src/transfer.rs:395
+#: crates/cr-gtk/src/transfer.rs:396
 msgid "_Import"
 msgstr "_Importar"
 
-#: crates/cr-gtk/src/transfer.rs:414
-msgid "Renamed with a * as a standard part has this name"
-msgstr "Renombrado con un * porque una parte estándar tiene este nombre"
-
-#: crates/cr-gtk/src/transfer.rs:415
-msgid "Replaces your record of this name"
-msgstr "Sustituye su registro con este nombre"
-
-#: crates/cr-gtk/src/transfer.rs:416
-msgid "Not imported: you have a record of this name"
-msgstr "No importado: tiene un registro con este nombre"
-
-#: crates/cr-gtk/src/transfer.rs:427
+#: crates/cr-gtk/src/transfer.rs:424
 msgid "The package also holds {n} Map Maker II map, which is not imported."
 msgid_plural "The package also holds {n} Map Maker II maps, which are not imported."
 msgstr[0] "El paquete también contiene {n} mapa de Map Maker II, que no se importa."
 msgstr[1] "El paquete también contiene {n} mapas de Map Maker II, que no se importan."
 
-#: crates/cr-gtk/src/transfer.rs:435
+#: crates/cr-gtk/src/transfer.rs:432
 msgid "Import"
 msgstr "Importar"
 
-#: crates/cr-gtk/src/transfer.rs:453
-#: crates/cr-gtk/src/transfer.rs:545
+#: crates/cr-gtk/src/transfer.rs:451
+#: crates/cr-gtk/src/transfer.rs:659
+#: crates/cr-gtk/src/transfer.rs:665
 msgid "Import Failed"
 msgstr "Falló la importación"
 
-#: crates/cr-gtk/src/transfer.rs:554
+#: crates/cr-gtk/src/transfer.rs:483
+msgid "Renamed with a * as a standard part has this name"
+msgstr "Renombrado con un * porque una parte estándar tiene este nombre"
+
+#: crates/cr-gtk/src/transfer.rs:484
+msgid "Replaces your record of this name"
+msgstr "Sustituye su registro con este nombre"
+
+#: crates/cr-gtk/src/transfer.rs:485
+msgid "Not imported: you have a record of this name"
+msgstr "No importado: tiene un registro con este nombre"
+
+#: crates/cr-gtk/src/transfer.rs:505
+msgid "{n} item"
+msgid_plural "{n} items"
+msgstr[0] "{n} elemento"
+msgstr[1] "{n} elementos"
+
+#: crates/cr-gtk/src/transfer.rs:644
+msgid "Importing…"
+msgstr "Importando…"
+
+#: crates/cr-gtk/src/transfer.rs:666
+msgid "The import stopped unexpectedly."
+msgstr "La importación se detuvo inesperadamente."
+
+#: crates/cr-gtk/src/transfer.rs:678
 msgid "{item} was renamed {name}."
 msgstr "{item} se renombró como {name}."
 
-#: crates/cr-gtk/src/transfer.rs:557
+#: crates/cr-gtk/src/transfer.rs:681
 msgid "Replaced your records: {names}."
 msgstr "Se sustituyeron sus registros: {names}."
 
-#: crates/cr-gtk/src/transfer.rs:568
+#: crates/cr-gtk/src/transfer.rs:692
 msgid "Not imported, as you have records of these names: {names}."
 msgstr "No importados, porque tiene registros con estos nombres: {names}."
 
-#: crates/cr-gtk/src/transfer.rs:579
+#: crates/cr-gtk/src/transfer.rs:703
 msgid "Imported {n} Item"
 msgid_plural "Imported {n} Items"
 msgstr[0] "{n} elemento importado"
 msgstr[1] "{n} elementos importados"
 
-#: crates/cr-gtk/src/transfer.rs:600
+#: crates/cr-gtk/src/transfer.rs:724
 msgid "Edit Package"
 msgstr "Editar paquete"
 
-#: crates/cr-gtk/src/transfer.rs:608
+#: crates/cr-gtk/src/transfer.rs:732
 msgid "Core Rules 2.0 Package"
 msgstr "Paquete de Core Rules 2.0"
 
-#: crates/cr-gtk/src/transfer.rs:609
+#: crates/cr-gtk/src/transfer.rs:733
 msgid "Packages made by Core Rules 2.0 are only imported. Use Import… to bring their content into this installation, then make a new package from it."
 msgstr "Los paquetes creados por Core Rules 2.0 solo se importan. Use Importar… para traer su contenido a esta instalación y luego cree un paquete nuevo con él."
 
-#: crates/cr-gtk/src/transfer.rs:639
+#: crates/cr-gtk/src/transfer.rs:763
 msgid "New Package"
 msgstr "Nuevo paquete"
 
-#: crates/cr-gtk/src/transfer.rs:651
-#: crates/cr-gtk/src/transfer.rs:696
+#: crates/cr-gtk/src/transfer.rs:775
+#: crates/cr-gtk/src/transfer.rs:820
 msgid "Add Items"
 msgstr "Añadir elementos"
 
-#: crates/cr-gtk/src/transfer.rs:668
+#: crates/cr-gtk/src/transfer.rs:792
 msgid "This package was made by the Expansion; items of Core Rules 2.0 cannot be added to it."
 msgstr "Este paquete lo creó Expansion; no se le pueden añadir elementos de Core Rules 2.0."
 
-#: crates/cr-gtk/src/transfer.rs:673
+#: crates/cr-gtk/src/transfer.rs:797
 msgid "This package was made by Core Rules 2.0; items of the Expansion cannot be added to it."
 msgstr "Este paquete lo creó Core Rules 2.0; no se le pueden añadir elementos de Expansion."
 
-#: crates/cr-gtk/src/transfer.rs:713
+#: crates/cr-gtk/src/transfer.rs:837
 msgid "Items Not Added"
 msgstr "Elementos no añadidos"
 
-#: crates/cr-gtk/src/transfer.rs:739
+#: crates/cr-gtk/src/transfer.rs:863
 msgid "Discard Changes?"
 msgstr "¿Descartar los cambios?"
 
-#: crates/cr-gtk/src/transfer.rs:740
+#: crates/cr-gtk/src/transfer.rs:864
 msgid "The package has changes that are not saved."
 msgstr "El paquete tiene cambios sin guardar."
 
-#: crates/cr-gtk/src/transfer.rs:742
+#: crates/cr-gtk/src/transfer.rs:866
 msgid "_Discard"
 msgstr "_Descartar"
 
-#: crates/cr-gtk/src/transfer.rs:778
+#: crates/cr-gtk/src/transfer.rs:902
 msgid "Empty Package"
 msgstr "Paquete vacío"
 
-#: crates/cr-gtk/src/transfer.rs:779
+#: crates/cr-gtk/src/transfer.rs:903
 msgid "Add records and characters with the + button"
 msgstr "Añada registros y personajes con el botón +"
 
-#: crates/cr-gtk/src/transfer.rs:820
+#: crates/cr-gtk/src/transfer.rs:944
 msgid "The package also holds {n} Map Maker II map, which a change to the package leaves out."
 msgid_plural "The package also holds {n} Map Maker II maps, which a change to the package leaves out."
 msgstr[0] "El paquete también contiene {n} mapa de Map Maker II, que se pierde al cambiar el paquete."
 msgstr[1] "El paquete también contiene {n} mapas de Map Maker II, que se pierden al cambiar el paquete."
 
-#: crates/cr-gtk/src/transfer.rs:845
-#: crates/cr-gtk/src/transfer.rs:847
+#: crates/cr-gtk/src/transfer.rs:969
+#: crates/cr-gtk/src/transfer.rs:971
 msgid "Saved {name}"
 msgstr "Se guardó {name}"
 
-#: crates/cr-gtk/src/transfer.rs:850
+#: crates/cr-gtk/src/transfer.rs:974
 msgid "Package Not Saved"
 msgstr "Paquete no guardado"
 
@@ -5410,15 +5425,15 @@ msgstr "_Escuelas…"
 msgid "Name Conflict"
 msgstr "Conflicto de nombres"
 
-#: crates/cr-store/src/abilities.rs:503
+#: crates/cr-store/src/abilities.rs:507
 msgid "Not enough character points: the new abilities need {more} more"
 msgstr "No hay suficientes puntos de personaje: las nuevas habilidades necesitan {more} más"
 
-#: crates/cr-store/src/abilities.rs:513
+#: crates/cr-store/src/abilities.rs:517
 msgid "A {class} may have only one school"
 msgstr "Un {class} solo puede tener una escuela"
 
-#: crates/cr-store/src/abilities.rs:518
+#: crates/cr-store/src/abilities.rs:522
 msgid "A {class} may have only one sphere"
 msgstr "Un {class} solo puede tener una esfera"
 
