@@ -10,6 +10,7 @@ used when Commons marks it as public domain; the credits on the page are
 written from Commons' own metadata, so they always match the file used.
 """
 
+import hashlib
 import html
 import json
 import re
@@ -136,6 +137,12 @@ def main():
     (out / ".nojekyll").touch()
 
     page = (SITE / "index.html").read_text()
+    # A browser that still holds the previous style sheet or script would
+    # show the new page with it; naming their version in the link makes it
+    # fetch the new ones.
+    for asset in ("style.css", "main.js"):
+        digest = hashlib.sha256((SITE / asset).read_bytes()).hexdigest()[:10]
+        page = page.replace(f'"{asset}"', f'"{asset}?v={digest}"')
     credits = [] if "--no-art" in sys.argv else fetch_art(out)
     page = page.replace("<!--ART_CREDITS-->", credit_list(credits))
     (out / "index.html").write_text(page)
