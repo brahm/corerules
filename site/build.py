@@ -123,6 +123,7 @@ def main():
     shutil.copy(SITE / "main.js", out / "main.js")
     shutil.copytree(SITE / "original", out / "original")
     shutil.copytree(SITE / "boxes", out / "boxes")
+    shutil.copytree(SITE / "logo", out / "logo")
     shutil.copytree(ROOT / "docs" / "screenshots", out / "screenshots")
     shutil.copytree(ROOT / "addons" / "screenshots", out / "addons")
     icons = out / "icons"

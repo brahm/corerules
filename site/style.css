@@ -62,7 +62,8 @@ cite { font-style: italic; }
   display: flex; justify-content: space-between; align-items: center;
   padding: 18px max(16px, calc((100% - 1180px) / 2)); gap: 16px; flex-wrap: wrap;
 }
-.brand { display: flex; gap: 10px; align-items: center; font-family: var(--display); font-size: 1.35rem; text-decoration: none; color: var(--gold-soft); }
+.brand { display: flex; gap: 10px; align-items: center; text-decoration: none; }
+.brand-logo { height: 30px; width: auto; }
 .top .links { display: flex; gap: 22px; flex-wrap: wrap; }
 .top .links a { font-family: var(--display); font-size: 1.08rem; letter-spacing: .08em; text-decoration: none; color: var(--text); }
 .top .links a:hover { color: var(--gold-soft); }
@@ -73,11 +74,11 @@ cite { font-style: italic; }
   animation: float 7s ease-in-out infinite;
 }
 @keyframes float { 50% { transform: translateY(-10px); } }
-.hero h1 {
-  font-size: clamp(3.6rem, 12vw, 7.8rem); font-weight: 400; margin: .1em 0 .1em;
-  background: linear-gradient(180deg, #fff4d3 10%, var(--gold) 55%, #8a6420);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  text-shadow: 0 4px 30px rgba(0,0,0,.5);
+/* The app's text logo stands in for the title. */
+.hero h1 { margin: .35em 0 .45em; line-height: 0; }
+.wordmark {
+  width: min(760px, 88vw); height: auto;
+  filter: drop-shadow(0 10px 28px rgba(0,0,0,.65));
 }
 .tagline { font-family: var(--display); font-size: clamp(1.35rem, 2.6vw, 1.75rem); line-height: 1.35; max-width: 34em; margin: 0 0 1.4em; }
 .version { font-family: var(--display); font-size: 1.3rem; letter-spacing: .04em; color: var(--gold-soft); margin: .2em 0 .3em; }
