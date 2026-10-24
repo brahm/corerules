@@ -18,6 +18,11 @@ mkdir -p "$stage/debian"
 printf 'Source: corerules\n\nPackage: corerules\nArchitecture: any\n' > "$stage/debian/control"
 depends=$(cd "$stage" && dpkg-shlibdeps -O "pkg/usr/bin/corerules" "pkg/usr/bin/cr" \
     | sed -n 's/^shlibs:Depends=//p')
+# The symbols used would let the package install on older releases too
+# (Ubuntu 24.04), which are not supported: ask for the C library of the
+# release it is built on.
+libc=$(dpkg-query -W -f='${Version}' libc6 | sed 's/-[^-]*$//')
+depends="$depends, libc6 (>= $libc)"
 
 mkdir -p "$pkg/DEBIAN"
 cat > "$pkg/DEBIAN/control" <<CONTROL

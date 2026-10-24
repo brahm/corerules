@@ -139,6 +139,20 @@ jobs:
       - run: packaging/smoke-test.sh corerules
       - run: command -v cr && test -f /usr/share/icons/hicolor/256x256/apps/io.github.brahm.CoreRules.png
 
+  # Ubuntu 24.04 is not supported: apt has to refuse the package there.
+  refuse-deb:
+    needs: deb
+    runs-on: ubuntu-24.04
+    container: ubuntu:24.04
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: deb
+      - run: apt-get update
+      - run: "! apt-get install -y ./corerules_*.deb"
+
   test-rpm:
     needs: rpm
     strategy:
@@ -198,7 +212,7 @@ jobs:
       - run: packaging/smoke-test.sh flatpak run io.github.brahm.CoreRules
 
   release:
-    needs: [version, test-deb, test-rpm, test-appimage, test-flatpak]
+    needs: [version, test-deb, refuse-deb, test-rpm, test-appimage, test-flatpak]
     if: needs.version.outputs.tag != ''
     runs-on: ubuntu-24.04
     permissions:
