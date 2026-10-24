@@ -15,6 +15,10 @@ What's new since 1.0.0-rc1:
   and everything else made are saved there, opening the CD again reuses
   the copy, and the app opens it on start without the CD. `cr` does the
   same. A Core Rules 2.0 CD still opens read-only from the disc
+- **Importing packages**: Import brings in, in one go, the race/class
+  combinations that name two classes of the package, where the original
+  needed it imported twice; importing the Community Add-ons Collection now
+  warns only about the 36 races it ships without combinations
 
 What 1.0.0-rc1 brought since 0.9.0, the fixes from its test round:
 

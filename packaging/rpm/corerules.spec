@@ -52,7 +52,8 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/io.github.brah
 %changelog
 * Sat Oct 24 2026 Brahm - 1.0.0~rc2-1
 - Second release candidate: opening the mounted Expansion CD saves into a
-  local copy of it instead of failing
+  local copy of it instead of failing; Import brings in race/class
+  combinations in one go
 
 * Sat Oct 24 2026 Brahm - 1.0.0~rc1-1
 - Release candidate for 1.0: the fixes from the 0.9.0 test round, Re-roll
