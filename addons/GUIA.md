@@ -18,9 +18,9 @@ O que é preciso:
 
 **[Baixe o instalador aqui](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage).** O link sempre traz a versão mais nova. A [release addons](https://github.com/brahm/corerules/releases/tag/addons) também guarda cada versão.
 
-O mesmo arquivo é publicado no [GitHub Packages](https://github.com/brahm/corerules/packages) do projeto, de duas formas, porque o GitHub Packages não tem um registro para arquivos soltos:
+O mesmo arquivo é publicado no [GitHub Packages](https://github.com/brahm?tab=packages&repo_name=corerules) do projeto, de duas formas, porque o GitHub Packages não tem um registro para arquivos soltos:
 
-* **Como o arquivo AppImage**, no pacote Maven [`io.github.brahm.corerules-community-addons`](https://github.com/brahm/corerules/packages/3339900). A página dele lista `corerules-community-addons-VERSÃO-x86_64.AppImage` em Assets, para baixar pelo navegador. Baixar desse registro pela linha de comando pede um token do GitHub, mesmo com o pacote público.
+* **Como o arquivo AppImage**, no pacote Maven `io.github.brahm.corerules-community-addons`. A página dele lista `corerules-community-addons-VERSÃO-x86_64.AppImage` em Assets, para baixar pelo navegador. Baixar desse registro pela linha de comando pede um token do GitHub, mesmo com o pacote público.
 * **Como artefato OCI**, [`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons), que baixa sem conta nenhuma. Ele guarda a AppImage como seu único arquivo, e não uma imagem de contêiner: o `docker pull` que a página do GitHub mostra não serve. Para baixar de lá, use o [ORAS](https://oras.land):
 
 ```sh
