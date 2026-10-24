@@ -38,6 +38,8 @@
   <url type="homepage">https://github.com/brahm/corerules</url>
   <url type="bugtracker">https://github.com/brahm/corerules/issues</url>
   <url type="vcs-browser">https://github.com/brahm/corerules</url>
+  <url type="contribute">https://github.com/brahm/corerules#development</url>
+  <url type="translate">https://github.com/brahm/corerules#languages</url>
   <screenshots>
     <screenshot type="default">
       <image>https://raw.githubusercontent.com/brahm/corerules/main/docs/screenshots/character.png</image>
