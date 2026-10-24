@@ -83,8 +83,8 @@ def fetch_art(out):
         (out / "art" / f"{art['slug']}.jpg").write_bytes(get(ii["thumburl"]))
         credit = {
             "slug": art["slug"],
-            "name": text(meta.get("ObjectName", {}).get("value"))
-            or title.removeprefix("File:").rsplit(".", 1)[0],
+            # Commons' ObjectName mixes languages and Wikidata markup.
+            "name": art["name"],
             "artist": text(meta.get("Artist", {}).get("value")),
             # Commons appends Wikidata markup such as "date QS:P571,...".
             "date": text(meta.get("DateTimeOriginal", {}).get("value"))

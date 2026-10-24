@@ -1,20 +1,8 @@
 [
-  {"slug": "knight-crossroads", "width": 2000,
-   "title": "File:Victor Vasnetsov - Knight at the Crossroads - Google Art Project.jpg",
-   "search": "Vasnetsov Knight at the Crossroads 1882"},
-  {"slug": "bard", "width": 1400,
-   "title": "File:John Martin - The Bard - WGA14145.jpg",
-   "search": "John Martin The Bard"},
-  {"slug": "saint-george", "width": 2000,
-   "title": "File:Paolo Uccello 047b.jpg",
-   "search": "Paolo Uccello Saint George and the Dragon National Gallery"},
-  {"slug": "magic-circle", "width": 1400,
-   "title": "File:John William Waterhouse - Magic Circle.JPG",
-   "search": "Waterhouse The Magic Circle 1886"},
-  {"slug": "god-speed", "width": 1400,
-   "title": "File:Edmund Blair Leighton - God Speed (1900).jpg",
-   "search": "Edmund Blair Leighton God Speed 1900"},
-  {"slug": "accolade", "width": 1400,
-   "title": "File:Accolade by Edmund Blair Leighton - complete.jpg",
-   "search": "Edmund Blair Leighton The Accolade 1901"}
+  {"slug": "knight-crossroads", "name": "Knight at the Crossroads", "width": 2000, "title": "File:Victor Vasnetsov - Knight at the Crossroads - Google Art Project.jpg", "search": "Vasnetsov Knight at the Crossroads 1882"},
+  {"slug": "bard", "name": "The Bard", "width": 1400, "title": "File:John Martin - The Bard - WGA14145.jpg", "search": "John Martin The Bard"},
+  {"slug": "saint-george", "name": "Saint George and the Dragon", "width": 2000, "title": "File:Paolo Uccello 047b.jpg", "search": "Paolo Uccello Saint George and the Dragon National Gallery"},
+  {"slug": "magic-circle", "name": "The Magic Circle", "width": 1400, "title": "File:John William Waterhouse - Magic Circle.JPG", "search": "Waterhouse The Magic Circle 1886"},
+  {"slug": "god-speed", "name": "God Speed", "width": 1400, "title": "File:Edmund Blair Leighton - God Speed (1900).jpg", "search": "Edmund Blair Leighton God Speed 1900"},
+  {"slug": "accolade", "name": "The Accolade", "width": 1400, "title": "File:Accolade by Edmund Blair Leighton - complete.jpg", "search": "Edmund Blair Leighton The Accolade 1901"}
 ]
