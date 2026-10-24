@@ -35,7 +35,7 @@ curl -L -H "Authorization: Bearer $token" -o CoreRules-Community-Addons-x86_64.A
     "https://ghcr.io/v2/$repo/blobs/$layer"
 ```
 
-Além de `latest`, cada versão do app tem a sua tag, como `0.7.2`.
+Além de `latest`, cada versão do app tem a sua tag, como `1.0.0-rc1`.
 
 ## Instalação
 

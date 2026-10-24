@@ -81,8 +81,8 @@ pub struct Outcome {
     pub log: PathBuf,
 }
 
-/// Imports `file` into `install`, then the classes again: a race/class
-/// combination that names two new classes only comes in once both exist.
+/// Imports `file` into `install`; a second install leaves the characters
+/// out.
 pub fn import(install: &Installation, file: &ExportFile, stamp: &str) -> Result<Outcome, String> {
     let items = contents(file);
     let again = matches!(check(install.root()), Folder::Ready { again: true, .. });
@@ -93,15 +93,9 @@ pub fn import(install: &Installation, file: &ExportFile, stamp: &str) -> Result<
     });
     let failed = |e: cr_store::Error| tr!("The import failed: {e}", e);
     let report = install.import(file, first.as_deref()).map_err(failed)?;
-    let classes: Vec<usize> = (0..items.len())
-        .filter(|&n| items[n].category == Category::Class)
-        .collect();
-    let second = install.import(file, Some(&classes)).map_err(failed)?;
 
     let mut log = String::new();
     write_report(&mut log, &report);
-    log.push_str("=== second pass (classes)\n");
-    write_report(&mut log, &second);
     let path = beside(install.root(), &format!("addons-{stamp}.log"));
     fs::write(&path, log)
         .map_err(|e| tr!("Could not write {file}: {e}", file = path.display(), e))?;
@@ -201,6 +195,44 @@ mod tests {
         assert_eq!(items.len(), 36_525);
         let characters = items.iter().filter(|c| c.category == Category::Character);
         assert_eq!(characters.count(), 48);
+    }
+
+    /// With `CORERULES_DIR` pointing at an Expansion installation without
+    /// records of its own, the add-ons go into a copy of its user
+    /// databases.
+    #[test]
+    fn one_import_brings_every_combination() {
+        let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+            return;
+        };
+        let original = Installation::open(Path::new(&dir)).unwrap();
+        if original.is_core20() {
+            return;
+        }
+        let root = std::env::temp_dir().join(format!("cr-addons-once-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        copy_dir(&original.path("UserDbas").unwrap(), &root.join("UserDbas")).unwrap();
+        std::os::unix::fs::symlink(original.path("Database").unwrap(), root.join("Database"))
+            .unwrap();
+        let install = Installation::open(&root).unwrap();
+        let file = package().unwrap();
+        let report = install.import(&file, None).unwrap();
+        let unresolved: Vec<_> = report
+            .warnings
+            .iter()
+            .filter(|w| w.starts_with("No race/class combinations could be added"))
+            .collect();
+        assert!(unresolved.is_empty(), "{unresolved:?}");
+
+        // Importing the classes again, as the original needed, adds nothing.
+        let allowed = fs::read(root.join("UserDbas/AllowedU.dat")).unwrap();
+        let items = contents(&file);
+        let classes: Vec<usize> = (0..items.len())
+            .filter(|&n| items[n].category == Category::Class)
+            .collect();
+        install.import(&file, Some(&classes)).unwrap();
+        assert!(fs::read(root.join("UserDbas/AllowedU.dat")).unwrap() == allowed);
+        let _ = fs::remove_dir_all(&root);
     }
 
     #[test]
