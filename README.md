@@ -509,7 +509,12 @@ keep it for your own use and do not redistribute it.
 The app can also work directly on an existing installation: **Open
 Folder…** (Ctrl+O) takes any folder with a `Database/` folder, such as
 `$WINEPREFIX/drive_c/Program Files/AD&D Core Rules 2.0`, and saves there,
-so the original program sees the changes.
+so the original program sees the changes. A folder the app cannot write to,
+such as the mounted Expansion CD or ISO image, is copied into
+`~/.local/share/corerules/data` the first time it is opened, as Extract
+Data from CD… does, and characters and everything else made are saved in
+that copy; opening the CD again opens the copy. A Core Rules 2.0 CD opens
+read-only from the disc, as any 2.0 installation does.
 
 ## Community add-ons
 

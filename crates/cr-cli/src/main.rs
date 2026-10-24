@@ -202,7 +202,11 @@ NPCs, treasure, encounters, records and packages) follows the Expansion,
 and 2.0 content is brought over with cr import.
 
 Without INSTALL_DIR, the data package in ~/.local/share/corerules/data
-is used, else the installation in the Wine prefix.";
+is used, else the installation in the Wine prefix.
+
+An Expansion INSTALL_DIR that cannot be written to (a mounted CD or ISO
+image) is copied into ~/.local/share/corerules/data once, as
+cr extract-data does, and whatever a command saves goes into that copy.";
 
 /// Writes to standard output. A closed pipe exits with success, as a
 /// program killed by SIGPIPE would quietly stop; any other write error
@@ -288,6 +292,22 @@ fn main() -> ExitCode {
                  Expansion installation with cr import EXPANSION_DIR CORE_RULES_2.0_DIR"
                     .into(),
             ));
+        }
+        // A mounted CD or ISO image: what is made is saved into the copy in
+        // the app's data folder, as the app does.
+        if writes && !install.is_writable() {
+            let copy = cr_store::extract::local_copy(install.root())?;
+            eprintln!(
+                "cr: {} cannot be written to; {} {}",
+                install.root().display(),
+                if copy.made {
+                    "copied its data into"
+                } else {
+                    "using the copy in"
+                },
+                copy.path.display()
+            );
+            return Installation::open(copy.path);
         }
         Ok(install)
     });
