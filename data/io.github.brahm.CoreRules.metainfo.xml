@@ -85,6 +85,11 @@
     <color type="primary" scheme_preference="dark">#77101b</color>
   </branding>
   <releases>
+    <release version="1.0.0~rc2" date="2026-10-24" type="development">
+      <description>
+        <p>Second release candidate for 1.0: opening the mounted Expansion CD or its ISO image copies it to this computer, and everything made is saved there instead of failing on the read-only disc.</p>
+      </description>
+    </release>
     <release version="1.0.0~rc1" date="2026-10-24" type="development">
       <description>
         <p>Release candidate for 1.0: the fixes from the full test round of 0.9.0, an encounter's Re-roll that keeps hand-set hit points, and a psionicist's Psionics step in New Character.</p>

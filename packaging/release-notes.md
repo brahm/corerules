@@ -6,7 +6,17 @@ release candidate becomes 1.0. Keep a copy of your `Chars` and `UserDbas`
 folders, and [report](https://github.com/brahm/corerules/issues) anything
 that is wrong or works differently from the original.
 
-What's new since 0.9.0, the fixes from its test round:
+What's new since 1.0.0-rc1:
+
+- **Saving with the CD**: opening the mounted Expansion CD or ISO image
+  with Open Folder… no longer fails with a permission error when saving.
+  The app copies the disc to `~/.local/share/corerules/data` (in the
+  Flatpak, its own data folder), opens that copy and says so; characters
+  and everything else made are saved there, opening the CD again reuses
+  the copy, and the app opens it on start without the CD. `cr` does the
+  same. A Core Rules 2.0 CD still opens read-only from the disc
+
+What 1.0.0-rc1 brought since 0.9.0, the fixes from its test round:
 
 - **Critical**: Edit Character keeps an elf's subrace when it saves, and a
   large package (36,525 items) imports without crashing, in the background

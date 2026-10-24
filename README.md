@@ -20,7 +20,7 @@ the help. The app reads and writes the original's own data files, so
 characters, monsters, encounters and packages made in either program open
 in the other.
 
-> **Release candidate.** Version 1.0.0-rc1 is the release candidate for
+> **Release candidate.** Version 1.0.0-rc2 is the release candidate for
 > 1.0. Every feature was checked against the original programs and went
 > through a full round of manual tests. It now needs real use: keep a copy
 > of your `Chars` and `UserDbas` folders, and
@@ -54,7 +54,7 @@ preserved by the Internet Archive:
 
 ## Status and roadmap
 
-1. **Release candidate (now).** 1.0.0-rc1 goes to real users. Problems
+1. **Release candidate (now).** 1.0.0-rc2 goes to real users. Problems
    found are fixed in further release candidates.
 2. **1.0.** Once the release candidate is confirmed stable after the
    testing period, the last one becomes the final 1.0: a faithful
