@@ -44,6 +44,14 @@ for code in ${SMOKE_LANGUAGES:-en_US pt_BR es it fr de}; do
         setsid dbus-run-session -- "$@" >"$texts" 2>"$log" &
     pid=$!
     sleep "${SMOKE_SECONDS:-8}"
+    # A cold start (the first on a fresh container, or while the portals
+    # time out) can take longer to print the texts: wait up to 30 seconds
+    # more for them while the app runs.
+    waited=0
+    while ! grep -q "^text" "$texts" && [ $waited -lt 30 ] && kill -0 $pid 2>/dev/null; do
+        sleep 1
+        waited=$((waited + 1))
+    done
     if ! kill -0 $pid 2>/dev/null; then
         wait $pid
         exited=$?
