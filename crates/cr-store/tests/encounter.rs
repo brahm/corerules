@@ -239,6 +239,35 @@ fn hit_points_given_by_hand() {
     assert_eq!(p.hit_points.iter().map(|h| h.1).sum::<i32>(), 4);
 }
 
+#[test]
+fn re_roll_keeps_the_hit_points_given_by_hand() {
+    let (_t, rules) = rules("hp-keep", vec![], true);
+    let mut r = Rand::seeded(11);
+    let mut p = rules
+        .new_monster_package("Goblin, Leader", Some(1), &mut r)
+        .unwrap();
+    p.count = 5;
+    p.hit_points.clear();
+    // Two monsters at 99 (outside the dice, so no roll comes out equal).
+    p.hit_points.push((99, 0));
+    p.set_count_with(99, 2);
+    for _ in 0..20 {
+        rules.roll_hit_points(&mut p, &mut r);
+        assert_eq!(p.hit_points[0], (99, 2));
+        assert_eq!(p.hit_points.iter().map(|h| h.1).sum::<i32>(), 5);
+    }
+    // Taking them off the value lets Re-roll roll them.
+    p.set_count_with(99, 0);
+    rules.roll_hit_points(&mut p, &mut r);
+    assert_eq!(p.count_with(99), 0);
+    // Fewer monsters keep only as many as there are.
+    p.hit_points.clear();
+    p.set_count_with(17, 5);
+    p.count = 3;
+    rules.roll_hit_points(&mut p, &mut r);
+    assert_eq!(p.hit_points, vec![(17, 3)]);
+}
+
 /// A package as name, count and hit points.
 type Row<'a> = (&'a str, i32, Vec<(i32, i32)>);
 
@@ -677,6 +706,7 @@ fn texts() {
         count: 3,
         monster: m,
         hit_points: vec![(5, 2), (3, 1)],
+        hand_set: Vec::new(),
     };
     assert_eq!(
         rules.stat_line(&package),
