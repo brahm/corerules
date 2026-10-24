@@ -86,13 +86,15 @@ def fetch_art(out):
             "name": text(meta.get("ObjectName", {}).get("value"))
             or title.removeprefix("File:").rsplit(".", 1)[0],
             "artist": text(meta.get("Artist", {}).get("value")),
-            "date": text(meta.get("DateTimeOriginal", {}).get("value")),
+            # Commons appends Wikidata markup such as "date QS:P571,...".
+            "date": text(meta.get("DateTimeOriginal", {}).get("value"))
+            .split(" date QS:")[0],
             "licence": licence,
             "url": ii["descriptionurl"],
         }
         credits.append(credit)
-        print("OK", title, "|", credit["artist"], "|", credit["date"], "|",
-              licence)
+        print("OK", title, "|", credit["name"], "|", credit["artist"], "|",
+              credit["date"], "|", licence)
     if failed:
         sys.exit("Some paintings are missing or not free; see above.")
     return credits
