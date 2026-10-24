@@ -128,6 +128,10 @@ pub fn add_key(area: &impl IsA<gtk::Widget>, topic: impl Fn() -> u32 + 'static) 
             }
         })),
     ));
+    // An entry's text takes the keys before they bubble up to it.
+    if area.is::<gtk::Editable>() {
+        keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+    }
     area.add_controller(keys);
     // After the controls' own right-click menus.
     let click = gtk::GestureClick::builder()

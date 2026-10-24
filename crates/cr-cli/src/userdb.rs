@@ -54,9 +54,9 @@ fn run<K: UserKind>(install: &Installation, action: &str, args: &[String]) -> Re
                 let summary = K::summary(e.record);
                 let origin = origin_label(e.origin);
                 if summary.is_empty() {
-                    println!("{}\t{origin}", K::name(e.record));
+                    outln!("{}\t{origin}", K::name(e.record));
                 } else {
-                    println!("{}\t{origin}\t{summary}", K::name(e.record));
+                    outln!("{}\t{origin}\t{summary}", K::name(e.record));
                 }
             }
             Ok(())
@@ -73,7 +73,7 @@ fn run<K: UserKind>(install: &Installation, action: &str, args: &[String]) -> Re
             match db.add(record.clone()) {
                 Ok(_) => {
                     db.save(install)?;
-                    println!("added {new} to {}", K::FILE);
+                    outln!("added {new} to {}", K::FILE);
                     Ok(())
                 }
                 Err(e) => Err(invalid(db.name_message(&e, &record, true))),
@@ -90,7 +90,7 @@ fn run<K: UserKind>(install: &Installation, action: &str, args: &[String]) -> Re
             }
             db.delete(index);
             db.save(install)?;
-            println!("deleted {name} from {}", K::FILE);
+            outln!("deleted {name} from {}", K::FILE);
             Ok(())
         }
         _ => Err(invalid(

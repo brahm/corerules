@@ -191,6 +191,8 @@ pub fn choose_template<H: Host + 'static>(host: &Shared<H>) {
     let header = adw::HeaderBar::new();
     let view = adw::ToolbarView::new();
     crate::help::add_button(&header, &view, || topic::ENCOUNTERS);
+    // The search holds the focus.
+    crate::help::add_key(&search, || topic::ENCOUNTERS);
     view.add_top_bar(&header);
     let bar = gtk::SearchBar::builder()
         .child(&search)

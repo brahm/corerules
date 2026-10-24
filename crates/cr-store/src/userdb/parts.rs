@@ -399,11 +399,16 @@ impl UserKind for Parts {
         PartsFile { arrays }.to_bytes()
     }
 
+    /// With what IDD 155's OnInitDialog forces already in place, so the
+    /// editor opens as the original's does (a new magical item's XP Value
+    /// can be typed at once).
     fn new_record(context: &NewContext) -> PartRec {
-        PartRec {
+        let mut r = PartRec {
             part_type: context.scope,
             part: new_part(context.flavor, context.scope),
-        }
+        };
+        forced_on_open(&mut r);
+        r
     }
 
     /// The weapon proficiency name defaults to the part's name (the
@@ -411,11 +416,7 @@ impl UserKind for Parts {
     /// Also what IDD 155's OnInitDialog forces: armor is wearable and
     /// magical items are magic.
     fn prepare(r: &mut PartRec) {
-        match r.part_type {
-            ARMOR => r.part.head.unknown_0x250[0] = 1,
-            MAGICAL_ITEMS => r.part.head.unknown_0x224 = 1,
-            _ => {}
-        }
+        forced_on_open(r);
         if r.part.data.unknown_0x428.is_empty() {
             r.part.data.unknown_0x428.clone_from(&r.part.head.name);
         }
@@ -557,6 +558,16 @@ pub fn shown_values(
         }
     }
     shown
+}
+
+/// What IDD 155's OnInitDialog forces: armor is wearable and magical
+/// items are magic.
+fn forced_on_open(r: &mut PartRec) {
+    match r.part_type {
+        ARMOR => r.part.head.unknown_0x250[0] = 1,
+        MAGICAL_ITEMS => r.part.head.unknown_0x224 = 1,
+        _ => {}
+    }
 }
 
 fn records_of(file: PartsFile) -> Vec<PartRec> {

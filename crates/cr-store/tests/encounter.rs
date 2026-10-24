@@ -1055,8 +1055,7 @@ fn group_encounter_printout() {
     e.name = "The Company of the Long Road".into();
 
     let title = group_job_title(&e.name);
-    assert!(title.starts_with("Group Encounter ["));
-    assert_eq!(title.chars().count(), 31);
+    assert_eq!(title, "Group Encounter [The Company of the Long Road]");
     assert_eq!(group_job_title("Few"), "Group Encounter [Few]");
 
     let boxes = |condensed: bool| -> Vec<SheetBox> {

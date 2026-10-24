@@ -730,6 +730,12 @@ pub trait UserKind: 'static {
         Ok(())
     }
 
+    /// What is missing from `record` that the program needs, asked about
+    /// before it is saved.
+    fn save_warning(_record: &Self::Rec) -> Option<String> {
+        None
+    }
+
     /// Why the original refuses to copy `record`, when it does.
     fn copy_refusal(_record: &Self::Rec) -> Option<String> {
         None

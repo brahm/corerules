@@ -43,7 +43,7 @@ pub fn cmd_export(install: &Installation, args: &[String]) -> Result<()> {
     let all = install.exportable()?;
     if args.first().map(String::as_str) == Some("--list") {
         for item in &all {
-            println!("{}\t{}", item.category.label(), item.name);
+            outln!("{}\t{}", item.category.label(), item.name);
         }
         return Ok(());
     }
@@ -75,7 +75,9 @@ pub fn cmd_export(install: &Installation, args: &[String]) -> Result<()> {
     for warning in &export.warnings {
         eprintln!("cr: {warning}");
     }
-    println!("{}: {} items", path.display(), chosen.len());
+    let n = chosen.len();
+    let noun = if n == 1 { "item" } else { "items" };
+    outln!("{}: {n} {noun}", path.display());
     Ok(())
 }
 
@@ -143,10 +145,10 @@ pub fn cmd_import(install: &Installation, args: &[String]) -> Result<()> {
                 (Clash::Custom, true) => "\treplaces",
                 (Clash::Custom, false) => "\tname in use",
             };
-            println!("{}\t{}{mark}", c.category.label(), c.name);
+            outln!("{}\t{}{mark}", c.category.label(), c.name);
         }
         if file.map_maker.count > 0 {
-            println!("({} Map Maker II maps, not imported)", file.map_maker.count);
+            outln!("({} Map Maker II maps, not imported)", file.map_maker.count);
         }
         return Ok(());
     }
@@ -154,19 +156,19 @@ pub fn cmd_import(install: &Installation, args: &[String]) -> Result<()> {
     let report = install.import(&file, chosen.as_deref())?;
     let label = |c: &Content| format!("{}: {}", c.category.label(), c.name);
     for c in &report.imported {
-        println!("imported {}", label(c));
+        outln!("imported {}", label(c));
     }
     for (category, name) in &report.replaced {
-        println!("replaced {}: {name}", category.label());
+        outln!("replaced {}: {name}", category.label());
     }
     for c in &report.skipped {
-        println!("skipped {} (a custom record has the name)", label(c));
+        outln!("skipped {} (a custom record has the name)", label(c));
     }
     for (c, name) in &report.renamed {
-        println!("renamed {} to {name}", label(c));
+        outln!("renamed {} to {name}", label(c));
     }
     for file in &report.characters {
-        println!("wrote Chars/{file}");
+        outln!("wrote Chars/{file}");
     }
     for warning in &report.warnings {
         eprintln!("cr: {warning}");
@@ -233,7 +235,7 @@ pub fn cmd_package(install: &Installation, args: &[String]) -> Result<()> {
         write_package(&path, &file)?;
     }
     for c in cr_store::export::contents(&file) {
-        println!("{}\t{}", c.category.label(), c.name);
+        outln!("{}\t{}", c.category.label(), c.name);
     }
     for warning in &warnings {
         eprintln!("cr: {warning}");

@@ -375,6 +375,13 @@ impl Installation {
     /// Saves a generated NPC to the character list as an NPC (in `party`,
     /// which may be empty); returns its file name inside `Chars/`.
     pub fn save_npc(&self, npc: &Npc, party: &str) -> Result<String> {
+        // As Manage Parties takes it (DDX_MaxChars).
+        if party.chars().count() > crate::party::MAX_NAME {
+            return Err(Error::Invalid(tr!(
+                "A party name has at most {max} characters",
+                max = crate::party::MAX_NAME
+            )));
+        }
         let format = |path: &str| {
             let path = path.to_owned();
             move |source| Error::Format {

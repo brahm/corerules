@@ -1042,9 +1042,13 @@ fn nonweapon_rows(ctx: &Ctx) -> Vec<Vec<Cell>> {
 }
 
 /// A part's name as the ability boxes show it: without the "Race, " or
-/// "Class, " prefix and the cost in parentheses.
+/// "Class, " prefix and the cost in parentheses. A name whose comma comes
+/// after a colon ("Phobia: Snakes, severe") has no such prefix.
 pub(crate) fn ability_display_name(name: &str) -> String {
-    let name = name.split_once(", ").map_or(name, |(_, n)| n);
+    let name = match name.split_once(", ") {
+        Some((prefix, rest)) if !prefix.contains(':') => rest,
+        _ => name,
+    };
     let name = match name.rfind(" (") {
         Some(i) if name.ends_with(')') && name[i + 2..name.len() - 1].parse::<i32>().is_ok() => {
             &name[..i]
@@ -1211,4 +1215,21 @@ fn portrait(ctx: &Ctx) -> Section {
         "Portrait",
         vec![Block::Image { windows, file }],
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ability_display_name;
+
+    #[test]
+    fn display_names_drop_the_prefix_and_cost_only() {
+        assert_eq!(
+            ability_display_name("Dwarf, Infravision (5)"),
+            "Infravision"
+        );
+        assert_eq!(
+            ability_display_name("Phobia: Snakes, severe"),
+            "Phobia: Snakes, severe"
+        );
+    }
 }

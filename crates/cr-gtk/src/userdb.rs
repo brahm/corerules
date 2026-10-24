@@ -848,10 +848,13 @@ fn editor<K: UserKind, H: Host + 'static>(
                 }
             }
         });
-        // An editor with only some fields open starts on the first of them.
+        // An editor with only some fields open starts on the first of them;
+        // any other on its first page with something shown (a nonweapon
+        // proficiency has nothing on the Part page).
         let first = open
             .and_then(|o| fields.iter().find(|f| o.contains(&f.label)))
             .and_then(|f| page_names.iter().position(|p| *p == f.page))
+            .or_else(|| pages.borrow().iter().position(|(row, _)| row.is_visible()))
             .unwrap_or(0);
         sidebar.select_row(sidebar.row_at_index(first as i32).as_ref());
         let toggle = gtk::ToggleButton::builder()
@@ -928,9 +931,9 @@ fn finish<K: UserKind, H: Host + 'static>(
             dialog.close();
         }
     });
-    save.connect_clicked({
-        let (host, dialog) = (host.clone(), dialog.clone());
-        move |_| {
+    let store = Rc::new({
+        let (host, dialog, record) = (host.clone(), dialog.clone(), record.clone());
+        move || {
             let r = record.borrow().clone();
             let result = host.with_install(|install| {
                 let mut db = UserDb::<K>::load(install)?;
@@ -980,6 +983,28 @@ fn finish<K: UserKind, H: Host + 'static>(
                 }
                 None => {}
             }
+        }
+    });
+    save.connect_clicked({
+        let dialog = dialog.clone();
+        move |_| {
+            let Some(warning) = K::save_warning(&record.borrow()) else {
+                return store();
+            };
+            let alert = adw::AlertDialog::builder()
+                .heading(tr("Save Anyway?"))
+                .body(warning)
+                .default_response("cancel")
+                .close_response("cancel")
+                .build();
+            alert.add_responses(&[("cancel", tr("_Cancel")), ("save", tr("_Save"))]);
+            let store = store.clone();
+            alert.connect_response(None, move |_, response| {
+                if response == "save" {
+                    store();
+                }
+            });
+            alert.present(Some(&dialog));
         }
     });
     dialog.present(Some(&host.parent()));
@@ -1682,13 +1707,22 @@ fn table_editor<H: Host + 'static>(
         .build();
     rows_group.add(&rows_box);
     let draw: Redraw = Rc::default();
+    // The rows drawn, whose ranges a weight change shows again in place,
+    // keeping the row open.
+    let shown: Rc<RefCell<Vec<adw::ExpanderRow>>> = Rc::default();
     let render: Rc<dyn Fn()> = Rc::new({
-        let (host, table, rows_box, draw) =
-            (host.clone(), table.clone(), rows_box.clone(), draw.clone());
+        let (host, table, rows_box, draw, shown) = (
+            host.clone(),
+            table.clone(),
+            rows_box.clone(),
+            draw.clone(),
+            shown.clone(),
+        );
         move || {
             while let Some(child) = rows_box.first_child() {
                 rows_box.remove(&child);
             }
+            shown.borrow_mut().clear();
             let t = table.borrow().clone();
             let ranges = tables::ranges(&t);
             if ranges.is_empty() {
@@ -1720,7 +1754,7 @@ fn table_editor<H: Host + 'static>(
                         0.0,
                     ))
                     .build();
-                let (table2, draw2) = (table.clone(), draw.clone());
+                let (table2, shown2) = (table.clone(), shown.clone());
                 weight.connect_value_notify(move |w| {
                     if let Some(e) = tables::entries_mut(&mut table2.borrow_mut())
                         .into_iter()
@@ -1728,13 +1762,11 @@ fn table_editor<H: Host + 'static>(
                     {
                         e.weight = w.value() as u32;
                     }
-                    // Ranges follow the weights; redraw after the change.
-                    let draw2 = draw2.clone();
-                    glib::idle_add_local_once(move || {
-                        if let Some(d) = draw2.borrow().clone() {
-                            d();
-                        }
-                    });
+                    // Ranges follow the weights.
+                    let ranges = tables::ranges(&table2.borrow());
+                    for (row, range) in shown2.borrow().iter().zip(ranges) {
+                        row.set_subtitle(&tr!("Roll {range}", range));
+                    }
                 });
                 row.add_row(&weight);
                 // Rows naming another table have only a weight; the others
@@ -1780,6 +1812,7 @@ fn table_editor<H: Host + 'static>(
                 });
                 row.add_suffix(&remove);
                 rows_box.append(&row);
+                shown.borrow_mut().push(row);
             }
         }
     });

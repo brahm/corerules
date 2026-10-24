@@ -8,10 +8,13 @@
 //! the databases lack (Dragonlance's kender, Dark Sun's muls and half-giants
 //! are not in them, so they cannot be offered).
 
+use cr_i18n::tr_noop;
+
 /// One campaign setting and what it allows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Setting {
     pub id: &'static str,
+    /// In English, translated where shown.
     pub name: &'static str,
     /// What the setting is and which book its rules come from.
     pub description: &'static str,
@@ -33,9 +36,11 @@ const HANDBOOK_RACES: &[&str] = &["Dwarf", "Elf", "Gnome", "Half-elf", "Halfling
 pub const SETTINGS: [Setting; 6] = [
     Setting {
         id: "generic",
-        name: "Generic",
-        description: "Every race and class in the databases, as the original program offers \
-                      them",
+        name: tr_noop!("Generic"),
+        description: tr_noop!(
+            "Every race and class in the databases, as the original program offers \
+                      them"
+        ),
         races: None,
         excluded_subraces: &[],
         default_subraces_only: false,
@@ -45,8 +50,10 @@ pub const SETTINGS: [Setting; 6] = [
     Setting {
         id: "forgotten-realms",
         name: "Forgotten Realms",
-        description: "The Player's Handbook races and half-orcs, every class \
-                      (Forgotten Realms Campaign Setting)",
+        description: tr_noop!(
+            "The Player's Handbook races and half-orcs, every class \
+                      (Forgotten Realms Campaign Setting)"
+        ),
         races: Some(&[
             "Dwarf", "Elf", "Gnome", "Half-elf", "Half-orc", "Halfling", "Human",
         ]),
@@ -58,8 +65,10 @@ pub const SETTINGS: [Setting; 6] = [
     Setting {
         id: "greyhawk",
         name: "Greyhawk",
-        description: "The Player's Handbook races and half-orcs, every class \
-                      (From the Ashes)",
+        description: tr_noop!(
+            "The Player's Handbook races and half-orcs, every class \
+                      (From the Ashes)"
+        ),
         races: Some(&[
             "Dwarf", "Elf", "Gnome", "Half-elf", "Half-orc", "Halfling", "Human",
         ]),
@@ -71,9 +80,11 @@ pub const SETTINGS: [Setting; 6] = [
     Setting {
         id: "dragonlance",
         name: "Dragonlance",
-        description: "Humans, dwarves, elves, half-elves, gnomes and minotaurs; no \
+        description: tr_noop!(
+            "Humans, dwarves, elves, half-elves, gnomes and minotaurs; no \
                       halflings (kender take their place), no half-orcs, no psionics, \
-                      and none of the underground subraces (Tales of the Lance)",
+                      and none of the underground subraces (Tales of the Lance)"
+        ),
         races: Some(&["Dwarf", "Elf", "Gnome", "Half-elf", "Human", "Minotaur"]),
         excluded_subraces: &[
             "Dark (drow) elf",
@@ -88,8 +99,10 @@ pub const SETTINGS: [Setting; 6] = [
     Setting {
         id: "ravenloft",
         name: "Ravenloft",
-        description: "The Player's Handbook races and every class \
-                      (Ravenloft Campaign Setting)",
+        description: tr_noop!(
+            "The Player's Handbook races and every class \
+                      (Ravenloft Campaign Setting)"
+        ),
         races: Some(HANDBOOK_RACES),
         excluded_subraces: &[],
         default_subraces_only: false,
@@ -99,9 +112,11 @@ pub const SETTINGS: [Setting; 6] = [
     Setting {
         id: "dark-sun",
         name: "Dark Sun",
-        description: "Humans, dwarves, elves, half-elves, halflings and thri-kreen; no \
+        description: tr_noop!(
+            "Humans, dwarves, elves, half-elves, halflings and thri-kreen; no \
                       gnomes, no paladins, and of the wizards only mages (preservers and \
-                      defilers) and illusionists (Dark Sun Campaign Setting)",
+                      defilers) and illusionists (Dark Sun Campaign Setting)"
+        ),
         races: Some(&[
             "Dwarf",
             "Elf",

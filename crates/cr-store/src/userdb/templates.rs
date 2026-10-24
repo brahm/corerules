@@ -64,6 +64,26 @@ impl UserKind for Templates {
         new_template(&context.parent)
     }
 
+    /// A line left with "and" or "or" but nothing in its second box
+    /// would hang: it is stored as "appear." instead.
+    fn prepare(r: &mut EncounterTemplate) {
+        for object in r.monsters.iter_mut().chain(r.npcs.iter_mut()) {
+            match object {
+                Object::TemplateMonsterProperties(p) if p.second_name.trim().is_empty() => {
+                    p.flags[1] = 0;
+                    p.flags[2] = 0;
+                }
+                Object::TemplateNpcProperties(p)
+                    if p.second_npc.name.trim().is_empty() && p.second_npc.race.is_empty() =>
+                {
+                    p.flags[1] = 0;
+                    p.flags[2] = 0;
+                }
+                _ => {}
+            }
+        }
+    }
+
     /// The template editor is the app's own (see the GTK front end).
     fn fields(_flavor: Flavor) -> Vec<FieldDesc<EncounterTemplate>> {
         Vec::new()
@@ -538,6 +558,29 @@ mod tests {
         let mut m = empty_monster();
         name.clone_into(&mut m.name);
         m
+    }
+
+    #[test]
+    fn a_hanging_or_is_stored_as_appear() {
+        let mut t = new_template("");
+        let mut line = new_monster_line(&monster("Orc"));
+        line.flags = Combo::Or.flags(false);
+        let mut both = line.clone();
+        "Goblin".clone_into(&mut both.second_name);
+        t.monsters = vec![
+            Object::TemplateMonsterProperties(Box::new(both)),
+            Object::TemplateMonsterProperties(Box::new(line)),
+        ];
+        Templates::prepare(&mut t);
+        let combos: Vec<Combo> = t
+            .monsters
+            .iter()
+            .map(|o| match o {
+                Object::TemplateMonsterProperties(p) => Combo::of_flags(&p.flags),
+                _ => unreachable!(),
+            })
+            .collect();
+        assert_eq!(combos, [Combo::Or, Combo::Appear]);
     }
 
     #[test]
