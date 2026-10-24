@@ -2912,28 +2912,33 @@ msgstr ""
 msgid "Core Rules is a complete Linux version of AD&D Core Rules 2.0 and its Expansion (TSR/Evermore, 1998-1999), the character manager and Dungeon Master's toolkit for Advanced Dungeons & Dragons 2nd Edition. It is written in Rust with GTK 4 and libadwaita and runs natively, with no Wine and no Windows."
 msgstr ""
 
-#: crates/cr-gtk/src/help.rs:1412
+#: crates/cr-gtk/src/help.rs:1414
 msgid "Every screen of the original program is here: the Character Generator with Create, Enter and Update Character, kits and Player's Option, the character sheet, parties, the NPC, treasure and encounter generators, Table Rolls, editors for every user database, DM Toolkit packages, the rule books and the help. The app reads and writes the original's own data files, so characters, monsters, encounters and packages made in either program open in the other."
 msgstr ""
 
-#: crates/cr-gtk/src/help.rs:1418
+#: crates/cr-gtk/src/help.rs:1422
 msgid "This project contains no TSR or Wizards of the Coast content. The rules, books, monsters, pictures and help all come from a copy of AD&D Core Rules 2.0 (and, for everything the app creates and edits, the Expansion) that you already own."
 msgstr ""
 
-#: crates/cr-gtk/src/help.rs:1442
+#: crates/cr-gtk/src/help.rs:1449
 msgid "translator-credits"
 msgstr ""
 
-#: crates/cr-gtk/src/help.rs:1447
+#: crates/cr-gtk/src/help.rs:1454
 msgid "Assistant"
 msgstr ""
 
-#: crates/cr-gtk/src/help.rs:1451
+#: crates/cr-gtk/src/help.rs:1458
 msgid "AD&D Core Rules"
 msgstr ""
 
-#: crates/cr-gtk/src/help.rs:1454
+#: crates/cr-gtk/src/help.rs:1461
 msgid "AD&D, Advanced Dungeons & Dragons and Core Rules are trademarks of Wizards of the Coast. The rules, books, monsters, pictures and help of AD&D Core Rules 2.0 and its Expansion are copyrighted by Wizards of the Coast and are not covered by this app's license. This project is not affiliated with Wizards of the Coast and contains none of their content: it needs the original discs, or a copy of them, that you own."
+msgstr ""
+
+#: crates/cr-gtk/src/help.rs:1478
+#: crates/cr-gtk/src/help.rs:1494
+msgid "{product} (original program)"
 msgstr ""
 
 #: crates/cr-gtk/src/kit_magic.rs:180

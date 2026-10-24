@@ -1,4 +1,4 @@
-# Maintainer: Brahm <https://github.com/brahm>
+# Maintainer: Wagner Brahm <https://github.com/brahm>
 # Builds Core Rules for Arch Linux and the distributions built on it
 # (CachyOS, Omarchy, Manjaro, EndeavourOS). packaging/arch/build.sh sets
 # pkgver and _tag from the release and builds from the checkout; on its

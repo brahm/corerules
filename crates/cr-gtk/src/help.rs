@@ -1429,14 +1429,15 @@ pub fn about(parent: &adw::ApplicationWindow, install: Option<&Installation>) {
     let dialog = adw::AboutDialog::builder()
         .application_name("Core Rules")
         .application_icon(crate::APP_ID)
-        .developer_name("Brahm")
-        .developers(["Brahm https://github.com/brahm"])
+        .developer_name("Wagner Brahm")
+        .developers(["Wagner Brahm https://wagnerbrahm.com.br"])
         .version(version)
         .release_notes_version(version)
         .release_notes(release_notes(METAINFO).unwrap_or_default())
         .website(repository)
         .issue_url(format!("{repository}/issues"))
-        .copyright("© 2026 Brahm")
+        // The copyleft sign, by the author's choice.
+        .copyright("🄯 2026 Wagner Brahm")
         .license_type(gtk::License::MitX11)
         // The comments, a section's license and a credit section's name
         // are markup.
@@ -1474,7 +1475,7 @@ pub fn about(parent: &adw::ApplicationWindow, install: Option<&Installation>) {
         let name = name.join(" ");
         if !name.is_empty() || original.license.is_some() {
             dialog.add_legal_section(
-                &name,
+                &tr!("{product} (original program)", product = &name),
                 Some(&rest.join("\n"))
                     .filter(|r| !r.is_empty())
                     .map(String::as_str),
@@ -1490,7 +1491,8 @@ pub fn about(parent: &adw::ApplicationWindow, install: Option<&Installation>) {
             let credits: Vec<&str> = original.credits.iter().map(String::as_str).collect();
             // The product's name without the game's, which does not fit.
             let product = original.lines.get(1).unwrap_or(&name);
-            dialog.add_credit_section(Some(&glib::markup_escape_text(product)), &credits);
+            let title = tr!("{product} (original program)", product = product);
+            dialog.add_credit_section(Some(&glib::markup_escape_text(&title)), &credits);
         }
     }
     dialog.present(Some(parent));

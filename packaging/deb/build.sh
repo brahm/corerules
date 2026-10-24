@@ -31,7 +31,7 @@ cat > "$pkg/DEBIAN/control" <<CONTROL
 Package: corerules
 Version: $version
 Architecture: $arch
-Maintainer: Brahm <https://github.com/brahm>
+Maintainer: Wagner Brahm <https://github.com/brahm>
 Installed-Size: $(du -sk "$pkg/usr" | cut -f1)
 Depends: $depends
 Section: games

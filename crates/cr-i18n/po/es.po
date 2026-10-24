@@ -2912,29 +2912,34 @@ msgstr "Ese tema no está en esta instalación"
 msgid "Core Rules is a complete Linux version of AD&D Core Rules 2.0 and its Expansion (TSR/Evermore, 1998-1999), the character manager and Dungeon Master's toolkit for Advanced Dungeons & Dragons 2nd Edition. It is written in Rust with GTK 4 and libadwaita and runs natively, with no Wine and no Windows."
 msgstr "Core Rules es una versión completa para Linux de AD&D Core Rules 2.0 y su Expansion (TSR/Evermore, 1998-1999), el gestor de personajes y la caja de herramientas del Dungeon Master para Advanced Dungeons & Dragons 2.ª edición. Está escrito en Rust con GTK 4 y libadwaita y funciona de forma nativa, sin Wine y sin Windows."
 
-#: crates/cr-gtk/src/help.rs:1412
+#: crates/cr-gtk/src/help.rs:1414
 msgid "Every screen of the original program is here: the Character Generator with Create, Enter and Update Character, kits and Player's Option, the character sheet, parties, the NPC, treasure and encounter generators, Table Rolls, editors for every user database, DM Toolkit packages, the rule books and the help. The app reads and writes the original's own data files, so characters, monsters, encounters and packages made in either program open in the other."
 msgstr "Todas las pantallas del programa original están aquí: el Character Generator con Create, Enter y Update Character, kits y Player's Option, la hoja de personaje, los grupos, los generadores de PNJ, tesoros y encuentros, las Table Rolls, editores para todas las bases de datos del usuario, los paquetes del DM Toolkit, los libros de reglas y la ayuda. La aplicación lee y escribe los propios archivos de datos del original, así que los personajes, monstruos, encuentros y paquetes creados en cualquiera de los dos programas se abren en el otro."
 
-#: crates/cr-gtk/src/help.rs:1418
+#: crates/cr-gtk/src/help.rs:1422
 msgid "This project contains no TSR or Wizards of the Coast content. The rules, books, monsters, pictures and help all come from a copy of AD&D Core Rules 2.0 (and, for everything the app creates and edits, the Expansion) that you already own."
 msgstr "Este proyecto no contiene ningún contenido de TSR ni de Wizards of the Coast. Las reglas, los libros, los monstruos, las imágenes y la ayuda provienen de una copia de AD&D Core Rules 2.0 (y, para todo lo que la aplicación crea y edita, de la Expansion) que ya tienes."
 
-#: crates/cr-gtk/src/help.rs:1442
+#: crates/cr-gtk/src/help.rs:1449
 msgid "translator-credits"
 msgstr "Claude (Anthropic) https://www.anthropic.com/claude"
 
-#: crates/cr-gtk/src/help.rs:1447
+#: crates/cr-gtk/src/help.rs:1454
 msgid "Assistant"
 msgstr "Asistente"
 
-#: crates/cr-gtk/src/help.rs:1451
+#: crates/cr-gtk/src/help.rs:1458
 msgid "AD&D Core Rules"
 msgstr "AD&D Core Rules"
 
-#: crates/cr-gtk/src/help.rs:1454
+#: crates/cr-gtk/src/help.rs:1461
 msgid "AD&D, Advanced Dungeons & Dragons and Core Rules are trademarks of Wizards of the Coast. The rules, books, monsters, pictures and help of AD&D Core Rules 2.0 and its Expansion are copyrighted by Wizards of the Coast and are not covered by this app's license. This project is not affiliated with Wizards of the Coast and contains none of their content: it needs the original discs, or a copy of them, that you own."
 msgstr "AD&D, Advanced Dungeons & Dragons y Core Rules son marcas registradas de Wizards of the Coast. Las reglas, los libros, los monstruos, las imágenes y la ayuda de AD&D Core Rules 2.0 y su Expansion tienen derechos de autor de Wizards of the Coast y no están cubiertos por la licencia de esta aplicación. Este proyecto no está afiliado a Wizards of the Coast y no contiene nada de su contenido: necesita los discos originales, o una copia de ellos, que tengas."
+
+#: crates/cr-gtk/src/help.rs:1478
+#: crates/cr-gtk/src/help.rs:1494
+msgid "{product} (original program)"
+msgstr "{product} (programa original)"
 
 #: crates/cr-gtk/src/kit_magic.rs:180
 msgid "Ignore"
