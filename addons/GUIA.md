@@ -18,7 +18,10 @@ O que é preciso:
 
 **[Baixe o instalador aqui](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage).** O link sempre traz a versão mais nova. A [release addons](https://github.com/brahm/corerules/releases/tag/addons) também guarda cada versão.
 
-O mesmo arquivo é publicado no GitHub Packages do projeto, como [`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons). É um artefato OCI, e não uma imagem de contêiner: o `docker pull` que a página do GitHub mostra não serve. Para baixar de lá, use o [ORAS](https://oras.land):
+O mesmo arquivo é publicado no [GitHub Packages](https://github.com/brahm?tab=packages&repo_name=corerules) do projeto, de duas formas, porque o GitHub Packages não tem um registro para arquivos soltos:
+
+* **Como o arquivo AppImage**, no pacote Maven `io.github.brahm.corerules-community-addons`. A página dele lista `corerules-community-addons-VERSÃO-x86_64.AppImage` em Assets, para baixar pelo navegador. Baixar desse registro pela linha de comando pede um token do GitHub, mesmo com o pacote público.
+* **Como artefato OCI**, [`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons), que baixa sem conta nenhuma. Ele guarda a AppImage como seu único arquivo, e não uma imagem de contêiner: o `docker pull` que a página do GitHub mostra não serve. Para baixar de lá, use o [ORAS](https://oras.land):
 
 ```sh
 oras pull ghcr.io/brahm/corerules-community-addons:latest
@@ -37,7 +40,7 @@ curl -L -H "Authorization: Bearer $token" -o CoreRules-Community-Addons-x86_64.A
     "https://ghcr.io/v2/$repo/blobs/$layer"
 ```
 
-Além de `latest`, cada versão do app tem a sua tag, como `1.0.0-rc1`.
+Além de `latest`, cada versão do app tem a sua tag, como `1.0.0`.
 
 ## Instalação
 
