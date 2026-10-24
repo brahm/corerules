@@ -855,7 +855,31 @@ impl Reader {
         state::set("zoom", &zoom.to_string());
         if let Some(paragraph) = paragraph {
             self.go_to_paragraph(paragraph);
+            self.keep_at_jump();
         }
+    }
+
+    /// Scrolls to the jump mark again while the view lays out the restyled
+    /// text: lines it has not measured yet are only estimated, so the
+    /// first scroll lands elsewhere (another chapter, after a zoom). It
+    /// stops once the text's height has settled.
+    fn keep_at_jump(&self) {
+        let jump = self.jump.clone();
+        // The height last seen and the frames it has stayed so.
+        let state = Cell::new((-1.0, 0u32));
+        let started = std::time::Instant::now();
+        self.view.add_tick_callback(move |view, _| {
+            let upper = view.vadjustment().map_or(0.0, |a| a.upper());
+            let (last_upper, still) = state.get();
+            let still = if upper == last_upper { still + 1 } else { 0 };
+            state.set((upper, still));
+            view.scroll_to_mark(&jump, 0.0, true, 0.0, 0.0);
+            if still < 20 && started.elapsed() < Duration::from_secs(10) {
+                glib::ControlFlow::Continue
+            } else {
+                glib::ControlFlow::Break
+            }
+        });
     }
 
     fn go_to_paragraph(&self, paragraph: usize) {

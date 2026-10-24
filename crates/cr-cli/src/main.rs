@@ -9,6 +9,25 @@ use cr_store::Installation;
 use cr_store::edit::CharacterDetails;
 use cr_store::lists::{CharacterLists, Item};
 
+/// `print!` to standard output that ends the program quietly when the
+/// reader has gone away (`cr encounter … | head`), where `print!` panics
+/// with "failed printing to stdout: Broken pipe".
+macro_rules! out {
+    ($($arg:tt)*) => {
+        $crate::write_stdout(format_args!($($arg)*))
+    };
+}
+
+/// `println!` with [`out!`]'s handling of a closed pipe.
+macro_rules! outln {
+    () => {
+        out!("\n")
+    };
+    ($($arg:tt)*) => {
+        out!("{}\n", format_args!($($arg)*))
+    };
+}
+
 mod party;
 mod transfer;
 mod userdb;
@@ -184,25 +203,6 @@ and 2.0 content is brought over with cr import.
 
 Without INSTALL_DIR, the data package in ~/.local/share/corerules/data
 is used, else the installation in the Wine prefix.";
-
-/// `print!` to standard output that ends the program quietly when the
-/// reader has gone away (`cr encounter … | head`), where `print!` panics
-/// with "failed printing to stdout: Broken pipe".
-macro_rules! out {
-    ($($arg:tt)*) => {
-        write_stdout(format_args!($($arg)*))
-    };
-}
-
-/// `println!` with [`out!`]'s handling of a closed pipe.
-macro_rules! outln {
-    () => {
-        out!("\n")
-    };
-    ($($arg:tt)*) => {
-        out!("{}\n", format_args!($($arg)*))
-    };
-}
 
 /// Writes to standard output. A closed pipe exits with success, as a
 /// program killed by SIGPIPE would quietly stop; any other write error

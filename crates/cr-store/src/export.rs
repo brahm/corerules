@@ -36,6 +36,7 @@
 //! do not exist: in both programs those buttons only point at the DM
 //! Toolkit, so monsters travel in these packages.
 
+use cr_i18n::{tr, trn};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -413,9 +414,10 @@ fn prune_combinations(file: &mut ExportFile) {
 /// before them define, so they do not survive a change to the package.
 fn drop_map_maker(file: &mut ExportFile, warnings: &mut Vec<String>) {
     if file.map_maker.count > 0 {
-        warnings.push(format!(
-            "The package's {} Map Maker II maps were left out",
-            file.map_maker.count
+        warnings.push(trn!(
+            "The package's Map Maker II map was left out",
+            "The package's {n} Map Maker II maps were left out",
+            file.map_maker.count as u64
         ));
         file.map_maker = Default::default();
     }
@@ -933,15 +935,19 @@ impl Installation {
             report.imported.push(item.clone());
         }
         if file.map_maker.count > 0 {
-            report.warnings.push(format!(
-                "{} Map Maker II maps were not imported",
-                file.map_maker.count
+            report.warnings.push(trn!(
+                "{n} Map Maker II map was not imported",
+                "{n} Map Maker II maps were not imported",
+                file.map_maker.count as u64
             ));
         }
         stores.save()?;
         if !characters.is_empty() {
             report.characters = self.add_characters(&characters, expansion)?;
         }
+        // Each warning once.
+        let mut seen = std::collections::HashSet::new();
+        report.warnings.retain(|w| seen.insert(w.clone()));
         Ok(report)
     }
 
@@ -1117,8 +1123,10 @@ fn downgrade_patched(object: &mut Object, name: &str, warnings: &mut Vec<String>
     match object {
         Object::Class(class) => {
             if class.drop_spell_points() > 0 {
-                warnings.push(format!(
-                    "The spell points of the class {name} were left out: the Expansion cannot read them"
+                warnings.push(tr!(
+                    "The spell points of the class {name} were left out: the Expansion cannot \
+                     read them",
+                    name
                 ));
             }
         }
@@ -1197,8 +1205,9 @@ fn export_race(file: &mut ExportFile, db: &AllowedDb, race: &str, warnings: &mut
         return;
     };
     let Some(record) = db.position(race).map(|i| db.records[i].clone()) else {
-        warnings.push(format!(
-            "No race/class combinations found for the race {race}"
+        warnings.push(tr!(
+            "No race/class combinations found for the race {race}",
+            race
         ));
         return;
     };
@@ -1390,9 +1399,9 @@ fn import_race(
         Object::ClassesAllowed(r) if r.race == race.name => Some(r),
         _ => None,
     }) else {
-        warnings.push(format!(
-            "The package has no race/class combinations for the race {}",
-            race.name
+        warnings.push(tr!(
+            "The package has no race/class combinations for the race {race}",
+            race = race.name
         ));
         return Ok(());
     };
@@ -1448,10 +1457,14 @@ fn import_class(
             if db.records[i].classes.len() == before
                 && Allowed::from_names(&helper_names(helper), &classes, 0).is_none()
             {
-                warnings.push(format!(
-                    "No race/class combinations could be added for the race {}",
-                    source.race
-                ));
+                let warning = tr!(
+                    "No race/class combinations could be added for the race {race}",
+                    race = source.race
+                );
+                // One per race, however many combinations fail.
+                if !warnings.contains(&warning) {
+                    warnings.push(warning);
+                }
             }
         }
     }

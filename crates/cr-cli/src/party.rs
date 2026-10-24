@@ -56,7 +56,7 @@ fn list(install: &Installation) -> Result<()> {
         if members.is_empty() {
             continue;
         }
-        println!(
+        outln!(
             "{}",
             if party.is_empty() {
                 "(no party)"
@@ -65,7 +65,7 @@ fn list(install: &Installation) -> Result<()> {
             }
         );
         for e in members {
-            println!("  {}\t{}", e.name, e.file);
+            outln!("  {}\t{}", e.name, e.file);
         }
     }
     Ok(())
@@ -90,7 +90,7 @@ pub fn cmd_party(install: &Installation, args: &[String]) -> Result<()> {
         }
         install.forget_deleted(&deleted)?;
         for d in &deleted {
-            println!("deleted {}\t{}", d.name, d.file);
+            outln!("deleted {}\t{}", d.name, d.file);
         }
         return Ok(());
     }
@@ -122,7 +122,7 @@ pub fn cmd_party(install: &Installation, args: &[String]) -> Result<()> {
     for arg in &args[1..] {
         let file = character_file(install, arg)?;
         let new = install.set_party(&file, &party)?;
-        println!("{arg}\t{new}");
+        outln!("{arg}\t{new}");
     }
     Ok(())
 }
@@ -140,7 +140,7 @@ pub fn cmd_delete(install: &Installation, args: &[String]) -> Result<()> {
     for file in files {
         let deleted = install.delete_character(&file)?;
         install.forget_deleted(std::slice::from_ref(&deleted))?;
-        println!("deleted {}\t{}", deleted.name, deleted.file);
+        outln!("deleted {}\t{}", deleted.name, deleted.file);
     }
     Ok(())
 }

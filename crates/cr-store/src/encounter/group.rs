@@ -10,13 +10,10 @@ use crate::sheet::{Block, Cell, Section, SectionContent, Sheet, SheetBox, Table}
 use crate::summary::bundle_list;
 use crate::treasure::{SUMMARY_TYPE_NAMES, thousands};
 
-/// The print job's title (0x63878e): "Group Encounter [<party>]", cut to
-/// 31 characters.
+/// The print job's title (0x63878e): "Group Encounter [<party>]". The
+/// original cuts it to 31 characters, which loses most party names.
 pub fn group_job_title(party: &str) -> String {
     format!("Group Encounter [{party}]")
-        .chars()
-        .take(31)
-        .collect()
 }
 
 impl Encounter {
@@ -101,12 +98,15 @@ impl EncounterRules {
             Cell::header("Gold Value").right(),
             Cell::header("Category"),
         ]];
-        let mut count = 0i32;
+        // The total gold is that of the rows, each floored to gold, so
+        // that it adds up as printed.
+        let (mut count, mut gold) = (0i32, 0i32);
         for (totals, name) in summary.by_type.iter().zip(SUMMARY_TYPE_NAMES) {
             if totals.value_cp == 0 && totals.xp == 0 && totals.count == 0 {
                 continue;
             }
             count = count.wrapping_add(totals.count);
+            gold = gold.wrapping_add(totals.value_cp / 100);
             rows.push(vec![
                 Cell::new(thousands(totals.count)).right(),
                 Cell::new(thousands(totals.xp)).right(),
@@ -117,7 +117,7 @@ impl EncounterRules {
         rows.push(vec![
             Cell::new(thousands(count)).right(),
             Cell::new(thousands(summary.xp)).right(),
-            Cell::new(thousands(summary.value_cp / 100)).right(),
+            Cell::new(thousands(gold)).right(),
             Cell::new("TOTAL"),
         ]);
         boxes.push(table_box("Treasure", 4, rows));

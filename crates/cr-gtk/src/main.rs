@@ -39,7 +39,7 @@ use cr_store::Installation;
 use cr_store::advance::{AdvanceRules, Advancement, adjust_psionic_points, psionic_total};
 use cr_store::catalog::{ENCOUNTER_KEY, Entry, Section, TABLE_KEY, TEMPLATES, TREASURE_KEY};
 use cr_store::choices::{Caster, caster};
-use cr_store::dual::ClassChoice;
+use cr_store::dual::{ClassChoice, ClassTable};
 use cr_store::edit::{ABILITY_RANGE, CharacterDetails};
 use cr_store::help::topic;
 use cr_store::learn::{LearnRules, Learner};
@@ -2342,6 +2342,23 @@ fn character_editor(
         100,
     );
     abilities.add(&exceptional);
+    // Only a warrior with Strength 18 has exceptional strength.
+    let fit_exceptional = {
+        let (rules, classes) = (
+            choices.creation.clone(),
+            choices.character.data.classes.names.clone(),
+        );
+        let (strength, exceptional) = (ability_rows[0][0].clone(), exceptional.clone());
+        move || {
+            let allowed = rules.has_exceptional_strength(&classes, strength.value() as u32);
+            exceptional.set_sensitive(allowed);
+            if !allowed {
+                exceptional.set_value(0.0);
+            }
+        }
+    };
+    fit_exceptional();
+    ability_rows[0][0].connect_value_notify(move |_| fit_exceptional());
 
     let (portrait_row, portrait) = picture::portrait_row(
         root,
@@ -2408,8 +2425,27 @@ fn character_editor(
     appearance.add(&age);
     appearance.add(&height);
     appearance.add(&weight);
-    let (class_group, new_classes) = classes_group(classes, &choices.new_classes);
+    let (class_group, new_classes, refresh_classes) =
+        classes_group(classes, &choices.class_table, &choices.character);
     let advanced = Rc::new(RefCell::new(choices.character.clone()));
+    // Add Class follows the abilities as edited, not as saved.
+    {
+        let edited = Rc::new({
+            let (advanced, rows) = (advanced.clone(), ability_rows.clone());
+            move || {
+                let mut character = advanced.borrow().clone();
+                character.data.strength[0] = rows[0][0].value() as u32;
+                for (slot, rows) in rows.iter().enumerate().skip(1) {
+                    character.data.abilities[slot - 1][0] = rows[0].value() as u32;
+                }
+                character
+            }
+        });
+        for rows in &ability_rows {
+            let (edited, refresh) = (edited.clone(), refresh_classes.clone());
+            rows[0].connect_value_notify(move |_| refresh(&edited()));
+        }
+    }
     let level_listeners: Listeners = Rc::default();
     let experience = experience_group(&choices.advance, &advanced, &level_listeners);
     let page = adw::PreferencesPage::new();
@@ -2889,12 +2925,19 @@ fn character_editor(
     dialog.present(Some(parent));
 }
 
+/// Checks the classes offered again against a character as edited.
+type Recheck = Rc<dyn Fn(&Character)>;
+
 /// The character's classes, with an Add button for one more class when
 /// the race may dual-class. Race and classes themselves cannot change.
+/// The returned closure checks the dual-class rules again against the
+/// abilities as edited, and takes back an added class they no longer
+/// allow.
 fn classes_group(
     classes: &[String],
-    choice: &ClassChoice,
-) -> (adw::PreferencesGroup, Rc<RefCell<Vec<String>>>) {
+    table: &Rc<ClassTable>,
+    character: &Character,
+) -> (adw::PreferencesGroup, Rc<RefCell<Vec<String>>>, Recheck) {
     let add = gtk::Button::builder()
         .icon_name("list-add-symbolic")
         .tooltip_text(tr("Add Class"))
@@ -2913,32 +2956,55 @@ fn classes_group(
         );
     }
     let added: Rc<RefCell<Vec<String>>> = Rc::default();
-    let offered = match choice {
-        ClassChoice::Refused(why) => {
-            group.set_description(Some(&glib::markup_escape_text(why)));
-            add.set_sensitive(false);
-            return (group, added);
+    let added_row: Rc<RefCell<Option<adw::ActionRow>>> = Rc::default();
+    let offered: Rc<RefCell<Vec<String>>> = Rc::default();
+    let refresh: Recheck = Rc::new({
+        let (table, group, add) = (table.clone(), group.clone(), add.clone());
+        let (added, added_row, offered) = (added.clone(), added_row.clone(), offered.clone());
+        move |character| {
+            let names = match table.choices(character) {
+                ClassChoice::Refused(why) => {
+                    group.set_description(Some(&glib::markup_escape_text(&why)));
+                    Vec::new()
+                }
+                ClassChoice::Allowed(names) if names.is_empty() => {
+                    group.set_description(Some(tr(
+                        "No class meets the dual-class requirements of these abilities",
+                    )));
+                    names
+                }
+                ClassChoice::Allowed(names) => {
+                    group.set_description(Some(tr(
+                        "Dual-classing: the new class starts at level 1 and the earlier class stops advancing",
+                    )));
+                    names
+                }
+            };
+            let kept = added.borrow().iter().all(|n| names.contains(n));
+            if !kept {
+                added.borrow_mut().clear();
+                if let Some(row) = added_row.borrow_mut().take() {
+                    group.remove(&row);
+                }
+            }
+            add.set_sensitive(!names.is_empty() && added.borrow().is_empty());
+            *offered.borrow_mut() = names;
         }
-        ClassChoice::Allowed(names) if names.is_empty() => {
-            group.set_description(Some(tr(
-                "No class meets the dual-class requirements of these abilities",
-            )));
-            add.set_sensitive(false);
-            return (group, added);
-        }
-        ClassChoice::Allowed(names) => names.clone(),
-    };
-    group.set_description(Some(tr(
-        "Dual-classing: the new class starts at level 1 and the earlier class stops advancing",
-    )));
+    });
+    refresh(character);
     add.connect_clicked({
-        let (group, added) = (group.clone(), added.clone());
+        let (group, added, added_row) = (group.clone(), added.clone(), added_row.clone());
         move |button| {
-            let (group, added, button) = (group.clone(), added.clone(), button.clone());
+            let (group, added, added_row, button) = (
+                group.clone(),
+                added.clone(),
+                added_row.clone(),
+                button.clone(),
+            );
             pick(
                 &button.clone(),
                 tr("Classes"),
-                offered.clone(),
+                offered.borrow().clone(),
                 move |name| {
                     let remove = gtk::Button::builder()
                         .icon_name("list-remove-symbolic")
@@ -2953,13 +3019,20 @@ fn classes_group(
                     row.add_suffix(&remove);
                     group.add(&row);
                     added.borrow_mut().push(name);
+                    *added_row.borrow_mut() = Some(row.clone());
                     // One class at a time: the next one depends on this one.
                     button.set_sensitive(false);
                     remove.connect_clicked({
-                        let (group, added, button) = (group.clone(), added.clone(), button.clone());
+                        let (group, added, added_row, button) = (
+                            group.clone(),
+                            added.clone(),
+                            added_row.clone(),
+                            button.clone(),
+                        );
                         move |_| {
                             group.remove(&row);
                             added.borrow_mut().clear();
+                            added_row.borrow_mut().take();
                             button.set_sensitive(true);
                         }
                     });
@@ -2967,7 +3040,7 @@ fn classes_group(
             );
         }
     });
-    (group, added)
+    (group, added, refresh)
 }
 
 /// Experience, levels, hit points and PSPs, with the Name page's
@@ -3407,8 +3480,8 @@ struct Choices {
     wizard_levels: Rc<HashMap<String, u32>>,
     priest_levels: Rc<HashMap<String, u32>>,
     class_ids: HashMap<String, i32>,
-    /// Classes the character may add, or why none.
-    new_classes: ClassChoice,
+    /// The dual-class rules, for the classes the character may add.
+    class_table: Rc<ClassTable>,
     advance: Arc<AdvanceRules>,
     /// The character as read, for experience and levels.
     character: Character,
@@ -3452,7 +3525,7 @@ impl Choices {
             wizard_levels: Rc::new(install.spell_levels(true)?),
             priest_levels: Rc::new(install.spell_levels(false)?),
             class_ids: install.class_ids()?,
-            new_classes: install.class_table()?.choices(character),
+            class_table: Rc::new(install.class_table()?),
             combat: Rc::new(install.combat_rules_with(creation.clone(), advance.clone())?),
             proficiencies: Rc::new(
                 install.proficiency_rules_with(creation.clone(), advance.clone()),

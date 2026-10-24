@@ -294,6 +294,24 @@ impl UserKind for Classes {
     fn summary(r: &Class) -> String {
         tr(GROUPS[group(r)]).into()
     }
+
+    /// New Character offers only classes with an alignment, and a class
+    /// whose hit die has no sides starts with 1 hit point.
+    fn save_warning(r: &Class) -> Option<String> {
+        let d = data(r)?;
+        let mut missing = Vec::new();
+        if d.alignments.is_empty() {
+            missing.push(tr(
+                "No alignment is allowed, so New Character will not offer the class.",
+            ));
+        }
+        if d.unknown_0x84[0] <= 0 {
+            missing.push(tr(
+                "The starting hit die has no sides, so characters start with 1 hit point.",
+            ));
+        }
+        (!missing.is_empty()).then(|| missing.join("\n\n"))
+    }
 }
 
 fn pick(o: Object) -> Option<Class> {
@@ -315,6 +333,19 @@ mod tests {
             id,
             group: group_of(id),
         }
+    }
+
+    #[test]
+    fn a_class_without_alignments_or_hit_die_is_warned_about() {
+        let mut class = new_class();
+        assert_eq!(
+            Classes::save_warning(&class).map(|w| w.matches("\n\n").count()),
+            Some(1)
+        );
+        let d = data_mut(&mut class).unwrap();
+        d.alignments = vec![ALIGNMENTS[0].into()];
+        d.unknown_0x84[0] = 8;
+        assert_eq!(Classes::save_warning(&class), None);
     }
 
     #[test]

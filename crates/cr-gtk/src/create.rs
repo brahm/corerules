@@ -161,6 +161,9 @@ fn title(entering: bool) -> &'static str {
     }
 }
 
+/// The Details page's tag, for going back to it.
+const DETAILS: &str = "details";
+
 /// A page of the dialog: a header bar with `button` at the end and
 /// `groups` below it; Help opens the program help at the topic `help`
 /// gives.
@@ -213,7 +216,12 @@ fn core_vs_option(
     skills_and_powers: bool,
     then: impl Fn() + 'static,
 ) {
-    let off = gtk::CheckButton::with_mnemonic(tr("_Do not show this window again"));
+    let label = tr("_Do not show this window again");
+    let off = gtk::CheckButton::with_mnemonic(label);
+    // Screen readers get the words without the mnemonic's underline.
+    off.update_property(&[gtk::accessible::Property::Label(
+        &label.replacen('_', "", 1),
+    )]);
     let alert = adw::AlertDialog::builder()
         .heading(tr("Core Rules Vs Player's Option"))
         .body(if skills_and_powers {
@@ -750,7 +758,7 @@ impl Wizard {
             .build();
         let choices: Vec<(String, String)> = SETTINGS
             .iter()
-            .map(|s| (s.name.to_owned(), s.description.to_owned()))
+            .map(|s| (tr(s.name).to_owned(), tr(s.description).to_owned()))
             .collect();
         let chosen: Rc<RefCell<&'static Setting>> = Rc::new(RefCell::new(&SETTINGS[0]));
         radio_rows(&group, &choices, 0, {
@@ -791,6 +799,8 @@ impl Wizard {
         let methods = RollMethod::offered(self.rules().expansion);
         let names: Vec<String> = methods.iter().map(|m| m.name().into()).collect();
         let method_row = combo_row(tr("Method"), &names, RollMethod::FourDice.name());
+        // The methods' long names would squeeze the title to a few letters.
+        method_row.set_use_subtitle(true);
         let method_group = adw::PreferencesGroup::new();
         method_group.add(&method_row);
 
@@ -2090,6 +2100,7 @@ impl Wizard {
             let gender = gender.clone();
             move || gender.selected() == 0
         });
+        let generator = random_name.as_ref().map(|(npc, _)| npc.clone());
         if let Some((npc, button)) = random_name {
             let (this, name, male) = (self.clone(), name.clone(), male.clone());
             button.connect_clicked(move |_| {
@@ -2247,16 +2258,25 @@ impl Wizard {
                     accept();
                     return;
                 }
+                // Answered once Next has gone on (the pages after Details
+                // were built for the other kit), Yes builds them again for
+                // this one and No goes back to Details.
                 let reset = {
                     let (this, accept) = (this.clone(), accept.clone());
                     move || {
                         this.0.draft.borrow_mut().reset_proficiencies();
                         accept();
+                        if this.0.nav.pop_to_tag(DETAILS) {
+                            this.push(this.proficiencies_page());
+                        }
                     }
                 };
                 let revert = {
-                    let (row, shown) = (row.clone(), shown_kit.clone());
-                    move || select(&row, &shown.borrow())
+                    let (this, row, shown) = (this.clone(), row.clone(), shown_kit.clone());
+                    move || {
+                        select(&row, &shown.borrow());
+                        this.0.nav.pop_to_tag(DETAILS);
+                    }
                 };
                 ask(
                     &this.0.dialog,
@@ -2285,15 +2305,34 @@ impl Wizard {
             move |_| exceptional.set_value(this.0.dice.borrow_mut().roll(1, 100).into())
         });
 
+        // With the name generator an empty name gets a random one on Next.
         let next = next_button(tr("_Next"));
-        next.set_sensitive(!name.text().trim().is_empty());
+        let can_go = generator.is_some();
+        next.set_sensitive(can_go || !name.text().trim().is_empty());
         name.connect_changed({
             let next = next.clone();
-            move |name| next.set_sensitive(!name.text().trim().is_empty())
+            move |name| next.set_sensitive(can_go || !name.text().trim().is_empty())
         });
         next.connect_clicked({
             let (this, event) = (self.clone(), event.clone());
             move |_| {
+                if name.text().trim().is_empty()
+                    && let Some(npc) = &generator
+                {
+                    let subrace = {
+                        let d = this.0.draft.borrow();
+                        if d.subrace.is_empty() {
+                            d.race.clone()
+                        } else {
+                            d.subrace.clone()
+                        }
+                    };
+                    name.set_text(&npc.random_name(
+                        &mut this.0.names.borrow_mut(),
+                        &subrace,
+                        male(),
+                    ));
+                }
                 {
                     let mut d = this.0.draft.borrow_mut();
                     d.name = name.text().trim().to_owned();
@@ -2337,9 +2376,11 @@ impl Wizard {
         groups.extend(levels.as_ref());
         groups.extend([&combat, &subabilities]);
         groups.extend(event.as_ref().map(|e| &e.2));
-        step(tr("Details"), &groups, &next, None, || {
+        let page = step(tr("Details"), &groups, &next, None, || {
             topic::CHARACTER_INFORMATION
-        })
+        });
+        page.set_tag(Some(DETAILS));
+        page
     }
 
     /// Enter Character's levels, hit points and PSPs on the details page,

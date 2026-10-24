@@ -328,7 +328,8 @@ impl LearnRules {
     /// The chance to learn `name` as the original's spell picker shows it
     /// for the spell selected (" List 55%"; 0x630052).
     pub fn chance_text(&self, learner: &Learner, name: &str, wizard: bool) -> String {
-        let chance = self.chance(learner, name, wizard);
+        // A low Intelligence takes the chance below zero; no roll learns it.
+        let chance = self.chance(learner, name, wizard).max(0);
         tr!("Chance to learn: {chance}%", chance)
     }
 
