@@ -108,8 +108,12 @@ pub fn class_group(class: &Class) -> Option<usize> {
 
 /// Every class, standard then user, sorted by name.
 pub fn class_list(install: &Installation) -> Result<Vec<ClassEntry>> {
-    let mut list: Vec<ClassEntry> = install
-        .list_objects("Class")?
+    Ok(class_entries(&install.list_objects("Class")?))
+}
+
+/// [`class_list`] of the class records `objects`, standard then user.
+pub fn class_entries(objects: &[Object]) -> Vec<ClassEntry> {
+    let mut list: Vec<ClassEntry> = objects
         .iter()
         .filter_map(|o| match o {
             Object::Class(c) => Some(ClassEntry {
@@ -122,7 +126,7 @@ pub fn class_list(install: &Installation) -> Result<Vec<ClassEntry>> {
         .collect();
     list.sort_by_cached_key(|c| crate::collate::sort_key(&c.name));
     list.dedup_by(|a, b| a.name == b.name);
-    Ok(list)
+    list
 }
 
 /// The class names of each group, sorted.
