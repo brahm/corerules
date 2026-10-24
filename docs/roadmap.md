@@ -6,7 +6,9 @@ what comes after 1.0. The decisions that shaped it are in the
 
 ## Where we are
 
-**1.0.0-rc1, published on 2026-10-24 as a pre-release.** It does everything
+**1.0.0-rc2, published on 2026-10-24 as a pre-release.** It fixes saving
+when the mounted Expansion CD is opened as a folder (PR #85), the first
+problem real users of 1.0.0-rc1 reported. Like rc1, it does everything
 the original AD&D Core Rules 2.0 Expansion does, except what was left out on
 purpose ([decision log](decisions.md#left-out-on-purpose)). Every feature was
 checked against the original programs, and the 0.9.0 beta went through a
@@ -42,6 +44,7 @@ taken out of scope.
 | Release | 0.9.0 beta with the parity work | Done (2026-10-23) |
 | Test round | Manual test notebook run on 0.9.0, 57 problems fixed by severity | Done (PRs #76 to #81) |
 | Release candidate | 1.0.0-rc1, README rewritten in English with every difference from the original, pacman package | Done (PRs #82 and #83) |
+| Real-user fixes | 1.0.0-rc2: saving with the mounted CD opened | Done (PR #85) |
 | Flathub | Publication on Flathub | Moved after 1.0 |
 
 ### Releases
@@ -58,6 +61,7 @@ taken out of scope.
 | 0.8.0, 0.8.1 | 2026-10-19 | Extract Data from CD…, community add-on pictures |
 | 0.9.0 | 2026-10-23 | Parity with the original |
 | 1.0.0-rc1 | 2026-10-24 | Fixes from the test round, pacman package |
+| 1.0.0-rc2 | 2026-10-24 | Saving with the mounted CD opened goes into a local copy |
 
 ## After the release candidate
 
