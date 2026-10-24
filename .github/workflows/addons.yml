@@ -4,7 +4,8 @@ name: Addons package
 # AppImage with the add-ons inside (crates/cr-addons), and, on main or by
 # hand, publishes it on GitHub Packages as the OCI artifact
 # ghcr.io/<owner>/corerules-community-addons, tagged with the app version
-# and latest, and on the release "addons", whose tag follows main: there
+# and latest, and as the file itself in the Maven registry of GitHub
+# Packages, and on the release "addons", whose tag follows main: there
 # CoreRules-Community-Addons-x86_64.AppImage is always the newest, for a
 # download link that does not change.
 on:
@@ -49,6 +50,11 @@ jobs:
           test -x usr/bin/corerules-community-addons
           test -f usr/share/icons/hicolor/256x256/apps/io.github.brahm.CoreRules.Addons.png
           ls -l "$GITHUB_WORKSPACE"/dist/CoreRules-Community-Addons-*.AppImage
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: addons-appimage
+          path: dist/CoreRules-Community-Addons-${{ steps.v.outputs.version }}-x86_64.AppImage
       - if: github.event_name != 'pull_request'
         uses: oras-project/setup-oras@v1
       - if: github.event_name != 'pull_request'
@@ -97,7 +103,72 @@ jobs:
 
             Direct link: https://github.com/${{ github.repository }}/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage
 
-            The same file is on GitHub Packages: `oras pull ghcr.io/${{ github.repository_owner }}/corerules-community-addons:latest`. The app itself is on the [Core Rules releases](https://github.com/${{ github.repository }}/releases).
+            The same file is on GitHub Packages twice: as a file, `corerules-community-addons-${{ steps.v.outputs.version }}-x86_64.AppImage`, in the Maven package `io.github.brahm.corerules-community-addons` ([the project's packages](https://github.com/${{ github.repository_owner }}?tab=packages&repo_name=${{ github.event.repository.name }})), and in the OCI package [`corerules-community-addons`](https://github.com/${{ github.repository }}/pkgs/container/corerules-community-addons): `oras pull ghcr.io/${{ github.repository_owner }}/corerules-community-addons:latest`. The app itself is on the [Core Rules releases](https://github.com/${{ github.repository }}/releases).
           files: |
             dist/CoreRules-Community-Addons-x86_64.AppImage
             dist/CoreRules-Community-Addons-${{ steps.v.outputs.version }}-x86_64.AppImage
+
+  # GitHub Packages has no registry for plain files, and its container
+  # registry shows the AppImage as an OCI artifact. Its Maven registry keeps
+  # any file as it is, with its name and extension, and the package page
+  # lists it under Assets for download, so the AppImage goes there too, as
+  # io.github.brahm:corerules-community-addons:VERSION:x86_64@AppImage. A
+  # version is published once, since Maven versions cannot be replaced; a
+  # later build of the same version only replaces the other two copies.
+  maven:
+    needs: package
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REGISTRY: https://maven.pkg.github.com/${{ github.repository }}
+      ARTIFACT: io/github/brahm/corerules-community-addons
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: echo "version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          name: addons-appimage
+          path: dist
+      # Writes ~/.m2/settings.xml with the server "github", which logs in
+      # as GITHUB_ACTOR with GITHUB_TOKEN.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          server-id: github
+      - id: exists
+        name: Look for this version on GitHub Packages
+        run: |
+          version=${{ steps.v.outputs.version }}
+          code=$(curl -s -o /dev/null -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" \
+              "$REGISTRY/$ARTIFACT/$version/corerules-community-addons-$version.pom")
+          echo "HTTP $code"
+          if [ "$code" = 200 ]; then
+            echo "::notice::corerules-community-addons $version is already in the Maven registry; it keeps its first build"
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.exists.outputs.found != 'true'
+        name: Publish the AppImage on GitHub Packages (Maven)
+        run: |
+          version=${{ steps.v.outputs.version }}
+          mvn -B --no-transfer-progress deploy:deploy-file \
+              -Durl="$REGISTRY" -DrepositoryId=github \
+              -Dfile="dist/CoreRules-Community-Addons-$version-x86_64.AppImage" \
+              -DgroupId=io.github.brahm -DartifactId=corerules-community-addons \
+              -Dversion="$version" -Dclassifier=x86_64 -Dpackaging=AppImage \
+              -DgeneratePom=true \
+              -DgeneratePom.description="Core Rules Community Add-ons Collection: 672 community add-ons for AD&D Core Rules 2.0 Expansion, in one self-installing AppImage"
+      - name: Check the published AppImage
+        run: |
+          version=${{ steps.v.outputs.version }}
+          curl -sSfL -u "$GITHUB_ACTOR:$GITHUB_TOKEN" -o published.AppImage \
+              "$REGISTRY/$ARTIFACT/$version/corerules-community-addons-$version-x86_64.AppImage"
+          sha256sum published.AppImage "dist/CoreRules-Community-Addons-$version-x86_64.AppImage"
+          if [ "${{ steps.exists.outputs.found }}" != true ]; then
+            cmp published.AppImage "dist/CoreRules-Community-Addons-$version-x86_64.AppImage"
+          fi

@@ -89,15 +89,25 @@ chmod +x CoreRules-Community-Addons-x86_64.AppImage
 ./CoreRules-Community-Addons-x86_64.AppImage
 ```
 
-The same file is published on GitHub Packages as
-[`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons),
-an OCI artifact rather than a container image, so the `docker pull` that
-page shows does not apply. Download it from there with
-[ORAS](https://oras.land):
+The same file is published on
+[GitHub Packages](https://github.com/brahm?tab=packages&repo_name=corerules)
+in two forms. GitHub Packages has no registry for plain files, so:
 
-```sh
-oras pull ghcr.io/brahm/corerules-community-addons:latest
-```
+* **As the AppImage file**, in the Maven package
+  `io.github.brahm.corerules-community-addons`. Its page lists
+  `corerules-community-addons-VERSION-x86_64.AppImage` under Assets, to
+  download from the browser. Command-line downloads from that registry
+  need a GitHub token, even for a public package.
+* **As an OCI artifact**,
+  [`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons),
+  tagged with each version and `latest`, which downloads with no account.
+  It holds the AppImage as its one file rather than a container image, so
+  the `docker pull` that page shows does not apply. Download it with
+  [ORAS](https://oras.land):
+
+  ```sh
+  oras pull ghcr.io/brahm/corerules-community-addons:latest
+  ```
 
 The [Portuguese guide](GUIA.md) also shows how to download it with
 `curl` alone, and how to undo an install.

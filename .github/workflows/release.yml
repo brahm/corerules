@@ -141,12 +141,14 @@ jobs:
   # supported release, and the app has to start and keep running in each
   # interface language, with its texts in that language. Minimal
   # containers lack the Mesa drivers every desktop has, so the tests add them.
+  # Ubuntu 26.10 and Fedora 45 are where users tested 1.0 before it was
+  # released (ubuntu:latest is the LTS, fedora:latest lags a release).
   test-deb:
     needs: deb
     strategy:
       fail-fast: false
       matrix:
-        image: ['ubuntu:26.04', 'ubuntu:latest']
+        image: ['ubuntu:26.04', 'ubuntu:26.10', 'ubuntu:latest']
     runs-on: ubuntu-24.04
     container: ${{ matrix.image }}
     env:
@@ -179,7 +181,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: ['fedora:44', 'fedora:latest']
+        image: ['fedora:44', 'fedora:45', 'fedora:latest']
     runs-on: ubuntu-24.04
     container: ${{ matrix.image }}
     steps:
@@ -222,7 +224,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: ['fedora:44', 'ubuntu:26.04', 'fedora:latest', 'ubuntu:latest']
+        image: ['fedora:44', 'ubuntu:26.04', 'fedora:45', 'ubuntu:26.10', 'fedora:latest', 'ubuntu:latest']
     runs-on: ubuntu-24.04
     container: ${{ matrix.image }}
     env:
@@ -275,4 +277,7 @@ jobs:
           name: Core Rules ${{ needs.version.outputs.version }}${{ contains(needs.version.outputs.version, '-rc') && ' release candidate' || startsWith(needs.version.outputs.version, '0.') && ' beta' || '' }}
           body_path: packaging/release-notes.md
           prerelease: ${{ startsWith(needs.version.outputs.version, '0.') || contains(needs.version.outputs.version, '-') }}
+          # A final release becomes the repository's latest release, which
+          # the addons release never is.
+          make_latest: ${{ !startsWith(needs.version.outputs.version, '0.') && !contains(needs.version.outputs.version, '-') }}
           files: dist/*

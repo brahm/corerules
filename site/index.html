@@ -11,7 +11,7 @@
 <link rel="icon" type="image/png" href="icons/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Forum&family=Inter:ital,opsz,wght@0,14..32,400..700;1,14..32,400..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -33,10 +33,11 @@
     <h1>Core Rules</h1>
     <p class="tagline">The character manager and Dungeon Master's toolkit of 1998,<br>dusted off and brought back to the table.</p>
     <div class="actions">
-      <a class="btn primary" href="https://github.com/brahm/corerules/releases">Download for Linux</a>
-      <a class="btn" href="https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage">Community Add-ons</a>
+      <a class="btn primary" href="#download">Download for Linux</a>
+      <a class="btn" href="#addons">Community Add-ons</a>
     </div>
-    <p class="small">Version 1.0.0-rc2 · Free and open source · Requires your original AD&amp;D Core Rules discs</p>
+    <p class="version">Version 1.0.0 · the first stable release</p>
+    <p class="small">Free and open source · Requires your original AD&amp;D Core Rules discs</p>
   </div>
   <p class="art-caption"><cite>Knight at the Crossroads</cite>, Viktor Vasnetsov, 1882</p>
 </header>
@@ -153,7 +154,7 @@
       <article><h3>The library</h3><p>Races, classes, kits, items, spells, psionic powers and monsters, with their pictures and icons, and the Core Rules books in a reader with search.</p></article>
       <article><h3>Faithful files</h3><p>Characters, monsters, encounters and packages made in either program open in the other. Results were compared with files the original wrote.</p></article>
       <article><h3>Six languages</h3><p>English, Português (Brasil), Español, Italiano, Français and Deutsch.</p></article>
-      <article><h3>Any Linux</h3><p>.deb for Ubuntu, .rpm for Fedora, pacman for Arch, CachyOS and Omarchy, a Flatpak and an AppImage. Windows and macOS come after 1.0.</p></article>
+      <article><h3>Any Linux</h3><p>.deb for Ubuntu, .rpm for Fedora, pacman for Arch, CachyOS and Omarchy, a Flatpak and an AppImage for Bazzite and every other distribution. Windows and macOS come next.</p></article>
     </div>
   </div>
 </section>
@@ -163,19 +164,37 @@
     <div class="parchment">
       <p class="eyebrow dark">Ready the horses</p>
       <h2>Download Core Rules</h2>
-      <p>Every release has packages for x86-64 Linux. Release candidates are marked as pre-releases.</p>
-      <table>
-        <thead><tr><th>System</th><th>Package</th></tr></thead>
-        <tbody>
-          <tr><td>Fedora 44 or newer</td><td><code>.rpm</code></td></tr>
-          <tr><td>Ubuntu 26.04 or newer</td><td><code>.deb</code></td></tr>
-          <tr><td>Arch Linux, CachyOS, Omarchy</td><td><code>.pkg.tar.zst</code></td></tr>
-          <tr><td>Any distribution</td><td><code>.flatpak</code></td></tr>
-          <tr><td>Any distribution (glibc 2.43+)</td><td><code>.AppImage</code></td></tr>
-        </tbody>
-      </table>
+      <p class="callout">Version 1.0.0, the first stable release</p>
+      <p>Pick the file for your system; each link downloads it directly. Every file is for
+      x86-64 Linux.</p>
+      <ul class="downloads">
+        <li><span class="system">Ubuntu 26.04 or newer</span><span class="kind">.deb</span>
+          <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.0.0/corerules_1.0.0_amd64.deb">corerules_1.0.0_amd64.deb</a>
+          <code>sudo apt install ./corerules_1.0.0_amd64.deb</code></li>
+        <li><span class="system">Fedora 44 or newer</span><span class="kind">.rpm</span>
+          <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.0.0/corerules-1.0.0-1.fc44.x86_64.rpm">corerules-1.0.0-1.fc44.x86_64.rpm</a>
+          <code>sudo dnf install ./corerules-1.0.0-1.fc44.x86_64.rpm</code></li>
+        <li><span class="system">Arch Linux, CachyOS, Omarchy</span><span class="kind">pacman</span>
+          <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.0.0/corerules-1.0.0-1-x86_64.pkg.tar.zst">corerules-1.0.0-1-x86_64.pkg.tar.zst</a>
+          <code>sudo pacman -U ./corerules-1.0.0-1-x86_64.pkg.tar.zst</code></li>
+        <li><span class="system">Bazzite, or any distribution with Flatpak</span><span class="kind">Flatpak</span>
+          <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.0.0/CoreRules-1.0.0.flatpak">CoreRules-1.0.0.flatpak</a>
+          <code>flatpak install --user CoreRules-1.0.0.flatpak</code></li>
+        <li><span class="system">Any distribution (glibc 2.43+)</span><span class="kind">AppImage</span>
+          <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.0.0/CoreRules-1.0.0-x86_64.AppImage">CoreRules-1.0.0-x86_64.AppImage</a>
+          <code>chmod +x CoreRules-1.0.0-x86_64.AppImage</code></li>
+        <li><span class="system">Community Add-ons, for any of the above</span><span class="kind">Installer</span>
+          <a class="file" href="https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage">CoreRules-Community-Addons-x86_64.AppImage</a>
+          <code>chmod +x CoreRules-Community-Addons-x86_64.AppImage</code></li>
+      </ul>
+      <p class="tested"><span>Tested by players on</span> Fedora 45 beta · Ubuntu 26.10 · Bazzite · Arch Linux · CachyOS</p>
+      <p class="small">The Flatpak needs the GNOME 51 runtime from Flathub, which <code>flatpak install</code>
+      offers to fetch. The AppImage bundles GTK, libadwaita and the other GNOME 51 libraries. Update
+      Arch first (<code>sudo pacman -Syu</code>), or build the package from source with its
+      <a href="https://github.com/brahm/corerules/releases/download/v1.0.0/PKGBUILD">PKGBUILD</a>. The checksums of every file are in
+      <a href="https://github.com/brahm/corerules/releases/download/v1.0.0/SHA256SUMS">SHA256SUMS</a>.</p>
       <div class="actions left">
-        <a class="btn primary" href="https://github.com/brahm/corerules/releases">Releases on GitHub</a>
+        <a class="btn primary" href="https://github.com/brahm/corerules/releases/tag/v1.0.0">Release notes</a>
         <a class="btn dark" href="https://github.com/brahm/corerules">Source code</a>
       </div>
 
@@ -229,6 +248,7 @@
         <div><dt>48</dt><dd>characters from the published modules</dd></div>
         <div><dt>6</dt><dd>languages in the installer</dd></div>
       </dl>
+      <p class="version">Version 1.0.0 · one self-installing AppImage</p>
       <p class="small">Needs Linux x86-64 (glibc 2.43 or newer), Core Rules 0.7.2 or newer and your
       Expansion data in the app. The installer backs up your <code>UserDbas</code> and <code>Chars</code>
       folders first. It leaves out Evermore's monthly goodies; the add-ons belong to their authors in
@@ -237,6 +257,10 @@
         <a class="btn primary" href="https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage">Download the add-ons installer</a>
         <a class="btn" href="https://github.com/brahm/corerules/tree/main/addons">What's inside</a>
       </div>
+      <p class="small">The link always gives the newest build. The same file, version by version:
+      <a href="https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-1.0.0-x86_64.AppImage">CoreRules-Community-Addons-1.0.0-x86_64.AppImage</a>
+      on the <a href="https://github.com/brahm/corerules/releases/tag/addons">addons release</a>, and on
+      <a href="https://github.com/brahm?tab=packages&amp;repo_name=corerules">GitHub Packages</a>.</p>
     </div>
   </div>
   <div class="wrap">
