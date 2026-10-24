@@ -1402,21 +1402,72 @@ fn print_topic(
 /// has them.
 pub fn about(parent: &adw::ApplicationWindow, install: Option<&Installation>) {
     let repository = env!("CARGO_PKG_REPOSITORY");
+    let version = env!("CARGO_PKG_VERSION");
+    // The README's description, one paragraph each.
+    let comments = [
+        tr(
+            "Core Rules is a complete Linux version of AD&D Core Rules 2.0 and its Expansion \
+            (TSR/Evermore, 1998-1999), the character manager and Dungeon Master's toolkit \
+            for Advanced Dungeons & Dragons 2nd Edition. It is written in Rust with GTK 4 \
+            and libadwaita and runs natively, with no Wine and no Windows.",
+        ),
+        tr(
+            "Every screen of the original program is here: the Character Generator with \
+            Create, Enter and Update Character, kits and Player's Option, the character \
+            sheet, parties, the NPC, treasure and encounter generators, Table Rolls, editors \
+            for every user database, DM Toolkit packages, the rule books and the help. The \
+            app reads and writes the original's own data files, so characters, monsters, \
+            encounters and packages made in either program open in the other.",
+        ),
+        tr(
+            "This project contains no TSR or Wizards of the Coast content. The rules, books, \
+            monsters, pictures and help all come from a copy of AD&D Core Rules 2.0 (and, for \
+            everything the app creates and edits, the Expansion) that you already own.",
+        ),
+    ]
+    .join("\n\n");
     let dialog = adw::AboutDialog::builder()
         .application_name("Core Rules")
         .application_icon(crate::APP_ID)
-        .developer_name("Brahm")
-        .version(env!("CARGO_PKG_VERSION"))
-        .website(repository)
+        .developer_name("Wagner Brahm")
+        .developers(["Wagner Brahm https://wagnerbrahm.com.br"])
+        .version(version)
+        .release_notes_version(version)
+        .release_notes(release_notes(METAINFO).unwrap_or_default())
+        // The landing page; the repository is where issues go.
+        .website("https://brahm.github.io/corerules/")
         .issue_url(format!("{repository}/issues"))
+        // The copyleft sign, by the author's choice.
+        .copyright("🄯 2026 Wagner Brahm")
         .license_type(gtk::License::MitX11)
         // The comments, a section's license and a credit section's name
         // are markup.
-        .comments(glib::markup_escape_text(tr(
-            "A Linux replica of AD&D Core Rules 2.0. It reads the rules data from a Core \
-             Rules installation you own and contains no TSR or Wizards of the Coast content.",
-        )))
+        .comments(glib::markup_escape_text(&comments))
+        .debug_info(debug_info(install))
+        .debug_info_filename("corerules-debug-info.txt")
         .build();
+    // The catalog's credits; English has no translators.
+    let translators = tr("translator-credits");
+    if translators != "translator-credits" {
+        dialog.set_translator_credits(translators);
+    }
+    dialog.add_credit_section(
+        Some(&glib::markup_escape_text(tr("Assistant"))),
+        &["Claude (Anthropic) https://www.anthropic.com/claude"],
+    );
+    dialog.add_legal_section(
+        tr("AD&D Core Rules"),
+        None,
+        gtk::License::Custom,
+        Some(&glib::markup_escape_text(tr(
+            "AD&D, Advanced Dungeons & Dragons and Core Rules are trademarks of Wizards of the \
+             Coast. The rules, books, monsters, pictures and help of AD&D Core Rules 2.0 and its \
+             Expansion are copyrighted by Wizards of the Coast and are not covered by this \
+             app's license. This project is not affiliated with Wizards of the Coast and \
+             contains none of their content: it needs the original discs, or a copy of them, \
+             that you own.",
+        ))),
+    );
     if let Some(install) = install {
         let original = install.original_about();
         // The product's name, then its version, copyright and developer.
@@ -1425,7 +1476,7 @@ pub fn about(parent: &adw::ApplicationWindow, install: Option<&Installation>) {
         let name = name.join(" ");
         if !name.is_empty() || original.license.is_some() {
             dialog.add_legal_section(
-                &name,
+                &tr!("{product} (original program)", product = &name),
                 Some(&rest.join("\n"))
                     .filter(|r| !r.is_empty())
                     .map(String::as_str),
@@ -1441,8 +1492,70 @@ pub fn about(parent: &adw::ApplicationWindow, install: Option<&Installation>) {
             let credits: Vec<&str> = original.credits.iter().map(String::as_str).collect();
             // The product's name without the game's, which does not fit.
             let product = original.lines.get(1).unwrap_or(&name);
-            dialog.add_credit_section(Some(&glib::markup_escape_text(product)), &credits);
+            let title = tr!("{product} (original program)", product = product);
+            dialog.add_credit_section(Some(&glib::markup_escape_text(&title)), &credits);
         }
     }
     dialog.present(Some(parent));
+}
+
+/// The app's AppStream metainfo, whose newest release the About window
+/// shows as What's New.
+const METAINFO: &str = include_str!("../../../data/io.github.brahm.CoreRules.metainfo.xml");
+
+/// The description of the metainfo's newest release, the AppStream markup
+/// the About window's release notes take.
+fn release_notes(metainfo: &str) -> Option<String> {
+    let release = &metainfo[metainfo.find("<release ")?..];
+    let start = release.find("<description>")? + "<description>".len();
+    let end = release.find("</description>")?;
+    let notes = release.get(start..end)?;
+    Some(notes.split_whitespace().collect::<Vec<_>>().join(" "))
+}
+
+/// What a bug report needs: the versions, how the app was installed and
+/// which data it opened.
+fn debug_info(install: Option<&Installation>) -> String {
+    let package = if std::path::Path::new("/.flatpak-info").exists() {
+        "Flatpak"
+    } else if std::env::var_os("APPIMAGE").is_some() {
+        "AppImage"
+    } else {
+        "native"
+    };
+    let data = install.map_or_else(|| "none".to_owned(), |i| i.root().display().to_string());
+    format!(
+        "Core Rules {}\nPackage: {package}\nGTK {}.{}.{}\nlibadwaita {}.{}.{}\n\
+         Language: {}\nData: {data}\n",
+        env!("CARGO_PKG_VERSION"),
+        gtk::major_version(),
+        gtk::minor_version(),
+        gtk::micro_version(),
+        adw::major_version(),
+        adw::minor_version(),
+        adw::micro_version(),
+        cr_i18n::language().code(),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The About window's What's New is the metainfo's newest release, which
+    /// has to be this version.
+    #[test]
+    fn newest_release_is_this_version() {
+        let release = &METAINFO[METAINFO.find("<release ").unwrap()..];
+        let version = env!("CARGO_PKG_VERSION").replace('-', "~");
+        assert!(
+            release.starts_with(&format!("<release version=\"{version}\"")),
+            "the metainfo's newest release is not {version}"
+        );
+        let notes = release_notes(METAINFO).unwrap();
+        assert!(
+            notes.starts_with("<p>") && notes.ends_with("</p>"),
+            "{notes}"
+        );
+    }
 }

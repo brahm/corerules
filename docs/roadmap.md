@@ -75,8 +75,8 @@ they report are fixed and shipped as further candidates (`1.0.0-rc2`, …).
 
 Done when:
 
-- a release candidate has been in use for a testing period Brahm sets, and
-  Brahm confirms it is stable;
+- a release candidate has been in use for a testing period Wagner Brahm sets, and
+  Wagner Brahm confirms it is stable;
 - no issue labeled critical or high is open, and none reports lost or
   damaged characters or user data;
 - every report is answered: fixed, listed as a difference in the
@@ -87,7 +87,7 @@ Then the last candidate is tagged `v1.0.0` (same code, final version
 number), the README drops the release candidate notice, and the metainfo
 release type becomes `stable`.
 
-Needs Brahm: the length of the testing period and the go-ahead for 1.0.
+Needs Wagner Brahm: the length of the testing period and the go-ahead for 1.0.
 
 ### Step 2: publish on Flathub
 
@@ -123,8 +123,8 @@ Risks:
 - GNOME 51 leaves support in about a year; the runtime is raised with each
   GNOME release, as was done in 0.6.0.
 
-Needs Brahm: the go-ahead for the submission, which is public and in
-Brahm's name, and following the Flathub reviewers' questions.
+Needs Wagner Brahm: the go-ahead for the submission, which is public and in
+Wagner Brahm's name, and following the Flathub reviewers' questions.
 
 ### Step 3: Windows and macOS
 
@@ -153,14 +153,14 @@ they still are.
    Gatekeeper warn or block the app. Signing needs a certificate for
    Windows and an Apple Developer account for notarization, both paid.
 
-Needs Brahm: the choice of interface, and whether to pay for signing.
+Needs Wagner Brahm: the choice of interface, and whether to pay for signing.
 
 ### Step 4: new features, and independence from the original
 
 From 1.0 on, the app improves on the original and moves away from it step
 by step, until it no longer needs the original's files to work
 (decision S12). What each release contains is planned when the step
-starts, from Brahm's ideas and the users' requests; this is the direction:
+starts, from Wagner Brahm's ideas and the users' requests; this is the direction:
 
 1. **Improvements that keep compatibility.** Features the original never
    had that still save files it opens, so users can keep both programs.
@@ -178,7 +178,7 @@ starts, from Brahm's ideas and the users' requests; this is the direction:
    on them, and with an export to the original's formats kept for as long
    as users ask for it.
 
-Needs Brahm: the list of features for each release, and how far
+Needs Wagner Brahm: the list of features for each release, and how far
 independence goes (step 4.3).
 
 ## Decisions pending

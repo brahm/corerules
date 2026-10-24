@@ -78,9 +78,9 @@ msgid "The built-in pictures are damaged: {e}"
 msgstr "Le immagini incluse sono danneggiate: {e}"
 
 #: crates/cr-addons/src/extras.rs:208
-#: crates/cr-addons/src/install.rs:107
-#: crates/cr-addons/src/install.rs:131
-#: crates/cr-addons/src/install.rs:138
+#: crates/cr-addons/src/install.rs:101
+#: crates/cr-addons/src/install.rs:125
+#: crates/cr-addons/src/install.rs:132
 msgid "Could not write {file}: {e}"
 msgstr "Impossibile scrivere {file}: {e}"
 
@@ -1225,7 +1225,7 @@ msgstr "La razza scelta permette di aggiungere un punto a qualsiasi caratteristi
 #: crates/cr-store/src/catalog.rs:1129
 #: crates/cr-store/src/tables/data.rs:405
 #: crates/cr-store/src/userdb/classes/pages.rs:84
-#: crates/cr-store/src/userdb/classes.rs:209
+#: crates/cr-store/src/userdb/classes.rs:213
 msgid "Class"
 msgstr "Classe"
 
@@ -2908,9 +2908,38 @@ msgstr "Scegli un argomento dall'elenco."
 msgid "That topic is not in this installation"
 msgstr "Quell'argomento non è in questa installazione"
 
-#: crates/cr-gtk/src/help.rs:1415
-msgid "A Linux replica of AD&D Core Rules 2.0. It reads the rules data from a Core Rules installation you own and contains no TSR or Wizards of the Coast content."
-msgstr "Una replica per Linux di AD&D Core Rules 2.0. Legge i dati delle regole da un'installazione di Core Rules che possiedi e non contiene contenuti di TSR o di Wizards of the Coast."
+#: crates/cr-gtk/src/help.rs:1408
+msgid "Core Rules is a complete Linux version of AD&D Core Rules 2.0 and its Expansion (TSR/Evermore, 1998-1999), the character manager and Dungeon Master's toolkit for Advanced Dungeons & Dragons 2nd Edition. It is written in Rust with GTK 4 and libadwaita and runs natively, with no Wine and no Windows."
+msgstr "Core Rules è una versione completa per Linux di AD&D Core Rules 2.0 e della sua Expansion (TSR/Evermore, 1998-1999), il gestore di personaggi e kit di strumenti del Dungeon Master per Advanced Dungeons & Dragons 2ª edizione. È scritto in Rust con GTK 4 e libadwaita e funziona in modo nativo, senza Wine e senza Windows."
+
+#: crates/cr-gtk/src/help.rs:1414
+msgid "Every screen of the original program is here: the Character Generator with Create, Enter and Update Character, kits and Player's Option, the character sheet, parties, the NPC, treasure and encounter generators, Table Rolls, editors for every user database, DM Toolkit packages, the rule books and the help. The app reads and writes the original's own data files, so characters, monsters, encounters and packages made in either program open in the other."
+msgstr "Ogni schermata del programma originale è qui: il Character Generator con Create, Enter e Update Character, kit e Player's Option, la scheda del personaggio, i gruppi, i generatori di PNG, tesori e incontri, le Table Rolls, gli editor per ogni database dell'utente, i pacchetti del DM Toolkit, i manuali e la guida. L'app legge e scrive i file di dati dell'originale, quindi personaggi, mostri, incontri e pacchetti creati in uno dei due programmi si aprono nell'altro."
+
+#: crates/cr-gtk/src/help.rs:1422
+msgid "This project contains no TSR or Wizards of the Coast content. The rules, books, monsters, pictures and help all come from a copy of AD&D Core Rules 2.0 (and, for everything the app creates and edits, the Expansion) that you already own."
+msgstr "Questo progetto non contiene alcun contenuto di TSR o Wizards of the Coast. Le regole, i manuali, i mostri, le immagini e la guida provengono tutti da una copia di AD&D Core Rules 2.0 (e, per tutto ciò che l'app crea e modifica, della Expansion) che possiedi già."
+
+#: crates/cr-gtk/src/help.rs:1449
+msgid "translator-credits"
+msgstr "Claude (Anthropic) https://www.anthropic.com/claude"
+
+#: crates/cr-gtk/src/help.rs:1454
+msgid "Assistant"
+msgstr "Assistente"
+
+#: crates/cr-gtk/src/help.rs:1458
+msgid "AD&D Core Rules"
+msgstr "AD&D Core Rules"
+
+#: crates/cr-gtk/src/help.rs:1461
+msgid "AD&D, Advanced Dungeons & Dragons and Core Rules are trademarks of Wizards of the Coast. The rules, books, monsters, pictures and help of AD&D Core Rules 2.0 and its Expansion are copyrighted by Wizards of the Coast and are not covered by this app's license. This project is not affiliated with Wizards of the Coast and contains none of their content: it needs the original discs, or a copy of them, that you own."
+msgstr "AD&D, Advanced Dungeons & Dragons e Core Rules sono marchi di Wizards of the Coast. Le regole, i manuali, i mostri, le immagini e la guida di AD&D Core Rules 2.0 e della sua Expansion sono protetti dal diritto d'autore di Wizards of the Coast e non sono coperti dalla licenza di questa app. Questo progetto non è affiliato a Wizards of the Coast e non contiene nulla dei suoi contenuti: richiede i dischi originali, o una loro copia, che possiedi."
+
+#: crates/cr-gtk/src/help.rs:1478
+#: crates/cr-gtk/src/help.rs:1494
+msgid "{product} (original program)"
+msgstr "{product} (programma originale)"
 
 #: crates/cr-gtk/src/kit_magic.rs:180
 msgid "Ignore"
@@ -6700,25 +6729,25 @@ msgid_plural "The package's {n} Map Maker II maps were left out"
 msgstr[0] "La mappa di Map Maker II del pacchetto è stata esclusa"
 msgstr[1] "Le {n} mappe di Map Maker II del pacchetto sono state escluse"
 
-#: crates/cr-store/src/export.rs:938
+#: crates/cr-store/src/export.rs:964
 msgid "{n} Map Maker II map was not imported"
 msgid_plural "{n} Map Maker II maps were not imported"
 msgstr[0] "{n} mappa di Map Maker II non è stata importata"
 msgstr[1] "{n} mappe di Map Maker II non sono state importate"
 
-#: crates/cr-store/src/export.rs:1126
+#: crates/cr-store/src/export.rs:1152
 msgid "The spell points of the class {name} were left out: the Expansion cannot read them"
 msgstr "I punti incantesimo della classe {name} sono stati esclusi: la Expansion non può leggerli"
 
-#: crates/cr-store/src/export.rs:1208
+#: crates/cr-store/src/export.rs:1234
 msgid "No race/class combinations found for the race {race}"
 msgstr "Nessuna combinazione razza/classe trovata per la razza {race}"
 
-#: crates/cr-store/src/export.rs:1402
+#: crates/cr-store/src/export.rs:1428
 msgid "The package has no race/class combinations for the race {race}"
 msgstr "Il pacchetto non ha combinazioni razza/classe per la razza {race}"
 
-#: crates/cr-store/src/export.rs:1460
+#: crates/cr-store/src/export.rs:1486
 msgid "No race/class combinations could be added for the race {race}"
 msgstr "Non è stato possibile aggiungere combinazioni razza/classe per la razza {race}"
 
@@ -8229,23 +8258,23 @@ msgstr ""
 msgid "Invalid Character In Class Name"
 msgstr "Carattere non valido nel nome della classe"
 
-#: crates/cr-store/src/userdb/classes.rs:263
+#: crates/cr-store/src/userdb/classes.rs:267
 msgid "Class not added: Error. The name you chose for your class is identical to a standard class name.  Please choose a unique name."
 msgstr "Classe non aggiunta: errore. Il nome scelto per la classe è identico a quello di una classe standard. Scegli un nome univoco."
 
-#: crates/cr-store/src/userdb/classes.rs:266
+#: crates/cr-store/src/userdb/classes.rs:270
 msgid "Class not added: Error. {reason}"
 msgstr "Classe non aggiunta: errore. {reason}"
 
-#: crates/cr-store/src/userdb/classes.rs:275
+#: crates/cr-store/src/userdb/classes.rs:279
 msgid "Any character or NPC created from the deleted Class will no longer function correctly"
 msgstr "Qualsiasi personaggio o PNG creato con la classe eliminata non funzionerà più correttamente"
 
-#: crates/cr-store/src/userdb/classes.rs:304
+#: crates/cr-store/src/userdb/classes.rs:308
 msgid "No alignment is allowed, so New Character will not offer the class."
 msgstr "Nessun allineamento è permesso, quindi New Character non offrirà la classe."
 
-#: crates/cr-store/src/userdb/classes.rs:309
+#: crates/cr-store/src/userdb/classes.rs:313
 msgid "The starting hit die has no sides, so characters start with 1 hit point."
 msgstr "Il dado vita iniziale non ha facce, quindi i personaggi iniziano con 1 punto ferita."
 

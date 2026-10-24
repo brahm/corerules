@@ -11,7 +11,7 @@
   <summary xml:lang="fr">Consultez et modifiez les personnages et règles d’AD&amp;D Core Rules 2.0</summary>
   <summary xml:lang="de">Charaktere und Regeln von AD&amp;D Core Rules 2.0 ansehen und bearbeiten</summary>
   <developer id="io.github.brahm">
-    <name>Brahm</name>
+    <name>Wagner Brahm</name>
   </developer>
   <description>
     <p>
@@ -35,9 +35,11 @@
     <p>This is a release candidate for version 1.0.</p>
   </description>
   <launchable type="desktop-id">io.github.brahm.CoreRules.desktop</launchable>
-  <url type="homepage">https://github.com/brahm/corerules</url>
+  <url type="homepage">https://brahm.github.io/corerules/</url>
   <url type="bugtracker">https://github.com/brahm/corerules/issues</url>
   <url type="vcs-browser">https://github.com/brahm/corerules</url>
+  <url type="contribute">https://github.com/brahm/corerules#development</url>
+  <url type="translate">https://github.com/brahm/corerules#languages</url>
   <screenshots>
     <screenshot type="default">
       <image>https://raw.githubusercontent.com/brahm/corerules/main/docs/screenshots/character.png</image>
