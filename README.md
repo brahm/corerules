@@ -59,10 +59,9 @@ preserved by the Internet Archive:
 2. **1.0 (now).** The release candidate was confirmed stable on Fedora 45
    beta, Ubuntu 26.10, Bazzite, Arch Linux and CachyOS, and became 1.0.0:
    a faithful replacement for the original program.
-3. **Flathub.** With 1.0 stable, the app is published on Flathub.
-4. **Windows and macOS.** Then come Windows and macOS builds, on the same
+3. **Windows and macOS.** Then come Windows and macOS builds, on the same
    backend.
-5. **New features.** From then on the app improves on the original and
+4. **New features.** From then on the app improves on the original and
    moves away from it, step by step, until it no longer needs the original
    program's files to work.
 
@@ -345,7 +344,7 @@ when and why each was decided.
 ### Platform and setup
 
 - **Linux only, no Wine.** The app is a native GTK 4 program. Windows and
-  macOS versions come after 1.0 and the Flathub publication; the backend
+  macOS versions come after 1.0; the backend
   crates have no GTK dependency so they can be built then.
 - **No installation of the original needed.** Extract Data from CD… copies
   what the app uses from the CD, its ISO image (read directly, with no
