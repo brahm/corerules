@@ -20,7 +20,8 @@ CachyOS, Omarchy), a Flatpak and an AppImage (both on GNOME 51), and the
 Community Add-ons Collection as its own AppImage, version 1.0.0. The
 [website](https://brahm.github.io/corerules/) links every file.
 
-The next step is the Flathub publication. No issue is open on GitHub.
+The next step is Windows and macOS (step 2). Publishing on Flathub was
+dropped from the plan (decision P15). No issue is open on GitHub.
 
 ## The original plan (2026-10-09)
 
@@ -34,8 +35,8 @@ taken out of scope.
 | 2. Writing and rules engine | Write user data and packages, character creation, Player's Option | Done, byte for byte with the original |
 | 3. Minimal GTK app | Library, sheet, creation wizard, rules browser, printing and PDF | Done. The dice roller was dropped (S6) |
 | 4. Generators | Encounters, treasure, NPCs, monsters, custom tables | Done |
-| 5. Maps and Expansion | Map Maker II and Campaign Mapper, Expansion classes, Flathub, pt-BR | Expansion classes and translations (six languages) done; maps dropped (S6); Flathub moved after 1.0 |
-| 6. macOS and Windows | Other platforms over the same backend | Moved after Flathub (P11) |
+| 5. Maps and Expansion | Map Maker II and Campaign Mapper, Expansion classes, Flathub, pt-BR | Expansion classes and translations (six languages) done; maps dropped (S6); Flathub dropped (P15) |
+| 6. macOS and Windows | Other platforms over the same backend | Moved after 1.0 (P15) |
 
 ## The revised plan (2026-10-17 to 2026-10-24)
 
@@ -49,7 +50,7 @@ taken out of scope.
 | Release candidate | 1.0.0-rc1, README rewritten in English with every difference from the original, pacman package | Done (PRs #82 and #83) |
 | Real-user fixes | 1.0.0-rc2: saving with the mounted CD opened | Done (PR #85) |
 | 1.0 | Release candidate confirmed stable by its users, 1.0.0 released with the new About window and the website | Done |
-| Flathub | Publication on Flathub | Moved after 1.0 |
+| Flathub | Publication on Flathub | Dropped (P15) |
 
 ### Releases
 
@@ -96,44 +97,7 @@ Done on 2026-10-24: Wagner Brahm's friends ran 1.0.0-rc2 on Fedora 45
 beta, Ubuntu 26.10, Bazzite, Arch Linux and CachyOS, found nothing wrong,
 and Wagner Brahm gave the go-ahead (decision P13).
 
-### Step 2: publish on Flathub
-
-Delivers `flatpak install flathub io.github.brahm.CoreRules`.
-
-1. **Offline build.** Flathub builds without network access. The manifest
-   now lets Cargo download crates during the build
-   (`packaging/flatpak/io.github.brahm.CoreRules.yml`, `--share=network`);
-   it has to list them as sources instead, generated from `Cargo.lock`
-   with `flatpak-cargo-generator`, and point at a release tag instead of
-   the local folder.
-2. **Permissions.** The app asks for the whole home folder (where Wine
-   keeps Core Rules) and for `/media` and `/run/media` (mounted CDs). The
-   Flathub reviewers ask for the narrowest set that works, so this needs a
-   look: the data package in the app's own data folder and the file chooser
-   portal for ISO images may make `--filesystem=home` unnecessary for most
-   users, and the reason must be written in the submission when it stays.
-3. **Metainfo.** Pass `flatpak-builder-lint`: screenshots (already in
-   `docs/screenshots`), content rating, release notes, developer name and
-   the release type of 1.0.
-4. **App id.** `io.github.brahm.CoreRules` is verified through the GitHub
-   account `brahm`.
-5. **Submission.** A pull request to `flathub/flathub`; after it is
-   accepted, Flathub creates `flathub/io.github.brahm.CoreRules`, where
-   each new release becomes a manifest update.
-6. **Release workflow.** Keep building the Flatpak bundle for the GitHub
-   release, and add the manifest update for Flathub to the release steps.
-
-Risks:
-
-- The app only works with data from discs the user owns. The metainfo and
-  the submission must say plainly that it contains no rules content.
-- GNOME 51 leaves support in about a year; the runtime is raised with each
-  GNOME release, as was done in 0.6.0.
-
-Needs Wagner Brahm: the go-ahead for the submission, which is public and in
-Wagner Brahm's name, and following the Flathub reviewers' questions.
-
-### Step 3: Windows and macOS
+### Step 2: Windows and macOS
 
 The original plan kept `cr-formats` and `cr-store` free of GTK for this, and
 they still are.
@@ -162,7 +126,7 @@ they still are.
 
 Needs Wagner Brahm: the choice of interface, and whether to pay for signing.
 
-### Step 4: new features, and independence from the original
+### Step 3: new features, and independence from the original
 
 From 1.0 on, the app improves on the original and moves away from it step
 by step, until it no longer needs the original's files to work
@@ -186,14 +150,11 @@ starts, from Wagner Brahm's ideas and the users' requests; this is the direction
    as users ask for it.
 
 Needs Wagner Brahm: the list of features for each release, and how far
-independence goes (step 4.3).
+independence goes (step 3.3).
 
 ## Decisions pending
 
-- The length of the testing period, and the confirmation that 1.0 is
-  stable (step 1).
-- The go-ahead for the Flathub submission (step 2).
 - GTK 4 or native interfaces on Windows and macOS, and code signing
-  (step 3).
+  (step 2).
 - The first features after 1.0, and the source of rules content without
-  the discs (step 4).
+  the discs (step 3).
