@@ -32,7 +32,7 @@
       <li>The rule books in a reader, and the races, classes, items, spells, psionic powers and monsters of the installation</li>
       <li>An interface in English, Brazilian Portuguese, Spanish, Italian, French and German</li>
     </ul>
-    <p>This is a beta release.</p>
+    <p>This is a release candidate for version 1.0.</p>
   </description>
   <launchable type="desktop-id">io.github.brahm.CoreRules.desktop</launchable>
   <url type="homepage">https://github.com/brahm/corerules</url>
@@ -85,6 +85,11 @@
     <color type="primary" scheme_preference="dark">#77101b</color>
   </branding>
   <releases>
+    <release version="1.0.0~rc1" date="2026-10-24" type="development">
+      <description>
+        <p>Release candidate for 1.0: the fixes from the full test round of 0.9.0, an encounter's Re-roll that keeps hand-set hit points, and a psionicist's Psionics step in New Character.</p>
+      </description>
+    </release>
     <release version="0.9.0" date="2026-10-23" type="development">
       <description>
         <p>Beta: the screens of Update Character, Enter Character, kits, every part and template editor, Help on every screen, and the original's remaining dialogs.</p>

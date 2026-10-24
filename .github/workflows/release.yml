@@ -228,7 +228,8 @@ jobs:
         with:
           tag_name: ${{ needs.version.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: Core Rules ${{ needs.version.outputs.version }}${{ startsWith(needs.version.outputs.version, '0.') && ' beta' || '' }}
+          # 0.x releases are betas; a -rc suffix is a release candidate.
+          name: Core Rules ${{ needs.version.outputs.version }}${{ contains(needs.version.outputs.version, '-rc') && ' release candidate' || startsWith(needs.version.outputs.version, '0.') && ' beta' || '' }}
           body_path: packaging/release-notes.md
-          prerelease: ${{ startsWith(needs.version.outputs.version, '0.') }}
+          prerelease: ${{ startsWith(needs.version.outputs.version, '0.') || contains(needs.version.outputs.version, '-') }}
           files: dist/*

@@ -3,7 +3,9 @@
 # Build on the Ubuntu release it targets (26.04) so the package installs there
 # and on every newer release.
 set -eu
-version=$1
+# A pre-release suffix (1.0.0-rc1) is written with a tilde, which both
+# dpkg and rpm sort before the release itself (1.0.0~rc1 < 1.0.0).
+version=$(printf '%s' "$1" | tr '-' '~')
 arch=$(dpkg --print-architecture)
 stage=$(mktemp -d)
 pkg=$stage/pkg
@@ -41,5 +43,6 @@ Description: Browse and edit AD&D Core Rules 2.0 characters and rules
  files of the original program and needs a Core Rules installation or CD.
 CONTROL
 mkdir -p dist
-dpkg-deb --root-owner-group --build "$pkg" "dist/corerules_${version}_${arch}.deb"
+# The file keeps the hyphen, so release asset names have no tilde.
+dpkg-deb --root-owner-group --build "$pkg" "dist/corerules_${1}_${arch}.deb"
 rm -rf "$stage"
