@@ -35,6 +35,8 @@ pub trait Host {
     /// New ("new"), Copy, Edit or Delete on a record of the user
     /// database's `section` ("traps" or "monsters").
     fn user_record(&self, section: &str, action: &str, origin: Origin, name: &str);
+    /// New on `section`; `saved` gets the name of the record once saved.
+    fn new_user_record(&self, section: &str, saved: Box<dyn Fn(&str)>);
 }
 
 type Shared<H> = Rc<H>;
@@ -1018,8 +1020,28 @@ impl<H: Host + 'static> State<H> {
             }
         };
         new.connect_clicked({
-            let record = record.clone();
-            move |_| record("new", Origin::Custom, String::new())()
+            let (state, dialog) = (self.clone(), dialog.clone());
+            move |_| {
+                dialog.close();
+                // The new trap goes in the encounter, as the original's.
+                let state2 = state.clone();
+                state.host.new_user_record(
+                    "traps",
+                    Box::new(move |name| {
+                        let Some(db) = errors(
+                            &*state2.host,
+                            state2.host.with_install(UserDb::<Traps>::load),
+                        ) else {
+                            return;
+                        };
+                        let added = add_trap(&mut state2.encounter.borrow_mut().traps, &db, name);
+                        match added {
+                            Ok(()) => state2.refresh(),
+                            Err(e) => state2.host.toast(&e.to_string()),
+                        }
+                    }),
+                );
+            }
         });
         let fill = {
             let (state, list, dialog, db) =
@@ -1140,14 +1162,17 @@ impl<H: Host + 'static> State<H> {
         names.sort_by_cached_key(|n| cr_store::collate::sort_key(n));
         names.dedup();
         let state = self.clone();
-        // Create New Monsters… (0x64f291): the custom monster editor.
+        // Create New Monsters… (0x64f291): the custom monster editor; the
+        // new monster goes in the encounter.
         let new = {
             let state = self.clone();
             move || {
                 state.monster_rules_stale.set(true);
-                state
-                    .host
-                    .user_record("monsters", "new", Origin::Custom, "")
+                let state2 = state.clone();
+                state.host.new_user_record(
+                    "monsters",
+                    Box::new(move |name| state2.add_new_monster(name)),
+                );
             }
         };
         pick_from(
@@ -1165,6 +1190,24 @@ impl<H: Host + 'static> State<H> {
                 }
             },
         );
+    }
+
+    /// A monster just made with New Monster, read from the databases
+    /// again, into the encounter.
+    fn add_new_monster(self: &Rc<Self>, name: &str) {
+        let Some(rules) = errors(&*self.host, self.host.with_install(|i| i.encounter_rules()))
+        else {
+            return;
+        };
+        let rules = Rc::new(rules);
+        *self.monster_rules.borrow_mut() = rules.clone();
+        self.monster_rules_stale.set(false);
+        let rand = self.host.rand();
+        let package = rules.new_monster_package(name, None, &mut rand.borrow_mut());
+        if let Some(package) = package {
+            self.encounter.borrow_mut().monsters.push(package);
+            self.refresh();
+        }
     }
 
     /// Add NPC…: a saved character.
@@ -1801,6 +1844,9 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
         let (rules, table, host, dialog) =
             (rules.clone(), table.clone(), host.clone(), dialog.clone());
         move |_| {
+            if table.borrow().slots.iter().all(|s| s.is_empty()) {
+                return host.toast(tr("The table has no templates; fill it first"));
+            }
             let r = roll_2_to_20(&rules, &mut host.rand().borrow_mut());
             let slot = table.borrow().slot(r).map(str::to_owned);
             match slot {

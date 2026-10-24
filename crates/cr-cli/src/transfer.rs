@@ -115,6 +115,14 @@ pub fn cmd_import(install: &Installation, args: &[String]) -> Result<()> {
         read_package(Path::new(input))?
     };
     let preview = install.import_preview(&file)?;
+    if preview.is_empty() {
+        return Err(invalid(if Path::new(input).is_dir() {
+            "nothing to import: this Core Rules 2.0 installation has no characters or records of \
+             its own"
+        } else {
+            "nothing to import: the package is empty"
+        }));
+    }
     let mut chosen: Vec<usize> = Vec::new();
     let mut list = false;
     for arg in &args[1..] {

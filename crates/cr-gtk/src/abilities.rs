@@ -58,9 +58,55 @@ impl State {
     }
 }
 
+/// The character points the Edit dialog's Abilities and Combat pages
+/// share: each page's counter also takes off what the other spends, and
+/// tells the other when its own spending changes.
+#[derive(Clone)]
+pub struct PointsLink {
+    /// What the other page spends.
+    pub others: Rc<RefCell<Rc<dyn Fn() -> i64>>>,
+    /// Shows the other page's counter again.
+    pub changed: Rc<RefCell<Rc<dyn Fn()>>>,
+}
+
+impl Default for PointsLink {
+    fn default() -> Self {
+        Self {
+            others: Rc::new(RefCell::new(Rc::new(|| 0))),
+            changed: Rc::new(RefCell::new(Rc::new(|| {}))),
+        }
+    }
+}
+
+impl PointsLink {
+    pub(crate) fn others_spend(&self) -> i64 {
+        let others = self.others.borrow().clone();
+        others()
+    }
+
+    pub(crate) fn notify(&self) {
+        let changed = self.changed.borrow().clone();
+        changed();
+    }
+}
+
+/// Sets the counter `points` to `left`, in red below zero.
+pub(crate) fn show_left(points: &gtk::Label, left: i64) {
+    points.set_label(&left.to_string());
+    if left < 0 {
+        points.add_css_class("error");
+    } else {
+        points.remove_css_class("error");
+    }
+}
+
 pub struct AbilityEditor {
     pub page: adw::PreferencesPage,
     state: State,
+    character: Rc<Character>,
+    pub link: PointsLink,
+    /// Shows the counter again.
+    show_points: Rc<dyn Fn()>,
 }
 
 /// "10 points", or "gives 5 points" for a restriction.
@@ -323,16 +369,19 @@ impl AbilityEditor {
             classes,
         };
         let character = Rc::new(character.clone());
-        let refresh = Rc::new({
-            let (state, character) = (state.clone(), character.clone());
+        let link = PointsLink::default();
+        let show_points: Rc<dyn Fn()> = Rc::new({
+            let (state, character, link) = (state.clone(), character.clone(), link.clone());
             move || {
                 let left = state.rules.points_left(&character, &state.abilities());
-                points.set_label(&left.to_string());
-                if left < 0 {
-                    points.add_css_class("error");
-                } else {
-                    points.remove_css_class("error");
-                }
+                show_left(&points, left - link.others_spend());
+            }
+        });
+        let refresh = Rc::new({
+            let (show_points, link) = (show_points.clone(), link.clone());
+            move || {
+                show_points();
+                link.notify();
             }
         });
         let lists = state
@@ -363,12 +412,28 @@ impl AbilityEditor {
             }
         });
         refresh();
-        Self { page, state }
+        Self {
+            page,
+            state,
+            character,
+            link,
+            show_points,
+        }
     }
 
     /// The choices as edited.
     pub fn abilities(&self) -> CharacterAbilities {
         self.state.abilities()
+    }
+
+    /// The character points the choices as edited spend.
+    pub fn spent(&self) -> i64 {
+        self.state.rules.spent(&self.character, &self.abilities())
+    }
+
+    /// Shows the counter again, after the other page changed.
+    pub fn show_points(&self) {
+        (self.show_points)();
     }
 
     /// Adds what the kit tells about the schools and the minor and major

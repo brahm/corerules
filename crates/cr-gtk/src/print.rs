@@ -102,10 +102,30 @@ pub(crate) fn print_buffer(
             }
         }
     });
+    report_failure(&operation, parent);
     let window = parent.root().and_downcast::<gtk::Window>();
     if let Err(e) = operation.run(gtk::PrintOperationAction::PrintDialog, window.as_ref()) {
         toast(&tr!("Could not print: {error}", error = e));
     }
+}
+
+/// Has a failure the print job reports after it was sent (a file that
+/// cannot be written) shown on `parent`, as the original's "Could not
+/// print" does.
+pub(crate) fn report_failure(operation: &gtk::PrintOperation, parent: &impl IsA<gtk::Widget>) {
+    let parent = parent.clone().upcast::<gtk::Widget>();
+    operation.connect_done(move |operation, result| {
+        if result == gtk::PrintOperationResult::Error {
+            let error = operation
+                .error()
+                .map_or_else(|| tr("unknown error").to_owned(), |e| e.to_string());
+            crate::create::message(
+                &parent,
+                tr("Could Not Print"),
+                &tr!("Could not print: {error}", error),
+            );
+        }
+    });
 }
 
 /// A paragraph's layout on a page `width` points wide.

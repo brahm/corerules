@@ -15,7 +15,7 @@ use cr_store::combat::{CharacterCombat, CombatRules, Purchase};
 use cr_store::create::{SHIELDS, UNARMED};
 use gtk::glib;
 
-use crate::abilities::{cost_text, names_list};
+use crate::abilities::{PointsLink, cost_text, names_list, show_left};
 use crate::create::{ask, ask_each, ignorable, message, notice};
 use crate::lists::{RowList, RowSpec};
 
@@ -80,6 +80,8 @@ impl WeaponCombo {
 struct State {
     rules: Rc<CombatRules>,
     character: Rc<Character>,
+    /// The kit chosen on the Details page, when it changed there.
+    chosen_kit: Rc<RefCell<Option<String>>>,
     levels: Levels,
     parent: gtk::Widget,
     original: Rc<CharacterCombat>,
@@ -355,14 +357,23 @@ impl State {
             .core_slots_left(&self.character, &new, &levels)
             .map(|left| trn!("{n} slot left", "{n} slots left", left));
         self.weapons.group.set_description(slots.as_deref());
-        let focus = self.rules.focus_choices(&self.character, &new, &levels);
+        // The focus and the picks follow the kit as chosen now.
+        let character = match &*self.chosen_kit.borrow() {
+            Some(kit) if *kit != self.character.data.kit => {
+                let mut c = (*self.character).clone();
+                c.data.kit.clone_from(kit);
+                Rc::new(c)
+            }
+            _ => self.character.clone(),
+        };
+        let focus = self.rules.focus_choices(&character, &new, &levels);
         let focusing = focus.is_some();
         self.focus.row.set_visible(focusing);
         if let Some((prompt, weapons)) = focus {
             self.focus.row.set_subtitle(&prompt);
             self.focus.refill(weapons);
         }
-        let picks = self.rules.kit_picks(&self.character, &new, &levels);
+        let picks = self.rules.kit_picks(&character, &new, &levels);
         for (slot, combo) in self.picks.iter().enumerate() {
             match picks.iter().find(|p| p.slot == slot) {
                 Some(pick) => {
@@ -410,6 +421,9 @@ pub struct CombatEditor {
     pub page: adw::PreferencesPage,
     state: State,
     refresh: Rc<dyn Fn()>,
+    pub link: PointsLink,
+    /// Shows the counter again.
+    show_points: Rc<dyn Fn()>,
 }
 
 fn switch_row(title: &str, subtitle: &str, active: bool) -> adw::SwitchRow {
@@ -700,6 +714,7 @@ impl CombatEditor {
         let state = State {
             rules: rules.clone(),
             character: character.clone(),
+            chosen_kit: Rc::default(),
             levels,
             parent: page.clone().upcast(),
             kit: Rc::new(RefCell::new((*original).clone())),
@@ -723,17 +738,20 @@ impl CombatEditor {
             disadvantages,
         };
         *cell.borrow_mut() = Some(state.clone());
+        let link = PointsLink::default();
+        let show_points: Rc<dyn Fn()> = Rc::new({
+            let (state, link) = (state.clone(), link.clone());
+            move || {
+                let left = rules.points_left(&character, &state.combat());
+                show_left(&points, left - link.others_spend());
+            }
+        });
         let refresh: Rc<dyn Fn()> = Rc::new({
-            let state = state.clone();
+            let (state, show_points, link) = (state.clone(), show_points.clone(), link.clone());
             move || {
                 state.refresh_kit();
-                let left = rules.points_left(&character, &state.combat());
-                points.set_label(&left.to_string());
-                if left < 0 {
-                    points.add_css_class("error");
-                } else {
-                    points.remove_css_class("error");
-                }
+                show_points();
+                link.notify();
             }
         });
         // Skills & Powers: removing a proficiency the character had
@@ -855,12 +873,33 @@ impl CombatEditor {
             page,
             state,
             refresh,
+            link,
+            show_points,
         }
     }
 
     /// The choices as edited.
     pub fn combat(&self) -> CharacterCombat {
         self.state.combat()
+    }
+
+    /// The character points the choices as edited spend.
+    pub fn spent(&self) -> i64 {
+        self.state
+            .rules
+            .spent(&self.state.character, &self.combat())
+    }
+
+    /// Shows the counter again, after the other page changed.
+    pub fn show_points(&self) {
+        (self.show_points)();
+    }
+
+    /// The kit chosen on the Details page: the focus and the weapons the
+    /// kit has the character pick follow it.
+    pub fn kit_changed(&self, kit: &str) {
+        *self.state.chosen_kit.borrow_mut() = Some(kit.to_owned());
+        (self.refresh)();
     }
 
     /// Shows again what depends on the class levels, once they changed.

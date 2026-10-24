@@ -121,6 +121,10 @@ pub fn new_race(parent: &str) -> Race {
         parent.clone_into(&mut r.unknown_0x188);
         r.unknown_0xa8 = 45;
         r.unknown_0xac = 5;
+    } else {
+        // A race needs ability limits, or New Character takes it for an
+        // old subrace record; 3 to 18 until the user sets them.
+        r.ability_limits = [[3, 18]; 6];
     }
     r
 }
@@ -598,6 +602,15 @@ mod tests {
     use super::*;
     use crate::userdb::testing::TempInstall;
     use crate::userdb::{NameError, UserDb};
+
+    /// A new race has limits, so New Character offers it as a race; a new
+    /// subrace takes its race's.
+    #[test]
+    fn a_new_race_has_ability_limits() {
+        assert_eq!(new_race("").ability_limits, [[3, 18]; 6]);
+        assert!(!is_subrace(&new_race("")));
+        assert_eq!(new_race("Dwarf").ability_limits, [[0, 0]; 6]);
+    }
 
     #[test]
     fn a_race_keeps_its_image_as_folder_and_file() {

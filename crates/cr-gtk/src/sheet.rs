@@ -832,6 +832,7 @@ pub(crate) fn print_sheet(
         }
         None => gtk::PrintOperationAction::PrintDialog,
     };
+    crate::print::report_failure(&operation, parent);
     let window = parent.root().and_downcast::<gtk::Window>();
     match operation.run(action, window.as_ref()) {
         Ok(gtk::PrintOperationResult::Apply) if pdf.is_some() => toast(tr("Sheet saved as PDF")),

@@ -582,6 +582,31 @@ impl NpcRules {
         self.data.t(texts::NO_CLASS).to_owned()
     }
 
+    /// The lowest and highest score of each ability the race's NPCs may
+    /// have: its limits with its adjustments, as the generator keeps a
+    /// roll (0x4bfd74); the whole 1 to 25 for a race it does not know.
+    pub fn ability_range(&self, race: &str) -> [(i32, i32); 6] {
+        let Some(r) = self.data.race(race).map(|i| &self.data.races[i]) else {
+            return [(1, 25); 6];
+        };
+        std::array::from_fn(|i| {
+            let [lo, hi] = r.ability_limits[i];
+            let adjust = r.ability_adjustments[i];
+            if hi <= 0 {
+                return (1, 25);
+            }
+            (state::clamp125(lo + adjust), state::clamp125(hi + adjust))
+        })
+    }
+
+    /// Whether the race's NPCs with 18 Strength roll exceptional
+    /// Strength (0x4bfd74).
+    pub fn exceptional_strength(&self, race: &str) -> bool {
+        self.data
+            .race(race)
+            .is_some_and(|i| self.data.races[i].unknown_0x40 != 0)
+    }
+
     /// Race names the "Select from Standard races" choice offers.
     pub fn standard_races(&self) -> Vec<String> {
         self.data
@@ -1299,6 +1324,19 @@ mod tests {
             .generate(&mut Rand::seeded(1), "Human", &fighter(2), &po)
             .unwrap();
         assert!(!npc.messages.iter().any(|m| m.contains("Player's Option")));
+        // And it is saved as one, Core Rules NPCs as Core Rules ones.
+        if rules.flavor == Flavor::Expansion {
+            assert!(npc.character.skills_and_powers());
+        }
+        let core = rules
+            .generate(
+                &mut Rand::seeded(1),
+                "Human",
+                &fighter(2),
+                &NpcOptions::default(),
+            )
+            .unwrap();
+        assert!(!core.character.skills_and_powers());
     }
 
     #[test]

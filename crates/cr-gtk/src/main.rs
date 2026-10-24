@@ -799,6 +799,9 @@ impl Window {
 
     /// Reloads the sections and shows the entry `key` of `section`.
     fn reload(&self, section: &str, key: Option<String>) {
+        // A record saved changes what the NPC generator and the item
+        // checks offer (a new kit, race or item).
+        self.npc_rules.borrow_mut().take();
         let install = self.install.borrow();
         let Some(install) = install.as_ref() else {
             return;
@@ -929,8 +932,13 @@ impl Window {
         alert.present(Some(&self.window));
     }
 
+    /// A note at the bottom of the window; with a dialog open, which
+    /// would hide it, an alert on the dialog instead.
     fn toast(&self, message: &str) {
-        self.toasts.add_toast(adw::Toast::new(message));
+        match self.window.visible_dialog() {
+            Some(dialog) => create::message(&dialog, tr("Core Rules"), message),
+            None => self.toasts.add_toast(adw::Toast::new(message)),
+        }
     }
 
     /// Shows the character sheet of the character in `Chars/<file>`; an
@@ -1027,7 +1035,7 @@ impl Window {
             None => return,
         };
         if let Err(e) = opened {
-            self.toast(&e);
+            create::message(&self.window, tr("Could Not Open Book"), &e);
         }
     }
 
@@ -1259,6 +1267,10 @@ impl encounter::Host for Window {
         name: &str,
     ) {
         userdb::record_action(&Rc::new(self.clone()), section, action, origin, name)
+    }
+
+    fn new_user_record(&self, section: &str, saved: Box<dyn Fn(&str)>) {
+        userdb::new_record_then(&Rc::new(self.clone()), section, saved)
     }
 
     fn parent(&self) -> gtk::Widget {
@@ -1706,6 +1718,13 @@ impl Browser {
             .child(&search)
             .search_mode_enabled(true)
             .build();
+        // The bar stays: Esc only clears the search.
+        search_bar.connect_search_mode_enabled_notify(|bar| {
+            if !bar.is_search_mode() {
+                bar.set_search_mode(true);
+            }
+        });
+        search.connect_stop_search(|entry| entry.set_text(""));
         // Shown in the Characters section.
         let new_button = gtk::Button::builder()
             .icon_name("list-add-symbolic")
@@ -2484,6 +2503,31 @@ fn character_editor(
     });
     let combat_editor =
         combat::CombatEditor::new(choices.combat.clone(), &choices.character, levels.clone());
+    // Abilities and Combat spend the same character points.
+    {
+        let combat = combat_editor.clone();
+        let abilities = Rc::downgrade(&ability_editor);
+        *ability_editor.link.others.borrow_mut() = Rc::new({
+            let combat = combat.clone();
+            move || combat.spent()
+        });
+        *ability_editor.link.changed.borrow_mut() = Rc::new(move || combat.show_points());
+        *combat_editor.link.others.borrow_mut() = Rc::new({
+            let abilities = abilities.clone();
+            move || abilities.upgrade().map_or(0, |a| a.spent())
+        });
+        *combat_editor.link.changed.borrow_mut() = Rc::new(move || {
+            if let Some(a) = abilities.upgrade() {
+                a.show_points();
+            }
+        });
+        ability_editor.show_points();
+        combat_editor.show_points();
+    }
+    kit.connect_selected_notify({
+        let combat = combat_editor.clone();
+        move |kit| combat.kit_changed(&create::combo_value(kit))
+    });
     level_listeners.borrow_mut().push(Box::new({
         let editor = combat_editor.clone();
         move || editor.levels_changed()

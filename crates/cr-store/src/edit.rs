@@ -169,6 +169,24 @@ impl Installation {
             None => None,
         };
         details.apply(&mut character);
+        // Abilities and combat choices spend the same character points, so
+        // a refusal names what both need.
+        if let Some(lists) = lists
+            && let (Some(abilities), Some(combat)) = (&lists.abilities, &lists.combat)
+            && let Some((creation, advance)) = &shared
+        {
+            let combat_rules = self.combat_rules_with(creation.clone(), advance.clone())?;
+            let left = i64::from(character.data.unknown_0x1778[0])
+                - self.ability_rules()?.spent(&character, abilities)
+                - combat_rules.spent(&character, combat);
+            if left < 0 {
+                return Err(Error::Invalid(tr!(
+                    "Not enough character points: the new abilities and combat choices \
+                     need {more} more",
+                    more = -left
+                )));
+            }
+        }
         if let Some(abilities) = lists.and_then(|l| l.abilities.as_ref()) {
             self.ability_rules()?.apply(&mut character, abilities)?;
         }

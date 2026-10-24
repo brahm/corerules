@@ -350,8 +350,10 @@ impl SkillsEditor {
                 state.defenses.group.set_visible(modes);
             }
         });
-        for row in &state.rogue {
-            // Points past what is left are refused: the row goes back.
+        for (index, row) in state.rogue.iter().enumerate() {
+            // Points past what is left, past the most one skill may get
+            // at this level, or past a 95% score are refused: the row goes
+            // back.
             let before = Rc::new(Cell::new(row.value()));
             let (refresh, state, rules, character) = (
                 refresh.clone(),
@@ -360,9 +362,17 @@ impl SkillsEditor {
                 character.clone(),
             );
             row.connect_value_notify(move |row| {
-                if row.value() > before.get()
-                    && rules.rogue_points_left(&character, &state.skills()) < 0
-                {
+                let over = || {
+                    let new = state.skills();
+                    let mut old = new.clone();
+                    if let Some(points) = old.rogue.get_mut(index) {
+                        *points = before.get() as i32;
+                    }
+                    rules.rogue_points_left(&character, &new) < 0
+                        || rules.rogue_warnings(&character, &new).len()
+                            > rules.rogue_warnings(&character, &old).len()
+                };
+                if row.value() > before.get() && over() {
                     row.set_value(before.get());
                     row.error_bell();
                     return;

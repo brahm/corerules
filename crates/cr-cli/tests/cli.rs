@@ -25,3 +25,34 @@ fn closed_pipe_is_not_an_error() {
     assert!(output.status.success(), "{}: {stderr}", output.status);
     assert!(stderr.is_empty(), "{stderr}");
 }
+
+/// Runs `cr` with `args`, with no data to find: a home and Wine prefix
+/// of nothing.
+fn cr_without_data(args: &[&str]) -> std::process::Output {
+    let home = std::env::temp_dir().join(format!("cr-cli-home-{}", std::process::id()));
+    fs::create_dir_all(&home).unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_cr"))
+        .args(args)
+        .env("HOME", &home)
+        .env("XDG_DATA_HOME", home.join("data"))
+        .env("WINEPREFIX", home.join("wine"))
+        .output()
+        .unwrap();
+    let _ = fs::remove_dir_all(&home);
+    output
+}
+
+#[test]
+fn help_needs_no_data_and_mistakes_fail() {
+    let help = cr_without_data(&["--help"]);
+    assert!(help.status.success());
+    assert!(String::from_utf8_lossy(&help.stdout).starts_with("usage:"));
+
+    let unknown = cr_without_data(&["foo"]);
+    assert!(!unknown.status.success());
+    assert!(String::from_utf8_lossy(&unknown.stderr).contains("unknown command foo"));
+
+    let missing = cr_without_data(&["chars", "/nao/existe"]);
+    assert!(!missing.status.success());
+    assert!(String::from_utf8_lossy(&missing.stderr).contains("/nao/existe"));
+}

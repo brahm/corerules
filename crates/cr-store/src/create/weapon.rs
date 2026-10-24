@@ -135,6 +135,8 @@ pub enum WeaponCheck {
     EveryOther,
     /// Only those the kit requires or recommends (+0x76; +0x1de9).
     Recommended,
+    /// Always from a list (+0x4e0); the file keeps no flag for it.
+    AlwaysFromList,
     /// Specializations only from a list (+0x524; +0x1de6).
     SpecializationList,
     /// A specialization from a list (+0x3e8; +0x1de1), checked on leaving
@@ -656,6 +658,20 @@ impl CreationRules {
                         kit = kit_name
                     ),
                     list,
+                ),
+            );
+        }
+        let always = kit.sa(0x4e0);
+        if !always.is_empty() && !always.contains(&weapon.name) {
+            warn(
+                WeaponCheck::AlwaysFromList,
+                listed(
+                    tr!(
+                        "The kit \"{kit}\" requires that you always select weapon proficiencies \
+                         from the following list.",
+                        kit = kit_name
+                    ),
+                    always,
                 ),
             );
         }
