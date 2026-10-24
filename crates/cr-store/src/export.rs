@@ -55,7 +55,7 @@ use crate::encounter::{flavor_of, replace_or_create};
 use crate::exe::Image;
 use crate::userdb::Flavor;
 use crate::userdb::allowed::{self, Allowed, AllowedDb};
-use crate::userdb::classes::{ClassEntry, class_list};
+use crate::userdb::classes::{ClassEntry, class_entries, class_list};
 use crate::userdb::parts::{CLASS_ABILITIES, KITS, VERSION_MARKER, VERSION_STRING};
 use crate::{Error, Installation, Result};
 
@@ -594,6 +594,16 @@ impl<'a> Stores<'a> {
         Ok(self.classes.clone().expect("just set"))
     }
 
+    /// The standard classes and the user's as this import left them, the
+    /// classes it brought in included before they are saved.
+    fn classes_after_import(&mut self) -> Result<Vec<ClassEntry>> {
+        let mut objects = self
+            .read("Database/Class.dat", ObjectList::parse)?
+            .map_or(Vec::new(), |l| l.objects);
+        objects.extend(self.list_ref(Category::Class)?.iter().cloned());
+        Ok(class_entries(&objects))
+    }
+
     /// Checks every changed file can be written, then writes them.
     fn save(self) -> Result<()> {
         let mut files: Vec<(&str, Vec<u8>)> = Vec::new();
@@ -890,6 +900,8 @@ impl Installation {
         // The Expansion turns what Core Rules 2.0 wrote into its own layout.
         let upgrade = expansion && !file.is_expansion();
         let mut image = None;
+        let mut classes = Vec::new();
+        let mut class_warnings = Vec::new();
         let all = contents(file);
         for (n, item) in all.iter().enumerate() {
             if chosen.is_some_and(|c| !c.contains(&n)) {
@@ -928,12 +940,26 @@ impl Installation {
                         import_race(&mut stores, file, &object, &mut report.warnings)?;
                     }
                     if expansion && category == Category::Class {
-                        import_class(&mut stores, file, &item.name, &mut report.warnings)?;
+                        import_class(&mut stores, file, &item.name, &mut class_warnings)?;
+                        classes.push(item.name.clone());
                     }
                 }
             }
             report.imported.push(item.clone());
         }
+        // The combinations of the classes are looked up in the classes
+        // there were before the import, as the original does, so those
+        // naming a class of the package only come in on a second round,
+        // with all of them known; only what still fails is reported. The
+        // original needed the package imported twice for this.
+        if !classes.is_empty() {
+            class_warnings.clear();
+            stores.classes = Some(stores.classes_after_import()?);
+            for class in &classes {
+                import_class(&mut stores, file, class, &mut class_warnings)?;
+            }
+        }
+        report.warnings.append(&mut class_warnings);
         if file.map_maker.count > 0 {
             report.warnings.push(trn!(
                 "{n} Map Maker II map was not imported",

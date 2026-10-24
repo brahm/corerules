@@ -153,9 +153,9 @@ failed.
 
 **Packaging.** The consolidated file is compressed with xz and built into
 the installer, `crates/cr-addons`, a Rust program with GTK 4 and
-libadwaita that imports it through the same code as the app (`cr-store`),
-in two passes so race and class combinations that name two new classes
-come in.
+libadwaita that imports it through the same code as the app's Import
+(`cr-store`), so installing and importing `Comunidade.xpx` in the app leave
+the same databases.
 
 **Pictures and texts.** The 668 pictures (8-bit BMP files) and 309 texts
 that came with the add-ons, again without Evermore's, are built into the

@@ -77,6 +77,16 @@ Ficaram algumas menções de nomes nas listas de outros addons: kits de raças d
   * Os bancos do usuário ficaram idênticos byte a byte aos que o antigo script de instalação gravava.
   * Instalar de novo não duplica personagens nem altera os registros, a não ser por 4 combinações de raças cujo nome se repete no pacote.
 
+## Compatibilidade com o app 1.0.0-rc1
+
+O pacote foi conferido de novo com o app 1.0.0-rc1, que corrigiu o travamento ao importar o `Comunidade.xpx` pela janela do app (o bug crítico dos testes da 0.9.0).
+
+* **Import pela janela do app:** a prévia abre e o Import traz os 36.525 itens sem travar, numa instalação limpa da Expansion.
+* **Combinações raça/classe numa importação só.** Antes, uma combinação que cita duas classes novas do pacote só entrava numa segunda importação, como no original, e o Import do app mostrava 304 avisos "No race/class combinations could be added". Agora o Import fecha essas combinações na mesma vez. Sobram só os 36 avisos das raças que o pacote traz sem combinações, que são do próprio pacote. O instalador passou a importar uma vez só, e o resultado é idêntico byte a byte ao das duas passagens de antes.
+* **Qilué Veladorn.** A personagem tem a classe "Sword Dancer", mas o pacote trazia a classe como "Sword Dancer " (com um espaço no fim, vinda de `sword dancer.xpx`). A ficha e o Edit Character recusavam abrir a personagem com "Sword Dancer is not a class in the databases". A classe e as suas 5 menções com espaço (2 combinações raça/classe e 3 listas de classes de kits e itens) passaram a "Sword Dancer", como já estavam nos outros 90 lugares do pacote. Nada mais mudou no pacote, o que foi conferido comparando os dois pacotes inteiros lidos pelo leitor do projeto.
+* **Edição no app:** os 36.207 registros dos bancos do usuário foram abertos, passados campo a campo pelos editores da 1.0.0-rc1 e salvos, e nenhum foi recusado. Os 48 personagens abrem na ficha (texto, HTML e Markdown), são editados e salvos.
+* **Instalador:** a AppImage 1.0.0-rc1 instalou o pacote numa cópia limpa em 22 segundos, com 36.525 itens, 48 personagens e 1.204 imagens, e gravou os mesmos bancos que o Import do app.
+
 ## Imagens e textos
 
 Os addons trouxeram 685 imagens BMP e 321 textos. Sem os da Evermore, ficam 668 imagens e 309 textos, embutidos no instalador em `Comunidade-extras.xz`.
@@ -84,5 +94,5 @@ Os addons trouxeram 685 imagens BMP e 321 textos. Sem os da Evermore, ficam 668 
 * **Para onde vai cada imagem.** Os registros guardam o caminho do Windows que a imagem tinha no computador do autor, como `C:\Program Files\AD&D Core Rules 2.0\Bitmaps\Monsters\Achaierai.BMP` ou `C:\AD&D Pics\troll.bmp`. Um caminho dentro de uma instalação do Core Rules, em qualquer drive, vira o mesmo caminho dentro da pasta de dados (`Bitmaps/Monsters/Achaierai.BMP`). Um caminho para o `Bitmaps` do CD fica em `Bitmaps`. Os outros vão para `UserBMP`, sem o drive (`UserBMP/AD&D Pics/troll.bmp`). No Wine, estes últimos também vão para o drive C:, onde o original os procura.
 * **Escolha da imagem.** 528 imagens são citadas pelos registros e vão para 536 lugares. Quando dois addons trazem imagens com o mesmo nome, vale a do addon de onde veio o registro. Nenhum lugar recebe duas imagens diferentes. As 4 citações a imagens do próprio CD ficam com as do CD. Todas as 668 imagens também vão para `UserBMP/`, na pasta do seu addon, que é onde o diálogo de imagens do original abre.
 * **Nada é sobrescrito.** Um arquivo que já existe fica como está, e o registro da instalação lista cada imagem gravada.
-* **No app.** Tipos de monstro, monstros (pela imagem do seu tipo), raças e personagens mostram a imagem quando o arquivo está na pasta de dados. As imagens são lidas pelo próprio app, sem depender dos leitores de imagem do sistema. 3.800 citações apontam para imagens que nenhum addon trouxe, quase todas as do CD (`6.bmp`, `NA.bmp`), e o app não as mostra porque **Extrair dados do CD…** não copia o `Bitmaps` do CD.
+* **No app.** Tipos de monstro, monstros (pela imagem do seu tipo), raças e personagens mostram a imagem quando o arquivo está na pasta de dados. As imagens são lidas pelo próprio app, sem depender dos leitores de imagem do sistema. 3.800 citações apontam para imagens que nenhum addon trouxe, quase todas as do CD (`6.bmp`, `NA.bmp`), que **Extrair dados do CD…** copia do CD desde a versão 1.0.0-rc1.
 * **Textos.** Os leia-me em texto, HTML, RTF, Word e PDF foram convertidos para texto simples. O botão **Detalhes dos addons…** do instalador mostra, para cada pasta de addons, os pacotes, o que cada um trouxe para a coleção e esses textos.
