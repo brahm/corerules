@@ -293,8 +293,9 @@ impl Extraction {
                 None => mkdir(&dest.join(dir))?,
             }
         }
-        // The book reader and Table Rolls.
-        for dir in ["Books", "Tables"] {
+        // The book reader, Table Rolls, and the portraits, item icons and
+        // monster pictures.
+        for dir in ["Books", "Tables", "Bitmaps"] {
             if let Some(found) = tree.entry(&self.root, dir) {
                 tree.copy_tree(&found, &dest.join(dir))?;
             }
@@ -363,6 +364,7 @@ mod tests {
             "TABLES/SUB",
             "PROGRAM",
             "HELP/X",
+            "BITMAPS/PORTRAIT",
             "SOUNDS",
         ] {
             fs::create_dir_all(cd.join(dir)).unwrap();
@@ -377,6 +379,7 @@ mod tests {
             "HELP/PHB.CNT",
             "HELP/PHB.HLP",
             "HELP/ROBOEX32.DLL",
+            "BITMAPS/PORTRAIT/ELF.BMP",
             "SOUNDS/A.WAV",
         ] {
             fs::write(cd.join(file), file).unwrap();
@@ -404,6 +407,9 @@ mod tests {
         assert_eq!(
             found,
             [
+                "Bitmaps/",
+                "Bitmaps/PORTRAIT/",
+                "Bitmaps/PORTRAIT/ELF.BMP",
                 "Chars/",
                 "Database/",
                 "Database/RACE.DAT",

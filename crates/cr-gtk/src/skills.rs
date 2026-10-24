@@ -69,7 +69,7 @@ impl State {
         }
         let kit = self.kit.borrow();
         CharacterSkills {
-            rogue: self.rogue.iter().map(|r| r.value() as u32).collect(),
+            rogue: self.rogue.iter().map(|r| r.value() as i32).collect(),
             kit_bonuses: kit.kit_bonuses.clone(),
             kit_chosen: kit.kit_chosen.clone(),
             primary,
@@ -141,7 +141,7 @@ impl SkillsEditor {
                     .title(&skill.label)
                     .adjustment(&gtk::Adjustment::new(
                         f64::from(value),
-                        0.0,
+                        f64::from(value.min(0)),
                         250.0,
                         1.0,
                         10.0,
@@ -281,7 +281,7 @@ impl SkillsEditor {
             wild,
         };
         let refresh = Rc::new({
-            let state = state.clone();
+            let (state, rules, character) = (state.clone(), rules.clone(), character.clone());
             move || {
                 let new = state.skills();
                 if let Some((group, (_, level))) =
@@ -318,8 +318,7 @@ impl SkillsEditor {
                     .zip(&new.rogue)
                     .zip(&kit_points)
                 {
-                    let mut subtitle =
-                        tr!("Score {score}%", score = skill.base_score + *value as i32);
+                    let mut subtitle = tr!("Score {score}%", score = skill.base_score + *value);
                     if *adjustment != 0 {
                         subtitle.push_str(" · ");
                         subtitle.push_str(&tr!(
@@ -352,8 +351,25 @@ impl SkillsEditor {
             }
         });
         for row in &state.rogue {
-            let refresh = refresh.clone();
-            row.connect_value_notify(move |_| refresh());
+            // Points past what is left are refused: the row goes back.
+            let before = Rc::new(Cell::new(row.value()));
+            let (refresh, state, rules, character) = (
+                refresh.clone(),
+                state.clone(),
+                rules.clone(),
+                character.clone(),
+            );
+            row.connect_value_notify(move |row| {
+                if row.value() > before.get()
+                    && rules.rogue_points_left(&character, &state.skills()) < 0
+                {
+                    row.set_value(before.get());
+                    row.error_bell();
+                    return;
+                }
+                before.set(row.value());
+                refresh();
+            });
         }
 
         // The primary disciplines are among the disciplines taken.
@@ -536,7 +552,7 @@ fn kit_rogue_groups(
         move || {
             let kit = kit.borrow();
             CharacterSkills {
-                rogue: rows.iter().map(|r| r.value() as u32).collect(),
+                rogue: rows.iter().map(|r| r.value() as i32).collect(),
                 kit_bonuses: kit.kit_bonuses.clone(),
                 kit_chosen: kit.kit_chosen.clone(),
                 ..(*original).clone()
@@ -598,7 +614,7 @@ fn kit_rogue_groups(
                     rules.set_rogue_bonus(&character, &mut new, pick.level, Some(&name));
                     kit.borrow_mut().kit_bonuses = new.kit_bonuses.clone();
                     for (row, &value) in rows.iter().zip(&new.rogue) {
-                        row.adjustment().set_lower(0.0);
+                        row.adjustment().set_lower(f64::from(value.min(0)));
                         row.set_value(f64::from(value));
                     }
                 }

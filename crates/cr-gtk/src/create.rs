@@ -620,10 +620,12 @@ fn ability_rows(
     group: &adw::PreferencesGroup,
     choices: &[(String, i32)],
     selected: &[String],
-    changed: impl Fn(Vec<String>) + 'static,
+    changed: impl Fn(Vec<String>) -> bool + 'static,
 ) {
     let checks: Rc<RefCell<Vec<(String, gtk::CheckButton)>>> = Rc::default();
     let changed = Rc::new(changed);
+    // Set while a refused toggle is undone.
+    let undoing = Rc::new(Cell::new(false));
     for (name, cost) in choices {
         // The databases have some abilities in two versions that differ
         // only in cost (Followers (5) and (10)); those keep it.
@@ -652,15 +654,24 @@ fn ability_rows(
             .build();
         row.add_prefix(&check);
         check.connect_toggled({
-            let (checks, changed) = (checks.clone(), changed.clone());
-            move |_| {
+            let (checks, changed, undoing) = (checks.clone(), changed.clone(), undoing.clone());
+            move |check| {
+                if undoing.get() {
+                    return;
+                }
                 let names = checks
                     .borrow()
                     .iter()
                     .filter(|(_, c)| c.is_active())
                     .map(|(n, _)| n.clone())
                     .collect();
-                changed(names);
+                // A change the points do not cover is refused.
+                if !changed(names) {
+                    undoing.set(true);
+                    check.set_active(!check.is_active());
+                    undoing.set(false);
+                    check.error_bell();
+                }
             }
         });
         group.add(&row);
@@ -1413,7 +1424,7 @@ impl Wizard {
     /// classes are those the race's best scores reach, and the scores are
     /// rolled here to fit the class chosen.
     fn class_page(&self) -> adw::NavigationPage {
-        let (setting, race, scores, previous, choice, raised) = {
+        let (setting, race, subrace, scores, previous, choice, raised) = {
             let d = self.0.draft.borrow();
             let choice = d.roll_method == RollMethod::PlayersChoice;
             let scores = if choice {
@@ -1424,6 +1435,7 @@ impl Wizard {
             (
                 d.setting,
                 d.race.clone(),
+                d.subrace.clone(),
                 scores,
                 d.classes.clone(),
                 choice,
@@ -1431,7 +1443,9 @@ impl Wizard {
             )
         };
         let adjusted = self.rules().raised(&race, &scores, raised);
-        let options = self.rules().class_options(setting, &race, &adjusted);
+        let options = self
+            .rules()
+            .class_options(setting, &race, &subrace, &adjusted);
         let group = adw::PreferencesGroup::builder()
             .title(tr("Class"))
             .description(if choice {
@@ -1685,10 +1699,16 @@ impl Wizard {
             }
         } else {
             ability_rows(&group, &choices, &d.racial_abilities, {
-                let (chosen, update) = (chosen.clone(), update.clone());
+                let (this, chosen, update) = (self.clone(), chosen.clone(), update.clone());
                 move |names| {
-                    *chosen.borrow_mut() = names;
+                    let mut probe = this.0.draft.borrow().clone();
+                    probe.racial_abilities = names;
+                    if !this.0.entering && this.rules().racial_points_left(&probe) < 0 {
+                        return false;
+                    }
+                    *chosen.borrow_mut() = probe.racial_abilities;
                     update();
+                    true
                 }
             });
             update();
@@ -1761,12 +1781,19 @@ impl Wizard {
             let choices = self.rules().class_ability_choices(class);
             let selected = d.class_abilities.get(slot).cloned().unwrap_or_default();
             ability_rows(group, &choices, &selected, {
-                let (chosen, update) = (chosen.clone(), update.clone());
+                let (this, chosen, update) = (self.clone(), chosen.clone(), update.clone());
                 move |names| {
-                    if let Some(abilities) = chosen.borrow_mut().get_mut(slot) {
+                    let mut probe = this.0.draft.borrow().clone();
+                    probe.class_abilities = chosen.borrow().clone();
+                    if let Some(abilities) = probe.class_abilities.get_mut(slot) {
                         *abilities = names;
                     }
+                    if !this.0.entering && this.rules().class_points_left(&probe, slot) < 0 {
+                        return false;
+                    }
+                    *chosen.borrow_mut() = probe.class_abilities;
                     update();
+                    true
                 }
             });
         }
@@ -3204,6 +3231,26 @@ impl Wizard {
             let update = update.clone();
             list.connect_changed(move || update());
         }
+        // A proficiency, trait or language past the slots or points is
+        // refused, as the original does (Enter Character's are free).
+        let refused = Rc::new({
+            let this = self.clone();
+            move || {
+                let text = if sp {
+                    tr("You do not have enough Character Points.")
+                } else {
+                    tr("You do not have enough slots.")
+                };
+                message(&this.0.dialog, tr("Not Allowed"), text);
+            }
+        });
+        for list in [&nonweapon, &traits, &weapons, &learned] {
+            let (this, current, refused) = (self.clone(), current.clone(), refused.clone());
+            list.set_limit(
+                move || this.0.entering || this.rules().proficiencies_fit(&current()),
+                move || refused(),
+            );
+        }
         next.connect_clicked({
             let this = self.clone();
             move |next| {
@@ -4109,13 +4156,72 @@ impl Wizard {
         let psionicist = self.rules().is_psionicist(&self.0.draft.borrow().classes);
         match &self.0.skills {
             Some(skills) if self.rules().expansion && !psionicist => {
+                self.0.draft.borrow_mut().psionics = None;
                 self.push(self.wild_page(skills.clone()));
             }
-            _ => {
+            Some(skills) if psionicist => {
                 self.0.draft.borrow_mut().wild = Default::default();
+                match self.psionics_page(skills.clone()) {
+                    Some(page) => self.push(page),
+                    None => self.push(self.equipment_page()),
+                }
+            }
+            _ => {
+                let mut d = self.0.draft.borrow_mut();
+                d.wild = Default::default();
+                d.psionics = None;
+                drop(d);
                 self.push(self.equipment_page());
             }
         }
+    }
+
+    /// A psionicist's disciplines, sciences, devotions and attack and
+    /// defense modes, as Update Character's Skills page has them (the
+    /// original's Psionics dialog, IDD 357).
+    fn psionics_page(&self, skills: Rc<SkillRules>) -> Option<adw::NavigationPage> {
+        let mut character = self.rules().build(&self.0.draft.borrow()).ok()?;
+        if let Some(psionics) = &self.0.draft.borrow().psionics {
+            // Back from a later step: what was chosen before.
+            let _ = skills.apply(&mut character, psionics, &mut Dice::default());
+        }
+        let character = Rc::new(character);
+        let hooks = crate::skills::WildHooks {
+            character: Rc::new({
+                let character = character.clone();
+                move || (*character).clone()
+            }),
+            set_abilities: Rc::new(|_| {}),
+        };
+        let editor = crate::skills::SkillsEditor::new(skills.clone(), &character, hooks);
+        let content = editor.page.clone();
+        let next = next_button(tr("_Next"));
+        next.connect_clicked({
+            let this = self.clone();
+            move |_| {
+                let new = editor.skills();
+                if !this.0.entering
+                    && let Some(problem) = skills.problem(&character, &new)
+                {
+                    message(&this.0.dialog, tr("Psionics"), &problem);
+                    return;
+                }
+                this.0.draft.borrow_mut().psionics = Some(new);
+                this.push(this.equipment_page());
+            }
+        });
+        let header = adw::HeaderBar::new();
+        header.pack_end(&next);
+        let view = adw::ToolbarView::new();
+        crate::help::add_button(&header, &view, || topic::SKILLS);
+        view.add_top_bar(&header);
+        view.set_content(Some(&content));
+        Some(
+            adw::NavigationPage::builder()
+                .title(tr("Psionics"))
+                .child(&view)
+                .build(),
+        )
     }
 
     /// The Wild Talents dialog (IDD 358) as a step: New Character tests
@@ -4440,15 +4546,25 @@ impl Wizard {
         let values: Rc<RefCell<Vec<f64>>> =
             Rc::new(RefCell::new(rows.iter().map(|(_, r)| r.value()).collect()));
         for (index, (skill, row)) in rows.iter().enumerate() {
-            let (this, update, ignored, values, skill) = (
+            let (this, update, ignored, values, skill, current) = (
                 self.clone(),
                 update.clone(),
                 ignored.clone(),
                 values.clone(),
                 *skill,
+                current.clone(),
             );
             row.connect_value_notify(move |row| {
                 let (before, wanted) = (values.borrow()[index], row.value());
+                // Points past what is left are refused.
+                if wanted > before
+                    && !this.0.entering
+                    && this.rules().rogue_points_left(&current()) < 0
+                {
+                    row.set_value(before);
+                    row.error_bell();
+                    return;
+                }
                 if wanted > before && !ignored.get() {
                     let warning = this
                         .rules()

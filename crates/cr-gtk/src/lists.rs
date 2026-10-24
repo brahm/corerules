@@ -308,6 +308,10 @@ type RemoveCheck<T> = Rc<RefCell<Option<Box<dyn Fn(&T, Box<dyn FnOnce()>)>>>>;
 /// it.
 type AddCheck = Rc<RefCell<Option<Box<dyn Fn(&str, Box<dyn FnOnce()>)>>>>;
 
+/// Whether the rows fit what the list may hold, and what tells the user
+/// when an addition does not.
+type Limit = Rc<RefCell<Option<(Box<dyn Fn() -> bool>, Box<dyn Fn()>)>>>;
+
 /// How big an item's icon is drawn at the start of its row.
 const ROW_ICON_SIZE: i32 = 40;
 
@@ -328,6 +332,7 @@ pub struct RowList<T: 'static> {
     changed: Callback,
     remove_check: RemoveCheck<T>,
     add_check: AddCheck,
+    limit: Limit,
     detail: Rc<RefCell<Option<Detail>>>,
     /// The icons drawn at the start of the rows, by title (item name).
     icons: Rc<RefCell<Option<Rc<ItemIcons>>>>,
@@ -345,6 +350,7 @@ impl<T: Clone + 'static> Clone for RowList<T> {
             changed: self.changed.clone(),
             remove_check: self.remove_check.clone(),
             add_check: self.add_check.clone(),
+            limit: self.limit.clone(),
             detail: self.detail.clone(),
             icons: self.icons.clone(),
         }
@@ -385,6 +391,7 @@ impl<T: Clone + 'static> RowList<T> {
             changed: Rc::default(),
             remove_check: Rc::default(),
             add_check: Rc::default(),
+            limit: Rc::default(),
             detail: Rc::default(),
             icons: Rc::default(),
         };
@@ -407,6 +414,9 @@ impl<T: Clone + 'static> RowList<T> {
                             if let Some(spec) = make(name) {
                                 list.push(spec);
                                 list.update();
+                                if !list.fits() {
+                                    list.drop_last();
+                                }
                             }
                         })
                     };
@@ -442,10 +452,18 @@ impl<T: Clone + 'static> RowList<T> {
                         0.0,
                     ))
                     .build();
+                let before = Rc::new(Cell::new(f64::from(value)));
                 spin.connect_value_notify({
-                    let changed = self.changed.clone();
-                    move |_| {
-                        if let Some(changed) = &*changed.borrow() {
+                    let list = self.clone();
+                    move |spin| {
+                        // A number raised past the limit goes back.
+                        if spin.value() > before.get() && !list.fits() {
+                            spin.set_value(before.get());
+                            list.refused();
+                            return;
+                        }
+                        before.set(spin.value());
+                        if let Some(changed) = &*list.changed.borrow() {
                             changed();
                         }
                     }
@@ -575,6 +593,34 @@ impl<T: Clone + 'static> RowList<T> {
     /// and what adds it.
     pub fn connect_add(&self, f: impl Fn(&str, Box<dyn FnOnce()>) + 'static) {
         *self.add_check.borrow_mut() = Some(Box::new(f));
+    }
+
+    /// Has the list refuse a row added, or a number raised, past what it
+    /// may hold: `fits` says whether the rows fit, and `refused` tells
+    /// the user when they do not.
+    pub fn set_limit(&self, fits: impl Fn() -> bool + 'static, refused: impl Fn() + 'static) {
+        *self.limit.borrow_mut() = Some((Box::new(fits), Box::new(refused)));
+    }
+
+    fn fits(&self) -> bool {
+        self.limit.borrow().as_ref().is_none_or(|(fits, _)| fits())
+    }
+
+    fn refused(&self) {
+        if let Some((_, refused)) = &*self.limit.borrow() {
+            refused();
+        }
+    }
+
+    /// Takes back the row just added, as the limit refuses it.
+    fn drop_last(&self) {
+        let last = self.rows.borrow_mut().pop();
+        if let Some((_, row, _)) = last {
+            self.group.remove(&row);
+            self.removes.borrow_mut().pop();
+            self.update();
+            self.refused();
+        }
     }
 
     /// Calls `f` after every change.

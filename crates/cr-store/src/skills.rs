@@ -270,8 +270,9 @@ impl Installation {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CharacterSkills {
     /// The points put into each rogue skill (in `rogue_skills` order) at
-    /// the rogue class's current level.
-    pub rogue: Vec<u32>,
+    /// the rogue class's current level; a kit's negative modifier makes
+    /// them negative (the file keeps them as 32-bit two's complement).
+    pub rogue: Vec<i32>,
     /// The primary discipline, and a psychic adept's second.
     pub primary: [String; 2],
     pub disciplines: Vec<String>,
@@ -298,7 +299,7 @@ pub struct RogueSkill {
     /// The name as the dialog shows it.
     pub label: String,
     /// Points put in at earlier levels.
-    pub earlier: u32,
+    pub earlier: i64,
     /// The score without the points of the current level.
     pub base_score: i32,
 }
@@ -363,14 +364,17 @@ impl SkillRules {
             .entries
             .iter()
             .map(|(name, values)| {
-                let current = values.get(column).copied().unwrap_or(0);
-                let earlier = values[..column.min(values.len())].iter().sum();
+                let current = values.get(column).map_or(0, |v| *v as i32);
+                let earlier = values[..column.min(values.len())]
+                    .iter()
+                    .map(|v| i64::from(*v as i32))
+                    .sum();
                 let score = scores.iter().find(|s| &s.0 == name).map_or(0, |s| s.1);
                 RogueSkill {
                     name: name.clone(),
                     label: crate::sheet::ability_display_name(name),
                     earlier,
-                    base_score: score - current as i32,
+                    base_score: score - current,
                 }
             })
             .collect()
@@ -443,7 +447,7 @@ impl SkillRules {
                     })
                     .map(|l| i64::from(Self::bonus_at(new, l, &skill.name)))
                     .sum();
-                i64::from(skill.earlier) + added
+                skill.earlier + added
             })
             .collect()
     }
@@ -492,7 +496,7 @@ impl SkillRules {
     /// The fewest points each skill may have at this level: the kit's
     /// bonus of the level, and at 1st level its fixed adjustment
     /// (62c7e3).
-    pub fn rogue_minimums(&self, character: &Character, new: &CharacterSkills) -> Vec<u32> {
+    pub fn rogue_minimums(&self, character: &Character, new: &CharacterSkills) -> Vec<i32> {
         let Some((_, level)) = self.rogue_level(character) else {
             return Vec::new();
         };
@@ -503,7 +507,7 @@ impl SkillRules {
                 if level == 1 {
                     least += self.kit_adjustment(character, &skill.name);
                 }
-                least.max(0) as u32
+                least as i32
             })
             .collect()
     }
@@ -598,7 +602,7 @@ impl SkillRules {
                 && let Some(i) = skills.iter().position(|s| s.name == name)
                 && let Some(value) = new.rogue.get_mut(i)
             {
-                *value = value.saturating_add_signed(amount);
+                *value = value.saturating_add(amount);
             }
         };
         if let Some(old) = new.kit_bonuses[at].take() {
@@ -672,7 +676,7 @@ impl SkillRules {
                     limit = limit.unwrap_or(0)
                 ));
             }
-            if skill.base_score + points as i32 > MOST_ROGUE_SCORE {
+            if skill.base_score + points > MOST_ROGUE_SCORE {
                 warnings.push(tr!(
                     "{skill} goes past {most}%",
                     skill = name.as_str(),
@@ -769,7 +773,7 @@ impl SkillRules {
                 d.rogue_skills
                     .entries
                     .iter()
-                    .map(|e| e.1.get(c).copied().unwrap_or(0))
+                    .map(|e| e.1.get(c).map_or(0, |v| *v as i32))
                     .collect()
             }),
             primary: d.unknown_0x1980.clone(),
@@ -949,7 +953,7 @@ impl SkillRules {
         if let Some(column) = column {
             for (entry, &points) in d.rogue_skills.entries.iter_mut().zip(&new.rogue) {
                 if let Some(value) = entry.1.get_mut(column) {
-                    *value = points;
+                    *value = points as u32;
                 }
                 // The kit's bonuses newly given to earlier levels.
                 for l in 1..level {
