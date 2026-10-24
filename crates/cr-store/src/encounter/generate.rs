@@ -144,6 +144,7 @@ impl Run<'_> {
             count,
             monster: monster.clone(),
             hit_points: Vec::new(),
+            hand_set: Vec::new(),
         };
         self.rules.roll_hit_points(&mut p, self.rand);
         p

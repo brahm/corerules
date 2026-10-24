@@ -727,7 +727,7 @@ impl<H: Host + 'static> State<H> {
             let reroll = gtk::Button::builder()
                 .label(tr("_Re-roll"))
                 .use_underline(true)
-                .tooltip_text(tr("Roll the hit points of every monster again"))
+                .tooltip_text(tr("Roll the hit points again, except those set by hand"))
                 .valign(gtk::Align::Center)
                 .build();
             let filling = Rc::new(Cell::new(false));

@@ -249,6 +249,10 @@ pub struct MonsterPackage {
     /// "Double these monsters" leaves it as it was, so it may add up to
     /// less than `count`.
     pub hit_points: Vec<(i32, i32)>,
+    /// (hit points, how many) set with the "Monsters" spinner since the
+    /// encounter was opened, which Re-roll keeps. The file has no room
+    /// for it.
+    pub hand_set: Vec<(i32, i32)>,
 }
 
 /// NPCs in an encounter (`CEncounterNPCPackageOb`): one character shared
@@ -299,6 +303,14 @@ impl MonsterPackage {
     /// `hit_points`. None removes the value; a new one goes at the end.
     pub fn set_count_with(&mut self, hit_points: i32, count: i32) {
         let count = count.clamp(0, self.most_with(hit_points));
+        match self.hand_set.iter().position(|(hp, _)| *hp == hit_points) {
+            Some(i) if count == 0 => {
+                self.hand_set.remove(i);
+            }
+            Some(i) => self.hand_set[i].1 = count,
+            None if count > 0 => self.hand_set.push((hit_points, count)),
+            None => {}
+        }
         let at = self.hit_points.iter().position(|(hp, _)| *hp == hit_points);
         match (at, count) {
             (Some(i), 0) => {
@@ -853,6 +865,7 @@ impl Encounter {
                             other => Err(wrong_object(&r.name, other)),
                         })
                         .collect::<Result<_>>()?,
+                    hand_set: Vec::new(),
                 }),
                 other => Err(wrong_object(&r.name, other)),
             })
@@ -1133,12 +1146,21 @@ impl EncounterRules {
     }
 
     /// Rolls the hit points of every monster of a package (0x6406f4):
-    /// `Σ hit dice + bonus` each, equal values merged.
+    /// `Σ hit dice + bonus` each, equal values merged. Those set by hand
+    /// ([`MonsterPackage::hand_set`]) are kept, which the original's
+    /// later patch does too; the rest are rolled.
     pub fn roll_hit_points(&self, package: &mut MonsterPackage, rand: &mut Rand) {
         let m = &package.monster;
         let (dice, bonus, sides) = (m.hit_dice, m.unknown_0x438, m.hit_die_size);
         package.hit_points.clear();
-        for _ in 0..package.count {
+        let mut left = package.count.max(0);
+        package.hand_set.retain_mut(|(_, n)| {
+            *n = (*n).min(left);
+            left -= *n;
+            *n > 0
+        });
+        package.hit_points.clone_from(&package.hand_set);
+        for _ in 0..left {
             let mut hp = 0i32;
             for _ in 0..dice {
                 hp = hp.wrapping_add(self.between(rand, 1, sides));
@@ -1170,6 +1192,7 @@ impl EncounterRules {
             count,
             monster,
             hit_points: Vec::new(),
+            hand_set: Vec::new(),
         };
         self.roll_hit_points(&mut package, rand);
         Some(package)
