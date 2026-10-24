@@ -436,6 +436,7 @@ on that page.
 | --- | --- | --- |
 | Fedora 44 or newer | `.rpm` | `sudo dnf install ./corerules-*.rpm` |
 | Ubuntu 26.04 or newer | `.deb` | `sudo apt install ./corerules_*_amd64.deb` |
+| Arch Linux, CachyOS, Omarchy | `.pkg.tar.zst` | `sudo pacman -U ./corerules-*.pkg.tar.zst` |
 | Any distribution | `.flatpak` | `flatpak install --user CoreRules-*.flatpak` |
 | Any distribution (glibc 2.43+) | `.AppImage` | `chmod +x CoreRules-*.AppImage`, then run it |
 
@@ -443,11 +444,17 @@ Ubuntu 24.04 and older releases are not supported: the `.deb` refuses to
 install there, and the Flatpak is the way to run the app on them.
 
 The app is called **Core Rules** in the applications menu (`corerules` on
-the command line); the `.deb` and `.rpm` also install the `cr` command-line
-tool. The Flatpak uses the GNOME 51 runtime from Flathub and may read and
-write your home folder, where Wine keeps Core Rules, and CDs under `/media`
+the command line); the `.deb`, `.rpm` and pacman packages also install the
+`cr` command-line tool. The Flatpak uses the GNOME 51 runtime from Flathub
+and may read and write your home folder, where Wine keeps Core Rules, and CDs under `/media`
 and `/run/media`. The AppImage bundles the GNOME 51 libraries (GTK,
 libadwaita and the rest).
+
+The pacman package is built on the current Arch Linux and fits the
+distributions that follow its repositories, such as CachyOS, Omarchy
+and EndeavourOS; update the system (`sudo pacman -Syu`) before
+installing it. Each release also has its `PKGBUILD`, which builds the
+package from the release's source with `makepkg -si`.
 
 ## Getting the rules data
 

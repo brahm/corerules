@@ -1,7 +1,7 @@
 #!/bin/sh
 # Installs the built binaries and desktop data into a staging tree.
 # Usage: packaging/install.sh DESTDIR [PREFIX] [TARGET_DIR]
-# Every package format (deb, rpm, Flatpak, AppImage) uses this layout.
+# Every package format (deb, rpm, pacman, Flatpak, AppImage) uses this layout.
 set -eu
 destdir=$1
 prefix=${2:-/usr}
