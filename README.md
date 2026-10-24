@@ -56,11 +56,19 @@ preserved by the Internet Archive:
 
 1. **Release candidate (now).** 1.0.0-rc1 goes to real users. Problems
    found are fixed in further release candidates.
-2. **1.0.** After the testing period, the last release candidate becomes
-   the final 1.0: a faithful replacement for the original program.
-3. **After 1.0.** The app starts improving on the original and moving away
-   from it, step by step, until it no longer needs the original program's
-   files to work.
+2. **1.0.** Once the release candidate is confirmed stable after the
+   testing period, the last one becomes the final 1.0: a faithful
+   replacement for the original program.
+3. **Flathub.** With 1.0 stable, the app is published on Flathub.
+4. **Windows and macOS.** Then come Windows and macOS builds, on the same
+   backend.
+5. **New features.** From then on the app improves on the original and
+   moves away from it, step by step, until it no longer needs the original
+   program's files to work.
+
+The [roadmap](docs/roadmap.md) has the plan, what is done and what each
+step needs; the [decision log](docs/decisions.md) records every decision
+that shaped the app's scope and behavior.
 
 ## Features
 
@@ -331,13 +339,14 @@ Expansion converts a 2.0 package, and leaves the 2.0 folder untouched.
 
 The app aims to do what the original does, the way it does it, and saves
 nothing the original cannot read. This is the complete list of where it
-differs, each one on purpose.
+differs, each one on purpose; the [decision log](docs/decisions.md) says
+when and why each was decided.
 
 ### Platform and setup
 
-- **Linux only, no Wine.** The app is a native GTK 4 program. macOS and
-  Windows versions are postponed; the backend crates have no GTK
-  dependency so they can be built later.
+- **Linux only, no Wine.** The app is a native GTK 4 program. Windows and
+  macOS versions come after 1.0 and the Flathub publication; the backend
+  crates have no GTK dependency so they can be built then.
 - **No installation of the original needed.** Extract Data from CD… copies
   what the app uses from the CD, its ISO image (read directly, with no
   mounting) or an existing installation into a local data folder. The
@@ -400,6 +409,15 @@ differs, each one on purpose.
 - **The first Table Roll** after the app starts begins from the value the
   original has under Wine (44), where the original's comes from Windows
   memory.
+- **Where the original hangs, the app stops:** a table that rolls again
+  while the result is within 1 of the previous one gives up after 1,000
+  tries, and the hit point arrows skip a roll that could never be lowered.
+- **Character points and slots never go below 0** in Update Character; the
+  original lets them, after asking.
+- **The database editors** save only the file that changed, each time a
+  record is saved, where the original writes every user file when its menu
+  closes; the bytes are the same. A record imported under a standard
+  record's name can still be edited while it keeps that name.
 
 ### Not included
 
@@ -411,6 +429,8 @@ differs, each one on purpose.
 - Analyze and Repair Database and Delete User Data: the original deletes
   its own Database menu when it starts, so no user reaches them there
   either.
+- Sell and Buy Character Points on the Equipment page, which the original
+  always hides.
 
 ### Same as the original, although it may surprise
 
@@ -421,6 +441,8 @@ same:
   adding to it; only the follow-up rolls of one roll are listed together.
 - A new Proficiency starts with **MAC Bonus** turned on.
 - **Move Into** in a treasure bundle offers any item.
+- **View NPC** and **Print NPC** in an encounter print the standard
+  sections, whatever sheet options the character has.
 
 ### Packages
 
