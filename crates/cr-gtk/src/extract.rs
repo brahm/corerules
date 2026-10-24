@@ -1,6 +1,7 @@
 //! Extract Data from CD… of the main menu: copies what the app uses out of
 //! a Core Rules 2.0 or Expansion CD (its ISO image or the mounted CD) or an
 //! installation into the app's data folder, which the app opens on start.
+//! The same copy is made when a read-only CD is opened as a folder.
 
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -103,6 +104,46 @@ fn extract(host: &Rc<impl Host>, source: PathBuf) {
             toast.connect_button_clicked(move |_| opener.open(dest.path.clone()));
         }
         host.add_toast(toast);
+    });
+}
+
+/// Opens, in place of `source`, an Expansion installation the app cannot
+/// write to (a mounted CD or ISO image), the copy of it in the app's data
+/// folder, making the copy first if there is none.
+pub fn open_local_copy(host: &Rc<impl Host>, source: PathBuf) {
+    let working = adw::Toast::builder()
+        .title(tr("The CD cannot be written to; copying its data…"))
+        .timeout(0)
+        .build();
+    host.add_toast(working.clone());
+    let host = host.clone();
+    glib::spawn_future_local(async move {
+        let done = gio::spawn_blocking(move || cr_store::extract::local_copy(&source)).await;
+        working.dismiss();
+        let copy = match done {
+            Ok(Ok(copy)) => copy,
+            Ok(Err(e)) => return failed(&*host, &e.to_string()),
+            Err(_) => return failed(&*host, tr("The data could not be copied")),
+        };
+        if !copy.made {
+            host.open(copy.path);
+            host.add_toast(adw::Toast::new(tr(
+                "The CD cannot be written to: opened your copy of its data",
+            )));
+            return;
+        }
+        let alert = adw::AlertDialog::builder()
+            .heading(tr("The CD Was Copied to This Computer"))
+            .body(cr_i18n::tr!(
+                "The CD cannot be written to, so its data was copied into {path}. \
+                 The characters and everything else you make are saved there, and \
+                 the app opens it on start without the CD.",
+                path = copy.path.display()
+            ))
+            .build();
+        alert.add_response("close", tr("_Close"));
+        host.open(copy.path);
+        alert.present(Some(&host.parent()));
     });
 }
 

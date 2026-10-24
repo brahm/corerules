@@ -112,6 +112,22 @@ impl Installation {
         &self.root
     }
 
+    /// Whether the app can save into this installation: false for a
+    /// mounted CD or ISO image, a folder shared read-only with the Flatpak,
+    /// or any folder the user may not write to. Everything the app makes
+    /// is saved under the installation's folders, so this is tried by
+    /// making and removing a file in each of them: permission bits do not
+    /// show a read-only mount.
+    pub fn is_writable(&self) -> bool {
+        std::iter::once(self.root.clone())
+            .chain(
+                ["Chars", "UserDbas", "Database"]
+                    .into_iter()
+                    .filter_map(|folder| self.path(folder)),
+            )
+            .all(|dir| can_write_in(&dir))
+    }
+
     /// Whether this is Core Rules 2.0 (Evermore), whose content is only
     /// imported into the Expansion: everything new is made in the
     /// Expansion's layout, so 2.0 installations are opened read-only.
@@ -168,6 +184,17 @@ impl Installation {
     }
 }
 
+fn can_write_in(dir: &Path) -> bool {
+    let probe = dir.join(format!(".corerules-write-test-{}", std::process::id()));
+    let made = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&probe)
+        .is_ok();
+    made && fs::remove_file(&probe).is_ok()
+}
+
 fn find_entry(dir: &Path, name: &str) -> Option<PathBuf> {
     let exact = dir.join(name);
     if exact.exists() {
@@ -197,6 +224,28 @@ mod tests {
             Some(root.join("Chars/INDEX.CHR"))
         );
         assert!(install.characters().unwrap().entries.is_empty());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_read_only_folder_is_not_writable() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!("cr-store-ro-{}", std::process::id()));
+        fs::create_dir_all(root.join("Database")).unwrap();
+        fs::create_dir_all(root.join("Chars")).unwrap();
+        let install = Installation::open(&root).unwrap();
+        assert!(install.is_writable());
+        assert_eq!(fs::read_dir(root.join("Chars")).unwrap().count(), 0);
+
+        let chars = root.join("Chars");
+        fs::set_permissions(&chars, fs::Permissions::from_mode(0o555)).unwrap();
+        // Root writes into any folder; the check is then left to CI.
+        let bypassed = fs::write(chars.join("probe"), b"").is_ok();
+        if !bypassed {
+            assert!(!install.is_writable());
+        }
+        fs::set_permissions(&chars, fs::Permissions::from_mode(0o755)).unwrap();
         fs::remove_dir_all(root).unwrap();
     }
 }

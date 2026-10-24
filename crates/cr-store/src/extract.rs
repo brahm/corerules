@@ -140,6 +140,51 @@ fn io_error(path: &Path, source: io::Error) -> Error {
     }
 }
 
+fn app_data_dir() -> Result<PathBuf> {
+    data_package_dir().ok_or_else(|| Error::Invalid(tr("The home folder is not known").to_owned()))
+}
+
+/// The writable copy of a read-only installation that the app opens in
+/// its place, from [`local_copy`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LocalCopy {
+    pub path: PathBuf,
+    /// Whether it was made just now; else it was already there.
+    pub made: bool,
+    /// Where the Core Rules 2.0 package that was in the data folder went.
+    pub moved: Option<PathBuf>,
+}
+
+/// Where the app saves the work done on `source`, an installation it
+/// cannot write to (a mounted CD or ISO image): the package of the same
+/// edition already in the app's data folder, which holds what was saved
+/// the last time, else a new one copied from `source` as Extract Data from
+/// CD… copies it. The original saves into the installation on the hard
+/// disk, never onto the CD.
+pub fn local_copy(source: &Path) -> Result<LocalCopy> {
+    local_copy_in(source, &app_data_dir()?)
+}
+
+/// [`local_copy`] with `data` as the app's data folder.
+pub fn local_copy_in(source: &Path, data: &Path) -> Result<LocalCopy> {
+    let extraction = Extraction::probe(source)?;
+    let (path, made, moved) = match extraction.existing_copy(data) {
+        Some(path) => (path, false, None),
+        None => {
+            let dest = extraction.install_in(data)?;
+            (dest.path, true, dest.moved)
+        }
+    };
+    let writable = crate::Installation::open(&path).is_ok_and(|i| i.is_writable());
+    if !writable {
+        return Err(Error::Invalid(tr!(
+            "Cannot save into {path}",
+            path = path.display()
+        )));
+    }
+    Ok(LocalCopy { path, made, moved })
+}
+
 /// A source found to hold Core Rules data, ready to be copied.
 pub struct Extraction {
     source: PathBuf,
@@ -214,8 +259,12 @@ impl Extraction {
     /// the data folder over from a Core Rules 2.0 package, which moves next
     /// to it under its package name.
     pub fn install(&self) -> Result<Destination> {
-        let data = data_package_dir()
-            .ok_or_else(|| Error::Invalid(tr("The home folder is not known").to_owned()))?;
+        self.install_in(&app_data_dir()?)
+    }
+
+    /// [`Extraction::install`] with `data` as the app's data folder.
+    fn install_in(&self, data: &Path) -> Result<Destination> {
+        let data = data.to_path_buf();
         let beside = |name: &str| data.with_file_name(name);
         if !data.exists() {
             self.write(&data)?;
@@ -245,6 +294,14 @@ impl Extraction {
             is_data_folder: false,
             moved: None,
         })
+    }
+
+    /// A package of this edition already in the app's data folder `data`
+    /// or next to it under its package name.
+    fn existing_copy(&self, data: &Path) -> Option<PathBuf> {
+        [data.to_path_buf(), data.with_file_name(self.package_name())]
+            .into_iter()
+            .find(|path| Extraction::probe(path).is_ok_and(|e| e.edition == self.edition))
     }
 
     /// The source as the package's README names it.
@@ -438,6 +495,58 @@ mod tests {
             Extraction::probe(&base.join("out/Chars")),
             Err(Error::NotAnInstallation(_))
         ));
+        fs::remove_dir_all(base).unwrap();
+    }
+
+    /// A CD that cannot be written to is copied into the data folder once;
+    /// opening it again opens the copy, with what was saved in it.
+    #[test]
+    fn a_read_only_cd_is_saved_into_one_local_copy() {
+        let base = std::env::temp_dir().join(format!("cr-local-copy-{}", std::process::id()));
+        let cd = base.join("cd");
+        for dir in ["DATABASE", "USERDBAS", "CHARS", "PROGRAM"] {
+            fs::create_dir_all(cd.join(dir)).unwrap();
+        }
+        for file in [
+            "DATABASE/RACE.DAT",
+            "USERDBAS/ALLOWEDU.DAT",
+            "PROGRAM/TSRP3.EXE",
+        ] {
+            fs::write(cd.join(file), file).unwrap();
+        }
+        let data = base.join("share/corerules/data");
+
+        let first = local_copy_in(&cd, &data).unwrap();
+        assert_eq!(
+            first,
+            LocalCopy {
+                path: data.clone(),
+                made: true,
+                moved: None
+            }
+        );
+        fs::write(data.join("Chars/Saved.chr"), b"saved").unwrap();
+
+        let again = local_copy_in(&cd, &data).unwrap();
+        assert_eq!((again.path.as_path(), again.made), (data.as_path(), false));
+        assert_eq!(fs::read(data.join("Chars/Saved.chr")).unwrap(), b"saved");
+
+        // The data folder holding a Core Rules 2.0 package: the Expansion
+        // takes it over, the 2.0 package moves aside, and the copy is
+        // found the next time.
+        fs::remove_dir_all(&data).unwrap();
+        let core20 = base.join("core20");
+        fs::create_dir_all(core20.join("Database")).unwrap();
+        fs::create_dir_all(core20.join("UserDbas")).unwrap();
+        Extraction::probe(&core20).unwrap().write(&data).unwrap();
+        let replaced = local_copy_in(&cd, &data).unwrap();
+        assert!(replaced.made);
+        assert_eq!(replaced.path, data);
+        assert_eq!(
+            replaced.moved,
+            Some(base.join("share/corerules/corerules-data-core20"))
+        );
+        assert!(!local_copy_in(&cd, &data).unwrap().made);
         fs::remove_dir_all(base).unwrap();
     }
 }

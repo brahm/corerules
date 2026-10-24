@@ -56,3 +56,51 @@ fn help_needs_no_data_and_mistakes_fail() {
     assert!(!missing.status.success());
     assert!(String::from_utf8_lossy(&missing.stderr).contains("/nao/existe"));
 }
+
+/// Saving into a CD that cannot be written to uses a copy of it in the data
+/// folder instead, made the first time.
+#[cfg(unix)]
+#[test]
+fn a_read_only_cd_is_saved_into_a_local_copy() {
+    use std::os::unix::fs::PermissionsExt;
+    let base = std::env::temp_dir().join(format!("cr-cli-cd-{}", std::process::id()));
+    let cd = base.join("cd");
+    for dir in ["DATABASE", "USERDBAS", "CHARS", "PROGRAM"] {
+        fs::create_dir_all(cd.join(dir)).unwrap();
+    }
+    fs::write(cd.join("PROGRAM/TSRP3.EXE"), b"").unwrap();
+    fs::write(cd.join("USERDBAS/ALLOWEDU.DAT"), b"").unwrap();
+    let read_only = |mode| {
+        for dir in ["", "DATABASE", "USERDBAS", "CHARS", "PROGRAM"] {
+            fs::set_permissions(cd.join(dir), fs::Permissions::from_mode(mode)).unwrap();
+        }
+    };
+    read_only(0o555);
+    // Root writes into any folder; the check is then left to CI.
+    if fs::write(cd.join("CHARS/probe"), b"").is_ok() {
+        read_only(0o755);
+        fs::remove_dir_all(&base).unwrap();
+        return;
+    }
+    let data = base.join("data");
+    let delete = || {
+        Command::new(env!("CARGO_BIN_EXE_cr"))
+            .args(["delete", cd.to_str().unwrap(), "Nobody"])
+            .env("HOME", &base)
+            .env("XDG_DATA_HOME", &data)
+            .output()
+            .unwrap()
+    };
+    let first = String::from_utf8_lossy(&delete().stderr).into_owned();
+    let again = String::from_utf8_lossy(&delete().stderr).into_owned();
+    read_only(0o755);
+    let copy = data.join("corerules/data");
+    assert!(
+        first.contains("cannot be written to; copied its data into"),
+        "{first}"
+    );
+    assert!(first.contains(copy.to_str().unwrap()), "{first}");
+    assert!(again.contains("using the copy in"), "{again}");
+    assert!(copy.join("UserDbas/ALLOWEDU.DAT").is_file());
+    fs::remove_dir_all(&base).unwrap();
+}

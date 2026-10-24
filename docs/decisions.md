@@ -77,6 +77,7 @@ log is complete.
 | B9 | 2026-10-24 | **(code)** Update Character refuses a purchase that would take character points or slots below 0, where the original lets them go negative after asking. | Test round item B07: negative counters confused testers and broke later pages. | PR #77 |
 | B10 | 2026-10-17 | **(code)** The user database editors write the one changed file on each save, where the originals write every user file when their menu closes. The bytes are the same the original would write. | Smaller writes, each with a `.bak` copy. | `userdb.rs` |
 | B11 | 2026-10-22 | **(code)** A user record that arrived by import with a standard record's name can still be edited as long as it keeps that name; the original refuses it. | Otherwise such records could never be fixed. | `userdb.rs` |
+| B12 | 2026-10-24 | Opening an Expansion folder the app cannot write to (the mounted CD or ISO image, or a folder shared read-only with the Flatpak) copies it into the app's data folder, as Extract Data from CD… does, and opens the copy, where everything made is saved; opening the CD again opens the same copy. `cr` does the same for commands that save. A Core Rules 2.0 CD still opens read-only from the disc. | The original is installed from the CD onto the hard disk and saves there; saving onto the CD always failed with a permission error. Reported by Brahm on Ubuntu with v1.0.0-rc1. | This PR |
 
 ## Kept the same as the original
 
