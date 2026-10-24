@@ -327,6 +327,9 @@ packages for x86-64 Linux:
 | Any distribution | `.flatpak` | `flatpak install --user CoreRules-*.flatpak` |
 | Any distribution (glibc 2.43+) | `.AppImage` | `chmod +x CoreRules-*.AppImage`, then run it |
 
+Ubuntu 24.04 and older releases are not supported: the `.deb` refuses to
+install there, and the Flatpak is the way to run the app on them.
+
 The app is called **Core Rules** in the applications menu (`corerules` on
 the command line); the `.deb` and `.rpm` also install the `cr` command-line
 tool. The Flatpak uses the GNOME 51 runtime from Flathub and may read and
@@ -431,7 +434,7 @@ cargo test
 ./target/release/corerules
 ```
 
-On Ubuntu 24.04 or newer (its packaged Rust is too old, so use
+On Ubuntu 26.04 or newer (its packaged Rust may be too old, so use
 [rustup](https://rustup.rs)):
 
 ```sh
