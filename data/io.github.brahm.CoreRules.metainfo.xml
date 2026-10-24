@@ -35,7 +35,7 @@
     <p>This is a release candidate for version 1.0.</p>
   </description>
   <launchable type="desktop-id">io.github.brahm.CoreRules.desktop</launchable>
-  <url type="homepage">https://github.com/brahm/corerules</url>
+  <url type="homepage">https://brahm.github.io/corerules/</url>
   <url type="bugtracker">https://github.com/brahm/corerules/issues</url>
   <url type="vcs-browser">https://github.com/brahm/corerules</url>
   <url type="contribute">https://github.com/brahm/corerules#development</url>

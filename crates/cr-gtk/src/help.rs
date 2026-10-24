@@ -1434,7 +1434,8 @@ pub fn about(parent: &adw::ApplicationWindow, install: Option<&Installation>) {
         .version(version)
         .release_notes_version(version)
         .release_notes(release_notes(METAINFO).unwrap_or_default())
-        .website(repository)
+        // The landing page; the repository is where issues go.
+        .website("https://brahm.github.io/corerules/")
         .issue_url(format!("{repository}/issues"))
         // The copyleft sign, by the author's choice.
         .copyright("🄯 2026 Wagner Brahm")
