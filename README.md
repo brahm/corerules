@@ -524,9 +524,11 @@ classes, kits, spells, monsters, modules and the AD&D Core Rules User
 Database), converted to the Expansion's format and consolidated into
 36,525 items, with the 668 pictures that came with them. Monster types,
 monsters, races and characters show those pictures in the app. It ships as its own self-installing AppImage
-(`crates/cr-addons`, GTK 4 and libadwaita), published on GitHub Packages as
-[`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons),
-and needs the app 0.7.2 or newer. The installer finds the app on its own,
+(`crates/cr-addons`, GTK 4 and libadwaita):
+[download it here](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage).
+It is also on GitHub Packages as
+[`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons)
+(`oras pull ghcr.io/brahm/corerules-community-addons:latest`), and needs the app 0.7.2 or newer. The installer finds the app on its own,
 whether it came as the Flatpak, the .deb, .rpm or pacman package or an AppImage,
 and speaks the app's six languages. Its [README](addons/README.md) says
 what is inside, how it was built and how to install it.
