@@ -8,7 +8,9 @@
 its **Expansion** (TSR/Evermore, 1998-1999), the character manager and
 Dungeon Master's toolkit for Advanced Dungeons & Dragons 2nd Edition. It is
 written in Rust with GTK 4 and libadwaita and runs natively, with no Wine
-and no Windows.
+and no Windows. It comes as a `.deb` for Ubuntu, an `.rpm` for Fedora, a
+pacman package for Arch Linux (and CachyOS and Omarchy), a Flatpak and an
+AppImage; see [Installing](#installing).
 
 Every screen of the original program is here: the Character Generator with
 Create, Enter and Update Character, kits and Player's Option, the character
@@ -422,9 +424,10 @@ same:
 
 ### Packages
 
-- Packages target Ubuntu 26.04 and Fedora 44 or newer. The `.deb` refuses
-  to install on Ubuntu 24.04 and older; the Flatpak runs there. The
-  AppImage and the Flatpak use the GNOME 51 libraries.
+- Packages target Ubuntu 26.04, Fedora 44 or newer and the current Arch
+  Linux. The `.deb` refuses to install on Ubuntu 24.04 and older; the
+  Flatpak runs there. The AppImage and the Flatpak use the GNOME 51
+  libraries.
 
 ## Installing
 
@@ -497,7 +500,7 @@ monsters, races and characters show those pictures in the app. It ships as its o
 (`crates/cr-addons`, GTK 4 and libadwaita), published on GitHub Packages as
 [`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons),
 and needs the app 0.7.2 or newer. The installer finds the app on its own,
-whether it came as the Flatpak, the .deb or .rpm package or an AppImage,
+whether it came as the Flatpak, the .deb, .rpm or pacman package or an AppImage,
 and speaks the app's six languages. Its [README](addons/README.md) says
 what is inside, how it was built and how to install it.
 
@@ -580,31 +583,41 @@ cargo build --release
 cargo test
 ```
 
+On Arch Linux and the distributions built on it:
+
+```sh
+sudo pacman -S --needed base-devel cargo gtk4 libadwaita
+cargo build --release
+cargo test
+```
+
 To install a build system-wide, run `packaging/install.sh / /usr/local`
 as root after `cargo build --release`.
 
 #### Packages
 
-`packaging/` builds every package (the `.rpm` and Flatpak compile from source,
-the others package `target/release`):
+`packaging/` builds every package (the `.rpm`, pacman package and Flatpak
+compile from source, the others package `target/release`):
 
 ```sh
 packaging/deb/build.sh 0.1.0        # dist/corerules_0.1.0_amd64.deb (on Ubuntu 26.04)
 packaging/rpm/build.sh 0.1.0        # dist/corerules-0.1.0-1.fc44.x86_64.rpm (on Fedora 44, needs rpm-build)
+packaging/arch/build.sh 0.1.0       # dist/corerules-0.1.0-1-x86_64.pkg.tar.zst and its PKGBUILD (on Arch, not as root)
 packaging/appimage/build-in-sdk.sh 0.1.0  # dist/CoreRules-0.1.0-x86_64.AppImage (in the GNOME 51 SDK)
 flatpak-builder --user --install-deps-from=flathub --install build \
     packaging/flatpak/io.github.brahm.CoreRules.yml
 ```
 
-The Packages workflow in GitHub Actions builds all four, installs each one
-on clean Ubuntu 26.04, Ubuntu latest, Fedora 44 and Fedora latest
-containers and starts the app there once in each of its six languages,
+The Packages workflow in GitHub Actions builds all five, installs each one
+on clean Ubuntu 26.04, Ubuntu latest, Fedora 44, Fedora latest, Arch Linux
+and CachyOS containers and starts the app there once in each of its six languages,
 checking that every text on screen is in that language
 (`packaging/smoke-test.sh`). Pushing a `v*` tag, or running the workflow
 with a tag, publishes them as a release; `packaging/release-notes.md` is its
 description. A tag with a suffix, such as `v1.0.0-rc1`, is published as
 a pre-release (a release candidate for `-rc` tags); the `.deb` and `.rpm`
-write the suffix with a tilde (`1.0.0~rc1`) so that 1.0.0 sorts after it.
+write the suffix with a tilde (`1.0.0~rc1`) and the pacman package drops
+the hyphen (`1.0.0rc1`), so that 1.0.0 sorts after it.
 
 ### Running from a source checkout
 
