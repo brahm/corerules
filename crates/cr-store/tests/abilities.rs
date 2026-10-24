@@ -122,3 +122,19 @@ fn package_abilities_stay_and_bought_ones_go_with_the_subrace() {
     gray.racial.clear();
     assert_eq!(rules.points_left(&ours, &gray), 3);
 }
+
+#[test]
+fn a_core_rules_character_keeps_a_subrace_that_is_not_standard() {
+    let Some(rules) = rules() else { return };
+    // Coralina, a Core Rules Aquatic (Sea) elf: the Edit Character tests
+    // saw her become a High elf on a save that changed nothing.
+    let mut coralina = read(&fixtures().join("update/coralina.dat"));
+    let subrace = coralina.data.subrace.clone();
+    assert_eq!(coralina.data.skills_and_powers, 0);
+    assert!(rules.subraces(&coralina).contains(&subrace));
+    let before = coralina.clone();
+    let same = rules.abilities_of(&coralina);
+    assert_eq!(same.subrace, subrace);
+    rules.apply(&mut coralina, &same).unwrap();
+    assert_eq!(coralina, before);
+}
