@@ -90,11 +90,11 @@ chmod +x CoreRules-Community-Addons-x86_64.AppImage
 ```
 
 The same file is published on
-[GitHub Packages](https://github.com/brahm?tab=packages&repo_name=corerules)
+[GitHub Packages](https://github.com/brahm/corerules/packages)
 in two forms. GitHub Packages has no registry for plain files, so:
 
 * **As the AppImage file**, in the Maven package
-  `io.github.brahm.corerules-community-addons`. Its page lists
+  [`io.github.brahm.corerules-community-addons`](https://github.com/brahm/corerules/packages/3339900). Its page lists
   `corerules-community-addons-VERSION-x86_64.AppImage` under Assets, to
   download from the browser. Command-line downloads from that registry
   need a GitHub token, even for a public package.

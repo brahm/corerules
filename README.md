@@ -547,9 +547,9 @@ This link always gives the newest build; the
 [addons release](https://github.com/brahm/corerules/releases/tag/addons)
 also keeps each version, such as
 [`CoreRules-Community-Addons-1.0.0-x86_64.AppImage`](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-1.0.0-x86_64.AppImage).
-The same AppImage is on [GitHub Packages](https://github.com/brahm?tab=packages&repo_name=corerules)
+The same AppImage is on [GitHub Packages](https://github.com/brahm/corerules/packages)
 twice: as the file itself in the Maven package
-`io.github.brahm.corerules-community-addons`, whose page lists
+[`io.github.brahm.corerules-community-addons`](https://github.com/brahm/corerules/packages/3339900), whose page lists
 `corerules-community-addons-1.0.0-x86_64.AppImage` for download, and as the
 OCI artifact
 [`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons)
