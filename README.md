@@ -20,12 +20,12 @@ the help. The app reads and writes the original's own data files, so
 characters, monsters, encounters and packages made in either program open
 in the other.
 
-> **Release candidate.** Version 1.0.0-rc2 is the release candidate for
-> 1.0. Every feature was checked against the original programs and went
-> through a full round of manual tests. It now needs real use: keep a copy
-> of your `Chars` and `UserDbas` folders, and
-> [report](https://github.com/brahm/corerules/issues) anything that is
-> wrong or that works differently from the original.
+> **Version 1.0.0, the first stable release.** Every feature was checked
+> against the original programs and went through a full round of manual
+> tests, and players and Dungeon Masters ran the release candidate on
+> Fedora 45 beta, Ubuntu 26.10, Bazzite, Arch Linux and CachyOS, where it
+> worked as it should. [Download it](#installing) for your distribution,
+> or visit the [website](https://brahm.github.io/corerules/).
 
 ![The character list with a character made in the original program](docs/screenshots/character.png)
 
@@ -54,11 +54,11 @@ preserved by the Internet Archive:
 
 ## Status and roadmap
 
-1. **Release candidate (now).** 1.0.0-rc2 goes to real users. Problems
-   found are fixed in further release candidates.
-2. **1.0.** Once the release candidate is confirmed stable after the
-   testing period, the last one becomes the final 1.0: a faithful
-   replacement for the original program.
+1. **Release candidates (done).** 1.0.0-rc1 and 1.0.0-rc2 went to real
+   users, and the problems they found were fixed.
+2. **1.0 (now).** The release candidate was confirmed stable on Fedora 45
+   beta, Ubuntu 26.10, Bazzite, Arch Linux and CachyOS, and became 1.0.0:
+   a faithful replacement for the original program.
 3. **Flathub.** With 1.0 stable, the app is published on Flathub.
 4. **Windows and macOS.** Then come Windows and macOS builds, on the same
    backend.
@@ -454,16 +454,32 @@ same:
 ## Installing
 
 Every [release](https://github.com/brahm/corerules/releases) has
-packages for x86-64 Linux. Release candidates are marked as pre-releases
-on that page.
+packages for x86-64 Linux. These are the files of
+[Core Rules 1.0.0](https://github.com/brahm/corerules/releases/tag/v1.0.0),
+the latest release:
 
-| System | Package | Install |
+| System | Download | Install |
 | --- | --- | --- |
-| Fedora 44 or newer | `.rpm` | `sudo dnf install ./corerules-*.rpm` |
-| Ubuntu 26.04 or newer | `.deb` | `sudo apt install ./corerules_*_amd64.deb` |
-| Arch Linux, CachyOS, Omarchy | `.pkg.tar.zst` | `sudo pacman -U ./corerules-*.pkg.tar.zst` |
-| Any distribution | `.flatpak` | `flatpak install --user CoreRules-*.flatpak` |
-| Any distribution (glibc 2.43+) | `.AppImage` | `chmod +x CoreRules-*.AppImage`, then run it |
+| Fedora 44 or newer | [`corerules-1.0.0-1.fc44.x86_64.rpm`](https://github.com/brahm/corerules/releases/download/v1.0.0/corerules-1.0.0-1.fc44.x86_64.rpm) | `sudo dnf install ./corerules-1.0.0-1.fc44.x86_64.rpm` |
+| Ubuntu 26.04 or newer | [`corerules_1.0.0_amd64.deb`](https://github.com/brahm/corerules/releases/download/v1.0.0/corerules_1.0.0_amd64.deb) | `sudo apt install ./corerules_1.0.0_amd64.deb` |
+| Arch Linux, CachyOS, Omarchy | [`corerules-1.0.0-1-x86_64.pkg.tar.zst`](https://github.com/brahm/corerules/releases/download/v1.0.0/corerules-1.0.0-1-x86_64.pkg.tar.zst) | `sudo pacman -U ./corerules-1.0.0-1-x86_64.pkg.tar.zst` |
+| Any distribution with Flatpak, such as Bazzite | [`CoreRules-1.0.0.flatpak`](https://github.com/brahm/corerules/releases/download/v1.0.0/CoreRules-1.0.0.flatpak) | `flatpak install --user CoreRules-1.0.0.flatpak` |
+| Any distribution (glibc 2.43+) | [`CoreRules-1.0.0-x86_64.AppImage`](https://github.com/brahm/corerules/releases/download/v1.0.0/CoreRules-1.0.0-x86_64.AppImage) | `chmod +x CoreRules-1.0.0-x86_64.AppImage`, then run it |
+| Community add-ons (installer) | [`CoreRules-Community-Addons-x86_64.AppImage`](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage) | `chmod +x CoreRules-Community-Addons-x86_64.AppImage`, then run it |
+
+The release also has the
+[`PKGBUILD`](https://github.com/brahm/corerules/releases/download/v1.0.0/PKGBUILD)
+of the pacman package and
+[`SHA256SUMS`](https://github.com/brahm/corerules/releases/download/v1.0.0/SHA256SUMS),
+the checksums of every file. Before 1.0 there were betas (0.x) and release
+candidates (`-rc`), marked as pre-releases on the releases page; the 1.0.0
+packages replace a release candidate on update.
+
+Users ran 1.0 on Fedora 45 beta (the `.rpm`), Ubuntu 26.10 (the `.deb`),
+Bazzite (the Flatpak and the AppImage, as on any Fedora Atomic desktop),
+Arch Linux and CachyOS (the pacman package). The release workflow also
+installs and starts every package on clean Ubuntu 26.04 and 26.10,
+Fedora 44 and 45, Arch Linux and CachyOS systems.
 
 Ubuntu 24.04 and older releases are not supported: the `.deb` refuses to
 install there, and the Flatpak is the way to run the app on them.
@@ -524,19 +540,28 @@ classes, kits, spells, monsters, modules and the AD&D Core Rules User
 Database), converted to the Expansion's format and consolidated into
 36,525 items, with the 668 pictures that came with them. Monster types,
 monsters, races and characters show those pictures in the app. It ships as its own self-installing AppImage
-(`crates/cr-addons`, GTK 4 and libadwaita):
-[download it here](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage).
-It is also on GitHub Packages as
+(`crates/cr-addons`, GTK 4 and libadwaita), version 1.0.0 with the app:
+
+**[Download CoreRules-Community-Addons-x86_64.AppImage](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage)**
+
+This link always gives the newest build; the
+[addons release](https://github.com/brahm/corerules/releases/tag/addons)
+also keeps each version, such as
+[`CoreRules-Community-Addons-1.0.0-x86_64.AppImage`](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-1.0.0-x86_64.AppImage).
+The same AppImage is on [GitHub Packages](https://github.com/brahm?tab=packages&repo_name=corerules)
+twice: as the file itself in the Maven package
+`io.github.brahm.corerules-community-addons`, whose page lists
+`corerules-community-addons-1.0.0-x86_64.AppImage` for download, and as the
+OCI artifact
 [`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons)
-(`oras pull ghcr.io/brahm/corerules-community-addons:latest`), and needs the app 0.7.2 or newer. The installer finds the app on its own,
+(`oras pull ghcr.io/brahm/corerules-community-addons:latest`). It needs the app 0.7.2 or newer. The installer finds the app on its own,
 whether it came as the Flatpak, the .deb, .rpm or pacman package or an AppImage,
 and speaks the app's six languages. Its [README](addons/README.md) says
 what is inside, how it was built and how to install it.
 
 ## Reporting problems
 
-This is a release candidate, and real use is what it needs now. Please
-[open an issue](https://github.com/brahm/corerules/issues) for anything
+Please [open an issue](https://github.com/brahm/corerules/issues) for anything
 that crashes, saves something the original cannot open, or works
 differently from the original in a way the list above does not mention.
 Say which package you installed, which disc your data came from, and
@@ -638,8 +663,8 @@ flatpak-builder --user --install-deps-from=flathub --install build \
 ```
 
 The Packages workflow in GitHub Actions builds all five, installs each one
-on clean Ubuntu 26.04, Ubuntu latest, Fedora 44, Fedora latest, Arch Linux
-and CachyOS containers and starts the app there once in each of its six languages,
+on clean Ubuntu 26.04, 26.10 and latest, Fedora 44, 45 and latest, Arch
+Linux and CachyOS containers and starts the app there once in each of its six languages,
 checking that every text on screen is in that language
 (`packaging/smoke-test.sh`). Pushing a `v*` tag, or running the workflow
 with a tag, publishes them as a release; `packaging/release-notes.md` is its

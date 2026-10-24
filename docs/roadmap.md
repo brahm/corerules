@@ -6,18 +6,21 @@ what comes after 1.0. The decisions that shaped it are in the
 
 ## Where we are
 
-**1.0.0-rc2, published on 2026-10-24 as a pre-release.** It fixes saving
-when the mounted Expansion CD is opened as a folder (PR #85), the first
-problem real users of 1.0.0-rc1 reported. Like rc1, it does everything
+**1.0.0, published on 2026-10-24, the first stable release.** Its users
+ran 1.0.0-rc2 on Fedora 45 beta, Ubuntu 26.10, Bazzite, Arch Linux and
+CachyOS, and Wagner Brahm confirmed it stable, so 1.0.0 is the code of
+1.0.0-rc2 with the new About window (PR #89). It does everything
 the original AD&D Core Rules 2.0 Expansion does, except what was left out on
 purpose ([decision log](decisions.md#left-out-on-purpose)). Every feature was
 checked against the original programs, and the 0.9.0 beta went through a
 full round of manual tests whose 57 problems were fixed (PRs #76 to #79,
 plus #80 and #81 for the items that needed a decision). It ships as a
 `.deb` (Ubuntu 26.04), an `.rpm` (Fedora 44), a pacman package (Arch Linux,
-CachyOS, Omarchy), a Flatpak and an AppImage (both on GNOME 51).
+CachyOS, Omarchy), a Flatpak and an AppImage (both on GNOME 51), and the
+Community Add-ons Collection as its own AppImage, version 1.0.0. The
+[website](https://brahm.github.io/corerules/) links every file.
 
-The release candidate now goes to real users. No issue is open on GitHub.
+The next step is the Flathub publication. No issue is open on GitHub.
 
 ## The original plan (2026-10-09)
 
@@ -45,6 +48,7 @@ taken out of scope.
 | Test round | Manual test notebook run on 0.9.0, 57 problems fixed by severity | Done (PRs #76 to #81) |
 | Release candidate | 1.0.0-rc1, README rewritten in English with every difference from the original, pacman package | Done (PRs #82 and #83) |
 | Real-user fixes | 1.0.0-rc2: saving with the mounted CD opened | Done (PR #85) |
+| 1.0 | Release candidate confirmed stable by its users, 1.0.0 released with the new About window and the website | Done |
 | Flathub | Publication on Flathub | Moved after 1.0 |
 
 ### Releases
@@ -62,13 +66,14 @@ taken out of scope.
 | 0.9.0 | 2026-10-23 | Parity with the original |
 | 1.0.0-rc1 | 2026-10-24 | Fixes from the test round, pacman package |
 | 1.0.0-rc2 | 2026-10-24 | Saving with the mounted CD opened goes into a local copy |
+| 1.0.0 | 2026-10-24 | First stable release, the About window, the website |
 
-## After the release candidate
+## After 1.0
 
 The steps run in order; each starts when the one before it is closed. Bug
 reports are fixed at every step, and `main` stays green.
 
-### Step 1: confirm that 1.0 is stable
+### Step 1: confirm that 1.0 is stable (done)
 
 The release candidate is used by real players and Dungeon Masters. Problems
 they report are fixed and shipped as further candidates (`1.0.0-rc2`, …).
@@ -87,7 +92,9 @@ Then the last candidate is tagged `v1.0.0` (same code, final version
 number), the README drops the release candidate notice, and the metainfo
 release type becomes `stable`.
 
-Needs Wagner Brahm: the length of the testing period and the go-ahead for 1.0.
+Done on 2026-10-24: Wagner Brahm's friends ran 1.0.0-rc2 on Fedora 45
+beta, Ubuntu 26.10, Bazzite, Arch Linux and CachyOS, found nothing wrong,
+and Wagner Brahm gave the go-ahead (decision P13).
 
 ### Step 2: publish on Flathub
 

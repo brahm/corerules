@@ -6,7 +6,7 @@ members = ["crates/cr-i18n", "crates/cr-formats", "crates/cr-store", "crates/cr-
 default-members = ["crates/cr-i18n", "crates/cr-formats", "crates/cr-store", "crates/cr-cli", "crates/cr-gtk"]
 
 [workspace.package]
-version = "1.0.0-rc2"
+version = "1.0.0"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/brahm/corerules"
