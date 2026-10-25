@@ -1458,7 +1458,7 @@ msgstr "Habilidades"
 #: crates/cr-gtk/src/main.rs:2671
 #: crates/cr-store/src/userdb/parts/pages.rs:264
 msgid "Skills"
-msgstr "Habilidades"
+msgstr "Talentos"
 
 #: crates/cr-app/src/editor/proficiencies.rs:28
 #: crates/cr-gtk/src/nonweapon.rs:60

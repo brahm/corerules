@@ -68,6 +68,50 @@ fn catalogs_are_complete() {
     );
 }
 
+/// Texts shown side by side as choices, whose translations must differ:
+/// Windows' SelectorBar tells its tabs apart by their text alone.
+#[test]
+fn texts_shown_side_by_side_stay_apart() {
+    // The character editor's tabs.
+    let groups: &[&[&str]] = &[&[
+        "Details",
+        "Abilities",
+        "Combat",
+        "Proficiencies",
+        "Skills",
+        "Spells",
+        "Equipment",
+    ]];
+    let mut problems = Vec::new();
+    for lang in Language::ALL
+        .into_iter()
+        .filter(|l| *l != Language::English)
+    {
+        let file = format!("{}.po", lang.code());
+        let text = std::fs::read_to_string(extract::po_dir().join(&file)).unwrap();
+        let entries = po::parse(&text);
+        let translated = |msgid: &str| {
+            entries
+                .iter()
+                .find(|e| e.key() == msgid)
+                .map_or(msgid.to_owned(), |e| e.msgstr[0].clone())
+        };
+        for group in groups {
+            for (i, a) in group.iter().enumerate() {
+                for b in &group[i + 1..] {
+                    if translated(a) == translated(b) {
+                        problems.push(format!(
+                            "{file}: {a:?} and {b:?} are both {:?}",
+                            translated(a)
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
 /// The metainfo tells software centers which languages the app speaks;
 /// the catalogs are built into the program, so nothing generates the list.
 #[test]
