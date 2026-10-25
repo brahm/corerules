@@ -34,11 +34,13 @@ use std::sync::Arc;
 
 use adw::prelude::*;
 use cr_app::action;
+use cr_app::library::{self, Commands};
+use cr_app::records;
 use cr_formats::character::Character;
 use cr_i18n::{tr, tr_noop, trn};
 use cr_store::Installation;
 use cr_store::advance::{AdvanceRules, Advancement, adjust_psionic_points, psionic_total};
-use cr_store::catalog::{ENCOUNTER_KEY, Entry, Section, TABLE_KEY, TEMPLATES, TREASURE_KEY};
+use cr_store::catalog::{ENCOUNTER_KEY, Entry, Section, TABLE_KEY, TREASURE_KEY};
 use cr_store::choices::{Caster, caster};
 use cr_store::dual::{ClassChoice, ClassTable};
 use cr_store::edit::{ABILITY_RANGE, CharacterDetails};
@@ -273,7 +275,7 @@ impl Window {
             move |_| {
                 let key = this.browser.current_key.borrow().clone();
                 let host = Rc::new(this.clone());
-                if let Some(name) = template_name(&key) {
+                if let Some(name) = library::template_name(&key) {
                     encounter::create_from_template(&host, name)
                 } else if let Some(name) = key.strip_prefix(TABLE_KEY) {
                     encounter::roll_and_generate(&host, name)
@@ -295,7 +297,7 @@ impl Window {
                     };
                     let toasts = this.toasts.clone();
                     let toast = move |m: &str| toasts.add_toast(adw::Toast::new(m));
-                    match monster_key(&key) {
+                    match library::monster_key(&key) {
                         Some((name, custom)) => {
                             help::monster(&this.window, install, name, custom, print, toast)
                         }
@@ -952,14 +954,7 @@ impl Window {
     /// Expansion character's sections and border can be changed there.
     fn show_sheet(&self, file: &str) {
         let loaded = match &*self.install.borrow() {
-            Some(install) => install.character(file).and_then(|c| {
-                let rules = install.sheet_rules()?;
-                let choice = (rules.flavor() == cr_store::sheet::Flavor::Expansion
-                    && !install.is_core20())
-                .then(|| rules.sheet_choice(&c))
-                .transpose()?;
-                Ok((rules.sheet(&c)?, choice))
-            }),
+            Some(install) => cr_app::sheets::character(install, file),
             None => return,
         };
         let (sheet, choice) = match loaded {
@@ -971,11 +966,9 @@ impl Window {
             save: Box::new({
                 let (this, file) = (self.clone(), file.to_owned());
                 move |choice| match &*this.install.borrow() {
-                    Some(install) => install
-                        .save_sheet_choice(&file, choice)
-                        .and_then(|()| install.character(&file))
-                        .and_then(|c| install.sheet(&c))
-                        .map_err(|e| e.to_string()),
+                    Some(install) => {
+                        cr_app::sheets::choose(install, &file, choice).map_err(|e| e.to_string())
+                    }
                     None => Err(String::new()),
                 }
             }),
@@ -1288,38 +1281,6 @@ impl encounter::Host for Window {
 /// The template a catalog key names.
 /// The name of the monster with detail key `key`, and whether it is the
 /// user's.
-fn monster_key(key: &str) -> Option<(&str, bool)> {
-    cr_store::userdb::parse_key(key)
-        .filter(|(section, ..)| *section == "monsters")
-        .map(|(_, origin, name)| (name, origin == cr_store::userdb::Origin::Custom))
-}
-
-/// Whether the record with detail key `key` shows a monster type's
-/// picture: a monster type, monster, template or saved encounter, the
-/// records of the original's Monsters screen.
-fn is_monster(key: &str) -> bool {
-    key.starts_with(ENCOUNTER_KEY)
-        || cr_store::userdb::parse_key(key).is_some_and(|(section, ..)| {
-            ["monsters", "monster-types", TEMPLATES].contains(&section)
-        })
-}
-
-/// Whether the record with detail key `key` has a page to view and print
-/// ([`cr_store::Installation::page`]).
-fn has_page(key: &str) -> bool {
-    [ENCOUNTER_KEY, TABLE_KEY, TREASURE_KEY]
-        .iter()
-        .any(|p| key.starts_with(p))
-        || cr_store::userdb::parse_key(key)
-            .is_some_and(|(section, ..)| section == TEMPLATES || section == "treasure-tables")
-}
-
-fn template_name(key: &str) -> Option<&str> {
-    cr_store::userdb::parse_key(key)
-        .filter(|(section, ..)| *section == TEMPLATES)
-        .map(|(.., name)| name)
-}
-
 fn open_menu() -> gtk::MenuButton {
     let menu = gio::Menu::new();
     menu.append(
@@ -1472,46 +1433,26 @@ impl DetailPane {
         self.view
             .set_content(Some(&detail(entry, self.full_screen.borrow().clone())));
         let key = &entry.key;
-        let character = !key.is_empty() && !key.contains(':');
         let writable = !self.read_only.get();
-        self.edit_button.set_visible(
-            writable
-                && (character
-                    || userdb::editable(key)
-                    || [TREASURE_KEY, ENCOUNTER_KEY, TABLE_KEY]
-                        .iter()
-                        .any(|p| key.starts_with(p))),
-        );
-        self.copy_button.set_visible(
-            writable
-                && [TREASURE_KEY, ENCOUNTER_KEY]
-                    .iter()
-                    .any(|p| key.starts_with(p)),
-        );
-        self.udb_actions.update(if writable { key } else { "" });
-        self.sheet_button.set_visible(character);
-        self.convert_button
-            .set_visible(writable && character && entry.npc);
-        self.npc_button
-            .set_visible(writable && character && !entry.npc);
-        self.delete_button.set_visible(writable && character);
+        let commands = Commands::of(entry, writable);
+        self.edit_button.set_visible(commands.edit);
+        self.copy_button.set_visible(commands.copy);
+        self.udb_actions
+            .update(if commands.records { key } else { "" });
+        self.sheet_button.set_visible(commands.sheet);
+        self.convert_button.set_visible(commands.to_character);
+        self.npc_button.set_visible(commands.to_npc);
+        self.delete_button.set_visible(commands.delete);
+        self.generate_button.set_visible(commands.generate);
         self.generate_button
-            .set_visible(writable && (template_name(key).is_some() || key.starts_with(TABLE_KEY)));
-        self.generate_button
-            .set_tooltip_text(Some(if key.starts_with(TABLE_KEY) {
-                tr("Roll and Create Encounter")
-            } else {
-                tr("Create Encounter")
-            }));
-        let monster = monster_key(key).is_some();
-        let page = monster || has_page(key);
-        self.view_button.set_visible(page);
-        self.view_button.set_icon_name(if monster {
+            .set_tooltip_text(Some(library::generate_label(key)));
+        self.view_button.set_visible(commands.view);
+        self.view_button.set_icon_name(if commands.monster {
             "help-browser-symbolic"
         } else {
             "document-print-preview-symbolic"
         });
-        self.print_button.set_visible(page);
+        self.print_button.set_visible(commands.print);
         self.current_key.borrow_mut().clone_from(&entry.key);
     }
 
@@ -1658,34 +1599,35 @@ impl Browser {
             .tooltip_text(tr("Magic Only"))
             .visible(false)
             .build();
+        // The section shown, by its place in `sections`.
+        let current = Rc::new(RefCell::new(0usize));
         let filter = gtk::CustomFilter::new({
             let (type_filter, magic_filter) = (type_filter.clone(), magic_filter.clone());
             let (search, origin_filter) = (search.clone(), origin_filter.clone());
             let (party_filter, party_choices) = (party_filter.clone(), party_choices.clone());
+            let (sections, current) = (sections.clone(), current.clone());
             move |item| {
-                let needle = search.text().to_lowercase();
                 let item = item.downcast_ref::<glib::BoxedAnyObject>().unwrap();
                 let row = item.borrow::<Row>();
-                let party = party_choices
-                    .borrow()
-                    .get(party_filter.selected() as usize)
-                    .cloned()
-                    .flatten();
-                let in_party = match (&row.party, party) {
-                    (Some(theirs), Some(wanted)) => theirs.eq_ignore_ascii_case(&wanted),
-                    _ => true,
+                let filter = library::Filter {
+                    search: search.text().into(),
+                    origins: cr_store::userdb::Filter::of(origin_filter.selected()),
+                    party: party_choices
+                        .borrow()
+                        .get(party_filter.selected() as usize)
+                        .cloned()
+                        .flatten(),
+                    part_type: (type_filter.selected() as usize)
+                        .checked_sub(1)
+                        .and_then(|i| OTHER_TYPES.get(i))
+                        .map(|(id, ..)| *id),
+                    magic_only: magic_filter.is_active(),
                 };
-                let of_type = match (type_filter.selected() as usize).checked_sub(1) {
-                    Some(i) => row.part_type == OTHER_TYPES.get(i).map(|(id, ..)| *id),
-                    None => true,
-                };
-                userdb::passes(&origin_filter, row.origin)
-                    && in_party
-                    && of_type
-                    && (row.magic || !magic_filter.is_active() || !magic_filter.is_visible())
-                    && (needle.is_empty()
-                        || row.title.to_lowercase().contains(&needle)
-                        || row.subtitle.to_lowercase().contains(&needle))
+                let sections = sections.borrow();
+                sections
+                    .get(*current.borrow())
+                    .and_then(|s| Some((s.id, s.entries.get(row.index)?)))
+                    .is_some_and(|(id, entry)| filter.shows(id, entry))
             }
         });
         origin_filter.connect_selected_notify({
@@ -1832,7 +1774,6 @@ impl Browser {
         outer.set_content(Some(&inner_page));
 
         // Behaviour.
-        let current = Rc::new(RefCell::new(0usize));
         sidebar_list.connect_row_selected({
             let sections = sections.clone();
             let (model, search, inner) = (model.clone(), search.clone(), inner.clone());
@@ -1847,34 +1788,17 @@ impl Browser {
                 let sections = sections.borrow();
                 let section = &sections[index];
                 *current.borrow_mut() = index;
-                let new = match section.id {
-                    "characters" => {
-                        Some((action::NEW_CHARACTER.detailed, tr("New Character").into()))
-                    }
-                    "encounters" => {
-                        Some((action::NEW_ENCOUNTER.detailed, tr("New Encounter").into()))
-                    }
-                    "tables" => {
-                        Some((action::NEW_TABLE.detailed, tr("New Encounter Table").into()))
-                    }
-                    "treasure" => {
-                        Some((action::ROLL_TREASURE.detailed, tr("Roll Treasure").into()))
-                    }
-                    id if userdb::can_create(id) => {
-                        Some((action::UDB_NEW.detailed, userdb::new_tooltip(id)))
-                    }
-                    _ => None,
-                };
+                let new = library::new_command(section.id);
                 new_button.set_visible(new.is_some());
                 if let Some((action, tooltip)) = new {
-                    new_button.set_action_name(Some(action));
+                    new_button.set_action_name(Some(action.detailed));
                     new_button.set_tooltip_text(Some(&tooltip));
                 }
-                origin_filter.set_visible(userdb::has_origins(section.id));
+                origin_filter.set_visible(records::has_origins(section.id));
                 party_filter
                     .set_visible(section.id == "characters" && party_choices.borrow().len() > 1);
                 type_filter.set_visible(section.id == OTHER_SECTION);
-                magic_filter.set_visible(is_parts(section.id));
+                magic_filter.set_visible(library::is_parts(section.id));
                 entries_page.set_title(section.title);
                 inner_page.set_title(section.title);
                 search.set_text("");
@@ -1887,12 +1811,6 @@ impl Browser {
                             index: i,
                             title: e.title.clone(),
                             subtitle: e.subtitle.clone(),
-                            origin: userdb::origin_of(&e.key),
-                            party: (section.id == "characters").then(|| e.party.clone()),
-                            part_type: cr_store::userdb::parse_key(&e.key).and_then(|(id, ..)| {
-                                OTHER_TYPES.iter().map(|(i, ..)| *i).find(|i| *i == id)
-                            }),
-                            magic: e.magic,
                         })
                     })
                     .collect();
@@ -2013,47 +1931,17 @@ impl Browser {
     /// Fills the party filter with the characters' parties, keeping the
     /// choice when its party is still there.
     fn load_parties(&self, sections: &[Section]) {
-        let mut parties: Vec<String> = Vec::new();
-        let mut unassigned = false;
-        for entry in sections
-            .iter()
-            .filter(|s| s.id == "characters")
-            .flat_map(|s| &s.entries)
-        {
-            if entry.party.is_empty() {
-                unassigned = true;
-            } else if !parties.iter().any(|p| p.eq_ignore_ascii_case(&entry.party)) {
-                parties.push(entry.party.clone());
-            }
-        }
-        parties.sort_by_cached_key(|p| cr_store::collate::sort_key(p));
-        let mut choices = vec![None];
-        if !parties.is_empty() {
-            choices.extend(parties.into_iter().map(Some));
-            if unassigned {
-                choices.push(Some(String::new()));
-            }
-        }
+        let choices = library::parties(sections);
         let chosen = self
             .party_choices
             .borrow()
             .get(self.party_filter.selected() as usize)
             .cloned()
             .flatten();
-        let position = chosen
-            .and_then(|c| {
-                choices
-                    .iter()
-                    .position(|p| p.as_ref().is_some_and(|p| p.eq_ignore_ascii_case(&c)))
-            })
-            .unwrap_or(0);
+        let position = library::party_position(&choices, chosen.as_deref());
         let names: Vec<&str> = choices
             .iter()
-            .map(|c| match c.as_deref() {
-                None => tr("All Parties"),
-                Some("") => tr("No Party"),
-                Some(party) => party,
-            })
+            .map(|c| library::party_label(c.as_deref()))
             .collect();
         let model = gtk::StringList::new(&names);
         *self.party_choices.borrow_mut() = choices;
@@ -2091,31 +1979,10 @@ impl Browser {
 
 /// What the entry list shows for one entry.
 struct Row {
+    /// Its place in its section.
     index: usize,
     title: String,
     subtitle: String,
-    /// Standard or custom, for the records of the user databases.
-    origin: Option<cr_store::userdb::Origin>,
-    /// The party of a character, empty for none.
-    party: Option<String>,
-    /// The type of one of the other parts (an [`OTHER_TYPES`] id).
-    part_type: Option<&'static str>,
-    /// A part checked Magic, for Magic Only.
-    magic: bool,
-}
-
-/// Whether section `id` lists parts, as the original's Parts list does.
-fn is_parts(id: &str) -> bool {
-    id == OTHER_SECTION
-        || [
-            "kits",
-            "weapons",
-            "armor",
-            "equipment",
-            "magic-items",
-            "nonweapon",
-        ]
-        .contains(&id)
 }
 
 fn row_factory() -> gtk::SignalListItemFactory {
@@ -2200,15 +2067,6 @@ fn placeholder_text(title: &str, icon: &str, text: &str) -> gtk::Widget {
         .upcast()
 }
 
-/// Text from the original's Windows edit boxes, cleaned up for a label.
-fn clean_text(text: &str) -> String {
-    text.replace("\r\n", "\n")
-        .replace('\r', "\n")
-        .replace('\t', "    ")
-        .trim()
-        .to_owned()
-}
-
 fn detail(entry: &Entry, full_screen: Option<std::path::PathBuf>) -> gtk::Widget {
     let page = adw::PreferencesPage::new();
 
@@ -2253,7 +2111,7 @@ fn detail(entry: &Entry, full_screen: Option<std::path::PathBuf>) -> gtk::Widget
         None => heading.add(&column),
     }
     page.add(&heading);
-    if is_monster(&entry.key)
+    if library::is_monster(&entry.key)
         && let Some(group) = entry
             .picture
             .as_deref()
@@ -2295,7 +2153,7 @@ fn detail(entry: &Entry, full_screen: Option<std::path::PathBuf>) -> gtk::Widget
         page.add(&widget);
     }
 
-    let text = clean_text(&entry.text);
+    let text = library::clean_text(&entry.text);
     if !text.is_empty() {
         let group = adw::PreferencesGroup::builder()
             .title(tr("Description"))

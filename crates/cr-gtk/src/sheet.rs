@@ -11,10 +11,11 @@ use cr_app::pages::{
     self, FOOTER, FRAME_PAD, Measure, Page, Printed, cell_width, column_starts, frame_pen,
 };
 use cr_app::pdf::Paper;
-use cr_i18n::{tr, tr_noop};
+use cr_app::sheets::Export;
+use cr_i18n::tr;
 use cr_store::help::topic;
 use cr_store::sheet::{
-    Align, Block, Border, CellKind, ListItem, Sheet, SheetBox, SheetChoice, Table, Timestamp,
+    Align, Block, Border, CellKind, ListItem, Sheet, SheetBox, SheetChoice, Table,
 };
 use gtk::{gio, glib, pango};
 
@@ -49,20 +50,9 @@ pub fn show(
         .build();
     let menu = gio::Menu::new();
     menu.append(Some(tr("Save as _PDF…")), Some(action::SHEET_PDF.detailed));
-    menu.append(
-        Some(tr("Export as _HTML…")),
-        Some(action::SHEET_HTML.detailed),
-    );
-    if flavor == cr_store::sheet::Flavor::Expansion {
-        menu.append(
-            Some(tr("Export as _Text…")),
-            Some(action::SHEET_TXT.detailed),
-        );
+    for export in Export::of(flavor) {
+        menu.append(Some(export.label()), Some(export_action(export).detailed));
     }
-    menu.append(
-        Some(tr("Export as _Markdown…")),
-        Some(action::SHEET_MD.detailed),
-    );
     let export = gtk::MenuButton::builder()
         .icon_name("document-save-symbolic")
         .tooltip_text(tr("Save or Export"))
@@ -128,34 +118,23 @@ pub fn show(
         let (current, dialog, toast) = (current.clone(), dialog.clone(), toast.clone());
         Box::new(move || ask_pdf(&dialog, &current.borrow().clone(), toast.clone()))
     });
-    for (name, extension, kind) in [
-        (action::SHEET_HTML.name, "html", tr_noop!("HTML documents")),
-        (action::SHEET_TXT.name, "txt", tr_noop!("Text files")),
-        (action::SHEET_MD.name, "md", tr_noop!("Markdown documents")),
-    ] {
-        add(name, {
+    for export in [Export::Html, Export::Text, Export::Markdown] {
+        add(export_action(export).name, {
             let (current, dialog, toast) = (current.clone(), dialog.clone(), toast.clone());
             Box::new(move || {
                 let (sheet, toast) = (current.borrow().clone(), toast.clone());
                 save_file(
                     &dialog,
                     &sheet.title.clone(),
-                    extension,
-                    tr(kind),
-                    move |path| {
-                        let date = Timestamp::now_utc().format(sheet.flavor);
-                        let bytes = match extension {
-                            "md" => sheet.to_markdown(&date).into_bytes(),
-                            _ => sheet.export(extension == "html", &date),
-                        };
-                        match std::fs::write(&path, bytes) {
-                            Ok(()) => toast(tr("Sheet exported")),
-                            Err(e) => toast(&tr!(
-                                "Could not save {file}: {error}",
-                                file = path.display(),
-                                error = e
-                            )),
-                        }
+                    export.extension(),
+                    export.kind(),
+                    move |path| match std::fs::write(&path, export.write(&sheet)) {
+                        Ok(()) => toast(tr("Sheet exported")),
+                        Err(e) => toast(&tr!(
+                            "Could not save {file}: {error}",
+                            file = path.display(),
+                            error = e
+                        )),
                     },
                 );
             })
@@ -163,6 +142,15 @@ pub fn show(
     }
     dialog.insert_action_group("sheet", Some(&actions));
     dialog.present(Some(parent));
+}
+
+/// The action that exports the sheet to `export`.
+fn export_action(export: Export) -> action::Action {
+    match export {
+        Export::Html => action::SHEET_HTML,
+        Export::Text => action::SHEET_TXT,
+        Export::Markdown => action::SHEET_MD,
+    }
 }
 
 /// Shows `sheet` over `parent` as the original's print preview does, to

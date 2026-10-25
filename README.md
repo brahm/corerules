@@ -619,10 +619,10 @@ CORERULES_DIR="$HOME/.wine/drive_c/Program Files/AD&D Core Rules 2.0" cargo test
 | `cr-store` | Finds and opens an installation (case-insensitive paths) and builds the catalog the app shows |
 | `cr-cli` | `cr` command for inspecting data |
 | `cr-i18n` | Translations of the interface (`po/*.po`, built into the program) |
-| `cr-app` | What both apps share above the backend, with no GTK and no Windows: the names of their actions, the sheet laid out on printed pages and the sheet as a PDF |
+| `cr-app` | What both apps share above the backend, with no GTK and no Windows: the names of their actions, the library's search, filters and commands, the pictures, the sheet's options and exports, the sheet laid out on printed pages and the sheet as a PDF |
 | `cr-gtk` | The GNOME app |
 | `cr-addons` | Core Rules Community Add-ons Collection, the add-ons and their installer |
-| `cr-win` | The Windows 11 app (WinUI 3 with windows-reactor), a prototype for now |
+| `cr-win` | The Windows 11 app (WinUI 3 with windows-reactor), being ported screen by screen |
 
 The backend crates and `cr-app` have no GTK dependency, and CI builds and
 tests them on Windows too, with `cr-win` and its MSIX package.
@@ -749,9 +749,9 @@ cargo run -p cr-gtk                                # the data package or the Win
 cargo run -p cr-gtk -- "/media/cdrom"               # or any folder with Database/
 ```
 
-On Windows 11, with the Windows App Runtime 2.4 installed, the prototype of
-the Windows app runs with `cargo run -p cr-win`; it opens the data package
-in `Documents\Core Rules\data` or the original's installation.
+On Windows 11, with the Windows App Runtime 2.4 installed, the Windows app,
+still being ported, runs with `cargo run -p cr-win`; it opens the data
+package in `Documents\Core Rules\data` or the original's installation.
 
 ## License
 

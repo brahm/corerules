@@ -100,3 +100,35 @@ pub fn command(label: &str, symbol: Symbol, enabled: bool, click: Callback<()>) 
         .on_click(click)
         .slot(AppBarButtonSlot::Icon, SymbolIcon::new().symbol(symbol))
 }
+
+/// A button that is only a symbol, named for screen readers and with its
+/// name as a tooltip.
+pub fn icon_button<C: Component>(
+    name: &str,
+    symbol: Symbol,
+    message: C::Message,
+    context: &mut ViewContext<C>,
+) -> View
+where
+    C::Message: Clone,
+{
+    Button::new()
+        .automation_name(name)
+        .on_click(context.message(message))
+        .content(SymbolIcon::new().symbol(symbol))
+        .tooltip(name)
+}
+
+/// A decoded picture as a PNG, since WinUI's decoders do not read every
+/// bitmap the original wrote.
+pub fn png(image: &cr_formats::bmp::Image) -> Option<EncodedImage> {
+    let rgba = image::RgbaImage::from_raw(image.width, image.height, image.rgba.clone())?;
+    let mut png = std::io::Cursor::new(Vec::new());
+    rgba.write_to(&mut png, image::ImageFormat::Png).ok()?;
+    Some(EncodedImage::new(png.into_inner()))
+}
+
+/// A bitmap file of the original as a PNG.
+pub fn picture(path: &std::path::Path) -> Option<EncodedImage> {
+    png(&cr_app::pictures::load(path)?)
+}

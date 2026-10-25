@@ -27,7 +27,8 @@ built and tested on Windows (phase 1), Wagner Brahm approved the
 prototype of the Windows app on 2026-10-25 (phase 2, decision P21), and
 the groundwork that keeps both apps the same is in place (phase 3): the
 shared crate `cr-app`, one PDF of the sheet for both systems and a test
-that fails when an action is in one app and not in the other.
+that fails when an action is in one app and not in the other. The screens
+are being ported (phase 4): the library and the character sheet are done.
 Publishing on Flathub was dropped from the plan (decision P15).
 
 ## The original plan (2026-10-09)
@@ -176,9 +177,26 @@ The phases run in order:
      does not list, or when it has one that the list still holds. The
      list has the 44 actions not yet on Windows, and the release with
      Windows waits until it is empty (decision P23).
-4. **Porting the screens.** The library and the sheet, character creation,
-   editing, the generators, the user database editors, packages, Extract
-   Data from CD…, help, Settings and About.
+4. **Porting the screens (in progress).** One pull request per stage,
+   each merged once CI passes. Each stage first moves what the screens
+   decide into `cr-app`, where the GNOME app uses it too, and then writes
+   the Windows screens over it.
+   - **The library and the sheet (done).** `cr-app` gained the library's
+     search and filters, the commands an entry offers, the pictures of
+     items and monsters, the sheet's options and exports, and the rules of
+     the user database's records. The Windows app now shows every section
+     of the catalog in its navigation pane, with the search, the origin,
+     party, type and magic filters, the details of any entry with its
+     pictures (a monster's frames and Full Screen), the character sheet
+     as the GNOME app lays it out, Print and Save as PDF of any sheet,
+     export as HTML, text or Markdown, Character Sheet Options, Convert to
+     Character or NPC, and Delete. Sharing the filters fixed a GNOME bug:
+     the part type filter hid every entry of the other sections. 41
+     actions are left on `NOT_YET_ON_WINDOWS`.
+   - Still to port: Settings, About and help; the books; character
+     creation and Enter Character; editing; the generators (NPCs,
+     treasure, encounters, tables, parties); the user database editors;
+     packages and Import Core Rules 2.0; Extract Data from CD….
 5. **Package and Store.** The release workflow builds and tests the MSIX;
    a beta goes to a closed group through the Microsoft Store.
 6. **Release with Windows**, once the beta's users confirm it, with the

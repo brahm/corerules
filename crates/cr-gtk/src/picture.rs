@@ -229,31 +229,21 @@ pub fn icon_texture(icon: &Icon) -> Option<gdk::MemoryTexture> {
     let strip = STRIPS.with_borrow_mut(|strips| {
         strips
             .entry(icon.path.clone())
-            .or_insert_with(|| {
-                std::fs::read(&icon.path)
-                    .ok()
-                    .and_then(|data| cr_formats::bmp::decode(&data))
-                    .map(Rc::new)
-            })
+            .or_insert_with(|| cr_app::pictures::load(&icon.path).map(Rc::new))
             .clone()
     })?;
-    let width = ICON_SIZE.min(strip.width.checked_sub(left)?) as usize;
-    let height = ICON_SIZE.min(strip.height) as usize;
-    if width == 0 {
-        return None;
-    }
-    let mut rgba = Vec::with_capacity(width * height * 4);
-    for y in 0..height {
-        let at = (y * strip.width as usize + left as usize) * 4;
-        rgba.extend_from_slice(&strip.rgba[at..at + width * 4]);
-    }
-    Some(gdk::MemoryTexture::new(
-        width as i32,
-        height as i32,
+    cr_app::pictures::icon_in(&strip, left).map(|image| image_texture(&image))
+}
+
+/// A decoded picture as a texture.
+fn image_texture(image: &cr_formats::bmp::Image) -> gdk::MemoryTexture {
+    gdk::MemoryTexture::new(
+        image.width as i32,
+        image.height as i32,
         gdk::MemoryFormat::R8g8b8a8,
-        &glib::Bytes::from_owned(rgba),
-        width * 4,
-    ))
+        &glib::Bytes::from(&image.rgba[..]),
+        image.width as usize * 4,
+    )
 }
 
 fn icon(kind: Kind) -> &'static str {
@@ -697,35 +687,6 @@ fn alert(parent: &impl IsA<gtk::Widget>, heading: &str, body: &str) {
     alert.present(Some(parent));
 }
 
-/// Square `index` of a strip of squares as tall as the strip (a monster
-/// type's picture page), as a texture.
-fn frame_texture(page: &Path, index: u32) -> Option<gdk::MemoryTexture> {
-    let image = cr_formats::bmp::decode(&std::fs::read(page).ok()?)?;
-    let (width, side) = (image.width as usize, image.height as usize);
-    let x = index as usize * side;
-    if side == 0 || x + side > width {
-        return None;
-    }
-    let mut rgba = Vec::with_capacity(side * side * 4);
-    for row in image.rgba.chunks_exact(width * 4) {
-        rgba.extend_from_slice(&row[x * 4..(x + side) * 4]);
-    }
-    // The pages key the background in magenta; the single pictures have
-    // it white.
-    for px in rgba.as_chunks_mut::<4>().0 {
-        if px[..3] == [255, 0, 255] {
-            px[..3].copy_from_slice(&[255, 255, 255]);
-        }
-    }
-    Some(gdk::MemoryTexture::new(
-        side as i32,
-        side as i32,
-        gdk::MemoryFormat::R8g8b8a8,
-        &glib::Bytes::from_owned(rgba),
-        side * 4,
-    ))
-}
-
 /// A monster type's picture on the detail page of the type, its monsters,
 /// templates and encounters, with the Monsters screen's two buttons: Next
 /// Image, its Alternate Image(s) (0x6d2e79), going through the type's
@@ -736,12 +697,7 @@ pub fn monster_group(
     frames: Option<&cr_store::catalog::Frames>,
     background: Option<PathBuf>,
 ) -> Option<adw::PreferencesGroup> {
-    // As the Monsters screen (0x6d2390), a type with frames starts at its
-    // first one, which need not be its own picture.
-    let first: gdk::Texture = frames
-        .and_then(|f| frame_texture(&f.page, f.first))
-        .or_else(|| texture(picture))?
-        .upcast();
+    let first: gdk::Texture = image_texture(&cr_app::pictures::monster(picture, frames)?).upcast();
     let shown = Rc::new(RefCell::new(first.clone()));
     let widget = gtk::Picture::builder()
         .halign(gtk::Align::Start)
@@ -759,15 +715,12 @@ pub fn monster_group(
         let at = std::cell::Cell::new(0);
         let (widget, shown) = (widget.clone(), shown.clone());
         next.connect_clicked(move |_| {
-            let mut k = at.get() + 1;
-            if frames.first + k > frames.last {
-                k = 0;
-            }
-            let Some(texture) = frame_texture(&frames.page, frames.first + k) else {
+            let k = cr_app::pictures::next_frame(&frames, at.get());
+            let Some(image) = cr_app::pictures::frame(&frames.page, frames.first + k) else {
                 return;
             };
             at.set(k);
-            let texture: gdk::Texture = texture.upcast();
+            let texture: gdk::Texture = image_texture(&image).upcast();
             widget.set_paintable(Some(&texture));
             *shown.borrow_mut() = texture;
         });
@@ -790,10 +743,6 @@ pub fn monster_group(
     Some(group)
 }
 
-/// Where the Monster Full Screen dialog (IDD 282, 0x6fb7d0) draws the
-/// picture on its 794 by 550 background: at 174, 49, 450 pixels square.
-const FULL_SCREEN: (f64, f64, f64, f64, f64) = (794.0, 550.0, 174.0, 49.0, 450.0);
-
 /// Shows `picture` over the whole screen, in the original's frame when
 /// its background is there, until a click or a key.
 fn full_screen(parent: &gtk::Button, picture: gdk::Texture, background: Option<gdk::Texture>) {
@@ -802,7 +751,7 @@ fn full_screen(parent: &gtk::Button, picture: gdk::Texture, background: Option<g
         let (w, h) = (f64::from(width), f64::from(height));
         cr.set_source_rgb(0.0, 0.0, 0.0);
         let _ = cr.paint();
-        let (bw, bh, px, py, side) = FULL_SCREEN;
+        let (bw, bh, px, py, side) = cr_app::pictures::FULL_SCREEN;
         match &background {
             Some(background) => {
                 let scale = (w / bw).min(h / bh);

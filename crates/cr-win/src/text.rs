@@ -19,16 +19,6 @@ pub fn plain(label: &str) -> String {
     out
 }
 
-/// Whether a list row whose title and subtitle are these matches what
-/// was typed in the search box, case ignored, as in the GTK app: the
-/// title or the subtitle holds it.
-pub fn matches(search: &str, title: &str, subtitle: &str) -> bool {
-    let needle = search.to_lowercase();
-    needle.is_empty()
-        || title.to_lowercase().contains(&needle)
-        || subtitle.to_lowercase().contains(&needle)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -39,13 +29,5 @@ mod tests {
         assert_eq!(plain("Extract Data from _CD…"), "Extract Data from CD…");
         assert_eq!(plain("a__b"), "a_b");
         assert_eq!(plain("Print"), "Print");
-    }
-
-    #[test]
-    fn the_title_or_the_subtitle_holds_the_search() {
-        assert!(matches("", "Lirael", "Elf Ranger"));
-        assert!(matches("elf", "Lirael", "Elf Ranger"));
-        assert!(matches("LIR", "Lirael", "Elf Ranger"));
-        assert!(!matches("lirael elf", "Lirael", "Elf Ranger"));
     }
 }

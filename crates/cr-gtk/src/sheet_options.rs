@@ -5,23 +5,13 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_app::sheets::section_name;
 use cr_i18n::tr;
 use cr_store::help::topic;
-use cr_store::sheet::{Border, SECTIONS, SheetChoice, ids};
+use cr_store::sheet::{Border, SheetChoice};
 
 /// A change to the chosen sections.
 type Edit = Box<dyn Fn(&mut Vec<u32>)>;
-
-/// A section's name as the lists show it.
-fn name(id: u32) -> String {
-    if id == ids::PAGE_BREAK {
-        return format!("— {} —", tr("Page Break"));
-    }
-    SECTIONS
-        .iter()
-        .find(|(s, _)| *s == id)
-        .map_or_else(String::new, |(_, n)| (*n).to_owned())
-}
 
 /// Opens the options over `parent`, starting from `choice`; Save hands
 /// the new choice to `save`.
@@ -61,17 +51,14 @@ pub fn choose(
             .build(),
     ));
 
-    // Every section, in the original's sorted list; adding one leaves it
-    // there, so any can be added again.
-    let mut offered: Vec<u32> = SECTIONS.iter().map(|(id, _)| *id).collect();
-    offered.sort_by_key(|&id| (id != ids::PAGE_BREAK, name(id)));
+    let offered = cr_app::sheets::offered();
     let menu = gtk::ListBox::builder()
         .selection_mode(gtk::SelectionMode::None)
         .build();
     for &id in &offered {
         menu.append(
             &gtk::Label::builder()
-                .label(name(id))
+                .label(section_name(id))
                 .xalign(0.0)
                 .margin_top(6)
                 .margin_bottom(6)
@@ -112,7 +99,7 @@ pub fn choose(
             list.remove_all();
             let count = sections.borrow().len();
             for (i, &id) in sections.borrow().iter().enumerate() {
-                let row = adw::ActionRow::builder().title(name(id)).build();
+                let row = adw::ActionRow::builder().title(section_name(id)).build();
                 let button = |icon: &str, tip: String, enabled: bool| {
                     let b = gtk::Button::builder()
                         .icon_name(icon)
