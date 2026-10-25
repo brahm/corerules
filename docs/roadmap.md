@@ -160,7 +160,7 @@ The phases run in order:
    (`crates/cr-win/package/make-msix.ps1`) unsigned, as the Store signs
    it; on a machine in Developer Mode it is installed for testing with
    `Add-AppxPackage -Register target\msix\AppxManifest.xml`.
-3. **Parity groundwork (done).** A new crate, `cr-app`, with no GTK and
+3. **Parity groundwork (done, PR #99).** A new crate, `cr-app`, with no GTK and
    no Windows in it, holds what the two apps share above the backend:
    - the character sheet laid out on printed pages, which both apps now
      print from, measuring the text with Pango or DirectWrite;
