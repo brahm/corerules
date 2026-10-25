@@ -357,10 +357,15 @@ impl Font {
 
     /// The lines `text` takes, each with its width: one per line of the
     /// text, and with `wrap` broken between words to fit it, or inside a
-    /// word too long for a line of its own.
+    /// word too long for a line of its own. A line ends at `\n`, `\r\n`
+    /// (as in the original's files) or `\r`, as Pango and DirectWrite
+    /// take them.
     fn lines(self, text: &str, wrap: Option<f64>) -> Vec<(Vec<u8>, f64)> {
         let mut out = Vec::new();
-        for paragraph in text.split('\n') {
+        let paragraphs = text
+            .split('\n')
+            .flat_map(|line| line.strip_suffix('\r').unwrap_or(line).split('\r'));
+        for paragraph in paragraphs {
             let bytes = encode(paragraph);
             let Some(wrap) = wrap else {
                 out.push((bytes.clone(), self.width(&bytes)));
@@ -639,6 +644,9 @@ mod tests {
         let long = font.lines("abcdefghij", Some(font.width(b"abcd")));
         assert!(long.len() >= 3 && long.iter().all(|(_, w)| *w <= font.width(b"abcd")));
         assert_eq!(font.lines("a\nb", None).len(), 2);
+        let ends: Vec<_> = font.lines("a\r\nb\rc\n", None);
+        let ends: Vec<&[u8]> = ends.iter().map(|(l, _)| &l[..]).collect();
+        assert_eq!(ends, [&b"a"[..], b"b", b"c", b""]);
         assert_eq!(font.measure("", Some(100.0)).1, font.line_height());
     }
 
