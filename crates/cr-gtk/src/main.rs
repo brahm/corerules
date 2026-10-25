@@ -42,7 +42,7 @@ use cr_store::Installation;
 use cr_store::advance::{AdvanceRules, Advancement, adjust_psionic_points, psionic_total};
 use cr_store::catalog::{ENCOUNTER_KEY, Entry, Section, TABLE_KEY, TREASURE_KEY};
 use cr_store::choices::{Caster, caster};
-use cr_store::dual::{ClassChoice, ClassTable};
+use cr_store::dual::ClassTable;
 use cr_store::edit::{ABILITY_RANGE, CharacterDetails};
 use cr_store::help::topic;
 use cr_store::learn::{LearnRules, Learner};
@@ -2877,24 +2877,9 @@ fn classes_group(
         let (table, group, add) = (table.clone(), group.clone(), add.clone());
         let (added, added_row, offered) = (added.clone(), added_row.clone(), offered.clone());
         move |character| {
-            let names = match table.choices(character) {
-                ClassChoice::Refused(why) => {
-                    group.set_description(Some(&glib::markup_escape_text(&why)));
-                    Vec::new()
-                }
-                ClassChoice::Allowed(names) if names.is_empty() => {
-                    group.set_description(Some(tr(
-                        "No class meets the dual-class requirements of these abilities",
-                    )));
-                    names
-                }
-                ClassChoice::Allowed(names) => {
-                    group.set_description(Some(tr(
-                        "Dual-classing: the new class starts at level 1 and the earlier class stops advancing",
-                    )));
-                    names
-                }
-            };
+            let offer = cr_app::editor::class_offer(&table, character);
+            group.set_description(Some(&glib::markup_escape_text(&offer.description)));
+            let names = offer.names;
             let kept = added.borrow().iter().all(|n| names.contains(n));
             if !kept {
                 added.borrow_mut().clear();
@@ -3126,6 +3111,7 @@ fn experience_group(
 }
 
 pub(crate) use cr_app::levels::level_text;
+use cr_app::levels::{ExperienceForm, LevelsInput};
 
 /// Callbacks run when the character's levels change.
 type Listeners = Rc<RefCell<Vec<Box<dyn Fn()>>>>;
@@ -3277,36 +3263,19 @@ pub(crate) fn experience_dialog(
     give.connect_clicked({
         let (dialog, rules, advanced) = (dialog.clone(), rules.clone(), advanced.clone());
         move |_| {
-            let n = names.len();
-            let amount = amount.value() as i64;
-            let selected = target.selected() as usize;
-            let (classes, amount) = match selected {
-                g if g < n => (vec![g], amount),
-                g if g == n => ((0..n).collect(), amount),
-                _ => ((0..n).collect(), amount / n as i64),
-            };
-            let mut dice = cr_store::create::Dice::default();
             let mut character = advanced.borrow().clone();
-            let result = classes.into_iter().rev().try_for_each(|g| {
-                rules.add_experience(
-                    &mut character,
-                    g,
-                    amount,
-                    prime.is_active(),
-                    points.value() as u32,
-                    &mut dice,
-                )
-            });
-            match result {
-                Ok(()) => {
-                    *advanced.borrow_mut() = character;
-                    changed();
-                    dialog.close();
-                }
-                Err(e) => {
-                    error.set_title(&glib::markup_escape_text(&e.to_string()));
-                    error.set_revealed(true);
-                }
+            let mut form = ExperienceForm::new(&character, None);
+            form.input(LevelsInput::Amount(amount.value() as i64));
+            form.input(LevelsInput::Target(target.selected() as usize));
+            let settings = (prime.is_active(), points.value() as u32);
+            let mut dice = cr_store::create::Dice::default();
+            if form.give(&rules, &mut character, settings, &mut dice) {
+                *advanced.borrow_mut() = character;
+                changed();
+                dialog.close();
+            } else if let Some(e) = form.error {
+                error.set_title(&glib::markup_escape_text(&e));
+                error.set_revealed(true);
             }
         }
     });

@@ -5,8 +5,8 @@
 use cr_app::create::{
     AbilitiesPage, Answer, Choice, ClassAbilitiesPage, ClassPage, CombatPage, DetailsPage,
     EnteredClassPage, EnteredScoresPage, EquipmentPage, Input, List, ListKind, MOST_ITEMS, Page,
-    PickGroup, ProficienciesPage, Prompt, PromptKind, RacePage, RacialPage, RoguePage,
-    SOCIAL_CLASSES, SettingPage, SpellsPage, Unarmed, WildPage, Wizard, none_label,
+    PickGroup, ProficienciesPage, PromptKind, RacePage, RacialPage, RoguePage, SOCIAL_CLASSES,
+    SettingPage, SpellsPage, Unarmed, WildPage, Wizard, none_label,
 };
 use cr_app::skills::{MOST_POINTS, SkillsForm};
 use cr_i18n::{tr, trn};
@@ -91,7 +91,12 @@ pub fn view(
         .map(|prompt| {
             KeyedView::new(
                 wizard.prompt_serial().to_string(),
-                prompt_dialog(prompt, wizard.prompt_serial(), context),
+                prompt_dialog(
+                    prompt,
+                    wizard.prompt_serial(),
+                    Message::WizardAnswer,
+                    context,
+                ),
             )
         })
         .into_iter()
@@ -107,9 +112,15 @@ pub fn view(
     ))
 }
 
-/// The question in view as a ContentDialog; its answers carry `serial`,
-/// the prompt's number.
-fn prompt_dialog(prompt: &Prompt, serial: u64, context: &mut ViewContext<Shell>) -> View {
+/// The question in view as a ContentDialog, the wizard's or the
+/// editor's; `answer` makes the message of its answers, which carry
+/// `serial`, the prompt's number.
+pub(super) fn prompt_dialog<T>(
+    prompt: &cr_app::prompt::Prompt<T>,
+    serial: u64,
+    answer: fn(u64, Answer) -> Message,
+    context: &mut ViewContext<Shell>,
+) -> View {
     let text = ui::body(prompt.text.clone()).is_text_selection_enabled(true);
     let content: View = match &prompt.kind {
         PromptKind::RaiseOne { labels } => {
@@ -121,9 +132,7 @@ fn prompt_dialog(prompt: &Prompt, serial: u64, context: &mut ViewContext<Shell>)
                         a.to_string(),
                         Button::new()
                             .horizontal_alignment(HorizontalAlignment::Stretch)
-                            .on_click(
-                                context.message(Message::WizardAnswer(serial, Answer::Choice(a))),
-                            )
+                            .on_click(context.message(answer(serial, Answer::Choice(a))))
                             .content(label.clone()),
                     )
                 })
@@ -187,7 +196,7 @@ fn prompt_dialog(prompt: &Prompt, serial: u64, context: &mut ViewContext<Shell>)
         .close_button_text(close)
         .is_open(true)
         .on_closed(context.callback(move |result| {
-            Message::WizardAnswer(
+            answer(
                 serial,
                 match result {
                     ContentDialogResult::Primary => Answer::Yes,
@@ -199,7 +208,7 @@ fn prompt_dialog(prompt: &Prompt, serial: u64, context: &mut ViewContext<Shell>)
 }
 
 /// A heading over a group of cards, with the group's description.
-fn heading(title: &str, description: Option<&str>) -> View {
+pub(super) fn heading(title: &str, description: Option<&str>) -> View {
     let margin = Thickness::new(0.0, 16.0, 0.0, 4.0);
     match description {
         Some(text) if !text.is_empty() => StackPanel::new()
@@ -286,7 +295,7 @@ fn roll(name: &str, what: Input, context: &mut ViewContext<Shell>) -> View {
 }
 
 /// A control and the buttons after it, in a row.
-fn with_buttons(control: impl Into<View>, buttons: impl Into<View>) -> View {
+pub(super) fn with_buttons(control: impl Into<View>, buttons: impl Into<View>) -> View {
     StackPanel::new()
         .orientation(Orientation::Horizontal)
         .spacing(8.0)

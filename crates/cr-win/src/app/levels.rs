@@ -3,7 +3,7 @@
 //! rolls, and the Levels dialog with its Add Experience.
 
 use cr_app::create::{EnteredLevels, Input, MOST_HIT_POINTS};
-use cr_app::levels::{LevelsForm, LevelsInput, MOST_EXPERIENCE, MOST_LEVEL};
+use cr_app::levels::{ExperienceForm, LevelsForm, LevelsInput, MOST_EXPERIENCE, MOST_LEVEL};
 use cr_i18n::tr;
 use cr_win::text::plain;
 use windows_reactor::*;
@@ -202,66 +202,25 @@ pub fn dialog(
         None => View::empty(),
     };
     let experience: View = match &form.experience {
-        Some(experience) => {
-            let error: View = match &experience.error {
-                Some(text) => InfoBar::new()
-                    .severity(InfoBarSeverity::Error)
-                    .message(text.clone())
-                    .is_open(true)
-                    .is_closable(false)
-                    .into(),
-                None => View::empty(),
-            };
-            ui::card(
-                StackPanel::new().spacing(8.0).children((
-                    ui::strong(tr("Add Experience")),
-                    ui::caption(tr(
-                        "Each level gained rolls its hit points. Levels lost keep their rolls, \
-                         as in the original.",
+        Some(experience) => ui::card(
+            StackPanel::new().spacing(8.0).children((
+                ui::strong(tr("Add Experience")),
+                experience_fields(experience, map, context),
+                StackPanel::new()
+                    .orientation(Orientation::Horizontal)
+                    .spacing(8.0)
+                    .horizontal_alignment(HorizontalAlignment::Right)
+                    .children((
+                        Button::new()
+                            .on_click(context.message(map(LevelsInput::Cancel)))
+                            .content(plain(tr("_Cancel"))),
+                        Button::new()
+                            .style(ButtonStyle::Accent)
+                            .on_click(context.message(map(LevelsInput::Give)))
+                            .content(plain(tr("_Add"))),
                     )),
-                    ui::setting(
-                        tr("Experience"),
-                        tr("Negative to take experience away"),
-                        number(
-                            tr("Experience"),
-                            experience.amount,
-                            (-MOST_EXPERIENCE, MOST_EXPERIENCE),
-                            move |v| map(LevelsInput::Amount(v)),
-                            context,
-                        ),
-                    ),
-                    ui::setting(
-                        tr("Give To"),
-                        "",
-                        ComboBox::new()
-                            .automation_name(tr("Give To"))
-                            .items_source(experience.targets.clone())
-                            .selected_index(experience.target)
-                            .min_width(220.0)
-                            .on_selection_changed(context.callback(
-                                move |i: Option<usize>| match i {
-                                    Some(i) => map(LevelsInput::Target(i)),
-                                    None => Message::Nothing,
-                                },
-                            )),
-                    ),
-                    error,
-                    StackPanel::new()
-                        .orientation(Orientation::Horizontal)
-                        .spacing(8.0)
-                        .horizontal_alignment(HorizontalAlignment::Right)
-                        .children((
-                            Button::new()
-                                .on_click(context.message(map(LevelsInput::Cancel)))
-                                .content(plain(tr("_Cancel"))),
-                            Button::new()
-                                .style(ButtonStyle::Accent)
-                                .on_click(context.message(map(LevelsInput::Give)))
-                                .content(plain(tr("_Add"))),
-                        )),
-                )),
-            )
-        }
+            )),
+        ),
         None => Button::new()
             .on_click(context.message(map(LevelsInput::AddExperience)))
             .content(plain(tr("Add Experience…"))),
@@ -291,4 +250,109 @@ pub fn dialog(
         .is_open(true)
         .on_closed(context.callback(move |_| close.clone()))
         .content(ScrollViewer::new().max_height(560.0).content(content))
+}
+
+/// Add Experience's amount, the classes it goes to, its own prime
+/// requisite bonus and points per level when it has them, and why it
+/// could not be given.
+fn experience_fields(
+    experience: &ExperienceForm,
+    map: fn(LevelsInput) -> Message,
+    context: &mut ViewContext<Shell>,
+) -> View {
+    let error: View = match &experience.error {
+        Some(text) => InfoBar::new()
+            .severity(InfoBarSeverity::Error)
+            .message(text.clone())
+            .is_open(true)
+            .is_closable(false)
+            .into(),
+        None => View::empty(),
+    };
+    let settings: View = match &experience.settings {
+        Some(settings) => {
+            let points: View = if settings.skills_and_powers {
+                ui::setting(
+                    tr("Character Points per Level"),
+                    "",
+                    number(
+                        tr("Character Points per Level"),
+                        settings.points_per_level.into(),
+                        (0, 10),
+                        move |v| map(LevelsInput::PointsPerLevel(v as u32)),
+                        context,
+                    ),
+                )
+            } else {
+                View::empty()
+            };
+            StackPanel::new().spacing(4.0).children((
+                ui::setting(
+                    tr("Prime Requisite Bonus"),
+                    tr("10% more for a class whose prime requisites are all 16 or more"),
+                    ToggleSwitch::new()
+                        .automation_name(tr("Prime Requisite Bonus"))
+                        .is_on(settings.prime_bonus)
+                        .on_toggled(context.callback(move |on| map(LevelsInput::PrimeBonus(on)))),
+                ),
+                points,
+            ))
+        }
+        None => View::empty(),
+    };
+    StackPanel::new().spacing(4.0).children((
+        ui::caption(tr(
+            "Each level gained rolls its hit points. Levels lost keep their rolls, as in the \
+             original.",
+        )),
+        ui::setting(
+            tr("Experience"),
+            tr("Negative to take experience away"),
+            number(
+                tr("Experience"),
+                experience.amount,
+                (-MOST_EXPERIENCE, MOST_EXPERIENCE),
+                move |v| map(LevelsInput::Amount(v)),
+                context,
+            ),
+        ),
+        ui::setting(
+            tr("Give To"),
+            "",
+            ComboBox::new()
+                .automation_name(tr("Give To"))
+                .items_source(experience.targets.clone())
+                .selected_index(experience.target)
+                .min_width(220.0)
+                .on_selection_changed(context.callback(move |i: Option<usize>| match i {
+                    Some(i) => map(LevelsInput::Target(i)),
+                    None => Message::Nothing,
+                })),
+        ),
+        settings,
+        error,
+    ))
+}
+
+/// Add Experience as a dialog of its own, as the editor's Add… opens it:
+/// Add gives the experience, Cancel closes it.
+pub fn experience_dialog(
+    experience: &ExperienceForm,
+    map: fn(LevelsInput) -> Message,
+    context: &mut ViewContext<Shell>,
+) -> View {
+    ContentDialog::new()
+        .title(tr("Add Experience"))
+        .primary_button_text(plain(tr("_Add")))
+        .close_button_text(plain(tr("_Cancel")))
+        .is_open(true)
+        .on_closed(context.callback(move |result| match result {
+            ContentDialogResult::Primary => map(LevelsInput::Give),
+            _ => map(LevelsInput::Cancel),
+        }))
+        .content(
+            ScrollViewer::new()
+                .max_height(560.0)
+                .content(experience_fields(experience, map, context)),
+        )
 }

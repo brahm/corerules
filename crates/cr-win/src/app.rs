@@ -22,6 +22,7 @@ use std::sync::{Arc, OnceLock};
 
 use cr_app::action::{self, Action};
 use cr_app::create::{Answer, Effect, Input, ListKind, Needs, Page as CreatePage, Wizard};
+use cr_app::editor::{EditEffect, EditInput, EditNeeds, Editor, Tab as EditTab};
 use cr_app::help::{Files, Found, MonsterHelp, PROGRAM, Target};
 use cr_app::library::Filter;
 use cr_app::sheets::Export;
@@ -40,7 +41,6 @@ use windows_reactor::*;
 use crate::native::keys::Key;
 use crate::native::{self, Owner};
 use book::{BookPage, BookView};
-pub use edit::Edit;
 use help::{HelpPage, Opened, Shown};
 use library::Pictures;
 use sheet::{OptionsEdit, SheetOptions, SheetPage};
@@ -131,7 +131,7 @@ pub struct Shell {
 #[derive(Clone)]
 pub enum Page {
     Library,
-    Edit(Box<Edit>),
+    Edit(Box<Editor>),
     Create(Box<Wizard>),
     Import(Arc<Package>),
     Settings,
@@ -248,9 +248,10 @@ pub enum Message {
     FolderChosen(Result<Option<PathBuf>, String>),
     // An entry's commands.
     EditCharacter,
-    EditLoaded(Result<Box<Edit>, String>),
-    Edit(edit::Field),
-    Save,
+    EditLoaded(Result<Box<Editor>, String>),
+    Editor(EditInput),
+    /// The answer to the editor's prompt with this number.
+    EditorAnswer(u64, Answer),
     Saved(Result<(String, String), String>),
     AskDelete,
     Answered(ContentDialogResult),
@@ -676,10 +677,17 @@ impl Shell {
 
     /// Gives the details page the portrait of `file`, or none.
     fn set_portrait(&mut self, file: Option<String>, context: &ComponentContext<Self>) {
-        if let Page::Create(wizard) = &mut self.page {
-            let stored = file.as_deref().map(stored_portrait).unwrap_or_default();
-            wizard.input(Input::Portrait(stored));
-            self.wizard_effects(context);
+        let stored = file.as_deref().map(stored_portrait).unwrap_or_default();
+        match &mut self.page {
+            Page::Create(wizard) => {
+                wizard.input(Input::Portrait(stored));
+                self.wizard_effects(context);
+            }
+            Page::Edit(editor) => {
+                editor.input(EditInput::Portrait(stored));
+                self.editor_effects(context);
+            }
+            _ => {}
         }
     }
 
@@ -694,6 +702,40 @@ impl Shell {
                 *cached = Some(shown.clone());
                 shown
             }
+        }
+    }
+
+    /// Does what the editor asks of the app.
+    fn editor_effects(&mut self, context: &ComponentContext<Self>) {
+        let Page::Edit(editor) = &mut self.page else {
+            return;
+        };
+        for effect in editor.take_effects() {
+            match effect {
+                EditEffect::Save(saving) => {
+                    let Some(install) = self.install.clone() else {
+                        editor.failed(tr("The installation is no longer open").to_owned());
+                        continue;
+                    };
+                    context.spawn_background(move |_| {
+                        let name = saving.details.name.clone();
+                        Message::Saved(
+                            install
+                                .save_character(&saving.file, &saving.details, Some(&saving.lists))
+                                .map(|()| (saving.file.clone(), name))
+                                .map_err(|e| e.to_string()),
+                        )
+                    });
+                }
+            }
+        }
+    }
+
+    /// `page` with Choose Portrait over it while it is open.
+    fn with_portraits(&self, page: View, context: &mut ViewContext<Self>) -> View {
+        match &self.portraits {
+            Some(chooser) => Grid::new().children((page, portrait::dialog(chooser, context))),
+            None => page,
         }
     }
 
@@ -735,7 +777,7 @@ impl Shell {
     fn here(&self) -> u32 {
         match &self.page {
             Page::Library => topic::of_section(&self.section),
-            Page::Edit(_) => topic::CHARACTER_INFORMATION,
+            Page::Edit(editor) => editor.help(),
             Page::Create(wizard) => wizard.help(),
             Page::Import(_) => topic::IMPORT,
             Page::Sheet(_) | Page::SheetOptions(_) => topic::CHARACTER_SHEET,
@@ -1111,32 +1153,28 @@ impl Component for Shell {
             Message::EditCharacter => {
                 if let Some(file) = self.selected_character() {
                     self.with_install(context, move |install| {
-                        Message::EditLoaded(Edit::load(install, &file).map(Box::new))
+                        let loaded = install.character(&file).and_then(|character| {
+                            let needs = EditNeeds::load(install)?;
+                            Ok(Editor::new(Arc::new(needs), &file, character))
+                        });
+                        Message::EditLoaded(loaded.map(Box::new).map_err(|e| e.to_string()))
                     });
                 }
             }
-            Message::EditLoaded(Ok(edit)) => self.go(Page::Edit(edit)),
+            Message::EditLoaded(Ok(editor)) => self.go(Page::Edit(editor)),
             Message::EditLoaded(Err(e)) => self.show_error(tr("Edit Character"), e),
-            Message::Edit(field) => {
-                if let Page::Edit(edit) = &mut self.page {
-                    edit.set(field);
+            Message::Editor(change) => {
+                if let Page::Edit(editor) = &mut self.page {
+                    editor.input(change);
+                    self.editor_effects(context);
                 }
             }
-            Message::Save => {
-                if let (Page::Edit(edit), Some(install)) = (&mut self.page, self.install.clone())
-                    && edit.problem().is_none()
-                    && !edit.saving
+            Message::EditorAnswer(serial, answer) => {
+                if let Page::Edit(editor) = &mut self.page
+                    && editor.prompt_serial() == serial
                 {
-                    edit.saving = true;
-                    let (file, details) = (edit.file.clone(), edit.details.clone());
-                    context.spawn_background(move |_| {
-                        Message::Saved(
-                            install
-                                .save_character_details(&file, &details)
-                                .map(|()| (file, details.name.trim().to_owned()))
-                                .map_err(|e| e.to_string()),
-                        )
-                    });
+                    editor.answer(answer);
+                    self.editor_effects(context);
                 }
             }
             Message::Saved(Ok((file, name))) => {
@@ -1145,10 +1183,9 @@ impl Component for Shell {
                 self.load(Some(file), context);
             }
             Message::Saved(Err(e)) => {
-                if let Page::Edit(edit) = &mut self.page {
-                    edit.saving = false;
+                if let Page::Edit(editor) = &mut self.page {
+                    editor.failed(e);
                 }
-                self.show_error(tr("Edit Character"), e);
             }
             Message::AskDelete => {
                 if let Some(entry) = self.selected_entry() {
@@ -1347,11 +1384,19 @@ impl Component for Shell {
                 }
             }
             Message::ChoosePortrait => {
-                if let Page::Create(wizard) = &self.page
-                    && matches!(wizard.page(), CreatePage::Details(_))
+                // The race whose portraits come first.
+                let race = match &self.page {
+                    Page::Create(wizard) if matches!(wizard.page(), CreatePage::Details(_)) => {
+                        Some(wizard.draft().race.clone())
+                    }
+                    Page::Edit(editor) if editor.tab == EditTab::Details => {
+                        Some(editor.character().data.race.clone())
+                    }
+                    _ => None,
+                };
+                if let Some(race) = race
                     && self.portraits.is_none()
                 {
-                    let race = wizard.draft().race.clone();
                     self.portraits = Some(portrait::Chooser {
                         race: race.clone(),
                         tiles: None,
@@ -1803,20 +1848,18 @@ impl Component for Shell {
 
         let content = match &self.page {
             Page::Library => library::view(self, context),
-            Page::Edit(edit) => edit::view(edit, context),
             Page::Create(wizard) => {
                 let portrait = match wizard.page() {
                     CreatePage::Details(page) => Some(self.portrait_shown(&page.portrait)),
                     _ => None,
                 };
-                let chooser: View = match &self.portraits {
-                    Some(chooser) => portrait::dialog(chooser, context),
-                    None => View::empty(),
-                };
-                Grid::new().children((
-                    create::view(wizard, &self.adding, portrait.as_deref(), context),
-                    chooser,
-                ))
+                let page = create::view(wizard, &self.adding, portrait.as_deref(), context);
+                self.with_portraits(page, context)
+            }
+            Page::Edit(editor) => {
+                let portrait = self.portrait_shown(&editor.details.portrait);
+                let page = edit::view(editor, &portrait, context);
+                self.with_portraits(page, context)
             }
             Page::Import(package) => import::view(self, package, context),
             Page::Settings => settings::view(self, context),
