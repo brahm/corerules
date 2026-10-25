@@ -412,11 +412,7 @@ impl<T: Clone + 'static> RowList<T> {
                         let (list, make, name) = (list.clone(), make.clone(), name.clone());
                         Box::new(move || {
                             if let Some(spec) = make(name) {
-                                list.push(spec);
-                                list.update();
-                                if !list.fits() {
-                                    list.drop_last();
-                                }
+                                list.add(spec);
                             }
                         })
                     };
@@ -554,10 +550,13 @@ impl<T: Clone + 'static> RowList<T> {
         self.update();
     }
 
-    /// Adds a row as Add does.
+    /// Adds a row as Add does: one past the limit goes back.
     pub fn add(&self, spec: RowSpec<T>) {
         self.push(spec);
         self.update();
+        if !self.fits() {
+            self.drop_last();
+        }
     }
 
     /// Rewrites each row's subtitle from its value and number.

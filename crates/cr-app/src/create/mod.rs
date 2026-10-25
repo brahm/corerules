@@ -10,14 +10,16 @@
 //! classes their levels.
 
 mod details;
+mod proficiencies;
 mod start;
 
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use cr_i18n::{tr, tr_noop, trn};
 use cr_store::Installation;
 use cr_store::advance::AdvanceRules;
-use cr_store::create::{CreationRules, Dice, Draft};
+use cr_store::create::{CreationRules, Dice, Draft, Question};
 use cr_store::help::topic;
 use cr_store::learn::LearnRules;
 use cr_store::npc::{NpcRules, Rand};
@@ -25,6 +27,11 @@ use cr_store::settings::SETTINGS;
 use cr_store::skills::SkillRules;
 
 pub use details::{DetailsPage, SOCIAL_CLASSES, hit_dice_text, subability_rows};
+pub use proficiencies::{
+    Choice, CombatPage, Lending, List, ListKind, PickGroup, ProficienciesPage, Unarmed,
+    disadvantages_text, languages_text, nonweapon_subtitle, pick_texts, specialization_costs,
+    weapon_subtitle,
+};
 pub use start::{
     AbilitiesPage, ClassAbilitiesPage, ClassAbilityGroup, ClassPage, EnteredClassPage,
     EnteredScoresPage, GROUPS, RacePage, RacialPage, SettingPage, ability_rows, class_choice,
@@ -223,12 +230,35 @@ impl Prompt {
         Self::new(PromptKind::Message, title, text)
     }
 
+    /// A message with OK that runs `then` once closed.
+    pub(crate) fn notice(title: &str, text: impl Into<String>, then: Then) -> Self {
+        Self {
+            yes: Some(then),
+            ..Self::message(title, text)
+        }
+    }
+
     /// A Yes/No question, No the default as in the original.
     pub(crate) fn ask(title: &str, text: impl Into<String>, yes: Then, no: Option<Then>) -> Self {
         Self {
             yes: Some(yes),
             no,
             ..Self::new(PromptKind::Question { yes_default: false }, title, text)
+        }
+    }
+
+    /// A warning the user may ignore: Ignore runs `ignore`, OK nothing.
+    pub(crate) fn ignorable(title: &str, text: &str, ignore: Then) -> Self {
+        let text = format!(
+            "{text}\n\n{}",
+            tr(
+                "If you choose to ignore this message and save this character, this message will \
+                not appear for this character again."
+            )
+        );
+        Self {
+            yes: Some(ignore),
+            ..Self::new(PromptKind::Ignorable, title, text)
         }
     }
 
@@ -273,8 +303,10 @@ pub enum Page {
     EnteredClass(EnteredClassPage),
     ClassAbilities(ClassAbilitiesPage),
     Details(Box<DetailsPage>),
-    /// The steps after the details, which this version of the Windows app
-    /// does not have yet.
+    Proficiencies(Box<ProficienciesPage>),
+    Combat(Box<CombatPage>),
+    /// The steps after the proficiencies, which this version of the
+    /// Windows app does not have yet.
     Later,
 }
 
@@ -289,7 +321,9 @@ impl Page {
             Self::Class(_) | Self::EnteredClass(_) => tr("Class").to_owned(),
             Self::ClassAbilities(_) => tr("Class Abilities").to_owned(),
             Self::Details(_) => tr("Details").to_owned(),
-            Self::Later => tr("Proficiencies").to_owned(),
+            Self::Proficiencies(_) => tr("Proficiencies").to_owned(),
+            Self::Combat(_) => tr("Combat").to_owned(),
+            Self::Later => tr("Equipment").to_owned(),
         }
     }
 
@@ -303,7 +337,9 @@ impl Page {
             Self::Racial(_) => topic::SUBRACE,
             Self::ClassAbilities(_) => topic::CLASS_ABILITIES,
             Self::Details(_) => topic::CHARACTER_INFORMATION,
-            Self::Later => topic::NONWEAPON_PROFICIENCIES,
+            Self::Proficiencies(_) => topic::NONWEAPON_PROFICIENCIES,
+            Self::Combat(_) => topic::WEAPON_PROFICIENCIES,
+            Self::Later => topic::EQUIPMENT,
         }
     }
 
@@ -317,6 +353,8 @@ impl Page {
             Self::Class(page) => !page.options.is_empty(),
             Self::ClassAbilities(page) => page.ok,
             Self::Details(page) => page.ok,
+            Self::Proficiencies(page) => page.ok,
+            Self::Combat(page) => page.ok,
             Self::Later => false,
         }
     }
@@ -379,6 +417,28 @@ pub enum Input {
     PromptOff(bool),
     /// "All Classes...": the class chosen in a group.
     PromptGroup(usize, usize),
+    // Proficiencies and Combat.
+    /// Add on a list: what was chosen.
+    Add(ListKind, String),
+    /// Remove on a row of a list.
+    Remove(ListKind, usize),
+    /// How many times a nonweapon proficiency is taken, by its row.
+    Times(usize, u32),
+    /// A proficiency of a pick list ticked or not: the list, the name.
+    Pick(usize, usize, bool),
+    /// The nonweapon slots the weapons use.
+    Lent(u32),
+    /// Weapon Focus, by index, "None" first.
+    Focus(usize),
+    /// The kit's free specialization, by index, "None" first.
+    FreeSpecialization(usize),
+    /// An unarmed style ticked or not.
+    Unarmed(usize, bool),
+    WeaponOfChoice(usize),
+    Expertise(usize),
+    /// Skills & Powers' weapon specialization, by index, "None" first.
+    Specialization(usize),
+    Shield(usize, bool),
 }
 
 /// The wizard: the pages so far, the draft Next has kept, and the
@@ -518,6 +578,22 @@ impl Wizard {
         self.show(Prompt::message(title, text));
     }
 
+    /// Asks the questions in turn and runs `then` once each is answered
+    /// Yes (a notice only needs OK).
+    fn ask_each(&mut self, mut questions: VecDeque<Question>, then: Then) {
+        let Some(question) = questions.pop_front() else {
+            then(self);
+            return;
+        };
+        let next: Then =
+            Arc::new(move |w: &mut Wizard| w.ask_each(questions.clone(), then.clone()));
+        self.show(if question.notice {
+            Prompt::notice(&question.title, question.text, next)
+        } else {
+            Prompt::ask(&question.title, question.text, next, None)
+        });
+    }
+
     /// Answers the prompt in view.
     pub fn answer(&mut self, answer: Answer) {
         let Some(prompt) = self.prompt.take() else {
@@ -589,6 +665,8 @@ impl Wizard {
             Page::EnteredClass(_) => self.entered_class_input(input),
             Page::ClassAbilities(_) => self.class_abilities_input(input),
             Page::Details(_) => self.details_input(input),
+            Page::Proficiencies(_) => self.proficiencies_input(input),
+            Page::Combat(_) => self.combat_input(input),
             Page::Later => {}
         }
     }
@@ -643,5 +721,34 @@ pub(crate) mod tests {
             scores_summary(&[12, 9, 14, 10, 8, 16]),
             "Str 12 · Dex 9 · Con 14 · Int 10 · Wis 8 · Cha 16"
         );
+    }
+
+    #[test]
+    fn questions_are_asked_in_turn_and_then_runs_after_the_last_yes() {
+        let Some(mut w) = wizard(false) else {
+            return;
+        };
+        let questions: VecDeque<Question> = [
+            Question::notice("Note", "Read this".into()),
+            Question::new("Sure?", "Really?".into()),
+        ]
+        .into();
+        w.ask_each(
+            questions.clone(),
+            Arc::new(|w: &mut Wizard| w.draft.name = "done".into()),
+        );
+        assert_eq!(w.prompt().unwrap().kind, PromptKind::Message);
+        w.answer(Answer::No);
+        assert_eq!(w.prompt().unwrap().title, "Sure?");
+        w.answer(Answer::No);
+        assert!(w.prompt().is_none());
+        assert_eq!(w.draft.name, "");
+        w.ask_each(
+            questions,
+            Arc::new(|w: &mut Wizard| w.draft.name = "done".into()),
+        );
+        w.answer(Answer::Yes);
+        w.answer(Answer::Yes);
+        assert_eq!(w.draft.name, "done");
     }
 }

@@ -19,7 +19,7 @@ use std::rc::Rc;
 use std::sync::{Arc, OnceLock};
 
 use cr_app::action::{self, Action};
-use cr_app::create::{Answer, Effect, Input, Needs, Wizard};
+use cr_app::create::{Answer, Effect, Input, ListKind, Needs, Wizard};
 use cr_app::help::{Files, Found, MonsterHelp, PROGRAM, Target};
 use cr_app::library::Filter;
 use cr_app::sheets::Export;
@@ -114,6 +114,8 @@ pub struct Shell {
     /// Counts the times a page asked again for its WebView2's
     /// CoreWebView2, for it to ask once more.
     web_tries: u64,
+    /// What the boxes of New Character's lists have chosen for Add.
+    adding: create::Adding,
     /// A book is shown, whose keys the keyboard hook takes.
     reading: Rc<Cell<bool>>,
 }
@@ -268,6 +270,8 @@ pub enum Message {
     Wizard(Input),
     /// The answer to the prompt with this number.
     WizardAnswer(u64, Answer),
+    /// What the box of a list has chosen for Add.
+    WizardAdding(ListKind, String),
     // Import.
     PackageChosen(Result<Option<Arc<Package>>, String>),
     Import,
@@ -887,6 +891,7 @@ impl Component for Shell {
             about_open: Vec::new(),
             book_view: BookView::default(),
             web_tries: 0,
+            adding: Vec::new(),
             reading: Rc::default(),
         };
         let sender = context.sender();
@@ -1241,15 +1246,26 @@ impl Component for Shell {
             Message::WizardLoaded(loaded) => {
                 self.busy = false;
                 match loaded {
-                    Ok(wizard) => self.go(Page::Create(wizard)),
+                    Ok(wizard) => {
+                        self.adding.clear();
+                        self.go(Page::Create(wizard));
+                    }
                     Err(e) => self.show_error(tr("New Character"), e),
                 }
             }
             Message::Wizard(input) => {
                 if let Page::Create(wizard) = &mut self.page {
+                    // Added, the choice leaves the box.
+                    if let Input::Add(kind, _) = &input {
+                        self.adding.retain(|(k, _)| k != kind);
+                    }
                     wizard.input(input);
                     self.wizard_effects();
                 }
+            }
+            Message::WizardAdding(kind, name) => {
+                self.adding.retain(|(k, _)| *k != kind);
+                self.adding.push((kind, name));
             }
             Message::WizardAnswer(serial, answer) => {
                 if let Page::Create(wizard) = &mut self.page
@@ -1649,7 +1665,7 @@ impl Component for Shell {
         let content = match &self.page {
             Page::Library => library::view(self, context),
             Page::Edit(edit) => edit::view(edit, context),
-            Page::Create(wizard) => create::view(wizard, context),
+            Page::Create(wizard) => create::view(wizard, &self.adding, context),
             Page::Import(package) => import::view(self, package, context),
             Page::Settings => settings::view(self, context),
             Page::Sheet(page) => sheet::view(self, page, context),

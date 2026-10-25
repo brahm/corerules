@@ -433,47 +433,65 @@ impl Wizard {
         }
         // The details as Next left them, for Back.
         self.set_details(page);
-        self.push(Page::Later);
+        self.push_proficiencies();
     }
 }
 
 #[cfg(test)]
-mod tests {
+pub(super) mod tests {
     use super::super::tests::wizard;
     use super::super::{Answer, PromptKind};
     use super::*;
 
     /// A human fighter on the details page.
     fn at_details(entering: bool) -> Option<Wizard> {
+        at_details_with(entering, false)
+    }
+
+    /// A human fighter on the details page; `sp` with Skills & Powers.
+    pub(in super::super) fn at_details_with(entering: bool, sp: bool) -> Option<Wizard> {
         let mut w = wizard(entering)?;
+        if sp {
+            w.input(Input::Rules(1));
+        }
         w.input(Input::Next);
         if !entering {
             w.answer(Answer::Yes);
             let Page::Abilities(page) = w.page() else {
                 return None;
             };
-            let vii = page.methods.iter().position(|m| *m == RollMethod::Points)?;
-            w.input(Input::Method(vii));
-            for (a, score) in [18, 12, 13, 10, 10, 12].into_iter().enumerate() {
-                w.input(Input::Score(a, score));
+            if let Some(vii) = page.methods.iter().position(|m| *m == RollMethod::Points) {
+                w.input(Input::Method(vii));
+                for (a, score) in [18, 12, 13, 10, 10, 12].into_iter().enumerate() {
+                    w.input(Input::Score(a, score));
+                }
             }
         }
-        w.input(Input::Next);
-        let Page::Race(page) = w.page() else {
-            return None;
-        };
-        let human = page.races.iter().position(|(r, _)| r == "Human")?;
-        w.input(Input::Race(human));
-        w.input(Input::Next);
-        let options = match w.page() {
-            Page::Class(page) => page.options.clone(),
-            Page::EnteredClass(page) => page.options.clone(),
-            _ => return None,
-        };
-        let fighter = options.iter().position(|o| *o == ["Fighter"])?;
-        w.input(Input::Class(fighter));
-        w.input(Input::Next);
-        matches!(w.page(), Page::Details(_)).then_some(w)
+        // Next through the pages, a human fighter on the way.
+        for _ in 0..12 {
+            if w.prompt().is_some() {
+                w.answer(Answer::Yes);
+                continue;
+            }
+            w.input(Input::Next);
+            match w.page() {
+                Page::Race(page) => {
+                    let human = page.races.iter().position(|(r, _)| r == "Human")?;
+                    w.input(Input::Race(human));
+                }
+                Page::Class(page) => {
+                    let fighter = page.options.iter().position(|o| *o == ["Fighter"])?;
+                    w.input(Input::Class(fighter));
+                }
+                Page::EnteredClass(page) => {
+                    let fighter = page.options.iter().position(|o| *o == ["Fighter"])?;
+                    w.input(Input::Class(fighter));
+                }
+                Page::Details(_) => return Some(w),
+                _ => {}
+            }
+        }
+        None
     }
 
     fn details(w: &Wizard) -> &DetailsPage {
@@ -500,7 +518,7 @@ mod tests {
         w.input(Input::Age(30));
         w.input(Input::Exceptional(77));
         w.input(Input::Next);
-        assert!(matches!(w.page(), Page::Later));
+        assert!(matches!(w.page(), Page::Proficiencies(_)));
         let d = w.draft();
         // An empty name gets a random one on Next.
         assert!(!d.name.is_empty());

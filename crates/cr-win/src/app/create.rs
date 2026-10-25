@@ -3,12 +3,14 @@
 //! foot and its questions as dialogs.
 
 use cr_app::create::{
-    AbilitiesPage, Answer, ClassAbilitiesPage, ClassPage, DetailsPage, EnteredClassPage,
-    EnteredScoresPage, Input, Page, Prompt, PromptKind, RacePage, RacialPage, SOCIAL_CLASSES,
-    SettingPage, Wizard,
+    AbilitiesPage, Answer, Choice, ClassAbilitiesPage, ClassPage, CombatPage, DetailsPage,
+    EnteredClassPage, EnteredScoresPage, Input, List, ListKind, Page, PickGroup, ProficienciesPage,
+    Prompt, PromptKind, RacePage, RacialPage, SOCIAL_CLASSES, SettingPage, Unarmed, Wizard,
 };
 use cr_i18n::{tr, trn};
-use cr_store::create::{ABILITIES, ENTERED_SCORES, METHOD_VI_DICE, METHOD_X_STRENGTH_STEP};
+use cr_store::create::{
+    ABILITIES, ENTERED_SCORES, METHOD_VI_DICE, METHOD_X_STRENGTH_STEP, UNARMED,
+};
 use cr_store::settings::SETTINGS;
 use cr_win::text::plain;
 use windows_reactor::*;
@@ -21,7 +23,10 @@ fn input(input: Input) -> Message {
     Message::Wizard(input)
 }
 
-pub fn view(wizard: &Wizard, context: &mut ViewContext<Shell>) -> View {
+/// What the box of each list has chosen for Add, until it is added.
+pub type Adding = Vec<(ListKind, String)>;
+
+pub fn view(wizard: &Wizard, adding: &Adding, context: &mut ViewContext<Shell>) -> View {
     let page = wizard.page();
     let content: View = match page {
         Page::Setting(page) => setting(page, context),
@@ -33,6 +38,8 @@ pub fn view(wizard: &Wizard, context: &mut ViewContext<Shell>) -> View {
         Page::EnteredClass(page) => entered_class(page, context),
         Page::ClassAbilities(page) => class_abilities(page, context),
         Page::Details(page) => details(page, context),
+        Page::Proficiencies(page) => proficiencies(page, adding, context),
+        Page::Combat(page) => combat(page, adding, context),
         Page::Later => ui::card(StackPanel::new().spacing(4.0).children((
             ui::strong(tr("Not in this version yet")),
             ui::body(tr(
@@ -961,5 +968,336 @@ fn details(page: &DetailsPage, context: &mut ViewContext<Shell>) -> View {
             subabilities,
         )),
         history,
+    ))
+}
+
+/// A list the user adds to, with a box of what may be added and Add,
+/// and removes from by each row's Remove; a nonweapon proficiency's rank
+/// changes in its row.
+fn list(kind: ListKind, list: &List, adding: &Adding, context: &mut ViewContext<Shell>) -> View {
+    if !list.shown {
+        return View::empty();
+    }
+    let rows: Vec<KeyedView> = list
+        .rows
+        .iter()
+        .enumerate()
+        .map(|(i, (title, subtitle, times))| {
+            let rank: View = match *times {
+                Some(times) => number(
+                    &format!("{title}: {}", tr("Rank")),
+                    times,
+                    (1, 10),
+                    move |v| Input::Times(i, v),
+                    context,
+                )
+                .into(),
+                None => View::empty(),
+            };
+            let remove = ui::icon_button(
+                tr("Remove"),
+                Symbol::Delete,
+                input(Input::Remove(kind, i)),
+                context,
+            );
+            KeyedView::new(
+                format!("{i}\u{1}{title}"),
+                ui::setting(title, subtitle, with_buttons(rank, remove)),
+            )
+        })
+        .collect();
+    let rows: View = if rows.is_empty() {
+        ui::card(ui::body(tr("None")).opacity(0.6))
+    } else {
+        StackPanel::new().spacing(4.0).keyed_children(rows)
+    };
+    let chosen = adding
+        .iter()
+        .find(|(k, _)| *k == kind)
+        .and_then(|(_, name)| list.choices.iter().position(|c| c == name));
+    let add_to = tr!("Add to {list}", list = list.title.clone());
+    let choices = list.choices.clone();
+    let add: View = match chosen {
+        Some(i) => Button::new()
+            .on_click(context.message(input(Input::Add(kind, list.choices[i].clone()))))
+            .content(plain(tr("_Add"))),
+        None => Button::new().is_enabled(false).content(plain(tr("_Add"))),
+    };
+    let add = with_buttons(
+        ComboBox::new()
+            .automation_name(add_to.clone())
+            .placeholder_text(add_to)
+            .items_source(list.choices.clone())
+            .selected_index(chosen)
+            .is_enabled(!list.choices.is_empty())
+            .min_width(280.0)
+            .on_selection_changed(context.callback(move |i: Option<usize>| {
+                match i.and_then(|i| choices.get(i)) {
+                    Some(name) => Message::WizardAdding(kind, name.clone()),
+                    None => Message::Nothing,
+                }
+            })),
+        add,
+    );
+    StackPanel::new().spacing(4.0).children((
+        heading(&list.title, Some(&list.description)),
+        rows,
+        Border::new()
+            .margin(Thickness::new(0.0, 4.0, 0.0, 0.0))
+            .content(add),
+    ))
+}
+
+/// A choice of one, "None" first, as a settings card.
+fn choice(choice: &Choice, chosen: fn(usize) -> Input, context: &mut ViewContext<Shell>) -> View {
+    if !choice.shown {
+        return View::empty();
+    }
+    StackPanel::new().spacing(4.0).children((
+        heading(&choice.title, Some(&choice.description)),
+        ui::setting(
+            tr("Weapon"),
+            "",
+            ComboBox::new()
+                .automation_name(choice.title.clone())
+                .items_source(choice.items.clone())
+                .selected_index(choice.selected)
+                .min_width(240.0)
+                .on_selection_changed(context.callback(move |i: Option<usize>| match i {
+                    Some(i) => input(chosen(i)),
+                    None => Message::Nothing,
+                })),
+        ),
+    ))
+}
+
+/// Check boxes, each with a line under it: `make` makes the input of one
+/// ticked or not; the ones `enabled` refuses are off.
+fn checks(
+    rows: &[(String, String, bool)],
+    enabled: impl Fn(bool) -> bool,
+    make: impl Fn(usize, bool) -> Input + Clone + 'static,
+    context: &mut ViewContext<Shell>,
+) -> View {
+    let checks: Vec<KeyedView> = rows
+        .iter()
+        .enumerate()
+        .map(|(i, (title, subtitle, on))| {
+            let make = make.clone();
+            KeyedView::new(
+                format!("{i}\u{1}{title}"),
+                CheckBox::new()
+                    .automation_name(title.clone())
+                    .is_checked(*on)
+                    .is_enabled(enabled(*on))
+                    .on_is_checked_changed(context.callback(move |on| input(make(i, on))))
+                    .content(two_lines(title, subtitle)),
+            )
+        })
+        .collect();
+    ui::card(StackPanel::new().spacing(4.0).keyed_children(checks))
+}
+
+/// A list the classes or the kit have the user pick from: once as many
+/// are ticked as may be, the others are off.
+fn pick_group(g: usize, group: &PickGroup, context: &mut ViewContext<Shell>) -> View {
+    let rows: Vec<(String, String, bool)> = group
+        .names
+        .iter()
+        .zip(&group.picked)
+        .map(|(name, &on)| (name.clone(), String::new(), on))
+        .collect();
+    let full = group.full;
+    StackPanel::new().spacing(4.0).children((
+        heading(&group.title, Some(&group.description)),
+        checks(
+            &rows,
+            move |on| on || !full,
+            move |i, on| Input::Pick(g, i, on),
+            context,
+        ),
+    ))
+}
+
+/// The unarmed styles to tick, each with what it costs.
+fn unarmed(unarmed: &Unarmed, context: &mut ViewContext<Shell>) -> View {
+    if !unarmed.shown {
+        return View::empty();
+    }
+    let rows: Vec<(String, String, bool)> = UNARMED
+        .iter()
+        .zip(unarmed.taken)
+        .map(|(name, on)| ((*name).to_owned(), unarmed.cost.clone(), on))
+        .collect();
+    StackPanel::new().spacing(4.0).children((
+        heading(
+            tr("Unarmed Combat"),
+            Some(tr(
+                "Specialization in an unarmed style, not together with a weapon specialization",
+            )),
+        ),
+        checks(&rows, |_| true, Input::Unarmed, context),
+    ))
+}
+
+/// Skills & Powers: the character points left, kept for later levels.
+fn points_left(points: &str, problem: Option<&str>) -> View {
+    StackPanel::new().spacing(4.0).children((
+        heading(tr("Character Points Left"), problem),
+        ui::setting(
+            tr("Character Points Left"),
+            tr("Kept on the character for later levels"),
+            ui::subtitle(points.to_owned()),
+        ),
+    ))
+}
+
+fn proficiencies(
+    page: &ProficienciesPage,
+    adding: &Adding,
+    context: &mut ViewContext<Shell>,
+) -> View {
+    fn group(children: impl IntoViews) -> View {
+        StackPanel::new().spacing(4.0).children(children)
+    }
+    let picks: Vec<KeyedView> = page
+        .picks
+        .iter()
+        .enumerate()
+        .map(|(g, pick)| {
+            KeyedView::new(
+                format!("{g}\u{1}{}", pick.title),
+                pick_group(g, pick, context),
+            )
+        })
+        .collect();
+    let native: Vec<KeyedView> = page
+        .native
+        .iter()
+        .enumerate()
+        .map(|(i, name)| KeyedView::new(format!("{i}\u{1}{name}"), ui::body(name.clone())))
+        .collect();
+    let native = if native.is_empty() {
+        ui::card(ui::body(tr("None")).opacity(0.6))
+    } else {
+        ui::card(StackPanel::new().spacing(6.0).keyed_children(native))
+    };
+    let requirements: View = if page.requirements.is_empty() {
+        View::empty()
+    } else {
+        let rows: Vec<KeyedView> = page
+            .requirements
+            .iter()
+            .enumerate()
+            .map(|(i, text)| {
+                KeyedView::new(
+                    i.to_string(),
+                    ui::body(text.clone()).is_text_selection_enabled(true),
+                )
+            })
+            .collect();
+        group((
+            heading(
+                tr("Kit Weapon Proficiency Requirements"),
+                Some(&page.requirements_text),
+            ),
+            ui::card(StackPanel::new().spacing(6.0).keyed_children(rows)),
+        ))
+    };
+    let lending: View = match &page.lending {
+        Some(lending) => group((
+            heading(
+                tr("Nonweapon Slots for Weapons"),
+                Some(&lending.description),
+            ),
+            ui::setting(
+                tr("Nonweapon slots used"),
+                "",
+                number(
+                    tr("Nonweapon slots used"),
+                    lending.value,
+                    (lending.least, lending.most),
+                    Input::Lent,
+                    context,
+                ),
+            ),
+        )),
+        None => View::empty(),
+    };
+    let points: View = match &page.points_left {
+        Some(points) => points_left(points, None),
+        None => View::empty(),
+    };
+    StackPanel::new().spacing(4.0).children((
+        group((
+            list(ListKind::Nonweapon, &page.nonweapon, adding, context),
+            StackPanel::new().spacing(4.0).keyed_children(picks),
+            list(ListKind::Traits, &page.traits, adding, context),
+            list(
+                ListKind::Disadvantages,
+                &page.disadvantages,
+                adding,
+                context,
+            ),
+        )),
+        group((
+            heading(tr("Native Languages"), None),
+            native,
+            list(ListKind::Learned, &page.learned, adding, context),
+        )),
+        group((
+            requirements,
+            lending,
+            list(ListKind::Weapons, &page.weapons, adding, context),
+            list(ListKind::Broad, &page.broad, adding, context),
+            list(ListKind::Tight, &page.tight, adding, context),
+            choice(&page.focus, Input::Focus, context),
+        )),
+        group((
+            list(
+                ListKind::Specializations,
+                &page.specializations,
+                adding,
+                context,
+            ),
+            choice(&page.free, Input::FreeSpecialization, context),
+            unarmed(&page.unarmed, context),
+            points,
+        )),
+    ))
+}
+
+fn combat(page: &CombatPage, adding: &Adding, context: &mut ViewContext<Shell>) -> View {
+    let weapon =
+        |choice: &Choice, chosen: fn(usize) -> Input, context: &mut ViewContext<Shell>| -> View {
+            if !choice.shown {
+                return View::empty();
+            }
+            ui::setting(
+                &choice.title,
+                &choice.description,
+                ComboBox::new()
+                    .automation_name(choice.title.clone())
+                    .items_source(choice.items.clone())
+                    .selected_index(choice.selected)
+                    .min_width(240.0)
+                    .on_selection_changed(context.callback(move |i: Option<usize>| match i {
+                        Some(i) => input(chosen(i)),
+                        None => Message::Nothing,
+                    })),
+            )
+        };
+    let shields = checks(&page.shields, |_| true, Input::Shield, context);
+    StackPanel::new().spacing(4.0).children((
+        heading(tr("Weapons"), Some(&page.weapons_text)),
+        weapon(&page.weapon_of_choice, Input::WeaponOfChoice, context),
+        weapon(&page.expertise, Input::Expertise, context),
+        weapon(&page.specialization, Input::Specialization, context),
+        unarmed(&page.unarmed, context),
+        heading(tr("Shield Proficiencies"), None),
+        shields,
+        list(ListKind::Armor, &page.armor, adding, context),
+        list(ListKind::Styles, &page.styles, adding, context),
+        points_left(&page.points_left, page.problem.as_deref()),
     ))
 }

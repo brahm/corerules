@@ -232,17 +232,22 @@ The phases run in order:
      on every open, click in the contents and zoom, which it no longer
      does, and tables whose last column broke a word over lines in a
      narrow window, which now keeps to one line.
-   - **Character creation up to the details (in progress).** `cr-app`
+   - **Character creation up to Combat (in progress).** `cr-app`
      gained the creation wizard, free of any toolkit: its pages from the
-     campaign setting to the name, kit and appearance, what each choice
-     allows, the original's questions and messages, and the help topic
-     of each page; the GNOME wizard takes from it the texts and checks
-     they share. The Windows app's New Character goes through those
-     pages, with Back, the questions as dialogs, the Racial Abilities and
-     class abilities of Skills & Powers, and Enter Character's All
-     Classes. The steps after the details (proficiencies, combat,
-     thieving skills, spells, psionics, equipment and Create) and Enter
-     Character follow in the next two pull requests.
+     campaign setting to the name, kit and appearance, then the
+     proficiencies (nonweapon, languages, weapons, groups, focus,
+     specialization and unarmed combat, with the kit's picks, warnings
+     and slots lent) and Skills & Powers' Combat page (weapon of choice,
+     expertise, specialization, shields, armor and fighting styles),
+     what each choice allows, the original's questions and messages, and
+     the help topic of each page; the GNOME wizard takes from it the
+     texts and checks they share, and now refuses a weapon or a barred
+     proficiency past the slots as it refuses the others. The Windows
+     app's New Character goes through those pages, with Back, the
+     questions as dialogs, the Racial Abilities and class abilities of
+     Skills & Powers, and Enter Character's All Classes. The steps after
+     Combat (thieving skills, spells, psionics, equipment and Create)
+     and Enter Character follow in the next pull request.
    - Still to port: the rest of character creation and Enter Character;
      editing; the generators (NPCs, treasure, encounters, tables,
      parties); the user database editors; packages and Import Core Rules

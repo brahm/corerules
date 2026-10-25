@@ -15,12 +15,11 @@ use adw::prelude::*;
 use cr_i18n::{tr, trn};
 use cr_store::advance::AdvanceRules;
 use cr_store::create::{
-    ABILITIES, ALIGNMENTS, CreationRules, DISADVANTAGE_POINTS, Dice, Draft, ENTERED_DEFAULT_SCORE,
-    ENTERED_SCORES, Entered, METHOD_VI_DICE, METHOD_VII_POINTS, METHOD_VIII_DICE,
-    METHOD_X_STRENGTH_STEP, MOST_DISADVANTAGES, MOST_FIGHTING_STYLES, NonweaponPick, PickKind,
-    Question, ROGUE_SKILLS, RollMethod, SHIELDS, STANDARD_PACK, SUBABILITY_SPREAD, UNARMED,
-    max_spells_per_level, point_table, required_removal, rogue_skill_of, roll_dice_pool,
-    roll_seven_dice, seven_dice_scores,
+    ABILITIES, ALIGNMENTS, CreationRules, Dice, Draft, ENTERED_DEFAULT_SCORE, ENTERED_SCORES,
+    Entered, METHOD_VI_DICE, METHOD_VII_POINTS, METHOD_VIII_DICE, METHOD_X_STRENGTH_STEP,
+    MOST_DISADVANTAGES, MOST_FIGHTING_STYLES, NonweaponPick, Question, ROGUE_SKILLS, RollMethod,
+    SHIELDS, STANDARD_PACK, SUBABILITY_SPREAD, UNARMED, max_spells_per_level, point_table,
+    required_removal, rogue_skill_of, roll_dice_pool, roll_seven_dice, seven_dice_scores,
 };
 use cr_store::help::topic;
 use cr_store::kit_magic::KitMagicRules;
@@ -2270,19 +2269,7 @@ impl Wizard {
 
         // A proficiency may be taken more than once: more slots with the
         // Core Rules, more ranks at 1 point each with Skills & Powers.
-        // What a proficiency costs; the classes and the kit make some free.
-        let nonweapon_subtitle = move |rules: &CreationRules, draft: &Draft, name: &str| {
-            let cost = rules.nonweapon_cost(draft, name);
-            if sp {
-                tr!("{cost}, 1 more a further rank", cost = points(cost.into()))
-            } else if !rules.language_nonweapon(name) {
-                tr!("{cost}, 1 more a further rank", cost = slots(cost))
-            } else if cost == 0 {
-                tr("Free").into()
-            } else {
-                tr!("{slots} each time", slots = slots(cost))
-            }
-        };
+        let nonweapon_subtitle = cr_app::create::nonweapon_subtitle;
         let nonweapon_spec = {
             let (this, draft) = (self.clone(), d.clone());
             move |name: String, times: u32| RowSpec {
@@ -2491,16 +2478,7 @@ impl Wizard {
             move |name| Some(language_spec(name)),
         );
         // What a weapon costs; the kit makes some cheaper or dearer.
-        let weapon_subtitle = move |rules: &CreationRules, draft: &Draft, name: &str| {
-            let cost = rules.weapon_cost_for(draft, name);
-            if sp {
-                points(cost.into())
-            } else if cost == 1 {
-                String::new()
-            } else {
-                slots(cost)
-            }
-        };
+        let weapon_subtitle = cr_app::create::weapon_subtitle;
         let weapon_spec = {
             let (this, draft) = (self.clone(), d.clone());
             move |name: String| RowSpec {
@@ -2877,13 +2855,7 @@ impl Wizard {
                 weapons.set_subtitles(|name, _| weapon_subtitle(rules, &probe, name));
                 specializations
                     .set_subtitles(|name, _| slots(rules.core_specialization_cost(&probe, name)));
-                let mut costs = tr!(
-                    "Bows take {bows}, other weapons 1 slot.",
-                    bows = slots(rules.bow_specialization_cost(&probe))
-                );
-                if let Some(free) = rules.free_specialization(&probe) {
-                    costs = format!("{costs} {}", tr!("{free} is free.", free));
-                }
+                let costs = cr_app::create::specialization_costs(rules, &probe);
                 specializations.group.set_description(Some(&escape(&costs)));
                 filling.set(true);
                 if let Some((least, most)) = rules.nonweapon_lending(&probe) {
@@ -2900,12 +2872,9 @@ impl Wizard {
                 let room = rules.language_slots(&probe);
                 language_room.set(room);
                 let languages_left = room as i64 - probe.learned_languages.len() as i64;
-                learned.group.set_description(Some(&tr!(
-                    "{left} of {room} left: one for each slot or rank of Modern \
-                     Languages and the like",
-                    left = languages_left,
-                    room
-                )));
+                learned
+                    .group
+                    .set_description(Some(&cr_app::create::languages_text(languages_left, room)));
                 // Enter Character's proficiencies take no slots or points
                 // (0x5c30df, 0x5cd21c).
                 if this.0.entering {
@@ -2943,17 +2912,9 @@ impl Wizard {
                     left = points(left),
                     total = rules.proficiency_points(&probe)
                 )));
-                let given: u32 = probe
-                    .disadvantages
-                    .iter()
-                    .map(|d| rules.disadvantage_points(d))
-                    .sum();
-                disadvantages.group.set_description(Some(&tr!(
-                    "Up to {most}, giving at most {limit} points; these give {given}",
-                    most = MOST_DISADVANTAGES,
-                    limit = DISADVANTAGE_POINTS,
-                    given = given.min(DISADVANTAGE_POINTS)
-                )));
+                disadvantages
+                    .group
+                    .set_description(Some(&cr_app::create::disadvantages_text(rules, &probe)));
                 weapons.group.set_description(Some(&tr!(
                     "{cost} each; {free} come with the class, and points left from the \
                      proficiencies pay for more",
@@ -3363,53 +3324,7 @@ impl Wizard {
     /// from, as the original's pickers (5c7997, 5c6ca8, 5c6ad8): the
     /// picks go straight into the draft.
     fn pick_group(&self, pick: NonweaponPick, changed: Rc<dyn Fn()>) -> adw::PreferencesGroup {
-        let (title, description) = match pick.kind {
-            PickKind::Bonus(_) if pick.from_kit => (
-                tr("Bonus Proficiencies"),
-                tr!(
-                    "The kit {kit} allows you to select {count} bonus NWPs from the list below.",
-                    kit = pick.source,
-                    count = pick.count
-                ),
-            ),
-            PickKind::Bonus(_) => (
-                tr("Bonus Proficiencies"),
-                tr!(
-                    "The class {class} allows you to select {count} bonus NWPs from the list \
-                     below.",
-                    class = pick.source,
-                    count = pick.count
-                ),
-            ),
-            PickKind::PlusTwo => (
-                tr("+2 Proficiency"),
-                tr!(
-                    "The kit {kit} allows you to pick a NWP from this list to receive a +2 bonus.",
-                    kit = pick.source
-                ),
-            ),
-            PickKind::Free => (
-                tr("Free Proficiency"),
-                tr("Select a non-weapon proficiency that will be free.").into(),
-            ),
-            PickKind::Level { level, .. } => (
-                tr("Free Proficiency"),
-                tr!(
-                    "The class {class} lets you pick at level {level} one non-weapon proficiency \
-                     that will be free.",
-                    class = pick.source,
-                    level
-                ),
-            ),
-            PickKind::PlusOne => (
-                tr("+1 Proficiencies"),
-                tr!(
-                    "Select non-weapon proficiencies that will receive +1 to their score, up \
-                     to {count}.",
-                    count = pick.count
-                ),
-            ),
-        };
+        let (title, description) = cr_app::create::pick_texts(&pick);
         let group = adw::PreferencesGroup::builder()
             .title(title)
             .description(escape(&description))
