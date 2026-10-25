@@ -8,14 +8,16 @@ use cr_app::create::{
     ProficienciesPage, PromptKind, RacePage, RacialPage, RoguePage, SOCIAL_CLASSES, SettingPage,
     SpellsPage, Unarmed, WildPage, Wizard, none_label,
 };
-use cr_app::skills::{MOST_POINTS, SkillsForm};
+use cr_app::skills::SkillsForm;
 use cr_i18n::{tr, trn};
 use cr_store::create::{ABILITIES, ENTERED_SCORES, METHOD_VI_DICE, METHOD_X_STRENGTH_STEP};
 use cr_store::settings::SETTINGS;
 use cr_win::text::plain;
 use windows_reactor::*;
 
-use super::forms::{self, ListMessages, heading, points_left, two_lines, with_buttons};
+use super::forms::{
+    self, ListMessages, SkillsMessages, heading, points_left, two_lines, with_buttons,
+};
 use super::portrait::Shown;
 use super::{Message, Shell};
 use crate::ui;
@@ -205,7 +207,7 @@ pub(super) fn prompt_dialog<T>(
         .content(ScrollViewer::new().max_height(480.0).content(content))
 }
 
-/// One radio button per choice, in a card; `chosen` makes the message of
+/// One radio button per choice, in a card; `chosen` makes the input of
 /// the one checked.
 fn choices(
     group: &str,
@@ -214,29 +216,7 @@ fn choices(
     chosen: impl Fn(usize) -> Input + Clone + 'static,
     context: &mut ViewContext<Shell>,
 ) -> View {
-    let buttons: Vec<KeyedView> = rows
-        .iter()
-        .enumerate()
-        .map(|(i, (title, subtitle))| {
-            let chosen = chosen.clone();
-            KeyedView::new(
-                format!("{i}\u{1}{title}"),
-                RadioButton::new()
-                    .group_name(group)
-                    .automation_name(title.clone())
-                    .is_checked(i == selected)
-                    .on_checked(context.callback(move |on: bool| {
-                        if on {
-                            input(chosen(i))
-                        } else {
-                            Message::Nothing
-                        }
-                    }))
-                    .content(two_lines(title, subtitle)),
-            )
-        })
-        .collect();
-    ui::card(StackPanel::new().spacing(4.0).keyed_children(buttons))
+    forms::choices(group, rows, selected, move |i| input(chosen(i)), context)
 }
 
 /// A button with the Refresh symbol that rolls again.
@@ -952,6 +932,15 @@ const LISTS: ListMessages = ListMessages {
     times: |_, row, n| input(Input::Times(row, n)),
 };
 
+/// The Skills form's messages, on the Psionics step.
+const SKILLS: SkillsMessages = SkillsMessages {
+    points: |row, points| input(Input::SkillPoints(row, points)),
+    bonus: |group, name| input(Input::KitBonus(group, name)),
+    chosen: |name, on| input(Input::RogueChosen(name, on)),
+    primary: |slot, index| input(Input::Primary(slot, index)),
+    lists: LISTS,
+};
+
 /// A NumberBox for a whole number in `min..=max`; `changed` makes the
 /// input of a new value.
 fn number(
@@ -962,17 +951,6 @@ fn number(
     context: &mut ViewContext<Shell>,
 ) -> NumberBox {
     forms::number(name, value, range, move |v| input(changed(v)), context)
-}
-
-/// A NumberBox for a whole number in `min..=max` that may be below 0.
-fn signed_number(
-    name: &str,
-    value: i32,
-    range: (i32, i32),
-    changed: impl Fn(i32) -> Input + 'static,
-    context: &mut ViewContext<Shell>,
-) -> NumberBox {
-    forms::signed_number(name, value, range, move |v| input(changed(v)), context)
 }
 
 /// A list the user adds to and removes from, as [`forms::list`].
@@ -1290,19 +1268,6 @@ fn button(label: &str, enabled: bool, what: Input, context: &mut ViewContext<She
         .content(plain(label))
 }
 
-/// The text of warnings that do not stop Next.
-fn warnings(texts: &[String]) -> View {
-    if texts.is_empty() {
-        return View::empty();
-    }
-    InfoBar::new()
-        .severity(InfoBarSeverity::Warning)
-        .message(texts.join("\n"))
-        .is_open(true)
-        .is_closable(false)
-        .into()
-}
-
 /// The Wild Talents step: Test and Roll, the talents and, for a wild
 /// talent, the psionic attack and defense modes.
 fn wild(page: &WildPage, adding: &Adding, context: &mut ViewContext<Shell>) -> View {
@@ -1339,139 +1304,7 @@ fn wild(page: &WildPage, adding: &Adding, context: &mut ViewContext<Shell>) -> V
 /// bonuses and chosen skills, a psionicist's disciplines and powers, and
 /// the psionic attack and defense modes.
 fn skills_form(form: &SkillsForm, adding: &Adding, context: &mut ViewContext<Shell>) -> View {
-    let rogue: View = match form.rogue() {
-        Some(group) => {
-            let rows: Vec<KeyedView> = group
-                .rows
-                .iter()
-                .enumerate()
-                .map(|(i, row)| {
-                    KeyedView::new(
-                        format!("{i}\u{1}{}", row.label),
-                        ui::setting(
-                            &row.label,
-                            &row.subtitle,
-                            signed_number(
-                                &row.label,
-                                row.points,
-                                (row.least, MOST_POINTS),
-                                move |v| Input::SkillPoints(i, v),
-                                context,
-                            ),
-                        ),
-                    )
-                })
-                .collect();
-            StackPanel::new().spacing(4.0).children((
-                heading(tr("Rogue Skills"), Some(&group.description)),
-                ui::setting(
-                    tr("Points Left"),
-                    "",
-                    ui::subtitle(group.left.to_string().replace('-', "−")),
-                ),
-                StackPanel::new().spacing(4.0).keyed_children(rows),
-                warnings(&group.warnings),
-            ))
-        }
-        None => View::empty(),
-    };
-    let bonuses: Vec<KeyedView> = form
-        .kit_bonuses()
-        .into_iter()
-        .enumerate()
-        .map(|(g, group)| {
-            let rows: Vec<(String, String)> = group
-                .names
-                .iter()
-                .map(|n| (n.clone(), String::new()))
-                .collect();
-            KeyedView::new(
-                format!("{g}\u{1}{}", group.title),
-                StackPanel::new().spacing(4.0).children((
-                    heading(&group.title, Some(&group.description)),
-                    choices(
-                        &format!("kit-bonus-{g}"),
-                        &rows,
-                        group.picked.unwrap_or(usize::MAX),
-                        move |i| Input::KitBonus(g, i),
-                        context,
-                    ),
-                )),
-            )
-        })
-        .collect();
-    let chosen: View = match form.chosen() {
-        Some(group) => {
-            let rows: Vec<(String, String, bool)> = group
-                .names
-                .iter()
-                .zip(&group.ticked)
-                .map(|(n, &on)| (n.clone(), String::new(), on))
-                .collect();
-            let full = group.full;
-            StackPanel::new().spacing(4.0).children((
-                heading(&group.title, Some(&group.description)),
-                checks(&rows, move |on| on || !full, Input::RogueChosen, context),
-            ))
-        }
-        None => View::empty(),
-    };
-    let psionics: View = match form.psionics() {
-        Some(description) => {
-            let primary: Vec<KeyedView> = form
-                .primary()
-                .into_iter()
-                .enumerate()
-                .map(|(slot, choice)| {
-                    KeyedView::new(
-                        slot.to_string(),
-                        ui::setting(
-                            &choice.title,
-                            "",
-                            ComboBox::new()
-                                .automation_name(choice.title.clone())
-                                .items_source(choice.items.clone())
-                                .selected_index(choice.selected)
-                                .min_width(240.0)
-                                .on_selection_changed(context.callback(move |i: Option<usize>| {
-                                    match i {
-                                        Some(i) => input(Input::Primary(slot, i)),
-                                        None => Message::Nothing,
-                                    }
-                                })),
-                        ),
-                    )
-                })
-                .collect();
-            StackPanel::new().spacing(4.0).children((
-                heading(tr("Psionics"), Some(&description)),
-                StackPanel::new().spacing(4.0).keyed_children(primary),
-            ))
-        }
-        None => View::empty(),
-    };
-    let lists: Vec<KeyedView> = [
-        ListKind::Disciplines,
-        ListKind::Sciences,
-        ListKind::Devotions,
-        ListKind::Attacks,
-        ListKind::Defenses,
-    ]
-    .into_iter()
-    .map(|kind| {
-        KeyedView::new(
-            format!("{kind:?}"),
-            described_list(kind, &form.list(kind), &[], adding, context),
-        )
-    })
-    .collect();
-    StackPanel::new().spacing(4.0).children((
-        rogue,
-        StackPanel::new().spacing(4.0).keyed_children(bonuses),
-        chosen,
-        psionics,
-        StackPanel::new().spacing(4.0).keyed_children(lists),
-    ))
+    forms::skills(form, adding, SKILLS, View::empty(), context)
 }
 
 /// The last step: the starting money, the standard pack, what comes free

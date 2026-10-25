@@ -4,6 +4,7 @@
 //! the wizard's and the editor's inputs both fit.
 
 use cr_app::create::{Choice, List, ListKind, MOST_ITEMS, Unarmed};
+use cr_app::skills::{MOST_POINTS as MOST_SKILL_POINTS, SkillsForm};
 use cr_i18n::tr;
 use cr_store::create::UNARMED;
 use cr_win::text::plain;
@@ -301,5 +302,218 @@ pub fn points_left(points: &str, problem: Option<&str>) -> View {
             tr("Kept on the character for later levels"),
             ui::subtitle(points.to_owned()),
         ),
+    ))
+}
+
+/// One radio button per choice, in a card; `chosen` makes the message of
+/// the one checked.
+pub fn choices(
+    group: &str,
+    rows: &[(String, String)],
+    selected: usize,
+    chosen: impl Fn(usize) -> Message + Clone + 'static,
+    context: &mut ViewContext<Shell>,
+) -> View {
+    let buttons: Vec<KeyedView> = rows
+        .iter()
+        .enumerate()
+        .map(|(i, (title, subtitle))| {
+            let chosen = chosen.clone();
+            KeyedView::new(
+                format!("{i}\u{1}{title}"),
+                RadioButton::new()
+                    .group_name(group)
+                    .automation_name(title.clone())
+                    .is_checked(i == selected)
+                    .on_checked(context.callback(
+                        move |on: bool| {
+                            if on { chosen(i) } else { Message::Nothing }
+                        },
+                    ))
+                    .content(two_lines(title, subtitle)),
+            )
+        })
+        .collect();
+    ui::card(StackPanel::new().spacing(4.0).keyed_children(buttons))
+}
+
+/// The text of warnings that do not stop the form.
+pub fn warnings(texts: &[String]) -> View {
+    if texts.is_empty() {
+        return View::empty();
+    }
+    InfoBar::new()
+        .severity(InfoBarSeverity::Warning)
+        .message(texts.join("\n"))
+        .is_open(true)
+        .is_closable(false)
+        .into()
+}
+
+/// What the Skills form says: a rogue skill's points, the kit's bonus
+/// given, one of its chosen skills ticked, a primary discipline, and its
+/// lists' changes.
+#[derive(Clone, Copy)]
+pub struct SkillsMessages {
+    pub points: fn(usize, i32) -> Message,
+    pub bonus: fn(usize, usize) -> Message,
+    pub chosen: fn(usize, bool) -> Message,
+    pub primary: fn(usize, usize) -> Message,
+    pub lists: ListMessages,
+}
+
+/// The Skills form: the rogue skills, the kit's bonuses and chosen
+/// skills, the psionics, the disciplines and powers, then `wild` (the
+/// Wild Talents dialog's buttons, if any) with the wild talents, and the
+/// psionic attack and defense modes.
+pub fn skills(
+    form: &SkillsForm,
+    adding: &Adding,
+    messages: SkillsMessages,
+    wild: View,
+    context: &mut ViewContext<Shell>,
+) -> View {
+    let rogue: View = match form.rogue() {
+        Some(group) => {
+            let rows: Vec<KeyedView> = group
+                .rows
+                .iter()
+                .enumerate()
+                .map(|(i, row)| {
+                    KeyedView::new(
+                        format!("{i}\u{1}{}", row.label),
+                        ui::setting(
+                            &row.label,
+                            &row.subtitle,
+                            signed_number(
+                                &row.label,
+                                row.points,
+                                (row.least, MOST_SKILL_POINTS),
+                                move |v| (messages.points)(i, v),
+                                context,
+                            ),
+                        ),
+                    )
+                })
+                .collect();
+            StackPanel::new().spacing(4.0).children((
+                heading(tr("Rogue Skills"), Some(&group.description)),
+                ui::setting(
+                    tr("Points Left"),
+                    "",
+                    ui::subtitle(group.left.to_string().replace('-', "−")),
+                ),
+                StackPanel::new().spacing(4.0).keyed_children(rows),
+                warnings(&group.warnings),
+            ))
+        }
+        None => View::empty(),
+    };
+    let bonuses: Vec<KeyedView> = form
+        .kit_bonuses()
+        .into_iter()
+        .enumerate()
+        .map(|(g, group)| {
+            let rows: Vec<(String, String)> = group
+                .names
+                .iter()
+                .map(|n| (n.clone(), String::new()))
+                .collect();
+            KeyedView::new(
+                format!("{g}\u{1}{}", group.title),
+                StackPanel::new().spacing(4.0).children((
+                    heading(&group.title, Some(&group.description)),
+                    choices(
+                        &format!("kit-bonus-{g}"),
+                        &rows,
+                        group.picked.unwrap_or(usize::MAX),
+                        move |i| (messages.bonus)(g, i),
+                        context,
+                    ),
+                )),
+            )
+        })
+        .collect();
+    let chosen: View = match form.chosen() {
+        Some(group) => {
+            let full = group.full;
+            let rows: Vec<(String, String, bool, bool)> = group
+                .names
+                .iter()
+                .zip(&group.ticked)
+                .map(|(n, &on)| (n.clone(), String::new(), on, on || !full))
+                .collect();
+            StackPanel::new().spacing(4.0).children((
+                heading(&group.title, Some(&group.description)),
+                checks(&rows, messages.chosen, context),
+            ))
+        }
+        None => View::empty(),
+    };
+    let psionics: View = match form.psionics() {
+        Some(description) => {
+            let primary: Vec<KeyedView> = form
+                .primary()
+                .into_iter()
+                .enumerate()
+                .map(|(slot, choice)| {
+                    KeyedView::new(
+                        slot.to_string(),
+                        ui::setting(
+                            &choice.title,
+                            "",
+                            ComboBox::new()
+                                .automation_name(choice.title.clone())
+                                .items_source(choice.items.clone())
+                                .selected_index(choice.selected)
+                                .min_width(240.0)
+                                .on_selection_changed(context.callback(move |i: Option<usize>| {
+                                    match i {
+                                        Some(i) => (messages.primary)(slot, i),
+                                        None => Message::Nothing,
+                                    }
+                                })),
+                        ),
+                    )
+                })
+                .collect();
+            StackPanel::new().spacing(4.0).children((
+                heading(tr("Psionics"), Some(&description)),
+                StackPanel::new().spacing(4.0).keyed_children(primary),
+            ))
+        }
+        None => View::empty(),
+    };
+    let lists = |kinds: &[ListKind], context: &mut ViewContext<Shell>| -> View {
+        let lists: Vec<KeyedView> = kinds
+            .iter()
+            .map(|&kind| {
+                KeyedView::new(
+                    format!("{kind:?}"),
+                    list(kind, &form.list(kind), &[], adding, messages.lists, context),
+                )
+            })
+            .collect();
+        StackPanel::new().spacing(4.0).keyed_children(lists)
+    };
+    let powers = lists(
+        &[
+            ListKind::Disciplines,
+            ListKind::Sciences,
+            ListKind::Devotions,
+        ],
+        context,
+    );
+    let talents = lists(&[ListKind::WildTalents], context);
+    let modes = lists(&[ListKind::Attacks, ListKind::Defenses], context);
+    StackPanel::new().spacing(4.0).children((
+        rogue,
+        StackPanel::new().spacing(4.0).keyed_children(bonuses),
+        chosen,
+        psionics,
+        powers,
+        wild,
+        talents,
+        modes,
     ))
 }

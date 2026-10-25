@@ -6,7 +6,9 @@
 //! the racial and class abilities, schools and spheres; the Combat page
 //! the weapon proficiencies and groups, the specializations, unarmed
 //! combat, the kit's weapons, shields, armor, fighting styles, traits and
-//! disadvantages.
+//! disadvantages; the Proficiencies page the nonweapon proficiencies and
+//! the languages; the Skills page the rogue skills, the psionics and the
+//! wild talents.
 
 use cr_app::create::{ListKind, none_label, points};
 use cr_app::editor::{EditInput, Editor, MOST_AGE, MOST_HEIGHT, MOST_POINTS, MOST_WEIGHT, Tab};
@@ -18,7 +20,7 @@ use cr_win::text::plain;
 use windows_reactor::*;
 
 use super::create::prompt_dialog;
-use super::forms::{self, Adding, ListMessages, heading, with_buttons};
+use super::forms::{self, Adding, ListMessages, SkillsMessages, heading, with_buttons};
 use super::portrait::Shown;
 use super::{Message, Shell};
 use crate::ui;
@@ -43,6 +45,15 @@ const LISTS: ListMessages = ListMessages {
     add: |kind, name| input(EditInput::Add(kind, name)),
     remove: |kind, row| input(EditInput::Remove(kind, row)),
     times: |_, _, _| Message::Nothing,
+};
+
+/// The Skills page's messages.
+const SKILLS: SkillsMessages = SkillsMessages {
+    points: |row, points| input(EditInput::SkillPoints(row, points)),
+    bonus: |group, name| input(EditInput::KitBonus(group, name)),
+    chosen: |name, on| input(EditInput::RogueChosen(name, on)),
+    primary: |slot, index| input(EditInput::Primary(slot, index)),
+    lists: LISTS,
 };
 
 /// A NumberBox for a whole number in `0..=max`.
@@ -136,6 +147,25 @@ pub fn view(
         Tab::Details => details(editor, portrait, context),
         Tab::Abilities => abilities_tab(editor, context),
         Tab::Combat => combat_tab(editor, adding, context),
+        Tab::Proficiencies => StackPanel::new().spacing(4.0).children((
+            forms::list(
+                ListKind::Nonweapon,
+                &editor.nonweapon_list(),
+                &[],
+                adding,
+                LISTS,
+                context,
+            ),
+            forms::list(
+                ListKind::Learned,
+                &editor.languages_list(),
+                &[],
+                adding,
+                LISTS,
+                context,
+            ),
+        )),
+        Tab::Skills => skills_tab(editor, adding, context),
     };
     let problem: View = match editor.error.clone().or_else(|| editor.problem()) {
         Some(problem) => InfoBar::new()
@@ -679,4 +709,31 @@ fn combat_tab(editor: &Editor, adding: &Adding, context: &mut ViewContext<Shell>
     StackPanel::new()
         .spacing(4.0)
         .children((weapons, specialization, kit, rest))
+}
+
+/// The Skills page, with the Wild Talents dialog's Test and Roll for a
+/// character who is no psionicist.
+fn skills_tab(editor: &Editor, adding: &Adding, context: &mut ViewContext<Shell>) -> View {
+    let wild: View = match editor.skills.wild() {
+        Some(wild) => StackPanel::new().spacing(4.0).children((
+            heading(tr("Wild Talents"), None),
+            ui::setting(
+                tr("Test for Wild Talents"),
+                &wild.chance,
+                Button::new()
+                    .is_enabled(wild.can_test)
+                    .on_click(context.message(input(EditInput::TestWild)))
+                    .content(tr("Test")),
+            ),
+            ui::setting(
+                tr("Roll for Wild Talents"),
+                tr("Table 83: Wild Talents"),
+                Button::new()
+                    .on_click(context.message(input(EditInput::RollWild)))
+                    .content(tr("Roll")),
+            ),
+        )),
+        None => View::empty(),
+    };
+    forms::skills(&editor.skills, adding, SKILLS, wild, context)
 }

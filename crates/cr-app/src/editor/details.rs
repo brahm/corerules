@@ -193,6 +193,7 @@ impl Editor {
                     d.abilities[a] = [v; 3];
                 }
                 self.recheck_class();
+                self.abilities_changed();
             }
             EditInput::Exceptional(v) => {
                 let allowed = self.exceptional_allowed();

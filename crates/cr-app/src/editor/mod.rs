@@ -12,6 +12,8 @@
 mod abilities;
 mod combat;
 mod details;
+mod proficiencies;
+mod skills;
 
 use std::sync::Arc;
 
@@ -27,10 +29,13 @@ use cr_store::edit::CharacterDetails;
 use cr_store::help::topic;
 use cr_store::lists::CharacterLists;
 use cr_store::npc::Rand;
+use cr_store::proficiencies::{CharacterNonweapon, ProficiencyRules};
+use cr_store::skills::{CharacterSkills, SkillRules};
 
 use crate::create::ListKind;
 use crate::levels::{ExperienceForm, LevelsForm, LevelsInput};
 use crate::prompt::{Answer, Prompt as AnyPrompt};
+use crate::skills::SkillsForm;
 
 pub use abilities::{AbilityGroup, Check, Checks};
 pub use combat::CombatView;
@@ -55,6 +60,13 @@ pub struct EditNeeds {
     /// Weapon proficiencies and groups, specializations, unarmed combat,
     /// shields, armor, fighting styles, traits and disadvantages.
     pub combat: Arc<CombatRules>,
+    /// Nonweapon proficiencies' costs and the kit's questions about them.
+    pub proficiencies: Arc<ProficiencyRules>,
+    /// Rogue skills, psionic powers, wild talents, attack and defense
+    /// modes.
+    pub skills: Arc<SkillRules>,
+    /// Every language.
+    pub languages: Vec<String>,
 }
 
 impl EditNeeds {
@@ -63,6 +75,11 @@ impl EditNeeds {
         let advance = Arc::new(install.advance_rules()?);
         Ok(Self {
             combat: Arc::new(install.combat_rules_with(creation.clone(), advance.clone())?),
+            proficiencies: Arc::new(
+                install.proficiency_rules_with(creation.clone(), advance.clone()),
+            ),
+            skills: Arc::new(install.skill_rules()?),
+            languages: install.part_names("Languages")?,
             creation,
             advance,
             class_table: Arc::new(install.class_table()?),
@@ -78,17 +95,27 @@ pub enum Tab {
     Details,
     Abilities,
     Combat,
+    Proficiencies,
+    Skills,
 }
 
 impl Tab {
     /// The pages, in order.
-    pub const ALL: &[Tab] = &[Tab::Details, Tab::Abilities, Tab::Combat];
+    pub const ALL: &[Tab] = &[
+        Tab::Details,
+        Tab::Abilities,
+        Tab::Combat,
+        Tab::Proficiencies,
+        Tab::Skills,
+    ];
 
     pub fn title(self) -> &'static str {
         match self {
             Tab::Details => tr_noop!("Details"),
             Tab::Abilities => tr_noop!("Abilities"),
             Tab::Combat => tr_noop!("Combat"),
+            Tab::Proficiencies => tr_noop!("Proficiencies"),
+            Tab::Skills => tr_noop!("Skills"),
         }
     }
 
@@ -98,6 +125,8 @@ impl Tab {
             Tab::Details => topic::CHARACTER_INFORMATION,
             Tab::Abilities => topic::ABILITY_SCORES,
             Tab::Combat => topic::WEAPON_PROFICIENCIES,
+            Tab::Proficiencies => topic::NONWEAPON_PROFICIENCIES,
+            Tab::Skills => topic::SKILLS,
         }
     }
 }
@@ -161,6 +190,19 @@ pub enum EditInput {
     Unarmed(usize, bool),
     /// A shield proficiency, as `SHIELDS`.
     Shield(usize, bool),
+    // Skills.
+    /// A rogue skill's points, by its row.
+    SkillPoints(usize, i32),
+    /// The kit's bonus of a group given to a skill, by their indexes.
+    KitBonus(usize, usize),
+    /// One of the kit's chosen skills ticked or not.
+    RogueChosen(usize, bool),
+    /// A primary discipline, by its slot and its index ("None" first).
+    Primary(usize, usize),
+    /// Test for Wild Talents.
+    TestWild,
+    /// Roll for Wild Talents.
+    RollWild,
     Save,
 }
 
@@ -217,6 +259,14 @@ pub struct Editor {
     groups_shown: bool,
     /// Removing a weapon proficiency or group said it refunds nothing.
     refund_told: bool,
+    /// The nonweapon proficiencies as read and as edited.
+    original_nonweapon: CharacterNonweapon,
+    pub nonweapon: CharacterNonweapon,
+    /// The Skills page, and its choices as read.
+    pub skills: SkillsForm,
+    original_skills: CharacterSkills,
+    /// The lists as read.
+    original_lists: CharacterLists,
     prompt: Option<Prompt>,
     serial: u64,
     effects: Vec<EditEffect>,
@@ -256,6 +306,8 @@ impl Editor {
             .advance
             .levels(&character)
             .map_or_else(|_| vec![1], |l| l.iter().map(|c| c.level).collect());
+        let nonweapon = needs.proficiencies.nonweapon_of(&character);
+        let skills = SkillsForm::new(needs.skills.clone(), character.clone());
         let groups_shown = !combat.broad_groups.is_empty()
             || character.skills_and_powers()
                 && !needs
@@ -266,6 +318,7 @@ impl Editor {
             file: file.to_owned(),
             original_details: details.clone(),
             details,
+            original_lists: lists.clone(),
             lists,
             advanced: Box::new(character.clone()),
             original: Box::new(character),
@@ -283,6 +336,10 @@ impl Editor {
             combat,
             groups_shown,
             refund_told: false,
+            original_nonweapon: nonweapon.clone(),
+            nonweapon,
+            original_skills: skills.skills(),
+            skills,
             prompt: None,
             serial: 0,
             effects: Vec::new(),
@@ -315,11 +372,21 @@ impl Editor {
             || *self.advanced != *self.original
             || self.abilities != self.original_abilities
             || self.combat != self.original_combat
+            || self.nonweapon != self.original_nonweapon
+            || self.lists != self.original_lists
+            || self.skills_changed()
     }
 
     /// Why the character cannot be saved as it is, if it cannot.
     pub fn problem(&self) -> Option<String> {
-        self.details.problem().or_else(|| self.points_problem())
+        self.details
+            .problem()
+            .or_else(|| self.points_problem())
+            .or_else(|| {
+                self.skills_changed()
+                    .then(|| self.skills.problem())
+                    .flatten()
+            })
     }
 
     /// Whether Save may be pressed.
@@ -386,11 +453,20 @@ impl Editor {
             EditInput::Save => {
                 if self.can_save() {
                     // Leaving the original's Weapon Proficiencies page
-                    // checks the kit's specializations first.
-                    self.check_leaving_combat(Arc::new(Editor::save));
+                    // checks the kit's specializations first, and leaving
+                    // its Nonweapon Proficiencies page asks about the one
+                    // the kit has the character learn by a level.
+                    self.check_leaving_combat(Arc::new(|e: &mut Editor| {
+                        e.check_leaving_nonweapon(Arc::new(Editor::save));
+                    }));
                 }
             }
             input @ (EditInput::Subrace(_) | EditInput::Tick(..)) => self.abilities_input(input),
+            input @ (EditInput::Add(ListKind::Nonweapon | ListKind::Learned, _)
+            | EditInput::Remove(ListKind::Nonweapon | ListKind::Learned, _)) => {
+                self.proficiencies_input(input);
+            }
+            input if Self::is_skills_input(&input) => self.skills_input(input),
             input @ (EditInput::Add(..)
             | EditInput::Remove(..)
             | EditInput::WeaponOfChoice(_)
@@ -429,6 +505,18 @@ impl Editor {
         if self.combat != self.original_combat {
             lists.weapon_proficiencies.clone_from(&self.combat.weapons);
             lists.combat = Some(self.combat.clone());
+        }
+        lists.nonweapon_proficiencies = self
+            .nonweapon
+            .entries
+            .iter()
+            .map(|e| e.name.clone())
+            .collect();
+        if self.nonweapon != self.original_nonweapon {
+            lists.nonweapon = Some(self.nonweapon.clone());
+        }
+        if self.skills_changed() {
+            lists.skills = Some(self.skills.skills());
         }
         self.error = None;
         self.saving = true;
