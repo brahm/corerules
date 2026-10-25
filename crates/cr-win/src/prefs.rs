@@ -63,5 +63,29 @@ pub fn system_language() -> Language {
 /// Picks the interface language before any text is shown: the one chosen
 /// in Settings, else the Windows display language.
 pub fn apply_language() {
-    cr_i18n::set_language(chosen_language().unwrap_or_else(system_language));
+    let chosen = chosen_language();
+    cr_i18n::set_language(chosen.unwrap_or_else(system_language));
+    winui_language(chosen);
+}
+
+/// Asks WinUI for its own texts (the Settings item, Back, More options,
+/// the number boxes) in the chosen language too, or in the Windows display
+/// language for `None`. Windows keeps the override for a packaged app
+/// only; the process's preferred languages cover a run without a package.
+fn winui_language(chosen: Option<Language>) {
+    use windows::Globalization::ApplicationLanguages;
+    use windows::Win32::Globalization::{MUI_LANGUAGE_NAME, SetProcessPreferredUILanguages};
+    use windows::core::{HSTRING, PCWSTR};
+
+    let tag = chosen.map_or(String::new(), |l| l.code().replace('_', "-"));
+    // Fails without a package, where there is nothing to keep.
+    let _ = ApplicationLanguages::SetPrimaryLanguageOverride(&HSTRING::from(tag.as_str()));
+    if !tag.is_empty() {
+        // A list of names ending in an empty one.
+        let names: Vec<u16> = tag.encode_utf16().chain([0, 0]).collect();
+        // SAFETY: `names` is a double-terminated list that outlives the call.
+        let _ = unsafe {
+            SetProcessPreferredUILanguages(MUI_LANGUAGE_NAME, PCWSTR(names.as_ptr()), None)
+        };
+    }
 }

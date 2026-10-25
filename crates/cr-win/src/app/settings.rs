@@ -1,7 +1,7 @@
 //! Settings, at the foot of the navigation: the interface language, as in
 //! the GTK app's Preferences, and About inside, as Windows 11 apps keep it.
 
-use cr_i18n::{Language, tr};
+use cr_i18n::{Language, tr, trc};
 use cr_win::text::plain;
 use windows_reactor::*;
 
@@ -40,7 +40,7 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
     };
     ui::page(
         StackPanel::new().spacing(4.0).children((
-            ui::title(tr("Settings")).margin(Thickness::new(0.0, 0.0, 0.0, 16.0)),
+            ui::title(trc("preferences", "Settings")).margin(Thickness::new(0.0, 0.0, 0.0, 16.0)),
             ui::strong(tr("Interface")).margin(Thickness::new(0.0, 0.0, 0.0, 4.0)),
             ui::setting(
                 tr("Language"),

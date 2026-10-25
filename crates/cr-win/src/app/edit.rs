@@ -236,7 +236,7 @@ pub fn view(edit: &Edit, context: &mut ViewContext<Shell>) -> View {
                 "",
                 ComboBox::new()
                     .automation_name(tr("Alignment"))
-                    .items_source(edit.alignments.clone())
+                    .items_source(edit.alignments.iter().map(|a| tr(a).to_owned()))
                     .selected_index(edit.alignments.iter().position(|a| *a == d.alignment))
                     .min_width(200.0)
                     .on_selection_changed(context.callback(|i| Message::Edit(Field::Alignment(i)))),

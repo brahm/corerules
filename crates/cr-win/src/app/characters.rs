@@ -109,7 +109,12 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
                 .placeholder_text(plain(tr("Search")))
                 .automation_name(plain(tr("Search")))
                 .on_text_changed(context.callback(Message::Search)),
-            Border::new().grid_row(1).content(list),
+            // A new list for each search: the ListView keeps its selection
+            // on the item rather than on the index it is given, so after
+            // the search is cleared it would mark another character.
+            Grid::new()
+                .grid_row(1)
+                .keyed_children([KeyedView::new(shell.search.clone(), list)]),
         ));
 
     let details = match selected {
