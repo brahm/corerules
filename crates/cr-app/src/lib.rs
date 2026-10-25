@@ -24,6 +24,7 @@ pub mod prompt;
 pub mod records;
 pub mod sheets;
 pub mod skills;
+pub mod tables;
 pub mod treasure;
 
 /// The file name the original suggests when saving something called

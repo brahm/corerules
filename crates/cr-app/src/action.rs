@@ -112,7 +112,6 @@ pub const NOT_YET_ON_WINDOWS: &[Action] = &[
     EXTRACT_DATA,
     NEW_ENCOUNTER,
     NEW_TABLE,
-    ROLL_TABLE,
     MANAGE_PARTIES,
     EXPORT,
     IMPORT_CORE20,

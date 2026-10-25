@@ -188,6 +188,11 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
             tr("_Roll Treasure…"),
             Symbol::Shuffle,
         ),
+        (
+            action::ROLL_TABLE,
+            tr("Roll on a _Table…"),
+            Symbol::ShowResults,
+        ),
     ]
     .into_iter()
     .filter(|(action, ..)| available(*action))

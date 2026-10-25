@@ -16,6 +16,7 @@ mod npc;
 mod portrait;
 mod settings;
 mod sheet;
+mod tables;
 mod treasure;
 mod web;
 
@@ -31,6 +32,7 @@ use cr_app::help::{Files, Found, MonsterHelp, PROGRAM, Target};
 use cr_app::library::Filter;
 use cr_app::npc::{GroupForm, GroupInput, NpcForm, NpcInput};
 use cr_app::sheets::Export;
+use cr_app::tables::{TableInput, TableRoller};
 use cr_app::treasure::{Roller, TreasureEffect, TreasureInput};
 use cr_formats::export::ExportFile;
 use cr_i18n::{tr, trc};
@@ -41,6 +43,7 @@ use cr_store::help::{ItemHelp, topic};
 use cr_store::npc::{Npc, NpcRules};
 use cr_store::pictures::stored_portrait;
 use cr_store::sheet::Sheet;
+use cr_store::tables::{Leftovers, TableBook, TableRolls};
 use cr_store::treasure::{Bundle, Rand, TreasureRules};
 use cr_store::userdb::parts::OTHER_TYPES;
 use cr_win::text::plain;
@@ -142,6 +145,12 @@ pub struct Shell {
     npc_rules: Option<Arc<NpcRules>>,
     /// The treasure tables of the installation, read once.
     treasure_rules: Option<Arc<TreasureRules>>,
+    /// The tables Roll on a Table rolls on, read once, the book and table
+    /// chosen last, and what its closed sessions left for the next roll
+    /// (the original's stack).
+    table_rolls: Option<Arc<TableRolls>>,
+    table_last: Option<(TableBook, usize)>,
+    leftovers: Leftovers,
 }
 
 /// What the window shows.
@@ -159,6 +168,7 @@ pub enum Page {
     Npc(Box<NpcForm>),
     NpcGroup(Box<GroupForm>),
     Treasure(Box<Roller>),
+    Table(Box<TableRoller>),
 }
 
 /// A package opened for import, with what it would bring in.
@@ -380,6 +390,14 @@ pub enum Message {
     EditEntry,
     /// Copy on the details of a saved treasure.
     CopyEntry,
+    // Roll on a Table.
+    TableRollsLoaded(Result<Arc<TableRolls>, String>),
+    Table(TableInput),
+    CopyResults,
+    /// Read in Book: the table rolled on, in its book.
+    ReadTable,
+    /// Open Treasure Generator, which a roll on DMG Table 84 opens.
+    TableTreasure,
 }
 
 /// What Create on New NPC or New NPC Group made and saved.
@@ -473,12 +491,16 @@ impl Shell {
     }
 
     fn back(&mut self) {
+        if let Page::Table(roller) = &mut self.page {
+            roller.close(&mut self.leftovers);
+        }
         self.page = self.history.pop().unwrap_or(Page::Library);
         self.notice = None;
     }
 
     /// Back to the library, at the section `id`.
     fn show_section(&mut self, id: String) {
+        self.close_tables();
         self.history.clear();
         self.page = Page::Library;
         if id != self.section {
@@ -538,6 +560,7 @@ impl Shell {
             action::NEW_NPC => self.new_npc(false, context),
             action::NEW_NPC_GROUP => self.new_npc(true, context),
             action::ROLL_TREASURE => self.open_treasure(None, false, context),
+            action::ROLL_TABLE => self.open_tables(context),
             action::TREASURE_SAVE => {
                 if matches!(self.page, Page::Treasure(_)) {
                     self.update(Message::Treasure(TreasureInput::Save), context);
@@ -813,6 +836,39 @@ impl Shell {
         });
     }
 
+    /// Opens Roll on a Table once the tables are read.
+    fn open_tables(&mut self, context: &ComponentContext<Self>) {
+        if let Some(rolls) = self.table_rolls.clone() {
+            self.update(Message::TableRollsLoaded(Ok(rolls)), context);
+            return;
+        }
+        let Some(install) = self.install.clone() else {
+            return;
+        };
+        if self.busy {
+            return;
+        }
+        self.busy = true;
+        context.spawn_background(move |_| {
+            Message::TableRollsLoaded(
+                install
+                    .table_rolls()
+                    .map(Arc::new)
+                    .map_err(|e| e.to_string()),
+            )
+        });
+    }
+
+    /// Ends the Roll Results session of Roll on a Table, shown or under
+    /// the page shown, as closing the original's dialog does.
+    fn close_tables(&mut self) {
+        for page in std::iter::once(&mut self.page).chain(&mut self.history) {
+            if let Page::Table(roller) = page {
+                roller.close(&mut self.leftovers);
+            }
+        }
+    }
+
     /// Does what the treasure roller asks of the app.
     fn treasure_effects(&mut self, context: &ComponentContext<Self>) {
         let Page::Treasure(roller) = &mut self.page else {
@@ -1028,6 +1084,7 @@ impl Shell {
             Page::Npc(_) => topic::NPC_CREATION,
             Page::NpcGroup(_) => topic::NPC_GROUP,
             Page::Treasure(_) => topic::ROLL_TREASURE,
+            Page::Table(_) => topic::TABLES,
         }
     }
 
@@ -1250,6 +1307,9 @@ impl Component for Shell {
             rand: Arc::new(Mutex::new(Rand::from_clock())),
             npc_rules: None,
             treasure_rules: None,
+            table_rolls: None,
+            table_last: None,
+            leftovers: Leftovers::default(),
         };
         let sender = context.sender();
         let reading = shell.reading.clone();
@@ -1389,6 +1449,7 @@ impl Component for Shell {
                             self.items = Arc::default();
                             self.npc_rules = None;
                             self.treasure_rules = None;
+                            self.table_rolls = None;
                             self.history.clear();
                             self.page = Page::Library;
                             self.select(None);
@@ -2208,6 +2269,57 @@ impl Component for Shell {
                     self.open_treasure(Some(name.to_owned()), copy, context);
                 }
             }
+            Message::TableRollsLoaded(loaded) => {
+                self.busy = false;
+                match loaded {
+                    Ok(rolls) => {
+                        self.table_rolls = Some(rolls.clone());
+                        self.go(Page::Table(Box::new(TableRoller::new(
+                            rolls,
+                            self.table_last,
+                        ))));
+                    }
+                    Err(e) => self.show_error(tr("Could Not Read the Tables"), e),
+                }
+            }
+            Message::Table(input) => {
+                if let Page::Table(roller) = &mut self.page {
+                    let mut rand = self.rand.lock().unwrap_or_else(|e| e.into_inner());
+                    roller.input(input, &mut self.leftovers, &mut rand);
+                    self.table_last = roller.last();
+                }
+            }
+            Message::CopyResults => {
+                if let Page::Table(roller) = &self.page
+                    && let Some(result) = &roller.result
+                {
+                    match native::copy(&result.to_text()) {
+                        Ok(()) => {
+                            self.notice = Some(Notice::success(tr("Copied to the clipboard")))
+                        }
+                        Err(e) => self.show_error(&e.message(), ""),
+                    }
+                }
+            }
+            Message::ReadTable => {
+                let Page::Table(roller) = &mut self.page else {
+                    return;
+                };
+                if let Some((book, number)) = roller.result.as_ref().and_then(|r| r.reference) {
+                    roller.close(&mut self.leftovers);
+                    self.open_book(
+                        book.short_name().to_owned(),
+                        Some(format!("Table {number}:")),
+                        context,
+                    );
+                }
+            }
+            Message::TableTreasure => {
+                if let Page::Table(roller) = &mut self.page {
+                    roller.close(&mut self.leftovers);
+                    self.open_treasure(None, false, context);
+                }
+            }
         }
     }
 
@@ -2250,6 +2362,7 @@ impl Component for Shell {
             Page::Npc(form) => npc::view(form, self.busy, context),
             Page::NpcGroup(form) => npc::group_view(form, self.busy, context),
             Page::Treasure(roller) => treasure::view(roller, self.busy, context),
+            Page::Table(roller) => tables::view(roller, context),
         };
         // The keyboard hook takes the reader's keys only while a book
         // shows.
