@@ -136,6 +136,9 @@ pub struct Shell {
     help_view: WebHost,
     /// The sections of About that are open.
     about_open: Vec<settings::Section>,
+    /// The keys of the Expanders opened on the Encounter page or the 2-20
+    /// table editor.
+    open_rows: Vec<String>,
     book_view: BookView,
     /// Counts the times a page asked again for its WebView2's
     /// CoreWebView2, for it to ask once more.
@@ -498,6 +501,9 @@ pub enum Message {
     EncounterTable(TableEditInput),
     TableSaved(Result<String, String>),
     AskDeleteTable,
+    /// An Expander of the Encounter page or the table editor opened or
+    /// closed, by its key.
+    RowOpen(String, bool),
     TableDeleted(Result<(), String>),
     /// Create Encounter on the details of a template or a 2-20 table.
     GenerateEntry,
@@ -1187,6 +1193,7 @@ impl Shell {
     /// which close for it as the original's dialogs do, or over the page
     /// shown.
     fn open_page(&mut self, page: Page) {
+        self.open_rows.clear();
         if matches!(self.page, Page::NewEncounter(_) | Page::EncounterTable(_)) {
             self.page = page;
             self.notice = None;
@@ -1647,6 +1654,7 @@ impl Component for Shell {
             items: Arc::default(),
             help_view: WebHost::default(),
             about_open: Vec::new(),
+            open_rows: Vec::new(),
             book_view: BookView::default(),
             web_tries: 0,
             adding: Vec::new(),
@@ -2246,6 +2254,12 @@ impl Component for Shell {
                     self.about_open.push(section);
                 }
             }
+            Message::RowOpen(key, open) => {
+                self.open_rows.retain(|k| *k != key);
+                if open {
+                    self.open_rows.push(key);
+                }
+            }
             Message::CopyDebugInfo => match native::copy(&settings::debug_info(self)) {
                 Ok(()) => self.notice = Some(Notice::success(tr("Copied to the clipboard"))),
                 Err(e) => self.show_error(&e.message(), ""),
@@ -2698,7 +2712,10 @@ impl Component for Shell {
                                     ));
                                 }
                             }
-                            EncounterOpened::Table(editor) => self.go(Page::EncounterTable(editor)),
+                            EncounterOpened::Table(editor) => {
+                                self.open_rows.clear();
+                                self.go(Page::EncounterTable(editor))
+                            }
                             EncounterOpened::Sheet(sheet, true) => self.go(Page::Sheet(Arc::new(
                                 SheetPage::new((*sheet).clone(), None, None),
                             ))),
@@ -3128,8 +3145,10 @@ impl Component for Shell {
                 }
             }
             Page::NewEncounter(chooser) => encounter::chooser_view(chooser, self.busy, context),
-            Page::Encounter(form) => encounter::view(form, self.busy, context),
-            Page::EncounterTable(editor) => encounter::table_view(editor, self.busy, context),
+            Page::Encounter(form) => encounter::view(form, &self.open_rows, self.busy, context),
+            Page::EncounterTable(editor) => {
+                encounter::table_view(editor, &self.open_rows, self.busy, context)
+            }
         };
         // The keyboard hook takes the reader's keys only while a book
         // shows.

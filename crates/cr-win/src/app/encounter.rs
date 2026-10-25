@@ -12,7 +12,7 @@ use cr_app::encounter::{
     TERRAINS, TableEditInput, TableEditor,
 };
 use cr_i18n::tr;
-use cr_store::encounter::{EncounterRules, Package};
+use cr_store::encounter::{Encounter, EncounterRules, Package};
 use cr_store::userdb::Filter;
 use cr_win::text::plain;
 use windows_reactor::*;
@@ -41,6 +41,9 @@ const TREASURE: BundleMessages = BundleMessages {
     input: |_| Message::Nothing,
     answer: |_, _| Message::Nothing,
 };
+
+/// The key of the table editor's Climate and Terrain when it is open.
+pub const PLACES: &str = "places";
 
 /// A page's title with its commands beside it.
 fn header(title: String, commands: Vec<KeyedView>) -> View {
@@ -184,9 +187,44 @@ pub fn chooser_view(chooser: &Chooser, busy: bool, context: &mut ViewContext<She
     )
 }
 
+/// The key that a package's card and its open state go by: its place
+/// and name, so that a card removed above leaves the others as they were.
+fn package_key(encounter: &Encounter, package: Package) -> String {
+    let name = match package {
+        Package::Monster(i) => &encounter.monsters[i].monster.name,
+        Package::Npc(i) => &encounter.npcs[i].character.data.name,
+    };
+    format!("{package:?}\u{1}{name}")
+}
+
+/// An Expander open as the shell keeps it under `key`: WinUI's Expander
+/// opens only when its state says so.
+fn expander(
+    key: String,
+    name: &str,
+    open: &[String],
+    (header, content): (View, View),
+    context: &mut ViewContext<Shell>,
+) -> View {
+    Expander::new()
+        .automation_name(name)
+        .horizontal_alignment(HorizontalAlignment::Stretch)
+        .is_expanded(open.contains(&key))
+        .on_is_expanded_changed(context.callback(move |on| Message::RowOpen(key.clone(), on)))
+        .slots([
+            SlotView::new(ExpanderSlot::Header, header),
+            SlotView::new(ExpanderSlot::Content, content),
+        ])
+}
+
 /// The card of a package: its title and number, and, opened, its number,
 /// hit points and stat line.
-fn package_view(row: &cr_app::encounter::PackageRow, context: &mut ViewContext<Shell>) -> View {
+fn package_view(
+    row: &cr_app::encounter::PackageRow,
+    key: String,
+    open: &[String],
+    context: &mut ViewContext<Shell>,
+) -> View {
     let package = row.package;
     let mut buttons = Vec::new();
     if let Package::Npc(i) = package {
@@ -293,15 +331,13 @@ fn package_view(row: &cr_app::encounter::PackageRow, context: &mut ViewContext<S
         "stats",
         ui::card(ui::body(row.stats.clone()).is_text_selection_enabled(true)),
     ));
-    Expander::new()
-        .horizontal_alignment(HorizontalAlignment::Stretch)
-        .slots([
-            SlotView::new(ExpanderSlot::Header, title),
-            SlotView::new(
-                ExpanderSlot::Content,
-                StackPanel::new().spacing(4.0).keyed_children(parts),
-            ),
-        ])
+    expander(
+        key,
+        &row.title,
+        open,
+        (title, StackPanel::new().spacing(4.0).keyed_children(parts)),
+        context,
+    )
 }
 
 /// Add Monster, Add NPC or Add Trap: a search over the list, and Add
@@ -388,7 +424,13 @@ fn picker_dialog(picker: &Picker, context: &mut ViewContext<Shell>) -> View {
     )])
 }
 
-pub fn view(form: &EncounterForm, busy: bool, context: &mut ViewContext<Shell>) -> View {
+/// The Encounter page; `open` holds the keys of the cards opened.
+pub fn view(
+    form: &EncounterForm,
+    open: &[String],
+    busy: bool,
+    context: &mut ViewContext<Shell>,
+) -> View {
     let encounter = &form.encounter;
     let mut commands: Vec<KeyedView> = Vec::new();
     let mut add = |key: &'static str, label: String, symbol: Symbol, enabled: bool, message| {
@@ -473,14 +515,8 @@ pub fn view(form: &EncounterForm, busy: bool, context: &mut ViewContext<Shell>) 
         StackPanel::new()
             .spacing(4.0)
             .keyed_children(rows.iter().map(|row| {
-                let name = match row.package {
-                    Package::Monster(i) => encounter.monsters[i].monster.name.clone(),
-                    Package::Npc(i) => encounter.npcs[i].character.data.name.clone(),
-                };
-                KeyedView::new(
-                    format!("{:?}\u{1}{name}", row.package),
-                    package_view(row, context),
-                )
+                let key = package_key(encounter, row.package);
+                KeyedView::new(key.clone(), package_view(row, key, open, context))
             }))
     };
     let add_monster = button(
@@ -703,7 +739,14 @@ fn pick_dialog(pick: &cr_app::encounter::RollPick, context: &mut ViewContext<She
     )])
 }
 
-pub fn table_view(editor: &TableEditor, busy: bool, context: &mut ViewContext<Shell>) -> View {
+/// The 2-20 table editor; `open` holds [`PLACES`] when Climate and
+/// Terrain is opened.
+pub fn table_view(
+    editor: &TableEditor,
+    open: &[String],
+    busy: bool,
+    context: &mut ViewContext<Shell>,
+) -> View {
     let filter = &editor.table.filter;
     let mut commands: Vec<KeyedView> = Vec::new();
     let mut add = |key: &'static str, label: String, symbol: Symbol, enabled: bool, message| {
@@ -796,25 +839,23 @@ pub fn table_view(editor: &TableEditor, busy: bool, context: &mut ViewContext<Sh
         })
         .collect();
     let count = CLIMATES.len() + TERRAINS.len();
-    let places = Expander::new()
-        .horizontal_alignment(HorizontalAlignment::Stretch)
-        .slots([
-            SlotView::new(
-                ExpanderSlot::Header,
-                forms::two_lines(
-                    tr("Climate and Terrain"),
-                    tr("Where the templates may be encountered"),
-                ),
+    let places = expander(
+        PLACES.to_owned(),
+        tr("Climate and Terrain"),
+        open,
+        (
+            forms::two_lines(
+                tr("Climate and Terrain"),
+                tr("Where the templates may be encountered"),
             ),
-            SlotView::new(
-                ExpanderSlot::Content,
-                Grid::new()
-                    .columns(vec![GridLength::STAR; per_row])
-                    .rows(vec![GridLength::Auto; count.div_ceil(per_row)])
-                    .column_spacing(12.0)
-                    .keyed_children(places),
-            ),
-        ]);
+            Grid::new()
+                .columns(vec![GridLength::STAR; per_row])
+                .rows(vec![GridLength::Auto; count.div_ceil(per_row)])
+                .column_spacing(12.0)
+                .keyed_children(places),
+        ),
+        context,
+    );
     let filter_view = StackPanel::new().spacing(4.0).children((
         heading(
             tr("Filter"),
