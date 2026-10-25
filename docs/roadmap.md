@@ -298,7 +298,15 @@ The phases run in order:
      classes offered, Add Experience and the slot texts, and both apps
      now show the social class in the language chosen. The Windows app's
      Edit Character shows every tab. 30 actions are left on
-     `NOT_YET_ON_WINDOWS`.
+     `NOT_YET_ON_WINDOWS`. The Windows test found two tabs named
+     "Habilidades" in Brazilian Portuguese, where Skills is now
+     "Talentos" and a test keeps the tabs apart in every language; Save
+     offered with nothing changed; the last tabs cut off in a narrow
+     window, where the bar now scrolls; and the Combat tab's free
+     purchase blind to what the Abilities tab spent: the Abilities,
+     Combat and Proficiencies tabs now share the character points as they
+     are edited. A quest spell is named so among the memorized spells,
+     and a list's Add box keeps Add inside a narrow window.
    - Still to port: the generators (NPCs, treasure,
      encounters, tables, parties); the user database editors; packages
      and Import Core Rules 2.0; Extract Data from CD….

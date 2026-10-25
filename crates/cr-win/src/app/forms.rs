@@ -235,22 +235,31 @@ pub fn list_with(
             _ => choice.clone(),
         })
         .collect();
-    let add = with_buttons(
-        ComboBox::new()
-            .automation_name(add_to.clone())
-            .placeholder_text(add_to)
-            .items_source(items)
-            .selected_index(chosen)
-            .is_enabled(!list.choices.is_empty())
-            .min_width(280.0)
-            .on_selection_changed(context.callback(move |i: Option<usize>| {
-                match i.and_then(|i| choices.get(i)) {
-                    Some(name) => Message::Adding(kind, name.clone()),
-                    None => Message::Nothing,
-                }
-            })),
-        add,
-    );
+    // The box takes the width Add leaves it, up to a measure, so that a
+    // long name or choice is cut short in it rather than pushing Add
+    // past the edge of a narrow window.
+    let add = Grid::new()
+        .columns([GridLength::STAR, GridLength::Auto])
+        .column_spacing(8.0)
+        .max_width(560.0)
+        .horizontal_alignment(HorizontalAlignment::Left)
+        .children((
+            ComboBox::new()
+                .automation_name(add_to.clone())
+                .placeholder_text(add_to)
+                .items_source(items)
+                .selected_index(chosen)
+                .is_enabled(!list.choices.is_empty())
+                .min_width(200.0)
+                .horizontal_alignment(HorizontalAlignment::Stretch)
+                .on_selection_changed(context.callback(move |i: Option<usize>| {
+                    match i.and_then(|i| choices.get(i)) {
+                        Some(name) => Message::Adding(kind, name.clone()),
+                        None => Message::Nothing,
+                    }
+                })),
+            Border::new().grid_column(1).content(add),
+        ));
     StackPanel::new().spacing(4.0).children((
         heading(&list.title, Some(&list.description)),
         rows,
