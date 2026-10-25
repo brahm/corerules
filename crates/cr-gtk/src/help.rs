@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use std::rc::{Rc, Weak};
 
 use adw::prelude::*;
+use cr_app::action;
 use cr_formats::rtf::{Align, Format, Rgb, TabKind};
 use cr_formats::winhelp::{HelpFile, Item, Link, Macro, Paragraph, Topic};
 use cr_i18n::tr;
@@ -156,7 +157,7 @@ pub fn add_key(area: &impl IsA<gtk::Widget>, topic: impl Fn() -> u32 + 'static) 
             .chain(texts)
             .collect::<Vec<_>>()
             .join("\n");
-        let _ = area.activate_action("win.help-control", Some(&spec.to_variant()));
+        let _ = area.activate_action(action::HELP_CONTROL.detailed, Some(&spec.to_variant()));
     });
     area.add_controller(click);
 }
@@ -342,7 +343,7 @@ pub fn monster(
             return;
         };
         if print {
-            crate::sheet::print_sheet(parent, &Rc::new(sheet), None, &toast);
+            crate::sheet::print_sheet(parent, &Rc::new(sheet), &toast);
         } else {
             crate::sheet::preview(parent, sheet, toast);
         }
@@ -385,7 +386,7 @@ pub fn monster(
 /// window's `win.help`.
 pub fn show(widget: &impl IsA<gtk::Widget>, topic: u32) {
     let _ = widget.activate_action(
-        "win.help",
+        action::HELP.detailed,
         Some(&format!("Program.hlp#{topic}").to_variant()),
     );
 }

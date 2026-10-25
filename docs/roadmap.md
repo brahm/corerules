@@ -23,8 +23,11 @@ the project's own Flatpak repository, which gets each final release
 (decision P16).
 
 The Windows 11 version (step 2) is under way: the backend and `cr` are
-built and tested on Windows (phase 1), and Wagner Brahm approved the
-prototype of the Windows app on 2026-10-25 (phase 2, decision P21).
+built and tested on Windows (phase 1), Wagner Brahm approved the
+prototype of the Windows app on 2026-10-25 (phase 2, decision P21), and
+the groundwork that keeps both apps the same is in place (phase 3): the
+shared crate `cr-app`, one PDF of the sheet for both systems and a test
+that fails when an action is in one app and not in the other.
 Publishing on Flathub was dropped from the plan (decision P15).
 
 ## The original plan (2026-10-09)
@@ -157,8 +160,22 @@ The phases run in order:
    (`crates/cr-win/package/make-msix.ps1`) unsigned, as the Store signs
    it; on a machine in Developer Mode it is installed for testing with
    `Add-AppxPackage -Register target\msix\AppxManifest.xml`.
-3. **Parity groundwork.** `cr-app`, the shared PDF and the test of action
-   names.
+3. **Parity groundwork (done, PR #99).** A new crate, `cr-app`, with no GTK and
+   no Windows in it, holds what the two apps share above the backend:
+   - the character sheet laid out on printed pages, which both apps now
+     print from, measuring the text with Pango or DirectWrite;
+   - the sheet as a PDF, written in pure Rust with the PDF's built-in
+     Helvetica, so Save as PDF writes the same file on Linux and on
+     Windows, on A4 or Letter paper as the user's region uses (decision
+     P22). The GNOME app saves sheets, treasures and encounters with it,
+     and the Windows app gained Save as PDF for the character sheet;
+   - the catalog of the app's 51 actions, each with one name
+     (`sheet.pdf`). Both apps refer to actions only through it, and
+     `crates/cr-app/tests/parity.rs` fails when the GNOME app lacks an
+     action, when the Windows app lacks one that `NOT_YET_ON_WINDOWS`
+     does not list, or when it has one that the list still holds. The
+     list has the 44 actions not yet on Windows, and the release with
+     Windows waits until it is empty (decision P23).
 4. **Porting the screens.** The library and the sheet, character creation,
    editing, the generators, the user database editors, packages, Extract
    Data from CD…, help, Settings and About.
@@ -185,8 +202,8 @@ Platform details:
   writing there.
 - **Extract Data from CD…:** the CD by its drive letter, an ISO image read
   directly or mounted by File Explorer, or an installation.
-- **Printing:** the Windows print dialog, drawing the same layout as
-  `cr-store::sheet` with Direct2D.
+- **Printing:** the Windows print dialog, drawing the pages of
+  `cr-app` with Direct2D; Save as PDF writes the PDF of `cr-app`.
 - **Help:** the app's own help window, since Windows 11 has no WinHelp
   reader either.
 - **Language:** the Windows display language or Preferences, with the same

@@ -1,0 +1,13 @@
+[package]
+name = "cr-app"
+description = "What the Core Rules apps share above the backend: actions, the printed sheet and its PDF"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+cr-formats.workspace = true
+cr-store.workspace = true
+flate2 = "1"

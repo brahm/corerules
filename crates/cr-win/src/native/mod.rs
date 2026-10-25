@@ -1,5 +1,5 @@
 //! What the app asks of Windows directly, where windows-reactor has no
-//! control for it: the file dialogs and printing. Each runs on a thread
+//! control for it: the file dialogs, printing and the paper size. Each runs on a thread
 //! of its own in a single-threaded COM apartment, as the shell's dialogs
 //! need, with the app's window as owner so that the dialog stays modal to
 //! it while the window keeps drawing.
@@ -7,7 +7,9 @@
 pub mod dialogs;
 pub mod print;
 
+use cr_app::pdf::Paper;
 use windows::Win32::Foundation::HWND;
+use windows::Win32::Globalization::{GetLocaleInfoEx, LOCALE_IPAPERSIZE};
 use windows::Win32::System::Com::{
     COINIT_APARTMENTTHREADED, COINIT_DISABLE_OLE1DDE, CoInitializeEx, CoUninitialize,
 };
@@ -47,5 +49,21 @@ pub fn on_dialog_thread<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'st
     match thread.join() {
         Ok(result) => result,
         Err(panic) => std::panic::resume_unwind(panic),
+    }
+}
+
+/// The paper of the user's region: Letter where Windows says Letter or
+/// Legal, as in the United States, A4 elsewhere.
+pub fn paper() -> Paper {
+    let mut value = [0u16; 8];
+    // SAFETY: the buffer is passed with its length; no locale name means
+    // the user's own.
+    let n = unsafe { GetLocaleInfoEx(None, LOCALE_IPAPERSIZE, Some(&mut value)) };
+    let value = String::from_utf16_lossy(&value[..(n.max(1) - 1) as usize]);
+    // DMPAPER_LETTER and DMPAPER_LEGAL.
+    if matches!(value.as_str(), "1" | "5") {
+        Paper::Letter
+    } else {
+        Paper::A4
     }
 }

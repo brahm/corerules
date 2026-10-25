@@ -2,6 +2,7 @@
 //! character's details on the right, and the commands above them, as
 //! Windows lays out a list with details.
 
+use cr_app::action;
 use cr_i18n::tr;
 use cr_store::catalog::Entry;
 use cr_win::text::plain;
@@ -32,7 +33,7 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
                         &plain(tr("_New Character…")),
                         Symbol::Add,
                         can_write,
-                        context.message(Message::NewCharacter),
+                        context.message(Message::Act(action::NEW_CHARACTER)),
                     ),
                 ),
                 KeyedView::new(
@@ -41,7 +42,7 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
                         &plain(tr("_Import…")),
                         Symbol::Import,
                         can_write && !shell.busy,
-                        context.message(Message::OpenPackage),
+                        context.message(Message::Act(action::IMPORT)),
                     ),
                 ),
                 KeyedView::new(
@@ -50,7 +51,7 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
                         &plain(tr("_Open Folder…")),
                         Symbol::OpenLocal,
                         !shell.busy,
-                        context.message(Message::OpenFolder),
+                        context.message(Message::Act(action::OPEN)),
                     ),
                 ),
             ],
@@ -170,7 +171,16 @@ fn details(
                     &plain(tr("Print")),
                     Symbol::Print,
                     !busy,
-                    context.message(Message::Print),
+                    context.message(Message::Act(action::SHEET_PRINT)),
+                ),
+            ),
+            KeyedView::new(
+                "pdf",
+                ui::command(
+                    &plain(tr("Save as _PDF…")),
+                    Symbol::Save,
+                    !busy,
+                    context.message(Message::Act(action::SHEET_PDF)),
                 ),
             ),
             KeyedView::new(
@@ -264,7 +274,7 @@ fn no_installation(context: &mut ViewContext<Shell>) -> View {
             )),
             Button::new()
                 .style(ButtonStyle::Accent)
-                .on_click(context.message(Message::OpenFolder))
+                .on_click(context.message(Message::Act(action::OPEN)))
                 .content(plain(tr("_Open Folder…"))),
         )),
     )

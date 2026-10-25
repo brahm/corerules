@@ -1,12 +1,12 @@
 //! Printing the character sheet: the Windows print dialog, then the
 //! pages drawn with Direct2D and DirectWrite into a print job, laid out by
-//! [`cr_win::pages`] as the GTK app lays them out.
+//! [`cr_app::pages`] as the GNOME app lays them out.
 
-use cr_store::sheet::{Border, Sheet};
-use cr_win::pages::{
+use cr_app::pages::{
     self, FONT_SIZE, FOOTER, FRAME_PAD, Measure, Page, Printed, TITLE_SIZE, cell_width,
     column_starts, frame_pen,
 };
+use cr_store::sheet::{Border, Sheet};
 use windows::Win32::Foundation::{ERROR_PRINT_CANCELLED, GlobalFree, HGLOBAL};
 use windows::Win32::Graphics::Direct2D::Common::{
     D2D_RECT_F, D2D_SIZE_F, D2D_SIZE_U, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_COLOR_F,

@@ -1,10 +1,10 @@
 [workspace]
 resolver = "3"
-members = ["crates/cr-i18n", "crates/cr-formats", "crates/cr-store", "crates/cr-cli", "crates/cr-gtk", "crates/cr-addons", "crates/cr-win"]
+members = ["crates/cr-i18n", "crates/cr-formats", "crates/cr-store", "crates/cr-app", "crates/cr-cli", "crates/cr-gtk", "crates/cr-addons", "crates/cr-win"]
 # The add-ons installer carries 9 MB of add-ons; only its own AppImage
 # builds it (cargo build -p cr-addons). The Windows app is built on Windows
 # (cargo build -p cr-win).
-default-members = ["crates/cr-i18n", "crates/cr-formats", "crates/cr-store", "crates/cr-cli", "crates/cr-gtk"]
+default-members = ["crates/cr-i18n", "crates/cr-formats", "crates/cr-store", "crates/cr-app", "crates/cr-cli", "crates/cr-gtk"]
 
 [workspace.package]
 version = "1.0.0"
@@ -16,6 +16,7 @@ rust-version = "1.88"
 [workspace.dependencies]
 cr-formats = { path = "crates/cr-formats" }
 cr-store = { path = "crates/cr-store" }
+cr-app = { path = "crates/cr-app" }
 cr-i18n = { path = "crates/cr-i18n" }
 encoding_rs = "0.8"
 thiserror = "2"

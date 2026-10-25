@@ -12,6 +12,7 @@ mod settings;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use cr_app::action::{self, Action};
 use cr_formats::export::ExportFile;
 use cr_i18n::tr;
 use cr_store::Installation;
@@ -124,10 +125,10 @@ pub enum Message {
     Search(String),
     Select(Option<usize>),
     CloseNotice,
-    OpenFolder,
+    /// A command, by the action that does the same in the GNOME app.
+    Act(Action),
     FolderChosen(Result<Option<PathBuf>, String>),
     // The characters' commands.
-    NewCharacter,
     EditCharacter,
     EditLoaded(Result<Box<Edit>, String>),
     Edit(edit::Field),
@@ -136,14 +137,13 @@ pub enum Message {
     AskDelete,
     Answered(ContentDialogResult),
     Deleted(Result<String, String>),
-    Print,
     Printed(Result<bool, String>),
+    PdfSaved(Result<Option<PathBuf>, String>),
     // New Character.
     Rules(Option<usize>),
     Setting(Option<usize>),
     Next,
     // Import.
-    OpenPackage,
     PackageChosen(Result<Option<Arc<Package>>, String>),
     Import,
     Imported(Result<Arc<ImportReport>, String>),
@@ -202,6 +202,95 @@ impl Shell {
 
     /// Runs a dialog of Windows on a thread of its own, with the window
     /// as its owner.
+    /// Does what `action` does in the GNOME app; the actions the Windows
+    /// app does not have yet ([`action::NOT_YET_ON_WINDOWS`]) do nothing.
+    fn act(&mut self, action: Action, context: &ComponentContext<Self>) {
+        match action {
+            action::OPEN => self.dialog(
+                context,
+                |owner| native::dialogs::open_folder(owner, &plain(tr("_Open Folder…"))),
+                |r| Message::FolderChosen(r.map_err(|e| e.message())),
+            ),
+            action::NEW_CHARACTER => self.go(Page::NewCharacter {
+                skills_and_powers: false,
+                setting: 0,
+            }),
+            action::IMPORT => {
+                let install = self.install.clone();
+                let expansion = install.as_ref().is_some_and(|i| !i.is_core20());
+                self.dialog(
+                    context,
+                    move |owner| {
+                        let filters = import::filters(expansion);
+                        match native::dialogs::open_file(owner, tr("Import Package"), &filters) {
+                            Ok(Some(path)) => import::open(install.as_deref(), path).map(Some),
+                            Ok(None) => Ok(None),
+                            Err(e) => Err(e.message()),
+                        }
+                    },
+                    Message::PackageChosen,
+                );
+            }
+            action::SHEET_PRINT => {
+                let Some((install, file)) = self.install.clone().zip(self.selected.clone()) else {
+                    return;
+                };
+                self.dialog(
+                    context,
+                    move |owner| {
+                        let sheet = install
+                            .character(&file)
+                            .and_then(|c| install.sheet(&c))
+                            .map_err(|e| e.to_string())?;
+                        native::print::print_sheet(owner, &sheet).map_err(|e| e.message())
+                    },
+                    Message::Printed,
+                );
+            }
+            action::SHEET_PDF => {
+                let Some((install, file)) = self.install.clone().zip(self.selected.clone()) else {
+                    return;
+                };
+                let name = self
+                    .selected_entry()
+                    .map(|e| cr_app::file_name(&e.title, "pdf"))
+                    .unwrap_or_default();
+                self.dialog(
+                    context,
+                    move |owner| {
+                        let filters = [(tr("PDF documents").to_owned(), "*.pdf".to_owned())];
+                        let title = plain(tr("Save as _PDF…"));
+                        let Some(path) =
+                            native::dialogs::save_file(owner, &title, &name, "pdf", &filters)
+                                .map_err(|e| e.message())?
+                        else {
+                            return Ok(None);
+                        };
+                        let sheet = install
+                            .character(&file)
+                            .and_then(|c| install.sheet(&c))
+                            .map_err(|e| e.to_string())?;
+                        let pdf = cr_app::pdf::sheet(&sheet, native::paper());
+                        std::fs::write(&path, pdf).map_err(|e| {
+                            tr!(
+                                "Could not save {file}: {error}",
+                                file = path.display(),
+                                error = e
+                            )
+                        })?;
+                        Ok(Some(path))
+                    },
+                    Message::PdfSaved,
+                );
+            }
+            // About is on the Settings page, as in Windows 11 apps.
+            action::PREFERENCES | action::ABOUT if !matches!(self.page, Page::Settings) => {
+                self.go(Page::Settings)
+            }
+            _ => {}
+        }
+    }
+
     fn dialog<T: Send + 'static>(
         &mut self,
         context: &ComponentContext<Self>,
@@ -273,7 +362,7 @@ impl Component for Shell {
                     self.history.clear();
                     self.page = Page::Characters;
                 }
-                SETTINGS if !matches!(self.page, Page::Settings) => self.go(Page::Settings),
+                SETTINGS => self.act(action::PREFERENCES, context),
                 _ => {}
             },
             Message::Navigate(None) => {}
@@ -291,11 +380,7 @@ impl Component for Shell {
                 }
             }
             Message::CloseNotice => self.notice = None,
-            Message::OpenFolder => self.dialog(
-                context,
-                |owner| native::dialogs::open_folder(owner, &plain(tr("_Open Folder…"))),
-                |r| Message::FolderChosen(r.map_err(|e| e.message())),
-            ),
+            Message::Act(action) => self.act(action, context),
             Message::FolderChosen(chosen) => {
                 self.busy = false;
                 match chosen {
@@ -313,10 +398,6 @@ impl Component for Shell {
                     Err(e) => self.show_error(tr("No Core Rules Installation"), e),
                 }
             }
-            Message::NewCharacter => self.go(Page::NewCharacter {
-                skills_and_powers: false,
-                setting: 0,
-            }),
             Message::EditCharacter => {
                 if let (Some(install), Some(file)) = (self.install.clone(), self.selected.clone()) {
                     context.spawn_background(move |_| {
@@ -401,23 +482,6 @@ impl Component for Shell {
                 self.load(context);
             }
             Message::Deleted(Err(e)) => self.show_error(tr("Delete Character"), e),
-            Message::Print => {
-                let (Some(install), Some(file)) = (self.install.clone(), self.selected.clone())
-                else {
-                    return;
-                };
-                self.dialog(
-                    context,
-                    move |owner| {
-                        let sheet = install
-                            .character(&file)
-                            .and_then(|c| install.sheet(&c))
-                            .map_err(|e| e.to_string())?;
-                        native::print::print_sheet(owner, &sheet).map_err(|e| e.message())
-                    },
-                    Message::Printed,
-                );
-            }
             Message::Printed(result) => {
                 self.busy = false;
                 match result {
@@ -430,6 +494,20 @@ impl Component for Shell {
                     }
                     Ok(false) => {}
                     Err(e) => self.show_error(&tr!("Could not print: {error}", error = e), ""),
+                }
+            }
+            Message::PdfSaved(result) => {
+                self.busy = false;
+                match result {
+                    Ok(Some(_)) => {
+                        self.notice = Some(Notice::new(
+                            InfoBarSeverity::Success,
+                            tr("Sheet saved as PDF"),
+                            "",
+                        ))
+                    }
+                    Ok(None) => {}
+                    Err(e) => self.show_error(&e, ""),
                 }
             }
             Message::Rules(Some(index)) => {
@@ -454,22 +532,6 @@ impl Component for Shell {
                         "The other steps of New Character come to the Windows app in a later version.",
                     ),
                 ));
-            }
-            Message::OpenPackage => {
-                let install = self.install.clone();
-                let expansion = install.as_ref().is_some_and(|i| !i.is_core20());
-                self.dialog(
-                    context,
-                    move |owner| {
-                        let filters = import::filters(expansion);
-                        match native::dialogs::open_file(owner, tr("Import Package"), &filters) {
-                            Ok(Some(path)) => import::open(install.as_deref(), path).map(Some),
-                            Ok(None) => Ok(None),
-                            Err(e) => Err(e.message()),
-                        }
-                    },
-                    Message::PackageChosen,
-                );
             }
             Message::PackageChosen(chosen) => {
                 self.busy = false;

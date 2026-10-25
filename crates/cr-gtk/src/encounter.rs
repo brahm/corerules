@@ -6,6 +6,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_app::action;
 use cr_i18n::{tr, tr_noop, trn};
 use cr_store::encounter::{
     Encounter, EncounterRules, FrequencyTable, LairMode, NameError, PICK_ROLLS, Package,
@@ -310,7 +311,7 @@ pub fn group_encounter<H: Host + 'static>(
         if preview.is_active() {
             crate::sheet::preview(&under, sheet, toast);
         } else {
-            crate::sheet::print_sheet(&under, &Rc::new(sheet), None, &toast);
+            crate::sheet::print_sheet(&under, &Rc::new(sheet), &toast);
         }
     });
     alert.present(Some(parent));
@@ -411,11 +412,17 @@ pub fn editor<H: Host + 'static>(
         .build();
     let menu = gio::Menu::new();
     let print_section = gio::Menu::new();
-    print_section.append(Some(tr("_Print…")), Some("encounter.print"));
-    print_section.append(Some(tr("Save as P_DF…")), Some("encounter.pdf"));
+    print_section.append(Some(tr("_Print…")), Some(action::ENCOUNTER_PRINT.detailed));
+    print_section.append(
+        Some(tr("Save as P_DF…")),
+        Some(action::ENCOUNTER_PDF.detailed),
+    );
     menu.append_section(None, &print_section);
     let delete_section = gio::Menu::new();
-    delete_section.append(Some(tr("_Delete Encounter")), Some("encounter.delete"));
+    delete_section.append(
+        Some(tr("_Delete Encounter")),
+        Some(action::ENCOUNTER_DELETE.detailed),
+    );
     menu.append_section(None, &delete_section);
     let header = adw::HeaderBar::new();
     header.pack_end(
@@ -507,29 +514,21 @@ pub fn editor<H: Host + 'static>(
         let host = host.clone();
         move |m: &str| host.toast(m)
     };
-    add("print", {
+    add(action::ENCOUNTER_PRINT.name, {
         let (state, toast) = (state.clone(), toast.clone());
         Box::new(move || {
             let sheet = Rc::new(state.sheet());
-            crate::sheet::print_sheet(&state.dialog, &sheet, None, &toast)
+            crate::sheet::print_sheet(&state.dialog, &sheet, &toast)
         })
     });
-    add("pdf", {
+    add(action::ENCOUNTER_PDF.name, {
         let state = state.clone();
         Box::new(move || {
             let sheet = Rc::new(state.sheet());
-            let (dialog, toast) = (state.dialog.clone(), toast.clone());
-            let title = sheet.title.clone();
-            crate::sheet::save_file(
-                &state.dialog,
-                &title,
-                "pdf",
-                tr("PDF documents"),
-                move |path| crate::sheet::print_sheet(&dialog, &sheet, Some(path), &toast),
-            );
+            crate::sheet::ask_pdf(&state.dialog, &sheet, Rc::new(toast.clone()))
         })
     });
-    let delete = add("delete", {
+    let delete = add(action::ENCOUNTER_DELETE.name, {
         let state = state.clone();
         Box::new(move || state.confirm_delete())
     });
@@ -1065,17 +1064,17 @@ impl<H: Host + 'static> State<H> {
                     }
                     let menu = gio::Menu::new();
                     let actions = gio::SimpleActionGroup::new();
-                    let mut entries = vec![("copy", tr("_Copy…"))];
+                    let mut entries = vec![(action::TRAP_COPY, tr("_Copy…"))];
                     if origin == Origin::Custom {
-                        entries.insert(0, ("edit", tr("_Edit…")));
-                        entries.push(("delete", tr("_Delete")));
+                        entries.insert(0, (action::TRAP_EDIT, tr("_Edit…")));
+                        entries.push((action::TRAP_DELETE, tr("_Delete")));
                     }
-                    for (action, label) in entries {
-                        let a = gio::SimpleAction::new(action, None);
-                        let run = record(action, origin, trap.name.clone());
+                    for (entry, label) in entries {
+                        let a = gio::SimpleAction::new(entry.name, None);
+                        let run = record(entry.name, origin, trap.name.clone());
                         a.connect_activate(move |_, _| run());
                         actions.add_action(&a);
-                        menu.append(Some(label), Some(&format!("trap.{action}")));
+                        menu.append(Some(label), Some(entry.detailed));
                     }
                     let button = gtk::MenuButton::builder()
                         .icon_name("view-more-symbolic")
@@ -1330,7 +1329,7 @@ impl<H: Host + 'static> State<H> {
             move |m: &str| host.toast(m)
         };
         if print {
-            crate::sheet::print_sheet(&self.dialog, &Rc::new(sheet), None, &toast);
+            crate::sheet::print_sheet(&self.dialog, &Rc::new(sheet), &toast);
         } else {
             crate::sheet::preview(&self.dialog, sheet, toast);
         }

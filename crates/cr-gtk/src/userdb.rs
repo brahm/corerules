@@ -10,6 +10,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_app::action;
 use cr_store::help::topic;
 use cr_store::userdb::allowed::{self, Allowed, AllowedDb};
 use cr_store::userdb::classes::{self, Classes};
@@ -220,22 +221,22 @@ pub fn add_actions<H: Host + 'static>(window: &adw::ApplicationWindow, host: Sha
             .build()
     };
     window.add_action_entries([
-        entry("udb-new", |h| {
+        entry(action::UDB_NEW.name, |h| {
             let section = h.current_section();
             run(h, &section, Origin::Standard, "", Action::New);
         }),
-        entry("udb-copy", |h| on_key(h, Action::Copy)),
-        entry("udb-edit", |h| on_key(h, Action::Edit)),
-        entry("udb-delete", |h| on_key(h, Action::Delete)),
-        entry("udb-subrace", |h| on_key(h, Action::NewSubrace)),
-        entry("udb-schools", |h| on_key(h, Action::Schools)),
-        entry("udb-allowed", |h| {
+        entry(action::UDB_COPY.name, |h| on_key(h, Action::Copy)),
+        entry(action::UDB_EDIT.name, |h| on_key(h, Action::Edit)),
+        entry(action::UDB_DELETE.name, |h| on_key(h, Action::Delete)),
+        entry(action::UDB_SUBRACE.name, |h| on_key(h, Action::NewSubrace)),
+        entry(action::UDB_SCHOOLS.name, |h| on_key(h, Action::Schools)),
+        entry(action::UDB_ALLOWED.name, |h| {
             let key = h.current_key();
             if let Some((_, _, name)) = udb::parse_key(&key) {
                 allowed_classes(h, name);
             }
         }),
-        entry("udb-restore", |h| {
+        entry(action::UDB_RESTORE.name, |h| {
             let key = h.current_key();
             if let Some((_, _, name)) = udb::parse_key(&key) {
                 restore_table(h, name);
@@ -2629,7 +2630,7 @@ impl DetailActions {
         let copy = gtk::Button::builder()
             .icon_name("edit-copy-symbolic")
             .tooltip_text(tr("Copy"))
-            .action_name("win.udb-copy")
+            .action_name(action::UDB_COPY.detailed)
             .visible(false)
             .build();
         let menu = gtk::MenuButton::builder()
@@ -2655,23 +2656,29 @@ impl DetailActions {
         let kind = kind_of(section);
         self.copy.set_visible(true);
         let menu = gio::Menu::new();
-        menu.append(Some(new_menu_label(kind)), Some("win.udb-new"));
+        menu.append(Some(new_menu_label(kind)), Some(action::UDB_NEW.detailed));
         if kind == Some(Kind::Races) {
-            menu.append(Some(tr("New _Subrace…")), Some("win.udb-subrace"));
-            let item = gio::MenuItem::new(Some(tr("_Allowed Classes…")), Some("win.udb-allowed"));
+            menu.append(
+                Some(tr("New _Subrace…")),
+                Some(action::UDB_SUBRACE.detailed),
+            );
+            let item = gio::MenuItem::new(
+                Some(tr("_Allowed Classes…")),
+                Some(action::UDB_ALLOWED.detailed),
+            );
             item.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
             menu.append_item(&item);
         }
         if matches!(kind, Some(Kind::Spells(_))) {
-            menu.append(Some(tr("_Schools…")), Some("win.udb-schools"));
+            menu.append(Some(tr("_Schools…")), Some(action::UDB_SCHOOLS.detailed));
         }
         let tables = kind == Some(Kind::Tables);
         if tables && origin == Origin::Standard {
-            menu.append(Some(tr("_Restore")), Some("win.udb-restore"));
+            menu.append(Some(tr("_Restore")), Some(action::UDB_RESTORE.detailed));
         }
         if origin == Origin::Custom {
             let section = gio::Menu::new();
-            section.append(Some(tr("_Delete")), Some("win.udb-delete"));
+            section.append(Some(tr("_Delete")), Some(action::UDB_DELETE.detailed));
             menu.append_section(None, &section);
         }
         self.menu.set_menu_model(Some(&menu));

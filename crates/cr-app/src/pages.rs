@@ -1,10 +1,9 @@
-//! The character sheet laid out on printed pages the way the GTK app
-//! prints it (`print_items` and `print_sheet` in cr-gtk's `sheet.rs`):
-//! boxes one under the other, tables with their columns sized to fit the
-//! page, a title kept with what follows it and a footer on every page.
-//! Text is measured through [`Measure`], so nothing here depends on how it
-//! is drawn; this is the copy that the shared crate of the next phase
-//! takes over for both apps.
+//! The character sheet laid out on printed pages: boxes one under the
+//! other, tables with their columns sized to fit the page, a title kept
+//! with what follows it and a footer on every page. Text is measured
+//! through [`Measure`], so nothing here depends on how it is drawn: the
+//! GNOME app measures with Pango, the Windows app with DirectWrite and
+//! the PDF with the metrics of its own font.
 //!
 //! Lengths are in points.
 
