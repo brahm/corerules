@@ -1,0 +1,49 @@
+[package]
+name = "cr-win"
+description = "Windows 11 app for AD&D Core Rules 2.0 data"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+# windows-reactor needs a newer compiler than the rest of the workspace.
+rust-version = "1.95"
+
+[lib]
+name = "cr_win"
+path = "src/lib.rs"
+
+[[bin]]
+name = "CoreRules"
+path = "src/main.rs"
+
+[dependencies]
+cr-formats.workspace = true
+cr-i18n.workspace = true
+cr-store.workspace = true
+image.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-reactor = "0.100"
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Direct2D",
+    "Win32_Graphics_Direct2D_Common",
+    "Win32_Graphics_Direct3D",
+    "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_DirectWrite",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Gdi",
+    "Win32_Graphics_Imaging",
+    "Win32_Graphics_Printing_PrintTicket",
+    "Win32_Storage_Xps_Printing",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Memory",
+    "Win32_UI_Controls_Dialogs",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_Common",
+    "Win32_UI_WindowsAndMessaging",
+] }
+windows-numerics = "0.3"

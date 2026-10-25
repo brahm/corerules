@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The MSIX package of the Windows app. The identity is the one the
+     Microsoft Store reserved for Core Rules; make-msix.ps1 fills in the
+     version. -->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap rescap">
+
+  <Identity
+    Name="WagnerBrahm.CoreRules"
+    Publisher="CN=E77E0DF5-5354-4DC5-B7EC-3E228FF5F8E9"
+    Version="0.0.0.0"
+    ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>Core Rules</DisplayName>
+    <PublisherDisplayName>Wagner Brahm</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.22000.0" MaxVersionTested="10.0.26100.0" />
+    <!-- WinUI 3: the Windows App Runtime that windows-reactor 0.100 needs.
+         The Store installs it with the app. -->
+    <PackageDependency
+      Name="Microsoft.WindowsAppRuntime.2"
+      MinVersion="2.4.0.0"
+      Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-US" />
+    <Resource Language="pt-BR" />
+    <Resource Language="es-ES" />
+    <Resource Language="it-IT" />
+    <Resource Language="fr-FR" />
+    <Resource Language="de-DE" />
+  </Resources>
+
+  <Applications>
+    <Application Id="CoreRules" Executable="CoreRules.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Core Rules"
+        Description="Character manager and Dungeon Master's toolkit for AD&amp;D 2nd Edition, over the data of AD&amp;D Core Rules 2.0"
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+      </uap:VisualElements>
+      <Extensions>
+        <!-- DM Toolkit packages open in Import. -->
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="dmtoolkit">
+            <uap:DisplayName>DM Toolkit Package</uap:DisplayName>
+            <uap:Logo>Assets\StoreLogo.png</uap:Logo>
+            <uap:SupportedFileTypes>
+              <uap:FileType>.xpx</uap:FileType>
+              <uap:FileType>.xpt</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <!-- A desktop app: it reads and writes the data package in Documents
+         and an installation wherever the user keeps it. -->
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>
