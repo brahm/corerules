@@ -3,6 +3,7 @@
 //! holds the state and handles every message; the pages are drawn by the
 //! functions of the modules below, from that state.
 
+mod book;
 mod edit;
 mod help;
 mod import;
@@ -10,8 +11,11 @@ mod library;
 mod new_character;
 mod settings;
 mod sheet;
+mod web;
 
+use std::cell::Cell;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::{Arc, OnceLock};
 
 use cr_app::action::{self, Action};
@@ -29,11 +33,14 @@ use cr_store::userdb::parts::OTHER_TYPES;
 use cr_win::text::plain;
 use windows_reactor::*;
 
+use crate::native::keys::Key;
 use crate::native::{self, Owner};
+use book::{BookPage, BookView};
 pub use edit::Edit;
-use help::{HelpPage, HelpView, Opened, Shown};
+use help::{HelpPage, Opened, Shown};
 use library::Pictures;
 use sheet::{OptionsEdit, SheetOptions, SheetPage};
+use web::WebHost;
 
 /// Starts the app; `cr-win <file>` opens a package, as File Explorer does
 /// for a package the app is the default for.
@@ -60,6 +67,10 @@ pub fn available(action: Action) -> bool {
 /// by id.
 const SETTINGS: &str = "Settings";
 const HELP: &str = "Help";
+
+/// The width of the navigation, open; closed, only its icons show.
+const PANE: f64 = 240.0;
+const PANE_CLOSED: f64 = 48.0;
 
 pub struct Shell {
     install: Option<Arc<Installation>>,
@@ -88,14 +99,22 @@ pub struct Shell {
     notice: Option<Notice>,
     confirm: Option<Confirm>,
     pane_open: bool,
+    /// The window's width, once Reactor has said it; 0 before.
+    width: f64,
     /// A dialog or a print job is under way.
     busy: bool,
     /// The installation's help files and its records' help, read once.
     help_files: Option<Arc<Files>>,
     items: Arc<OnceLock<Arc<ItemHelp>>>,
-    help_view: HelpView,
+    help_view: WebHost,
     /// The sections of About that are open.
     about_open: Vec<settings::Section>,
+    book_view: BookView,
+    /// Counts the times a page asked again for its WebView2's
+    /// CoreWebView2, for it to ask once more.
+    web_tries: u64,
+    /// A book is shown, whose keys the keyboard hook takes.
+    reading: Rc<Cell<bool>>,
 }
 
 /// What the window shows.
@@ -112,6 +131,7 @@ pub enum Page {
     Sheet(Arc<SheetPage>),
     SheetOptions(Box<SheetOptions>),
     Help(Box<HelpPage>),
+    Book(Box<BookPage>),
 }
 
 /// A package opened for import, with what it would bring in.
@@ -206,6 +226,7 @@ pub enum Message {
     Back,
     TogglePane,
     PaneOpenChanged(bool),
+    WindowSized(WindowSize),
     Search(String),
     Origins(Option<usize>),
     Party(Option<usize>),
@@ -270,6 +291,25 @@ pub enum Message {
     /// whether to print it.
     ItemHelpFound(Result<ItemHelpShown, String>, bool),
     MonsterHelp(bool),
+    // A book.
+    /// The book asked for by this name was read.
+    BookOpened(String, Result<Arc<book::Opened>, String>),
+    /// What the book's page posted.
+    BookPosted(String),
+    BookHeading(Option<usize>),
+    /// The contents laid over the text were closed.
+    BookContentsClosed,
+    BookFind(String),
+    /// The match after (1) or before (-1) the one shown.
+    BookMatch(i32),
+    BookFindClosed,
+    // The WebView2 of the help or a book.
+    /// Its control was not there: the page asks for it again.
+    WebRetry,
+    /// Its CoreWebView2 could not be made, for this reason.
+    WebFailed(String),
+    /// Time to see whether it started.
+    WebWatch,
 }
 
 /// What a record's help shows.
@@ -477,7 +517,95 @@ impl Shell {
                 }
             }
             action::HELP_CONTROL => self.item_help(context),
+            // Read Book, on the book on the details.
+            action::OPEN_BOOK => {
+                if let Some(name) = self
+                    .selected_entry()
+                    .and_then(|e| cr_app::library::book_name(&e.key))
+                {
+                    self.open_book(name.to_owned(), None, context);
+                }
+            }
+            action::BOOK_FIND => {
+                if let Page::Book(page) = &mut self.page
+                    && page.book.is_some()
+                {
+                    page.finding = true;
+                    page.find_asked += 1;
+                }
+            }
+            action::BOOK_ZOOM_IN => self.book_zoom(1),
+            action::BOOK_ZOOM_OUT => self.book_zoom(-1),
+            action::BOOK_ZOOM_RESET => self.book_zoom(0),
+            action::BOOK_CONTENTS => {
+                let narrow = book::narrow(self);
+                if let Page::Book(page) = &mut self.page {
+                    // Over the text in a narrow window, beside it otherwise.
+                    if narrow {
+                        page.overlay = !page.overlay;
+                    } else {
+                        page.contents = !page.contents;
+                    }
+                }
+            }
+            action::BOOK_CLOSE => {
+                if matches!(self.page, Page::Book(_)) {
+                    self.back();
+                }
+            }
             _ => {}
+        }
+    }
+
+    /// Opens the book `name` on the book page, or goes to it if shown;
+    /// with `find`, Find starts with it.
+    fn open_book(&mut self, name: String, find: Option<String>, context: &ComponentContext<Self>) {
+        let Some(install) = self.install.clone() else {
+            return;
+        };
+        if let Page::Book(page) = &mut self.page
+            && page.name.eq_ignore_ascii_case(&name)
+        {
+            if let Some(find) = find {
+                page.finding = true;
+                page.find_asked += 1;
+                page.skip_first = true;
+                let scripts = page.search(find);
+                self.run_in_book(&scripts);
+            }
+            return;
+        }
+        self.go(Page::Book(Box::new(BookPage::new(name.clone(), find))));
+        context.spawn_background(move |_| {
+            let opened = book::open(&install, &name).map(Arc::new);
+            Message::BookOpened(name, opened)
+        });
+    }
+
+    /// Sees, once WebView2 has had time to start, whether the page's
+    /// did.
+    fn watch_web(context: &ComponentContext<Self>) {
+        context.spawn_background(|_| {
+            std::thread::sleep(web::WAIT);
+            Message::WebWatch
+        });
+    }
+
+    /// Zooms the book shown in, out (`direction` -1) or back to 1 (0).
+    fn book_zoom(&mut self, direction: i32) {
+        if let Page::Book(page) = &mut self.page
+            && let Some(script) = page.zoom(direction)
+        {
+            self.run_in_book(&[script]);
+        }
+    }
+
+    /// Runs `scripts` in the book's page, once it has loaded.
+    fn run_in_book(&self, scripts: &[String]) {
+        if let Page::Book(page) = &self.page {
+            for script in scripts {
+                self.book_view.run(page, script);
+            }
         }
     }
 
@@ -506,6 +634,7 @@ impl Shell {
             Page::Import(_) => topic::IMPORT,
             Page::Sheet(_) | Page::SheetOptions(_) => topic::CHARACTER_SHEET,
             Page::Settings | Page::Help(_) => topic::MAIN_MENU,
+            Page::Book(_) => topic::BOOKS,
         }
     }
 
@@ -712,15 +841,31 @@ impl Component for Shell {
             notice: None,
             confirm: None,
             pane_open: true,
+            width: 0.0,
             busy: false,
             help_files: None,
             items: Arc::default(),
-            help_view: HelpView::default(),
+            help_view: WebHost::default(),
             about_open: Vec::new(),
+            book_view: BookView::default(),
+            web_tries: 0,
+            reading: Rc::default(),
         };
         let sender = context.sender();
-        native::keys::on_f1(move || {
-            sender.send(Message::Act(action::HELP_HERE));
+        let reading = shell.reading.clone();
+        native::keys::on_key(move |key| {
+            let action = match key {
+                Key::Help => action::HELP_HERE,
+                _ if !reading.get() => return false,
+                Key::Contents => action::BOOK_CONTENTS,
+                Key::Find => action::BOOK_FIND,
+                Key::ZoomIn => action::BOOK_ZOOM_IN,
+                Key::ZoomOut => action::BOOK_ZOOM_OUT,
+                Key::ZoomReset => action::BOOK_ZOOM_RESET,
+                Key::Close => action::BOOK_CLOSE,
+            };
+            sender.send(Message::Act(action));
+            true
         });
         shell.load(None, context);
         if let Some(path) = file.clone() {
@@ -778,6 +923,7 @@ impl Component for Shell {
             }
             Message::TogglePane => self.pane_open = !self.pane_open,
             Message::PaneOpenChanged(open) => self.pane_open = open,
+            Message::WindowSized(size) => self.width = size.width,
             Message::Search(text) => self.filter.search = text,
             Message::Origins(Some(index)) => {
                 self.filter.origins = cr_store::userdb::Filter::of(index as u32)
@@ -1169,6 +1315,9 @@ impl Component for Shell {
                 };
                 page.shown = Some(Arc::from(shown));
                 page.generation += 1;
+                if self.help_view.web().is_none() {
+                    Self::watch_web(context);
+                }
                 page.printing = std::mem::take(&mut page.print);
                 page.row = shown_row;
                 page.popup = None;
@@ -1317,11 +1466,138 @@ impl Component for Shell {
             Message::ItemHelpFound(Err(e), _) => {
                 self.notice = Some(Notice::new(InfoBarSeverity::Informational, e, ""))
             }
+            Message::BookOpened(name, opened) => {
+                let Page::Book(page) = &mut self.page else {
+                    return;
+                };
+                if page.name != name {
+                    return;
+                }
+                match opened {
+                    Ok(book) => {
+                        page.opened(book);
+                        Self::watch_web(context);
+                    }
+                    Err(e) => page.error = Some(e),
+                }
+            }
+            Message::WebRetry => self.web_tries += 1,
+            // The page's WebView2 should have started by now.
+            Message::WebWatch => {
+                let waiting = match &self.page {
+                    Page::Book(page) => page.book.is_some() && self.book_view.host.web().is_none(),
+                    Page::Help(page) => page.shown.is_some() && self.help_view.web().is_none(),
+                    _ => false,
+                };
+                if waiting && self.notice.is_none() {
+                    self.show_error(
+                        tr("The Page Could Not Be Shown"),
+                        tr!("WebView2 did not start ({reason}).", reason = "no answer"),
+                    );
+                }
+            }
+            Message::WebFailed(reason) => self.show_error(
+                tr("The Page Could Not Be Shown"),
+                tr!("WebView2 did not start ({reason}).", reason),
+            ),
+            Message::BookPosted(message) => {
+                let Page::Book(page) = &mut self.page else {
+                    return;
+                };
+                if message == cr_win::book::READY {
+                    // The page shows anew: where the reader was, as zoomed,
+                    // with what Find found.
+                    page.ready = true;
+                    let mut scripts = vec![cr_win::book::start(page.zoom, page.top)];
+                    if !page.query.is_empty() {
+                        let query = page.query.clone();
+                        scripts.extend(page.search(query));
+                    }
+                    self.run_in_book(&scripts);
+                } else if let Some(top) = message.strip_prefix(cr_win::book::TOP) {
+                    if let Ok(top) = top.parse() {
+                        page.moved(top);
+                    }
+                } else if let Some(key) = message.strip_prefix(cr_win::book::KEY) {
+                    let action = match key {
+                        "find" => action::BOOK_FIND,
+                        "zoom-in" => action::BOOK_ZOOM_IN,
+                        "zoom-out" => action::BOOK_ZOOM_OUT,
+                        "zoom-reset" => action::BOOK_ZOOM_RESET,
+                        "contents" => action::BOOK_CONTENTS,
+                        "close" => action::BOOK_CLOSE,
+                        "help" => action::HELP_HERE,
+                        _ => return,
+                    };
+                    self.act(action, context);
+                }
+            }
+            Message::BookHeading(Some(index)) => {
+                let Page::Book(page) = &mut self.page else {
+                    return;
+                };
+                // The contents follow the text, which selects them too.
+                if page.heading == Some(index) {
+                    return;
+                }
+                let Some(paragraph) = page
+                    .book
+                    .as_ref()
+                    .and_then(|b| b.headings.get(index))
+                    .map(|h| h.paragraph)
+                else {
+                    return;
+                };
+                page.heading = Some(index);
+                // Contents laid over the text give way to it.
+                page.overlay = false;
+                self.run_in_book(&[cr_win::book::go(paragraph)]);
+            }
+            Message::BookHeading(None) => {}
+            Message::BookContentsClosed => {
+                if let Page::Book(page) = &mut self.page {
+                    page.overlay = false;
+                }
+            }
+            Message::BookFind(query) => {
+                if let Page::Book(page) = &mut self.page
+                    && page.query != query
+                {
+                    let scripts = page.search(query);
+                    self.run_in_book(&scripts);
+                }
+            }
+            Message::BookMatch(direction) => {
+                let Page::Book(page) = &mut self.page else {
+                    return;
+                };
+                let script = match page.step_match(direction) {
+                    Some(script) => vec![script],
+                    // Nothing found yet: Enter searches again.
+                    None if !page.query.is_empty() => {
+                        let query = page.query.clone();
+                        page.search(query)
+                    }
+                    None => return,
+                };
+                self.run_in_book(&script);
+            }
+            Message::BookFindClosed => {
+                if let Page::Book(page) = &mut self.page {
+                    page.finding = false;
+                    page.query.clear();
+                    page.matches = Arc::default();
+                    page.current = None;
+                }
+                self.run_in_book(&[cr_win::book::UNMARK.to_owned()]);
+            }
         }
     }
 
     fn view(&self, _file: &Option<PathBuf>, context: &mut ViewContext<Self>) -> View {
         context.window_title("Core Rules");
+        let sized = context.callback(Message::WindowSized);
+        context.on_window_size(sized);
         context.window_visuals(
             WindowVisuals::new()
                 .backdrop(WindowBackdrop::Mica)
@@ -1340,7 +1616,11 @@ impl Component for Shell {
             Page::Sheet(page) => sheet::view(self, page, context),
             Page::SheetOptions(options) => sheet::options_view(options, context),
             Page::Help(page) => help::view(self, page, context),
+            Page::Book(page) => book::view(self, page, context),
         };
+        // The keyboard hook takes the reader's keys only while a book
+        // shows.
+        self.reading.set(matches!(self.page, Page::Book(_)));
         let notice = match &self.notice {
             Some(notice) => InfoBar::new()
                 .severity(notice.severity)
@@ -1418,7 +1698,7 @@ impl Component for Shell {
             .is_settings_visible(false)
             .always_show_header(false)
             .is_pane_open(self.pane_open)
-            .open_pane_length(240.0)
+            .open_pane_length(PANE)
             .on_is_pane_open_changed(context.callback(Message::PaneOpenChanged))
             .on_selected_tag_changed(context.callback(Message::Navigate))
             .grid_row(1)

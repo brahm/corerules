@@ -161,6 +161,9 @@ fn credits(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
 
 /// The notice on the original's content, and the original program's
 /// About box and license.
+/// The license of Microsoft.Web.WebView2.Core.dll, which the app ships.
+const WEBVIEW2_LICENSE: &str = include_str!("../../package/WebView2-LICENSE.txt");
+
 fn legal(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
     let mut rows = vec![KeyedView::new(
         "notice",
@@ -184,6 +187,16 @@ fn legal(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
             ),
         ));
     }
+    // The BSD license of the WebView2 file shipped with the app.
+    rows.push(KeyedView::new(
+        "webview2",
+        credit(
+            "Microsoft WebView2",
+            ui::body(WEBVIEW2_LICENSE.trim_end())
+                .is_text_selection_enabled(true)
+                .into(),
+        ),
+    ));
     expander(
         (shell, context, Section::Legal),
         tr("Legal"),

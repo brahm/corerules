@@ -3,8 +3,6 @@
 //! topics, or the topics a search finds; the topic itself in a WebView2,
 //! as WinHelp draws it, with its links and popups.
 
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::sync::Arc;
 
 use cr_app::help::{self as shared, Files, Followed, Place, Row, Target};
@@ -15,7 +13,6 @@ use cr_win::text::plain;
 use windows_reactor::*;
 
 use super::{Message, Shell};
-use crate::native::webview::Web;
 use crate::ui;
 
 /// What the page posts once it has loaded when it is to be printed.
@@ -70,20 +67,6 @@ pub struct HelpPage {
     pub printing: bool,
     /// The row of the topic shown, whose branch of the tree is open.
     pub row: Option<usize>,
-}
-
-/// The WebView2 of the help page while it shows: Reactor's reference to
-/// the control, and its CoreWebView2 once made.
-#[derive(Clone, Default)]
-pub struct HelpView {
-    pub control: ElementRef<WebView2>,
-    pub web: Rc<RefCell<Option<Web>>>,
-}
-
-impl HelpView {
-    pub fn web(&self) -> Option<Web> {
-        self.web.borrow().clone()
-    }
 }
 
 /// Shows topic `place` with what goes beside it: the rows of its file
@@ -280,10 +263,7 @@ pub fn view(shell: &Shell, page: &HelpPage, context: &mut ViewContext<Shell>) ->
     // for each new topic.
     let help_view = shell.help_view.clone();
     context.use_effect("help-view", (), move || {
-        let web = help_view.web.clone();
-        Some(Box::new(move || {
-            web.borrow_mut().take();
-        }))
+        Some(Box::new(move || help_view.forget()))
     });
     if let Some(shown) = page.shown.clone() {
         let help_view = shell.help_view.clone();
@@ -300,24 +280,24 @@ pub fn view(shell: &Shell, page: &HelpPage, context: &mut ViewContext<Shell>) ->
         } else {
             shown.page.html.clone()
         };
-        context.use_effect("help-topic", page.generation, move || {
-            let slot = help_view.web.clone();
-            let _ = help_view.control.request_core_web_view2(move |core| {
-                let Some(web) = core.ok().as_ref().and_then(Web::of) else {
-                    return;
-                };
-                let mut current = slot.borrow_mut();
-                if current.as_ref().is_none_or(|w| !w.same(&web)) {
-                    let sender = sender.clone();
-                    web.on_message(move |link| {
-                        sender.send(Message::HelpLink(link));
-                    });
-                    *current = Some(web.clone());
-                }
-                web.show(&html);
-            });
-            None
-        });
+        context.use_effect(
+            "help-topic",
+            (page.generation, shell.web_tries),
+            move || {
+                let links = sender.clone();
+                help_view.request(
+                    sender,
+                    move |web| {
+                        let links = links.clone();
+                        web.on_message(move |link| {
+                            links.send(Message::HelpLink(link));
+                        });
+                    },
+                    move |web| web.show(&html),
+                );
+                None
+            },
+        );
     }
     let topic = Border::new()
         .margin(Thickness::new(16.0, 0.0, 24.0, 24.0))

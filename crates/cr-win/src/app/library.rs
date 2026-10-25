@@ -405,6 +405,15 @@ fn details(shell: &Shell, entry: &Entry, context: &mut ViewContext<Shell>) -> Vi
             ui::command(label, symbol, enabled, context.message(message)),
         ));
     };
+    if commands.read {
+        add(
+            "read",
+            &plain(tr("_Read Book")),
+            Symbol::Read,
+            !busy,
+            Message::Act(action::OPEN_BOOK),
+        );
+    }
     if commands.sheet {
         add(
             "sheet",

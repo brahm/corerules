@@ -1,13 +1,15 @@
 //! What the app asks of Windows directly, where windows-reactor has no
-//! control for it: the file dialogs, printing and the paper size, F1, the
-//! help's WebView2, web pages and the clipboard. The dialogs run on a
-//! thread of their own in a single-threaded COM apartment, as the shell's
-//! dialogs need, with the app's window as owner so that the dialog stays
-//! modal to it while the window keeps drawing.
+//! control for it: the file dialogs, printing and the paper size, F1 and
+//! the reader's keys, the WebView2 of the help and the books, scrolling
+//! the book's contents, web pages and the clipboard. The dialogs run on
+//! a thread of their own in a single-threaded COM apartment, as the
+//! shell's dialogs need, with the app's window as owner so that the
+//! dialog stays modal to it while the window keeps drawing.
 
 pub mod dialogs;
 pub mod keys;
 pub mod print;
+pub mod uia;
 pub mod webview;
 
 use cr_app::pdf::Paper;

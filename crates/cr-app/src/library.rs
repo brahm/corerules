@@ -3,6 +3,7 @@
 //! the library from here, so they list and offer the same things.
 
 use cr_i18n::tr;
+use cr_store::books::BOOK_KEY;
 use cr_store::catalog::{ENCOUNTER_KEY, Entry, Section, TABLE_KEY, TEMPLATES, TREASURE_KEY};
 use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES};
 use cr_store::userdb::{self, Filter as Origins};
@@ -185,6 +186,11 @@ pub fn has_page(key: &str) -> bool {
             .is_some_and(|(section, ..)| section == TEMPLATES || section == "treasure-tables")
 }
 
+/// The short name of a book of the Books section (`PhbBk`), by its key.
+pub fn book_name(key: &str) -> Option<&str> {
+    key.strip_prefix(BOOK_KEY)
+}
+
 /// The name of an encounter template, by its key.
 pub fn template_name(key: &str) -> Option<&str> {
     userdb::parse_key(key)
@@ -220,6 +226,8 @@ pub struct Commands {
     pub monster: bool,
     /// Print the page that View shows.
     pub print: bool,
+    /// Read Book, for a book of the Books section.
+    pub read: bool,
 }
 
 impl Commands {
@@ -250,6 +258,7 @@ impl Commands {
             view: page,
             monster,
             print: page,
+            read: book_name(key).is_some(),
         }
     }
 }
@@ -370,5 +379,9 @@ mod tests {
         assert!(orc.view && orc.monster && orc.records && !orc.edit);
         let treasure = Commands::of(&entry("treasure:Hoard", "Hoard", ""), true);
         assert!(treasure.view && !treasure.monster && treasure.copy && treasure.edit);
+        let book = Commands::of(&entry(&format!("{BOOK_KEY}PhbBk"), "Handbook", ""), true);
+        assert!(book.read && !book.view && !book.edit && !book.sheet);
+        assert!(!orc.read);
+        assert_eq!(book_name(&format!("{BOOK_KEY}PhbBk")), Some("PhbBk"));
     }
 }
