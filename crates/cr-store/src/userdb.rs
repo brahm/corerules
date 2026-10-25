@@ -173,7 +173,9 @@ impl Value {
             Self::Bool(b) => b.to_string(),
             Self::List(l) => l.join(", "),
             Self::Dice([n, s, m]) => dice_text(*n, *s, *m),
-            Self::Real(x) => x.to_string(),
+            // The records keep reals as `f32`: 0.1, not the f64
+            // 0.10000000149011612 it widens to.
+            Self::Real(x) => (*x as f32).to_string(),
             Self::Pairs(p) => p
                 .iter()
                 .map(|(n, v)| format!("{n} ({v})"))
@@ -1237,6 +1239,14 @@ mod tests {
         assert_eq!(dice_text(1, 4, 2), "1d4+2");
         assert_eq!(dice_text(0, 0, 1), "1");
         assert_eq!(dice_text(2, 8, -1), "2d8-1");
+    }
+
+    #[test]
+    fn reals_read_as_the_records_keep_them() {
+        let weight = Value::Real(f64::from(f32::from_bits(0x3dcc_cccd)));
+        assert_eq!(weight.text(), "0.1");
+        assert_eq!(Value::Real(2.5).text(), "2.5");
+        assert_eq!(Value::Real(10.0).text(), "10");
     }
 
     #[test]

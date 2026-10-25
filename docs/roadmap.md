@@ -28,7 +28,8 @@ prototype of the Windows app on 2026-10-25 (phase 2, decision P21), and
 the groundwork that keeps both apps the same is in place (phase 3): the
 shared crate `cr-app`, one PDF of the sheet for both systems and a test
 that fails when an action is in one app and not in the other. The screens
-are being ported (phase 4): the library and the character sheet are done.
+are being ported (phase 4): the library, the character sheet, the help,
+Settings and About are done.
 Publishing on Flathub was dropped from the plan (decision P15).
 
 ## The original plan (2026-10-09)
@@ -181,7 +182,7 @@ The phases run in order:
    each merged once CI passes. Each stage first moves what the screens
    decide into `cr-app`, where the GNOME app uses it too, and then writes
    the Windows screens over it.
-   - **The library and the sheet (done).** `cr-app` gained the library's
+   - **The library and the sheet (done, PR #100).** `cr-app` gained the library's
      search and filters, the commands an entry offers, the pictures of
      items and monsters, the sheet's options and exports, and the rules of
      the user database's records. The Windows app now shows every section
@@ -193,10 +194,24 @@ The phases run in order:
      Character or NPC, and Delete. Sharing the filters fixed a GNOME bug:
      the part type filter hid every entry of the other sections. 41
      actions are left on `NOT_YET_ON_WINDOWS`.
-   - Still to port: Settings, About and help; the books; character
-     creation and Enter Character; editing; the generators (NPCs,
-     treasure, encounters, tables, parties); the user database editors;
-     packages and Import Core Rules 2.0; Extract Data from CD….
+   - **Help, Settings and About (done).** `cr-app` gained the help (the
+     topic a target names, the list beside it, where a link leads, what a
+     right-click on a control or a row shows, a monster's View and Print)
+     and About's texts. The Windows app has a Help page in its
+     navigation: the contents as a tree, the search over the topics, and
+     the topic as WinHelp draws it, with its fonts, colours, tables,
+     pictures, links and popups, shown in a WebView2 (decision P24), with
+     Back and Print. F1 opens the help of the page shown, each entry's
+     Help shows what a right-click on its row shows in the original, and
+     a monster's View and Print open its topic. Settings gained the Core
+     Rules Vs Player's Option message, and About the description, What's
+     New, the credits, the legal notice, the original program's About box
+     and Credits, and the details a bug report needs. 38 actions are left
+     on `NOT_YET_ON_WINDOWS`.
+   - Still to port: the books; character creation and Enter Character;
+     editing; the generators (NPCs, treasure, encounters, tables,
+     parties); the user database editors; packages and Import Core Rules
+     2.0; Extract Data from CD….
 5. **Package and Store.** The release workflow builds and tests the MSIX;
    a beta goes to a closed group through the Microsoft Store.
 6. **Release with Windows**, once the beta's users confirm it, with the
@@ -222,8 +237,9 @@ Platform details:
   directly or mounted by File Explorer, or an installation.
 - **Printing:** the Windows print dialog, drawing the pages of
   `cr-app` with Direct2D; Save as PDF writes the PDF of `cr-app`.
-- **Help:** the app's own help window, since Windows 11 has no WinHelp
-  reader either.
+- **Help:** the app's own Help page, since Windows 11 has no WinHelp
+  reader either: the topics drawn as web pages in a WebView2 (decision
+  P24), and F1 for the page shown.
 - **Language:** the Windows display language or Preferences, with the same
   catalogs.
 - **`cr`:** `cr.exe` inside the same package, reached from a terminal

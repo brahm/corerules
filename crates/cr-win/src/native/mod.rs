@@ -1,11 +1,14 @@
 //! What the app asks of Windows directly, where windows-reactor has no
-//! control for it: the file dialogs, printing and the paper size. Each runs on a thread
-//! of its own in a single-threaded COM apartment, as the shell's dialogs
-//! need, with the app's window as owner so that the dialog stays modal to
-//! it while the window keeps drawing.
+//! control for it: the file dialogs, printing and the paper size, F1, the
+//! help's WebView2, web pages and the clipboard. The dialogs run on a
+//! thread of their own in a single-threaded COM apartment, as the shell's
+//! dialogs need, with the app's window as owner so that the dialog stays
+//! modal to it while the window keeps drawing.
 
 pub mod dialogs;
+pub mod keys;
 pub mod print;
+pub mod webview;
 
 use cr_app::pdf::Paper;
 use windows::Win32::Foundation::HWND;
@@ -65,5 +68,53 @@ pub fn paper() -> Paper {
         Paper::Letter
     } else {
         Paper::A4
+    }
+}
+
+/// Opens a web page in the user's browser.
+pub fn open_uri(uri: &str) {
+    use windows::Win32::UI::Shell::ShellExecuteW;
+    use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+    use windows::core::{HSTRING, w};
+    // Only web pages: a help file's macro could name anything.
+    if !(uri.starts_with("https://") || uri.starts_with("http://")) {
+        return;
+    }
+    // SAFETY: the strings outlive the call; no window owns it.
+    unsafe {
+        ShellExecuteW(
+            None,
+            w!("open"),
+            &HSTRING::from(uri),
+            None,
+            None,
+            SW_SHOWNORMAL,
+        )
+    };
+}
+
+/// Puts `text` on the clipboard.
+pub fn copy(text: &str) -> windows::core::Result<()> {
+    use windows::Win32::Foundation::{HANDLE, HGLOBAL};
+    use windows::Win32::System::DataExchange::{
+        CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData,
+    };
+    use windows::Win32::System::Memory::{GMEM_MOVEABLE, GlobalAlloc, GlobalLock, GlobalUnlock};
+    use windows::Win32::System::Ole::CF_UNICODETEXT;
+
+    let wide: Vec<u16> = text.encode_utf16().chain([0]).collect();
+    // SAFETY: the memory is allocated, filled within its size and handed
+    // to the clipboard, which owns it from then on; the clipboard is
+    // closed on every path once opened.
+    unsafe {
+        let memory: HGLOBAL = GlobalAlloc(GMEM_MOVEABLE, wide.len() * 2)?;
+        let target = GlobalLock(memory).cast::<u16>();
+        std::ptr::copy_nonoverlapping(wide.as_ptr(), target, wide.len());
+        let _ = GlobalUnlock(memory);
+        OpenClipboard(None)?;
+        let set = EmptyClipboard()
+            .and_then(|()| SetClipboardData(u32::from(CF_UNICODETEXT.0), Some(HANDLE(memory.0))));
+        let _ = CloseClipboard();
+        set.map(|_| ())
     }
 }
