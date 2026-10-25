@@ -11,6 +11,7 @@ mod library;
 mod new_character;
 mod settings;
 mod sheet;
+mod web;
 
 use std::cell::Cell;
 use std::path::PathBuf;
@@ -36,9 +37,10 @@ use crate::native::keys::Key;
 use crate::native::{self, Owner};
 use book::{BookPage, BookView};
 pub use edit::Edit;
-use help::{HelpPage, HelpView, Opened, Shown};
+use help::{HelpPage, Opened, Shown};
 use library::Pictures;
 use sheet::{OptionsEdit, SheetOptions, SheetPage};
+use web::WebHost;
 
 /// Starts the app; `cr-win <file>` opens a package, as File Explorer does
 /// for a package the app is the default for.
@@ -98,10 +100,13 @@ pub struct Shell {
     /// The installation's help files and its records' help, read once.
     help_files: Option<Arc<Files>>,
     items: Arc<OnceLock<Arc<ItemHelp>>>,
-    help_view: HelpView,
+    help_view: WebHost,
     /// The sections of About that are open.
     about_open: Vec<settings::Section>,
     book_view: BookView,
+    /// Counts the times a page asked again for its WebView2's
+    /// CoreWebView2, for it to ask once more.
+    web_tries: u64,
     /// A book is shown, whose keys the keyboard hook takes.
     reading: Rc<Cell<bool>>,
 }
@@ -289,6 +294,11 @@ pub enum Message {
     /// The match after (1) or before (-1) the one shown.
     BookMatch(i32),
     BookFindClosed,
+    // The WebView2 of the help or a book.
+    /// Its control was not there: the page asks for it again.
+    WebRetry,
+    /// Its CoreWebView2 could not be made, for this reason.
+    WebFailed(String),
 }
 
 /// What a record's help shows.
@@ -808,9 +818,10 @@ impl Component for Shell {
             busy: false,
             help_files: None,
             items: Arc::default(),
-            help_view: HelpView::default(),
+            help_view: WebHost::default(),
             about_open: Vec::new(),
             book_view: BookView::default(),
+            web_tries: 0,
             reading: Rc::default(),
         };
         let sender = context.sender();
@@ -1436,6 +1447,11 @@ impl Component for Shell {
                     Err(e) => page.error = Some(e),
                 }
             }
+            Message::WebRetry => self.web_tries += 1,
+            Message::WebFailed(reason) => self.show_error(
+                tr("The Page Could Not Be Shown"),
+                tr!("WebView2 did not start ({reason}).", reason),
+            ),
             Message::BookPosted(message) => {
                 let Page::Book(page) = &mut self.page else {
                     return;

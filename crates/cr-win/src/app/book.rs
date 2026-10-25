@@ -5,10 +5,10 @@
 //! WebView2, which says where the reader is and which keys were pressed
 //! in it.
 
-use std::cell::RefCell;
-use std::path::PathBuf;
-use std::rc::Rc;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
 
 use cr_app::books::Folded;
 use cr_i18n::tr;
@@ -17,8 +17,8 @@ use cr_store::books::{Heading, outline};
 use cr_win::text::plain;
 use windows_reactor::*;
 
+use super::web::WebHost;
 use super::{Message, Shell};
-use crate::native::webview::Web;
 use crate::{prefs, ui};
 
 /// A book read and made a page, in the background.
@@ -34,17 +34,29 @@ pub struct Opened {
     pub folded: Folded,
 }
 
+/// Counts the books opened, for each page to have a file of its own: a
+/// book opened again while Back still has it keeps its page.
+static OPENED: AtomicU64 = AtomicU64::new(0);
+
+/// How old the page of a book a Core Rules no longer running left behind
+/// is before the next book opened deletes it.
+const STALE: Duration = Duration::from_secs(24 * 60 * 60);
+
 /// Reads the book `name` of `install` and writes it as a page.
 pub fn open(install: &Installation, name: &str) -> Result<Opened, String> {
     let book = install
         .book(name)
         .ok_or_else(|| tr!("{name} is not in this installation", name = name.to_owned()))?;
     let doc = book.read().map_err(|e| e.to_string())?;
-    let path = std::env::temp_dir()
-        .join("Core Rules")
-        .join(format!("{}.html", book.info.short_name()));
-    path.parent()
-        .map_or(Ok(()), std::fs::create_dir_all)
+    let folder = std::env::temp_dir().join("Core Rules");
+    sweep(&folder);
+    let path = folder.join(format!(
+        "{}-{}-{}.html",
+        book.info.short_name(),
+        std::process::id(),
+        OPENED.fetch_add(1, Ordering::Relaxed)
+    ));
+    std::fs::create_dir_all(&folder)
         .and_then(|()| std::fs::write(&path, cr_win::book::page(&doc)))
         .map_err(|e| {
             tr!(
@@ -61,6 +73,34 @@ pub fn open(install: &Installation, name: &str) -> Result<Opened, String> {
         headings: outline(&doc, book.info.heading_colors),
         folded: Folded::of(&doc),
     })
+}
+
+/// Deletes the pages of books left in `folder` by a Core Rules that
+/// ended with a book open.
+fn sweep(folder: &Path) {
+    let Ok(entries) = std::fs::read_dir(folder) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let stale = entry
+            .metadata()
+            .and_then(|m| m.modified())
+            .is_ok_and(|modified| modified.elapsed().is_ok_and(|age| age > STALE));
+        if stale
+            && path.extension().is_some_and(|e| e == "html")
+            && path != folder.join("help.html")
+        {
+            let _ = std::fs::remove_file(path);
+        }
+    }
+}
+
+impl Drop for Opened {
+    /// The page goes with the book.
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.path);
+    }
 }
 
 #[derive(Clone)]
@@ -212,20 +252,15 @@ fn place(folded: &Folded, offset: usize) -> (usize, usize) {
 /// its own, and the box of Find.
 #[derive(Clone, Default)]
 pub struct BookView {
-    pub control: ElementRef<WebView2>,
-    pub web: Rc<RefCell<Option<Web>>>,
+    pub host: WebHost,
     pub find: ElementRef<TextBox>,
 }
 
 impl BookView {
-    pub fn web(&self) -> Option<Web> {
-        self.web.borrow().clone()
-    }
-
     /// Runs `script` in the page, once it has loaded.
     pub fn run(&self, page: &BookPage, script: &str) {
         if page.ready
-            && let Some(web) = self.web()
+            && let Some(web) = self.host.web()
         {
             web.run(script);
         }
@@ -302,12 +337,15 @@ pub fn view(shell: &Shell, page: &BookPage, context: &mut ViewContext<Shell>) ->
             ),
         ),
     ];
+    // The title takes the room it needs, up to a point, and the commands
+    // that do not fit in the rest go to the bar's overflow menu.
     let header = Grid::new()
-        .columns([GridLength::STAR, GridLength::Auto])
+        .columns([GridLength::Auto, GridLength::STAR])
         .margin(Thickness::new(24.0, 24.0, 24.0, 8.0))
         .children((
             StackPanel::new()
                 .spacing(2.0)
+                .max_width(360.0)
                 .vertical_alignment(VerticalAlignment::Center)
                 .children((ui::subtitle(title.clone()), ui::caption(category))),
             CommandBar::new()
@@ -346,7 +384,7 @@ pub fn view(shell: &Shell, page: &BookPage, context: &mut ViewContext<Shell>) ->
                 .border_thickness(1.0)
                 .content(
                     WebView2::new()
-                        .element_ref(&shell.book_view.control)
+                        .element_ref(&shell.book_view.host.control)
                         .automation_name(title),
                 )
         }
@@ -490,33 +528,26 @@ fn glyph_button(
 /// The page opens in the WebView2 once the control has its CoreWebView2,
 /// and again when it is shown anew.
 fn web_effects(shell: &Shell, book: &Opened, context: &mut ViewContext<Shell>) {
-    let book_view = shell.book_view.clone();
+    let host = shell.book_view.host.clone();
     context.use_effect("book-view", (), move || {
-        let web = book_view.web.clone();
-        Some(Box::new(move || {
-            web.borrow_mut().take();
-        }))
+        Some(Box::new(move || host.forget()))
     });
-    let book_view = shell.book_view.clone();
+    let host = shell.book_view.host.clone();
     let sender = context.sender();
     let path = book.path.clone();
-    context.use_effect("book-text", path.clone(), move || {
-        let slot = book_view.web.clone();
-        let _ = book_view.control.request_core_web_view2(move |core| {
-            let Some(web) = core.ok().as_ref().and_then(Web::of) else {
-                return;
-            };
-            let mut current = slot.borrow_mut();
-            if current.as_ref().is_none_or(|w| !w.same(&web)) {
+    context.use_effect("book-text", (path.clone(), shell.web_tries), move || {
+        let posted = sender.clone();
+        host.request(
+            sender,
+            move |web| {
                 web.keep_keys();
-                let sender = sender.clone();
+                let posted = posted.clone();
                 web.on_message(move |message| {
-                    sender.send(Message::BookPosted(message));
+                    posted.send(Message::BookPosted(message));
                 });
-                *current = Some(web.clone());
-            }
-            web.open(&path);
-        });
+            },
+            move |web| web.open(&path),
+        );
         None
     });
 }

@@ -9,11 +9,22 @@ use webview2_com::Microsoft::Web::WebView2::Win32::{
     COREWEBVIEW2_PRINT_DIALOG_KIND_SYSTEM, ICoreWebView2, ICoreWebView2_16, ICoreWebView2Settings3,
 };
 use webview2_com::{WebMessageReceivedEventHandler, take_pwstr};
-use windows::core::{HSTRING, IUnknown, Interface, PWSTR};
+use windows::core::{GUID, HRESULT, HSTRING, IUnknown, IUnknown_Vtbl, Interface, PWSTR};
 
 /// The most NavigateToString takes; a longer page is written to a file
 /// and opened from there.
 const MOST: usize = 1_500_000;
+
+/// `ICoreWebView2Interop2` of the SDK's WebView2Interop.idl, by which the
+/// WinRT CoreWebView2 of WinUI's control gives the COM one behind it.
+const INTEROP2: GUID = GUID::from_u128(0xB151AD7C_CFB0_4ECF_B9B2_AFCA868581A6);
+
+#[repr(C)]
+struct Interop2Vtbl {
+    base: IUnknown_Vtbl,
+    get_com_icorewebview2:
+        unsafe extern "system" fn(*mut std::ffi::c_void, *mut *mut std::ffi::c_void) -> HRESULT,
+}
 
 #[derive(Clone)]
 pub struct Web {
@@ -28,7 +39,10 @@ impl Web {
         // it is borrowed only to query the interface, which adds its own
         // reference.
         let unknown = unsafe { IUnknown::from_raw_borrowed(&raw) }?;
-        let core = unknown.cast::<ICoreWebView2>().ok()?;
+        let core = unknown
+            .cast::<ICoreWebView2>()
+            .ok()
+            .or_else(|| com(unknown))?;
         // The page is the app's: no developer tools and no status bar.
         // SAFETY: plain property calls on a live CoreWebView2.
         unsafe {
@@ -117,4 +131,28 @@ impl Web {
             let _ = unsafe { core.ShowPrintUI(COREWEBVIEW2_PRINT_DIALOG_KIND_SYSTEM) };
         }
     }
+}
+
+/// The COM CoreWebView2 behind the WinRT one `unknown`.
+fn com(unknown: &IUnknown) -> Option<ICoreWebView2> {
+    let mut interop = std::ptr::null_mut();
+    // SAFETY: a plain QueryInterface.
+    unsafe { unknown.query(&INTEROP2, &mut interop) }
+        .ok()
+        .ok()?;
+    // SAFETY: on success `interop` holds a reference, which the IUnknown
+    // made from it releases.
+    let interop = unsafe { IUnknown::from_raw(interop) };
+    let mut core = std::ptr::null_mut();
+    // SAFETY: `interop` is an ICoreWebView2Interop2, whose vtable is
+    // IUnknown's followed by GetComICoreWebView2; the out parameter gets
+    // a referenced ICoreWebView2, which `from_raw` takes over.
+    unsafe {
+        let vtable = &**interop.as_raw().cast::<*const Interop2Vtbl>();
+        (vtable.get_com_icorewebview2)(interop.as_raw(), &mut core)
+            .ok()
+            .ok()?;
+    }
+    // SAFETY: as above.
+    (!core.is_null()).then(|| unsafe { ICoreWebView2::from_raw(core) })
 }
