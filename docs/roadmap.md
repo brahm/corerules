@@ -22,11 +22,10 @@ Community Add-ons Collection as its own AppImage, version 1.0.0. The
 the project's own Flatpak repository, which gets each final release
 (decision P16).
 
-The Windows 11 version (step 2) has started: its first phase, the
-backend and `cr` built and tested on Windows, is done, and the prototype
-of the Windows app (phase 2) is built and waits for Wagner Brahm's
-approval. Publishing on
-Flathub was dropped from the plan (decision P15).
+The Windows 11 version (step 2) is under way: the backend and `cr` are
+built and tested on Windows (phase 1), and Wagner Brahm approved the
+prototype of the Windows app on 2026-10-25 (phase 2, decision P21).
+Publishing on Flathub was dropped from the plan (decision P15).
 
 ## The original plan (2026-10-09)
 
@@ -138,8 +137,8 @@ The phases run in order:
    are checked out with LF on Windows too, and the data package lives in
    `Core Rules\data` in the user's Documents folder, which a packaged app
    writes to directly, so uninstalling the app keeps the characters.
-2. **Prototype of `cr-win` (built and tried on Windows 11, waiting for
-   approval).** In Portuguese and packaged as an MSIX: the character list
+2. **Prototype of `cr-win` (done, approved on 2026-10-25, decision
+   P21).** In Portuguese and packaged as an MSIX: the character list
    with search, a page of the New Character assistant, an editing form, a
    confirmation dialog, opening an `.xpx` file and printing the sheet.
    Whatever blocks it is solved in `cr-win` or taken to windows-rs before
@@ -203,8 +202,7 @@ trusted its certificate by hand. The product Core Rules was reserved on
 2026-10-25; the Store drops a reservation not used within three months, so
 it may need to be reserved again before submission.
 
-Needs Wagner Brahm: approving the prototype (phase 2) and confirming the
-beta (phase 5).
+Needs Wagner Brahm: confirming the beta (phase 5).
 
 ### Step 3: new features, and independence from the original
 
@@ -234,7 +232,6 @@ independence goes (step 3.3).
 
 ## Decisions pending
 
-- Approving the Windows prototype and confirming the Windows beta
-  (step 2).
+- Confirming the Windows beta (step 2).
 - The first features after 1.0, and the source of rules content without
   the discs (step 3).
