@@ -23,7 +23,9 @@ the project's own Flatpak repository, which gets each final release
 (decision P16).
 
 The Windows 11 version (step 2) has started: its first phase, the
-backend and `cr` built and tested on Windows, is done. Publishing on
+backend and `cr` built and tested on Windows, is done, and the prototype
+of the Windows app (phase 2) is built and waits for Wagner Brahm's
+approval. Publishing on
 Flathub was dropped from the plan (decision P15).
 
 ## The original plan (2026-10-09)
@@ -136,11 +138,26 @@ The phases run in order:
    are checked out with LF on Windows too, and the data package lives in
    `Core Rules\data` in the user's Documents folder, which a packaged app
    writes to directly, so uninstalling the app keeps the characters.
-2. **Prototype of `cr-win`.** In Portuguese and packaged as an MSIX: the
-   character list with search, a page of the New Character assistant, an
-   editing form, a confirmation dialog, opening an `.xpx` file and printing
-   the sheet. Whatever blocks it is solved in `cr-win` or taken to
-   windows-rs before the rest is ported.
+2. **Prototype of `cr-win` (built and tried on Windows 11, waiting for
+   approval).** In Portuguese and packaged as an MSIX: the character list
+   with search, a page of the New Character assistant, an editing form, a
+   confirmation dialog, opening an `.xpx` file and printing the sheet.
+   Whatever blocks it is solved in `cr-win` or taken to windows-rs before
+   the rest is ported.
+   What it found: windows-reactor 0.100 (the release on crates.io, with
+   Windows App SDK 2.4) has the controls the prototype needs, but no way
+   to reach the window, the shell's Open dialog or printing, so `cr-win`
+   calls Windows for those itself, on a thread of their own with the
+   app's window as owner; printing draws the layout of `cr-store::sheet`
+   with Direct2D through the Windows print dialog. Its ContentDialog has
+   no DefaultButton, so Delete and Discard take the focus where Cancel
+   should; that goes to windows-rs. WinUI's own texts (the Settings
+   item, Back) follow the language chosen in Settings only in the
+   package; a run without one shows them in the Windows display
+   language. CI builds the MSIX
+   (`crates/cr-win/package/make-msix.ps1`) unsigned, as the Store signs
+   it; on a machine in Developer Mode it is installed for testing with
+   `Add-AppxPackage -Register target\msix\AppxManifest.xml`.
 3. **Parity groundwork.** `cr-app`, the shared PDF and the test of action
    names.
 4. **Porting the screens.** The library and the sheet, character creation,

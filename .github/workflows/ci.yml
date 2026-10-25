@@ -18,8 +18,9 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
 
-  # The backend and `cr` on Windows, ahead of the Windows app; the GTK
-  # crates are left out.
+  # The backend, `cr` and the Windows app on Windows; the GTK crates are
+  # left out. The MSIX package is not signed (the Microsoft Store signs
+  # it); its layout installs with Add-AppxPackage -Register.
   windows:
     runs-on: windows-2025
     steps:
@@ -27,10 +28,22 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - run: cargo clippy -p cr-formats -p cr-store -p cr-i18n -p cr-cli --all-targets -- -D warnings
-      - run: cargo test --no-fail-fast -p cr-formats -p cr-store -p cr-i18n -p cr-cli
-      - run: cargo build --release -p cr-cli
+      - run: cargo clippy -p cr-formats -p cr-store -p cr-i18n -p cr-cli -p cr-win --all-targets -- -D warnings
+      - run: cargo test --no-fail-fast -p cr-formats -p cr-store -p cr-i18n -p cr-cli -p cr-win
+      - run: cargo build --release -p cr-cli -p cr-win
+      - name: Package the MSIX
+        shell: pwsh
+        run: |
+          $version = (cargo metadata --no-deps --format-version 1 | ConvertFrom-Json).packages |
+            Where-Object name -eq 'cr-win' | ForEach-Object version
+          crates/cr-win/package/make-msix.ps1 -Version $version -Out target/package
       - uses: actions/upload-artifact@v4
         with:
           name: cr-windows-x64
           path: target/release/cr.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: corerules-windows-x64
+          path: |
+            target/package/*.msix
+            target/msix/

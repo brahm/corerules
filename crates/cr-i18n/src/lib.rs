@@ -110,14 +110,22 @@ impl Language {
 
 /// The language the system asks for, the way gettext reads it: the first
 /// of `LANGUAGE` (a colon-separated preference list), `LC_ALL`,
-/// `LC_MESSAGES` and `LANG` that is set. English when that language is not
-/// one of ours.
+/// `LC_MESSAGES` and `LANG` that is set. On Windows, where these are
+/// usually not set, the first of the display languages chosen in Settings
+/// that is one of ours. English when that language is not one of ours.
 pub fn system_language() -> Language {
     let var = |name: &str| std::env::var(name).ok().filter(|v| !v.is_empty());
     let locale = var("LC_ALL")
         .or_else(|| var("LC_MESSAGES"))
         .or_else(|| var("LANG"))
         .unwrap_or_default();
+    if locale.is_empty()
+        && let Some(language) = display_languages()
+            .iter()
+            .find_map(|l| Language::from_locale(l))
+    {
+        return language;
+    }
     // gettext ignores LANGUAGE under the C locale.
     let preferences = match locale.as_str() {
         "" | "C" | "POSIX" => None,
@@ -129,6 +137,44 @@ pub fn system_language() -> Language {
         .chain(std::iter::once(locale.as_str()))
         .find_map(Language::from_locale)
         .unwrap_or(Language::English)
+}
+
+/// The display languages chosen in Windows Settings, in order of
+/// preference, as names such as `pt-BR`.
+#[cfg(windows)]
+fn display_languages() -> Vec<String> {
+    use windows_sys::Win32::Globalization::{GetUserPreferredUILanguages, MUI_LANGUAGE_NAME};
+    let (mut count, mut len) = (0, 0);
+    // SAFETY: the first call only reports the buffer length; the second
+    // fills a buffer of that length.
+    unsafe {
+        if GetUserPreferredUILanguages(
+            MUI_LANGUAGE_NAME,
+            &mut count,
+            std::ptr::null_mut(),
+            &mut len,
+        ) == 0
+        {
+            return Vec::new();
+        }
+        let mut buffer = vec![0u16; len as usize];
+        if GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &mut count, buffer.as_mut_ptr(), &mut len)
+            == 0
+        {
+            return Vec::new();
+        }
+        // The names, each ended by a NUL, and one more NUL at the end.
+        buffer
+            .split(|&c| c == 0)
+            .filter(|name| !name.is_empty())
+            .map(String::from_utf16_lossy)
+            .collect()
+    }
+}
+
+#[cfg(not(windows))]
+fn display_languages() -> Vec<String> {
+    Vec::new()
 }
 
 static LANGUAGE: OnceLock<Language> = OnceLock::new();

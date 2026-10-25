@@ -531,7 +531,9 @@ impl Installation {
         ))
     }
 
-    fn character_entries(&self) -> std::result::Result<Vec<Entry>, String> {
+    /// The characters of the character list, as the Characters section
+    /// lists them; the Windows app lists them without the other sections.
+    pub fn character_entries(&self) -> std::result::Result<Vec<Entry>, String> {
         let index = self.characters().map_err(|e| e.to_string())?;
         let mut finder = Finder::new(self.root());
         Ok(index

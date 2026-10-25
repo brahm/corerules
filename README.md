@@ -621,9 +621,10 @@ CORERULES_DIR="$HOME/.wine/drive_c/Program Files/AD&D Core Rules 2.0" cargo test
 | `cr-i18n` | Translations of the interface (`po/*.po`, built into the program) |
 | `cr-gtk` | The GNOME app |
 | `cr-addons` | Core Rules Community Add-ons Collection, the add-ons and their installer |
+| `cr-win` | The Windows 11 app (WinUI 3 with windows-reactor), a prototype for now |
 
 The backend crates have no GTK dependency, and CI builds and tests them
-on Windows too, for the Windows 11 app that comes next.
+on Windows too, with `cr-win` and its MSIX package.
 
 ### Languages
 
@@ -739,6 +740,10 @@ cargo run -p cr-cli -- survey "/path/to/AD&D Core Rules 2.0"
 cargo run -p cr-gtk                                # the data package or the Wine prefix
 cargo run -p cr-gtk -- "/media/cdrom"               # or any folder with Database/
 ```
+
+On Windows 11, with the Windows App Runtime 2.4 installed, the prototype of
+the Windows app runs with `cargo run -p cr-win`; it opens the data package
+in `Documents\Core Rules\data` or the original's installation.
 
 ## License
 
