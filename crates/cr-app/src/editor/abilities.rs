@@ -1,7 +1,8 @@
 //! The editor's Abilities page: the Expansion's Race Abilities and Class
 //! Abilities pages of Update Character, with its Schools and Spheres
 //! dialogs as groups of each class. Each group ticks what the character
-//! has among what it may take.
+//! has among what it may take, with what the kit tells about the schools
+//! and spheres.
 
 use cr_i18n::tr;
 use cr_store::abilities::{SchoolRule, SphereRule};
@@ -31,10 +32,11 @@ pub struct Check {
     pub enabled: bool,
 }
 
-/// A group of choices to tick, as the page shows it.
+/// A group of choices to tick, as the page shows it: an [`AbilityGroup`]
+/// or one of the Spells page's.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Checks {
-    pub group: AbilityGroup,
+pub struct Checks<G = AbilityGroup> {
+    pub group: G,
     pub title: String,
     pub description: String,
     pub checks: Vec<Check>,
@@ -273,7 +275,34 @@ impl Editor {
                 None => {}
             }
         }
+        // What the kit tells about the schools and spheres, as the
+        // original's Schools and Spheres pages do.
+        for group in &mut groups {
+            let taken = group.checks.iter().filter(|c| c.on).count();
+            let notices = self.kit_notices(group.group, taken);
+            if !notices.is_empty() {
+                let text: Vec<&str> = Some(group.description.as_str())
+                    .filter(|d| !d.is_empty())
+                    .into_iter()
+                    .chain(notices.iter().map(String::as_str))
+                    .collect();
+                group.description = text.join("\n\n");
+            }
+        }
         groups
+    }
+
+    /// What the kit tells about a group's schools, or its minor or major
+    /// spheres with `taken` of them.
+    fn kit_notices(&self, group: AbilityGroup, taken: usize) -> Vec<String> {
+        let rules = &self.needs.kit_magic;
+        let (kit, magic) = (self.details.kit.as_str(), &self.kit_magic);
+        match group {
+            AbilityGroup::Schools(_) => rules.schools_notice(kit, magic).into_iter().collect(),
+            AbilityGroup::MinorSpheres(_) => rules.spheres_notice(kit, magic, false, taken),
+            AbilityGroup::MajorSpheres(_) => rules.spheres_notice(kit, magic, true, taken),
+            AbilityGroup::Racial | AbilityGroup::Class(_) => Vec::new(),
+        }
     }
 
     /// The character points left after the abilities and the combat

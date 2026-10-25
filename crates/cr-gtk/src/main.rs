@@ -34,6 +34,7 @@ use std::sync::Arc;
 
 use adw::prelude::*;
 use cr_app::action;
+use cr_app::editor::{ordinal, slots_fit, slots_text};
 use cr_app::library::{self, Commands};
 use cr_app::records;
 use cr_formats::character::Character;
@@ -2402,7 +2403,7 @@ fn character_editor(
             move || {
                 let slots = rules.spell_slots(&advanced.borrow(), slot).ok().flatten();
                 list.group
-                    .set_description(slots_text(slots, &list.values()).as_deref());
+                    .set_description(slots_text(slots, &spell_levels(&list)).as_deref());
             }
         };
         show();
@@ -2419,7 +2420,7 @@ fn character_editor(
                 );
                 move || {
                     let slots = rules.spell_slots(&advanced.borrow(), slot).ok().flatten();
-                    slots_fit(slots, &list.values())
+                    slots_fit(slots, &spell_levels(&list))
                 }
             },
             {
@@ -3116,41 +3117,9 @@ use cr_app::levels::{ExperienceForm, LevelsInput};
 /// Callbacks run when the character's levels change.
 type Listeners = Rc<RefCell<Vec<Box<dyn Fn()>>>>;
 
-/// Whether the memorized spells (values are their spell levels) fit the
-/// slots; with no slots known, they do.
-fn slots_fit(slots: Option<[u32; 9]>, memorized: &[(u32, Option<u32>)]) -> bool {
-    slots.is_none_or(|slots| {
-        (1..=9u32).all(|level| {
-            let used = memorized.iter().filter(|(l, _)| *l == level).count() as u32;
-            used <= slots[level as usize - 1]
-        })
-    })
-}
-
-/// "1st: 2 of 3 · 2nd: 0 of 1" for the memorized spells (values are their
-/// spell levels) against the slots, marking levels over the limit.
-fn slots_text(slots: Option<[u32; 9]>, memorized: &[(u32, Option<u32>)]) -> Option<String> {
-    let slots = slots?;
-    let parts: Vec<String> = (1..=9u32)
-        .filter_map(|level| {
-            let used = memorized.iter().filter(|(l, _)| *l == level).count() as u32;
-            let have = slots[level as usize - 1];
-            if have == 0 && used == 0 {
-                return None;
-            }
-            let level = ordinal(level);
-            Some(if used > have {
-                tr!("{level}: {used} of {have} (too many)", level, used, have)
-            } else {
-                tr!("{level}: {used} of {have}", level, used, have)
-            })
-        })
-        .collect();
-    Some(if parts.is_empty() {
-        tr("No spell slots at this level").into()
-    } else {
-        parts.join(" · ")
-    })
+/// The levels of the spells a memorized list holds.
+fn spell_levels(list: &RowList<u32>) -> Vec<u32> {
+    list.values().into_iter().map(|(level, _)| level).collect()
 }
 
 fn group_error(rows: &[adw::ActionRow], message: &str) {
@@ -3423,16 +3392,6 @@ fn stock(list: &RowList<Item>) -> Stock {
         .into_iter()
         .map(|(item, n)| (item.name, n.unwrap_or(item.quantity)))
         .collect()
-}
-
-/// Ordinal for a spell level ("1st").
-fn ordinal(level: u32) -> String {
-    match (level % 10, level % 100) {
-        (1, n) if n != 11 => tr!("{level}st", level),
-        (2, n) if n != 12 => tr!("{level}nd", level),
-        (3, n) if n != 13 => tr!("{level}rd", level),
-        _ => tr!("{level}th", level),
-    }
 }
 
 impl ListEditors {

@@ -8,10 +8,15 @@
 //! combat, the kit's weapons, shields, armor, fighting styles, traits and
 //! disadvantages; the Proficiencies page the nonweapon proficiencies and
 //! the languages; the Skills page the rogue skills, the psionics and the
-//! wild talents.
+//! wild talents; the Spells page the kit's schools and spheres, the
+//! spells known, the spellbooks and the spells memorized; the Equipment
+//! page the spending money and the items of each bundle.
 
 use cr_app::create::{ListKind, none_label, points};
-use cr_app::editor::{EditInput, Editor, MOST_AGE, MOST_HEIGHT, MOST_POINTS, MOST_WEIGHT, Tab};
+use cr_app::editor::{
+    COIN_NAMES, Checks, EditInput, Editor, MOST_AGE, MOST_COINS, MOST_HEIGHT, MOST_POINTS,
+    MOST_QUANTITY, MOST_WEIGHT, Tab,
+};
 use cr_app::levels::LevelsInput;
 use cr_i18n::{tr, tr_noop};
 use cr_store::create::{ABILITIES, SUBABILITIES};
@@ -20,7 +25,9 @@ use cr_win::text::plain;
 use windows_reactor::*;
 
 use super::create::prompt_dialog;
-use super::forms::{self, Adding, ListMessages, SkillsMessages, heading, with_buttons};
+use super::forms::{
+    self, Adding, Icons, ListMessages, Rows, SkillsMessages, heading, with_buttons,
+};
 use super::portrait::Shown;
 use super::{Message, Shell};
 use crate::ui;
@@ -40,11 +47,11 @@ fn experience(change: LevelsInput) -> Message {
     input(EditInput::Experience(change))
 }
 
-/// The editor's lists' messages; their rows have no number yet.
+/// The editor's lists' messages.
 const LISTS: ListMessages = ListMessages {
     add: |kind, name| input(EditInput::Add(kind, name)),
     remove: |kind, row| input(EditInput::Remove(kind, row)),
-    times: |_, _, _| Message::Nothing,
+    times: |kind, row, n| input(EditInput::Times(kind, row, n)),
 };
 
 /// The Skills page's messages.
@@ -107,11 +114,13 @@ fn combo(
         }))
 }
 
-/// The editor; `adding` is what the lists' boxes chose for Add, and
-/// `portrait` the one the Details page shows.
+/// The editor; `adding` is what the lists' boxes chose for Add, `icons`
+/// those of the items in the bundles, and `portrait` the one the Details
+/// page shows.
 pub fn view(
     editor: &Editor,
     adding: &Adding,
+    icons: &Icons,
     portrait: &Shown,
     context: &mut ViewContext<Shell>,
 ) -> View {
@@ -166,6 +175,8 @@ pub fn view(
             ),
         )),
         Tab::Skills => skills_tab(editor, adding, context),
+        Tab::Spells => spells_tab(editor, adding, context),
+        Tab::Equipment => equipment_tab(editor, adding, icons, context),
     };
     let problem: View = match editor.error.clone().or_else(|| editor.problem()) {
         Some(problem) => InfoBar::new()
@@ -575,33 +586,6 @@ fn abilities_tab(editor: &Editor, context: &mut ViewContext<Shell>) -> View {
         .enumerate()
         .map(|(i, name)| KeyedView::new(format!("{i}\u{1}{name}"), ui::body(name)))
         .collect();
-    let groups: Vec<KeyedView> = editor
-        .ability_groups()
-        .into_iter()
-        .map(|group| {
-            let rows: Vec<(String, String, bool, bool)> = group
-                .checks
-                .into_iter()
-                .map(|c| (c.title, c.subtitle, c.on, c.enabled))
-                .collect();
-            let which = group.group;
-            let checks = if rows.is_empty() {
-                ui::card(ui::body(tr("None")).opacity(0.6))
-            } else {
-                forms::checks(
-                    &rows,
-                    move |i, on| input(EditInput::Tick(which, i, on)),
-                    context,
-                )
-            };
-            KeyedView::new(
-                group.title.clone(),
-                StackPanel::new()
-                    .spacing(4.0)
-                    .children((heading(&group.title, Some(&group.description)), checks)),
-            )
-        })
-        .collect();
     StackPanel::new().spacing(4.0).children((
         forms::points_left(&points(editor.points_left()), None),
         heading(tr("Race"), Some(editor.subrace_description())),
@@ -618,8 +602,40 @@ fn abilities_tab(editor: &Editor, context: &mut ViewContext<Shell>) -> View {
         ),
         heading(tr("Racial Package"), None),
         ui::card(StackPanel::new().spacing(6.0).keyed_children(package)),
-        StackPanel::new().spacing(4.0).keyed_children(groups),
+        check_groups(editor.ability_groups(), EditInput::Tick, context),
     ))
+}
+
+/// Groups of check boxes, each under its heading; `tick` makes the input
+/// of one ticked or not.
+fn check_groups<G: Copy + 'static>(
+    groups: Vec<Checks<G>>,
+    tick: fn(G, usize, bool) -> EditInput,
+    context: &mut ViewContext<Shell>,
+) -> View {
+    let groups: Vec<KeyedView> = groups
+        .into_iter()
+        .map(|group| {
+            let rows: Vec<(String, String, bool, bool)> = group
+                .checks
+                .into_iter()
+                .map(|c| (c.title, c.subtitle, c.on, c.enabled))
+                .collect();
+            let which = group.group;
+            let checks = if rows.is_empty() {
+                ui::card(ui::body(tr("None")).opacity(0.6))
+            } else {
+                forms::checks(&rows, move |i, on| input(tick(which, i, on)), context)
+            };
+            KeyedView::new(
+                group.title.clone(),
+                StackPanel::new()
+                    .spacing(4.0)
+                    .children((heading(&group.title, Some(&group.description)), checks)),
+            )
+        })
+        .collect();
+    StackPanel::new().spacing(4.0).keyed_children(groups)
 }
 
 /// The Combat page.
@@ -736,4 +752,136 @@ fn skills_tab(editor: &Editor, adding: &Adding, context: &mut ViewContext<Shell>
         None => View::empty(),
     };
     forms::skills(&editor.skills, adding, SKILLS, wild, context)
+}
+
+/// The Spells page: the kit's barred schools, the schools to eliminate,
+/// the spheres to keep and the free sphere; the wizard and priest spells
+/// known, each offered with the chance to learn it; the spellbooks; and
+/// the spells each class that casts has memorized.
+fn spells_tab(editor: &Editor, adding: &Adding, context: &mut ViewContext<Shell>) -> View {
+    let magic = editor.kit_magic_view();
+    let barred: View = match &magic.barred {
+        Some((warning, ignored)) => StackPanel::new().spacing(4.0).children((
+            heading(tr("Kit Class Ability Requirements"), Some(warning)),
+            ui::setting(
+                tr("Ignore"),
+                tr("Keeps these schools; otherwise they are removed when the character is saved."),
+                ToggleSwitch::new()
+                    .automation_name(tr("Ignore"))
+                    .is_on(*ignored)
+                    .on_toggled(context.callback(|on| input(EditInput::IgnoreBarred(on)))),
+            ),
+        )),
+        None => View::empty(),
+    };
+    let lists = |lists: Vec<KeyedView>| StackPanel::new().spacing(4.0).keyed_children(lists);
+    let known: Vec<KeyedView> = [(ListKind::Spells, true), (ListKind::PriestSpells, false)]
+        .into_iter()
+        .map(|(kind, wizard)| {
+            let (list, chances) = editor.spells_known(wizard);
+            KeyedView::new(
+                format!("{kind:?}"),
+                forms::list(kind, &list, &chances, adding, LISTS, context),
+            )
+        })
+        .collect();
+    let books: Vec<KeyedView> = editor
+        .spellbooks()
+        .into_iter()
+        .enumerate()
+        .map(|(b, (list, most))| {
+            let kind = ListKind::Spellbook(b);
+            let rows = Rows {
+                number: (tr("Pages"), 1, most),
+                icons: None,
+            };
+            KeyedView::new(
+                format!("{kind:?}"),
+                forms::list_with(kind, &list, &[], adding, rows, LISTS, context),
+            )
+        })
+        .collect();
+    let memorized: Vec<KeyedView> = editor
+        .memorized()
+        .into_iter()
+        .map(|(slot, list)| {
+            let kind = ListKind::Memorized(slot);
+            KeyedView::new(
+                format!("{kind:?}"),
+                forms::list(kind, &list, &[], adding, LISTS, context),
+            )
+        })
+        .collect();
+    StackPanel::new().spacing(4.0).children((
+        barred,
+        check_groups(magic.groups, EditInput::MagicTick, context),
+        forms::choice(
+            &magic.free_sphere,
+            tr("Selected Free Sphere"),
+            |i| input(EditInput::FreeSphere(i)),
+            context,
+        ),
+        lists(known),
+        lists(books),
+        lists(memorized),
+    ))
+}
+
+/// The Equipment page: the spending money with Buy and Sell, then the
+/// items of each other bundle with their icons, `icons`.
+fn equipment_tab(
+    editor: &Editor,
+    adding: &Adding,
+    icons: &Icons,
+    context: &mut ViewContext<Shell>,
+) -> View {
+    let coins = editor.coins();
+    let coins: Vec<KeyedView> = COIN_NAMES
+        .iter()
+        .enumerate()
+        .map(|(c, name)| {
+            KeyedView::new(
+                *name,
+                ui::setting(
+                    tr(name),
+                    "",
+                    forms::number(
+                        tr(name),
+                        coins[c],
+                        (0, MOST_COINS),
+                        move |n| input(EditInput::Coin(c, n)),
+                        context,
+                    ),
+                ),
+            )
+        })
+        .collect();
+    let bundles: Vec<KeyedView> = editor
+        .bundles()
+        .into_iter()
+        .map(|(b, list, prices)| {
+            let kind = ListKind::Bundle(b);
+            let rows = Rows {
+                number: (tr("Quantity"), 1, MOST_QUANTITY),
+                icons: Some(icons),
+            };
+            KeyedView::new(
+                format!("{kind:?}"),
+                forms::list_with(kind, &list, &prices, adding, rows, LISTS, context),
+            )
+        })
+        .collect();
+    StackPanel::new().spacing(4.0).children((
+        heading(tr("Spending Money"), None),
+        ui::setting(
+            tr("Buy and Sell"),
+            tr("Items added are paid for with the spending money, items removed are sold"),
+            ToggleSwitch::new()
+                .automation_name(tr("Buy and Sell"))
+                .is_on(editor.trading)
+                .on_toggled(context.callback(|on| input(EditInput::Trading(on)))),
+        ),
+        StackPanel::new().spacing(4.0).keyed_children(coins),
+        StackPanel::new().spacing(4.0).keyed_children(bundles),
+    ))
 }

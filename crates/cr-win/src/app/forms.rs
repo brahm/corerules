@@ -3,6 +3,8 @@
 //! boxes. Each takes what makes the shell's message of a change, so that
 //! the wizard's and the editor's inputs both fit.
 
+use std::collections::HashMap;
+
 use cr_app::create::{Choice, List, ListKind, MOST_ITEMS, Unarmed};
 use cr_app::skills::{MOST_POINTS as MOST_SKILL_POINTS, SkillsForm};
 use cr_i18n::tr;
@@ -23,6 +25,32 @@ pub struct ListMessages {
     pub add: fn(ListKind, String) -> Message,
     pub remove: fn(ListKind, usize) -> Message,
     pub times: fn(ListKind, usize, u32) -> Message,
+}
+
+/// Items' icons by name, made once; `None` for an item without one.
+pub type Icons = HashMap<String, Option<EncodedImage>>;
+
+/// What a list's rows show: the name and range of their number, and each
+/// one's icon by its title.
+#[derive(Clone, Copy)]
+pub struct Rows<'a> {
+    pub number: (&'a str, u32, u32),
+    pub icons: Option<&'a Icons>,
+}
+
+impl Rows<'_> {
+    /// As a list of `kind` shows them: how many of an item, or a
+    /// proficiency's rank.
+    pub fn of(kind: ListKind) -> Self {
+        Rows {
+            number: if kind == ListKind::Items {
+                (tr("Quantity"), 1, MOST_ITEMS)
+            } else {
+                (tr("Rank"), 1, 10)
+            },
+            icons: None,
+        }
+    }
 }
 
 /// A heading over a group of cards, with the group's description.
@@ -112,6 +140,27 @@ pub fn list(
     messages: ListMessages,
     context: &mut ViewContext<Shell>,
 ) -> View {
+    list_with(
+        kind,
+        list,
+        details,
+        adding,
+        Rows::of(kind),
+        messages,
+        context,
+    )
+}
+
+/// [`list`] with its rows shown as `shown` has them.
+pub fn list_with(
+    kind: ListKind,
+    list: &List,
+    details: &[String],
+    adding: &Adding,
+    shown: Rows,
+    messages: ListMessages,
+    context: &mut ViewContext<Shell>,
+) -> View {
     if !list.shown {
         return View::empty();
     }
@@ -121,20 +170,12 @@ pub fn list(
         .enumerate()
         .map(|(i, (title, subtitle, count))| {
             let times = messages.times;
+            let (label, least, most) = shown.number;
             let rank: View = match *count {
-                // How many of an item, or a proficiency's rank.
-                Some(n) if kind == ListKind::Items => number(
-                    &format!("{title}: {}", tr("Quantity")),
-                    n,
-                    (1, MOST_ITEMS),
-                    move |v| times(kind, i, v),
-                    context,
-                )
-                .into(),
                 Some(n) => number(
-                    &format!("{title}: {}", tr("Rank")),
+                    &format!("{title}: {label}"),
                     n,
-                    (1, 10),
+                    (least, most),
                     move |v| times(kind, i, v),
                     context,
                 )
@@ -151,9 +192,14 @@ pub fn list(
                     context,
                 )
             };
+            let buttons = with_buttons(rank, remove);
+            let icon = shown.icons.and_then(|icons| icons.get(title)?.as_ref());
             KeyedView::new(
                 format!("{i}\u{1}{title}"),
-                ui::setting(title, subtitle, with_buttons(rank, remove)),
+                match icon {
+                    Some(icon) => ui::icon_setting(icon, title, subtitle, buttons),
+                    None => ui::setting(title, subtitle, buttons),
+                },
             )
         })
         .collect();

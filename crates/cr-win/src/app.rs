@@ -120,6 +120,8 @@ pub struct Shell {
     web_tries: u64,
     /// What the boxes of New Character's lists have chosen for Add.
     adding: create::Adding,
+    /// The icons of the items Edit Character's bundles have held.
+    icons: forms::Icons,
     /// Choose Portrait, while it is open.
     portraits: Option<portrait::Chooser>,
     /// The portrait the details page shows, read when it changes.
@@ -730,6 +732,24 @@ impl Shell {
                 }
             }
         }
+        self.editor_icons();
+    }
+
+    /// Makes the icons of the items the editor's bundles hold, once each.
+    fn editor_icons(&mut self) {
+        let Page::Edit(editor) = &self.page else {
+            return;
+        };
+        let icons = &editor.needs().icons;
+        for item in editor.equipment().iter().flatten() {
+            if !self.icons.contains_key(&item.name) {
+                let icon = icons
+                    .get(&item.name)
+                    .and_then(cr_app::pictures::icon)
+                    .and_then(|i| crate::ui::png(&i));
+                self.icons.insert(item.name.clone(), icon);
+            }
+        }
     }
 
     /// `page` with Choose Portrait over it while it is open.
@@ -999,6 +1019,7 @@ impl Component for Shell {
             book_view: BookView::default(),
             web_tries: 0,
             adding: Vec::new(),
+            icons: forms::Icons::new(),
             portraits: None,
             portrait: RefCell::new(None),
             reading: Rc::default(),
@@ -1164,7 +1185,9 @@ impl Component for Shell {
             }
             Message::EditLoaded(Ok(editor)) => {
                 self.adding.clear();
+                self.icons.clear();
                 self.go(Page::Edit(editor));
+                self.editor_icons();
             }
             Message::EditLoaded(Err(e)) => self.show_error(tr("Edit Character"), e),
             Message::Editor(change) => {
@@ -1866,7 +1889,7 @@ impl Component for Shell {
             }
             Page::Edit(editor) => {
                 let portrait = self.portrait_shown(&editor.details.portrait);
-                let page = edit::view(editor, &self.adding, &portrait, context);
+                let page = edit::view(editor, &self.adding, &self.icons, &portrait, context);
                 self.with_portraits(page, context)
             }
             Page::Import(package) => import::view(self, package, context),

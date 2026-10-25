@@ -162,6 +162,7 @@ impl Editor {
                 d.kit.clone_from(&kit);
                 self.advanced.data.kit.clone_from(&kit);
                 self.kit_weapons_changed();
+                self.settle_kit_magic();
                 if let Some(text) = self.needs.creation.kit_information(&kit) {
                     let text = text.to_owned();
                     self.message(tr("Kit Information"), text);

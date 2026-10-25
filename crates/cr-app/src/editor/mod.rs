@@ -12,9 +12,12 @@
 mod abilities;
 mod combat;
 mod details;
+mod equipment;
 mod proficiencies;
 mod skills;
+mod spells;
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use cr_formats::character::Character;
@@ -27,8 +30,11 @@ use cr_store::create::{CreationRules, Dice};
 use cr_store::dual::ClassTable;
 use cr_store::edit::CharacterDetails;
 use cr_store::help::topic;
-use cr_store::lists::CharacterLists;
-use cr_store::npc::Rand;
+use cr_store::kit_magic::{CharacterKitMagic, KitMagicRules};
+use cr_store::learn::LearnRules;
+use cr_store::lists::{COINS, CharacterLists, ITEM_TYPES};
+use cr_store::npc::{NpcRules, Rand};
+use cr_store::pictures::ItemIcons;
 use cr_store::proficiencies::{CharacterNonweapon, ProficiencyRules};
 use cr_store::skills::{CharacterSkills, SkillRules};
 
@@ -40,6 +46,8 @@ use crate::skills::SkillsForm;
 pub use abilities::{AbilityGroup, Check, Checks};
 pub use combat::CombatView;
 pub use details::{ClassOffer, MOST_AGE, MOST_HEIGHT, MOST_POINTS, MOST_WEIGHT, class_offer};
+pub use equipment::{COIN_NAMES, MOST_COINS, MOST_QUANTITY};
+pub use spells::{KitMagicView, MagicGroup, ordinal, slots_fit, slots_text};
 
 /// A question, warning or message the editor waits on.
 pub type Prompt = AnyPrompt<Editor>;
@@ -67,13 +75,54 @@ pub struct EditNeeds {
     pub skills: Arc<SkillRules>,
     /// Every language.
     pub languages: Vec<String>,
+    /// The kit's schools, spheres and spell use.
+    pub kit_magic: Arc<KitMagicRules>,
+    /// The spell pickers' checks.
+    pub learn: Arc<LearnRules>,
+    /// Every wizard and priest spell, and their levels by name.
+    pub wizard_spells: Vec<String>,
+    pub priest_spells: Vec<String>,
+    pub wizard_levels: HashMap<String, u32>,
+    pub priest_levels: HashMap<String, u32>,
+    /// Class database identifiers by class name, which tell the classes
+    /// that cast spells.
+    pub class_ids: HashMap<String, i32>,
+    /// Every item but the coins, which are edited as money, and what can
+    /// be bought: no magical items, gems or coins (5d9331).
+    pub items: Vec<String>,
+    pub wares: Vec<String>,
+    pub icons: ItemIcons,
+    /// The item check of the Equipment page, when the installation's
+    /// program could be read.
+    pub item_rules: Option<Arc<NpcRules>>,
 }
 
 impl EditNeeds {
     pub fn load(install: &Installation) -> cr_store::Result<Self> {
         let creation = Arc::new(install.creation_rules()?);
         let advance = Arc::new(install.advance_rules()?);
+        let sorted = |mut names: Vec<String>| {
+            names.sort_by_cached_key(|n| cr_store::collate::sort_key(n));
+            names.dedup();
+            names
+        };
+        let mut items = Vec::new();
+        for part_type in ITEM_TYPES {
+            items.extend(install.part_names(part_type)?);
+        }
+        items.retain(|n| !COINS.iter().any(|c| c.0 == n));
         Ok(Self {
+            kit_magic: Arc::new(install.kit_magic_rules()?),
+            learn: Arc::new(install.learn_rules()?),
+            wizard_spells: install.spell_names(true)?,
+            priest_spells: install.spell_names(false)?,
+            wizard_levels: install.spell_levels(true)?,
+            priest_levels: install.spell_levels(false)?,
+            class_ids: install.class_ids()?,
+            items: sorted(items),
+            wares: sorted(creation.wares.iter().map(|w| w.name.clone()).collect()),
+            icons: install.item_icons()?,
+            item_rules: install.npc_rules().ok().map(Arc::new),
             combat: Arc::new(install.combat_rules_with(creation.clone(), advance.clone())?),
             proficiencies: Arc::new(
                 install.proficiency_rules_with(creation.clone(), advance.clone()),
@@ -97,6 +146,8 @@ pub enum Tab {
     Combat,
     Proficiencies,
     Skills,
+    Spells,
+    Equipment,
 }
 
 impl Tab {
@@ -107,6 +158,8 @@ impl Tab {
         Tab::Combat,
         Tab::Proficiencies,
         Tab::Skills,
+        Tab::Spells,
+        Tab::Equipment,
     ];
 
     pub fn title(self) -> &'static str {
@@ -116,6 +169,8 @@ impl Tab {
             Tab::Combat => tr_noop!("Combat"),
             Tab::Proficiencies => tr_noop!("Proficiencies"),
             Tab::Skills => tr_noop!("Skills"),
+            Tab::Spells => tr_noop!("Spells"),
+            Tab::Equipment => tr_noop!("Equipment"),
         }
     }
 
@@ -127,6 +182,8 @@ impl Tab {
             Tab::Combat => topic::WEAPON_PROFICIENCIES,
             Tab::Proficiencies => topic::NONWEAPON_PROFICIENCIES,
             Tab::Skills => topic::SKILLS,
+            Tab::Spells => topic::SPELLS,
+            Tab::Equipment => topic::EQUIPMENT,
         }
     }
 }
@@ -203,6 +260,22 @@ pub enum EditInput {
     TestWild,
     /// Roll for Wild Talents.
     RollWild,
+    // Spells.
+    /// The kit's barred schools kept or not.
+    IgnoreBarred(bool),
+    /// A school to eliminate or a sphere to keep ticked or not, by its
+    /// index.
+    MagicTick(MagicGroup, usize, bool),
+    /// The kit's free sphere, by its index ("None" first).
+    FreeSphere(usize),
+    /// A row's number changed: the pages a spell takes in a spellbook, or
+    /// how many of an item a bundle has.
+    Times(ListKind, usize, u32),
+    // Equipment.
+    /// Buy and Sell.
+    Trading(bool),
+    /// How many coins of a kind the spending money has, as `COIN_NAMES`.
+    Coin(usize, u32),
     Save,
 }
 
@@ -267,6 +340,20 @@ pub struct Editor {
     original_skills: CharacterSkills,
     /// The lists as read.
     original_lists: CharacterLists,
+    /// The kit's schools and spheres as its groups had them when the
+    /// editor opened, and as edited.
+    original_kit_magic: CharacterKitMagic,
+    kit_magic: CharacterKitMagic,
+    /// The Spells page was shown: the kit trims the schools and spheres
+    /// once the character is saved, as the original's Spells and Memorize
+    /// pages do.
+    spells_shown: bool,
+    /// The Equipment page was shown, and told the kit's text.
+    equipped: bool,
+    /// Buy and Sell: items added are paid for with the spending money and
+    /// items removed are sold. Off as the editor opens, as the original's
+    /// Update Character has it.
+    pub trading: bool,
     prompt: Option<Prompt>,
     serial: u64,
     effects: Vec<EditEffect>,
@@ -308,13 +395,14 @@ impl Editor {
             .map_or_else(|_| vec![1], |l| l.iter().map(|c| c.level).collect());
         let nonweapon = needs.proficiencies.nonweapon_of(&character);
         let skills = SkillsForm::new(needs.skills.clone(), character.clone());
+        let kit_magic = needs.kit_magic.magic_of(&character);
         let groups_shown = !combat.broad_groups.is_empty()
             || character.skills_and_powers()
                 && !needs
                     .combat
                     .group_choices(&character, &combat, &levels, true)
                     .is_empty();
-        Self {
+        let mut editor = Self {
             file: file.to_owned(),
             original_details: details.clone(),
             details,
@@ -340,6 +428,11 @@ impl Editor {
             nonweapon,
             original_skills: skills.skills(),
             skills,
+            original_kit_magic: kit_magic.clone(),
+            kit_magic,
+            spells_shown: false,
+            equipped: false,
+            trading: false,
             prompt: None,
             serial: 0,
             effects: Vec::new(),
@@ -348,7 +441,10 @@ impl Editor {
             dice: Dice::default(),
             rand: Rand::default(),
             needs,
-        }
+        };
+        editor.settle_kit_magic();
+        editor.original_kit_magic = editor.kit_magic.clone();
+        editor
     }
 
     /// The character's file in `Chars`.
@@ -374,6 +470,7 @@ impl Editor {
             || self.combat != self.original_combat
             || self.nonweapon != self.original_nonweapon
             || self.lists != self.original_lists
+            || self.kit_magic != self.original_kit_magic
             || self.skills_changed()
     }
 
@@ -449,7 +546,14 @@ impl Editor {
             return;
         }
         match input {
-            EditInput::Tab(tab) => self.tab = tab,
+            EditInput::Tab(tab) => {
+                self.tab = tab;
+                match tab {
+                    Tab::Spells => self.spells_shown = true,
+                    Tab::Equipment => self.open_equipment(),
+                    _ => {}
+                }
+            }
             EditInput::Save => {
                 if self.can_save() {
                     // Leaving the original's Weapon Proficiencies page
@@ -461,6 +565,8 @@ impl Editor {
                     }));
                 }
             }
+            input if Self::is_spells_input(&input) => self.spells_input(input),
+            input if Self::is_equipment_input(&input) => self.equipment_input(input),
             input @ (EditInput::Subrace(_) | EditInput::Tick(..)) => self.abilities_input(input),
             input @ (EditInput::Add(ListKind::Nonweapon | ListKind::Learned, _)
             | EditInput::Remove(ListKind::Nonweapon | ListKind::Learned, _)) => {
@@ -517,6 +623,9 @@ impl Editor {
         }
         if self.skills_changed() {
             lists.skills = Some(self.skills.skills());
+        }
+        if self.spells_shown || self.kit_magic != self.needs.kit_magic.magic_of(&self.original) {
+            lists.kit_magic = Some(self.kit_magic.clone());
         }
         self.error = None;
         self.saving = true;

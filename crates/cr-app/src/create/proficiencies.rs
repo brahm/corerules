@@ -13,7 +13,7 @@ use cr_store::create::{
 
 use super::{Input, Page, Prompt, Wizard, points, slots};
 
-/// A list of the Proficiencies and Combat pages.
+/// A list of the pages of New Character and Edit Character.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ListKind {
     Nonweapon,
@@ -34,6 +34,14 @@ pub enum ListKind {
     Attacks,
     Defenses,
     Items,
+    /// The editor's Spells page: the priest spells known (the wizard's
+    /// are `Spells`), a spellbook's spells by its index, and the spells a
+    /// class has memorized, by its slot.
+    PriestSpells,
+    Spellbook(usize),
+    Memorized(usize),
+    /// The editor's Equipment page: a bundle's items, by its index.
+    Bundle(usize),
 }
 
 /// A list the user adds to and removes from, as the GNOME app's lists
