@@ -34,6 +34,9 @@ use std::sync::Arc;
 
 use adw::prelude::*;
 use cr_app::action;
+use cr_app::editor::{
+    slots_fit, slots_text, social_class_shown, social_class_stored, spell_level_text,
+};
 use cr_app::library::{self, Commands};
 use cr_app::records;
 use cr_formats::character::Character;
@@ -42,7 +45,7 @@ use cr_store::Installation;
 use cr_store::advance::{AdvanceRules, Advancement, adjust_psionic_points, psionic_total};
 use cr_store::catalog::{ENCOUNTER_KEY, Entry, Section, TABLE_KEY, TREASURE_KEY};
 use cr_store::choices::{Caster, caster};
-use cr_store::dual::{ClassChoice, ClassTable};
+use cr_store::dual::ClassTable;
 use cr_store::edit::{ABILITY_RANGE, CharacterDetails};
 use cr_store::help::topic;
 use cr_store::learn::{LearnRules, Learner};
@@ -2208,7 +2211,10 @@ fn character_editor(
     };
     let name = entry_row(tr("Name"), &details.name);
     let player = entry_row(tr("Player"), &details.player);
-    let social_class = entry_row(tr("Social Class"), &details.social_class);
+    let social_class = entry_row(
+        tr("Social Class"),
+        &social_class_shown(&details.social_class),
+    );
     let age = spin_row(tr("Age"), tr("Years"), details.age, 9999);
     let height = spin_row(tr("Height"), tr("Inches"), details.height, 999);
     let weight = spin_row(tr("Weight"), tr("Pounds"), details.weight, 99999);
@@ -2317,7 +2323,7 @@ fn character_editor(
         move |kit| {
             let chosen = create::combo_value(kit);
             let rolled = rules.roll_social_class(&chosen, &mut Default::default());
-            social_class.set_text(&rolled);
+            social_class.set_text(&social_class_shown(&rolled));
             create::kit_information(kit, &rules, &chosen);
         }
     });
@@ -2402,7 +2408,7 @@ fn character_editor(
             move || {
                 let slots = rules.spell_slots(&advanced.borrow(), slot).ok().flatten();
                 list.group
-                    .set_description(slots_text(slots, &list.values()).as_deref());
+                    .set_description(slots_text(slots, &spell_levels(&list)).as_deref());
             }
         };
         show();
@@ -2419,7 +2425,7 @@ fn character_editor(
                 );
                 move || {
                     let slots = rules.spell_slots(&advanced.borrow(), slot).ok().flatten();
-                    slots_fit(slots, &list.values())
+                    slots_fit(slots, &spell_levels(&list))
                 }
             },
             {
@@ -2771,7 +2777,7 @@ fn character_editor(
             let details = CharacterDetails {
                 name: name.text().trim().to_owned(),
                 player: player.text().trim().to_owned(),
-                social_class: social_class.text().trim().to_owned(),
+                social_class: social_class_stored(social_class.text().trim()),
                 age: age.value() as u32,
                 height: height.value() as u32,
                 weight: weight.value() as u32,
@@ -2877,24 +2883,9 @@ fn classes_group(
         let (table, group, add) = (table.clone(), group.clone(), add.clone());
         let (added, added_row, offered) = (added.clone(), added_row.clone(), offered.clone());
         move |character| {
-            let names = match table.choices(character) {
-                ClassChoice::Refused(why) => {
-                    group.set_description(Some(&glib::markup_escape_text(&why)));
-                    Vec::new()
-                }
-                ClassChoice::Allowed(names) if names.is_empty() => {
-                    group.set_description(Some(tr(
-                        "No class meets the dual-class requirements of these abilities",
-                    )));
-                    names
-                }
-                ClassChoice::Allowed(names) => {
-                    group.set_description(Some(tr(
-                        "Dual-classing: the new class starts at level 1 and the earlier class stops advancing",
-                    )));
-                    names
-                }
-            };
+            let offer = cr_app::editor::class_offer(&table, character);
+            group.set_description(Some(&glib::markup_escape_text(&offer.description)));
+            let names = offer.names;
             let kept = added.borrow().iter().all(|n| names.contains(n));
             if !kept {
                 added.borrow_mut().clear();
@@ -3126,45 +3117,14 @@ fn experience_group(
 }
 
 pub(crate) use cr_app::levels::level_text;
+use cr_app::levels::{ExperienceForm, LevelsInput};
 
 /// Callbacks run when the character's levels change.
 type Listeners = Rc<RefCell<Vec<Box<dyn Fn()>>>>;
 
-/// Whether the memorized spells (values are their spell levels) fit the
-/// slots; with no slots known, they do.
-fn slots_fit(slots: Option<[u32; 9]>, memorized: &[(u32, Option<u32>)]) -> bool {
-    slots.is_none_or(|slots| {
-        (1..=9u32).all(|level| {
-            let used = memorized.iter().filter(|(l, _)| *l == level).count() as u32;
-            used <= slots[level as usize - 1]
-        })
-    })
-}
-
-/// "1st: 2 of 3 · 2nd: 0 of 1" for the memorized spells (values are their
-/// spell levels) against the slots, marking levels over the limit.
-fn slots_text(slots: Option<[u32; 9]>, memorized: &[(u32, Option<u32>)]) -> Option<String> {
-    let slots = slots?;
-    let parts: Vec<String> = (1..=9u32)
-        .filter_map(|level| {
-            let used = memorized.iter().filter(|(l, _)| *l == level).count() as u32;
-            let have = slots[level as usize - 1];
-            if have == 0 && used == 0 {
-                return None;
-            }
-            let level = ordinal(level);
-            Some(if used > have {
-                tr!("{level}: {used} of {have} (too many)", level, used, have)
-            } else {
-                tr!("{level}: {used} of {have}", level, used, have)
-            })
-        })
-        .collect();
-    Some(if parts.is_empty() {
-        tr("No spell slots at this level").into()
-    } else {
-        parts.join(" · ")
-    })
+/// The levels of the spells a memorized list holds.
+fn spell_levels(list: &RowList<u32>) -> Vec<u32> {
+    list.values().into_iter().map(|(level, _)| level).collect()
 }
 
 fn group_error(rows: &[adw::ActionRow], message: &str) {
@@ -3277,36 +3237,19 @@ pub(crate) fn experience_dialog(
     give.connect_clicked({
         let (dialog, rules, advanced) = (dialog.clone(), rules.clone(), advanced.clone());
         move |_| {
-            let n = names.len();
-            let amount = amount.value() as i64;
-            let selected = target.selected() as usize;
-            let (classes, amount) = match selected {
-                g if g < n => (vec![g], amount),
-                g if g == n => ((0..n).collect(), amount),
-                _ => ((0..n).collect(), amount / n as i64),
-            };
-            let mut dice = cr_store::create::Dice::default();
             let mut character = advanced.borrow().clone();
-            let result = classes.into_iter().rev().try_for_each(|g| {
-                rules.add_experience(
-                    &mut character,
-                    g,
-                    amount,
-                    prime.is_active(),
-                    points.value() as u32,
-                    &mut dice,
-                )
-            });
-            match result {
-                Ok(()) => {
-                    *advanced.borrow_mut() = character;
-                    changed();
-                    dialog.close();
-                }
-                Err(e) => {
-                    error.set_title(&glib::markup_escape_text(&e.to_string()));
-                    error.set_revealed(true);
-                }
+            let mut form = ExperienceForm::new(&character, None);
+            form.input(LevelsInput::Amount(amount.value() as i64));
+            form.input(LevelsInput::Target(target.selected() as usize));
+            let settings = (prime.is_active(), points.value() as u32);
+            let mut dice = cr_store::create::Dice::default();
+            if form.give(&rules, &mut character, settings, &mut dice) {
+                *advanced.borrow_mut() = character;
+                changed();
+                dialog.close();
+            } else if let Some(e) = form.error {
+                error.set_title(&glib::markup_escape_text(&e));
+                error.set_revealed(true);
             }
         }
     });
@@ -3456,16 +3399,6 @@ fn stock(list: &RowList<Item>) -> Stock {
         .collect()
 }
 
-/// Ordinal for a spell level ("1st").
-fn ordinal(level: u32) -> String {
-    match (level % 10, level % 100) {
-        (1, n) if n != 11 => tr!("{level}st", level),
-        (2, n) if n != 12 => tr!("{level}nd", level),
-        (3, n) if n != 13 => tr!("{level}rd", level),
-        _ => tr!("{level}th", level),
-    }
-}
-
 impl ListEditors {
     /// `advanced` is the character at the levels the editor has now.
     fn new(
@@ -3551,7 +3484,7 @@ impl ListEditors {
                         .map(move |name| RowSpec {
                             value: level as u32,
                             title: name.clone(),
-                            subtitle: tr!("{ordinal} level", ordinal = ordinal(level as u32)),
+                            subtitle: spell_level_text(level as u32, wizard),
                             number: None,
                         })
                 })
@@ -3580,7 +3513,7 @@ impl ListEditors {
                         move || {
                             list.add(RowSpec {
                                 value: level,
-                                subtitle: tr!("{ordinal} level", ordinal = ordinal(level)),
+                                subtitle: spell_level_text(level, wizard),
                                 title: name.clone(),
                                 number: None,
                             })

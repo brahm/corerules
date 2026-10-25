@@ -29,7 +29,8 @@ the groundwork that keeps both apps the same is in place (phase 3): the
 shared crate `cr-app`, one PDF of the sheet for both systems and a test
 that fails when an action is in one app and not in the other. The screens
 are being ported (phase 4): the library, the character sheet, the help,
-Settings and About are done.
+Settings and About, the books, character creation with Enter Character,
+and editing are done.
 Publishing on Flathub was dropped from the plan (decision P15).
 
 ## The original plan (2026-10-09)
@@ -232,7 +233,7 @@ The phases run in order:
      on every open, click in the contents and zoom, which it no longer
      does, and tables whose last column broke a word over lines in a
      narrow window, which now keeps to one line.
-   - **Character creation and Enter Character (PR #103).** `cr-app` gained
+   - **Character creation and Enter Character (done, PR #103).** `cr-app` gained
      the creation wizard, free of any toolkit: its pages from the campaign
      setting to the name, kit and appearance, then the proficiencies
      (nonweapon, languages, weapons, groups, focus, specialization and
@@ -275,7 +276,38 @@ The phases run in order:
      narrow window, where a settings card now puts its control under its
      header. Enter Character no longer refuses a thief and psionicist
      with more rogue points than New Character gives.
-   - Still to port: editing; the generators (NPCs, treasure,
+   - **Editing (PR #104).** `cr-app` gained the character editor, free of
+     any toolkit, with the original's Update Character in its tabs:
+     Details (who the character is, the portrait, the background and
+     history, the classes with Add Class for dual-classing, the Levels
+     dialog and Add Experience, the hit points and PSPs, the appearance
+     and the abilities); Abilities (the subrace and its package, racial
+     and class abilities, schools and spheres with their rules of one);
+     Proficiencies (a rank more for each taken again, the slots or points
+     left, the kit's warning, the native languages); Combat (weapon
+     proficiencies and groups, weapon of choice, expertise,
+     specializations and mastery, unarmed combat, shields, armor,
+     fighting styles, traits and disadvantages); Skills (the Skills form
+     New Character shares, with the wild talent test and roll); Spells
+     (the kit's barred schools, schools to eliminate and spheres to keep,
+     the spells known with the Learn check, the spellbooks and the spells
+     memorized within the slots); and Equipment (the spending money, Buy
+     and Sell at the kit's prices, the item check and each bundle's
+     items). Save checks the character points the pages share and asks
+     the kit's questions first. The GNOME editor takes from it the
+     classes offered, Add Experience and the slot texts, and both apps
+     now show the social class in the language chosen. The Windows app's
+     Edit Character shows every tab. 30 actions are left on
+     `NOT_YET_ON_WINDOWS`. The Windows test found two tabs named
+     "Habilidades" in Brazilian Portuguese, where Skills is now
+     "Talentos" and a test keeps the tabs apart in every language; Save
+     offered with nothing changed; the last tabs cut off in a narrow
+     window, where the bar now scrolls; and the Combat tab's free
+     purchase blind to what the Abilities tab spent: the Abilities,
+     Combat and Proficiencies tabs now share the character points as they
+     are edited. A quest spell is named so among the memorized spells,
+     and a list's Add box keeps Add inside a narrow window.
+   - Still to port: the generators (NPCs, treasure,
      encounters, tables, parties); the user database editors; packages
      and Import Core Rules 2.0; Extract Data from CD….
 5. **Package and Store.** The release workflow builds and tests the MSIX;

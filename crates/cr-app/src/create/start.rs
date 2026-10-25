@@ -315,14 +315,18 @@ pub fn ability_rows(choices: &[(String, i32)]) -> Vec<(String, String)> {
                     .map_or(name.as_str(), |n| n.1)
                     .to_owned();
             }
-            let cost = if *cost < 0 {
-                tr!("Gives {points}", points = points(i64::from(-cost)))
-            } else {
-                points(i64::from(*cost))
-            };
-            (title, cost)
+            (title, cost_text(i64::from(*cost)))
         })
         .collect()
+}
+
+/// What a choice costs, or the points a restriction gives.
+pub fn cost_text(cost: i64) -> String {
+    if cost < 0 {
+        tr!("Gives {points}", points = points(-cost))
+    } else {
+        points(cost)
+    }
 }
 
 /// Skills & Powers: racial abilities bought with the race's points,

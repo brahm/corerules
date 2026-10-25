@@ -13,7 +13,7 @@ use cr_store::create::{
 
 use super::{Input, Page, Prompt, Wizard, points, slots};
 
-/// A list of the Proficiencies and Combat pages.
+/// A list of the pages of New Character and Edit Character.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ListKind {
     Nonweapon,
@@ -34,6 +34,14 @@ pub enum ListKind {
     Attacks,
     Defenses,
     Items,
+    /// The editor's Spells page: the priest spells known (the wizard's
+    /// are `Spells`), a spellbook's spells by its index, and the spells a
+    /// class has memorized, by its slot.
+    PriestSpells,
+    Spellbook(usize),
+    Memorized(usize),
+    /// The editor's Equipment page: a bundle's items, by its index.
+    Bundle(usize),
 }
 
 /// A list the user adds to and removes from, as the GNOME app's lists
@@ -311,21 +319,21 @@ pub fn pick_texts(pick: &NonweaponPick) -> (String, String) {
 }
 
 /// "None", then `items`.
-fn with_none(items: impl IntoIterator<Item = String>) -> Vec<String> {
+pub(crate) fn with_none(items: impl IntoIterator<Item = String>) -> Vec<String> {
     std::iter::once(tr("None").to_owned())
         .chain(items)
         .collect()
 }
 
 /// The index of `chosen` among `items`, which start with "None".
-fn index_of(items: &[String], chosen: Option<&String>) -> usize {
+pub(crate) fn index_of(items: &[String], chosen: Option<&String>) -> usize {
     chosen
         .and_then(|c| items.iter().skip(1).position(|i| i == c))
         .map_or(0, |i| i + 1)
 }
 
 /// The item at `index` of `items`, none for "None".
-fn item_at(items: &[String], index: usize) -> Option<String> {
+pub(crate) fn item_at(items: &[String], index: usize) -> Option<String> {
     (index > 0).then(|| items.get(index).cloned()).flatten()
 }
 

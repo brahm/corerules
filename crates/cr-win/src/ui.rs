@@ -83,13 +83,48 @@ pub fn card(content: impl Into<View>) -> View {
 /// A settings card: a header and a description on the left, the control
 /// on the right, as Windows Settings lays out its rows.
 pub fn setting(header: &str, description: &str, control: impl Into<View>) -> View {
-    let text: View = if description.is_empty() {
+    setting_of(setting_text(header, description), control)
+}
+
+/// A settings card with an item's icon before its header.
+pub fn icon_setting(
+    icon: &EncodedImage,
+    header: &str,
+    description: &str,
+    control: impl Into<View>,
+) -> View {
+    let side = f64::from(cr_store::pictures::ICON_SIZE);
+    // A grid rather than a row, for the text to wrap in a narrow window.
+    setting_of(
+        Grid::new()
+            .columns([GridLength::Auto, GridLength::STAR])
+            .column_spacing(12.0)
+            .children((
+                Image::new()
+                    .source_data(icon.clone())
+                    .width(side)
+                    .height(side)
+                    .vertical_alignment(VerticalAlignment::Center),
+                Border::new()
+                    .grid_column(1)
+                    .vertical_alignment(VerticalAlignment::Center)
+                    .content(setting_text(header, description)),
+            )),
+        control,
+    )
+}
+
+fn setting_text(header: &str, description: &str) -> View {
+    if description.is_empty() {
         body(header).into()
     } else {
         StackPanel::new()
             .spacing(2.0)
             .children((body(header), caption(description)))
-    };
+    }
+}
+
+fn setting_of(text: View, control: impl Into<View>) -> View {
     if ROOM.get() - 2.0 * PAGE_SIDE < STACKED_BELOW {
         return card(
             StackPanel::new().spacing(8.0).children((

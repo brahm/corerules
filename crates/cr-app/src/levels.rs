@@ -148,6 +148,94 @@ pub struct ExperienceForm {
     pub target: usize,
     /// Why the experience could not be given.
     pub error: Option<String>,
+    /// Its own prime requisite bonus and points per level, opened by
+    /// itself; from the Levels dialog it takes the dialog's.
+    pub settings: Option<ExperienceSettings>,
+}
+
+/// What Add Experience gives with when opened by itself, as the
+/// editor's Add… opens it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExperienceSettings {
+    pub prime_bonus: bool,
+    pub points_per_level: u32,
+    /// The points per level are offered: Skills & Powers.
+    pub skills_and_powers: bool,
+}
+
+impl ExperienceForm {
+    /// Add Experience for `character`, 1,000 to give; several classes
+    /// split it.
+    pub fn new(character: &Character, settings: Option<ExperienceSettings>) -> Self {
+        let names = &character.data.classes.names;
+        let mut targets = names.clone();
+        if names.len() > 1 {
+            targets.push(tr("All Classes").into());
+            targets.push(tr("Split Between Classes").into());
+        }
+        Self {
+            amount: 1000,
+            target: if names.len() > 1 { names.len() + 1 } else { 0 },
+            targets,
+            error: None,
+            settings,
+        }
+    }
+
+    /// Changes the amount, the classes or, with its own, the settings.
+    pub fn input(&mut self, input: LevelsInput) {
+        match input {
+            LevelsInput::Amount(n) => self.amount = n.clamp(-MOST_EXPERIENCE, MOST_EXPERIENCE),
+            LevelsInput::Target(t) if t < self.targets.len() => self.target = t,
+            LevelsInput::PrimeBonus(on) => {
+                if let Some(settings) = &mut self.settings {
+                    settings.prime_bonus = on;
+                }
+            }
+            LevelsInput::PointsPerLevel(n) => {
+                if let Some(settings) = &mut self.settings {
+                    settings.points_per_level = n.min(10);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Gives the amount to its classes of `character`, with `prime_bonus`
+    /// and `points_per_level` unless the form has its own; false, with
+    /// the error, if it could not.
+    pub fn give(
+        &mut self,
+        advance: &AdvanceRules,
+        character: &mut Character,
+        (prime_bonus, points_per_level): (bool, u32),
+        dice: &mut Dice,
+    ) -> bool {
+        let (prime_bonus, points_per_level) = match &self.settings {
+            Some(s) => (s.prime_bonus, s.points_per_level),
+            None => (prime_bonus, points_per_level),
+        };
+        let n = character.data.classes.names.len();
+        let (classes, amount) = match self.target {
+            g if g < n => (vec![g], self.amount),
+            g if g == n => ((0..n).collect(), self.amount),
+            _ => ((0..n).collect(), self.amount / n.max(1) as i64),
+        };
+        let mut changed = character.clone();
+        let result = classes.into_iter().rev().try_for_each(|g| {
+            advance.add_experience(&mut changed, g, amount, prime_bonus, points_per_level, dice)
+        });
+        match result {
+            Ok(()) => {
+                *character = changed;
+                true
+            }
+            Err(e) => {
+                self.error = Some(e.to_string());
+                false
+            }
+        }
+    }
 }
 
 impl LevelsForm {
@@ -211,30 +299,11 @@ impl LevelsForm {
             }
             LevelsInput::PointsPerLevel(n) => self.points_per_level = n.min(10),
             LevelsInput::AddExperience => {
-                let names = &self.character.data.classes.names;
-                let mut targets = names.clone();
-                if names.len() > 1 {
-                    targets.push(tr("All Classes").into());
-                    targets.push(tr("Split Between Classes").into());
-                }
-                self.experience = Some(ExperienceForm {
-                    amount: 1000,
-                    // Several classes split it.
-                    target: if names.len() > 1 { names.len() + 1 } else { 0 },
-                    targets,
-                    error: None,
-                });
+                self.experience = Some(ExperienceForm::new(&self.character, None));
             }
-            LevelsInput::Amount(n) => {
+            LevelsInput::Amount(_) | LevelsInput::Target(_) => {
                 if let Some(experience) = &mut self.experience {
-                    experience.amount = n.clamp(-MOST_EXPERIENCE, MOST_EXPERIENCE);
-                }
-            }
-            LevelsInput::Target(t) => {
-                if let Some(experience) = &mut self.experience
-                    && t < experience.targets.len()
-                {
-                    experience.target = t;
+                    experience.input(input);
                 }
             }
             LevelsInput::Give => self.give(advance, dice),
@@ -250,30 +319,9 @@ impl LevelsForm {
         let Some(experience) = &mut self.experience else {
             return;
         };
-        let n = self.character.data.classes.names.len();
-        let amount = experience.amount;
-        let (classes, amount) = match experience.target {
-            g if g < n => (vec![g], amount),
-            g if g == n => ((0..n).collect(), amount),
-            _ => ((0..n).collect(), amount / n.max(1) as i64),
-        };
-        let mut character = (*self.character).clone();
-        let result = classes.into_iter().rev().try_for_each(|g| {
-            advance.add_experience(
-                &mut character,
-                g,
-                amount,
-                self.prime_bonus,
-                self.points_per_level,
-                dice,
-            )
-        });
-        match result {
-            Ok(()) => {
-                *self.character = character;
-                self.experience = None;
-            }
-            Err(e) => experience.error = Some(e.to_string()),
+        let settings = (self.prime_bonus, self.points_per_level);
+        if experience.give(advance, &mut self.character, settings, dice) {
+            self.experience = None;
         }
     }
 
