@@ -125,14 +125,18 @@ pub fn view(edit: &Edit, context: &mut ViewContext<Shell>) -> View {
     let d = &edit.details;
     let field =
         |make: fn(String) -> Field| context.callback(move |text: String| Message::Edit(make(text)));
-    let text = |value: &str, make: fn(String) -> Field| {
+    // Each control carries its card's header as its name, for screen
+    // readers.
+    let text = |name: &str, value: &str, make: fn(String) -> Field| {
         TextBox::new()
+            .automation_name(name)
             .text(value)
             .min_width(260.0)
             .on_text_changed(field(make))
     };
-    let number = |value: u32, min: f64, max: f64, make: fn(Option<f64>) -> Field| {
+    let number = |name: &str, value: u32, min: f64, max: f64, make: fn(Option<f64>) -> Field| {
         NumberBox::new()
+            .automation_name(name)
             .value(f64::from(value))
             .minimum(min)
             .maximum(max)
@@ -142,6 +146,7 @@ pub fn view(edit: &Edit, context: &mut ViewContext<Shell>) -> View {
     let abilities = (0..6).map(|a| {
         let scores = d.abilities[a];
         let score = NumberBox::new()
+            .automation_name(tr(ABILITIES[a]))
             .value(f64::from(scores[0]))
             .minimum(f64::from(*ABILITY_RANGE.start()))
             .maximum(f64::from(*ABILITY_RANGE.end()))
@@ -152,6 +157,7 @@ pub fn view(edit: &Edit, context: &mut ViewContext<Shell>) -> View {
                 StackPanel::new().spacing(2.0).children((
                     ui::caption(tr(SUBABILITIES[a][part - 1])),
                     NumberBox::new()
+                        .automation_name(tr(SUBABILITIES[a][part - 1]))
                         .value(f64::from(scores[part]))
                         .minimum(f64::from(*ABILITY_RANGE.start()))
                         .maximum(f64::from(*ABILITY_RANGE.end()))
@@ -204,17 +210,22 @@ pub fn view(edit: &Edit, context: &mut ViewContext<Shell>) -> View {
     ui::page(
         StackPanel::new().spacing(4.0).children((
             ui::title(tr("Edit Character")).margin(Thickness::new(0.0, 0.0, 0.0, 16.0)),
-            ui::setting(tr("Name"), "", text(&d.name, Field::Name)),
-            ui::setting(tr("Player"), "", text(&d.player, Field::Player)),
+            ui::setting(tr("Name"), "", text(tr("Name"), &d.name, Field::Name)),
+            ui::setting(
+                tr("Player"),
+                "",
+                text(tr("Player"), &d.player, Field::Player),
+            ),
             ui::setting(
                 tr("Social Class"),
                 "",
-                text(&d.social_class, Field::SocialClass),
+                text(tr("Social Class"), &d.social_class, Field::SocialClass),
             ),
             ui::setting(
                 tr("Gender"),
                 "",
                 ComboBox::new()
+                    .automation_name(tr("Gender"))
                     .items_source(GENDERS.iter().map(|g| tr(g).to_owned()))
                     .selected_index(usize::from(!d.male))
                     .min_width(200.0)
@@ -224,6 +235,7 @@ pub fn view(edit: &Edit, context: &mut ViewContext<Shell>) -> View {
                 tr("Alignment"),
                 "",
                 ComboBox::new()
+                    .automation_name(tr("Alignment"))
                     .items_source(edit.alignments.clone())
                     .selected_index(edit.alignments.iter().position(|a| *a == d.alignment))
                     .min_width(200.0)
@@ -232,17 +244,17 @@ pub fn view(edit: &Edit, context: &mut ViewContext<Shell>) -> View {
             ui::setting(
                 tr("Age"),
                 tr("Years"),
-                number(d.age, 0.0, 9999.0, Field::Age),
+                number(tr("Age"), d.age, 0.0, 9999.0, Field::Age),
             ),
             ui::setting(
                 tr("Height"),
                 tr("Inches"),
-                number(d.height, 0.0, 999.0, Field::Height),
+                number(tr("Height"), d.height, 0.0, 999.0, Field::Height),
             ),
             ui::setting(
                 tr("Weight"),
                 tr("Pounds"),
-                number(d.weight, 0.0, 99999.0, Field::Weight),
+                number(tr("Weight"), d.weight, 0.0, 99999.0, Field::Weight),
             ),
             ui::strong(tr("Abilities")).margin(Thickness::new(0.0, 20.0, 0.0, 4.0)),
             StackPanel::new().spacing(4.0).keyed_children(abilities),
@@ -250,6 +262,7 @@ pub fn view(edit: &Edit, context: &mut ViewContext<Shell>) -> View {
                 tr("Exceptional Strength"),
                 tr("18/01 to 18/00, 0 for none"),
                 NumberBox::new()
+                    .automation_name(tr("Exceptional Strength"))
                     .value(f64::from(d.exceptional_strength))
                     .minimum(0.0)
                     .maximum(100.0)

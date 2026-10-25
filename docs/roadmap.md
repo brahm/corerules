@@ -148,7 +148,9 @@ The phases run in order:
    to reach the window, the shell's Open dialog or printing, so `cr-win`
    calls Windows for those itself, on a thread of their own with the
    app's window as owner; printing draws the layout of `cr-store::sheet`
-   with Direct2D through the Windows print dialog. CI builds the MSIX
+   with Direct2D through the Windows print dialog. Its ContentDialog has
+   no DefaultButton, so Delete and Discard take the focus where Cancel
+   should; that goes to windows-rs. CI builds the MSIX
    (`crates/cr-win/package/make-msix.ps1`) unsigned, as the Store signs
    it; on a machine in Developer Mode it is installed for testing with
    `Add-AppxPackage -Register target\msix\AppxManifest.xml`.

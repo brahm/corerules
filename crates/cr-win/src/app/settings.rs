@@ -24,6 +24,20 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
         .as_ref()
         .map(|i| i.root().display().to_string())
         .unwrap_or_else(|| tr("No Core Rules Installation").to_owned());
+    // Where the data package goes, unless the installation is that package.
+    let data_folder: View = if shell
+        .install
+        .as_ref()
+        .is_some_and(|i| cr_store::data_package_dir().as_deref() == Some(i.root()))
+    {
+        View::empty()
+    } else {
+        ui::setting(
+            tr("Data folder"),
+            cr_store::DATA_PACKAGE_SHOWN,
+            View::empty(),
+        )
+    };
     ui::page(
         StackPanel::new().spacing(4.0).children((
             ui::title(tr("Settings")).margin(Thickness::new(0.0, 0.0, 0.0, 16.0)),
@@ -32,6 +46,7 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
                 tr("Language"),
                 tr("Game data from the original files stays in English"),
                 ComboBox::new()
+                    .automation_name(tr("Language"))
                     .items_source(languages)
                     .selected_index(selected)
                     .min_width(220.0)
@@ -44,7 +59,7 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
                 website(),
             ),
             ui::setting(tr("Installation"), &installation, View::empty()),
-            ui::setting(tr("Data folder"), cr_store::DATA_PACKAGE_SHOWN, View::empty()),
+            data_folder,
             ui::card(StackPanel::new().spacing(4.0).children((
                 ui::body(tr("AD&D Core Rules")),
                 ui::caption(tr(

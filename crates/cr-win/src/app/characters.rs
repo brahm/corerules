@@ -11,11 +11,15 @@ use super::{Message, Shell};
 use crate::ui;
 
 pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
-    let Some(install) = &shell.install else {
+    if shell.install.is_none() {
         return no_installation(context);
-    };
-    let can_write = install.is_writable() && !install.is_core20();
-    let selected = shell.selected_entry();
+    }
+    let can_write = shell.can_write;
+    let visible = shell.visible();
+    // A character the search hides is not shown either.
+    let selected = shell
+        .selected_entry()
+        .filter(|entry| visible.iter().any(|e| e.key == entry.key));
     let commands = CommandBar::new()
         .horizontal_alignment(HorizontalAlignment::Right)
         .grid_column(1)
@@ -59,7 +63,6 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
             commands,
         ));
 
-    let visible = shell.visible();
     let list: View = match &shell.characters {
         None => ProgressRing::new()
             .is_active(true)
@@ -71,6 +74,7 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
             ui::caption(tr("No entries")).margin(12.0).into()
         }
         Some(Ok(_)) => ListView::new()
+            .automation_name(plain(tr("Characters")))
             .selected_index(
                 shell
                     .selected
@@ -103,6 +107,7 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
             AutoSuggestBox::new()
                 .text(shell.search.clone())
                 .placeholder_text(plain(tr("Search")))
+                .automation_name(plain(tr("Search")))
                 .on_text_changed(context.callback(Message::Search)),
             Border::new().grid_row(1).content(list),
         ));

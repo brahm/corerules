@@ -59,7 +59,6 @@ pub fn view(
                         RadioButtons::new()
                             .items_source(SETTINGS.iter().map(|s| tr(s.name).to_owned()))
                             .selected_index(setting)
-                            .max_columns(2)
                             .on_selection_changed(context.callback(Message::Setting)),
                         ui::caption(tr(chosen.description)),
                     )),

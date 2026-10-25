@@ -7,7 +7,7 @@ use cr_win::pages::{
     self, FONT_SIZE, FOOTER, FRAME_PAD, Measure, Page, Printed, TITLE_SIZE, cell_width,
     column_starts, frame_pen,
 };
-use windows::Win32::Foundation::{GlobalFree, HGLOBAL};
+use windows::Win32::Foundation::{ERROR_PRINT_CANCELLED, GlobalFree, HGLOBAL};
 use windows::Win32::Graphics::Direct2D::Common::{
     D2D_RECT_F, D2D_SIZE_F, D2D_SIZE_U, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_COLOR_F,
     D2D1_PIXEL_FORMAT,
@@ -54,7 +54,7 @@ use windows::Win32::UI::Controls::Dialogs::{
     PD_RETURNIC, PD_USEDEVMODECOPIESANDCOLLATE, PRINTDLGEXW, PrintDlgExW, START_PAGE_GENERAL,
 };
 use windows::Win32::UI::WindowsAndMessaging::GetDesktopWindow;
-use windows::core::{HSTRING, Interface, PCWSTR, Result, w};
+use windows::core::{HRESULT, HSTRING, Interface, PCWSTR, Result, w};
 use windows_numerics::{Matrix3x2, Vector2};
 
 use super::Owner;
@@ -72,6 +72,16 @@ pub fn print_sheet(owner: Owner, sheet: &Sheet) -> Result<bool> {
     let Some(printer) = choose_printer(owner)? else {
         return Ok(false);
     };
+    // A job cancelled on the way, as when the Save dialog of Microsoft
+    // Print to PDF is closed, is a cancel too.
+    match print(&printer, sheet) {
+        Err(e) if e.code() == HRESULT::from_win32(ERROR_PRINT_CANCELLED.0) => Ok(false),
+        result => result.map(|()| true),
+    }
+}
+
+/// Draws the pages of `sheet` into a print job on `printer`.
+fn print(printer: &Printer, sheet: &Sheet) -> Result<()> {
     let text = Text::new()?;
     let page = printer.page;
     let (width, height) = (page.content.0 / DIPS, page.content.1 / DIPS);
@@ -151,7 +161,7 @@ pub fn print_sheet(owner: Owner, sheet: &Sheet) -> Result<bool> {
         }
         control.Close()?;
     }
-    Ok(true)
+    Ok(())
 }
 
 /// The printer chosen in the print dialog.
