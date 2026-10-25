@@ -6,9 +6,10 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_app::parties::PartyLists;
 use cr_i18n::{tr, trn};
 use cr_store::help::topic;
-use cr_store::party::{ALL, Deleted, party_of};
+use cr_store::party::{ALL, Deleted};
 use cr_store::{Installation, Result};
 use gtk::glib;
 
@@ -95,13 +96,9 @@ struct Manager<H: Host + 'static> {
     toasts: adw::ToastOverlay,
     page: adw::PreferencesPage,
     party_row: adw::ComboRow,
-    /// The parties in the combo row, in its order.
-    parties: RefCell<Vec<String>>,
-    /// Parties made here that have no members yet; they go with the dialog.
-    new_parties: RefCell<Vec<String>>,
-    selected: RefCell<String>,
+    lists: RefCell<PartyLists>,
     /// The member and unassigned groups, rebuilt on every change.
-    lists: RefCell<Vec<adw::PreferencesGroup>>,
+    groups: RefCell<Vec<adw::PreferencesGroup>>,
     updating: Cell<bool>,
 }
 
@@ -138,10 +135,8 @@ pub fn manage<H: Host + 'static>(host: &Rc<H>) {
         toasts,
         page,
         party_row: party_row.clone(),
-        parties: RefCell::default(),
-        new_parties: RefCell::default(),
-        selected: RefCell::default(),
         lists: RefCell::default(),
+        groups: RefCell::default(),
         updating: Cell::new(false),
     });
     party_row.connect_selected_notify({
@@ -153,14 +148,15 @@ pub fn manage<H: Host + 'static>(host: &Rc<H>) {
             if manager.updating.get() {
                 return;
             }
-            let party = manager
+            let lists = manager.lists.borrow();
+            let party = lists
                 .parties
-                .borrow()
                 .get(row.selected() as usize)
                 .cloned()
                 .unwrap_or_default();
-            *manager.selected.borrow_mut() = party;
-            manager.fill();
+            let new = lists.new.clone();
+            drop(lists);
+            manager.refresh(&party, &new);
         }
     });
     new_row.connect_apply({
@@ -170,16 +166,15 @@ pub fn manage<H: Host + 'static>(host: &Rc<H>) {
                 return;
             };
             let name = row.text().trim().to_owned();
-            let others = manager.new_parties.borrow().clone();
+            let mut new = manager.lists.borrow().new.clone();
             let problem = manager
                 .host
-                .with_install(|i| i.party_name_problem(&name, &others));
+                .with_install(|i| i.party_name_problem(&name, &new));
             match problem {
                 Some(Ok(None)) => {
-                    manager.new_parties.borrow_mut().push(name.clone());
-                    *manager.selected.borrow_mut() = name;
+                    new.push(name.clone());
                     row.set_text("");
-                    manager.refresh();
+                    manager.refresh(&name, &new);
                 }
                 Some(Ok(Some(problem))) => manager.notice(&problem),
                 Some(Err(e)) => manager.notice(&e.to_string()),
@@ -192,13 +187,13 @@ pub fn manage<H: Host + 'static>(host: &Rc<H>) {
         let manager = RefCell::new(Some(manager.clone()));
         move |_| {
             if let Some(manager) = manager.borrow_mut().take() {
-                for group in manager.lists.borrow_mut().drain(..) {
+                for group in manager.groups.borrow_mut().drain(..) {
                     manager.page.remove(&group);
                 }
             }
         }
     });
-    manager.refresh();
+    manager.refresh("", &[]);
     dialog.present(Some(&host.parent()));
 }
 
@@ -207,123 +202,83 @@ impl<H: Host + 'static> Manager<H> {
         self.toasts.add_toast(adw::Toast::new(message));
     }
 
-    /// Reads the parties again and shows the selected one.
-    fn refresh(self: &Rc<Self>) {
-        let Some(Ok(mut parties)) = self.host.with_install(|i| i.parties()) else {
+    /// Reads the parties again and shows `selected`, with the parties
+    /// `new` made here.
+    fn refresh(self: &Rc<Self>, selected: &str, new: &[String]) {
+        let Some(lists) = errors(
+            &*self.host,
+            self.host
+                .with_install(|i| PartyLists::read(i, selected, new)),
+        ) else {
             return;
         };
-        self.new_parties
-            .borrow_mut()
-            .retain(|p| !parties.iter().any(|q| q.eq_ignore_ascii_case(p)));
-        parties.extend(self.new_parties.borrow().iter().cloned());
-        parties.sort_by_cached_key(|p| cr_store::collate::sort_key(p));
-        let mut selected = self.selected.borrow().clone();
-        let position = parties
-            .iter()
-            .position(|p| p.eq_ignore_ascii_case(&selected))
-            .unwrap_or(0);
-        selected = parties.get(position).cloned().unwrap_or_default();
         self.updating.set(true);
-        let names: Vec<&str> = parties.iter().map(String::as_str).collect();
+        let names: Vec<&str> = lists.parties.iter().map(String::as_str).collect();
         self.party_row
             .set_model(Some(&gtk::StringList::new(&names)));
-        self.party_row.set_selected(position as u32);
-        self.party_row.set_sensitive(!parties.is_empty());
+        self.party_row
+            .set_selected(lists.position().unwrap_or(0) as u32);
+        self.party_row.set_sensitive(!lists.parties.is_empty());
         self.updating.set(false);
-        *self.parties.borrow_mut() = parties;
-        *self.selected.borrow_mut() = selected;
+        *self.lists.borrow_mut() = lists;
         self.fill();
     }
 
     /// Rebuilds the member and unassigned lists.
     fn fill(self: &Rc<Self>) {
-        for group in self.lists.borrow_mut().drain(..) {
+        for group in self.groups.borrow_mut().drain(..) {
             self.page.remove(&group);
         }
-        let Some(Ok(index)) = self.host.with_install(|i| i.characters()) else {
-            return;
-        };
-        let party = self.selected.borrow().clone();
+        let lists = self.lists.borrow();
+        let party = lists.selected.clone();
         let members = adw::PreferencesGroup::builder()
             .title(tr("Members"))
             .build();
         let others = adw::PreferencesGroup::builder()
             .title(tr("Without a Party"))
             .build();
-        let (mut count, mut unassigned) = (0, 0);
-        // The party's NPCs, as the NPC screen lists them (0x44b5c2).
-        let mut npcs: Vec<(String, String)> = Vec::new();
-        for entry in &index.entries {
-            let in_party = party_of(entry);
-            let (group, icon, tooltip, to) = if party.is_empty() || in_party.is_empty() {
-                if !in_party.is_empty() {
-                    continue;
-                }
-                unassigned += 1;
-                (
-                    &others,
-                    "list-add-symbolic",
-                    tr("Add to Party"),
-                    party.as_str(),
-                )
-            } else if in_party.eq_ignore_ascii_case(&party) {
-                count += 1;
-                if entry.unknown_0x24 != 0 {
-                    npcs.push((entry.name.clone(), entry.file.clone()));
-                }
-                (
-                    &members,
-                    "list-remove-symbolic",
-                    tr("Remove from Party"),
-                    "",
-                )
-            } else {
-                continue;
-            };
-            let subtitle = entry
-                .details
-                .iter()
-                .filter_map(|d| d.strip_prefix("Class: "))
-                .next()
-                .map_or(entry.race.clone(), |class| {
-                    format!("{} {class}", entry.race)
-                });
-            let subtitle = if entry.unknown_0x24 != 0 {
-                tr!("NPC · {description}", description = subtitle)
-            } else {
-                subtitle
-            };
-            let row = adw::ActionRow::builder()
-                .title(glib::markup_escape_text(entry.name.trim()).as_str())
-                .subtitle(glib::markup_escape_text(&subtitle).as_str())
-                .build();
-            if !party.is_empty() {
-                let button = gtk::Button::builder()
-                    .icon_name(icon)
-                    .tooltip_text(tooltip)
-                    .valign(gtk::Align::Center)
-                    .css_classes(["flat"])
+        let rows = [
+            (
+                &members,
+                &lists.members,
+                "list-remove-symbolic",
+                tr("Remove from Party"),
+                "",
+            ),
+            (
+                &others,
+                &lists.without,
+                "list-add-symbolic",
+                tr("Add to Party"),
+                party.as_str(),
+            ),
+        ];
+        for (group, list, icon, tooltip, to) in rows {
+            for member in list {
+                let row = adw::ActionRow::builder()
+                    .title(glib::markup_escape_text(&member.name).as_str())
+                    .subtitle(glib::markup_escape_text(&member.subtitle).as_str())
                     .build();
-                let (manager, file, to) = (self.clone(), entry.file.clone(), to.to_owned());
-                button.connect_clicked(move |_| manager.move_to(&file, &to));
-                row.add_suffix(&button);
-                row.set_activatable_widget(Some(&button));
+                if !party.is_empty() {
+                    let button = gtk::Button::builder()
+                        .icon_name(icon)
+                        .tooltip_text(tooltip)
+                        .valign(gtk::Align::Center)
+                        .css_classes(["flat"])
+                        .build();
+                    let (manager, file, to) = (self.clone(), member.file.clone(), to.to_owned());
+                    button.connect_clicked(move |_| manager.move_to(&file, &to));
+                    row.add_suffix(&button);
+                    row.set_activatable_widget(Some(&button));
+                }
+                group.add(&row);
             }
-            group.add(&row);
         }
-        if unassigned == 0 {
-            others.set_description(Some(tr("Every character is in a party.")));
-        }
-        if party.is_empty() {
-            others.set_description(Some(tr("Make a party to put characters in it.")));
-        } else {
+        others.set_description(lists.without_note());
+        if !party.is_empty() {
+            members.set_description(lists.members_note());
             let buttons = gtk::Box::builder().spacing(6).build();
-            // Group Encounter (the NPC screen's button 1576), which only the
-            // Expansion has.
-            let expansion = self.host.with_install(|i| {
-                Ok(cr_store::encounter::flavor_of(i) == cr_store::sheet::Flavor::Expansion)
-            });
-            if matches!(expansion, Some(Ok(true))) {
+            if lists.group_encounter {
                 let group = gtk::Button::builder()
                     .label(tr("_Group Encounter…"))
                     .use_underline(true)
@@ -331,18 +286,14 @@ impl<H: Host + 'static> Manager<H> {
                     .valign(gtk::Align::Center)
                     .css_classes(["flat"])
                     .build();
-                npcs.sort_by_cached_key(|(name, _)| cr_store::collate::sort_key(name));
-                let files: Vec<String> = npcs.into_iter().map(|(_, file)| file).collect();
-                let (manager, party) = (self.clone(), party.clone());
+                let (manager, party, files) = (self.clone(), party.clone(), lists.npcs.clone());
                 group.connect_clicked(move |_| {
                     let parent = manager.dialog.clone().upcast();
                     manager.host.group_encounter(&parent, &party, files.clone());
                 });
                 buttons.append(&group);
             }
-            if count == 0 {
-                members.set_description(Some(tr("Nobody is in this party yet.")));
-            } else {
+            if !lists.members.is_empty() {
                 let delete = gtk::Button::builder()
                     .icon_name("user-trash-symbolic")
                     .tooltip_text(tr("Delete Members…"))
@@ -355,10 +306,10 @@ impl<H: Host + 'static> Manager<H> {
             }
             members.set_header_suffix(Some(&buttons));
             self.page.add(&members);
-            self.lists.borrow_mut().push(members);
+            self.groups.borrow_mut().push(members);
         }
         self.page.add(&others);
-        self.lists.borrow_mut().push(others);
+        self.groups.borrow_mut().push(others);
     }
 
     /// Puts the character of `file` in `party` (none when empty).
@@ -377,11 +328,14 @@ impl<H: Host + 'static> Manager<H> {
             current
         };
         self.host.reload("characters", Some(key));
-        self.refresh();
+        let lists = self.lists.borrow();
+        let (selected, new) = (lists.selected.clone(), lists.new.clone());
+        drop(lists);
+        self.refresh(&selected, &new);
     }
 
     fn confirm_delete(self: &Rc<Self>) {
-        let party = self.selected.borrow().clone();
+        let party = self.lists.borrow().selected.clone();
         let alert = adw::AlertDialog::builder()
             .heading(tr("Delete Party Members?"))
             .body(tr!(

@@ -184,6 +184,11 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
         (action::NEW_NPC, tr("New N_PC…"), Symbol::AddFriend),
         (action::NEW_NPC_GROUP, tr("New NPC _Group…"), Symbol::People),
         (
+            action::MANAGE_PARTIES,
+            tr("Manage _Parties…"),
+            Symbol::Contact2,
+        ),
+        (
             action::ROLL_TREASURE,
             tr("_Roll Treasure…"),
             Symbol::Shuffle,

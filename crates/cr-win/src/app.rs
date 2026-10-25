@@ -13,6 +13,7 @@ mod import;
 mod levels;
 mod library;
 mod npc;
+mod parties;
 mod portrait;
 mod settings;
 mod sheet;
@@ -31,11 +32,12 @@ use cr_app::editor::{EditEffect, EditInput, EditNeeds, Editor, Tab as EditTab};
 use cr_app::help::{Files, Found, MonsterHelp, PROGRAM, Target};
 use cr_app::library::Filter;
 use cr_app::npc::{GroupForm, GroupInput, NpcForm, NpcInput};
+use cr_app::parties::PartyLists;
 use cr_app::sheets::Export;
 use cr_app::tables::{TableInput, TableRoller};
 use cr_app::treasure::{Roller, TreasureEffect, TreasureInput};
 use cr_formats::export::ExportFile;
-use cr_i18n::{tr, trc};
+use cr_i18n::{tr, trc, trn};
 use cr_store::Installation;
 use cr_store::catalog::{Entry, Section, TREASURE_KEY};
 use cr_store::export::{Content, ImportReport};
@@ -54,6 +56,7 @@ use crate::native::{self, Owner};
 use book::{BookPage, BookView};
 use help::{HelpPage, Opened, Shown};
 use library::Pictures;
+use parties::PartiesPage;
 use sheet::{OptionsEdit, SheetOptions, SheetPage};
 use web::WebHost;
 
@@ -169,6 +172,7 @@ pub enum Page {
     NpcGroup(Box<GroupForm>),
     Treasure(Box<Roller>),
     Table(Box<TableRoller>),
+    Parties(Box<PartiesPage>),
 }
 
 /// A package opened for import, with what it would bring in.
@@ -225,6 +229,10 @@ pub enum Confirm {
     EmptySheet,
     DeleteTreasure {
         name: String,
+    },
+    /// Delete Members… on the party chosen in Manage Parties.
+    DeleteParty {
+        party: String,
     },
     /// What a record says, or a popup of the program help: only read.
     Info {
@@ -398,6 +406,20 @@ pub enum Message {
     ReadTable,
     /// Open Treasure Generator, which a roll on DMG Table 84 opens.
     TableTreasure,
+    // Manage Parties.
+    PartiesRead(Result<PartyLists, String>),
+    PartyChosen(String),
+    PartyName(String),
+    NewParty,
+    /// The lists with the party made, or why its name was refused.
+    NewPartyMade(Result<PartyLists, String>),
+    /// The character in this file goes to that party (none when empty).
+    MoveToParty(String, String),
+    /// The character moved: its file before and after, and the lists.
+    PartyMoved(Result<(String, String, PartyLists), String>),
+    AskDeleteParty,
+    /// How many characters of the party were deleted.
+    PartyDeleted(Result<(usize, String), String>),
 }
 
 /// What Create on New NPC or New NPC Group made and saved.
@@ -561,6 +583,12 @@ impl Shell {
             action::NEW_NPC_GROUP => self.new_npc(true, context),
             action::ROLL_TREASURE => self.open_treasure(None, false, context),
             action::ROLL_TABLE => self.open_tables(context),
+            action::MANAGE_PARTIES => {
+                if self.install.is_some() && !matches!(self.page, Page::Parties(_)) {
+                    self.go(Page::Parties(Box::default()));
+                    self.read_parties(String::new(), Vec::new(), context);
+                }
+            }
             action::TREASURE_SAVE => {
                 if matches!(self.page, Page::Treasure(_)) {
                     self.update(Message::Treasure(TreasureInput::Save), context);
@@ -859,6 +887,16 @@ impl Shell {
         });
     }
 
+    /// Reads Manage Parties' lists again, on the party `selected`, with
+    /// the parties `new` made there.
+    fn read_parties(&self, selected: String, new: Vec<String>, context: &ComponentContext<Self>) {
+        self.with_install(context, move |install| {
+            Message::PartiesRead(
+                PartyLists::read(install, &selected, &new).map_err(|e| e.to_string()),
+            )
+        });
+    }
+
     /// Ends the Roll Results session of Roll on a Table, shown or under
     /// the page shown, as closing the original's dialog does.
     fn close_tables(&mut self) {
@@ -1085,6 +1123,7 @@ impl Shell {
             Page::NpcGroup(_) => topic::NPC_GROUP,
             Page::Treasure(_) => topic::ROLL_TREASURE,
             Page::Table(_) => topic::TABLES,
+            Page::Parties(_) => topic::PARTY_MANAGEMENT,
         }
     }
 
@@ -1565,6 +1604,20 @@ impl Component for Shell {
                 },
                 (Some(Confirm::EmptySheet), ContentDialogResult::Primary) => {
                     self.save_options(context)
+                }
+                (Some(Confirm::DeleteParty { party }), ContentDialogResult::Primary) => {
+                    self.with_install(context, move |install| {
+                        // Without the GTK app's Undo, the kept files go at
+                        // once, as when its toast closes.
+                        let deleted = install
+                            .delete_party(&party)
+                            .and_then(|deleted| {
+                                install.forget_deleted(&deleted)?;
+                                Ok((deleted.len(), party))
+                            })
+                            .map_err(|e| e.to_string());
+                        Message::PartyDeleted(deleted)
+                    });
                 }
                 (Some(Confirm::DeleteTreasure { name }), ContentDialogResult::Primary) => {
                     self.with_install(context, move |install| {
@@ -2314,6 +2367,107 @@ impl Component for Shell {
                     );
                 }
             }
+            Message::PartiesRead(read) => match read {
+                Ok(lists) => {
+                    if let Page::Parties(page) = &mut self.page {
+                        page.lists = Some(lists);
+                    }
+                }
+                Err(e) => self.show_error(tr("Manage Parties"), e),
+            },
+            Message::PartyChosen(party) => {
+                if let Page::Parties(page) = &self.page
+                    && !party.eq_ignore_ascii_case(page.selected())
+                {
+                    let new = page.new_parties();
+                    self.read_parties(party, new, context);
+                }
+            }
+            Message::PartyName(name) => {
+                if let Page::Parties(page) = &mut self.page {
+                    page.name = name;
+                    page.problem = None;
+                }
+            }
+            Message::NewParty => {
+                let Page::Parties(page) = &self.page else {
+                    return;
+                };
+                let name = page.name.trim().to_owned();
+                let mut new = page.new_parties();
+                self.with_install(context, move |install| {
+                    let made = match install.party_name_problem(&name, &new) {
+                        Ok(None) => {
+                            new.push(name.clone());
+                            PartyLists::read(install, &name, &new).map_err(|e| e.to_string())
+                        }
+                        Ok(Some(problem)) => Err(problem),
+                        Err(e) => Err(e.to_string()),
+                    };
+                    Message::NewPartyMade(made)
+                });
+            }
+            Message::NewPartyMade(made) => {
+                if let Page::Parties(page) = &mut self.page {
+                    match made {
+                        Ok(lists) => {
+                            page.lists = Some(lists);
+                            page.name.clear();
+                            page.problem = None;
+                        }
+                        Err(problem) => page.problem = Some(problem),
+                    }
+                }
+            }
+            Message::MoveToParty(file, party) => {
+                let Page::Parties(page) = &self.page else {
+                    return;
+                };
+                let (selected, new) = (page.selected().to_owned(), page.new_parties());
+                self.with_install(context, move |install| {
+                    let moved = install.set_party(&file, &party).and_then(|moved| {
+                        let lists = PartyLists::read(install, &selected, &new)?;
+                        Ok((file, moved, lists))
+                    });
+                    Message::PartyMoved(moved.map_err(|e| e.to_string()))
+                });
+            }
+            Message::PartyMoved(Ok((before, after, lists))) => {
+                if let Page::Parties(page) = &mut self.page {
+                    page.lists = Some(lists);
+                }
+                // The character on the details keeps its place there under
+                // its new file.
+                let key = self
+                    .selected
+                    .as_deref()
+                    .is_some_and(|k| k.eq_ignore_ascii_case(&before))
+                    .then_some(after);
+                self.load(key, context);
+            }
+            Message::PartyMoved(Err(e)) => self.show_error(tr("Manage Parties"), e),
+            Message::AskDeleteParty => {
+                if let Page::Parties(page) = &self.page
+                    && !page.selected().is_empty()
+                {
+                    self.confirm = Some(Confirm::DeleteParty {
+                        party: page.selected().to_owned(),
+                    });
+                }
+            }
+            Message::PartyDeleted(Ok((n, party))) => {
+                if matches!(self.page, Page::Parties(_)) {
+                    self.back();
+                }
+                self.notice = Some(Notice::success(trn!(
+                    "{n} character of “{party}” deleted",
+                    "{n} characters of “{party}” deleted",
+                    n,
+                    party
+                )));
+                self.load(None, context);
+            }
+            Message::PartyDeleted(Err(e)) => self.show_error(tr("Manage Parties"), e),
             Message::TableTreasure => {
                 if let Page::Table(roller) = &mut self.page {
                     roller.close(&mut self.leftovers);
@@ -2363,6 +2517,7 @@ impl Component for Shell {
             Page::NpcGroup(form) => npc::group_view(form, self.busy, context),
             Page::Treasure(roller) => treasure::view(roller, self.busy, context),
             Page::Table(roller) => tables::view(roller, context),
+            Page::Parties(page) => parties::view(page, self.busy, context),
         };
         // The keyboard hook takes the reader's keys only while a book
         // shows.
@@ -2527,6 +2682,14 @@ impl Shell {
                 tr("No Sections").to_owned(),
                 tr("No sections: the sheet will be empty").to_owned(),
                 plain(tr("_Save")),
+            ),
+            Some(Confirm::DeleteParty { party }) => (
+                tr("Delete Party Members?").to_owned(),
+                tr!(
+                    "Every character in “{party}” will be deleted, and the party with them.",
+                    party = party.clone()
+                ),
+                plain(tr("_Delete")),
             ),
             Some(Confirm::DeleteTreasure { name }) => (
                 tr("Delete Saved Treasure?").to_owned(),
