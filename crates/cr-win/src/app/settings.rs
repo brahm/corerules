@@ -69,9 +69,9 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
             about_card(),
             ui::setting(tr("Installation"), &installation, View::empty()),
             data_folder,
-            whats_new(),
-            credits(shell),
-            legal(shell),
+            whats_new(shell, context),
+            credits(shell, context),
+            legal(shell, context),
             troubleshooting(shell, context),
         )),
     )
@@ -102,7 +102,7 @@ fn about_card() -> View {
 }
 
 /// The newest release's notes.
-fn whats_new() -> View {
+fn whats_new(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
     let lines: Vec<KeyedView> = about::release_notes_text()
         .into_iter()
         .enumerate()
@@ -112,13 +112,14 @@ fn whats_new() -> View {
         return View::empty();
     }
     expander(
+        (shell, context, Section::WhatsNew),
         &tr!("What's New in {version}", version = about::VERSION),
         StackPanel::new().spacing(8.0).keyed_children(lines),
     )
 }
 
 /// Who made the app, and the original program's Credits window.
-fn credits(shell: &Shell) -> View {
+fn credits(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
     let mut rows = vec![
         KeyedView::new(
             "developer",
@@ -152,6 +153,7 @@ fn credits(shell: &Shell) -> View {
         ));
     }
     expander(
+        (shell, context, Section::Credits),
         tr("Credits"),
         StackPanel::new().spacing(12.0).keyed_children(rows),
     )
@@ -159,7 +161,7 @@ fn credits(shell: &Shell) -> View {
 
 /// The notice on the original's content, and the original program's
 /// About box and license.
-fn legal(shell: &Shell) -> View {
+fn legal(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
     let mut rows = vec![KeyedView::new(
         "notice",
         credit(tr("AD&D Core Rules"), ui::body(about::legal()).into()),
@@ -183,6 +185,7 @@ fn legal(shell: &Shell) -> View {
         ));
     }
     expander(
+        (shell, context, Section::Legal),
         tr("Legal"),
         StackPanel::new().spacing(12.0).keyed_children(rows),
     )
@@ -190,23 +193,25 @@ fn legal(shell: &Shell) -> View {
 
 /// What a bug report needs, to copy, and where reports go.
 fn troubleshooting(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
-    expander(
-        tr("Troubleshooting"),
-        StackPanel::new().spacing(12.0).children((
-            ui::body(tr(
-                "A bug report helps most with these details and what you did when it happened.",
-            )),
-            ui::caption(debug_info(shell)).is_text_selection_enabled(true),
-            StackPanel::new()
-                .orientation(Orientation::Horizontal)
-                .spacing(12.0)
-                .children((
-                    Button::new()
-                        .on_click(context.message(Message::CopyDebugInfo))
-                        .content(tr("Copy Details")),
-                    link(about::ISSUES, tr("Report an Issue")),
-                )),
+    let content = StackPanel::new().spacing(12.0).children((
+        ui::body(tr(
+            "A bug report helps most with these details and what you did when it happened.",
         )),
+        ui::caption(debug_info(shell)).is_text_selection_enabled(true),
+        StackPanel::new()
+            .orientation(Orientation::Horizontal)
+            .spacing(12.0)
+            .children((
+                Button::new()
+                    .on_click(context.message(Message::CopyDebugInfo))
+                    .content(tr("Copy Details")),
+                link(about::ISSUES, tr("Report an Issue")),
+            )),
+    ));
+    expander(
+        (shell, context, Section::Troubleshooting),
+        tr("Troubleshooting"),
+        content,
     )
 }
 
@@ -231,9 +236,26 @@ pub fn debug_info(shell: &Shell) -> String {
     )
 }
 
-fn expander(header: &str, content: impl Into<View>) -> View {
+/// The sections of About that open and close.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Section {
+    WhatsNew,
+    Credits,
+    Legal,
+    Troubleshooting,
+}
+
+/// A section of About, open as the shell keeps it: WinUI's Expander
+/// opens only when its state says so.
+fn expander(
+    (shell, context, section): (&Shell, &mut ViewContext<Shell>, Section),
+    header: &str,
+    content: impl Into<View>,
+) -> View {
     Expander::new()
         .horizontal_alignment(HorizontalAlignment::Stretch)
+        .is_expanded(shell.about_open.contains(&section))
+        .on_is_expanded_changed(context.callback(move |open| Message::AboutSection(section, open)))
         .slots([
             SlotView::new(ExpanderSlot::Header, ui::body(header)),
             SlotView::new(ExpanderSlot::Content, content),

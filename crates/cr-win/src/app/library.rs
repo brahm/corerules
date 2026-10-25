@@ -297,22 +297,30 @@ fn filters(shell: &Shell, section: &Section, context: &mut ViewContext<Shell>) -
                 .on_selection_changed(context.callback(Message::PartType)),
         ));
     }
-    if library::is_parts(section.id) {
-        filters.push(KeyedView::new(
-            "magic",
-            ToggleButton::new()
-                .is_checked(shell.filter.magic_only)
-                .on_is_checked_changed(context.callback(Message::MagicOnly))
-                .content(tr("Magic Only")),
-        ));
+    let magic: Option<View> = library::is_parts(section.id).then(|| {
+        ToggleButton::new()
+            .is_checked(shell.filter.magic_only)
+            .on_is_checked_changed(context.callback(Message::MagicOnly))
+            .content(tr("Magic Only"))
+    });
+    let row = |filters: Vec<KeyedView>| {
+        StackPanel::new()
+            .orientation(Orientation::Horizontal)
+            .spacing(8.0)
+            .keyed_children(filters)
+    };
+    match magic {
+        // Two lists and Magic Only do not fit beside the list's width.
+        Some(magic) if filters.len() > 1 => StackPanel::new()
+            .spacing(8.0)
+            .children((row(filters), magic)),
+        Some(magic) => {
+            filters.push(KeyedView::new("magic", magic));
+            row(filters)
+        }
+        None if filters.is_empty() => View::empty(),
+        None => row(filters),
     }
-    if filters.is_empty() {
-        return View::empty();
-    }
-    StackPanel::new()
-        .orientation(Orientation::Horizontal)
-        .spacing(8.0)
-        .keyed_children(filters)
 }
 
 /// What the list depends on, so that a change makes it anew: a new
@@ -351,9 +359,8 @@ fn list(
         .automation_name(section.title)
         .selected_index(
             shell
-                .selected
-                .as_ref()
-                .and_then(|key| visible.iter().position(|e| &e.key == key)),
+                .selected_entry()
+                .and_then(|chosen| visible.iter().position(|e| std::ptr::eq(*e, chosen))),
         )
         .on_selection_changed(context.callback(Message::Select))
         .collection_slot(

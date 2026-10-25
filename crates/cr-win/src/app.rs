@@ -76,6 +76,8 @@ pub struct Shell {
     parties: Vec<Option<String>>,
     /// The entry on the details, by key, and its pictures.
     selected: Option<String>,
+    /// Which of the entries with that key, when the data repeats one.
+    selected_copy: usize,
     pictures: Pictures,
     /// Monster Full Screen is shown, over this background.
     full_screen: bool,
@@ -92,6 +94,8 @@ pub struct Shell {
     help_files: Option<Arc<Files>>,
     items: Arc<OnceLock<Arc<ItemHelp>>>,
     help_view: HelpView,
+    /// The sections of About that are open.
+    about_open: Vec<settings::Section>,
 }
 
 /// What the window shows.
@@ -250,6 +254,7 @@ pub enum Message {
     Language(Option<usize>),
     CoreVsOption(bool),
     CopyDebugInfo,
+    AboutSection(settings::Section, bool),
     // Help.
     HelpShown(Result<Box<Shown>, String>),
     HelpBook(Option<usize>),
@@ -310,14 +315,27 @@ impl Shell {
 
     fn selected_entry(&self) -> Option<&Entry> {
         let key = self.selected.as_deref()?;
-        self.current_section()?
+        let mut copies = self
+            .current_section()?
             .entries
             .iter()
-            .find(|e| e.key == key)
+            .filter(|e| e.key == key);
+        let first = copies.next();
+        match self.selected_copy {
+            0 => first,
+            n => copies.nth(n - 1).or(first),
+        }
     }
 
     fn select(&mut self, key: Option<String>) {
+        self.select_copy(key, 0);
+    }
+
+    /// Selects the `copy`th entry with `key` (the standard data repeats
+    /// some records).
+    fn select_copy(&mut self, key: Option<String>, copy: usize) {
         self.selected = key;
+        self.selected_copy = copy;
         self.pictures = self.selected_entry().map(Pictures::of).unwrap_or_default();
         self.full_screen = false;
     }
@@ -685,6 +703,7 @@ impl Component for Shell {
             filter: Filter::default(),
             parties: vec![None],
             selected: None,
+            selected_copy: 0,
             pictures: Pictures::default(),
             full_screen: false,
             background: None,
@@ -697,6 +716,7 @@ impl Component for Shell {
             help_files: None,
             items: Arc::default(),
             help_view: HelpView::default(),
+            about_open: Vec::new(),
         };
         let sender = context.sender();
         native::keys::on_f1(move || {
@@ -776,9 +796,19 @@ impl Component for Shell {
             Message::Origins(None) | Message::Party(None) | Message::PartType(None) => {}
             Message::MagicOnly(on) => self.filter.magic_only = on,
             Message::Select(index) => {
-                if let Some(key) = index.and_then(|i| self.visible().get(i).map(|e| e.key.clone()))
-                {
-                    self.select(Some(key));
+                let chosen = index.and_then(|i| {
+                    let entry = *self.visible().get(i)?;
+                    let copy = self
+                        .current_section()?
+                        .entries
+                        .iter()
+                        .take_while(|e| !std::ptr::eq(*e, entry))
+                        .filter(|e| e.key == entry.key)
+                        .count();
+                    Some((entry.key.clone(), copy))
+                });
+                if let Some((key, copy)) = chosen {
+                    self.select_copy(Some(key), copy);
                 }
             }
             Message::NextImage => self.pictures.next(),
@@ -1104,6 +1134,12 @@ impl Component for Shell {
                         &tr!("Could not save the preferences: {error}", error = e),
                         "",
                     );
+                }
+            }
+            Message::AboutSection(section, open) => {
+                self.about_open.retain(|s| *s != section);
+                if open {
+                    self.about_open.push(section);
                 }
             }
             Message::CopyDebugInfo => match native::copy(&settings::debug_info(self)) {
