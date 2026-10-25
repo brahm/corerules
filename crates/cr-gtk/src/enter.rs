@@ -8,21 +8,13 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use adw::prelude::*;
+use cr_app::create::GROUPS;
 use cr_formats::character::Character;
-use cr_i18n::{tr, tr_noop};
+use cr_i18n::tr;
 use cr_store::advance::{AdvanceRules, adjust_psionic_points, psionic_total};
 use cr_store::create::{Dice, Entered};
 use cr_store::help::topic;
 use gtk::glib;
-
-/// The groups "All Classes..." picks one class from.
-const GROUPS: [&str; 5] = [
-    tr_noop!("Warriors"),
-    tr_noop!("Rogues"),
-    tr_noop!("Priests"),
-    tr_noop!("Wizards"),
-    tr_noop!("Psionicists"),
-];
 
 /// A dialog with `groups` below a header bar that has `done` at its end.
 fn dialog(

@@ -19,7 +19,7 @@ fn header(language: &str) -> String {
          \"Content-Transfer-Encoding: 8bit\\n\"\n\
          \"Plural-Forms: nplurals=2; plural={};\\n\"\n",
         match language {
-            "fr" | "pt_BR" => "(n > 1)",
+            "fr" => "(n > 1)",
             _ => "(n != 1)",
         }
     )

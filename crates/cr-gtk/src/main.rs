@@ -3125,35 +3125,7 @@ fn experience_group(
     group
 }
 
-/// "Level 3 · 4,500 XP · next level at 9,000" for a class.
-pub(crate) fn level_text(class: &cr_store::advance::ClassLevel) -> String {
-    let (level, xp) = (class.level, thousands(class.experience));
-    match (class.next, class.limit) {
-        (_, Some(limit)) if class.level >= limit => {
-            tr!(
-                "Level {level} · {xp} XP · level limit {limit}",
-                level,
-                xp,
-                limit
-            )
-        }
-        (Some(next), _) => tr!(
-            "Level {level} · {xp} XP · next level at {next}",
-            level,
-            xp,
-            next = thousands(next)
-        ),
-        (None, Some(limit)) => {
-            tr!(
-                "Level {level} · {xp} XP · level limit {limit}",
-                level,
-                xp,
-                limit
-            )
-        }
-        (None, None) => tr!("Level {level} · {xp} XP", level, xp),
-    }
-}
+pub(crate) use cr_app::levels::level_text;
 
 /// Callbacks run when the character's levels change.
 type Listeners = Rc<RefCell<Vec<Box<dyn Fn()>>>>;
@@ -3199,19 +3171,6 @@ fn group_error(rows: &[adw::ActionRow], message: &str) {
     for row in rows {
         row.set_subtitle(&glib::markup_escape_text(message));
     }
-}
-
-/// 12345 as "12,345", as the original shows experience.
-fn thousands(n: u32) -> String {
-    let digits = n.to_string();
-    let mut out = String::new();
-    for (i, c) in digits.chars().enumerate() {
-        if i > 0 && (digits.len() - i).is_multiple_of(3) {
-            out.push(',');
-        }
-        out.push(c);
-    }
-    out
 }
 
 /// Asks how much experience to give to which classes, then gives it;

@@ -961,8 +961,9 @@ fn character_entry(c: &Character) -> Entry {
     for (name, scores) in ABILITIES[1..].iter().zip(&d.abilities) {
         abilities = abilities.row(tr(name), scores[0]);
     }
+    // A subrace named as its race ("Human (Human)") is said once.
     let race = match d.subrace.as_str() {
-        "" => d.race.clone(),
+        sub if sub.is_empty() || sub == d.race => d.race.clone(),
         sub => format!("{} ({sub})", d.race),
     };
     Entry {

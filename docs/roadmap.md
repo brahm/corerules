@@ -232,10 +232,52 @@ The phases run in order:
      on every open, click in the contents and zoom, which it no longer
      does, and tables whose last column broke a word over lines in a
      narrow window, which now keeps to one line.
-   - Still to port: character creation and Enter Character;
-     editing; the generators (NPCs, treasure, encounters, tables,
-     parties); the user database editors; packages and Import Core Rules
-     2.0; Extract Data from CD….
+   - **Character creation and Enter Character (PR #103).** `cr-app` gained
+     the creation wizard, free of any toolkit: its pages from the campaign
+     setting to the name, kit and appearance, then the proficiencies
+     (nonweapon, languages, weapons, groups, focus, specialization and
+     unarmed combat, with the kit's picks, warnings and slots lent) and
+     Skills & Powers' Combat page (weapon of choice, expertise,
+     specialization, shields, armor and fighting styles), what each choice
+     allows, the original's questions and messages, and the help topic of
+     each page; the GNOME wizard takes from it the texts and checks they
+     share, and now refuses a weapon or a barred proficiency past the
+     slots as it refuses the others. The Windows app's New Character goes
+     through those pages, with Back, the questions as dialogs, the Racial
+     Abilities and class abilities of Skills & Powers, and Enter
+     Character's All Classes. Back and Next again show a page as it was
+     left when nothing before it changed, and keep the details page's
+     rolls. `cr-app` then gained the wizard's last pages (thieving skills
+     with the kit's bonus and chosen skills, spells known and eliminated
+     schools, the Expansion's wild talent test, psionics, and the
+     equipment with the money, the standard pack and the kit's notices),
+     Create, and two forms that editing will use too: the Skills page
+     (rogue skills, the kit's bonuses, psionics and wild talents) and the
+     Levels dialog with its Add Experience. The GNOME app takes from them
+     the text of a power and of a class's level. The Windows app creates a
+     character from start to end, and Enter Character sets each class's
+     level, the hit points and the PSPs; the details page chooses the
+     portrait among the installation's, the race's first, or makes one
+     from a picture of the user's. 30 actions are left on
+     `NOT_YET_ON_WINDOWS`. The Windows test found Enter Character missing
+     from the Characters bar, which now has it, and Choose Portrait
+     closing the app (WinUI refuses a tooltip inside a dialog), whose
+     tiles now name their files under them. In both apps it found the
+     Psionics step of a thief and psionicist showing the rogue skills
+     again, in English, and saving those over the Rogue Skills step's,
+     which it no longer does; the details rolled again past the class
+     after the gender or the kit changed, which they no longer are; and
+     climbing walls scored without Dexterity's adjustment, which the
+     sheet gives it. Zero now takes the plural in Brazilian Portuguese,
+     thousands are grouped as the language does it, a psionicist's
+     allowance counts each kind of power, a subrace named as its race
+     is said once, and the Windows labels keep their words whole in a
+     narrow window, where a settings card now puts its control under its
+     header. Enter Character no longer refuses a thief and psionicist
+     with more rogue points than New Character gives.
+   - Still to port: editing; the generators (NPCs, treasure,
+     encounters, tables, parties); the user database editors; packages
+     and Import Core Rules 2.0; Extract Data from CD….
 5. **Package and Store.** The release workflow builds and tests the MSIX;
    a beta goes to a closed group through the Microsoft Store.
 6. **Release with Windows**, once the beta's users confirm it, with the

@@ -4,21 +4,24 @@
 //! functions of the modules below, from that state.
 
 mod book;
+mod create;
 mod edit;
 mod help;
 mod import;
+mod levels;
 mod library;
-mod new_character;
+mod portrait;
 mod settings;
 mod sheet;
 mod web;
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::{Arc, OnceLock};
 
 use cr_app::action::{self, Action};
+use cr_app::create::{Answer, Effect, Input, ListKind, Needs, Page as CreatePage, Wizard};
 use cr_app::help::{Files, Found, MonsterHelp, PROGRAM, Target};
 use cr_app::library::Filter;
 use cr_app::sheets::Export;
@@ -28,6 +31,7 @@ use cr_store::Installation;
 use cr_store::catalog::{Entry, Section};
 use cr_store::export::{Content, ImportReport};
 use cr_store::help::{ItemHelp, topic};
+use cr_store::pictures::stored_portrait;
 use cr_store::sheet::Sheet;
 use cr_store::userdb::parts::OTHER_TYPES;
 use cr_win::text::plain;
@@ -113,6 +117,12 @@ pub struct Shell {
     /// Counts the times a page asked again for its WebView2's
     /// CoreWebView2, for it to ask once more.
     web_tries: u64,
+    /// What the boxes of New Character's lists have chosen for Add.
+    adding: create::Adding,
+    /// Choose Portrait, while it is open.
+    portraits: Option<portrait::Chooser>,
+    /// The portrait the details page shows, read when it changes.
+    portrait: RefCell<Option<Rc<portrait::Shown>>>,
     /// A book is shown, whose keys the keyboard hook takes.
     reading: Rc<Cell<bool>>,
 }
@@ -122,10 +132,7 @@ pub struct Shell {
 pub enum Page {
     Library,
     Edit(Box<Edit>),
-    NewCharacter {
-        skills_and_powers: bool,
-        setting: usize,
-    },
+    Create(Box<Wizard>),
     Import(Arc<Package>),
     Settings,
     Sheet(Arc<SheetPage>),
@@ -263,10 +270,28 @@ pub enum Message {
     Options(OptionsEdit),
     SaveOptions,
     OptionsSaved(Result<Sheet, String>),
+    /// A control's change that does nothing.
+    Nothing,
     // New Character.
-    Rules(Option<usize>),
-    Setting(Option<usize>),
-    Next,
+    WizardLoaded(Result<Box<Wizard>, String>),
+    /// The character New Character wrote, by its file, or why it could
+    /// not; whether it was entered.
+    Created(Result<String, String>, bool),
+    Wizard(Input),
+    /// The answer to the prompt with this number.
+    WizardAnswer(u64, Answer),
+    /// What the box of a list has chosen for Add.
+    WizardAdding(ListKind, String),
+    /// Choose… on the Portrait row.
+    ChoosePortrait,
+    PortraitsListed(Result<Vec<portrait::Tile>, String>),
+    /// A portrait chosen by its file, or none.
+    PortraitChosen(Option<String>),
+    /// Choose File… on Choose Portrait.
+    PortraitFile,
+    /// The portrait made from the user's picture, if one was chosen.
+    PortraitAdded(Result<Option<String>, String>),
+    ClosePortraits,
     // Import.
     PackageChosen(Result<Option<Arc<Package>>, String>),
     Import,
@@ -414,6 +439,8 @@ impl Shell {
         match &self.page {
             Page::Edit(edit) => edit.changed(),
             Page::SheetOptions(options) => options.changed(),
+            // Past its first page the wizard has the choices made.
+            Page::Create(wizard) => wizard.depth() > 1,
             _ => false,
         }
     }
@@ -451,10 +478,8 @@ impl Shell {
                 |owner| native::dialogs::open_folder(owner, &plain(tr("_Open Folder…"))),
                 |r| Message::FolderChosen(r.map_err(|e| e.message())),
             ),
-            action::NEW_CHARACTER => self.go(Page::NewCharacter {
-                skills_and_powers: false,
-                setting: 0,
-            }),
+            action::NEW_CHARACTER => self.new_character(false, context),
+            action::ENTER_CHARACTER => self.new_character(true, context),
             action::IMPORT => {
                 let install = self.install.clone();
                 let expansion = install.as_ref().is_some_and(|i| !i.is_core20());
@@ -591,6 +616,87 @@ impl Shell {
         });
     }
 
+    /// Starts New Character, or with `entering` Enter Character, once its
+    /// rules are read.
+    fn new_character(&mut self, entering: bool, context: &ComponentContext<Self>) {
+        let Some(install) = self.install.clone() else {
+            return;
+        };
+        if self.busy {
+            return;
+        }
+        self.busy = true;
+        let core_vs_option = crate::prefs::core_vs_option_shown();
+        context.spawn_background(move |_| {
+            Message::WizardLoaded(
+                Needs::load(&install, entering, None, core_vs_option)
+                    .map(|(rules, needs)| Box::new(Wizard::new(rules, needs)))
+                    .map_err(|e| e.to_string()),
+            )
+        });
+    }
+
+    /// Does what the wizard asks of the app.
+    fn wizard_effects(&mut self, context: &ComponentContext<Self>) {
+        let Page::Create(wizard) = &mut self.page else {
+            return;
+        };
+        for effect in wizard.take_effects() {
+            match effect {
+                Effect::HideCoreVsOption => {
+                    if let Err(e) = crate::prefs::set_core_vs_option_shown(false) {
+                        self.show_error(
+                            &tr!("Could not save the preferences: {error}", error = e),
+                            "",
+                        );
+                    }
+                }
+                // Create pressed again while it writes creates nothing
+                // more.
+                Effect::Create(draft) => {
+                    let Some(install) = self.install.clone() else {
+                        continue;
+                    };
+                    if self.busy {
+                        continue;
+                    }
+                    self.busy = true;
+                    context.spawn_background(move |_| {
+                        let entered = draft.entered.is_some();
+                        let created = install
+                            .creation_rules()
+                            .and_then(|rules| install.create_character(&rules, &draft))
+                            .map_err(|e| e.to_string());
+                        Message::Created(created, entered)
+                    });
+                }
+            }
+        }
+    }
+
+    /// Gives the details page the portrait of `file`, or none.
+    fn set_portrait(&mut self, file: Option<String>, context: &ComponentContext<Self>) {
+        if let Page::Create(wizard) = &mut self.page {
+            let stored = file.as_deref().map(stored_portrait).unwrap_or_default();
+            wizard.input(Input::Portrait(stored));
+            self.wizard_effects(context);
+        }
+    }
+
+    /// The portrait `stored` as the details page shows it, read again
+    /// only when it changed.
+    fn portrait_shown(&self, stored: &[String; 2]) -> Rc<portrait::Shown> {
+        let mut cached = self.portrait.borrow_mut();
+        match cached.as_ref() {
+            Some(shown) if shown.stored == *stored => shown.clone(),
+            _ => {
+                let shown = Rc::new(portrait::Shown::read(self.install.as_deref(), stored));
+                *cached = Some(shown.clone());
+                shown
+            }
+        }
+    }
+
     /// Zooms the book shown in, out (`direction` -1) or back to 1 (0).
     fn book_zoom(&mut self, direction: i32) {
         if let Page::Book(page) = &mut self.page
@@ -630,7 +736,7 @@ impl Shell {
         match &self.page {
             Page::Library => topic::of_section(&self.section),
             Page::Edit(_) => topic::CHARACTER_INFORMATION,
-            Page::NewCharacter { .. } => topic::CHARACTER_MANAGEMENT,
+            Page::Create(wizard) => wizard.help(),
             Page::Import(_) => topic::IMPORT,
             Page::Sheet(_) | Page::SheetOptions(_) => topic::CHARACTER_SHEET,
             Page::Settings | Page::Help(_) => topic::MAIN_MENU,
@@ -849,6 +955,9 @@ impl Component for Shell {
             about_open: Vec::new(),
             book_view: BookView::default(),
             web_tries: 0,
+            adding: Vec::new(),
+            portraits: None,
+            portrait: RefCell::new(None),
             reading: Rc::default(),
         };
         let sender = context.sender();
@@ -915,6 +1024,11 @@ impl Component for Shell {
             }
             Message::Navigate(None) => {}
             Message::Back => {
+                if let Page::Create(wizard) = &mut self.page
+                    && wizard.back()
+                {
+                    return;
+                }
                 if self.changed() {
                     self.confirm = Some(Confirm::Discard { section: None });
                 } else {
@@ -1194,28 +1308,106 @@ impl Component for Shell {
                 }
                 self.show_error(tr("Character Sheet Options"), e);
             }
-            Message::Rules(Some(index)) => {
-                if let Page::NewCharacter {
-                    skills_and_powers, ..
-                } = &mut self.page
+            Message::Nothing => {}
+            Message::WizardLoaded(loaded) => {
+                self.busy = false;
+                match loaded {
+                    Ok(wizard) => {
+                        self.adding.clear();
+                        self.go(Page::Create(wizard));
+                    }
+                    Err(e) => self.show_error(tr("New Character"), e),
+                }
+            }
+            Message::Wizard(input) => {
+                if let Page::Create(wizard) = &mut self.page {
+                    // Added, the choice leaves the box.
+                    if let Input::Add(kind, _) = &input {
+                        self.adding.retain(|(k, _)| k != kind);
+                    }
+                    wizard.input(input);
+                    self.wizard_effects(context);
+                }
+            }
+            Message::Created(Ok(file), entered) => {
+                self.busy = false;
+                self.show_section(cr_app::library::CHARACTERS.to_owned());
+                // Enter Character's "Character Saved" (0x496b0b).
+                self.notice = Some(Notice::success(if entered {
+                    tr("Character saved")
+                } else {
+                    tr("Character created")
+                }));
+                self.load(Some(file), context);
+            }
+            Message::Created(Err(e), _) => {
+                self.busy = false;
+                if let Page::Create(wizard) = &mut self.page {
+                    wizard.failed(e);
+                }
+            }
+            Message::ChoosePortrait => {
+                if let Page::Create(wizard) = &self.page
+                    && matches!(wizard.page(), CreatePage::Details(_))
+                    && self.portraits.is_none()
                 {
-                    *skills_and_powers = index == 1;
+                    let race = wizard.draft().race.clone();
+                    self.portraits = Some(portrait::Chooser {
+                        race: race.clone(),
+                        tiles: None,
+                    });
+                    self.with_install(context, move |install| {
+                        Message::PortraitsListed(portrait::list(install, &race))
+                    });
                 }
             }
-            Message::Setting(Some(index)) => {
-                if let Page::NewCharacter { setting, .. } = &mut self.page {
-                    *setting = index;
+            Message::PortraitsListed(tiles) => {
+                if let Some(chooser) = &mut self.portraits {
+                    chooser.tiles = Some(tiles);
                 }
             }
-            Message::Rules(None) | Message::Setting(None) => {}
-            Message::Next => {
-                self.notice = Some(Notice::new(
-                    InfoBarSeverity::Informational,
-                    tr("Not in this version yet"),
-                    tr(
-                        "The other steps of New Character come to the Windows app in a later version.",
-                    ),
-                ));
+            Message::PortraitChosen(file) => {
+                self.portraits = None;
+                self.set_portrait(file, context);
+            }
+            Message::PortraitFile => {
+                self.portraits = None;
+                let Some(install) = self.install.clone() else {
+                    return;
+                };
+                self.dialog(
+                    context,
+                    move |owner| {
+                        let filters = portrait::filters();
+                        match native::dialogs::open_file(owner, tr("Choose a Picture"), &filters) {
+                            Ok(Some(path)) => portrait::add(&install, &path).map(Some),
+                            Ok(None) => Ok(None),
+                            Err(e) => Err(e.message()),
+                        }
+                    },
+                    Message::PortraitAdded,
+                );
+            }
+            Message::PortraitAdded(added) => {
+                self.busy = false;
+                match added {
+                    Ok(Some(file)) => self.set_portrait(Some(file), context),
+                    Ok(None) => {}
+                    Err(e) => self.show_error(tr("Could Not Use the Picture"), e),
+                }
+            }
+            Message::ClosePortraits => self.portraits = None,
+            Message::WizardAdding(kind, name) => {
+                self.adding.retain(|(k, _)| *k != kind);
+                self.adding.push((kind, name));
+            }
+            Message::WizardAnswer(serial, answer) => {
+                if let Page::Create(wizard) = &mut self.page
+                    && wizard.prompt_serial() == serial
+                {
+                    wizard.answer(answer);
+                    self.wizard_effects(context);
+                }
             }
             Message::PackageChosen(chosen) => {
                 self.busy = false;
@@ -1598,6 +1790,11 @@ impl Component for Shell {
         context.window_title("Core Rules");
         let sized = context.callback(Message::WindowSized);
         context.on_window_size(sized);
+        crate::ui::set_room(if self.width > 0.0 {
+            book::room(self)
+        } else {
+            f64::INFINITY
+        });
         context.window_visuals(
             WindowVisuals::new()
                 .backdrop(WindowBackdrop::Mica)
@@ -1607,10 +1804,20 @@ impl Component for Shell {
         let content = match &self.page {
             Page::Library => library::view(self, context),
             Page::Edit(edit) => edit::view(edit, context),
-            Page::NewCharacter {
-                skills_and_powers,
-                setting,
-            } => new_character::view(self, *skills_and_powers, *setting, context),
+            Page::Create(wizard) => {
+                let portrait = match wizard.page() {
+                    CreatePage::Details(page) => Some(self.portrait_shown(&page.portrait)),
+                    _ => None,
+                };
+                let chooser: View = match &self.portraits {
+                    Some(chooser) => portrait::dialog(chooser, context),
+                    None => View::empty(),
+                };
+                Grid::new().children((
+                    create::view(wizard, &self.adding, portrait.as_deref(), context),
+                    chooser,
+                ))
+            }
             Page::Import(package) => import::view(self, package, context),
             Page::Settings => settings::view(self, context),
             Page::Sheet(page) => sheet::view(self, page, context),
@@ -1635,10 +1842,14 @@ impl Component for Shell {
         };
         let dialog = self.confirm_dialog(context);
 
+        // Over a page of its own (a character's sheet, New Character, a
+        // book) no section is selected, so that choosing the section
+        // shown goes back to its list.
         let selected_tag = match self.page {
             Page::Settings => SETTINGS,
             Page::Help(_) => HELP,
-            _ => self.section.as_str(),
+            Page::Library => self.section.as_str(),
+            _ => "",
         };
         let mut menu: Vec<KeyedView> = self
             .sections

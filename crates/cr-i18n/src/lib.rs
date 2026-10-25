@@ -98,14 +98,39 @@ impl Language {
         }
     }
 
-    /// Whether `n` takes the plural form. French and Brazilian Portuguese
-    /// count zero as singular.
+    /// Whether `n` takes the plural form. French counts zero as singular;
+    /// Brazilian Portuguese, as its grammar has it, does not ("0 pontos").
     fn plural(self, n: u64) -> bool {
         match self {
-            Language::French | Language::PortugueseBrazil => n > 1,
+            Language::French => n > 1,
             _ => n != 1,
         }
     }
+
+    /// What separates the thousands of a number.
+    fn thousands_separator(self) -> char {
+        match self {
+            Language::English => ',',
+            // A narrow no-break space, as French typography has it.
+            Language::French => '\u{202f}',
+            _ => '.',
+        }
+    }
+}
+
+/// `n` with its thousands separated as the interface language does it:
+/// "12,500", "12.500".
+pub fn thousands(n: u64) -> String {
+    let separator = language().thousands_separator();
+    let digits = n.to_string();
+    let mut out = String::new();
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
+            out.push(separator);
+        }
+        out.push(c);
+    }
+    out
 }
 
 /// The language the system asks for, the way gettext reads it: the first
@@ -381,5 +406,7 @@ mod tests {
         assert!(Language::English.plural(0));
         assert!(!Language::German.plural(1));
         assert!(Language::PortugueseBrazil.plural(2));
+        assert!(Language::PortugueseBrazil.plural(0));
+        assert!(!Language::PortugueseBrazil.plural(1));
     }
 }

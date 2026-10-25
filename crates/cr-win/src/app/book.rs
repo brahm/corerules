@@ -47,7 +47,7 @@ pub fn narrow(shell: &Shell) -> bool {
 }
 
 /// The width beside the navigation.
-fn room(shell: &Shell) -> f64 {
+pub(super) fn room(shell: &Shell) -> f64 {
     let pane = if shell.pane_open {
         super::PANE
     } else {
