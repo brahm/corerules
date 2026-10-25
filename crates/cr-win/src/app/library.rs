@@ -147,6 +147,19 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
             ),
         ));
     }
+    // Enter Character sits beside New Character, as in the GNOME app's
+    // menu.
+    if section.id == library::CHARACTERS && available(action::ENTER_CHARACTER) {
+        commands.push(KeyedView::new(
+            "enter",
+            ui::command(
+                &plain(tr("E_nter Character…")),
+                Symbol::Edit,
+                shell.can_write,
+                context.message(Message::Act(action::ENTER_CHARACTER)),
+            ),
+        ));
+    }
     commands.push(KeyedView::new(
         "import",
         ui::command(

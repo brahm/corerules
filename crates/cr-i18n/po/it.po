@@ -1773,7 +1773,7 @@ msgid "This class may buy major access to a single sphere."
 msgstr "Questa classe può acquistare l'accesso maggiore a una sola sfera."
 
 #: crates/cr-gtk/src/books.rs:31
-#: crates/cr-win/src/app/library.rs:411
+#: crates/cr-win/src/app/library.rs:424
 msgid "_Read Book"
 msgstr "_Leggi libro"
 
@@ -1861,7 +1861,7 @@ msgstr "Impossibile aprire il libro"
 #: crates/cr-gtk/src/encounter.rs:1412
 #: crates/cr-gtk/src/main.rs:1696
 #: crates/cr-win/src/app/book.rs:264
-#: crates/cr-win/src/app/library.rs:353
+#: crates/cr-win/src/app/library.rs:366
 msgid "No Results"
 msgstr "Nessun risultato"
 
@@ -1974,8 +1974,8 @@ msgstr "Categoria"
 #: crates/cr-gtk/src/userdb/templates.rs:509
 #: crates/cr-gtk/src/userdb/templates.rs:662
 #: crates/cr-gtk/src/userdb/widgets.rs:101
-#: crates/cr-win/src/app/library.rs:185
-#: crates/cr-win/src/app/library.rs:186
+#: crates/cr-win/src/app/library.rs:198
+#: crates/cr-win/src/app/library.rs:199
 msgid "Search"
 msgstr "Cerca"
 
@@ -2817,7 +2817,7 @@ msgstr "Incontro"
 #: crates/cr-store/src/userdb/races.rs:548
 #: crates/cr-store/src/userdb/spells.rs:160
 #: crates/cr-store/src/userdb/spells.rs:161
-#: crates/cr-win/src/app/library.rs:619
+#: crates/cr-win/src/app/library.rs:632
 msgid "Description"
 msgstr "Descrizione"
 
@@ -3610,7 +3610,7 @@ msgstr "Impossibile estrarre i dati"
 #: crates/cr-gtk/src/help.rs:81
 #: crates/cr-gtk/src/help.rs:371
 #: crates/cr-gtk/src/help.rs:427
-#: crates/cr-win/src/app/library.rs:510
+#: crates/cr-win/src/app/library.rs:523
 msgid "Help"
 msgstr "Aiuto"
 
@@ -3702,8 +3702,8 @@ msgstr "Apri cartella di Core Rules"
 
 #: crates/cr-gtk/src/main.rs:556
 #: crates/cr-gtk/src/main.rs:1333
-#: crates/cr-win/src/app/library.rs:162
-#: crates/cr-win/src/app/library.rs:695
+#: crates/cr-win/src/app/library.rs:175
+#: crates/cr-win/src/app/library.rs:708
 #: crates/cr-win/src/app.rs:478
 msgid "_Open Folder…"
 msgstr "_Apri cartella…"
@@ -3715,7 +3715,7 @@ msgstr "Estrai dati dal _CD…"
 
 #: crates/cr-gtk/src/main.rs:578
 #: crates/cr-win/src/app/import.rs:37
-#: crates/cr-win/src/app/library.rs:686
+#: crates/cr-win/src/app/library.rs:699
 #: crates/cr-win/src/app/settings.rs:29
 #: crates/cr-win/src/app.rs:1105
 #: crates/cr-win/src/app.rs:1108
@@ -3805,6 +3805,7 @@ msgid "_New Character…"
 msgstr "_Nuovo personaggio…"
 
 #: crates/cr-gtk/src/main.rs:1284
+#: crates/cr-win/src/app/library.rs:156
 msgid "E_nter Character…"
 msgstr "Inse_risci personaggio…"
 
@@ -3833,7 +3834,7 @@ msgid "Roll on a _Table…"
 msgstr "Tira su una ta_bella…"
 
 #: crates/cr-gtk/src/main.rs:1315
-#: crates/cr-win/src/app/library.rs:153
+#: crates/cr-win/src/app/library.rs:166
 msgid "_Import…"
 msgstr "I_mporta…"
 
@@ -3883,22 +3884,22 @@ msgid "_About Core Rules"
 msgstr "_Informazioni su Core Rules"
 
 #: crates/cr-gtk/src/main.rs:1503
-#: crates/cr-win/src/app/library.rs:420
+#: crates/cr-win/src/app/library.rs:433
 msgid "Character Sheet"
 msgstr "Scheda del personaggio"
 
 #: crates/cr-gtk/src/main.rs:1508
-#: crates/cr-win/src/app/library.rs:483
+#: crates/cr-win/src/app/library.rs:496
 msgid "Convert to Character"
 msgstr "Converti in personaggio"
 
 #: crates/cr-gtk/src/main.rs:1513
-#: crates/cr-win/src/app/library.rs:492
+#: crates/cr-win/src/app/library.rs:505
 msgid "Convert to NPC"
 msgstr "Converti in PNG"
 
 #: crates/cr-gtk/src/main.rs:1518
-#: crates/cr-win/src/app/library.rs:501
+#: crates/cr-win/src/app/library.rs:514
 #: crates/cr-win/src/app.rs:1218
 msgid "Delete Character"
 msgstr "Elimina personaggio"
@@ -3909,59 +3910,59 @@ msgid "Copy"
 msgstr "Copia"
 
 #: crates/cr-gtk/src/main.rs:1533
-#: crates/cr-win/src/app/library.rs:438
-#: crates/cr-win/src/app/library.rs:449
+#: crates/cr-win/src/app/library.rs:451
+#: crates/cr-win/src/app/library.rs:462
 msgid "View"
 msgstr "Visualizza"
 
 #: crates/cr-gtk/src/main.rs:1538
 #: crates/cr-gtk/src/print.rs:365
 #: crates/cr-gtk/src/sheet.rs:48
-#: crates/cr-win/src/app/library.rs:456
-#: crates/cr-win/src/app/library.rs:465
+#: crates/cr-win/src/app/library.rs:469
+#: crates/cr-win/src/app/library.rs:478
 #: crates/cr-win/src/app/sheet.rs:77
 msgid "Print"
 msgstr "Stampa"
 
 #: crates/cr-gtk/src/main.rs:1554
 #: crates/cr-gtk/src/main.rs:1828
-#: crates/cr-win/src/app/library.rs:214
+#: crates/cr-win/src/app/library.rs:227
 msgid "Nothing Selected"
 msgstr "Nessuna selezione"
 
 #: crates/cr-gtk/src/main.rs:1583
-#: crates/cr-win/src/app/library.rs:278
+#: crates/cr-win/src/app/library.rs:291
 msgid "Show a Party"
 msgstr "Mostra una compagnia"
 
 #: crates/cr-gtk/src/main.rs:1590
-#: crates/cr-win/src/app/library.rs:287
+#: crates/cr-win/src/app/library.rs:300
 msgid "All Types"
 msgstr "Tutti i tipi"
 
 #: crates/cr-gtk/src/main.rs:1594
-#: crates/cr-win/src/app/library.rs:296
+#: crates/cr-win/src/app/library.rs:309
 msgid "Show a Part Type"
 msgstr "Mostra un tipo di elemento"
 
 #: crates/cr-gtk/src/main.rs:1600
-#: crates/cr-win/src/app/library.rs:304
+#: crates/cr-win/src/app/library.rs:317
 msgid "Magic Only"
 msgstr "Solo magici"
 
 #: crates/cr-gtk/src/main.rs:1693
 #: crates/cr-gtk/src/main.rs:1826
-#: crates/cr-win/src/app/library.rs:213
+#: crates/cr-win/src/app/library.rs:226
 msgid "No {section}"
 msgstr "{section}: nessun elemento"
 
 #: crates/cr-gtk/src/main.rs:1731
-#: crates/cr-win/src/app/library.rs:221
+#: crates/cr-win/src/app/library.rs:234
 msgid "Core Rules 2.0 is read-only"
 msgstr "Core Rules 2.0 è in sola lettura"
 
 #: crates/cr-gtk/src/main.rs:1732
-#: crates/cr-win/src/app/library.rs:222
+#: crates/cr-win/src/app/library.rs:235
 msgid "Open an Expansion installation and import this content with Import Core Rules 2.0…"
 msgstr "Apri un'installazione di Expansion e importa questo contenuto con Importa Core Rules 2.0…"
 
@@ -3973,14 +3974,14 @@ msgid "Entries"
 msgstr "Voci"
 
 #: crates/cr-gtk/src/main.rs:1823
-#: crates/cr-win/src/app/library.rs:211
+#: crates/cr-win/src/app/library.rs:224
 #: crates/cr-win/src/app.rs:221
 #: crates/cr-win/src/app.rs:1244
 msgid "Could Not Read"
 msgstr "Impossibile leggere"
 
 #: crates/cr-gtk/src/main.rs:2105
-#: crates/cr-win/src/app/library.rs:532
+#: crates/cr-win/src/app/library.rs:545
 msgid "Icon"
 msgstr "Icona"
 
@@ -4015,7 +4016,7 @@ msgstr "Abilità"
 
 #: crates/cr-gtk/src/main.rs:2739
 #: crates/cr-win/src/app/edit.rs:212
-#: crates/cr-win/src/app/library.rs:429
+#: crates/cr-win/src/app/library.rs:442
 #: crates/cr-win/src/app.rs:1119
 #: crates/cr-win/src/app.rs:1151
 msgid "Edit Character"
@@ -4790,14 +4791,14 @@ msgid "Could Not Use the Picture"
 msgstr "Impossibile usare l'immagine"
 
 #: crates/cr-gtk/src/picture.rs:712
-#: crates/cr-win/src/app/library.rs:550
+#: crates/cr-win/src/app/library.rs:563
 msgid "Next Image"
 msgstr "Immagine successiva"
 
 #: crates/cr-gtk/src/picture.rs:731
 #: crates/cr-gtk/src/picture.rs:779
-#: crates/cr-win/src/app/library.rs:560
-#: crates/cr-win/src/app/library.rs:677
+#: crates/cr-win/src/app/library.rs:573
+#: crates/cr-win/src/app/library.rs:690
 msgid "Full Screen"
 msgstr "Schermo intero"
 
@@ -4867,7 +4868,7 @@ msgid "Could not print"
 msgstr "Impossibile stampare"
 
 #: crates/cr-gtk/src/sheet.rs:52
-#: crates/cr-win/src/app/library.rs:474
+#: crates/cr-win/src/app/library.rs:487
 #: crates/cr-win/src/app/sheet.rs:86
 #: crates/cr-win/src/app.rs:515
 msgid "Save as _PDF…"
@@ -5541,7 +5542,7 @@ msgstr "I record standard non possono essere modificati; copiali invece"
 
 #: crates/cr-gtk/src/userdb/templates.rs:481
 #: crates/cr-gtk/src/userdb.rs:2565
-#: crates/cr-win/src/app/library.rs:260
+#: crates/cr-win/src/app/library.rs:273
 msgid "Show Standard or Custom Records"
 msgstr "Mostra record standard o personalizzati"
 
@@ -11470,7 +11471,7 @@ msgstr "Quantità"
 msgid "Score"
 msgstr "Punteggio"
 
-#: crates/cr-win/src/app/library.rs:687
+#: crates/cr-win/src/app/library.rs:700
 msgid "Put the data package made by Extract Data from CD… in {folder}, or open the folder where AD&D Core Rules 2.0 is installed."
 msgstr "Metti il pacchetto di dati creato con Estrai dati dal CD… in {folder}, oppure apri la cartella dove è installato AD&D Core Rules 2.0."
 
