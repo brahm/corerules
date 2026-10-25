@@ -138,11 +138,12 @@ The phases run in order:
    are checked out with LF on Windows too, and the data package lives in
    `Core Rules\data` in the user's Documents folder, which a packaged app
    writes to directly, so uninstalling the app keeps the characters.
-2. **Prototype of `cr-win` (built, waiting for approval).** In Portuguese
-   and packaged as an MSIX: the character list with search, a page of the
-   New Character assistant, an editing form, a confirmation dialog,
-   opening an `.xpx` file and printing the sheet. Whatever blocks it is
-   solved in `cr-win` or taken to windows-rs before the rest is ported.
+2. **Prototype of `cr-win` (built and tried on Windows 11, waiting for
+   approval).** In Portuguese and packaged as an MSIX: the character list
+   with search, a page of the New Character assistant, an editing form, a
+   confirmation dialog, opening an `.xpx` file and printing the sheet.
+   Whatever blocks it is solved in `cr-win` or taken to windows-rs before
+   the rest is ported.
    What it found: windows-reactor 0.100 (the release on crates.io, with
    Windows App SDK 2.4) has the controls the prototype needs, but no way
    to reach the window, the shell's Open dialog or printing, so `cr-win`
@@ -150,7 +151,10 @@ The phases run in order:
    app's window as owner; printing draws the layout of `cr-store::sheet`
    with Direct2D through the Windows print dialog. Its ContentDialog has
    no DefaultButton, so Delete and Discard take the focus where Cancel
-   should; that goes to windows-rs. CI builds the MSIX
+   should; that goes to windows-rs. WinUI's own texts (the Settings
+   item, Back) follow the language chosen in Settings only in the
+   package; a run without one shows them in the Windows display
+   language. CI builds the MSIX
    (`crates/cr-win/package/make-msix.ps1`) unsigned, as the Store signs
    it; on a machine in Developer Mode it is installed for testing with
    `Add-AppxPackage -Register target\msix\AppxManifest.xml`.
