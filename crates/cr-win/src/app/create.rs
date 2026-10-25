@@ -4,9 +4,11 @@
 
 use cr_app::create::{
     AbilitiesPage, Answer, Choice, ClassAbilitiesPage, ClassPage, CombatPage, DetailsPage,
-    EnteredClassPage, EnteredScoresPage, Input, List, ListKind, Page, PickGroup, ProficienciesPage,
-    Prompt, PromptKind, RacePage, RacialPage, SOCIAL_CLASSES, SettingPage, Unarmed, Wizard,
+    EnteredClassPage, EnteredScoresPage, EquipmentPage, Input, List, ListKind, MOST_ITEMS, Page,
+    PickGroup, ProficienciesPage, Prompt, PromptKind, RacePage, RacialPage, RoguePage,
+    SOCIAL_CLASSES, SettingPage, SpellsPage, Unarmed, WildPage, Wizard,
 };
+use cr_app::skills::{MOST_POINTS, SkillsForm};
 use cr_i18n::{tr, trn};
 use cr_store::create::{
     ABILITIES, ENTERED_SCORES, METHOD_VI_DICE, METHOD_X_STRENGTH_STEP, UNARMED,
@@ -15,6 +17,7 @@ use cr_store::settings::SETTINGS;
 use cr_win::text::plain;
 use windows_reactor::*;
 
+use super::portrait::Shown;
 use super::{Message, Shell};
 use crate::ui;
 
@@ -26,7 +29,13 @@ fn input(input: Input) -> Message {
 /// What the box of each list has chosen for Add, until it is added.
 pub type Adding = Vec<(ListKind, String)>;
 
-pub fn view(wizard: &Wizard, adding: &Adding, context: &mut ViewContext<Shell>) -> View {
+/// The wizard's page; `portrait` is the one the details page shows.
+pub fn view(
+    wizard: &Wizard,
+    adding: &Adding,
+    portrait: Option<&Shown>,
+    context: &mut ViewContext<Shell>,
+) -> View {
     let page = wizard.page();
     let content: View = match page {
         Page::Setting(page) => setting(page, context),
@@ -37,15 +46,14 @@ pub fn view(wizard: &Wizard, adding: &Adding, context: &mut ViewContext<Shell>) 
         Page::Class(page) => class(page, context),
         Page::EnteredClass(page) => entered_class(page, context),
         Page::ClassAbilities(page) => class_abilities(page, context),
-        Page::Details(page) => details(page, context),
+        Page::Details(page) => details(page, portrait, context),
         Page::Proficiencies(page) => proficiencies(page, adding, context),
         Page::Combat(page) => combat(page, adding, context),
-        Page::Later => ui::card(StackPanel::new().spacing(4.0).children((
-            ui::strong(tr("Not in this version yet")),
-            ui::body(tr(
-                "The other steps of New Character come to the Windows app in a later version.",
-            )),
-        ))),
+        Page::Rogue(page) => rogue(page, context),
+        Page::Spells(page) => spells(page, adding, context),
+        Page::Wild(page) => wild(page, adding, context),
+        Page::Psionics(page) => skills_form(&page.form, adding, context),
+        Page::Equipment(page) => equipment(page, adding, context),
     };
     let error: View = match &wizard.error {
         Some(error) => InfoBar::new()
@@ -70,7 +78,11 @@ pub fn view(wizard: &Wizard, adding: &Adding, context: &mut ViewContext<Shell>) 
                 .style(ButtonStyle::Accent)
                 .is_enabled(page.can_go_on())
                 .on_click(context.message(input(Input::Next)))
-                .content(plain(tr("_Next"))),
+                .content(plain(if matches!(page, Page::Equipment(_)) {
+                    tr("C_reate")
+                } else {
+                    tr("_Next")
+                })),
         ));
     // Each question is a dialog of its own, so that one asked right after
     // another opens.
@@ -214,13 +226,14 @@ fn choices(
     group: &str,
     rows: &[(String, String)],
     selected: usize,
-    chosen: fn(usize) -> Input,
+    chosen: impl Fn(usize) -> Input + Clone + 'static,
     context: &mut ViewContext<Shell>,
 ) -> View {
     let buttons: Vec<KeyedView> = rows
         .iter()
         .enumerate()
         .map(|(i, (title, subtitle))| {
+            let chosen = chosen.clone();
             KeyedView::new(
                 format!("{i}\u{1}{title}"),
                 RadioButton::new()
@@ -726,7 +739,7 @@ fn class_abilities(page: &ClassAbilitiesPage, context: &mut ViewContext<Shell>) 
     StackPanel::new().spacing(4.0).keyed_children(groups)
 }
 
-fn details(page: &DetailsPage, context: &mut ViewContext<Shell>) -> View {
+fn details(page: &DetailsPage, portrait: Option<&Shown>, context: &mut ViewContext<Shell>) -> View {
     let text =
         |name: &str, value: &str, make: fn(String) -> Input, context: &mut ViewContext<Shell>| {
             TextBox::new()
@@ -875,6 +888,11 @@ fn details(page: &DetailsPage, context: &mut ViewContext<Shell>) -> View {
         ),
         None => View::empty(),
     };
+    // Enter Character's levels stand in for the rolls.
+    let levels: View = match &page.levels {
+        Some(levels) => super::levels::group(levels, context),
+        None => View::empty(),
+    };
     let exceptional: View = if !page.exceptional_shown {
         View::empty()
     } else if page.exceptional_bought {
@@ -952,6 +970,10 @@ fn details(page: &DetailsPage, context: &mut ViewContext<Shell>) -> View {
             ui::setting(tr("Name"), "", name),
             ui::setting(tr("Player"), "", player),
             ui::setting(tr("Gender"), "", gender),
+            match portrait {
+                Some(shown) => super::portrait::row(shown, context),
+                None => View::empty(),
+            },
         )),
         group((
             heading(tr("Background"), None),
@@ -961,6 +983,7 @@ fn details(page: &DetailsPage, context: &mut ViewContext<Shell>) -> View {
             background,
         )),
         group((heading(tr("Appearance"), None), age, height, weight)),
+        levels,
         group((
             heading(tr("Combat"), None),
             hit_points,
@@ -975,6 +998,17 @@ fn details(page: &DetailsPage, context: &mut ViewContext<Shell>) -> View {
 /// and removes from by each row's Remove; a nonweapon proficiency's rank
 /// changes in its row.
 fn list(kind: ListKind, list: &List, adding: &Adding, context: &mut ViewContext<Shell>) -> View {
+    described_list(kind, list, &[], adding, context)
+}
+
+/// [`list`] with a line about each choice of Add, by its index.
+fn described_list(
+    kind: ListKind,
+    list: &List,
+    details: &[String],
+    adding: &Adding,
+    context: &mut ViewContext<Shell>,
+) -> View {
     if !list.shown {
         return View::empty();
     }
@@ -984,6 +1018,15 @@ fn list(kind: ListKind, list: &List, adding: &Adding, context: &mut ViewContext<
         .enumerate()
         .map(|(i, (title, subtitle, times))| {
             let rank: View = match *times {
+                // How many of an item, or a proficiency's rank.
+                Some(times) if kind == ListKind::Items => number(
+                    &format!("{title}: {}", tr("Quantity")),
+                    times,
+                    (1, MOST_ITEMS),
+                    move |v| Input::Times(i, v),
+                    context,
+                )
+                .into(),
                 Some(times) => number(
                     &format!("{title}: {}", tr("Rank")),
                     times,
@@ -994,12 +1037,16 @@ fn list(kind: ListKind, list: &List, adding: &Adding, context: &mut ViewContext<
                 .into(),
                 None => View::empty(),
             };
-            let remove = ui::icon_button(
-                tr("Remove"),
-                Symbol::Delete,
-                input(Input::Remove(kind, i)),
-                context,
-            );
+            let remove: View = if list.fixed {
+                View::empty()
+            } else {
+                ui::icon_button(
+                    tr("Remove"),
+                    Symbol::Delete,
+                    input(Input::Remove(kind, i)),
+                    context,
+                )
+            };
             KeyedView::new(
                 format!("{i}\u{1}{title}"),
                 ui::setting(title, subtitle, with_buttons(rank, remove)),
@@ -1011,6 +1058,12 @@ fn list(kind: ListKind, list: &List, adding: &Adding, context: &mut ViewContext<
     } else {
         StackPanel::new().spacing(4.0).keyed_children(rows)
     };
+    // Rows only rolled have nothing to add.
+    if list.fixed {
+        return StackPanel::new()
+            .spacing(4.0)
+            .children((heading(&list.title, Some(&list.description)), rows));
+    }
     let chosen = adding
         .iter()
         .find(|(k, _)| *k == kind)
@@ -1023,11 +1076,20 @@ fn list(kind: ListKind, list: &List, adding: &Adding, context: &mut ViewContext<
             .content(plain(tr("_Add"))),
         None => Button::new().is_enabled(false).content(plain(tr("_Add"))),
     };
+    let items: Vec<String> = list
+        .choices
+        .iter()
+        .enumerate()
+        .map(|(i, choice)| match details.get(i) {
+            Some(detail) if !detail.is_empty() => format!("{choice} · {detail}"),
+            _ => choice.clone(),
+        })
+        .collect();
     let add = with_buttons(
         ComboBox::new()
             .automation_name(add_to.clone())
             .placeholder_text(add_to)
-            .items_source(list.choices.clone())
+            .items_source(items)
             .selected_index(chosen)
             .is_enabled(!list.choices.is_empty())
             .min_width(280.0)
@@ -1299,5 +1361,346 @@ fn combat(page: &CombatPage, adding: &Adding, context: &mut ViewContext<Shell>) 
         list(ListKind::Armor, &page.armor, adding, context),
         list(ListKind::Styles, &page.styles, adding, context),
         points_left(&page.points_left, page.problem.as_deref()),
+    ))
+}
+
+fn rogue(page: &RoguePage, context: &mut ViewContext<Shell>) -> View {
+    let rows: Vec<KeyedView> = page
+        .rows
+        .iter()
+        .enumerate()
+        .map(|(i, row)| {
+            KeyedView::new(
+                format!("{i}\u{1}{}", row.name),
+                ui::setting(
+                    &row.name,
+                    &row.scores,
+                    number(
+                        &row.name,
+                        row.points,
+                        (0, page.most),
+                        move |v| Input::RoguePoints(i, v),
+                        context,
+                    ),
+                ),
+            )
+        })
+        .collect();
+    let bonus: View = if page.bonus.shown {
+        let rows: Vec<(String, String)> = page
+            .bonus
+            .names
+            .iter()
+            .map(|n| (n.clone(), String::new()))
+            .collect();
+        let selected = page
+            .bonus
+            .picked
+            .iter()
+            .position(|p| *p)
+            .unwrap_or(usize::MAX);
+        StackPanel::new().spacing(4.0).children((
+            heading(&page.bonus.title, Some(&page.bonus.description)),
+            choices("rogue-bonus", &rows, selected, Input::RogueBonus, context),
+        ))
+    } else {
+        View::empty()
+    };
+    let chosen: View = if page.chosen.shown {
+        let rows: Vec<(String, String, bool)> = page
+            .chosen
+            .names
+            .iter()
+            .zip(&page.chosen.picked)
+            .map(|(n, &on)| (n.clone(), String::new(), on))
+            .collect();
+        let full = page.chosen.full;
+        StackPanel::new().spacing(4.0).children((
+            heading(&page.chosen.title, Some(&page.chosen.description)),
+            checks(&rows, move |on| on || !full, Input::RogueChosen, context),
+        ))
+    } else {
+        View::empty()
+    };
+    StackPanel::new().spacing(4.0).children((
+        heading(tr("Rogue Skills"), Some(&page.description)),
+        StackPanel::new().spacing(4.0).keyed_children(rows),
+        bonus,
+        chosen,
+    ))
+}
+
+fn spells(page: &SpellsPage, adding: &Adding, context: &mut ViewContext<Shell>) -> View {
+    let schools: View = match &page.eliminated {
+        Some(schools) => {
+            let rows: Vec<(String, String, bool)> = schools
+                .names
+                .iter()
+                .zip(&schools.ticked)
+                .map(|(n, &on)| (n.clone(), String::new(), on))
+                .collect();
+            let full = schools.full;
+            StackPanel::new().spacing(4.0).children((
+                heading(&schools.title, Some(&schools.description)),
+                checks(&rows, move |on| on || !full, Input::School, context),
+            ))
+        }
+        None => View::empty(),
+    };
+    StackPanel::new().spacing(4.0).children((
+        schools,
+        described_list(
+            ListKind::Spells,
+            &page.spells,
+            &page.chances,
+            adding,
+            context,
+        ),
+    ))
+}
+
+/// A NumberBox for a whole number in `min..=max` that may be below 0.
+fn signed_number(
+    name: &str,
+    value: i32,
+    (min, max): (i32, i32),
+    changed: impl Fn(i32) -> Input + 'static,
+    context: &mut ViewContext<Shell>,
+) -> NumberBox {
+    NumberBox::new()
+        .automation_name(name)
+        .value(f64::from(value))
+        .minimum(f64::from(min))
+        .maximum(f64::from(max))
+        .min_width(120.0)
+        .on_value_changed(context.callback(move |v: Option<f64>| match v {
+            Some(v) => input(changed((v.round() as i32).clamp(min, max))),
+            None => Message::Nothing,
+        }))
+}
+
+/// A button with a label of its own.
+fn button(label: &str, enabled: bool, what: Input, context: &mut ViewContext<Shell>) -> View {
+    Button::new()
+        .is_enabled(enabled)
+        .on_click(context.message(input(what)))
+        .content(plain(label))
+}
+
+/// The text of warnings that do not stop Next.
+fn warnings(texts: &[String]) -> View {
+    if texts.is_empty() {
+        return View::empty();
+    }
+    InfoBar::new()
+        .severity(InfoBarSeverity::Warning)
+        .message(texts.join("\n"))
+        .is_open(true)
+        .is_closable(false)
+        .into()
+}
+
+/// The Wild Talents step: Test and Roll, the talents and, for a wild
+/// talent, the psionic attack and defense modes.
+fn wild(page: &WildPage, adding: &Adding, context: &mut ViewContext<Shell>) -> View {
+    let description: View = if page.description.is_empty() {
+        View::empty()
+    } else {
+        ui::card(ui::body(page.description.clone()))
+    };
+    let test: View = if page.test_shown {
+        ui::setting(
+            tr("Test for Wild Talents"),
+            &page.chance,
+            button(tr("Test"), page.can_test, Input::Test, context),
+        )
+    } else {
+        View::empty()
+    };
+    StackPanel::new().spacing(4.0).children((
+        description,
+        heading(tr("Wild Talents"), None),
+        test,
+        ui::setting(
+            tr("Roll for Wild Talents"),
+            tr("Table 83: Wild Talents"),
+            button(tr("Roll"), page.can_roll, Input::Roll, context),
+        ),
+        described_list(ListKind::WildTalents, &page.talents, &[], adding, context),
+        described_list(ListKind::Attacks, &page.attacks, &[], adding, context),
+        described_list(ListKind::Defenses, &page.defenses, &[], adding, context),
+    ))
+}
+
+/// The Skills page: the rogue skills of the current level, the kit's
+/// bonuses and chosen skills, a psionicist's disciplines and powers, and
+/// the psionic attack and defense modes.
+fn skills_form(form: &SkillsForm, adding: &Adding, context: &mut ViewContext<Shell>) -> View {
+    let rogue: View = match form.rogue() {
+        Some(group) => {
+            let rows: Vec<KeyedView> = group
+                .rows
+                .iter()
+                .enumerate()
+                .map(|(i, row)| {
+                    KeyedView::new(
+                        format!("{i}\u{1}{}", row.label),
+                        ui::setting(
+                            &row.label,
+                            &row.subtitle,
+                            signed_number(
+                                &row.label,
+                                row.points,
+                                (row.least, MOST_POINTS),
+                                move |v| Input::SkillPoints(i, v),
+                                context,
+                            ),
+                        ),
+                    )
+                })
+                .collect();
+            StackPanel::new().spacing(4.0).children((
+                heading(tr("Rogue Skills"), Some(&group.description)),
+                ui::setting(
+                    tr("Points Left"),
+                    "",
+                    ui::subtitle(group.left.to_string().replace('-', "−")),
+                ),
+                StackPanel::new().spacing(4.0).keyed_children(rows),
+                warnings(&group.warnings),
+            ))
+        }
+        None => View::empty(),
+    };
+    let bonuses: Vec<KeyedView> = form
+        .kit_bonuses()
+        .into_iter()
+        .enumerate()
+        .map(|(g, group)| {
+            let rows: Vec<(String, String)> = group
+                .names
+                .iter()
+                .map(|n| (n.clone(), String::new()))
+                .collect();
+            KeyedView::new(
+                format!("{g}\u{1}{}", group.title),
+                StackPanel::new().spacing(4.0).children((
+                    heading(&group.title, Some(&group.description)),
+                    choices(
+                        &format!("kit-bonus-{g}"),
+                        &rows,
+                        group.picked.unwrap_or(usize::MAX),
+                        move |i| Input::KitBonus(g, i),
+                        context,
+                    ),
+                )),
+            )
+        })
+        .collect();
+    let chosen: View = match form.chosen() {
+        Some(group) => {
+            let rows: Vec<(String, String, bool)> = group
+                .names
+                .iter()
+                .zip(&group.ticked)
+                .map(|(n, &on)| (n.clone(), String::new(), on))
+                .collect();
+            let full = group.full;
+            StackPanel::new().spacing(4.0).children((
+                heading(&group.title, Some(&group.description)),
+                checks(&rows, move |on| on || !full, Input::RogueChosen, context),
+            ))
+        }
+        None => View::empty(),
+    };
+    let psionics: View = match form.psionics() {
+        Some(description) => {
+            let primary: Vec<KeyedView> = form
+                .primary()
+                .into_iter()
+                .enumerate()
+                .map(|(slot, choice)| {
+                    KeyedView::new(
+                        slot.to_string(),
+                        ui::setting(
+                            &choice.title,
+                            "",
+                            ComboBox::new()
+                                .automation_name(choice.title.clone())
+                                .items_source(choice.items.clone())
+                                .selected_index(choice.selected)
+                                .min_width(240.0)
+                                .on_selection_changed(context.callback(move |i: Option<usize>| {
+                                    match i {
+                                        Some(i) => input(Input::Primary(slot, i)),
+                                        None => Message::Nothing,
+                                    }
+                                })),
+                        ),
+                    )
+                })
+                .collect();
+            StackPanel::new().spacing(4.0).children((
+                heading(tr("Psionics"), Some(&description)),
+                StackPanel::new().spacing(4.0).keyed_children(primary),
+            ))
+        }
+        None => View::empty(),
+    };
+    let lists: Vec<KeyedView> = [
+        ListKind::Disciplines,
+        ListKind::Sciences,
+        ListKind::Devotions,
+        ListKind::Attacks,
+        ListKind::Defenses,
+    ]
+    .into_iter()
+    .map(|kind| {
+        KeyedView::new(
+            format!("{kind:?}"),
+            described_list(kind, &form.list(kind), &[], adding, context),
+        )
+    })
+    .collect();
+    StackPanel::new().spacing(4.0).children((
+        rogue,
+        StackPanel::new().spacing(4.0).keyed_children(bonuses),
+        chosen,
+        psionics,
+        StackPanel::new().spacing(4.0).keyed_children(lists),
+    ))
+}
+
+/// The last step: the starting money, the standard pack, what comes free
+/// and what the money buys.
+fn equipment(page: &EquipmentPage, adding: &Adding, context: &mut ViewContext<Shell>) -> View {
+    let free: Vec<KeyedView> = page
+        .free
+        .iter()
+        .enumerate()
+        .map(|(i, (name, why))| {
+            KeyedView::new(
+                format!("{i}\u{1}{name}"),
+                ui::setting(name, why, View::empty()),
+            )
+        })
+        .collect();
+    StackPanel::new().spacing(4.0).children((
+        heading(tr("Money"), None),
+        ui::setting(
+            tr("Starting Money"),
+            &page.money,
+            roll(tr("Roll Starting Money"), Input::RollMoney, context),
+        ),
+        ui::setting(
+            tr("Standard Pack"),
+            &page.pack_text,
+            ToggleSwitch::new()
+                .automation_name(tr("Standard Pack"))
+                .is_on(page.pack)
+                .on_toggled(context.callback(|on| input(Input::Pack(on)))),
+        ),
+        StackPanel::new().spacing(4.0).keyed_children(free),
+        described_list(ListKind::Items, &page.items, &[], adding, context),
     ))
 }

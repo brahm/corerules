@@ -232,7 +232,7 @@ The phases run in order:
      on every open, click in the contents and zoom, which it no longer
      does, and tables whose last column broke a word over lines in a
      narrow window, which now keeps to one line.
-   - **Character creation up to Combat (in progress).** `cr-app`
+   - **Character creation up to Combat (PR #103).** `cr-app`
      gained the creation wizard, free of any toolkit: its pages from the
      campaign setting to the name, kit and appearance, then the
      proficiencies (nonweapon, languages, weapons, groups, focus,
@@ -245,13 +245,24 @@ The phases run in order:
      proficiency past the slots as it refuses the others. The Windows
      app's New Character goes through those pages, with Back, the
      questions as dialogs, the Racial Abilities and class abilities of
-     Skills & Powers, and Enter Character's All Classes. The steps after
-     Combat (thieving skills, spells, psionics, equipment and Create)
-     and Enter Character follow in the next pull request.
-   - Still to port: the rest of character creation and Enter Character;
-     editing; the generators (NPCs, treasure, encounters, tables,
-     parties); the user database editors; packages and Import Core Rules
-     2.0; Extract Data from CD….
+     Skills & Powers, and Enter Character's All Classes.
+   - **The rest of character creation and Enter Character.** `cr-app`
+     gained the wizard's last pages (thieving skills with the kit's
+     bonus and chosen skills, spells known and eliminated schools, the
+     Expansion's wild talent test, psionics, and the equipment with the
+     money, the standard pack and the kit's notices), Create, and two
+     forms that editing will use too: the Skills page (rogue skills, the
+     kit's bonuses, psionics and wild talents) and the Levels dialog with
+     its Add Experience. The GNOME app takes from them the text of a
+     power and of a class's level. The Windows app creates a character
+     from start to end, and
+     Enter Character sets each class's level, the hit points and the
+     PSPs; the details page chooses the portrait among the
+     installation's, the race's first, or makes one from a picture of
+     the user's. 30 actions are left on `NOT_YET_ON_WINDOWS`.
+   - Still to port: editing; the generators (NPCs, treasure,
+     encounters, tables, parties); the user database editors; packages
+     and Import Core Rules 2.0; Extract Data from CD….
 5. **Package and Store.** The release workflow builds and tests the MSIX;
    a beta goes to a closed group through the Microsoft Store.
 6. **Release with Windows**, once the beta's users confirm it, with the

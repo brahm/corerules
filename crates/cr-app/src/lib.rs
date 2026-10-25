@@ -12,12 +12,14 @@ pub mod action;
 pub mod books;
 pub mod create;
 pub mod help;
+pub mod levels;
 pub mod library;
 pub mod pages;
 pub mod pdf;
 pub mod pictures;
 pub mod records;
 pub mod sheets;
+pub mod skills;
 
 /// The file name the original suggests when saving something called
 /// `title`: `Borin_Pedraforte.pdf`.

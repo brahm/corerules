@@ -26,6 +26,14 @@ pub enum ListKind {
     Specializations,
     Armor,
     Styles,
+    Spells,
+    Disciplines,
+    Sciences,
+    Devotions,
+    WildTalents,
+    Attacks,
+    Defenses,
+    Items,
 }
 
 /// A list the user adds to and removes from, as the GNOME app's lists
@@ -40,6 +48,8 @@ pub struct List {
     /// What Add offers.
     pub choices: Vec<String>,
     pub shown: bool,
+    /// Its rows are rolled, not added or removed.
+    pub fixed: bool,
 }
 
 /// A list the classes or the kit have the user pick some proficiencies
@@ -555,6 +565,7 @@ impl Wizard {
                 )
             },
             shown: sp,
+            fixed: false,
         };
         let native = rules.native_languages(d);
         let room = rules.language_slots(&probe);
@@ -574,6 +585,7 @@ impl Wizard {
                     .collect()
             },
             shown: true,
+            fixed: false,
         };
         let mut weapons = List {
             title: tr("Weapon Proficiencies").to_owned(),
@@ -593,6 +605,7 @@ impl Wizard {
             rows: plain(taken, &|n| rules.group_weapons(broad, n).join(", ")),
             choices: rules.group_choices(d, broad),
             shown: sp && rules.expansion,
+            fixed: false,
         };
         let (broad, tight) = (group(true, &lists.broad), group(false, &lists.tight));
         let specializations = List {
@@ -603,6 +616,7 @@ impl Wizard {
             }),
             choices: without(lists.weapons.clone(), &lists.specializations),
             shown: core,
+            fixed: false,
         };
         let free_choices = rules.free_specialization_choices(d).to_vec();
         let free_items = with_none(free_choices.iter().cloned());
@@ -791,7 +805,7 @@ impl Wizard {
                     ListKind::Broad => &page.broad.choices,
                     ListKind::Tight => &page.tight.choices,
                     ListKind::Specializations => &page.specializations.choices,
-                    ListKind::Armor | ListKind::Styles => return,
+                    _ => return,
                 };
                 if !offered.contains(&name) {
                     return;
@@ -1291,6 +1305,7 @@ impl Wizard {
                 .filter(|a| !d.armor_proficiencies.contains(a))
                 .collect(),
             shown: true,
+            fixed: false,
         };
         let styles = List {
             title: tr("Fighting Styles").to_owned(),
@@ -1317,6 +1332,7 @@ impl Wizard {
                     .collect()
             },
             shown: true,
+            fixed: false,
         };
         let unarmed = self.unarmed(&d, true);
         let left = rules.points_left(&d);
@@ -1494,19 +1510,12 @@ impl Wizard {
             }),
         ));
     }
-
-    /// The page after the proficiencies and combat options: rogue skills
-    /// for a character with any, then spells for a wizard, then
-    /// equipment, which this version does not have yet.
-    fn after_combat(&mut self) {
-        self.push(Page::Later);
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::super::details::tests::at_details_with;
-    use super::super::{Answer, PromptKind};
+    use super::super::{Answer, Effect, MOST_ITEMS, PromptKind};
     use super::*;
 
     /// A human fighter on the Proficiencies page.
@@ -1569,13 +1578,77 @@ mod tests {
         assert_eq!(page(&w).weapons.rows.len(), 1);
         w.input(Input::Next);
         yes(&mut w);
-        assert!(matches!(w.page(), Page::Later));
+        // An Expansion fighter may test for wild talents.
+        assert!(matches!(w.page(), Page::Wild(_)));
         let d = w.draft();
         assert_eq!(d.weapon_proficiencies, std::slice::from_ref(&sword));
         assert_eq!(d.specializations, [sword]);
         // Back keeps the lists as Next left them.
         assert!(w.back());
         assert_eq!(page(&w).weapons.rows.len(), 1);
+    }
+
+    #[test]
+    fn a_fighter_tests_for_wild_talents_buys_equipment_and_is_created() {
+        let Some(mut w) = at_proficiencies(false) else {
+            return;
+        };
+        let weapon = page(&w).weapons.choices[0].clone();
+        w.input(Input::Add(ListKind::Weapons, weapon.clone()));
+        yes(&mut w);
+        w.input(Input::Next);
+        yes(&mut w);
+        let Page::Wild(wild) = w.page() else {
+            panic!("not wild talents");
+        };
+        assert!(wild.test_shown && wild.can_test && !wild.can_roll);
+        // New Character takes no talent but those rolled.
+        assert!(wild.talents.fixed && wild.talents.choices.is_empty());
+        w.input(Input::Test);
+        while w.prompt().is_some() {
+            w.answer(Answer::Yes);
+        }
+        let Page::Wild(wild) = w.page() else {
+            panic!();
+        };
+        let tested = wild.can_roll;
+        w.input(Input::Next);
+        assert!(w.draft().wild.tested);
+        assert_eq!(w.draft().wild.wild_talent, tested);
+        while w.prompt().is_some() {
+            w.answer(Answer::Yes);
+        }
+        let Page::Equipment(equipment) = w.page() else {
+            panic!("not equipment");
+        };
+        // One of each weapon taken.
+        assert_eq!(equipment.items.rows[0].0, weapon);
+        assert_eq!(equipment.items.rows[0].2, Some(1));
+        w.input(Input::RollMoney);
+        let Page::Equipment(equipment) = w.page() else {
+            panic!();
+        };
+        assert!(equipment.ok, "{}", equipment.money);
+        // More than the money buys is refused.
+        w.input(Input::Times(0, MOST_ITEMS));
+        assert_eq!(w.prompt().unwrap().text, tr("This item is too expensive."));
+        w.answer(Answer::Yes);
+        let Page::Equipment(equipment) = w.page() else {
+            panic!();
+        };
+        assert_eq!(equipment.items.rows[0].2, Some(1));
+        w.input(Input::Next);
+        while w.prompt().is_some() {
+            w.answer(Answer::Yes);
+        }
+        let effects = w.take_effects();
+        let Some(Effect::Create(draft)) = effects.last() else {
+            panic!("not created: {effects:?}");
+        };
+        assert_eq!(draft.purchases, [(weapon, 1)]);
+        assert!(draft.gold > 0);
+        assert_eq!(w.rules().problem(draft), None);
+        assert!(w.rules().build(draft).is_ok());
     }
 
     #[test]
@@ -1635,7 +1708,7 @@ mod tests {
         assert_eq!(combat.state.weapon_of_choice.as_ref(), Some(&weapon));
         if combat.ok {
             w.input(Input::Next);
-            assert!(matches!(w.page(), Page::Later));
+            assert!(matches!(w.page(), Page::Wild(_)));
             assert_eq!(w.draft().weapon_of_choice, Some(weapon));
         }
     }

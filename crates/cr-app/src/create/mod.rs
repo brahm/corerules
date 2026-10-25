@@ -10,8 +10,12 @@
 //! classes their levels.
 
 mod details;
+mod equipment;
 mod proficiencies;
+mod rogue;
+mod spells;
 mod start;
+mod wild;
 
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -26,17 +30,25 @@ use cr_store::npc::{NpcRules, Rand};
 use cr_store::settings::SETTINGS;
 use cr_store::skills::SkillRules;
 
-pub use details::{DetailsPage, SOCIAL_CLASSES, hit_dice_text, subability_rows};
+use crate::levels::LevelsInput;
+
+pub use details::{
+    DetailsPage, EnteredLevels, MOST_HIT_POINTS, SOCIAL_CLASSES, hit_dice_text, subability_rows,
+};
+pub use equipment::{EquipmentPage, MOST_ITEMS};
 pub use proficiencies::{
     Choice, CombatPage, Lending, List, ListKind, PickGroup, ProficienciesPage, Unarmed,
     disadvantages_text, languages_text, nonweapon_subtitle, pick_texts, specialization_costs,
     weapon_subtitle,
 };
+pub use rogue::{RoguePage, RoguePicks, RogueRow};
+pub use spells::{Schools, SpellsPage};
 pub use start::{
     AbilitiesPage, ClassAbilitiesPage, ClassAbilityGroup, ClassPage, EnteredClassPage,
     EnteredScoresPage, GROUPS, RacePage, RacialPage, SettingPage, ability_rows, class_choice,
     race_subtitle, start_details,
 };
+pub use wild::{PsionicsPage, WildPage};
 
 /// Abbreviations for the ability summaries.
 pub const SHORT: [&str; 6] = [
@@ -247,6 +259,16 @@ impl Prompt {
         }
     }
 
+    /// The original's "Error Message" about an item the character may not
+    /// use: Yes runs `ignore`, No leaves the item out.
+    pub(crate) fn item_error(text: &str, ignore: Then) -> Self {
+        let text = format!("{text}\n\n{}", tr("Do you wish to ignore this message?"));
+        Self {
+            yes: Some(ignore),
+            ..Self::new(PromptKind::ItemError, tr("Error Message"), text)
+        }
+    }
+
     /// A warning the user may ignore: Ignore runs `ignore`, OK nothing.
     pub(crate) fn ignorable(title: &str, text: &str, ignore: Then) -> Self {
         let text = format!(
@@ -289,6 +311,9 @@ pub enum Effect {
     /// "Do not show this window again" was ticked: Preferences keeps the
     /// Core Rules Vs Player's Option message off.
     HideCoreVsOption,
+    /// Create: the app writes the character the draft describes, and
+    /// says why it could not with [`Wizard::failed`].
+    Create(Box<Draft>),
 }
 
 /// A page of the wizard and what it holds until Next.
@@ -305,9 +330,11 @@ pub enum Page {
     Details(Box<DetailsPage>),
     Proficiencies(Box<ProficienciesPage>),
     Combat(Box<CombatPage>),
-    /// The steps after the proficiencies, which this version of the
-    /// Windows app does not have yet.
-    Later,
+    Rogue(Box<RoguePage>),
+    Spells(Box<SpellsPage>),
+    Wild(Box<WildPage>),
+    Psionics(Box<PsionicsPage>),
+    Equipment(Box<EquipmentPage>),
 }
 
 impl Page {
@@ -323,7 +350,11 @@ impl Page {
             Self::Details(_) => tr("Details").to_owned(),
             Self::Proficiencies(_) => tr("Proficiencies").to_owned(),
             Self::Combat(_) => tr("Combat").to_owned(),
-            Self::Later => tr("Equipment").to_owned(),
+            Self::Rogue(_) => tr("Rogue Skills").to_owned(),
+            Self::Spells(_) => tr("Spells").to_owned(),
+            Self::Wild(_) => tr("Wild Talents").to_owned(),
+            Self::Psionics(_) => tr("Psionics").to_owned(),
+            Self::Equipment(_) => tr("Equipment").to_owned(),
         }
     }
 
@@ -339,7 +370,10 @@ impl Page {
             Self::Details(_) => topic::CHARACTER_INFORMATION,
             Self::Proficiencies(_) => topic::NONWEAPON_PROFICIENCIES,
             Self::Combat(_) => topic::WEAPON_PROFICIENCIES,
-            Self::Later => topic::EQUIPMENT,
+            Self::Rogue(_) => topic::ROGUE_SKILLS,
+            Self::Spells(_) => topic::CHARACTER_SPELLS,
+            Self::Wild(_) | Self::Psionics(_) => topic::SKILLS,
+            Self::Equipment(_) => topic::EQUIPMENT,
         }
     }
 
@@ -355,7 +389,9 @@ impl Page {
             Self::Details(page) => page.ok,
             Self::Proficiencies(page) => page.ok,
             Self::Combat(page) => page.ok,
-            Self::Later => false,
+            Self::Rogue(page) => page.ok,
+            Self::Spells(_) | Self::Wild(_) | Self::Psionics(_) => true,
+            Self::Equipment(page) => page.ok,
         }
     }
 }
@@ -395,6 +431,8 @@ pub enum Input {
     Name(String),
     RandomName,
     Player(String),
+    /// The portrait's folder and file name, empty for none.
+    Portrait([String; 2]),
     Gender(usize),
     Alignment(usize),
     Kit(usize),
@@ -412,6 +450,17 @@ pub enum Input {
     RollHitPoints,
     RollExceptional,
     Subability(usize, i32),
+    // Enter Character's levels.
+    /// "Levels…".
+    OpenLevels,
+    /// A change in the Levels dialog.
+    Levels(LevelsInput),
+    /// Close on the Levels dialog.
+    CloseLevels,
+    /// The hit points the rolls are changed to give.
+    HitPoints(u32),
+    /// The PSPs, all levels together.
+    Psp(u32),
     // Prompts' own controls.
     /// "Do not show this window again".
     PromptOff(bool),
@@ -439,6 +488,30 @@ pub enum Input {
     /// Skills & Powers' weapon specialization, by index, "None" first.
     Specialization(usize),
     Shield(usize, bool),
+    // Rogue skills.
+    /// The points of a skill, by its row.
+    RoguePoints(usize, u32),
+    /// The skill the kit's bonus goes to, by index.
+    RogueBonus(usize),
+    /// A skill of the kit's chosen ones ticked or not.
+    RogueChosen(usize, bool),
+    /// A school of those to eliminate ticked or not.
+    School(usize, bool),
+    // Psionics and Wild Talents.
+    /// The points of a rogue skill on the Skills page, by its row.
+    SkillPoints(usize, i32),
+    /// A kit's bonus of a level given to a skill: the level's group, the
+    /// skill.
+    KitBonus(usize, usize),
+    /// A primary discipline: the first or second, the discipline by
+    /// index, "None" first.
+    Primary(usize, usize),
+    /// Test for Wild Talents.
+    Test,
+    // Equipment.
+    RollMoney,
+    /// The standard pack bought or not.
+    Pack(bool),
 }
 
 /// The wizard: the pages so far, the draft Next has kept, and the
@@ -667,7 +740,11 @@ impl Wizard {
             Page::Details(_) => self.details_input(input),
             Page::Proficiencies(_) => self.proficiencies_input(input),
             Page::Combat(_) => self.combat_input(input),
-            Page::Later => {}
+            Page::Rogue(_) => self.rogue_input(input),
+            Page::Spells(_) => self.spells_input(input),
+            Page::Wild(_) => self.wild_input(input),
+            Page::Psionics(_) => self.psionics_input(input),
+            Page::Equipment(_) => self.equipment_input(input),
         }
     }
 

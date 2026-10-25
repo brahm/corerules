@@ -1,15 +1,20 @@
 //! The details page: name, player, gender, portrait, alignment, kit,
 //! social class, background, age, height, weight, hit points, exceptional
-//! Strength and, with Skills & Powers, the subabilities.
+//! Strength and, with Skills & Powers, the subabilities. Enter Character's
+//! has the classes' levels instead of the hit point rolls, with the Levels
+//! dialog and the hit point and PSP arrows that stand in for the rolls.
 
 use std::sync::Arc;
 
+use cr_formats::character::Character;
 use cr_i18n::{tr, tr_noop};
+use cr_store::advance::{AdvanceRules, adjust_psionic_points, psionic_total};
 use cr_store::create::{
     ABILITIES, ALIGNMENTS, CreationRules, Draft, RollMethod, SUBABILITIES, SUBABILITY_SPREAD,
 };
 
 use super::{Input, Page, Prompt, Wizard};
+use crate::levels::{ClassRow, LevelsForm, class_rows, psionic};
 
 /// The social classes, in the original's order.
 pub const SOCIAL_CLASSES: [&str; 4] = [
@@ -108,7 +113,59 @@ pub struct DetailsPage {
     /// and the rows showing them.
     pub subabilities: Option<[i32; 6]>,
     pub subability_rows: [(String, String); 6],
+    /// Enter Character's levels.
+    pub levels: Option<EnteredLevels>,
     pub ok: bool,
+}
+
+/// Enter Character's levels on the details page (0x5bc9dc, 0x5bcaa3), on
+/// the character as it would be saved.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EnteredLevels {
+    pub classes: Vec<ClassRow>,
+    /// The hit points, when the levels give them.
+    pub hit_points: Option<u32>,
+    /// The PSPs, for a character with any.
+    pub psp: Option<u32>,
+    /// Why the character could not be made, in place of the rest.
+    pub error: Option<String>,
+    /// The Levels dialog, while it is open.
+    pub dialog: Option<Box<LevelsForm>>,
+    character: Option<Box<Character>>,
+}
+
+/// The most hit points and PSPs the arrows take.
+pub const MOST_HIT_POINTS: u32 = 999;
+
+impl EnteredLevels {
+    fn new(rules: &CreationRules, advance: &AdvanceRules, draft: &Draft) -> Self {
+        let mut levels = Self {
+            classes: Vec::new(),
+            hit_points: None,
+            psp: None,
+            error: None,
+            dialog: None,
+            character: None,
+        };
+        match rules.build(draft) {
+            Ok(character) => levels.character = Some(Box::new(character)),
+            Err(e) => levels.error = Some(e.to_string()),
+        }
+        levels.refresh(advance);
+        levels
+    }
+
+    fn refresh(&mut self, advance: &AdvanceRules) {
+        let Some(character) = &self.character else {
+            return;
+        };
+        self.classes = class_rows(advance, character);
+        self.hit_points = advance
+            .hit_points(character)
+            .ok()
+            .map(|hp| hp.max(0) as u32);
+        self.psp = psionic(advance, character).then(|| psionic_total(character));
+    }
 }
 
 impl DetailsPage {
@@ -157,6 +214,7 @@ impl DetailsPage {
             exceptional: d.exceptional_strength.clamp(1, 100),
             subabilities: d.skills_and_powers.then_some(d.subabilities),
             subability_rows: Default::default(),
+            levels: entering.then(|| EnteredLevels::new(&rules, &w.needs.advance, d)),
             ok: true,
         };
         // The page opens with a name when the character has none
@@ -227,8 +285,94 @@ impl Wizard {
         }
     }
 
+    /// Keeps what the levels changed in the draft, as the character
+    /// Enter Character saves: the Levels dialog's results and each class's
+    /// level.
+    fn store_levels(&mut self, levels: &mut EnteredLevels) {
+        let advance = self.needs.advance.clone();
+        let Some(character) = &levels.character else {
+            return;
+        };
+        let d = &mut self.draft;
+        let mut entered = d.entered.clone().unwrap_or_default();
+        entered.take(character);
+        let class_levels: Vec<u32> = advance
+            .levels(character)
+            .map(|l| l.iter().map(|c| c.level).collect())
+            .unwrap_or_default();
+        d.entered = Some(entered);
+        d.level = class_levels.iter().copied().max().unwrap_or(1).max(1);
+        d.class_levels = class_levels;
+        levels.refresh(&advance);
+    }
+
+    /// A change to Enter Character's levels.
+    fn levels_input(&mut self, levels: &mut EnteredLevels, input: Input) {
+        let advance = self.needs.advance.clone();
+        match input {
+            Input::OpenLevels => {
+                let Some(character) = &levels.character else {
+                    return;
+                };
+                let entered = self.draft.entered.clone().unwrap_or_default();
+                levels.dialog = Some(Box::new(LevelsForm::new(
+                    &advance,
+                    (**character).clone(),
+                    entered.prime_bonus,
+                    entered.points_per_level,
+                )));
+            }
+            Input::Levels(change) => {
+                if let Some(dialog) = &mut levels.dialog {
+                    dialog.input(&advance, change, &mut self.dice);
+                }
+            }
+            Input::CloseLevels => {
+                let Some(dialog) = levels.dialog.take() else {
+                    return;
+                };
+                let (prime, per_level) = (dialog.prime_bonus, dialog.points_per_level);
+                levels.character = Some(Box::new(dialog.close(&advance)));
+                let entered = self.draft.entered.get_or_insert_with(Default::default);
+                entered.prime_bonus = prime;
+                entered.points_per_level = per_level;
+                self.store_levels(levels);
+            }
+            Input::HitPoints(wanted) => {
+                let Some(character) = &mut levels.character else {
+                    return;
+                };
+                let wanted = wanted.clamp(1, MOST_HIT_POINTS) as i32;
+                let changed = advance
+                    .hit_points(character)
+                    .and_then(|hp| advance.adjust_hit_points(character, wanted - hp));
+                if changed.is_ok() {
+                    self.store_levels(levels);
+                }
+            }
+            Input::Psp(wanted) => {
+                let Some(character) = &mut levels.character else {
+                    return;
+                };
+                let delta =
+                    i64::from(wanted.min(MOST_HIT_POINTS)) - i64::from(psionic_total(character));
+                adjust_psionic_points(character, delta as i32);
+                self.store_levels(levels);
+            }
+            _ => {}
+        }
+    }
+
     /// Puts `page` back as the details in view, refreshed.
     fn set_details(&mut self, mut page: DetailsPage) {
+        // The kit chosen may change the experience the levels take.
+        if let Some(levels) = &mut page.levels
+            && let Some(character) = &mut levels.character
+            && character.data.kit != page.kit
+        {
+            character.data.kit = page.kit.clone();
+            self.store_levels(levels);
+        }
         self.refresh_details(&mut page);
         if let Page::Details(shown) = self.page_mut() {
             **shown = page;
@@ -245,6 +389,7 @@ impl Wizard {
             Input::Name(text) => page.name = text,
             Input::RandomName => page.name = self.random_name(page.male),
             Input::Player(text) => page.player = text,
+            Input::Portrait(portrait) => page.portrait = portrait,
             Input::Gender(i) => {
                 let male = i == 0;
                 if male == page.male {
@@ -380,6 +525,17 @@ impl Wizard {
             Input::Next if page.ok => {
                 self.details_next(page);
                 return;
+            }
+            Input::OpenLevels
+            | Input::Levels(_)
+            | Input::CloseLevels
+            | Input::HitPoints(_)
+            | Input::Psp(_) => {
+                let Some(mut levels) = page.levels.take() else {
+                    return;
+                };
+                self.levels_input(&mut levels, input);
+                page.levels = Some(levels);
             }
             _ => return,
         }
@@ -570,5 +726,43 @@ pub(super) mod tests {
         assert!(page.hit_dice_text.is_none());
         assert!(!page.exceptional_shown);
         assert_eq!(page.alignments.len(), ALIGNMENTS.len());
+    }
+
+    #[test]
+    fn enter_character_sets_the_levels_and_hit_points() {
+        use crate::levels::LevelsInput;
+        let Some(mut w) = at_details(true) else {
+            return;
+        };
+        let levels = details(&w).levels.clone().unwrap();
+        assert!(levels.error.is_none(), "{levels:?}");
+        assert_eq!(levels.classes[0].level, 1);
+        w.input(Input::OpenLevels);
+        w.input(Input::Levels(LevelsInput::Level(0, 5)));
+        let dialog = details(&w).levels.clone().unwrap().dialog.unwrap();
+        assert_eq!(dialog.classes[0].level, 5);
+        // Add Experience: a level more.
+        w.input(Input::Levels(LevelsInput::AddExperience));
+        w.input(Input::Levels(LevelsInput::Amount(1_000_000)));
+        w.input(Input::Levels(LevelsInput::Give));
+        let dialog = details(&w).levels.clone().unwrap().dialog.unwrap();
+        assert!(dialog.experience.is_none());
+        let level = dialog.classes[0].level;
+        assert!(level > 5, "{dialog:?}");
+        w.input(Input::CloseLevels);
+        let levels = details(&w).levels.clone().unwrap();
+        assert!(levels.dialog.is_none());
+        assert_eq!(levels.classes[0].level, level);
+        assert_eq!(w.draft().class_levels, [level]);
+        assert_eq!(w.draft().level, level);
+        // The hit points move the rolls.
+        let hp = levels.hit_points.unwrap();
+        w.input(Input::HitPoints(hp + 7));
+        assert_eq!(details(&w).levels.clone().unwrap().hit_points, Some(hp + 7));
+        let character = w.rules().build(w.draft()).unwrap();
+        assert_eq!(
+            w.needs.advance.hit_points(&character).unwrap(),
+            (hp + 7) as i32
+        );
     }
 }

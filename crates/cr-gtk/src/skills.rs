@@ -89,27 +89,7 @@ pub struct SkillsEditor {
     state: State,
 }
 
-/// "Telepathic devotion, from level 3", for a power.
-pub(crate) fn power_text(rules: &SkillRules, name: &str) -> String {
-    let Some(power) = rules.power(name) else {
-        return String::new();
-    };
-    let discipline = if power.discipline.is_empty() {
-        tr("Metapsionic")
-    } else {
-        tr(&power.discipline)
-    };
-    let kind = if power.devotion {
-        tr!("{discipline} devotion", discipline)
-    } else {
-        tr!("{discipline} science", discipline)
-    };
-    if power.level > 0 {
-        tr!("{kind}, from level {level}", kind, level = power.level)
-    } else {
-        kind
-    }
-}
+pub(crate) use cr_app::skills::power_text;
 
 impl SkillsEditor {
     pub fn new(rules: Rc<SkillRules>, character: &Character, hooks: WildHooks) -> Self {

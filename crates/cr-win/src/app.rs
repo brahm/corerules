@@ -8,18 +8,20 @@ mod create;
 mod edit;
 mod help;
 mod import;
+mod levels;
 mod library;
+mod portrait;
 mod settings;
 mod sheet;
 mod web;
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::{Arc, OnceLock};
 
 use cr_app::action::{self, Action};
-use cr_app::create::{Answer, Effect, Input, ListKind, Needs, Wizard};
+use cr_app::create::{Answer, Effect, Input, ListKind, Needs, Page as CreatePage, Wizard};
 use cr_app::help::{Files, Found, MonsterHelp, PROGRAM, Target};
 use cr_app::library::Filter;
 use cr_app::sheets::Export;
@@ -29,6 +31,7 @@ use cr_store::Installation;
 use cr_store::catalog::{Entry, Section};
 use cr_store::export::{Content, ImportReport};
 use cr_store::help::{ItemHelp, topic};
+use cr_store::pictures::stored_portrait;
 use cr_store::sheet::Sheet;
 use cr_store::userdb::parts::OTHER_TYPES;
 use cr_win::text::plain;
@@ -116,6 +119,10 @@ pub struct Shell {
     web_tries: u64,
     /// What the boxes of New Character's lists have chosen for Add.
     adding: create::Adding,
+    /// Choose Portrait, while it is open.
+    portraits: Option<portrait::Chooser>,
+    /// The portrait the details page shows, read when it changes.
+    portrait: RefCell<Option<Rc<portrait::Shown>>>,
     /// A book is shown, whose keys the keyboard hook takes.
     reading: Rc<Cell<bool>>,
 }
@@ -267,11 +274,24 @@ pub enum Message {
     Nothing,
     // New Character.
     WizardLoaded(Result<Box<Wizard>, String>),
+    /// The character New Character wrote, by its file, or why it could
+    /// not; whether it was entered.
+    Created(Result<String, String>, bool),
     Wizard(Input),
     /// The answer to the prompt with this number.
     WizardAnswer(u64, Answer),
     /// What the box of a list has chosen for Add.
     WizardAdding(ListKind, String),
+    /// Choose… on the Portrait row.
+    ChoosePortrait,
+    PortraitsListed(Result<Vec<portrait::Tile>, String>),
+    /// A portrait chosen by its file, or none.
+    PortraitChosen(Option<String>),
+    /// Choose File… on Choose Portrait.
+    PortraitFile,
+    /// The portrait made from the user's picture, if one was chosen.
+    PortraitAdded(Result<Option<String>, String>),
+    ClosePortraits,
     // Import.
     PackageChosen(Result<Option<Arc<Package>>, String>),
     Import,
@@ -458,7 +478,8 @@ impl Shell {
                 |owner| native::dialogs::open_folder(owner, &plain(tr("_Open Folder…"))),
                 |r| Message::FolderChosen(r.map_err(|e| e.message())),
             ),
-            action::NEW_CHARACTER => self.new_character(context),
+            action::NEW_CHARACTER => self.new_character(false, context),
+            action::ENTER_CHARACTER => self.new_character(true, context),
             action::IMPORT => {
                 let install = self.install.clone();
                 let expansion = install.as_ref().is_some_and(|i| !i.is_core20());
@@ -595,8 +616,9 @@ impl Shell {
         });
     }
 
-    /// Starts New Character once its rules are read.
-    fn new_character(&mut self, context: &ComponentContext<Self>) {
+    /// Starts New Character, or with `entering` Enter Character, once its
+    /// rules are read.
+    fn new_character(&mut self, entering: bool, context: &ComponentContext<Self>) {
         let Some(install) = self.install.clone() else {
             return;
         };
@@ -607,7 +629,7 @@ impl Shell {
         let core_vs_option = crate::prefs::core_vs_option_shown();
         context.spawn_background(move |_| {
             Message::WizardLoaded(
-                Needs::load(&install, false, None, core_vs_option)
+                Needs::load(&install, entering, None, core_vs_option)
                     .map(|(rules, needs)| Box::new(Wizard::new(rules, needs)))
                     .map_err(|e| e.to_string()),
             )
@@ -615,7 +637,7 @@ impl Shell {
     }
 
     /// Does what the wizard asks of the app.
-    fn wizard_effects(&mut self) {
+    fn wizard_effects(&mut self, context: &ComponentContext<Self>) {
         let Page::Create(wizard) = &mut self.page else {
             return;
         };
@@ -629,6 +651,48 @@ impl Shell {
                         );
                     }
                 }
+                // Create pressed again while it writes creates nothing
+                // more.
+                Effect::Create(draft) => {
+                    let Some(install) = self.install.clone() else {
+                        continue;
+                    };
+                    if self.busy {
+                        continue;
+                    }
+                    self.busy = true;
+                    context.spawn_background(move |_| {
+                        let entered = draft.entered.is_some();
+                        let created = install
+                            .creation_rules()
+                            .and_then(|rules| install.create_character(&rules, &draft))
+                            .map_err(|e| e.to_string());
+                        Message::Created(created, entered)
+                    });
+                }
+            }
+        }
+    }
+
+    /// Gives the details page the portrait of `file`, or none.
+    fn set_portrait(&mut self, file: Option<String>, context: &ComponentContext<Self>) {
+        if let Page::Create(wizard) = &mut self.page {
+            let stored = file.as_deref().map(stored_portrait).unwrap_or_default();
+            wizard.input(Input::Portrait(stored));
+            self.wizard_effects(context);
+        }
+    }
+
+    /// The portrait `stored` as the details page shows it, read again
+    /// only when it changed.
+    fn portrait_shown(&self, stored: &[String; 2]) -> Rc<portrait::Shown> {
+        let mut cached = self.portrait.borrow_mut();
+        match cached.as_ref() {
+            Some(shown) if shown.stored == *stored => shown.clone(),
+            _ => {
+                let shown = Rc::new(portrait::Shown::read(self.install.as_deref(), stored));
+                *cached = Some(shown.clone());
+                shown
             }
         }
     }
@@ -892,6 +956,8 @@ impl Component for Shell {
             book_view: BookView::default(),
             web_tries: 0,
             adding: Vec::new(),
+            portraits: None,
+            portrait: RefCell::new(None),
             reading: Rc::default(),
         };
         let sender = context.sender();
@@ -1260,9 +1326,77 @@ impl Component for Shell {
                         self.adding.retain(|(k, _)| k != kind);
                     }
                     wizard.input(input);
-                    self.wizard_effects();
+                    self.wizard_effects(context);
                 }
             }
+            Message::Created(Ok(file), entered) => {
+                self.busy = false;
+                self.show_section(cr_app::library::CHARACTERS.to_owned());
+                // Enter Character's "Character Saved" (0x496b0b).
+                self.notice = Some(Notice::success(if entered {
+                    tr("Character saved")
+                } else {
+                    tr("Character created")
+                }));
+                self.load(Some(file), context);
+            }
+            Message::Created(Err(e), _) => {
+                self.busy = false;
+                if let Page::Create(wizard) = &mut self.page {
+                    wizard.failed(e);
+                }
+            }
+            Message::ChoosePortrait => {
+                if let Page::Create(wizard) = &self.page
+                    && matches!(wizard.page(), CreatePage::Details(_))
+                    && self.portraits.is_none()
+                {
+                    let race = wizard.draft().race.clone();
+                    self.portraits = Some(portrait::Chooser {
+                        race: race.clone(),
+                        tiles: None,
+                    });
+                    self.with_install(context, move |install| {
+                        Message::PortraitsListed(portrait::list(install, &race))
+                    });
+                }
+            }
+            Message::PortraitsListed(tiles) => {
+                if let Some(chooser) = &mut self.portraits {
+                    chooser.tiles = Some(tiles);
+                }
+            }
+            Message::PortraitChosen(file) => {
+                self.portraits = None;
+                self.set_portrait(file, context);
+            }
+            Message::PortraitFile => {
+                self.portraits = None;
+                let Some(install) = self.install.clone() else {
+                    return;
+                };
+                self.dialog(
+                    context,
+                    move |owner| {
+                        let filters = portrait::filters();
+                        match native::dialogs::open_file(owner, tr("Choose a Picture"), &filters) {
+                            Ok(Some(path)) => portrait::add(&install, &path).map(Some),
+                            Ok(None) => Ok(None),
+                            Err(e) => Err(e.message()),
+                        }
+                    },
+                    Message::PortraitAdded,
+                );
+            }
+            Message::PortraitAdded(added) => {
+                self.busy = false;
+                match added {
+                    Ok(Some(file)) => self.set_portrait(Some(file), context),
+                    Ok(None) => {}
+                    Err(e) => self.show_error(tr("Could Not Use the Picture"), e),
+                }
+            }
+            Message::ClosePortraits => self.portraits = None,
             Message::WizardAdding(kind, name) => {
                 self.adding.retain(|(k, _)| *k != kind);
                 self.adding.push((kind, name));
@@ -1272,7 +1406,7 @@ impl Component for Shell {
                     && wizard.prompt_serial() == serial
                 {
                     wizard.answer(answer);
-                    self.wizard_effects();
+                    self.wizard_effects(context);
                 }
             }
             Message::PackageChosen(chosen) => {
@@ -1665,7 +1799,20 @@ impl Component for Shell {
         let content = match &self.page {
             Page::Library => library::view(self, context),
             Page::Edit(edit) => edit::view(edit, context),
-            Page::Create(wizard) => create::view(wizard, &self.adding, context),
+            Page::Create(wizard) => {
+                let portrait = match wizard.page() {
+                    CreatePage::Details(page) => Some(self.portrait_shown(&page.portrait)),
+                    _ => None,
+                };
+                let chooser: View = match &self.portraits {
+                    Some(chooser) => portrait::dialog(chooser, context),
+                    None => View::empty(),
+                };
+                Grid::new().children((
+                    create::view(wizard, &self.adding, portrait.as_deref(), context),
+                    chooser,
+                ))
+            }
             Page::Import(package) => import::view(self, package, context),
             Page::Settings => settings::view(self, context),
             Page::Sheet(page) => sheet::view(self, page, context),
