@@ -806,7 +806,18 @@ impl CaptureInstall {
                         .unwrap();
                 }
             } else {
+                #[cfg(unix)]
                 std::os::unix::fs::symlink(entry.path(), root.join(&name)).unwrap();
+                // Windows needs Developer Mode or an administrator, as on CI.
+                #[cfg(windows)]
+                {
+                    let link = root.join(&name);
+                    if entry.file_type().unwrap().is_dir() {
+                        std::os::windows::fs::symlink_dir(entry.path(), link).unwrap();
+                    } else {
+                        std::os::windows::fs::symlink_file(entry.path(), link).unwrap();
+                    }
+                }
             }
         }
         let install = Installation::open(&root).unwrap();

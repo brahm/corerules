@@ -59,8 +59,10 @@ preserved by the Internet Archive:
 2. **1.0 (now).** The release candidate was confirmed stable on Fedora 45
    beta, Ubuntu 26.10, Bazzite, Arch Linux and CachyOS, and became 1.0.0:
    a faithful replacement for the original program.
-3. **Windows and macOS.** Then come Windows and macOS builds, on the same
-   backend.
+3. **Windows 11 (in progress).** A Windows 11 version in this repository,
+   with a native WinUI 3 interface written in Rust over the same backend,
+   distributed through the Microsoft Store. From then on every feature
+   ships on Linux and Windows together.
 4. **New features.** From then on the app improves on the original and
    moves away from it, step by step, until it no longer needs the original
    program's files to work.
@@ -343,9 +345,9 @@ when and why each was decided.
 
 ### Platform and setup
 
-- **Linux only, no Wine.** The app is a native GTK 4 program. Windows and
-  macOS versions come after 1.0; the backend
-  crates have no GTK dependency so they can be built then.
+- **Linux only, no Wine.** The app is a native GTK 4 program. A Windows 11
+  version is being made over the same backend, which is already built
+  and tested on Windows.
 - **No installation of the original needed.** Extract Data from CD… copies
   what the app uses from the CD, its ISO image (read directly, with no
   mounting) or an existing installation into a local data folder. The
@@ -620,8 +622,8 @@ CORERULES_DIR="$HOME/.wine/drive_c/Program Files/AD&D Core Rules 2.0" cargo test
 | `cr-gtk` | The GNOME app |
 | `cr-addons` | Core Rules Community Add-ons Collection, the add-ons and their installer |
 
-The backend crates have no GTK dependency so macOS and Windows front ends
-can reuse them later.
+The backend crates have no GTK dependency, and CI builds and tests them
+on Windows too, for the Windows 11 app that comes next.
 
 ### Languages
 

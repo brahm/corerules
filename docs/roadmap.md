@@ -22,8 +22,9 @@ Community Add-ons Collection as its own AppImage, version 1.0.0. The
 the project's own Flatpak repository, which gets each final release
 (decision P16).
 
-The next step is Windows and macOS (step 2). Publishing on Flathub was
-dropped from the plan (decision P15). No issue is open on GitHub.
+The Windows 11 version (step 2) has started: its first phase, the
+backend and `cr` built and tested on Windows, is done. Publishing on
+Flathub was dropped from the plan (decision P15).
 
 ## The original plan (2026-10-09)
 
@@ -38,9 +39,9 @@ taken out of scope.
 | 3. Minimal GTK app | Library, sheet, creation wizard, rules browser, printing and PDF | Done. The dice roller was dropped (S6) |
 | 4. Generators | Encounters, treasure, NPCs, monsters, custom tables | Done |
 | 5. Maps and Expansion | Map Maker II and Campaign Mapper, Expansion classes, Flathub, pt-BR | Expansion classes and translations (six languages) done; maps dropped (S6); Flathub dropped (P15) |
-| 6. macOS and Windows | Other platforms over the same backend | Moved after 1.0 (P15) |
+| 6. macOS and Windows | Other platforms over the same backend | Moved after 1.0 (P15); Windows 11 is step 2 after 1.0 |
 
-## The revised plan (2026-10-17 to 2026-10-24)
+## The revised plan (2026-10-17 to 2026-10-25)
 
 | Phase | Content | Status |
 | --- | --- | --- |
@@ -100,34 +101,93 @@ Done on 2026-10-24: Wagner Brahm's friends ran 1.0.0-rc2 on Fedora 45
 beta, Ubuntu 26.10, Bazzite, Arch Linux and CachyOS, found nothing wrong,
 and Wagner Brahm gave the go-ahead (decision P13).
 
-### Step 2: Windows and macOS
+### Step 2: Windows 11 (in progress)
 
-The original plan kept `cr-formats` and `cr-store` free of GTK for this, and
-they still are.
+Decided by Wagner Brahm on 2026-10-25 (decisions S13 and P17 to P20): the
+Windows version lives in this repository, next to the Linux one, and from
+then on every feature ships in every maintained version, Windows 11
+included. Its interface is a native WinUI 3 interface that follows
+Microsoft's design guidelines, written in Rust with windows-reactor, the
+WinUI 3 library of the windows-rs project, over the same backend. It is
+distributed as an MSIX package through the Microsoft Store, which signs it.
+macOS is not part of this step.
 
-1. **Backend on every platform.** Add Windows and macOS runners to CI for
-   the backend crates and `cr` (`cargo test` and `cargo build`). This finds
-   path, file system and line ending problems before any interface work.
-2. **Choose the interface.** At the start of this step, as the first plan
-   said: ship the existing GTK 4 and libadwaita app on both platforms, or
-   write native interfaces over the backend through a C API (`cr-ffi`).
-   GTK 4 reuses the whole app and its translations and is the faster path;
-   native interfaces fit each platform better and cost a new front end per
-   platform.
-3. **Platform details.** The data folder (`%APPDATA%`, `~/Library/Application
-   Support`), Extract Data from CD… with drive letters and `/Volumes`,
-   opening an installation of the original (which on Windows may run on the
-   same machine, with its files under `Program Files` and possibly in the
-   UAC VirtualStore), printing and PDF, the help window, the interface
-   language from the system settings.
-4. **Packages.** An installer for Windows (MSI or MSIX) and a `.dmg` with an
-   app bundle for macOS, built and started by the release workflow as the
-   Linux packages are.
-5. **Signing.** Without code signing, Windows SmartScreen and macOS
-   Gatekeeper warn or block the app. Signing needs a certificate for
-   Windows and an Apple Developer account for notarization, both paid.
+How the two versions stay the same:
 
-Needs Wagner Brahm: the choice of interface, and whether to pay for signing.
+- Rules and data live only in `cr-store`; an interface shows them and calls
+  it.
+- Logic that is in `cr-gtk` today moves into a new shared crate, `cr-app`
+  (screen state, checks, warnings, actions; no GTK and no Windows), before
+  its screen is ported. The character sheet's PDF is made there in pure
+  Rust, so both systems write the same file.
+- Every action has one name, like the `sheet.pdf` that `cr-gtk` already
+  uses; a test fails when an action exists in one interface and not in the
+  other.
+- Both interfaces take their texts from `cr-i18n`, whose test already fails
+  on a missing translation.
+- CI runs on Ubuntu and on Windows for every pull request, and one `v*` tag
+  makes the Linux packages and the MSIX in the same release workflow.
+
+The phases run in order:
+
+1. **Backend on Windows (done).** A Windows job in CI lints and tests
+   `cr-formats`, `cr-store`, `cr-i18n` and `cr`, and builds `cr.exe`. The
+   tests link the original's data the same way on both systems, text files
+   are checked out with LF on Windows too, and the data package lives in
+   `Core Rules\data` in the user's Documents folder, which a packaged app
+   writes to directly, so uninstalling the app keeps the characters.
+2. **Prototype of `cr-win`.** In Portuguese and packaged as an MSIX: the
+   character list with search, a page of the New Character assistant, an
+   editing form, a confirmation dialog, opening an `.xpx` file and printing
+   the sheet. Whatever blocks it is solved in `cr-win` or taken to
+   windows-rs before the rest is ported.
+3. **Parity groundwork.** `cr-app`, the shared PDF and the test of action
+   names.
+4. **Porting the screens.** The library and the sheet, character creation,
+   editing, the generators, the user database editors, packages, Extract
+   Data from CD…, help, Settings and About.
+5. **Package and Store.** The release workflow builds and tests the MSIX;
+   a beta goes to a closed group through the Microsoft Store.
+6. **Release with Windows**, once the beta's users confirm it, with the
+   same version and tag as Linux. The Community Add-ons Collection follows
+   as a package the Windows app imports.
+
+The interface follows Windows 11's patterns rather than GNOME's: settings
+cards with combo boxes, number boxes and toggle switches for the forms,
+ContentDialog for dialogs, a NavigationView for the sections, the title bar
+with a CommandBar, InfoBar for notices, Settings (with About inside) at the
+foot of the navigation, the system's light, dark and high-contrast themes
+and the Mica backdrop.
+
+Platform details:
+
+- **Data folder:** `Documents\Core Rules\data` (decision P19), where
+  Linux has `~/.local/share/corerules/data`.
+- **The original on the same machine:** its installation under
+  `Program Files (x86)` or `Program Files`, and what it saved into the UAC
+  VirtualStore (`%LOCALAPPDATA%\VirtualStore`) when Windows kept it from
+  writing there.
+- **Extract Data from CD…:** the CD by its drive letter, an ISO image read
+  directly or mounted by File Explorer, or an installation.
+- **Printing:** the Windows print dialog, drawing the same layout as
+  `cr-store::sheet` with Direct2D.
+- **Help:** the app's own help window, since Windows 11 has no WinHelp
+  reader either.
+- **Language:** the Windows display language or Preferences, with the same
+  catalogs.
+- **`cr`:** `cr.exe` inside the same package, reached from a terminal
+  through an MSIX alias.
+
+Distribution: the Microsoft Store's individual developer account is free
+since September 2025 and the Store signs the MSIX after certification, so
+Windows SmartScreen and Smart App Control do not warn. A self-signed or
+unsigned package is not used: Windows blocks it for anyone who has not
+trusted its certificate by hand. The product Core Rules was reserved on
+2026-10-25; the Store drops a reservation not used within three months, so
+it may need to be reserved again before submission.
+
+Needs Wagner Brahm: approving the prototype (phase 2) and confirming the
+beta (phase 5).
 
 ### Step 3: new features, and independence from the original
 
@@ -157,7 +217,7 @@ independence goes (step 3.3).
 
 ## Decisions pending
 
-- GTK 4 or native interfaces on Windows and macOS, and code signing
+- Approving the Windows prototype and confirming the Windows beta
   (step 2).
 - The first features after 1.0, and the source of rules content without
   the discs (step 3).

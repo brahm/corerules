@@ -53,7 +53,38 @@ const COMMANDS: [&str; 17] = [
     "delete",
 ];
 
-const USAGE: &str = "usage:
+/// The data package folder as the usage text names it
+/// ([`cr_store::DATA_PACKAGE_SHOWN`], which `concat!` cannot take).
+#[cfg(not(windows))]
+macro_rules! data_dir {
+    () => {
+        "~/.local/share/corerules/data"
+    };
+}
+#[cfg(windows)]
+macro_rules! data_dir {
+    () => {
+        r"Documents\Core Rules\data"
+    };
+}
+
+/// Where an installation is looked for after the data package: a Wine
+/// prefix, except on Windows.
+#[cfg(not(windows))]
+macro_rules! wine_fallback {
+    () => {
+        ", else the installation in the Wine prefix"
+    };
+}
+#[cfg(windows)]
+macro_rules! wine_fallback {
+    () => {
+        ""
+    };
+}
+
+const USAGE: &str = concat!(
+    "usage:
   cr extract-data SOURCE [DEST_DIR]
                             copy what the app uses out of a Core Rules 2.0
                             or Expansion CD into a data package, as Extract
@@ -61,7 +92,9 @@ const USAGE: &str = "usage:
                             image, the mounted CD, an installation (the
                             folder holding Database/) or a Wine prefix;
                             DEST_DIR, which must not exist, defaults to
-                            ~/.local/share/corerules/data while that is
+                            ",
+    data_dir!(),
+    " while that is
                             free, else a corerules-data-EDITION folder
                             next to it (the Expansion takes the data
                             folder over from 2.0 data, which moves there)
@@ -201,12 +234,19 @@ Core Rules 2.0 installations are read-only: new content (characters,
 NPCs, treasure, encounters, records and packages) follows the Expansion,
 and 2.0 content is brought over with cr import.
 
-Without INSTALL_DIR, the data package in ~/.local/share/corerules/data
-is used, else the installation in the Wine prefix.
+Without INSTALL_DIR, the data package in ",
+    data_dir!(),
+    "
+is used",
+    wine_fallback!(),
+    ".
 
 An Expansion INSTALL_DIR that cannot be written to (a mounted CD or ISO
-image) is copied into ~/.local/share/corerules/data once, as
-cr extract-data does, and whatever a command saves goes into that copy.";
+image) is copied into ",
+    data_dir!(),
+    " once, as
+cr extract-data does, and whatever a command saves goes into that copy."
+);
 
 /// Writes to standard output. A closed pipe exits with success, as a
 /// program killed by SIGPIPE would quietly stop; any other write error
@@ -254,7 +294,7 @@ fn main() -> ExitCode {
     // folder: the data package or the Wine installation is used.
     // A path that is not there is an error, not a reason to use the
     // default data.
-    if let Some(dir) = args.get(1).filter(|d| d.contains('/'))
+    if let Some(dir) = args.get(1).filter(|d| d.contains(std::path::is_separator))
         && !std::path::Path::new(dir).exists()
     {
         eprintln!("cr: {dir}: no such folder");
@@ -264,7 +304,14 @@ fn main() -> ExitCode {
         Some(dir) => (Installation::open(dir), &args[2..]),
         None => (
             Installation::discover().ok_or_else(|| {
-                cr_store::Error::NotAnInstallation(cr_store::DEFAULT_WINE_PATH.into())
+                // Windows has no Wine prefix: the data package is the only
+                // place looked in.
+                let looked = if cfg!(windows) {
+                    cr_store::data_package_dir().unwrap_or_default()
+                } else {
+                    cr_store::DEFAULT_WINE_PATH.into()
+                };
+                cr_store::Error::NotAnInstallation(looked)
             }),
             &args[1..],
         ),

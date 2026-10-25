@@ -67,7 +67,9 @@ fn not_an_installation(path: &Path) -> String {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// Where Extract Data from CD… (`cr extract-data`) puts the data package.
+/// Where Extract Data from CD… (`cr extract-data`) puts the data package:
+/// `$XDG_DATA_HOME/corerules/data`, else `~/.local/share/corerules/data`.
+#[cfg(not(windows))]
 pub fn data_package_dir() -> Option<PathBuf> {
     let data = std::env::var_os("XDG_DATA_HOME")
         .filter(|d| !d.is_empty())
@@ -75,6 +77,54 @@ pub fn data_package_dir() -> Option<PathBuf> {
         .or_else(|| std::env::var_os("HOME").map(|h| Path::new(&h).join(".local/share")))?;
     Some(data.join("corerules").join("data"))
 }
+
+/// Where Extract Data from CD… (`cr extract-data`) puts the data package:
+/// `Core Rules\data` in the user's Documents folder. A packaged (MSIX) app
+/// writes there directly, so the characters stay when the app is
+/// uninstalled, where AppData would be removed with it.
+#[cfg(windows)]
+pub fn data_package_dir() -> Option<PathBuf> {
+    Some(documents_dir()?.join("Core Rules").join("data"))
+}
+
+/// The Documents folder as Windows knows it, which may have been moved
+/// (into OneDrive, say) and whose name may be translated.
+#[cfg(windows)]
+fn documents_dir() -> Option<PathBuf> {
+    use std::os::windows::ffi::OsStringExt;
+    use windows_sys::Win32::System::Com::CoTaskMemFree;
+    use windows_sys::Win32::UI::Shell::{
+        FOLDERID_Documents, KF_FLAG_DEFAULT, SHGetKnownFolderPath,
+    };
+
+    let mut path = std::ptr::null_mut();
+    // SAFETY: on success `path` is a NUL-terminated UTF-16 string; it is
+    // freed with CoTaskMemFree whether the call succeeds or not, as the
+    // documentation of SHGetKnownFolderPath asks.
+    unsafe {
+        let result = SHGetKnownFolderPath(
+            &FOLDERID_Documents,
+            KF_FLAG_DEFAULT as _,
+            std::ptr::null_mut(),
+            &mut path,
+        );
+        let dir = (result == 0 && !path.is_null()).then(|| {
+            let len = (0..).take_while(|&i| *path.add(i) != 0).count();
+            PathBuf::from(std::ffi::OsString::from_wide(std::slice::from_raw_parts(
+                path, len,
+            )))
+        });
+        CoTaskMemFree(path as _);
+        dir
+    }
+}
+
+/// [`data_package_dir`] the way texts for the user name it.
+#[cfg(not(windows))]
+pub const DATA_PACKAGE_SHOWN: &str = "~/.local/share/corerules/data";
+/// [`data_package_dir`] the way texts for the user name it.
+#[cfg(windows)]
+pub const DATA_PACKAGE_SHOWN: &str = r"Documents\Core Rules\data";
 
 /// Folder where the installer puts Core Rules inside a Wine prefix.
 pub const DEFAULT_WINE_PATH: &str = "drive_c/Program Files/AD&D Core Rules 2.0";
@@ -93,14 +143,17 @@ impl Installation {
     }
 
     /// Looks for the data package made by Extract Data from CD… in the app's
-    /// data folder (`$XDG_DATA_HOME/corerules/data`, else
-    /// `~/.local/share/corerules/data`), then for an installation in the
-    /// usual Wine prefix (`$WINEPREFIX`, else `~/.wine`).
+    /// data folder ([`data_package_dir`]), then, except on Windows, for an
+    /// installation in the usual Wine prefix (`$WINEPREFIX`, else
+    /// `~/.wine`).
     pub fn discover() -> Option<Self> {
         if let Some(dir) = data_package_dir()
             && let Ok(install) = Self::open(dir)
         {
             return Some(install);
+        }
+        if cfg!(windows) {
+            return None;
         }
         let prefix = std::env::var_os("WINEPREFIX")
             .map(PathBuf::from)
@@ -196,9 +249,14 @@ fn can_write_in(dir: &Path) -> bool {
 }
 
 fn find_entry(dir: &Path, name: &str) -> Option<PathBuf> {
-    let exact = dir.join(name);
-    if exact.exists() {
-        return Some(exact);
+    // On Windows every spelling exists, and the shortcut would give back
+    // the one asked for; the folder is read for the name as it is on disk,
+    // the one the original and Linux see.
+    if !cfg!(windows) {
+        let exact = dir.join(name);
+        if exact.exists() {
+            return Some(exact);
+        }
     }
     fs::read_dir(dir)
         .ok()?

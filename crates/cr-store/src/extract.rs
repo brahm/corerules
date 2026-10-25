@@ -394,8 +394,9 @@ impl Extraction {
              It holds TSR/Wizards of the Coast content from your own copy of AD&D Core\n\
              Rules 2.0. Keep it for your own use; do not redistribute it.\n\
              \n\
-             The app finds it in ~/.local/share/corerules/data (or open this folder with\n\
+             The app finds it in {shown} (or open this folder with\n\
              \"Open Folder…\"). Characters and user databases you edit are saved here.\n",
+            shown = crate::DATA_PACKAGE_SHOWN,
             edition = self.edition.id(),
             root = self.root_display(),
             year = date.year,
@@ -450,7 +451,8 @@ mod tests {
         fn walk(dir: &Path, base: &Path, found: &mut Vec<String>) {
             for e in fs::read_dir(dir).unwrap() {
                 let p = e.unwrap().path();
-                let rel = p.strip_prefix(base).unwrap().to_string_lossy().into_owned();
+                let rel = p.strip_prefix(base).unwrap().to_string_lossy();
+                let rel = rel.replace('\\', "/");
                 if p.is_dir() {
                     found.push(format!("{rel}/"));
                     walk(&p, base, found);

@@ -8,6 +8,8 @@
 //! copy of `*_before` next to links to the installation's `Database` and a
 //! copy of its `UserDbas`. Without the variables they pass without checking.
 
+mod common;
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -49,7 +51,7 @@ fn scratch(test: &str) -> Option<Scratch> {
     let root = std::env::temp_dir().join(format!("cr-party-{test}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root).unwrap();
-    std::os::unix::fs::symlink(original.path("Database")?, root.join("Database")).unwrap();
+    common::symlink(original.path("Database")?, root.join("Database")).unwrap();
     copy_dir(&original.path("UserDbas")?, &root.join("UserDbas"));
     copy_dir(
         &golden.join(format!("{prefix}_before")),
@@ -218,8 +220,8 @@ fn chars_copy(test: &str) -> Option<(PathBuf, Installation)> {
     let root = std::env::temp_dir().join(format!("cr-index-{test}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root).unwrap();
-    std::os::unix::fs::symlink(original.path("Database")?, root.join("Database")).unwrap();
-    std::os::unix::fs::symlink(original.path("UserDbas")?, root.join("UserDbas")).unwrap();
+    common::symlink(original.path("Database")?, root.join("Database")).unwrap();
+    common::symlink(original.path("UserDbas")?, root.join("UserDbas")).unwrap();
     copy_dir(&original.path("Chars")?, &root.join("Chars"));
     let install = Installation::open(&root).unwrap();
     Some((root, install))

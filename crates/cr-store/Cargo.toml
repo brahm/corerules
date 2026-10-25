@@ -13,3 +13,6 @@ cr-i18n.workspace = true
 thiserror.workspace = true
 color_quant.workspace = true
 image.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Com", "Win32_UI_Shell"] }

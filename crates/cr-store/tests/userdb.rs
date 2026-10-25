@@ -10,6 +10,8 @@
 //! `AllowedU.dat`, 2.0's (`ev/`) otherwise. Without the variables the
 //! tests pass without checking.
 
+mod common;
+
 use std::fs;
 use std::path::PathBuf;
 
@@ -52,7 +54,7 @@ fn scratch(test: &str) -> Option<Scratch> {
     let root = std::env::temp_dir().join(format!("cr-userdb-golden-{test}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(root.join("UserDbas")).unwrap();
-    std::os::unix::fs::symlink(&database, root.join("Database")).unwrap();
+    common::symlink(&database, root.join("Database")).unwrap();
     for entry in fs::read_dir(&user).unwrap() {
         let entry = entry.unwrap();
         if entry.file_type().unwrap().is_file() {

@@ -5,6 +5,8 @@
 //! character's options are saved there and read back. Without it, or on
 //! Core Rules 2.0, the tests pass without checking.
 
+mod common;
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -39,7 +41,7 @@ fn scratch(test: &str) -> Option<Scratch> {
     let root = std::env::temp_dir().join(format!("cr-sheet-options-{test}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root).unwrap();
-    std::os::unix::fs::symlink(original.path("Database")?, root.join("Database")).unwrap();
+    common::symlink(original.path("Database")?, root.join("Database")).unwrap();
     if let Some(user) = original.path("UserDbas") {
         copy_dir(&user, &root.join("UserDbas"));
     }
