@@ -1790,6 +1790,11 @@ impl Component for Shell {
         context.window_title("Core Rules");
         let sized = context.callback(Message::WindowSized);
         context.on_window_size(sized);
+        crate::ui::set_room(if self.width > 0.0 {
+            book::room(self)
+        } else {
+            f64::INFINITY
+        });
         context.window_visuals(
             WindowVisuals::new()
                 .backdrop(WindowBackdrop::Mica)

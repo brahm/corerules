@@ -175,9 +175,13 @@ impl SkillsForm {
         self.character = character;
     }
 
-    /// The choices as edited.
+    /// The choices as edited. Without the rogue skills, none: the points
+    /// they keep are another page's, to check and to keep.
     pub fn skills(&self) -> CharacterSkills {
         let mut skills = self.skills.clone();
+        if !self.rogue_shown {
+            skills.rogue.clear();
+        }
         if self.psionic_level().is_none() {
             (skills.devotions, skills.sciences) = self
                 .talents
@@ -188,14 +192,9 @@ impl SkillsForm {
         skills
     }
 
-    /// Why the choices cannot be kept, if they cannot. Without the rogue
-    /// skills, the points they keep are another page's to judge.
+    /// Why the choices cannot be kept, if they cannot.
     pub fn problem(&self) -> Option<String> {
-        let mut skills = self.skills();
-        if !self.rogue_shown {
-            skills.rogue.clear();
-        }
-        self.rules.problem(&self.character, &skills)
+        self.rules.problem(&self.character, &self.skills())
     }
 
     fn psionic_level(&self) -> Option<u32> {
@@ -758,8 +757,14 @@ mod tests {
                 .problem()
                 .is_some()
         );
-        let form = SkillsForm::new(rules, character).without_rogue_skills();
+        let form = SkillsForm::new(rules.clone(), character.clone()).without_rogue_skills();
         assert_eq!(form.problem(), None);
+        // Create keeps them as they were.
+        let mut created = character.clone();
+        rules
+            .apply(&mut created, &form.skills(), &mut Dice::seeded(1))
+            .unwrap();
+        assert_eq!(created.data.rogue_skills, character.data.rogue_skills);
     }
 
     #[test]

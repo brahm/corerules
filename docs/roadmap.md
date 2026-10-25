@@ -272,7 +272,9 @@ The phases run in order:
      thousands are grouped as the language does it, a psionicist's
      allowance counts each kind of power, a subrace named as its race
      is said once, and the Windows labels keep their words whole in a
-     narrow window.
+     narrow window, where a settings card now puts its control under its
+     header. Enter Character no longer refuses a thief and psionicist
+     with more rogue points than New Character gives.
    - Still to port: editing; the generators (NPCs, treasure,
      encounters, tables, parties); the user database editors; packages
      and Import Core Rules 2.0; Extract Data from CD….

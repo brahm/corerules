@@ -1,8 +1,29 @@
 //! The Windows 11 type ramp and cards the pages are made of. Text wraps
 //! between words only: in a narrow window a label keeps its words whole
-//! rather than breaking one over lines.
+//! rather than breaking one over lines, and a settings card puts its
+//! control under its header.
+
+use std::cell::Cell;
 
 use windows_reactor::*;
+
+thread_local! {
+    /// The width beside the navigation pane, as the window last had it.
+    static ROOM: Cell<f64> = const { Cell::new(f64::INFINITY) };
+}
+
+/// Notes the width beside the navigation pane, which the cards lay
+/// themselves out by; infinite while the window has not said.
+pub fn set_room(width: f64) {
+    ROOM.set(width);
+}
+
+/// The padding each side of a page's content.
+const PAGE_SIDE: f64 = 36.0;
+
+/// The width of a settings card below which its control goes under its
+/// header, as the Windows Community Toolkit's SettingsCard does it.
+const STACKED_BELOW: f64 = 476.0;
 
 /// The page title (TitleTextBlockStyle).
 pub fn title(text: impl Into<String>) -> TextBlock {
@@ -69,6 +90,16 @@ pub fn setting(header: &str, description: &str, control: impl Into<View>) -> Vie
             .spacing(2.0)
             .children((body(header), caption(description)))
     };
+    if ROOM.get() - 2.0 * PAGE_SIDE < STACKED_BELOW {
+        return card(
+            StackPanel::new().spacing(8.0).children((
+                text,
+                Border::new()
+                    .horizontal_alignment(HorizontalAlignment::Left)
+                    .content(control),
+            )),
+        );
+    }
     card(
         Grid::new()
             .column_spacing(16.0)
@@ -89,14 +120,22 @@ pub fn setting(header: &str, description: &str, control: impl Into<View>) -> Vie
 pub fn page(content: impl Into<View>) -> View {
     ScrollViewer::new().content(
         Border::new()
-            .padding(Thickness::new(36.0, 24.0, 36.0, 36.0))
+            .padding(Thickness::new(PAGE_SIDE, 24.0, PAGE_SIDE, 36.0))
             .content(Border::new().max_width(1000.0).content(content)),
     )
 }
 
-/// A command bar button with a symbol.
+/// A command bar button with a symbol. It is wide enough for the
+/// longest word of its label, which WinUI would otherwise break over
+/// lines under the symbol when the bar opens.
 pub fn command(label: &str, symbol: Symbol, enabled: bool, click: Callback<()>) -> View {
+    let longest = label
+        .split_whitespace()
+        .map(|word| word.chars().count())
+        .max()
+        .unwrap_or(0);
     AppBarButton::new()
+        .min_width(68f64.max(7.0 * longest as f64 + 12.0))
         .label(label)
         .is_enabled(enabled)
         .on_click(click)
