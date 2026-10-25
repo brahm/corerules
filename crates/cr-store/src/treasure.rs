@@ -327,6 +327,13 @@ impl Bundle {
     }
 }
 
+/// `n` with its thousands separated as the interface language does it,
+/// for the texts translated with it: "3,335", "3.335".
+pub fn grouped(n: i32) -> String {
+    let digits = cr_i18n::thousands(u64::from(n.unsigned_abs()));
+    if n < 0 { format!("-{digits}") } else { digits }
+}
+
 /// A number with thousands separators (0x554d8a): "3,335", "-1,000".
 pub fn thousands(n: i32) -> String {
     let digits = n.unsigned_abs().to_string();
@@ -477,11 +484,11 @@ impl Summary {
     /// gold value is floored on its own, so the parts need not add up.
     pub fn lines(&self) -> Vec<String> {
         let mut lines = vec![
-            tr!("GP Value: {value}", value = thousands(self.value_cp / 100)),
-            tr!("XP Value: {value}", value = thousands(self.xp)),
+            tr!("GP Value: {value}", value = grouped(self.value_cp / 100)),
+            tr!("XP Value: {value}", value = grouped(self.xp)),
             tr!(
                 "Magical Items: {count}",
-                count = thousands(self.magical_items)
+                count = grouped(self.magical_items)
             ),
         ];
         for (name, t) in SUMMARY_TYPE_NAMES.iter().zip(&self.by_type) {
@@ -492,17 +499,17 @@ impl Summary {
             lines.push(tr!(
                 "Number of {name}: {count}",
                 name,
-                count = thousands(t.count)
+                count = grouped(t.count)
             ));
             lines.push(tr!(
                 "XP Value of {name}: {value}",
                 name,
-                value = thousands(t.xp)
+                value = grouped(t.xp)
             ));
             lines.push(tr!(
                 "GP Value of {name}: {value}",
                 name,
-                value = thousands(t.value_cp / 100)
+                value = grouped(t.value_cp / 100)
             ));
         }
         lines

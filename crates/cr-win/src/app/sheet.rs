@@ -271,8 +271,12 @@ fn table_view(table: &Table) -> View {
             column += span;
         }
     }
+    // The last column takes the room left and wraps in it, so that a
+    // wide table (a group encounter's NPCs) stays inside its card.
+    let mut widths = vec![GridLength::Auto; columns];
+    widths[columns - 1] = GridLength::STAR;
     Grid::new()
-        .columns(vec![GridLength::Auto; columns])
+        .columns(widths)
         .rows(vec![GridLength::Auto; table.rows.len()])
         .column_spacing(12.0)
         .row_spacing(4.0)

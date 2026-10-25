@@ -633,6 +633,8 @@ impl Shell {
             Page::SheetOptions(options) => options.changed(),
             // Past its first page the wizard has the choices made.
             Page::Create(wizard) => wizard.depth() > 1,
+            Page::Encounter(form) => form.changed(),
+            Page::EncounterTable(editor) => editor.changed(),
             _ => false,
         }
     }
@@ -2020,7 +2022,7 @@ impl Component for Shell {
             Message::PdfSaved(result) => {
                 self.busy = false;
                 match result {
-                    Ok(Some(_)) => self.notice = Some(Notice::success(tr("Sheet saved as PDF"))),
+                    Ok(Some(_)) => self.notice = Some(Notice::success(tr("Saved as PDF"))),
                     Ok(None) => {}
                     Err(e) => self.show_error(&e, ""),
                 }
@@ -3298,6 +3300,8 @@ impl Shell {
                 plain(tr("Discard Changes?")),
                 match &self.page {
                     Page::SheetOptions(_) => tr("The options have changes that are not saved."),
+                    Page::Encounter(_) => tr("The encounter has changes that are not saved."),
+                    Page::EncounterTable(_) => tr("The table has changes that are not saved."),
                     _ => tr("The character has changes that are not saved."),
                 }
                 .to_owned(),

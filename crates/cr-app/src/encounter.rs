@@ -13,7 +13,7 @@ use cr_store::encounter::{
     add_trap, hit_point_text, remove_trap, roll_2_to_20, roll_and_pick,
 };
 use cr_store::sheet::Sheet;
-use cr_store::treasure::{Bundle, Counts, Rand, TreasureRules, thousands};
+use cr_store::treasure::{Bundle, Counts, Rand, TreasureRules, grouped};
 use cr_store::userdb::traps::Traps;
 use cr_store::userdb::{Filter, Origin, UserDb};
 
@@ -336,6 +336,9 @@ pub struct EncounterForm {
     pub encounter: Encounter,
     /// The name the encounter is saved under.
     pub saved: Option<String>,
+    /// The encounter as last saved; an empty one when it is not, so that
+    /// one just generated counts as changed.
+    kept: Encounter,
     pub pending: Vec<PendingNpc>,
     /// The value each monster package's Hit Points box shows.
     shown: Vec<i32>,
@@ -358,12 +361,18 @@ impl EncounterForm {
         pending: Vec<PendingNpc>,
     ) -> Self {
         let treasure_rules = Arc::new(rules.treasure_rules().clone());
+        let kept = if saved.is_some() {
+            encounter.clone()
+        } else {
+            Encounter::default()
+        };
         Self {
             items: BundleEditor::new(treasure_rules.clone()),
             treasure_rules,
             rules,
             encounter,
             saved,
+            kept,
             pending,
             shown: Vec::new(),
             picker: None,
@@ -392,9 +401,9 @@ impl EncounterForm {
     pub fn totals(&self) -> [(&'static str, String); 3] {
         let t = self.rules.totals(&self.encounter);
         [
-            (tr("Gold Value"), thousands(t.gold_value)),
-            (tr("Monster XP"), thousands(t.monster_xp)),
-            (tr("Treasure XP"), thousands(t.treasure_xp)),
+            (tr("Gold Value"), grouped(t.gold_value)),
+            (tr("Monster XP"), grouped(t.monster_xp)),
+            (tr("Treasure XP"), grouped(t.treasure_xp)),
         ]
     }
 
@@ -487,7 +496,7 @@ impl EncounterForm {
         let summary = self
             .treasure_rules
             .summary_with(&self.encounter.treasure, self.encounter.prices());
-        tr!("{value} gp", value = thousands(summary.value_cp / 100))
+        tr!("{value} gp", value = grouped(summary.value_cp / 100))
     }
 
     /// The treasure types the roller opens with (0x63de14).
@@ -507,7 +516,14 @@ impl EncounterForm {
     /// The encounter was saved under `name`.
     pub fn saved_as(&mut self, name: String) {
         self.saved = Some(name);
+        self.kept = self.encounter.clone();
         self.saving = false;
+    }
+
+    /// Whether leaving would lose changes: the encounter differs from the
+    /// one saved, or was generated and never saved.
+    pub fn changed(&self) -> bool {
+        self.encounter != self.kept
     }
 
     pub fn take_effects(&mut self) -> Vec<EncounterEffect> {
@@ -712,6 +728,8 @@ pub struct TableEditor {
     pub table: FrequencyTable,
     /// The name the table is saved under.
     pub saved: Option<String>,
+    /// The table as last saved, or as it was opened.
+    kept: FrequencyTable,
     pub picking: Option<RollPick>,
     pub error: Option<String>,
     /// A save under way.
@@ -726,6 +744,7 @@ impl TableEditor {
         table.slots.resize(19, String::new());
         Self {
             rules,
+            kept: table.clone(),
             table,
             saved,
             picking: None,
@@ -773,7 +792,13 @@ impl TableEditor {
     /// The table was saved under `name`.
     pub fn saved_as(&mut self, name: String) {
         self.saved = Some(name);
+        self.kept = self.table.clone();
         self.saving = false;
+    }
+
+    /// Whether leaving would lose changes.
+    pub fn changed(&self) -> bool {
+        self.table != self.kept
     }
 
     pub fn take_effects(&mut self) -> Vec<TableEffect> {
@@ -898,6 +923,7 @@ mod tests {
         form.input(EncounterInput::PickChoose(name.clone()), &mut rand);
         form.input(EncounterInput::PickAnswer(true), &mut rand);
         assert!(form.picker.is_none());
+        assert!(form.changed());
         let rows = form.rows();
         assert_eq!(rows.len(), 1);
         assert!(rows[0].title.ends_with(&name));
@@ -907,6 +933,36 @@ mod tests {
         assert_eq!(form.rows()[0].count, 3);
         form.input(EncounterInput::Remove(rows[0].package), &mut rand);
         assert!(form.rows().is_empty());
+    }
+
+    #[test]
+    fn leaving_loses_only_what_is_not_saved() {
+        let Some(rules) = rules() else {
+            return;
+        };
+        let mut rand = Rand::seeded(11);
+        let made = templates(&rules)
+            .into_iter()
+            .map(|(name, _)| from_template(&rules, &name, &mut rand))
+            .find(|made| made.encounter != Encounter::default());
+        let Some(made) = made else {
+            return;
+        };
+        // A generated encounter is lost unless it is saved.
+        let mut form = EncounterForm::new(rules.clone(), made.encounter, None, Vec::new());
+        assert!(form.changed());
+        form.input(EncounterInput::Name("Ambush".into()), &mut rand);
+        form.saved_as("Ambush".into());
+        assert!(!form.changed());
+        form.input(EncounterInput::Description("At dusk".into()), &mut rand);
+        assert!(form.changed());
+        let saved = EncounterForm::new(
+            rules,
+            form.encounter.clone(),
+            Some("Ambush".into()),
+            Vec::new(),
+        );
+        assert!(!saved.changed());
     }
 
     #[test]

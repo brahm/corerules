@@ -370,7 +370,9 @@ fn picker_dialog(picker: &Picker, context: &mut ViewContext<Shell>) -> View {
                 items.iter().enumerate().map(|(i, (name, under))| {
                     KeyedView::new(
                         format!("{i}\u{1}{name}"),
-                        ListViewItem::new().content(forms::two_lines(name, under)),
+                        ListViewItem::new()
+                            .automation_name(name.as_str())
+                            .content(forms::two_lines(name, under)),
                     )
                 }),
             )
@@ -992,6 +994,7 @@ pub fn group_dialog(group: &GroupDialog, context: &mut ViewContext<Shell>) -> Vi
                 context.callback(|i: Option<usize>| Message::GroupPrint(i == Some(1))),
             ),
         CheckBox::new()
+            .automation_name(plain(tr("Co_ndensed Format")))
             .is_enabled(group.print)
             .is_checked(group.condensed)
             .on_is_checked_changed(context.callback(Message::GroupCondensed))
