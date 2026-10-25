@@ -10,6 +10,8 @@
 //! temporary copy of `before` next to a link to the installation's
 //! `Database`. Without the variables they pass without checking.
 
+mod common;
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -52,7 +54,7 @@ fn scratch(test: &str) -> Option<Scratch> {
     let root = std::env::temp_dir().join(format!("cr-export-{test}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(&root).unwrap();
-    std::os::unix::fs::symlink(original.path("Database")?, root.join("Database")).unwrap();
+    common::symlink(original.path("Database")?, root.join("Database")).unwrap();
     for folder in ["UserDbas", "Chars"] {
         copy_dir(
             &golden.join("import/before").join(folder),

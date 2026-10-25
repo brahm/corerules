@@ -17,3 +17,20 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
+
+  # The backend and `cr` on Windows, ahead of the Windows app; the GTK
+  # crates are left out.
+  windows:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - run: cargo clippy -p cr-formats -p cr-store -p cr-i18n -p cr-cli --all-targets -- -D warnings
+      - run: cargo test -p cr-formats -p cr-store -p cr-i18n -p cr-cli
+      - run: cargo build --release -p cr-cli
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cr-windows-x64
+          path: target/release/cr.exe

@@ -2,6 +2,8 @@
 //! powers, with `CORERULES_DIR` (an Expansion installation) on a scratch
 //! copy of its `UserDbas` and `Chars`.
 
+mod common;
+
 use std::fs;
 use std::path::PathBuf;
 
@@ -29,7 +31,7 @@ fn scratch(test: &str) -> Option<Scratch> {
     let root = std::env::temp_dir().join(format!("cr-user-races-{test}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&root);
     fs::create_dir_all(root.join("UserDbas")).unwrap();
-    std::os::unix::fs::symlink(original.path("Database")?, root.join("Database")).unwrap();
+    common::symlink(original.path("Database")?, root.join("Database")).unwrap();
     for entry in fs::read_dir(original.path("UserDbas")?).unwrap() {
         let entry = entry.unwrap();
         if entry.file_type().unwrap().is_file() {

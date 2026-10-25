@@ -9,6 +9,8 @@
 //! (when present); a Core Rules 2.0 installation makes no NPCs. Without
 //! them (or with another golden folder) the tests pass without checking.
 
+mod common;
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -702,7 +704,7 @@ fn with_parts(install: &Installation, parts: &Path, test: &str) -> WithParts {
     for entry in fs::read_dir(install.root()).unwrap() {
         let entry = entry.unwrap();
         if entry.file_name() != "UserDbas" {
-            std::os::unix::fs::symlink(entry.path(), root.join(entry.file_name())).unwrap();
+            common::symlink(entry.path(), root.join(entry.file_name())).unwrap();
         }
     }
     let user = install.path("UserDbas").unwrap();

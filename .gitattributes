@@ -1,0 +1,5 @@
+# Text files are checked out with LF on Windows too: the tests compare what
+# the app writes, byte for byte, with texts written in the code.
+* text=auto eol=lf
+# The add-on lists keep the CRLF line ends they were published with.
+addons/*.csv -text

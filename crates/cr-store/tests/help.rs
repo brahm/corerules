@@ -2,6 +2,8 @@
 //! installation): every one reads, and every topic its contents file
 //! lists is found.
 
+mod common;
+
 use std::path::Path;
 
 use cr_formats::winhelp::{Item, Link, Macro};
@@ -255,7 +257,7 @@ fn user_copy(test: &str) -> Option<(std::path::PathBuf, Installation)> {
     std::fs::create_dir_all(root.join("UserDbas")).unwrap();
     for name in ["Database", "Help", "Bitmaps"] {
         if let Some(path) = original.path(name) {
-            std::os::unix::fs::symlink(path, root.join(name)).unwrap();
+            common::symlink(path, root.join(name)).unwrap();
         }
     }
     for entry in std::fs::read_dir(original.path("UserDbas").unwrap()).unwrap() {

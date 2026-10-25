@@ -394,8 +394,9 @@ impl Extraction {
              It holds TSR/Wizards of the Coast content from your own copy of AD&D Core\n\
              Rules 2.0. Keep it for your own use; do not redistribute it.\n\
              \n\
-             The app finds it in ~/.local/share/corerules/data (or open this folder with\n\
+             The app finds it in {shown} (or open this folder with\n\
              \"Open Folder…\"). Characters and user databases you edit are saved here.\n",
+            shown = crate::DATA_PACKAGE_SHOWN,
             edition = self.edition.id(),
             root = self.root_display(),
             year = date.year,
