@@ -12,14 +12,14 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use adw::prelude::*;
-use cr_i18n::{tr, tr_noop, trn};
+use cr_i18n::{tr, trn};
 use cr_store::advance::AdvanceRules;
 use cr_store::create::{
     ABILITIES, ALIGNMENTS, CreationRules, DISADVANTAGE_POINTS, Dice, Draft, ENTERED_DEFAULT_SCORE,
     ENTERED_SCORES, Entered, METHOD_VI_DICE, METHOD_VII_POINTS, METHOD_VIII_DICE,
     METHOD_X_STRENGTH_STEP, MOST_DISADVANTAGES, MOST_FIGHTING_STYLES, NonweaponPick, PickKind,
-    Question, ROGUE_SKILLS, RollMethod, SHIELDS, STANDARD_PACK, SUBABILITIES, SUBABILITY_SPREAD,
-    UNARMED, max_spells_per_level, point_table, required_removal, rogue_skill_of, roll_dice_pool,
+    Question, ROGUE_SKILLS, RollMethod, SHIELDS, STANDARD_PACK, SUBABILITY_SPREAD, UNARMED,
+    max_spells_per_level, point_table, required_removal, rogue_skill_of, roll_dice_pool,
     roll_seven_dice, seven_dice_scores,
 };
 use cr_store::help::topic;
@@ -34,28 +34,10 @@ use gtk::glib;
 
 use crate::lists::{RowList, RowSpec};
 
-/// Abbreviations for the ability summaries.
-const SHORT: [&str; 6] = [
-    tr_noop!("Str"),
-    tr_noop!("Dex"),
-    tr_noop!("Con"),
-    tr_noop!("Int"),
-    tr_noop!("Wis"),
-    tr_noop!("Cha"),
-];
-
-const SOCIAL_CLASSES: [&str; 4] = [
-    tr_noop!("Lower class"),
-    tr_noop!("Lower middle class"),
-    tr_noop!("Upper middle class"),
-    tr_noop!("Upper class"),
-];
+use cr_app::create::{ENTERED_ROGUE_POINTS, SOCIAL_CLASSES, ability_title, scores_summary, title};
+pub(crate) use cr_app::create::{money, points, slots};
 
 type Create = dyn Fn(&Draft) -> Result<(), String>;
-
-/// The most points a rogue skill takes in Enter Character, which has no
-/// limits of its own (0x62b739): a skill's whole range.
-const ENTERED_ROGUE_POINTS: u32 = 100;
 
 /// What a check row sets on the draft: its index and whether it is on.
 type SetCheck = dyn Fn(&mut Draft, usize, bool);
@@ -151,14 +133,6 @@ pub fn new_character(
     let first = wizard.setting_page();
     wizard.0.nav.add(&first);
     dialog.present(Some(parent));
-}
-
-fn title(entering: bool) -> &'static str {
-    if entering {
-        tr("Enter Character")
-    } else {
-        tr("New Character")
-    }
 }
 
 /// The Details page's tag, for going back to it.
@@ -583,45 +557,6 @@ fn spin_row(title: &str, subtitle: &str, value: u32, min: u32, max: u32) -> adw:
         .build()
 }
 
-/// "34 gp 6 sp 7 cp" for an amount in copper pieces.
-pub(crate) fn money(copper: u32) -> String {
-    let parts: Vec<String> = [copper / 100, copper / 10 % 10, copper % 10]
-        .into_iter()
-        .enumerate()
-        .filter(|(_, amount)| *amount > 0)
-        .map(|(unit, amount)| match unit {
-            0 => tr!("{amount} gp", amount),
-            1 => tr!("{amount} sp", amount),
-            _ => tr!("{amount} cp", amount),
-        })
-        .collect();
-    if parts.is_empty() {
-        tr("Free").into()
-    } else {
-        parts.join(" ")
-    }
-}
-
-pub(crate) fn slots(n: u32) -> String {
-    trn!("{n} slot", "{n} slots", n)
-}
-
-/// "Axe bonus" for "Dwarf, Axe bonus (5)": the race or class and the cost
-/// are shown elsewhere.
-fn ability_title(name: &str) -> String {
-    let name = name.split_once(", ").map_or(name, |(_, rest)| rest);
-    match name.rsplit_once(" (") {
-        Some((title, cost)) if cost.trim_end_matches(')').parse::<i32>().is_ok() => title,
-        _ => name,
-    }
-    .to_owned()
-}
-
-pub(crate) fn points(n: i64) -> String {
-    let count = n.to_string().replace('-', "−");
-    trn!("{count} point", "{count} points", n.unsigned_abs(), count)
-}
-
 /// One check row per ability with its cost; `changed` gets the names
 /// checked after every toggle.
 fn ability_rows(
@@ -634,30 +569,15 @@ fn ability_rows(
     let changed = Rc::new(changed);
     // Set while a refused toggle is undone.
     let undoing = Rc::new(Cell::new(false));
-    for (name, cost) in choices {
-        // The databases have some abilities in two versions that differ
-        // only in cost (Followers (5) and (10)); those keep it.
-        let mut title = ability_title(name);
-        if choices
-            .iter()
-            .any(|(other, _)| other != name && ability_title(other) == title)
-        {
-            title = name
-                .split_once(", ")
-                .map_or(name.as_str(), |n| n.1)
-                .to_owned();
-        }
+    let texts = cr_app::create::ability_rows(choices);
+    for ((name, _), (title, cost)) in choices.iter().zip(texts) {
         let check = gtk::CheckButton::builder()
             .valign(gtk::Align::Center)
             .active(selected.contains(name))
             .build();
         let row = adw::ActionRow::builder()
             .title(escape(&title))
-            .subtitle(if *cost < 0 {
-                tr!("Gives {points}", points = points(i64::from(-cost)))
-            } else {
-                points(i64::from(*cost))
-            })
+            .subtitle(cost)
             .activatable_widget(&check)
             .build();
         row.add_prefix(&check);
@@ -685,15 +605,6 @@ fn ability_rows(
         group.add(&row);
         checks.borrow_mut().push((name.clone(), check));
     }
-}
-
-fn scores_summary(scores: &[u32; 6]) -> String {
-    SHORT
-        .iter()
-        .zip(scores)
-        .map(|(a, s)| format!("{} {s}", tr(a)))
-        .collect::<Vec<_>>()
-        .join(" · ")
 }
 
 impl Wizard {
@@ -1195,18 +1106,7 @@ impl Wizard {
 
     /// "Fighter/Mage" with "Multi-class · d10/d4" for a class choice.
     fn class_choice(&self, classes: &[String]) -> (String, String) {
-        let dice: Vec<String> = classes
-            .iter()
-            .filter_map(|c| self.rules().class(c))
-            .map(|c| format!("d{}", c.hit_die))
-            .collect();
-        let dice = dice.join("/");
-        let subtitle = if classes.len() > 1 {
-            tr!("Multi-class · {dice}", dice)
-        } else {
-            tr!("Hit die · {dice}", dice)
-        };
-        (classes.join("/"), subtitle)
+        cr_app::create::class_choice(self.rules(), classes)
     }
 
     /// The race, among those whose limits the scores meet; with Player's
@@ -1293,25 +1193,7 @@ impl Wizard {
                 let choices: Vec<(String, String)> = races
                     .iter()
                     .map(|r| {
-                        let race = this.rules().race(r);
-                        let mut adjustments: Vec<String> = race
-                            .map(|r| r.adjustments)
-                            .unwrap_or_default()
-                            .iter()
-                            .enumerate()
-                            .filter(|(_, v)| **v != 0)
-                            .map(|(a, v)| format!("{} {v:+}", tr(SHORT[a])))
-                            .collect();
-                        if race.is_some_and(|r| r.any_point) {
-                            adjustments.push(tr("+1 to any ability").to_owned());
-                        }
-                        let subtitle = if entering {
-                            String::new()
-                        } else if adjustments.is_empty() {
-                            tr("No ability adjustments").to_owned()
-                        } else {
-                            adjustments.join(" · ").replace('-', "−")
-                        };
+                        let subtitle = cr_app::create::race_subtitle(this.rules(), r, entering);
                         (r.clone(), subtitle)
                     })
                     .collect();
@@ -1832,67 +1714,20 @@ impl Wizard {
     /// Character new classes start at 1st level. Shows why not and
     /// returns false when the character cannot be made.
     fn start_details(&self, classes: Vec<String>) -> bool {
-        let rules = self.rules();
-        let mut dice = self.0.dice.borrow_mut();
-        let mut d = self.0.draft.borrow_mut();
-        let changed = d.classes != classes;
-        d.classes = classes;
-        let race = d.race.clone();
-        let alignments = rules.alignments(&d.classes);
-        // Enter Character sets the alignment freely (0x5beb8f).
-        let free = self.0.entering && ALIGNMENTS.contains(&d.alignment.as_str());
-        if !free && !alignments.contains(&d.alignment) {
-            d.alignment = alignments
-                .first()
-                .cloned()
-                .unwrap_or_else(|| ALIGNMENTS[4].to_owned());
+        let started = cr_app::create::start_details(
+            self.rules(),
+            &mut self.0.draft.borrow_mut(),
+            classes,
+            self.0.entering,
+            &mut self.0.dice.borrow_mut(),
+        );
+        match started {
+            Ok(()) => true,
+            Err(e) => {
+                message(&self.0.dialog, title(true), &e);
+                false
+            }
         }
-        if !rules.kits_for(&d).contains(&d.kit) {
-            d.kit = "None".into();
-        }
-        d.social_class = rules.roll_social_class(&d.kit, &mut dice);
-        d.age = rules.roll_age(&race, &mut dice);
-        d.height = rules.roll_height(&race, d.male, &mut dice);
-        d.weight = rules.roll_weight(&race, d.male, &mut dice);
-        d.hit_dice = rules.roll_hit_dice(&d.classes, &mut dice);
-        d.psionic_roll = rules.roll_psionic(&d.classes, &mut dice);
-        // Bought with Method X; typed in with Enter Character.
-        if d.roll_method != RollMethod::PointsAndStrength && !self.0.entering {
-            d.exceptional_strength = dice.roll(1, 100);
-        }
-        d.gold = rules.roll_gold(&d, &mut dice);
-        if changed {
-            d.reset_proficiencies();
-            d.spells.clear();
-            d.purchases.clear();
-            d.rogue_points = [0; 8];
-            d.rogue_bonus = None;
-            d.rogue_chosen.clear();
-            d.barred_schools_ignored = false;
-            d.eliminated_schools.clear();
-            d.unarmed.clear();
-            d.shields = [false; 4];
-            d.armor_proficiencies.clear();
-            d.fighting_styles.clear();
-        }
-        if changed || d.class_abilities.len() != d.classes.len() {
-            d.class_abilities = d
-                .classes
-                .iter()
-                .map(|c| rules.default_class_abilities(c))
-                .collect();
-            d.specializations.clear();
-        }
-        d.languages = rules.native_languages(&d);
-        if self.0.entering
-            && (changed || d.class_levels.len() != d.classes.len())
-            && let Err(e) = rules.start_entered(&mut d)
-        {
-            drop((d, dice));
-            message(&self.0.dialog, title(true), &e.to_string());
-            return false;
-        }
-        true
     }
 
     /// Name, player, gender, alignment, kit, social class, age, height,
@@ -1996,22 +1831,11 @@ impl Wizard {
             let (this, hit_points, hit_dice) = (self.clone(), hit_points.clone(), hit_dice.clone());
             let (classes, kit) = (d.classes.clone(), kit.clone());
             move || {
-                // The kit's hit points go on each roll (0x42d8f7).
-                let bonus = match this.rules().kit_hit_points(&combo_value(&kit)) {
-                    0 => String::new(),
-                    b => format!("{b:+}"),
-                };
-                let text: Vec<String> = classes
-                    .iter()
-                    .zip(hit_dice.borrow().iter())
-                    .map(|(c, roll)| {
-                        let die = this.rules().class(c).map_or(0, |c| c.hit_die);
-                        format!("{c} {roll}{bonus} (d{die}{bonus})")
-                    })
-                    .collect();
-                hit_points.set_subtitle(&tr!(
-                    "{rolls} · Constitution adjusts it on the sheet",
-                    rolls = text.join(", ")
+                hit_points.set_subtitle(&cr_app::create::hit_dice_text(
+                    this.rules(),
+                    &classes,
+                    &hit_dice.borrow(),
+                    &combo_value(&kit),
                 ));
             }
         });
@@ -2074,18 +1898,14 @@ impl Wizard {
         let show_subabilities = Rc::new({
             let (this, spread_rows, spreads) = (self.clone(), spread_rows.clone(), spreads.clone());
             move || {
-                let mut probe = this.0.draft.borrow().clone();
-                probe.subabilities = spreads();
-                let scores = this.rules().subability_scores(&probe);
-                for (a, row) in spread_rows.iter().enumerate() {
-                    row.set_title(&format!("{} {}", tr(ABILITIES[a]), scores[a][0]));
-                    row.set_subtitle(&format!(
-                        "{} {} · {} {}",
-                        tr(SUBABILITIES[a][0]),
-                        scores[a][1],
-                        tr(SUBABILITIES[a][1]),
-                        scores[a][2]
-                    ));
+                let rows = cr_app::create::subability_rows(
+                    this.rules(),
+                    &this.0.draft.borrow(),
+                    spreads(),
+                );
+                for (row, (title, subtitle)) in spread_rows.iter().zip(rows) {
+                    row.set_title(&title);
+                    row.set_subtitle(&subtitle);
                 }
             }
         });

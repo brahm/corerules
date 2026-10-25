@@ -10,6 +10,7 @@
 pub mod about;
 pub mod action;
 pub mod books;
+pub mod create;
 pub mod help;
 pub mod library;
 pub mod pages;
