@@ -11,6 +11,7 @@ use cr_store::dual::{ClassChoice, ClassTable};
 use cr_store::edit::ABILITY_RANGE;
 
 use super::{EditInput, Editor};
+use crate::create::SOCIAL_CLASSES;
 use crate::levels::{
     ClassRow, ExperienceForm, ExperienceSettings, LevelsForm, class_rows, psionic,
 };
@@ -51,6 +52,27 @@ pub fn class_offer(table: &ClassTable, character: &Character) -> ClassOffer {
             names,
         },
     }
+}
+
+/// The social class as the Social Class box shows it: one of the
+/// original's classes in the language chosen, any other text as written.
+pub fn social_class_shown(stored: &str) -> String {
+    SOCIAL_CLASSES
+        .iter()
+        .find(|class| **class == stored)
+        .map_or(stored, |class| tr(class))
+        .to_owned()
+}
+
+/// The social class as the character keeps it: one of the original's
+/// classes, shown in the language chosen, back in English, so that the
+/// sheet and the kits' tables still know it; any other text as written.
+pub fn social_class_stored(shown: &str) -> String {
+    SOCIAL_CLASSES
+        .iter()
+        .find(|class| tr(class) == shown)
+        .map_or(shown, |class| class)
+        .to_owned()
 }
 
 impl Editor {
@@ -141,7 +163,7 @@ impl Editor {
         match input {
             EditInput::Name(text) => d.name = text,
             EditInput::Player(text) => d.player = text,
-            EditInput::SocialClass(text) => d.social_class = text,
+            EditInput::SocialClass(text) => d.social_class = social_class_stored(&text),
             EditInput::Portrait(portrait) => d.portrait = portrait,
             EditInput::Gender(i) => d.male = i == 0,
             EditInput::Alignment(i) => {
@@ -281,6 +303,16 @@ mod tests {
     use super::super::tests::editor;
     use super::*;
     use crate::levels::LevelsInput;
+
+    #[test]
+    fn the_social_class_is_kept_in_english_and_shown_translated() {
+        for class in SOCIAL_CLASSES {
+            assert_eq!(social_class_shown(class), tr(class));
+            assert_eq!(social_class_stored(&social_class_shown(class)), class);
+        }
+        assert_eq!(social_class_shown("Gentry"), "Gentry");
+        assert_eq!(social_class_stored("Gentry"), "Gentry");
+    }
 
     #[test]
     fn a_new_kit_rolls_the_social_class() {

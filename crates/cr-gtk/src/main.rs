@@ -34,7 +34,7 @@ use std::sync::Arc;
 
 use adw::prelude::*;
 use cr_app::action;
-use cr_app::editor::{ordinal, slots_fit, slots_text};
+use cr_app::editor::{ordinal, slots_fit, slots_text, social_class_shown, social_class_stored};
 use cr_app::library::{self, Commands};
 use cr_app::records;
 use cr_formats::character::Character;
@@ -2209,7 +2209,10 @@ fn character_editor(
     };
     let name = entry_row(tr("Name"), &details.name);
     let player = entry_row(tr("Player"), &details.player);
-    let social_class = entry_row(tr("Social Class"), &details.social_class);
+    let social_class = entry_row(
+        tr("Social Class"),
+        &social_class_shown(&details.social_class),
+    );
     let age = spin_row(tr("Age"), tr("Years"), details.age, 9999);
     let height = spin_row(tr("Height"), tr("Inches"), details.height, 999);
     let weight = spin_row(tr("Weight"), tr("Pounds"), details.weight, 99999);
@@ -2318,7 +2321,7 @@ fn character_editor(
         move |kit| {
             let chosen = create::combo_value(kit);
             let rolled = rules.roll_social_class(&chosen, &mut Default::default());
-            social_class.set_text(&rolled);
+            social_class.set_text(&social_class_shown(&rolled));
             create::kit_information(kit, &rules, &chosen);
         }
     });
@@ -2772,7 +2775,7 @@ fn character_editor(
             let details = CharacterDetails {
                 name: name.text().trim().to_owned(),
                 player: player.text().trim().to_owned(),
-                social_class: social_class.text().trim().to_owned(),
+                social_class: social_class_stored(social_class.text().trim()),
                 age: age.value() as u32,
                 height: height.value() as u32,
                 weight: weight.value() as u32,

@@ -15,7 +15,7 @@
 use cr_app::create::{ListKind, none_label, points};
 use cr_app::editor::{
     COIN_NAMES, Checks, EditInput, Editor, MOST_AGE, MOST_COINS, MOST_HEIGHT, MOST_POINTS,
-    MOST_QUANTITY, MOST_WEIGHT, Tab,
+    MOST_QUANTITY, MOST_WEIGHT, Tab, social_class_shown,
 };
 use cr_app::levels::LevelsInput;
 use cr_i18n::{tr, tr_noop};
@@ -263,7 +263,7 @@ fn details(editor: &Editor, portrait: &Shown, context: &mut ViewContext<Shell>) 
             "",
             text(
                 tr("Social Class"),
-                &d.social_class,
+                &social_class_shown(&d.social_class),
                 EditInput::SocialClass,
                 context,
             ),

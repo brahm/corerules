@@ -45,7 +45,10 @@ use crate::skills::SkillsForm;
 
 pub use abilities::{AbilityGroup, Check, Checks};
 pub use combat::CombatView;
-pub use details::{ClassOffer, MOST_AGE, MOST_HEIGHT, MOST_POINTS, MOST_WEIGHT, class_offer};
+pub use details::{
+    ClassOffer, MOST_AGE, MOST_HEIGHT, MOST_POINTS, MOST_WEIGHT, class_offer, social_class_shown,
+    social_class_stored,
+};
 pub use equipment::{COIN_NAMES, MOST_COINS, MOST_QUANTITY};
 pub use spells::{KitMagicView, MagicGroup, ordinal, slots_fit, slots_text};
 
@@ -592,13 +595,10 @@ impl Editor {
             return;
         }
         let mut details = self.details.clone();
-        for text in [
-            &mut details.name,
-            &mut details.player,
-            &mut details.social_class,
-        ] {
+        for text in [&mut details.name, &mut details.player] {
             *text = text.trim().to_owned();
         }
+        details.social_class = details::social_class_stored(details.social_class.trim());
         let mut lists = self.lists.clone();
         lists.new_classes = self.new_class.iter().cloned().collect();
         let advancement = Advancement::between(&self.original, &self.advanced);
