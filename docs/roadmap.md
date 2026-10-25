@@ -194,7 +194,7 @@ The phases run in order:
      Character or NPC, and Delete. Sharing the filters fixed a GNOME bug:
      the part type filter hid every entry of the other sections. 41
      actions are left on `NOT_YET_ON_WINDOWS`.
-   - **Help, Settings and About (done).** `cr-app` gained the help (the
+   - **Help, Settings and About (done, PR #101).** `cr-app` gained the help (the
      topic a target names, the list beside it, where a link leads, what a
      right-click on a control or a row shows, a monster's View and Print)
      and About's texts. The Windows app has a Help page in its
@@ -210,7 +210,9 @@ The phases run in order:
      on `NOT_YET_ON_WINDOWS`. The same pull request fixed what the
      Windows test of the first stage found: Other Parts no longer closes
      the app, a character's details show at the default window size, and
-     reals read as the records keep them (0.1) in both apps.
+     reals read as the records keep them (0.1) in both apps; About's
+     sections open, and a record the data repeats (Garnet) is selected
+     by its row.
    - **The books (done).** `cr-app` gained the reader's zoom steps, the
      reading positions and zoom kept between sessions, Find over the
      book's folded text, and the heading a paragraph is under. The
