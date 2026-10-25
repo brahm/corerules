@@ -178,6 +178,26 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
             context.message(Message::Act(action::OPEN)),
         ),
     ));
+    // The DM Tool Kit's generators, in the bar's More menu of every
+    // section as in the GNOME app's main menu.
+    let tools: Vec<KeyedView> = [
+        (action::NEW_NPC, tr("New N_PC…"), Symbol::AddFriend),
+        (action::NEW_NPC_GROUP, tr("New NPC _Group…"), Symbol::People),
+    ]
+    .into_iter()
+    .filter(|(action, ..)| available(*action))
+    .map(|(action, label, symbol)| {
+        KeyedView::new(
+            action.name,
+            ui::command(
+                &plain(label),
+                symbol,
+                shell.can_write && !shell.busy,
+                context.message(Message::Act(action)),
+            ),
+        )
+    })
+    .collect();
     // The title keeps its width; the commands that do not fit beside it
     // go to the bar's overflow menu.
     let header = Grid::new()
@@ -189,7 +209,10 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
             CommandBar::new()
                 .horizontal_alignment(HorizontalAlignment::Right)
                 .grid_column(1)
-                .collection_slot(CommandBarSlot::PrimaryCommands, commands),
+                .slots([
+                    SlotView::collection(CommandBarSlot::PrimaryCommands, commands),
+                    SlotView::collection(CommandBarSlot::SecondaryCommands, tools),
+                ]),
         ));
 
     let master = Grid::new()

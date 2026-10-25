@@ -180,7 +180,7 @@ struct Window {
     /// theirs once at start.
     rand: Rc<RefCell<Rand>>,
     /// The NPC generator of the open installation, loaded on first use.
-    npc_rules: Rc<RefCell<Option<Rc<NpcRules>>>>,
+    npc_rules: Rc<RefCell<Option<Arc<NpcRules>>>>,
 }
 
 impl Window {
@@ -833,11 +833,11 @@ impl Window {
     /// The item check the Equipment pages use, read with the NPC
     /// generator's data and kept with it; `None`, without a word, when
     /// the program cannot be read.
-    fn item_rules(&self) -> Option<Rc<NpcRules>> {
+    fn item_rules(&self) -> Option<Arc<NpcRules>> {
         if let Some(rules) = &*self.npc_rules.borrow() {
             return Some(rules.clone());
         }
-        let rules = Rc::new(self.install.borrow().as_ref()?.npc_rules().ok()?);
+        let rules = Arc::new(self.install.borrow().as_ref()?.npc_rules().ok()?);
         *self.npc_rules.borrow_mut() = Some(rules.clone());
         Some(rules)
     }
@@ -1089,14 +1089,14 @@ impl npc::Host for Window {
         self.install.borrow().as_ref().map(run)
     }
 
-    fn npc_rules(&self) -> Option<Rc<NpcRules>> {
+    fn npc_rules(&self) -> Option<Arc<NpcRules>> {
         if let Some(rules) = &*self.npc_rules.borrow() {
             return Some(rules.clone());
         }
         let loaded = self.install.borrow().as_ref()?.npc_rules();
         match loaded {
             Ok(rules) => {
-                let rules = Rc::new(rules);
+                let rules = Arc::new(rules);
                 *self.npc_rules.borrow_mut() = Some(rules.clone());
                 Some(rules)
             }
@@ -3318,7 +3318,7 @@ struct Choices {
     /// The spell pickers' checks.
     learn: Rc<LearnRules>,
     /// The item check of the Equipment page, when the program was read.
-    item_rules: Option<Rc<NpcRules>>,
+    item_rules: Option<Arc<NpcRules>>,
 }
 
 impl Choices {

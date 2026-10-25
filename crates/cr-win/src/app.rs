@@ -11,6 +11,7 @@ mod help;
 mod import;
 mod levels;
 mod library;
+mod npc;
 mod portrait;
 mod settings;
 mod sheet;
@@ -19,13 +20,14 @@ mod web;
 use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use cr_app::action::{self, Action};
 use cr_app::create::{Answer, Effect, Input, ListKind, Needs, Page as CreatePage, Wizard};
 use cr_app::editor::{EditEffect, EditInput, EditNeeds, Editor, Tab as EditTab};
 use cr_app::help::{Files, Found, MonsterHelp, PROGRAM, Target};
 use cr_app::library::Filter;
+use cr_app::npc::{GroupForm, GroupInput, NpcForm, NpcInput};
 use cr_app::sheets::Export;
 use cr_formats::export::ExportFile;
 use cr_i18n::{tr, trc};
@@ -33,8 +35,10 @@ use cr_store::Installation;
 use cr_store::catalog::{Entry, Section};
 use cr_store::export::{Content, ImportReport};
 use cr_store::help::{ItemHelp, topic};
+use cr_store::npc::{Npc, NpcRules};
 use cr_store::pictures::stored_portrait;
 use cr_store::sheet::Sheet;
+use cr_store::treasure::Rand;
 use cr_store::userdb::parts::OTHER_TYPES;
 use cr_win::text::plain;
 use windows_reactor::*;
@@ -128,6 +132,11 @@ pub struct Shell {
     portrait: RefCell<Option<Rc<portrait::Shown>>>,
     /// A book is shown, whose keys the keyboard hook takes.
     reading: Rc<Cell<bool>>,
+    /// The dice of the generators, one sequence for the session as in
+    /// the GNOME app.
+    rand: Arc<Mutex<Rand>>,
+    /// The NPC generator of the installation, read once.
+    npc_rules: Option<Arc<NpcRules>>,
 }
 
 /// What the window shows.
@@ -142,6 +151,8 @@ pub enum Page {
     SheetOptions(Box<SheetOptions>),
     Help(Box<HelpPage>),
     Book(Box<BookPage>),
+    Npc(Box<NpcForm>),
+    NpcGroup(Box<GroupForm>),
 }
 
 /// A package opened for import, with what it would bring in.
@@ -339,6 +350,24 @@ pub enum Message {
     WebFailed(String),
     /// Time to see whether it started.
     WebWatch,
+    // NPC Generation.
+    /// The NPC generator was read, for New NPC or (true) New NPC Group.
+    NpcRulesLoaded(Result<Arc<NpcRules>, String>, bool),
+    Npc(NpcInput),
+    Group(GroupInput),
+    /// Create on New NPC or New NPC Group.
+    CreateNpcs,
+    NpcsSaved(Result<NpcsSaved, String>),
+}
+
+/// What Create on New NPC or New NPC Group made and saved.
+#[derive(Clone)]
+pub struct NpcsSaved {
+    /// The file of the last NPC saved.
+    file: Option<String>,
+    said: String,
+    /// The generator's notes on what it could not do.
+    messages: Option<String>,
 }
 
 /// What a record's help shows.
@@ -484,6 +513,8 @@ impl Shell {
             ),
             action::NEW_CHARACTER => self.new_character(false, context),
             action::ENTER_CHARACTER => self.new_character(true, context),
+            action::NEW_NPC => self.new_npc(false, context),
+            action::NEW_NPC_GROUP => self.new_npc(true, context),
             action::IMPORT => {
                 let install = self.install.clone();
                 let expansion = install.as_ref().is_some_and(|i| !i.is_core20());
@@ -637,6 +668,79 @@ impl Shell {
                     .map(|(rules, needs)| Box::new(Wizard::new(rules, needs)))
                     .map_err(|e| e.to_string()),
             )
+        });
+    }
+
+    /// Opens New NPC, or with `group` New NPC Group, once the generator
+    /// is read.
+    fn new_npc(&mut self, group: bool, context: &ComponentContext<Self>) {
+        if let Some(rules) = self.npc_rules.clone() {
+            self.update(Message::NpcRulesLoaded(Ok(rules), group), context);
+            return;
+        }
+        let Some(install) = self.install.clone() else {
+            return;
+        };
+        if self.busy {
+            return;
+        }
+        self.busy = true;
+        context.spawn_background(move |_| {
+            Message::NpcRulesLoaded(
+                install.npc_rules().map(Arc::new).map_err(|e| e.to_string()),
+                group,
+            )
+        });
+    }
+
+    /// Create on New NPC or New NPC Group: the NPCs are made and saved in
+    /// the background.
+    fn create_npcs(&mut self, context: &ComponentContext<Self>) {
+        if self.busy {
+            return;
+        }
+        enum Form {
+            One(Box<NpcForm>),
+            Group(Box<GroupForm>),
+        }
+        let form = match &self.page {
+            Page::Npc(form) => Form::One(form.clone()),
+            Page::NpcGroup(form) => Form::Group(form.clone()),
+            _ => return,
+        };
+        let Some(install) = self.install.clone() else {
+            return;
+        };
+        self.busy = true;
+        let rand = self.rand.clone();
+        context.spawn_background(move |_| {
+            let mut rand = rand.lock().unwrap_or_else(|e| e.into_inner());
+            let (npcs, party) = match &form {
+                Form::One(form) => (
+                    form.generate(&mut rand).map(|npc| vec![npc]),
+                    form.party.trim().to_owned(),
+                ),
+                Form::Group(form) => (form.generate(&mut rand), form.name.trim().to_owned()),
+            };
+            drop(rand);
+            let saved = npcs.and_then(|npcs: Vec<Npc>| {
+                let mut file = None;
+                for npc in &npcs {
+                    file = Some(install.save_npc(npc, &party).map_err(|e| e.to_string())?);
+                }
+                let said = match (&form, npcs.first()) {
+                    (Form::One(_), Some(npc)) => {
+                        tr!("{name} was created", name = npc.character.data.name.clone())
+                    }
+                    _ => cr_app::npc::created_text(npcs.len()),
+                };
+                Ok(NpcsSaved {
+                    file,
+                    said,
+                    messages: cr_app::npc::messages(&npcs),
+                })
+            });
+            Message::NpcsSaved(saved)
         });
     }
 
@@ -804,6 +908,8 @@ impl Shell {
             Page::Sheet(_) | Page::SheetOptions(_) => topic::CHARACTER_SHEET,
             Page::Settings | Page::Help(_) => topic::MAIN_MENU,
             Page::Book(_) => topic::BOOKS,
+            Page::Npc(_) => topic::NPC_CREATION,
+            Page::NpcGroup(_) => topic::NPC_GROUP,
         }
     }
 
@@ -1023,6 +1129,8 @@ impl Component for Shell {
             portraits: None,
             portrait: RefCell::new(None),
             reading: Rc::default(),
+            rand: Arc::new(Mutex::new(Rand::from_clock())),
+            npc_rules: None,
         };
         let sender = context.sender();
         let reading = shell.reading.clone();
@@ -1160,6 +1268,7 @@ impl Component for Shell {
                             self.background = None;
                             self.help_files = None;
                             self.items = Arc::default();
+                            self.npc_rules = None;
                             self.history.clear();
                             self.page = Page::Library;
                             self.select(None);
@@ -1513,6 +1622,9 @@ impl Component for Shell {
                 self.busy = false;
                 match result {
                     Ok(report) => {
+                        // Imported races and classes change what the NPC
+                        // generator offers.
+                        self.npc_rules = None;
                         self.history.clear();
                         self.page = Page::Library;
                         self.notice = Some(import::report(&report));
@@ -1859,6 +1971,52 @@ impl Component for Shell {
                 }
                 self.run_in_book(&[cr_win::book::UNMARK.to_owned()]);
             }
+            Message::NpcRulesLoaded(loaded, group) => {
+                self.busy = false;
+                match loaded {
+                    Ok(rules) => {
+                        self.npc_rules = Some(rules.clone());
+                        self.go(if group {
+                            Page::NpcGroup(Box::new(GroupForm::new(rules)))
+                        } else {
+                            Page::Npc(Box::new(NpcForm::new(rules, false)))
+                        });
+                    }
+                    Err(e) => self.show_error(tr("NPC Generator"), e),
+                }
+            }
+            Message::Npc(input) => {
+                if let Page::Npc(form) = &mut self.page {
+                    let mut rand = self.rand.lock().unwrap_or_else(|e| e.into_inner());
+                    form.input(input, &mut rand);
+                }
+            }
+            Message::Group(input) => {
+                if let Page::NpcGroup(form) = &mut self.page {
+                    form.input(input);
+                }
+            }
+            Message::CreateNpcs => self.create_npcs(context),
+            Message::NpcsSaved(Ok(saved)) => {
+                self.busy = false;
+                self.show_section(cr_app::library::CHARACTERS.to_owned());
+                self.notice = Some(Notice::success(saved.said));
+                if let Some(text) = saved.messages {
+                    self.confirm = Some(Confirm::Info {
+                        title: tr("NPC Generator").to_owned(),
+                        text,
+                    });
+                }
+                self.load(saved.file, context);
+            }
+            Message::NpcsSaved(Err(e)) => {
+                self.busy = false;
+                match &mut self.page {
+                    Page::Npc(form) => form.error = Some(e),
+                    Page::NpcGroup(form) => form.error = Some(e),
+                    _ => self.show_error(tr("NPC Generator"), e),
+                }
+            }
         }
     }
 
@@ -1898,6 +2056,8 @@ impl Component for Shell {
             Page::SheetOptions(options) => sheet::options_view(options, context),
             Page::Help(page) => help::view(self, page, context),
             Page::Book(page) => book::view(self, page, context),
+            Page::Npc(form) => npc::view(form, self.busy, context),
+            Page::NpcGroup(form) => npc::group_view(form, self.busy, context),
         };
         // The keyboard hook takes the reader's keys only while a book
         // shows.

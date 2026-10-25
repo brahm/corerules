@@ -15,6 +15,7 @@ pub mod editor;
 pub mod help;
 pub mod levels;
 pub mod library;
+pub mod npc;
 pub mod pages;
 pub mod pdf;
 pub mod pictures;
