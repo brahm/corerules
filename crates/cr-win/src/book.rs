@@ -92,7 +92,8 @@ font:12pt 'Times New Roman',serif}\
 main>div{white-space:pre-wrap;overflow-wrap:break-word;tab-size:48px}\
 .s{display:flex;align-items:baseline}\
 .t{display:inline-block;flex:none;white-space:pre;text-indent:0;tab-size:0}\
-.r{flex:1 1 0;min-width:0;text-indent:0}\
+.r{flex:1 1 0;text-indent:0}\
+.n{flex:none;white-space:pre}\
 img{max-width:100%;height:auto;vertical-align:middle}\
 ::highlight(m){background-color:rgba(246,211,45,.45)}\
 ::highlight(c){background-color:rgba(255,120,0,.8)}\
@@ -197,6 +198,9 @@ impl Out {
         let mut stops = (tabs > 0 && !p.tabs.is_empty())
             .then(|| Stops::of(p))
             .filter(|stops| fits(p, stops.clone()));
+        // A short text after the last tab is a table's last column, which
+        // does not wrap either.
+        let rest = if short_rest(p) { "r n" } else { "r" };
         if let Some(stops) = &mut stops {
             let _ = write!(html, "<div id=\"p{index}\" class=\"a{layout} s\">");
             // A row has no first line to indent: its first stretch is.
@@ -218,7 +222,7 @@ impl Out {
                                 if tabs > 0 {
                                     stretch(stops, html, 0);
                                 } else {
-                                    html.push_str("<span class=\"r\">");
+                                    let _ = write!(html, "<span class=\"{rest}\">");
                                 }
                             }
                         }
@@ -350,6 +354,25 @@ fn fits(p: &Paragraph, mut stops: Stops) -> bool {
     }
     true
 }
+
+/// Whether the text after the paragraph's last tab is a few words at
+/// most, with no picture.
+fn short_rest(p: &Paragraph) -> bool {
+    let mut rest = 0;
+    for item in &p.items {
+        match item {
+            Inline::Text(text, _) => match text.rfind('\t') {
+                Some(tab) => rest = text[tab + 1..].chars().count(),
+                None => rest += text.chars().count(),
+            },
+            Inline::Picture(_) => rest = SHORT_REST + 1,
+        }
+    }
+    rest <= SHORT_REST
+}
+
+/// The most characters after a row's last tab that stay on one line.
+const SHORT_REST: usize = 24;
 
 /// A paragraph's tab stops, in twips from its left indent, and where its
 /// text has got to on the first line.
@@ -546,6 +569,12 @@ mod tests {
             "{html}"
         );
         assert!(html.contains("wraps</span></span></div>"), "{html}");
+        // A table's short last column does not wrap.
+        let row = page(&doc(r"\tx1500\tx3000 Item\tab Cost\tab Weight (lbs.)\par"));
+        assert!(
+            row.contains("<span class=\"r n\"><span class=\"f0\">Weight"),
+            "{row}"
+        );
         // Without stops of its own, a tab is the default half inch.
         let plain = page(&doc(r"Name\tab Level\par"));
         assert!(!plain.contains("class=\"t\""));

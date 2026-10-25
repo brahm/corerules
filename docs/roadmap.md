@@ -230,7 +230,8 @@ The phases run in order:
      and the MSIX declares its classes, and a WebView2 that does not
      start says so. It also found the place kept moving back a paragraph
      on every open, click in the contents and zoom, which it no longer
-     does.
+     does, and tables whose last column broke a word over lines in a
+     narrow window, which now keeps to one line.
    - Still to port: character creation and Enter Character;
      editing; the generators (NPCs, treasure, encounters, tables,
      parties); the user database editors; packages and Import Core Rules
