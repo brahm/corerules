@@ -341,6 +341,13 @@ impl Editor {
         });
     }
 
+    /// The character as the combat rules see it for a purchase: with what
+    /// the other pages spend of the character points taken off.
+    fn combat_character(&self) -> Character {
+        let own = self.needs.combat.spent(&self.original, &self.combat);
+        self.sharing_points(&self.original, own)
+    }
+
     /// Asks a purchase's questions, then `take`s it for what it costs or,
     /// when the points run short and the user says so, for nothing.
     fn buy(&mut self, purchase: Purchase, take: Take) {
@@ -366,10 +373,12 @@ impl Editor {
 
     /// Takes a weapon proficiency once the questions are answered Yes.
     fn add_weapon(&mut self, name: String) {
-        let purchase =
-            self.needs
-                .combat
-                .weapon_purchase(&self.original, &self.combat, &self.levels(), &name);
+        let purchase = self.needs.combat.weapon_purchase(
+            &self.combat_character(),
+            &self.combat,
+            &self.levels(),
+            &name,
+        );
         self.buy(
             purchase,
             Arc::new(move |e: &mut Editor, cost| e.weapon_warned(name.clone(), cost)),
@@ -424,7 +433,7 @@ impl Editor {
             ));
             return;
         }
-        match rules.group_purchase(&self.original, &self.combat, &levels, broad) {
+        match rules.group_purchase(&self.combat_character(), &self.combat, &levels, broad) {
             Ok(purchase) => self.buy(
                 purchase,
                 Arc::new(move |e: &mut Editor, cost| {
@@ -482,10 +491,11 @@ impl Editor {
 
     /// Turns unarmed style `i` on once the questions are answered Yes.
     fn take_unarmed(&mut self, i: usize) {
-        let purchase =
-            self.needs
-                .combat
-                .unarmed_purchase(&self.original, &self.combat, &self.levels());
+        let purchase = self.needs.combat.unarmed_purchase(
+            &self.combat_character(),
+            &self.combat,
+            &self.levels(),
+        );
         self.buy(
             purchase,
             Arc::new(move |e: &mut Editor, cost| {
@@ -770,6 +780,24 @@ mod tests {
         if e.points_left() < 0 {
             assert!(e.problem().is_some());
             assert!(!e.can_save());
+            // A weapon then costs more than is left to all the pages.
+            let levels = e.levels();
+            let weapon = e.needs.combat.weapon_names().into_iter().find(|w| {
+                !e.combat.weapons.contains(w)
+                    && e.needs
+                        .combat
+                        .weapon_price(&e.original, &e.combat, &levels, w)
+                        > 0
+            });
+            if let Some(weapon) = weapon {
+                let purchase = e.needs.combat.weapon_purchase(
+                    &e.combat_character(),
+                    &e.combat,
+                    &levels,
+                    &weapon,
+                );
+                assert!(purchase.free.is_some(), "{weapon}");
+            }
         }
     }
 

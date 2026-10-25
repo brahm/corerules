@@ -50,7 +50,7 @@ pub use details::{
     social_class_stored,
 };
 pub use equipment::{COIN_NAMES, MOST_COINS, MOST_QUANTITY};
-pub use spells::{KitMagicView, MagicGroup, ordinal, slots_fit, slots_text};
+pub use spells::{KitMagicView, MagicGroup, ordinal, slots_fit, slots_text, spell_level_text};
 
 /// A question, warning or message the editor waits on.
 pub type Prompt = AnyPrompt<Editor>;
@@ -489,9 +489,9 @@ impl Editor {
             })
     }
 
-    /// Whether Save may be pressed.
+    /// Whether Save may be pressed: something changed, and it may be kept.
     pub fn can_save(&self) -> bool {
-        !self.saving && self.prompt.is_none() && self.problem().is_none()
+        !self.saving && self.prompt.is_none() && self.changed() && self.problem().is_none()
     }
 
     /// The question or message in view.
@@ -708,6 +708,7 @@ pub(crate) mod tests {
             let groups = e.ability_groups();
             let view = e.combat_view();
             assert!(!e.changed(), "{}", entry.file);
+            assert_eq!(e.nonweapon_points(), 0, "{}", entry.file);
             assert_eq!(
                 view.points_left.is_some(),
                 e.original.skills_and_powers(),
@@ -720,6 +721,16 @@ pub(crate) mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn an_unchanged_character_is_not_saved() {
+        let Some(mut e) = editor() else {
+            return;
+        };
+        assert!(!e.can_save());
+        e.input(EditInput::Save);
+        assert!(e.take_effects().is_empty());
     }
 
     #[test]

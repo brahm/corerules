@@ -5,6 +5,7 @@
 
 use std::sync::Arc;
 
+use cr_formats::character::Character;
 use cr_i18n::{tr, trn};
 
 use super::{EditInput, Editor, Prompt, Tab, Then};
@@ -36,7 +37,7 @@ impl Editor {
     pub fn nonweapon_list(&self) -> List {
         let rules = &self.needs.proficiencies;
         let character = &*self.advanced;
-        let description = match rules.left(character, &self.nonweapon) {
+        let description = match rules.left(&self.nonweapon_character(), &self.nonweapon) {
             Some(left) if character.skills_and_powers() => {
                 tr!("{points} left", points = points(left))
             }
@@ -85,6 +86,13 @@ impl Editor {
         }
     }
 
+    /// The character as the proficiency rules see it for the points
+    /// left: with what the abilities and combat choices spend of the
+    /// character points taken off.
+    fn nonweapon_character(&self) -> Character {
+        self.sharing_points(&self.advanced, self.nonweapon_points())
+    }
+
     /// Takes a proficiency once the kit's warning is ignored and the
     /// question answered Yes, or says why not.
     fn add_nonweapon(&mut self, name: String) {
@@ -100,7 +108,7 @@ impl Editor {
             ));
             return;
         }
-        match rules.purchase(&self.advanced, &self.nonweapon, &name) {
+        match rules.purchase(&self.nonweapon_character(), &self.nonweapon, &name) {
             Ok(purchase) => self.ask_each(
                 purchase.question.clone().into_iter().collect(),
                 Arc::new(move |e: &mut Editor| {

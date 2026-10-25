@@ -4,6 +4,7 @@
 //! has among what it may take, with what the kit tells about the schools
 //! and spheres.
 
+use cr_formats::character::Character;
 use cr_i18n::tr;
 use cr_store::abilities::{SchoolRule, SphereRule};
 
@@ -305,13 +306,49 @@ impl Editor {
         }
     }
 
-    /// The character points left after the abilities and the combat
-    /// choices as edited, which spend the same points; negative when they
-    /// cost more than the character has.
+    /// The character points left after the abilities, the combat choices
+    /// and, with Skills & Powers, the nonweapon proficiencies as edited,
+    /// which spend the same points; negative when they cost more than the
+    /// character has.
     pub fn points_left(&self) -> i64 {
         i64::from(self.original.data.unknown_0x1778[0])
             - self.needs.abilities.spent(&self.original, &self.abilities)
             - self.needs.combat.spent(&self.original, &self.combat)
+            - self.nonweapon_points()
+    }
+
+    /// What the nonweapon proficiencies as edited spend of the character
+    /// points beyond what they cost before, with Skills & Powers.
+    pub(super) fn nonweapon_points(&self) -> i64 {
+        if !self.original.skills_and_powers() {
+            return 0;
+        }
+        let before: i64 = self
+            .original
+            .data
+            .nonweapon_costs
+            .iter()
+            .map(|&c| i64::from(c))
+            .sum();
+        let now: i64 = self
+            .nonweapon
+            .entries
+            .iter()
+            .map(|e| i64::from(e.spent))
+            .sum();
+        now - before
+    }
+
+    /// `character` with what the other pages spend of the character
+    /// points taken off its unspent ones, `own` being what the page asking
+    /// spends: the store's rules for one page then see what is left to
+    /// all of them.
+    pub(super) fn sharing_points(&self, character: &Character, own: i64) -> Character {
+        let spent = i64::from(self.original.data.unknown_0x1778[0]) - self.points_left();
+        let mut shared = character.clone();
+        let points = &mut shared.data.unknown_0x1778[0];
+        *points = (i64::from(*points) - (spent - own)).max(0) as u32;
+        shared
     }
 
     /// Why the abilities and combat choices cannot be saved, if they

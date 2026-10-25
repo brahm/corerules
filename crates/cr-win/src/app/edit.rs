@@ -137,18 +137,29 @@ pub fn view(
                 )
             })
             .collect();
-        SelectorBar::new()
-            .margin(Thickness::new(0.0, 0.0, 0.0, 12.0))
-            .on_selected_text_changed(context.callback(|text: Option<String>| {
-                match Tab::ALL
-                    .iter()
-                    .find(|t| text.as_deref() == Some(tr(t.title())))
-                {
-                    Some(tab) => input(EditInput::Tab(*tab)),
-                    None => Message::Nothing,
-                }
-            }))
-            .slots([SlotView::collection(SelectorBarSlot::Items, items)])
+        // The bar keeps its tabs on one line; in a narrow window it
+        // scrolls, with room under it for the scroll bar.
+        ScrollViewer::new()
+            .horizontal_scroll_bar_visibility(ScrollBarVisibility::Auto)
+            .vertical_scroll_bar_visibility(ScrollBarVisibility::Disabled)
+            .margin(Thickness::new(0.0, 0.0, 0.0, 4.0))
+            .content(
+                Border::new()
+                    .padding(Thickness::new(0.0, 0.0, 0.0, 8.0))
+                    .content(
+                        SelectorBar::new()
+                            .on_selected_text_changed(context.callback(|text: Option<String>| {
+                                match Tab::ALL
+                                    .iter()
+                                    .find(|t| text.as_deref() == Some(tr(t.title())))
+                                {
+                                    Some(tab) => input(EditInput::Tab(*tab)),
+                                    None => Message::Nothing,
+                                }
+                            }))
+                            .slots([SlotView::collection(SelectorBarSlot::Items, items)]),
+                    ),
+            )
     } else {
         View::empty()
     };
