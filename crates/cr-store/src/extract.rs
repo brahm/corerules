@@ -451,7 +451,8 @@ mod tests {
         fn walk(dir: &Path, base: &Path, found: &mut Vec<String>) {
             for e in fs::read_dir(dir).unwrap() {
                 let p = e.unwrap().path();
-                let rel = p.strip_prefix(base).unwrap().to_string_lossy().into_owned();
+                let rel = p.strip_prefix(base).unwrap().to_string_lossy();
+                let rel = rel.replace('\\', "/");
                 if p.is_dir() {
                     found.push(format!("{rel}/"));
                     walk(&p, base, found);

@@ -249,9 +249,14 @@ fn can_write_in(dir: &Path) -> bool {
 }
 
 fn find_entry(dir: &Path, name: &str) -> Option<PathBuf> {
-    let exact = dir.join(name);
-    if exact.exists() {
-        return Some(exact);
+    // On Windows every spelling exists, and the shortcut would give back
+    // the one asked for; the folder is read for the name as it is on disk,
+    // the one the original and Linux see.
+    if !cfg!(windows) {
+        let exact = dir.join(name);
+        if exact.exists() {
+            return Some(exact);
+        }
     }
     fs::read_dir(dir)
         .ok()?

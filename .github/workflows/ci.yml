@@ -28,7 +28,7 @@ jobs:
         with:
           components: clippy
       - run: cargo clippy -p cr-formats -p cr-store -p cr-i18n -p cr-cli --all-targets -- -D warnings
-      - run: cargo test -p cr-formats -p cr-store -p cr-i18n -p cr-cli
+      - run: cargo test --no-fail-fast -p cr-formats -p cr-store -p cr-i18n -p cr-cli
       - run: cargo build --release -p cr-cli
       - uses: actions/upload-artifact@v4
         with:
