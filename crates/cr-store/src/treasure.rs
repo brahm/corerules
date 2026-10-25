@@ -190,12 +190,13 @@ impl Item {
     }
 
     /// As the roller's tree shows it (0x4ad31e): the name, then
-    /// " x3,335" when there is more than one.
+    /// " x3,335" when there is more than one, grouped as the interface
+    /// language does it.
     pub fn label(&self) -> String {
         if self.quantity == 1 {
             self.name.clone()
         } else {
-            format!("{} x{}", self.name, thousands(self.quantity as i32))
+            format!("{} x{}", self.name, grouped(self.quantity as i32))
         }
     }
 

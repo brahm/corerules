@@ -626,6 +626,15 @@ impl Shell {
         }
     }
 
+    /// Makes `id` the library's section under the page shown, as the
+    /// GNOME app shows the section of a record just saved.
+    fn reveal(&mut self, id: &str) {
+        if id != self.section {
+            self.section = id.to_owned();
+            self.filter.search.clear();
+        }
+    }
+
     /// Whether the page shown has changes that leaving it would lose.
     fn changed(&self) -> bool {
         match &self.page {
@@ -2650,6 +2659,7 @@ impl Component for Shell {
                     roller.saved_as(name.clone());
                 }
                 self.notice = Some(Notice::success(tr("Treasure saved")));
+                self.reveal("treasure");
                 self.load(Some(format!("{TREASURE_KEY}{name}")), context);
             }
             Message::TreasureSaved(Err(e)) => {
@@ -2775,6 +2785,7 @@ impl Component for Shell {
                     form.saved_as(name.clone());
                 }
                 self.notice = Some(Notice::success(tr("Encounter saved")));
+                self.reveal("encounters");
                 self.load(Some(format!("{ENCOUNTER_KEY}{name}")), context);
             }
             Message::EncounterSaved(Err(e)) => {
@@ -2880,7 +2891,7 @@ impl Component for Shell {
             }
             Message::TableSaved(Ok(name)) => {
                 if matches!(self.page, Page::EncounterTable(_)) {
-                    self.back();
+                    self.show_section("tables".to_owned());
                 }
                 self.notice = Some(Notice::success(tr("Table saved")));
                 self.load(Some(format!("{TABLE_KEY}{name}")), context);

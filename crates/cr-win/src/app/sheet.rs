@@ -271,16 +271,23 @@ fn table_view(table: &Table) -> View {
             column += span;
         }
     }
-    // The last column takes the room left and wraps in it, so that a
-    // wide table (a group encounter's NPCs) stays inside its card.
-    let mut widths = vec![GridLength::Auto; columns];
-    widths[columns - 1] = GridLength::STAR;
-    Grid::new()
-        .columns(widths)
+    let grid = Grid::new()
+        .columns(vec![GridLength::Auto; columns])
         .rows(vec![GridLength::Auto; table.rows.len()])
         .column_spacing(12.0)
         .row_spacing(4.0)
-        .keyed_children(cells)
+        .keyed_children(cells);
+    // A wide table (the weapons, a group encounter's NPCs) scrolls
+    // sideways inside its card when the window is narrower than it,
+    // keeping its rows as the printed page has them.
+    if columns > 3 {
+        ScrollViewer::new()
+            .horizontal_scroll_bar_visibility(ScrollBarVisibility::Auto)
+            .vertical_scroll_bar_visibility(ScrollBarVisibility::Disabled)
+            .content(grid)
+    } else {
+        grid
+    }
 }
 
 fn list_view(items: &[ListItem], depth: u32) -> View {
