@@ -100,6 +100,7 @@ name = "cr-app"
 version = "1.0.0"
 dependencies = [
  "cr-formats",
+ "cr-i18n",
  "cr-store",
  "flate2",
 ]

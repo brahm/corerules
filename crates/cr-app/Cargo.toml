@@ -9,5 +9,6 @@ rust-version.workspace = true
 
 [dependencies]
 cr-formats.workspace = true
+cr-i18n.workspace = true
 cr-store.workspace = true
 flate2 = "1"
