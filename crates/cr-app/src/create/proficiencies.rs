@@ -1336,7 +1336,15 @@ impl Wizard {
         };
         let unarmed = self.unarmed(&d, true);
         let left = rules.points_left(&d);
-        let problem = rules.combat_problem(&d);
+        // Enter Character charges no points (0x5d09e6).
+        let problem = rules.combat_problem(&d).or_else(|| {
+            (left < 0 && !entering).then(|| {
+                tr!(
+                    "Not enough character points: the new choices need {more} more",
+                    more = -left
+                )
+            })
+        });
         let Some(page) = self.combat_mut() else {
             return;
         };
@@ -1349,8 +1357,7 @@ impl Wizard {
         page.armor = armor;
         page.styles = styles;
         page.points_left = signed(left);
-        // Enter Character charges no points (0x5d09e6).
-        page.ok = (left >= 0 || entering) && problem.is_none();
+        page.ok = problem.is_none();
         page.problem = problem;
     }
 
@@ -1652,6 +1659,45 @@ mod tests {
     }
 
     #[test]
+    fn back_to_the_details_and_next_keep_the_proficiencies() {
+        let Some(mut w) = at_proficiencies(false) else {
+            return;
+        };
+        let weapon = page(&w).weapons.choices[0].clone();
+        w.input(Input::Add(ListKind::Weapons, weapon.clone()));
+        yes(&mut w);
+        let nonweapon = page(&w).nonweapon.choices.first().cloned();
+        if let Some(name) = nonweapon {
+            w.input(Input::Add(ListKind::Nonweapon, name));
+            yes(&mut w);
+        }
+        let before = page(&w).clone();
+        assert!(w.back());
+        assert!(matches!(w.page(), Page::Details(_)));
+        w.input(Input::Next);
+        yes(&mut w);
+        assert_eq!(page(&w).weapons.rows, before.weapons.rows);
+        assert_eq!(page(&w).nonweapon.rows, before.nonweapon.rows);
+        // A new kit, once said yes to, starts them over.
+        assert!(w.back());
+        let Page::Details(details) = w.page() else {
+            panic!("not the details");
+        };
+        let Some(kit) = (0..details.kits.len()).find(|&k| Some(k) != details.kit_index()) else {
+            return;
+        };
+        w.input(Input::Kit(kit));
+        assert_eq!(w.prompt().unwrap().title, tr("Warning"));
+        w.answer(Answer::Yes);
+        yes(&mut w);
+        w.input(Input::Next);
+        yes(&mut w);
+        if let Page::Proficiencies(p) = w.page() {
+            assert!(!p.weapons.rows.iter().any(|(name, ..)| *name == weapon));
+        }
+    }
+
+    #[test]
     fn a_proficiency_past_the_slots_is_refused() {
         let Some(mut w) = at_proficiencies(false) else {
             return;
@@ -1704,6 +1750,14 @@ mod tests {
         w.input(Input::WeaponOfChoice(i));
         let Page::Combat(combat) = w.page() else {
             panic!();
+        };
+        assert_eq!(combat.state.weapon_of_choice.as_ref(), Some(&weapon));
+        // Back to the proficiencies and Next keep the combat choices.
+        assert!(w.back());
+        w.input(Input::Next);
+        yes(&mut w);
+        let Page::Combat(combat) = w.page() else {
+            panic!("not combat again");
         };
         assert_eq!(combat.state.weapon_of_choice.as_ref(), Some(&weapon));
         if combat.ok {

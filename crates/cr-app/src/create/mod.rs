@@ -33,7 +33,8 @@ use cr_store::skills::SkillRules;
 use crate::levels::LevelsInput;
 
 pub use details::{
-    DetailsPage, EnteredLevels, MOST_HIT_POINTS, SOCIAL_CLASSES, hit_dice_text, subability_rows,
+    DetailsPage, EnteredLevels, MOST_HIT_POINTS, SOCIAL_CLASSES, hit_dice_text, none_label,
+    subability_rows,
 };
 pub use equipment::{EquipmentPage, MOST_ITEMS};
 pub use proficiencies::{
@@ -528,6 +529,12 @@ pub struct Wizard {
     /// The pages shown; the last is in view and Back returns to the one
     /// before.
     pages: Vec<Page>,
+    /// The pages Back left, the last the nearest, each with the draft as
+    /// it was then: Next shows one again as it was left when nothing
+    /// before it changed.
+    ahead: Vec<(Page, Draft)>,
+    /// What the details page's rolls were made for.
+    rolled: Option<start::RollKey>,
     prompt: Option<Prompt>,
     /// Counts the prompts shown, for an app to tell one from the next.
     serial: u64,
@@ -555,6 +562,8 @@ impl Wizard {
             dice: Dice::default(),
             names: Rand::default(),
             pages: vec![first],
+            ahead: Vec::new(),
+            rolled: None,
             prompt: None,
             serial: 0,
             core_vs_option,
@@ -625,7 +634,9 @@ impl Wizard {
         if self.pages.len() < 2 {
             return false;
         }
-        self.pages.pop();
+        if let Some(page) = self.pages.pop() {
+            self.ahead.push((page, self.draft.clone()));
+        }
         self.error = None;
         true
     }
@@ -635,7 +646,21 @@ impl Wizard {
         self.error = Some(why);
     }
 
+    /// Shows `page` next; or, when Back left a page of its kind and
+    /// nothing before it changed since, that page as it was left.
     fn push(&mut self, page: Page) {
+        let page = match self.ahead.pop() {
+            Some((kept, draft))
+                if std::mem::discriminant(&kept) == std::mem::discriminant(&page)
+                    && draft == self.draft =>
+            {
+                kept
+            }
+            _ => {
+                self.ahead.clear();
+                page
+            }
+        };
         self.pages.push(page);
         self.error = None;
     }

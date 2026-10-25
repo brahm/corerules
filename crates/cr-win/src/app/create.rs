@@ -6,7 +6,7 @@ use cr_app::create::{
     AbilitiesPage, Answer, Choice, ClassAbilitiesPage, ClassPage, CombatPage, DetailsPage,
     EnteredClassPage, EnteredScoresPage, EquipmentPage, Input, List, ListKind, MOST_ITEMS, Page,
     PickGroup, ProficienciesPage, Prompt, PromptKind, RacePage, RacialPage, RoguePage,
-    SOCIAL_CLASSES, SettingPage, SpellsPage, Unarmed, WildPage, Wizard,
+    SOCIAL_CLASSES, SettingPage, SpellsPage, Unarmed, WildPage, Wizard, none_label,
 };
 use cr_app::skills::{MOST_POINTS, SkillsForm};
 use cr_i18n::{tr, trn};
@@ -790,7 +790,7 @@ fn details(page: &DetailsPage, portrait: Option<&Shown>, context: &mut ViewConte
     );
     let kit = combo(
         tr("Kit"),
-        page.kits.clone(),
+        page.kits.iter().map(|k| none_label(k)).collect(),
         page.kit_index(),
         Input::Kit,
         context,
@@ -814,7 +814,7 @@ fn details(page: &DetailsPage, portrait: Option<&Shown>, context: &mut ViewConte
             with_buttons(
                 combo(
                     tr("Background Event"),
-                    page.backgrounds.clone(),
+                    page.backgrounds.iter().map(|b| none_label(b)).collect(),
                     page.background_index(),
                     Input::Background,
                     context,

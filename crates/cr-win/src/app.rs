@@ -1837,10 +1837,14 @@ impl Component for Shell {
         };
         let dialog = self.confirm_dialog(context);
 
+        // Over a page of its own (a character's sheet, New Character, a
+        // book) no section is selected, so that choosing the section
+        // shown goes back to its list.
         let selected_tag = match self.page {
             Page::Settings => SETTINGS,
             Page::Help(_) => HELP,
-            _ => self.section.as_str(),
+            Page::Library => self.section.as_str(),
+            _ => "",
         };
         let mut menu: Vec<KeyedView> = self
             .sections

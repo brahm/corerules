@@ -403,6 +403,33 @@ pub fn start_details(
     entering: bool,
     dice: &mut Dice,
 ) -> Result<(), String> {
+    start_details_keeping(rules, d, classes, entering, dice, None).map(|_| ())
+}
+
+/// What the rolls of the details page depend on: the race, the gender,
+/// the classes, the kit and the method.
+#[derive(Debug, Clone, PartialEq)]
+pub(super) struct RollKey {
+    race: String,
+    subrace: String,
+    male: bool,
+    classes: Vec<String>,
+    kit: String,
+    method: RollMethod,
+}
+
+/// [`start_details`], which keeps the draft's rolls when they were made
+/// for `rolled`, the same race, gender, classes, kit and method: Back
+/// past the details page and Next again do not roll them anew. Gives
+/// what the rolls are for.
+pub(super) fn start_details_keeping(
+    rules: &CreationRules,
+    d: &mut Draft,
+    classes: Vec<String>,
+    entering: bool,
+    dice: &mut Dice,
+    rolled: Option<&RollKey>,
+) -> Result<RollKey, String> {
     let changed = d.classes != classes;
     d.classes = classes;
     let race = d.race.clone();
@@ -418,17 +445,27 @@ pub fn start_details(
     if !rules.kits_for(d).contains(&d.kit) {
         d.kit = "None".into();
     }
-    d.social_class = rules.roll_social_class(&d.kit, dice);
-    d.age = rules.roll_age(&race, dice);
-    d.height = rules.roll_height(&race, d.male, dice);
-    d.weight = rules.roll_weight(&race, d.male, dice);
-    d.hit_dice = rules.roll_hit_dice(&d.classes, dice);
-    d.psionic_roll = rules.roll_psionic(&d.classes, dice);
-    // Bought with Method X; typed in with Enter Character.
-    if d.roll_method != RollMethod::PointsAndStrength && !entering {
-        d.exceptional_strength = dice.roll(1, 100);
+    let key = RollKey {
+        race: race.clone(),
+        subrace: d.subrace.clone(),
+        male: d.male,
+        classes: d.classes.clone(),
+        kit: d.kit.clone(),
+        method: d.roll_method,
+    };
+    if rolled != Some(&key) {
+        d.social_class = rules.roll_social_class(&d.kit, dice);
+        d.age = rules.roll_age(&race, dice);
+        d.height = rules.roll_height(&race, d.male, dice);
+        d.weight = rules.roll_weight(&race, d.male, dice);
+        d.hit_dice = rules.roll_hit_dice(&d.classes, dice);
+        d.psionic_roll = rules.roll_psionic(&d.classes, dice);
+        // Bought with Method X; typed in with Enter Character.
+        if d.roll_method != RollMethod::PointsAndStrength && !entering {
+            d.exceptional_strength = dice.roll(1, 100);
+        }
+        d.gold = rules.roll_gold(d, dice);
     }
-    d.gold = rules.roll_gold(d, dice);
     if changed {
         d.reset_proficiencies();
         d.spells.clear();
@@ -455,7 +492,7 @@ pub fn start_details(
     if entering && (changed || d.class_levels.len() != d.classes.len()) {
         rules.start_entered(d).map_err(|e| e.to_string())?;
     }
-    Ok(())
+    Ok(key)
 }
 
 impl Wizard {
@@ -805,7 +842,11 @@ impl Wizard {
                 let mut probe = self.draft.clone();
                 probe.racial_abilities = names.clone();
                 // A change the points do not cover is refused.
-                if !self.entering() && self.rules.racial_points_left(&probe) < 0 {
+                let after = self.rules.racial_points_left(&probe);
+                if !self.entering() && after < 0 {
+                    probe.racial_abilities = page.chosen.clone();
+                    let left = self.rules.racial_points_left(&probe);
+                    self.not_enough_points(left - after, left);
                     return;
                 }
                 page.chosen = names;
@@ -978,15 +1019,19 @@ impl Wizard {
     /// abilities or the details.
     fn classes_chosen(&mut self, classes: Vec<String>) {
         let entering = self.entering();
-        if let Err(e) = start_details(
+        match start_details_keeping(
             &self.rules,
             &mut self.draft,
             classes,
             entering,
             &mut self.dice,
+            self.rolled.as_ref(),
         ) {
-            self.message(super::title(entering), e);
-            return;
+            Ok(key) => self.rolled = Some(key),
+            Err(e) => {
+                self.message(super::title(entering), e);
+                return;
+            }
         }
         if self.draft.skills_and_powers {
             self.push_class_abilities();
@@ -1064,8 +1109,11 @@ impl Wizard {
                 let names = Self::ticked(&group.choices, &page.chosen[slot], i, on);
                 let mut probe = self.draft.clone();
                 probe.class_abilities = page.chosen.clone();
+                let left = self.rules.class_points_left(&probe, slot);
                 probe.class_abilities[slot] = names.clone();
-                if !self.entering() && self.rules.class_points_left(&probe, slot) < 0 {
+                let after = self.rules.class_points_left(&probe, slot);
+                if !self.entering() && after < 0 {
+                    self.not_enough_points(left - after, left);
                     return;
                 }
                 page.chosen[slot] = names;
@@ -1082,6 +1130,20 @@ impl Wizard {
             }
             _ => {}
         }
+    }
+
+    /// An ability that costs more points than are left is refused, as
+    /// the original says.
+    fn not_enough_points(&mut self, cost: i64, left: i64) {
+        self.message(
+            tr("Not Allowed"),
+            tr!(
+                "The selected ability requires {cost} character points, only {left} are \
+                 available.",
+                cost,
+                left = left.max(0)
+            ),
+        );
     }
 
     fn push_details(&mut self) {

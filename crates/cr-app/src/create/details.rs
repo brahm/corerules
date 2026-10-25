@@ -168,6 +168,16 @@ impl EnteredLevels {
     }
 }
 
+/// A kit or background event as the user reads it: the data's "None" and
+/// "NONE" for none, translated.
+pub fn none_label(name: &str) -> String {
+    if name.eq_ignore_ascii_case("none") {
+        tr("None").to_owned()
+    } else {
+        name.to_owned()
+    }
+}
+
 impl DetailsPage {
     pub(super) fn new(w: &mut Wizard) -> Self {
         let rules = w.rules.clone();
@@ -681,6 +691,44 @@ pub(super) mod tests {
         assert_eq!(d.player, "Brahm");
         assert_eq!(d.age, 30);
         assert_eq!(d.exceptional_strength, 77);
+    }
+
+    #[test]
+    fn back_to_the_class_and_next_keep_the_details() {
+        let Some(mut w) = at_details(false) else {
+            return;
+        };
+        w.input(Input::Player("Brahm".into()));
+        w.input(Input::History("Born in a storm".into()));
+        let before = details(&w).clone();
+        assert!(w.back());
+        w.input(Input::Next);
+        while w.prompt().is_some() {
+            w.answer(Answer::Yes);
+        }
+        assert_eq!(*details(&w), before);
+        // Past the details and back, the rolls stay as Next kept them.
+        w.input(Input::Next);
+        while w.prompt().is_some() {
+            w.answer(Answer::Yes);
+        }
+        assert!(w.back());
+        assert!(w.back());
+        w.input(Input::Next);
+        while w.prompt().is_some() {
+            w.answer(Answer::Yes);
+        }
+        let page = details(&w);
+        assert_eq!(
+            (page.height, page.weight, &page.hit_dice, page.social_class),
+            (
+                before.height,
+                before.weight,
+                &before.hit_dice,
+                before.social_class
+            )
+        );
+        assert_eq!(page.player, "Brahm");
     }
 
     #[test]
