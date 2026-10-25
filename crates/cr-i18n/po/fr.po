@@ -7527,15 +7527,15 @@ msgstr "Le personnage ne peut pas encore lancer de sorts de ce niveau. L'apprend
 
 #: crates/cr-store/src/learn.rs:366
 msgid "This spell is level {level}, this character is limited by intelligence to level {max}.  Override limit?"
-msgstr "Ce sort est de niveau {level} ; son intelligence limite ce personnage au niveau {max}.  Ignorer la limite ?"
+msgstr "Ce sort est de niveau {level} ; son intelligence limite ce personnage au niveau {max}. Ignorer la limite ?"
 
 #: crates/cr-store/src/learn.rs:387
 msgid "This character can learn up to {most} spells per level.  This will be spell number {number}.  Override limit?"
-msgstr "Ce personnage peut apprendre jusqu'à {most} sorts par niveau.  Ce sera le sort numéro {number}.  Ignorer la limite ?"
+msgstr "Ce personnage peut apprendre jusqu'à {most} sorts par niveau. Ce sera le sort numéro {number}. Ignorer la limite ?"
 
 #: crates/cr-store/src/learn.rs:398
 msgid "This spell belongs to a school from which this character is banned.  Take the spell anyway?"
-msgstr "Ce sort appartient à une école interdite à ce personnage.  Prendre le sort quand même ?"
+msgstr "Ce sort appartient à une école interdite à ce personnage. Prendre le sort quand même ?"
 
 #: crates/cr-store/src/learn.rs:404
 msgid "Failed"
@@ -7543,7 +7543,7 @@ msgstr "Échec"
 
 #: crates/cr-store/src/learn.rs:405
 msgid "The character failed to learn the spell.  Learn anyway?"
-msgstr "Le personnage n'a pas réussi à apprendre le sort.  L'apprendre quand même ?"
+msgstr "Le personnage n'a pas réussi à apprendre le sort. L'apprendre quand même ?"
 
 #: crates/cr-store/src/lib.rs:62
 msgid "{path} is not a Core Rules installation (no Database folder)"
@@ -11254,7 +11254,7 @@ msgstr "Mage spécialiste"
 
 #: crates/cr-store/src/userdb/parts.rs:52
 msgid "There is a conflict between the name of a Custom Item and the name of a Standard Item.  You must enter a new name for your custom item before you may continue."
-msgstr "Le nom d'un élément personnalisé est identique à celui d'un élément standard.  Vous devez saisir un nouveau nom pour votre élément personnalisé avant de continuer."
+msgstr "Le nom d'un élément personnalisé est identique à celui d'un élément standard. Vous devez saisir un nouveau nom pour votre élément personnalisé avant de continuer."
 
 #: crates/cr-store/src/userdb/parts.rs:441
 msgid "This class ability may not be copied.  Returning."

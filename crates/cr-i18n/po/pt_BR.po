@@ -7527,15 +7527,15 @@ msgstr "O personagem ainda não pode lançar magias deste nível. Aprender mesmo
 
 #: crates/cr-store/src/learn.rs:366
 msgid "This spell is level {level}, this character is limited by intelligence to level {max}.  Override limit?"
-msgstr "Esta magia é de nível {level}; pela inteligência, este personagem está limitado ao nível {max}.  Ignorar o limite?"
+msgstr "Esta magia é de nível {level}; pela inteligência, este personagem está limitado ao nível {max}. Ignorar o limite?"
 
 #: crates/cr-store/src/learn.rs:387
 msgid "This character can learn up to {most} spells per level.  This will be spell number {number}.  Override limit?"
-msgstr "Este personagem pode aprender até {most} magias por nível.  Esta será a magia número {number}.  Ignorar o limite?"
+msgstr "Este personagem pode aprender até {most} magias por nível. Esta será a magia número {number}. Ignorar o limite?"
 
 #: crates/cr-store/src/learn.rs:398
 msgid "This spell belongs to a school from which this character is banned.  Take the spell anyway?"
-msgstr "Esta magia pertence a uma escola proibida para este personagem.  Ficar com a magia mesmo assim?"
+msgstr "Esta magia pertence a uma escola proibida para este personagem. Ficar com a magia mesmo assim?"
 
 #: crates/cr-store/src/learn.rs:404
 msgid "Failed"
@@ -7543,7 +7543,7 @@ msgstr "Falhou"
 
 #: crates/cr-store/src/learn.rs:405
 msgid "The character failed to learn the spell.  Learn anyway?"
-msgstr "O personagem não conseguiu aprender a magia.  Aprender mesmo assim?"
+msgstr "O personagem não conseguiu aprender a magia. Aprender mesmo assim?"
 
 #: crates/cr-store/src/lib.rs:62
 msgid "{path} is not a Core Rules installation (no Database folder)"
@@ -11254,7 +11254,7 @@ msgstr "Mago especialista"
 
 #: crates/cr-store/src/userdb/parts.rs:52
 msgid "There is a conflict between the name of a Custom Item and the name of a Standard Item.  You must enter a new name for your custom item before you may continue."
-msgstr "O nome de um item personalizado é igual ao de um item padrão.  Você precisa dar outro nome ao seu item personalizado antes de continuar."
+msgstr "O nome de um item personalizado é igual ao de um item padrão. Você precisa dar outro nome ao seu item personalizado antes de continuar."
 
 #: crates/cr-store/src/userdb/parts.rs:441
 msgid "This class ability may not be copied.  Returning."

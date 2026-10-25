@@ -7527,15 +7527,15 @@ msgstr "Il personaggio non può ancora lanciare incantesimi di questo livello. I
 
 #: crates/cr-store/src/learn.rs:366
 msgid "This spell is level {level}, this character is limited by intelligence to level {max}.  Override limit?"
-msgstr "Questo incantesimo è di livello {level}; per l'intelligenza, questo personaggio è limitato al livello {max}.  Ignorare il limite?"
+msgstr "Questo incantesimo è di livello {level}; per l'intelligenza, questo personaggio è limitato al livello {max}. Ignorare il limite?"
 
 #: crates/cr-store/src/learn.rs:387
 msgid "This character can learn up to {most} spells per level.  This will be spell number {number}.  Override limit?"
-msgstr "Questo personaggio può imparare fino a {most} incantesimi per livello.  Questo sarà l'incantesimo numero {number}.  Ignorare il limite?"
+msgstr "Questo personaggio può imparare fino a {most} incantesimi per livello. Questo sarà l'incantesimo numero {number}. Ignorare il limite?"
 
 #: crates/cr-store/src/learn.rs:398
 msgid "This spell belongs to a school from which this character is banned.  Take the spell anyway?"
-msgstr "Questo incantesimo appartiene a una scuola proibita a questo personaggio.  Prenderlo comunque?"
+msgstr "Questo incantesimo appartiene a una scuola proibita a questo personaggio. Prenderlo comunque?"
 
 #: crates/cr-store/src/learn.rs:404
 msgid "Failed"
@@ -7543,7 +7543,7 @@ msgstr "Fallito"
 
 #: crates/cr-store/src/learn.rs:405
 msgid "The character failed to learn the spell.  Learn anyway?"
-msgstr "Il personaggio non è riuscito a imparare l'incantesimo.  Impararlo comunque?"
+msgstr "Il personaggio non è riuscito a imparare l'incantesimo. Impararlo comunque?"
 
 #: crates/cr-store/src/lib.rs:62
 msgid "{path} is not a Core Rules installation (no Database folder)"
@@ -11254,7 +11254,7 @@ msgstr "Mago specialista"
 
 #: crates/cr-store/src/userdb/parts.rs:52
 msgid "There is a conflict between the name of a Custom Item and the name of a Standard Item.  You must enter a new name for your custom item before you may continue."
-msgstr "Il nome di un elemento personalizzato coincide con quello di un elemento standard.  Inserisci un nuovo nome per il tuo elemento personalizzato prima di continuare."
+msgstr "Il nome di un elemento personalizzato coincide con quello di un elemento standard. Inserisci un nuovo nome per il tuo elemento personalizzato prima di continuare."
 
 #: crates/cr-store/src/userdb/parts.rs:441
 msgid "This class ability may not be copied.  Returning."

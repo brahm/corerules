@@ -7527,15 +7527,15 @@ msgstr "Der Charakter kann Zauber dieses Grades noch nicht wirken. Trotzdem lern
 
 #: crates/cr-store/src/learn.rs:366
 msgid "This spell is level {level}, this character is limited by intelligence to level {max}.  Override limit?"
-msgstr "Dieser Zauber ist vom Grad {level}; seine Intelligenz beschränkt diesen Charakter auf Grad {max}.  Grenze übergehen?"
+msgstr "Dieser Zauber ist vom Grad {level}; seine Intelligenz beschränkt diesen Charakter auf Grad {max}. Grenze übergehen?"
 
 #: crates/cr-store/src/learn.rs:387
 msgid "This character can learn up to {most} spells per level.  This will be spell number {number}.  Override limit?"
-msgstr "Dieser Charakter kann bis zu {most} Zauber pro Grad lernen.  Dies wäre Zauber Nummer {number}.  Grenze übergehen?"
+msgstr "Dieser Charakter kann bis zu {most} Zauber pro Grad lernen. Dies wäre Zauber Nummer {number}. Grenze übergehen?"
 
 #: crates/cr-store/src/learn.rs:398
 msgid "This spell belongs to a school from which this character is banned.  Take the spell anyway?"
-msgstr "Dieser Zauber gehört zu einer Schule, die diesem Charakter verboten ist.  Den Zauber trotzdem nehmen?"
+msgstr "Dieser Zauber gehört zu einer Schule, die diesem Charakter verboten ist. Den Zauber trotzdem nehmen?"
 
 #: crates/cr-store/src/learn.rs:404
 msgid "Failed"
@@ -7543,7 +7543,7 @@ msgstr "Fehlgeschlagen"
 
 #: crates/cr-store/src/learn.rs:405
 msgid "The character failed to learn the spell.  Learn anyway?"
-msgstr "Der Charakter konnte den Zauber nicht lernen.  Trotzdem lernen?"
+msgstr "Der Charakter konnte den Zauber nicht lernen. Trotzdem lernen?"
 
 #: crates/cr-store/src/lib.rs:62
 msgid "{path} is not a Core Rules installation (no Database folder)"
@@ -11254,7 +11254,7 @@ msgstr "Spezialistenmagier"
 
 #: crates/cr-store/src/userdb/parts.rs:52
 msgid "There is a conflict between the name of a Custom Item and the name of a Standard Item.  You must enter a new name for your custom item before you may continue."
-msgstr "Der Name eines eigenen Elements stimmt mit dem eines Standardelements überein.  Bevor Sie fortfahren können, müssen Sie Ihrem eigenen Element einen neuen Namen geben."
+msgstr "Der Name eines eigenen Elements stimmt mit dem eines Standardelements überein. Bevor Sie fortfahren können, müssen Sie Ihrem eigenen Element einen neuen Namen geben."
 
 #: crates/cr-store/src/userdb/parts.rs:441
 msgid "This class ability may not be copied.  Returning."
