@@ -1,6 +1,9 @@
-//! Settings, at the foot of the navigation: the interface language, as in
-//! the GTK app's Preferences, and About inside, as Windows 11 apps keep it.
+//! Settings, at the foot of the navigation: the interface language and
+//! the Core Rules Vs Player's Option message, as in the GTK app's
+//! Preferences, and About inside, as Windows 11 apps keep it, with what
+//! the GTK app's About window shows.
 
+use cr_app::about::{self, Original, System};
 use cr_i18n::{Language, tr, trc};
 use cr_win::text::plain;
 use windows_reactor::*;
@@ -38,6 +41,7 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
             View::empty(),
         )
     };
+    let heading = |text: &str| ui::strong(text).margin(Thickness::new(0.0, 20.0, 0.0, 4.0));
     ui::page(
         StackPanel::new().spacing(4.0).children((
             ui::title(trc("preferences", "Settings")).margin(Thickness::new(0.0, 0.0, 0.0, 16.0)),
@@ -52,33 +56,200 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
                     .min_width(220.0)
                     .on_selection_changed(context.callback(Message::Language)),
             ),
-            ui::strong(plain(tr("_About Core Rules"))).margin(Thickness::new(0.0, 20.0, 0.0, 4.0)),
+            heading(tr("Character Creation")),
             ui::setting(
-                &format!("Core Rules {}", env!("CARGO_PKG_VERSION")),
-                "🄯 2026 Wagner Brahm · MIT",
-                website(),
+                tr("Core Rules Vs Player's Option Message"),
+                tr("Shown in New Character after the rules are chosen"),
+                ToggleSwitch::new()
+                    .automation_name(tr("Core Rules Vs Player's Option Message"))
+                    .is_on(prefs::core_vs_option_shown())
+                    .on_toggled(context.callback(Message::CoreVsOption)),
             ),
+            heading(&plain(tr("_About Core Rules"))),
+            about_card(),
             ui::setting(tr("Installation"), &installation, View::empty()),
             data_folder,
-            ui::card(StackPanel::new().spacing(4.0).children((
-                ui::body(tr("AD&D Core Rules")),
-                ui::caption(tr(
-                    "AD&D, Advanced Dungeons & Dragons and Core Rules are trademarks of Wizards of the \
-                     Coast. The rules, books, monsters, pictures and help of AD&D Core Rules 2.0 and its \
-                     Expansion are copyrighted by Wizards of the Coast and are not covered by this \
-                     app's license. This project is not affiliated with Wizards of the Coast and \
-                     contains none of their content: it needs the original discs, or a copy of them, \
-                     that you own.",
-                )),
-            ))),
+            whats_new(),
+            credits(shell),
+            legal(shell),
+            troubleshooting(shell, context),
         )),
     )
 }
 
-/// The landing page, as the GTK app's About links it.
-fn website() -> View {
-    match HyperlinkButton::new().navigate_uri("https://brahm.github.io/corerules/") {
-        Ok(link) => link.content("brahm.github.io/corerules"),
-        Err(_) => View::empty(),
+/// The app's name, version and description, with its website.
+fn about_card() -> View {
+    let mut paragraphs: Vec<KeyedView> = about::description(System::Windows)
+        .into_iter()
+        .enumerate()
+        .map(|(i, text)| KeyedView::new(i.to_string(), ui::body(text)))
+        .collect();
+    paragraphs.insert(
+        0,
+        KeyedView::new(
+            "name",
+            StackPanel::new().spacing(2.0).children((
+                ui::subtitle(format!("Core Rules {}", about::VERSION)),
+                ui::caption(format!("{} · MIT", about::COPYRIGHT)),
+            )),
+        ),
+    );
+    paragraphs.push(KeyedView::new(
+        "website",
+        link(about::WEBSITE, "brahm.github.io/corerules"),
+    ));
+    ui::card(StackPanel::new().spacing(10.0).keyed_children(paragraphs))
+}
+
+/// The newest release's notes.
+fn whats_new() -> View {
+    let lines: Vec<KeyedView> = about::release_notes_text()
+        .into_iter()
+        .enumerate()
+        .map(|(i, line)| KeyedView::new(i.to_string(), ui::body(line)))
+        .collect();
+    if lines.is_empty() {
+        return View::empty();
+    }
+    expander(
+        &tr!("What's New in {version}", version = about::VERSION),
+        StackPanel::new().spacing(8.0).keyed_children(lines),
+    )
+}
+
+/// Who made the app, and the original program's Credits window.
+fn credits(shell: &Shell) -> View {
+    let mut rows = vec![
+        KeyedView::new(
+            "developer",
+            credit(
+                tr("Developer"),
+                link(about::DEVELOPER_URL, about::DEVELOPER),
+            ),
+        ),
+        KeyedView::new(
+            "assistant",
+            credit(
+                tr("Assistant"),
+                link(about::ASSISTANT_URL, about::ASSISTANT),
+            ),
+        ),
+    ];
+    if let Some(translators) = about::translators() {
+        rows.push(KeyedView::new(
+            "translators",
+            credit(tr("Translators"), ui::body(translators).into()),
+        ));
+    }
+    if let Some((title, lines)) = shell
+        .install
+        .as_ref()
+        .and_then(|i| Original::of(&i.original_about()).credits)
+    {
+        rows.push(KeyedView::new(
+            "original",
+            credit(&title, ui::body(lines.join("\n")).into()),
+        ));
+    }
+    expander(
+        tr("Credits"),
+        StackPanel::new().spacing(12.0).keyed_children(rows),
+    )
+}
+
+/// The notice on the original's content, and the original program's
+/// About box and license.
+fn legal(shell: &Shell) -> View {
+    let mut rows = vec![KeyedView::new(
+        "notice",
+        credit(tr("AD&D Core Rules"), ui::body(about::legal()).into()),
+    )];
+    if let Some(original) = shell
+        .install
+        .as_ref()
+        .and_then(|i| Original::of(&i.original_about()).about)
+    {
+        let text = [original.rest, original.license.unwrap_or_default()]
+            .into_iter()
+            .filter(|t| !t.is_empty())
+            .collect::<Vec<_>>()
+            .join("\n\n");
+        rows.push(KeyedView::new(
+            "original",
+            credit(
+                &original.name,
+                ui::body(text).is_text_selection_enabled(true).into(),
+            ),
+        ));
+    }
+    expander(
+        tr("Legal"),
+        StackPanel::new().spacing(12.0).keyed_children(rows),
+    )
+}
+
+/// What a bug report needs, to copy, and where reports go.
+fn troubleshooting(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
+    expander(
+        tr("Troubleshooting"),
+        StackPanel::new().spacing(12.0).children((
+            ui::body(tr(
+                "A bug report helps most with these details and what you did when it happened.",
+            )),
+            ui::caption(debug_info(shell)).is_text_selection_enabled(true),
+            StackPanel::new()
+                .orientation(Orientation::Horizontal)
+                .spacing(12.0)
+                .children((
+                    Button::new()
+                        .on_click(context.message(Message::CopyDebugInfo))
+                        .content(tr("Copy Details")),
+                    link(about::ISSUES, tr("Report an Issue")),
+                )),
+        )),
+    )
+}
+
+/// What a bug report needs: the versions, how the app was installed and
+/// which data it opened, as the GTK app's About gives them.
+pub fn debug_info(shell: &Shell) -> String {
+    let package = if std::env::current_exe()
+        .is_ok_and(|exe| exe.to_string_lossy().contains("\\WindowsApps\\"))
+    {
+        "MSIX"
+    } else {
+        "unpackaged"
+    };
+    let data = shell
+        .install
+        .as_ref()
+        .map_or_else(|| "none".to_owned(), |i| i.root().display().to_string());
+    format!(
+        "Core Rules {}\nPackage: {package}\nWindows App SDK 2.4\nLanguage: {}\nData: {data}\n",
+        about::VERSION,
+        cr_i18n::language().code(),
+    )
+}
+
+fn expander(header: &str, content: impl Into<View>) -> View {
+    Expander::new()
+        .horizontal_alignment(HorizontalAlignment::Stretch)
+        .slots([
+            SlotView::new(ExpanderSlot::Header, ui::body(header)),
+            SlotView::new(ExpanderSlot::Content, content),
+        ])
+}
+
+/// A credit: who or what, under its heading.
+fn credit(heading: &str, content: View) -> View {
+    StackPanel::new()
+        .spacing(2.0)
+        .children((ui::caption(heading), content))
+}
+
+fn link(uri: &str, text: &str) -> View {
+    match HyperlinkButton::new().navigate_uri(uri) {
+        Ok(link) => link.content(text.to_owned()),
+        Err(_) => ui::body(text).into(),
     }
 }

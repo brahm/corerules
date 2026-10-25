@@ -184,7 +184,7 @@ pub struct Bitmap {
     pub height: u32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct HelpFile {
     pub title: String,
     pub copyright: String,

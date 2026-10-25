@@ -1,12 +1,14 @@
 //! What the GNOME and the Windows app share above the backend, with no
 //! GTK and no Windows in it: the names of their actions, the library and
 //! what each entry offers, the records of the user databases, the
-//! original's pictures cut out, the character sheet laid out on printed
-//! pages, and the sheet as a PDF. An interface draws, asks and reports;
+//! original's pictures cut out, the help and About, the character sheet
+//! laid out on printed pages, and the sheet as a PDF. An interface draws, asks and reports;
 //! what it decides comes from here or from `cr-store`, so that every
 //! version of the app does the same.
 
+pub mod about;
 pub mod action;
+pub mod help;
 pub mod library;
 pub mod pages;
 pub mod pdf;

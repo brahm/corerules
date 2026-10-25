@@ -7,56 +7,22 @@ use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::{Rc, Weak};
+use std::sync::Arc;
 
 use adw::prelude::*;
 use cr_app::action;
+pub use cr_app::help::Target;
+use cr_app::help::{Files, Followed, Found, MonsterHelp, Place, Row};
 use cr_formats::rtf::{Align, Format, Rgb, TabKind};
-use cr_formats::winhelp::{HelpFile, Item, Link, Macro, Paragraph, Topic};
+use cr_formats::winhelp::{HelpFile, Item, Link, Paragraph, Topic};
 use cr_i18n::tr;
 use cr_store::Installation;
-use cr_store::help::{Contents, ItemFound, ItemHelp, ItemKind, ItemTopic, ScreenHelp};
+use cr_store::help::{ItemHelp, ScreenHelp};
 use gtk::{gdk, gio, glib, pango};
-
-/// Which topic to show.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Target {
-    /// The file's contents topic.
-    Contents,
-    /// A context string, as the contents files and links name topics.
-    Context(String),
-    /// A `[MAP]` number, as the original's Help buttons pass them.
-    Number(u32),
-}
-
-/// A topic of a help file.
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct Place {
-    /// The file's name in `Help/`, lower case.
-    file: String,
-    topic: usize,
-}
-
-/// A row of the sidebar.
-#[derive(Debug, Clone)]
-struct Row {
-    level: u32,
-    title: String,
-    place: Option<Place>,
-    /// A contents entry's file and context string, found when chosen:
-    /// the Tome of Help lists every book's topics.
-    context: Option<(String, String)>,
-}
-
-impl Row {
-    fn is_topic(&self) -> bool {
-        self.place.is_some() || self.context.is_some()
-    }
-}
 
 struct Viewer {
     window: adw::ApplicationWindow,
-    install: Installation,
-    files: RefCell<HashMap<String, Option<Rc<HelpFile>>>>,
+    files: Files,
     view: gtk::TextView,
     title: adw::WindowTitle,
     toasts: adw::ToastOverlay,
@@ -88,7 +54,17 @@ thread_local! {
     /// the records' help, read once per installation.
     static FILES: RefCell<HashMap<(PathBuf, String), Shared>> = RefCell::default();
     static SCREENS: RefCell<HashMap<(PathBuf, u32), Rc<ScreenHelp>>> = RefCell::default();
-    static ITEMS: RefCell<HashMap<PathBuf, Rc<ItemHelp>>> = RefCell::default();
+    static ITEMS: RefCell<HashMap<PathBuf, Arc<ItemHelp>>> = RefCell::default();
+}
+
+/// The records' help of the installation, read once.
+fn items(install: &Installation) -> Arc<ItemHelp> {
+    ITEMS.with_borrow_mut(|items| {
+        items
+            .entry(install.root().to_owned())
+            .or_insert_with(|| Arc::new(install.item_help()))
+            .clone()
+    })
 }
 
 /// Adds the original's Help… button to `header`, and F1 to `area` (a
@@ -226,12 +202,6 @@ pub fn context_help(
     texts: &[&str],
     toast: impl Fn(&str) + 'static,
 ) {
-    use cr_store::help::topic;
-    use cr_store::summary::Summary;
-    enum Found {
-        Item(ItemFound),
-        Summary(Summary),
-    }
     let root = install.root().to_owned();
     let controls = SCREENS.with_borrow_mut(|screens| {
         screens
@@ -239,62 +209,23 @@ pub fn context_help(
             .or_insert_with(|| Rc::new(install.screen_help(screen)))
             .clone()
     });
-    // The original shows a summary for these, not help.
-    let summarized = [
-        topic::ENCOUNTERS,
-        topic::ENCOUNTER_TEMPLATES,
-        topic::TRAPS,
-        topic::TREASURE_BUNDLES,
-        topic::CHARACTER_MANAGEMENT,
-    ]
-    .contains(&screen);
-    let items = (!summarized).then(|| {
-        ITEMS.with_borrow_mut(|items| {
-            items
-                .entry(root.clone())
-                .or_insert_with(|| Rc::new(install.item_help()))
-                .clone()
-        })
-    });
-    let found = texts.iter().find_map(|&text| {
-        let english = std::iter::once(text).chain(cr_i18n::sources(text));
-        let control = english
-            .clone()
-            .find_map(|t| controls.topic_of(t))
-            .map(|number| {
-                Found::Item(ItemFound::Topic(ItemTopic {
-                    file: "Program.hlp",
-                    number,
-                    popup: true,
-                }))
-            });
-        control.or_else(|| match &items {
-            Some(items) => items.find(text, &ItemKind::order(screen)).map(Found::Item),
-            None => install.summary(screen, text).map(Found::Summary),
-        })
-    });
-    let found = match found {
-        Some(Found::Item(ItemFound::Topic(found))) => found,
-        Some(Found::Item(ItemFound::Custom { title, text })) => {
-            text_dialog(&title, &text, true).present(Some(parent));
-            return;
-        }
-        Some(Found::Summary(Summary::Text { title, text })) => {
-            text_dialog(&title, &text, false).present(Some(parent));
-            return;
-        }
-        Some(Found::Item(ItemFound::CustomMonster(name))) => {
-            if let Some(sheet) = install.custom_monster_sheet(&name) {
-                crate::sheet::preview(parent, sheet, toast);
+    let found =
+        match cr_app::help::context_help(install, screen, texts, &controls, || items(install)) {
+            Some(Found::Topic(found)) => found,
+            Some(Found::Custom { title, text }) => {
+                text_dialog(&title, &text, true).present(Some(parent));
+                return;
             }
-            return;
-        }
-        Some(Found::Summary(Summary::Page(sheet))) => {
-            crate::sheet::preview(parent, sheet, toast);
-            return;
-        }
-        None => return,
-    };
+            Some(Found::Text { title, text }) => {
+                text_dialog(&title, &text, false).present(Some(parent));
+                return;
+            }
+            Some(Found::Page(sheet)) => {
+                crate::sheet::preview(parent, sheet, toast);
+                return;
+            }
+            None => return,
+        };
     if !found.popup {
         if let Err(e) = open(parent, install, found.file, Target::Number(found.number)) {
             eprintln!("{e}");
@@ -338,28 +269,23 @@ pub fn monster(
     print: bool,
     toast: impl Fn(&str) + 'static,
 ) {
-    if custom {
-        let Some(sheet) = install.custom_monster_sheet(name) else {
-            return;
-        };
-        if print {
+    let found = match cr_app::help::monster(install, name, custom, || items(install)) {
+        MonsterHelp::Page(sheet) if print => {
             crate::sheet::print_sheet(parent, &Rc::new(sheet), &toast);
-        } else {
-            crate::sheet::preview(parent, sheet, toast);
+            return;
         }
-        return;
-    }
-    let root = install.root().to_owned();
-    let items = ITEMS.with_borrow_mut(|items| {
-        items
-            .entry(root.clone())
-            .or_insert_with(|| Rc::new(install.item_help()))
-            .clone()
-    });
-    let Some(found) = items.topic_of(name, &[ItemKind::Monster]) else {
-        toast(&tr!("{name} has no help topic", name = name));
-        return;
+        MonsterHelp::Page(sheet) => {
+            crate::sheet::preview(parent, sheet, toast);
+            return;
+        }
+        MonsterHelp::Topic(found) => found,
+        MonsterHelp::None if custom => return,
+        MonsterHelp::None => {
+            toast(&tr!("{name} has no help topic", name = name));
+            return;
+        }
     };
+    let root = install.root().to_owned();
     if !print {
         if let Err(e) = open(parent, install, found.file, Target::Number(found.number)) {
             toast(&e);
@@ -387,7 +313,7 @@ pub fn monster(
 pub fn show(widget: &impl IsA<gtk::Widget>, topic: u32) {
     let _ = widget.activate_action(
         action::HELP.detailed,
-        Some(&format!("Program.hlp#{topic}").to_variant()),
+        Some(&cr_app::help::program(topic).to_variant()),
     );
 }
 
@@ -515,8 +441,7 @@ impl Viewer {
 
         let viewer = Rc::new(Self {
             window,
-            install,
-            files: RefCell::default(),
+            files: Files::new(install),
             view,
             title,
             toasts,
@@ -637,27 +562,12 @@ impl Viewer {
     }
 
     /// The help file `name`, read once.
-    fn file(&self, name: &str) -> Option<Rc<HelpFile>> {
-        let key = name.to_ascii_lowercase();
-        if let Some(file) = self.files.borrow().get(&key) {
-            return file.clone();
-        }
-        let file = self.install.help_file(name).ok().map(Rc::new);
-        self.files.borrow_mut().insert(key, file.clone());
-        file
+    fn file(&self, name: &str) -> Option<Arc<HelpFile>> {
+        self.files.file(name)
     }
 
     fn resolve(&self, file: &str, target: &Target) -> Option<Place> {
-        let help = self.file(file)?;
-        let topic = match target {
-            Target::Contents => Some(help.contents),
-            Target::Context(name) => help.topic_of_context(name),
-            Target::Number(n) => help.topic_of_number(*n),
-        }?;
-        Some(Place {
-            file: file.to_ascii_lowercase(),
-            topic,
-        })
+        self.files.resolve(file, target)
     }
 
     fn go(&self, place: Place, remember: bool) {
@@ -674,10 +584,7 @@ impl Viewer {
             self.history.borrow_mut().push(current);
         }
         self.back.set_sensitive(!self.history.borrow().is_empty());
-        // A file without a contents topic opens on an empty one.
-        let title = Some(topic.display_title())
-            .filter(|t| !t.is_empty())
-            .unwrap_or_else(|| help.title.clone());
+        let title = cr_app::help::title(&help, topic);
         self.title.set_title(&title);
         self.title
             .set_subtitle(if help.title == title { "" } else { &help.title });
@@ -694,13 +601,7 @@ impl Viewer {
         add_pictures(&self.view, &help, pictures);
         *self.links.borrow_mut() = links;
         *self.current.borrow_mut() = Some(place.clone());
-        // A contents file that includes the file shown, as the Tome of
-        // Help's does every book's, stays listed.
-        let listed = self
-            .rows
-            .borrow()
-            .iter()
-            .any(|r| r.context.as_ref().is_some_and(|(f, _)| *f == place.file));
+        let listed = cr_app::help::lists(&self.rows.borrow(), &place);
         if *self.listed.borrow() != place.file && !listed {
             *self.listed.borrow_mut() = place.file.clone();
             self.fill_sidebar();
@@ -735,64 +636,7 @@ impl Viewer {
     /// or the topics whose text has what the search entry holds.
     fn fill_sidebar(&self) {
         let file = self.listed.borrow().clone();
-        let Some(help) = self.file(&file) else { return };
-        let query = self.search.text().to_lowercase();
-        let mut rows = Vec::new();
-        if !query.is_empty() {
-            // The files the contents include are searched too: the Tome
-            // of Help's search covers every book.
-            let mut files = vec![(file.clone(), help.clone())];
-            if let Some(contents) = self.install.help_contents(&file) {
-                for name in contents.entries.iter().filter_map(|e| e.file.as_deref()) {
-                    let name = name.to_ascii_lowercase();
-                    if files.iter().all(|(f, _)| !f.eq_ignore_ascii_case(&name))
-                        && let Some(other) = self.file(&name)
-                    {
-                        files.push((name, other));
-                    }
-                }
-            }
-            for (file, help) in files {
-                for (i, topic) in help.topics.iter().enumerate() {
-                    let title = topic.display_title();
-                    let found = title.to_lowercase().contains(&query)
-                        || topic
-                            .paragraphs
-                            .iter()
-                            .any(|p| p.text().to_lowercase().contains(&query));
-                    if found && !title.is_empty() {
-                        rows.push(Row {
-                            level: 1,
-                            title,
-                            context: None,
-                            place: Some(Place {
-                                file: file.clone(),
-                                topic: i,
-                            }),
-                        });
-                    }
-                }
-            }
-        } else if let Some(contents) = self.install.help_contents(&file) {
-            rows = self.contents_rows(&file, &contents);
-        } else {
-            // Like WinHelp's Index tab, alphabetically.
-            for (i, topic) in help.topics.iter().enumerate() {
-                let title = topic.display_title();
-                if !title.is_empty() {
-                    rows.push(Row {
-                        level: 1,
-                        title,
-                        context: None,
-                        place: Some(Place {
-                            file: file.clone(),
-                            topic: i,
-                        }),
-                    });
-                }
-            }
-            rows.sort_by_cached_key(|r| r.title.to_lowercase());
-        }
+        let rows = self.files.rows(&file, &self.search.text());
         while let Some(child) = self.list.first_child() {
             self.list.remove(&child);
         }
@@ -820,22 +664,6 @@ impl Viewer {
         }
     }
 
-    fn contents_rows(&self, file: &str, contents: &Contents) -> Vec<Row> {
-        contents
-            .entries
-            .iter()
-            .map(|entry| Row {
-                level: entry.level,
-                title: entry.title.clone(),
-                place: None,
-                context: entry.context.as_ref().map(|context| {
-                    let file = entry.file.as_deref().unwrap_or(file);
-                    (file.to_ascii_lowercase(), context.clone())
-                }),
-            })
-            .collect()
-    }
-
     fn missing(&self) {
         self.toasts.add_toast(adw::Toast::new(tr(
             "That topic is not in this installation",
@@ -844,18 +672,11 @@ impl Viewer {
 
     /// Where a row leads; a contents entry's file is read then.
     fn row_place(&self, row: &Row) -> Option<Place> {
-        match &row.context {
-            Some((file, context)) => self.resolve(file, &Target::Context(context.clone())),
-            None => row.place.clone(),
-        }
+        self.files.row_place(row)
     }
 
     fn select_row(&self, place: &Place) {
-        let at = self.rows.borrow().iter().position(|r| match &r.context {
-            // Only rows of the file shown can be it.
-            Some((file, _)) => *file == place.file && self.row_place(r).as_ref() == Some(place),
-            None => r.place.as_ref() == Some(place),
-        });
+        let at = self.files.row_of(&self.rows.borrow(), place);
         match at.and_then(|i| self.list.row_at_index(i as i32)) {
             Some(row) => self.list.select_row(Some(&row)),
             None => self.list.unselect_all(),
@@ -875,54 +696,15 @@ impl Viewer {
 
     /// Follows `link` of a topic of `from` (lower case).
     fn follow_from(self: &Rc<Self>, from: &str, link: &Link) {
-        let (place, popup) = match link {
-            Link::Topic { hash, file, popup } => {
-                let name = file.clone().unwrap_or_else(|| from.to_owned());
-                let place = self.file(&name).and_then(|h| {
-                    Some(Place {
-                        file: name.to_ascii_lowercase(),
-                        topic: h.topic_of_hash(*hash)?,
-                    })
-                });
-                (place, *popup)
-            }
-            Link::Offset { offset, popup } => {
-                let place = self.file(from).and_then(|h| {
-                    Some(Place {
-                        file: from.to_owned(),
-                        topic: h.topic_at(*offset)?,
-                    })
-                });
-                (place, *popup)
-            }
-            Link::Macro(text) => match Macro::parse(text) {
-                Some(Macro::Web(uri)) => {
-                    gtk::UriLauncher::new(&uri).launch(
-                        Some(&self.window),
-                        gio::Cancellable::NONE,
-                        |_| {},
-                    );
-                    return;
-                }
-                Some(Macro::Jump {
-                    file,
-                    context,
-                    popup,
-                }) => (
-                    self.resolve(file.as_deref().unwrap_or(from), &Target::Context(context)),
-                    popup,
-                ),
-                Some(Macro::Contents { file }) => (
-                    self.resolve(file.as_deref().unwrap_or(from), &Target::Contents),
-                    false,
-                ),
-                None => (None, false),
-            },
-        };
-        match place {
-            Some(place) if popup => self.popup(place),
-            Some(place) => self.go(place, true),
-            None => self.missing(),
+        match self.files.follow(from, link) {
+            Followed::Go(place) => self.go(place, true),
+            Followed::Popup(place) => self.popup(place),
+            Followed::Web(uri) => gtk::UriLauncher::new(&uri).launch(
+                Some(&self.window),
+                gio::Cancellable::NONE,
+                |_| {},
+            ),
+            Followed::Missing => self.missing(),
         }
     }
 
@@ -1392,9 +1174,7 @@ fn print_topic(
             Some((anchor, texture, width, height))
         })
         .collect();
-    let title = Some(topic.display_title())
-        .filter(|t| !t.is_empty())
-        .unwrap_or_else(|| help.title.clone());
+    let title = cr_app::help::title(help, topic);
     crate::print::print_buffer(parent, &title, &buffer, &pictures, toast);
 }
 
@@ -1402,44 +1182,19 @@ fn print_topic(
 /// About box and Credits window show, read from the installation when it
 /// has them.
 pub fn about(parent: &adw::ApplicationWindow, install: Option<&Installation>) {
-    let repository = env!("CARGO_PKG_REPOSITORY");
-    let version = env!("CARGO_PKG_VERSION");
-    // The README's description, one paragraph each.
-    let comments = [
-        tr(
-            "Core Rules is a complete Linux version of AD&D Core Rules 2.0 and its Expansion \
-            (TSR/Evermore, 1998-1999), the character manager and Dungeon Master's toolkit \
-            for Advanced Dungeons & Dragons 2nd Edition. It is written in Rust with GTK 4 \
-            and libadwaita and runs natively, with no Wine and no Windows.",
-        ),
-        tr(
-            "Every screen of the original program is here: the Character Generator with \
-            Create, Enter and Update Character, kits and Player's Option, the character \
-            sheet, parties, the NPC, treasure and encounter generators, Table Rolls, editors \
-            for every user database, DM Toolkit packages, the rule books and the help. The \
-            app reads and writes the original's own data files, so characters, monsters, \
-            encounters and packages made in either program open in the other.",
-        ),
-        tr(
-            "This project contains no TSR or Wizards of the Coast content. The rules, books, \
-            monsters, pictures and help all come from a copy of AD&D Core Rules 2.0 (and, for \
-            everything the app creates and edits, the Expansion) that you already own.",
-        ),
-    ]
-    .join("\n\n");
+    use cr_app::about::{self as shared, Original, System};
+    let comments = shared::description(System::Linux).join("\n\n");
     let dialog = adw::AboutDialog::builder()
         .application_name("Core Rules")
         .application_icon(crate::APP_ID)
-        .developer_name("Wagner Brahm")
-        .developers(["Wagner Brahm https://wagnerbrahm.com.br"])
-        .version(version)
-        .release_notes_version(version)
-        .release_notes(release_notes(METAINFO).unwrap_or_default())
-        // The landing page; the repository is where issues go.
-        .website("https://brahm.github.io/corerules/")
-        .issue_url(format!("{repository}/issues"))
-        // The copyleft sign, by the author's choice.
-        .copyright("🄯 2026 Wagner Brahm")
+        .developer_name(shared::DEVELOPER)
+        .developers([format!("{} {}", shared::DEVELOPER, shared::DEVELOPER_URL)])
+        .version(shared::VERSION)
+        .release_notes_version(shared::VERSION)
+        .release_notes(shared::release_notes().unwrap_or_default())
+        .website(shared::WEBSITE)
+        .issue_url(shared::ISSUES)
+        .copyright(shared::COPYRIGHT)
         .license_type(gtk::License::MitX11)
         // The comments, a section's license and a credit section's name
         // are markup.
@@ -1447,71 +1202,39 @@ pub fn about(parent: &adw::ApplicationWindow, install: Option<&Installation>) {
         .debug_info(debug_info(install))
         .debug_info_filename("corerules-debug-info.txt")
         .build();
-    // The catalog's credits; English has no translators.
-    let translators = tr("translator-credits");
-    if translators != "translator-credits" {
+    if let Some(translators) = shared::translators() {
         dialog.set_translator_credits(translators);
     }
     dialog.add_credit_section(
         Some(&glib::markup_escape_text(tr("Assistant"))),
-        &["Claude (Anthropic) https://www.anthropic.com/claude"],
+        &[&format!("{} {}", shared::ASSISTANT, shared::ASSISTANT_URL)],
     );
     dialog.add_legal_section(
         tr("AD&D Core Rules"),
         None,
         gtk::License::Custom,
-        Some(&glib::markup_escape_text(tr(
-            "AD&D, Advanced Dungeons & Dragons and Core Rules are trademarks of Wizards of the \
-             Coast. The rules, books, monsters, pictures and help of AD&D Core Rules 2.0 and its \
-             Expansion are copyrighted by Wizards of the Coast and are not covered by this \
-             app's license. This project is not affiliated with Wizards of the Coast and \
-             contains none of their content: it needs the original discs, or a copy of them, \
-             that you own.",
-        ))),
+        Some(&glib::markup_escape_text(shared::legal())),
     );
     if let Some(install) = install {
-        let original = install.original_about();
-        // The product's name, then its version, copyright and developer.
-        let split = original.lines.len().min(2);
-        let (name, rest) = original.lines.split_at(split);
-        let name = name.join(" ");
-        if !name.is_empty() || original.license.is_some() {
+        let original = Original::of(&install.original_about());
+        if let Some(about) = &original.about {
             dialog.add_legal_section(
-                &tr!("{product} (original program)", product = &name),
-                Some(&rest.join("\n"))
-                    .filter(|r| !r.is_empty())
-                    .map(String::as_str),
+                &about.name,
+                Some(about.rest.as_str()).filter(|r| !r.is_empty()),
                 gtk::License::Custom,
-                original
+                about
                     .license
                     .as_deref()
                     .map(glib::markup_escape_text)
                     .as_deref(),
             );
         }
-        if !original.credits.is_empty() {
-            let credits: Vec<&str> = original.credits.iter().map(String::as_str).collect();
-            // The product's name without the game's, which does not fit.
-            let product = original.lines.get(1).unwrap_or(&name);
-            let title = tr!("{product} (original program)", product = product);
-            dialog.add_credit_section(Some(&glib::markup_escape_text(&title)), &credits);
+        if let Some((title, lines)) = &original.credits {
+            let credits: Vec<&str> = lines.iter().map(String::as_str).collect();
+            dialog.add_credit_section(Some(&glib::markup_escape_text(title)), &credits);
         }
     }
     dialog.present(Some(parent));
-}
-
-/// The app's AppStream metainfo, whose newest release the About window
-/// shows as What's New.
-const METAINFO: &str = include_str!("../../../data/io.github.brahm.CoreRules.metainfo.xml");
-
-/// The description of the metainfo's newest release, the AppStream markup
-/// the About window's release notes take.
-fn release_notes(metainfo: &str) -> Option<String> {
-    let release = &metainfo[metainfo.find("<release ")?..];
-    let start = release.find("<description>")? + "<description>".len();
-    let end = release.find("</description>")?;
-    let notes = release.get(start..end)?;
-    Some(notes.split_whitespace().collect::<Vec<_>>().join(" "))
 }
 
 /// What a bug report needs: the versions, how the app was installed and
@@ -1537,26 +1260,4 @@ fn debug_info(install: Option<&Installation>) -> String {
         adw::micro_version(),
         cr_i18n::language().code(),
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// The About window's What's New is the metainfo's newest release, which
-    /// has to be this version.
-    #[test]
-    fn newest_release_is_this_version() {
-        let release = &METAINFO[METAINFO.find("<release ").unwrap()..];
-        let version = env!("CARGO_PKG_VERSION").replace('-', "~");
-        assert!(
-            release.starts_with(&format!("<release version=\"{version}\"")),
-            "the metainfo's newest release is not {version}"
-        );
-        let notes = release_notes(METAINFO).unwrap();
-        assert!(
-            notes.starts_with("<p>") && notes.ends_with("</p>"),
-            "{notes}"
-        );
-    }
 }

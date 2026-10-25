@@ -4,6 +4,7 @@
 //! functions of the modules below, from that state.
 
 mod edit;
+mod help;
 mod import;
 mod library;
 mod new_character;
@@ -11,9 +12,10 @@ mod settings;
 mod sheet;
 
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use cr_app::action::{self, Action};
+use cr_app::help::{Files, Found, MonsterHelp, PROGRAM, Target};
 use cr_app::library::Filter;
 use cr_app::sheets::Export;
 use cr_formats::export::ExportFile;
@@ -21,6 +23,7 @@ use cr_i18n::tr;
 use cr_store::Installation;
 use cr_store::catalog::{Entry, Section};
 use cr_store::export::{Content, ImportReport};
+use cr_store::help::{ItemHelp, topic};
 use cr_store::sheet::Sheet;
 use cr_store::userdb::parts::OTHER_TYPES;
 use cr_win::text::plain;
@@ -28,6 +31,7 @@ use windows_reactor::*;
 
 use crate::native::{self, Owner};
 pub use edit::Edit;
+use help::{HelpPage, HelpView, Opened, Shown};
 use library::Pictures;
 use sheet::{OptionsEdit, SheetOptions, SheetPage};
 
@@ -52,8 +56,10 @@ pub fn available(action: Action) -> bool {
     !action::NOT_YET_ON_WINDOWS.contains(&action)
 }
 
-/// The navigation's tag for Settings; the sections are tagged by id.
+/// The navigation's tags for Settings and Help; the sections are tagged
+/// by id.
 const SETTINGS: &str = "Settings";
+const HELP: &str = "Help";
 
 pub struct Shell {
     install: Option<Arc<Installation>>,
@@ -81,6 +87,10 @@ pub struct Shell {
     pane_open: bool,
     /// A dialog or a print job is under way.
     busy: bool,
+    /// The installation's help files and its records' help, read once.
+    help_files: Option<Arc<Files>>,
+    items: Arc<OnceLock<Arc<ItemHelp>>>,
+    help_view: HelpView,
 }
 
 /// What the window shows.
@@ -96,6 +106,7 @@ pub enum Page {
     Settings,
     Sheet(Arc<SheetPage>),
     SheetOptions(Box<SheetOptions>),
+    Help(Box<HelpPage>),
 }
 
 /// A package opened for import, with what it would bring in.
@@ -150,6 +161,11 @@ pub enum Confirm {
     },
     /// Character Sheet Options with no section.
     EmptySheet,
+    /// What a record says, or a popup of the program help: only read.
+    Info {
+        title: String,
+        text: String,
+    },
 }
 
 /// What Print and Save as PDF act on.
@@ -231,6 +247,35 @@ pub enum Message {
     Imported(Result<Arc<ImportReport>, String>),
     // Settings.
     Language(Option<usize>),
+    CoreVsOption(bool),
+    CopyDebugInfo,
+    // Help.
+    HelpShown(Result<Box<Shown>, String>),
+    HelpBook(Option<usize>),
+    /// A row of the tree, by its title.
+    HelpRow(String),
+    HelpSearch(String),
+    HelpRows(String, Arc<Vec<cr_app::help::Row>>),
+    HelpLink(String),
+    HelpOpened(Opened),
+    HelpBack,
+    HelpPrint,
+    /// What a record's help or a monster's View and Print show, and
+    /// whether to print it.
+    ItemHelpFound(Result<ItemHelpShown, String>, bool),
+    MonsterHelp(bool),
+}
+
+/// What a record's help shows.
+#[derive(Clone)]
+pub enum ItemHelpShown {
+    /// The help at a topic.
+    Open(String),
+    Info {
+        title: String,
+        text: String,
+    },
+    Page(Sheet),
 }
 
 impl Shell {
@@ -368,18 +413,9 @@ impl Shell {
                 );
             }
             action::SHEET_PRINT => {
-                let Some(((printable, _), install)) = self.printable().zip(self.install.clone())
-                else {
-                    return;
-                };
-                self.dialog(
-                    context,
-                    move |owner| {
-                        let sheet = printable.sheet(&install)?;
-                        native::print::print_sheet(owner, &sheet).map_err(|e| e.message())
-                    },
-                    Message::Printed,
-                );
+                if let Some((printable, _)) = self.printable() {
+                    self.print(printable, context);
+                }
             }
             action::SHEET_PDF => {
                 let Some(((printable, title), install)) =
@@ -413,8 +449,143 @@ impl Shell {
             action::PREFERENCES | action::ABOUT if !matches!(self.page, Page::Settings) => {
                 self.go(Page::Settings)
             }
+            action::HELP => self.open_help(PROGRAM.to_owned(), false, context),
+            // The original's Help > Main Menu and F1: the program help of
+            // the page shown.
+            action::HELP_HERE => {
+                if !matches!(self.page, Page::Help(_)) {
+                    self.open_help(cr_app::help::program(self.here()), false, context);
+                }
+            }
+            action::HELP_CONTROL => self.item_help(context),
             _ => {}
         }
+    }
+
+    /// Prints a sheet through the Windows print dialog.
+    fn print(&mut self, printable: Printable, context: &ComponentContext<Self>) {
+        let Some(install) = self.install.clone() else {
+            return;
+        };
+        self.dialog(
+            context,
+            move |owner| {
+                let sheet = printable.sheet(&install)?;
+                native::print::print_sheet(owner, &sheet).map_err(|e| e.message())
+            },
+            Message::Printed,
+        );
+    }
+
+    /// The topic of the program help for the page shown, as the
+    /// original's screens open it.
+    fn here(&self) -> u32 {
+        match &self.page {
+            Page::Library => topic::of_section(&self.section),
+            Page::Edit(_) => topic::CHARACTER_INFORMATION,
+            Page::NewCharacter { .. } => topic::CHARACTER_MANAGEMENT,
+            Page::Import(_) => topic::IMPORT,
+            Page::Sheet(_) | Page::SheetOptions(_) => topic::CHARACTER_SHEET,
+            Page::Settings | Page::Help(_) => topic::MAIN_MENU,
+        }
+    }
+
+    /// The installation's help files, read as they are opened.
+    fn help_files(&mut self) -> Option<Arc<Files>> {
+        if self.help_files.is_none() {
+            let root = self.install.as_ref()?.root().to_owned();
+            self.help_files = Installation::open(&root)
+                .ok()
+                .map(|i| Arc::new(Files::new(i)));
+        }
+        self.help_files.clone()
+    }
+
+    /// The records' help, read once.
+    fn items(&self) -> impl FnOnce() -> Arc<ItemHelp> + Send + 'static {
+        let (items, install) = (self.items.clone(), self.install.clone());
+        move || {
+            items
+                .get_or_init(|| Arc::new(install.map(|i| i.item_help()).unwrap_or_default()))
+                .clone()
+        }
+    }
+
+    /// Opens the help at `spec` (`Program.hlp#1234`) on the help page;
+    /// `print` prints the topic once it shows.
+    fn open_help(&mut self, spec: String, print: bool, context: &ComponentContext<Self>) {
+        let Some(files) = self.help_files() else {
+            self.show_error(tr("Open a Core Rules folder to read its help"), "");
+            return;
+        };
+        if !matches!(self.page, Page::Help(_)) {
+            self.go(Page::Help(Box::default()));
+        }
+        let Page::Help(page) = &mut self.page else {
+            return;
+        };
+        page.print = print;
+        let (listed, rows) = (page.listed.clone(), page.rows.clone());
+        context.spawn_background(move |_| {
+            let (file, target) = Target::parse(&spec);
+            Message::HelpShown(help::open(&files, file, &target, &listed, &rows))
+        });
+    }
+
+    /// Shows topic `place` of the help page in the background.
+    fn show_topic(
+        &mut self,
+        place: Option<cr_app::help::Place>,
+        remember: bool,
+        context: &ComponentContext<Self>,
+    ) {
+        let Some(files) = self.help_files() else {
+            return;
+        };
+        let Page::Help(page) = &self.page else {
+            return;
+        };
+        let (listed, rows) = (page.listed.clone(), page.rows.clone());
+        context.spawn_background(move |_| {
+            let shown = place
+                .ok_or_else(|| tr("That topic is not in this installation").to_owned())
+                .and_then(|place| help::show(&files, place, &listed, &rows, remember));
+            Message::HelpShown(shown)
+        });
+    }
+
+    /// The help of the entry on the details, as a right-click on its row
+    /// in the original's list opens it.
+    fn item_help(&mut self, context: &ComponentContext<Self>) {
+        let (Some(entry), Some(install)) = (self.selected_entry(), self.install.clone()) else {
+            return;
+        };
+        let screen = topic::of_section(&self.section);
+        let texts = [entry.title.trim().to_owned(), entry.subtitle.clone()];
+        let name = entry.title.trim().to_owned();
+        let (items, files) = (self.items(), self.help_files());
+        context.spawn_background(move |_| {
+            let controls = install.screen_help(screen);
+            let texts: Vec<&str> = texts.iter().map(String::as_str).collect();
+            let shown = match cr_app::help::context_help(&install, screen, &texts, &controls, items)
+            {
+                Some(Found::Topic(found)) if found.popup => files
+                    .as_ref()
+                    .and_then(|files| popup_text(files, found.file, found.number))
+                    .map(|(title, text)| ItemHelpShown::Info { title, text })
+                    .ok_or_else(|| tr!("{name} has no help topic", name = name)),
+                Some(Found::Topic(found)) => Ok(ItemHelpShown::Open(format!(
+                    "{}#{}",
+                    found.file, found.number
+                ))),
+                Some(Found::Custom { title, text } | Found::Text { title, text }) => {
+                    Ok(ItemHelpShown::Info { title, text })
+                }
+                Some(Found::Page(sheet)) => Ok(ItemHelpShown::Page(sheet)),
+                None => Err(tr!("{name} has no help topic", name = name)),
+            };
+            Message::ItemHelpFound(shown, false)
+        });
     }
 
     /// Exports the character's sheet shown.
@@ -474,6 +645,19 @@ impl Shell {
     }
 }
 
+/// The title and text of topic `number` of `file`, as a popup shows it.
+fn popup_text(files: &Files, file: &str, number: u32) -> Option<(String, String)> {
+    let help = files.file(file)?;
+    let topic = help.topics.get(help.topic_of_number(number)?)?;
+    let text = topic
+        .paragraphs
+        .iter()
+        .map(|p| p.text())
+        .collect::<Vec<_>>()
+        .join("\n");
+    Some((cr_app::help::title(&help, topic), text.trim().to_owned()))
+}
+
 /// Writes a file the user chose, saying which when it fails.
 fn write(path: &std::path::Path, bytes: &[u8]) -> Result<(), String> {
     std::fs::write(path, bytes).map_err(|e| {
@@ -508,7 +692,14 @@ impl Component for Shell {
             confirm: None,
             pane_open: true,
             busy: false,
+            help_files: None,
+            items: Arc::default(),
+            help_view: HelpView::default(),
         };
+        let sender = context.sender();
+        native::keys::on_f1(move || {
+            sender.send(Message::Act(action::HELP_HERE));
+        });
         shell.load(None, context);
         if let Some(path) = file.clone() {
             shell.busy = true;
@@ -544,6 +735,10 @@ impl Component for Shell {
             Message::Navigate(Some(tag)) => {
                 if tag == SETTINGS {
                     self.act(action::PREFERENCES, context);
+                } else if tag == HELP {
+                    if !matches!(self.page, Page::Help(_)) {
+                        self.act(action::HELP_HERE, context);
+                    }
                 } else if self.changed() {
                     self.confirm = Some(Confirm::Discard { section: Some(tag) });
                 } else if tag != self.section || !matches!(self.page, Page::Library) {
@@ -606,6 +801,8 @@ impl Component for Shell {
                             self.install = Some(Arc::new(install));
                             self.sections = None;
                             self.background = None;
+                            self.help_files = None;
+                            self.items = Arc::default();
                             self.history.clear();
                             self.page = Page::Library;
                             self.select(None);
@@ -898,6 +1095,189 @@ impl Component for Shell {
                 });
             }
             Message::Language(None) => {}
+            Message::CoreVsOption(shown) => {
+                if let Err(e) = crate::prefs::set_core_vs_option_shown(shown) {
+                    self.show_error(
+                        &tr!("Could not save the preferences: {error}", error = e),
+                        "",
+                    );
+                }
+            }
+            Message::CopyDebugInfo => match native::copy(&settings::debug_info(self)) {
+                Ok(()) => self.notice = Some(Notice::success(tr("Copied to the clipboard"))),
+                Err(e) => self.show_error(&e.message(), ""),
+            },
+            Message::HelpShown(Ok(shown)) | Message::HelpOpened(Opened::Shown(shown)) => {
+                let Page::Help(page) = &mut self.page else {
+                    return;
+                };
+                if shown.remember
+                    && let Some(current) = &page.shown
+                    && current.place != shown.place
+                {
+                    page.history.push(current.place.clone());
+                }
+                if let Some(rows) = shown.rows.clone() {
+                    page.rows = rows;
+                    page.listed = shown.place.file.clone();
+                    page.query.clear();
+                }
+                // A search's rows are not the ones it was found in.
+                let shown_row = if page.query.is_empty() {
+                    shown.row
+                } else {
+                    None
+                };
+                page.shown = Some(Arc::from(shown));
+                page.generation += 1;
+                page.printing = std::mem::take(&mut page.print);
+                page.row = shown_row;
+                page.popup = None;
+            }
+            Message::HelpShown(Err(e)) => {
+                if let Page::Help(page) = &mut self.page {
+                    page.print = false;
+                }
+                self.show_error(&e, "");
+            }
+            Message::HelpBook(Some(index)) => {
+                if let (Some(file), Page::Help(page)) = (help::book(index), &self.page)
+                    && !page.listed.eq_ignore_ascii_case(file)
+                {
+                    self.open_help(file.to_owned(), false, context);
+                }
+            }
+            Message::HelpBook(None) => {}
+            Message::HelpRow(title) => {
+                let (Some(files), Page::Help(page)) = (self.help_files(), &self.page) else {
+                    return;
+                };
+                // The tree says which row by its title; a heading only
+                // opens and closes its branch.
+                if let Some(row) = page.rows.iter().find(|r| r.title == title && r.is_topic()) {
+                    let place = files.row_place(row);
+                    self.show_topic(place, true, context);
+                }
+            }
+            Message::HelpSearch(query) => {
+                let (Some(files), Page::Help(page)) = (self.help_files(), &mut self.page) else {
+                    return;
+                };
+                if page.query == query {
+                    return;
+                }
+                page.query = query.clone();
+                let listed = page.listed.clone();
+                context.spawn_background(move |_| {
+                    let rows = Arc::new(files.rows(&listed, &query));
+                    Message::HelpRows(query, rows)
+                });
+            }
+            Message::HelpRows(query, rows) => {
+                if let Page::Help(page) = &mut self.page
+                    && page.query == query
+                {
+                    page.rows = rows;
+                    page.row = None;
+                }
+            }
+            // The page asks to print once it has loaded.
+            Message::HelpLink(id) if id == help::PRINT => {
+                if let Some(web) = self.help_view.web() {
+                    web.print();
+                }
+            }
+            Message::HelpLink(id) => {
+                let (Some(files), Page::Help(page)) = (self.help_files(), &self.page) else {
+                    return;
+                };
+                let (from, links, index) = match id.strip_prefix(cr_win::html::POPUP) {
+                    Some(index) => match &page.popup {
+                        Some((file, links)) => (file.clone(), links, index),
+                        None => return,
+                    },
+                    None => match &page.shown {
+                        Some(shown) => (shown.place.file.clone(), &shown.page.links, id.as_str()),
+                        None => return,
+                    },
+                };
+                let Some(link) = index
+                    .parse::<usize>()
+                    .ok()
+                    .and_then(|i| links.get(i))
+                    .cloned()
+                else {
+                    return;
+                };
+                let (listed, rows) = (page.listed.clone(), page.rows.clone());
+                context.spawn_background(move |_| {
+                    Message::HelpOpened(help::follow(&files, &from, &link, &listed, &rows))
+                });
+            }
+            Message::HelpOpened(Opened::Popup(file, popup)) => {
+                if let Page::Help(page) = &mut self.page
+                    && let Some(web) = self.help_view.web()
+                {
+                    web.run(&format!(
+                        "showPopup({})",
+                        cr_win::html::js_string(&popup.html)
+                    ));
+                    page.popup = Some((file, popup.links));
+                }
+            }
+            Message::HelpOpened(Opened::Web(uri)) => native::open_uri(&uri),
+            Message::HelpOpened(Opened::Missing) => {
+                self.show_error(tr("That topic is not in this installation"), "")
+            }
+            Message::HelpBack => {
+                if let Page::Help(page) = &mut self.page
+                    && let Some(place) = page.history.pop()
+                {
+                    self.show_topic(Some(place), false, context);
+                }
+            }
+            Message::HelpPrint => {
+                if let Some(web) = self.help_view.web() {
+                    web.print();
+                }
+            }
+            Message::MonsterHelp(print) => {
+                let (Some(entry), Some(install)) = (self.selected_entry(), self.install.clone())
+                else {
+                    return;
+                };
+                let Some((name, custom)) = cr_app::library::monster_key(&entry.key) else {
+                    return;
+                };
+                let name = name.to_owned();
+                let items = self.items();
+                context.spawn_background(move |_| {
+                    let shown = match cr_app::help::monster(&install, &name, custom, items) {
+                        MonsterHelp::Page(sheet) => Ok(ItemHelpShown::Page(sheet)),
+                        MonsterHelp::Topic(found) => Ok(ItemHelpShown::Open(format!(
+                            "{}#{}",
+                            found.file, found.number
+                        ))),
+                        MonsterHelp::None => Err(tr!("{name} has no help topic", name = name)),
+                    };
+                    Message::ItemHelpFound(shown, print)
+                });
+            }
+            Message::ItemHelpFound(Ok(ItemHelpShown::Open(spec)), print) => {
+                self.open_help(spec, print, context)
+            }
+            Message::ItemHelpFound(Ok(ItemHelpShown::Info { title, text }), _) => {
+                self.confirm = Some(Confirm::Info { title, text })
+            }
+            Message::ItemHelpFound(Ok(ItemHelpShown::Page(sheet)), true) => {
+                self.print(Printable::Sheet(Arc::new(sheet)), context)
+            }
+            Message::ItemHelpFound(Ok(ItemHelpShown::Page(sheet)), false) => {
+                self.go(Page::Sheet(Arc::new(SheetPage::new(sheet, None, None))))
+            }
+            Message::ItemHelpFound(Err(e), _) => {
+                self.notice = Some(Notice::new(InfoBarSeverity::Informational, e, ""))
+            }
         }
     }
 
@@ -920,6 +1300,7 @@ impl Component for Shell {
             Page::Settings => settings::view(self, context),
             Page::Sheet(page) => sheet::view(self, page, context),
             Page::SheetOptions(options) => sheet::options_view(options, context),
+            Page::Help(page) => help::view(self, page, context),
         };
         let notice = match &self.notice {
             Some(notice) => InfoBar::new()
@@ -937,9 +1318,10 @@ impl Component for Shell {
 
         let selected_tag = match self.page {
             Page::Settings => SETTINGS,
+            Page::Help(_) => HELP,
             _ => self.section.as_str(),
         };
-        let menu: Vec<KeyedView> = self
+        let mut menu: Vec<KeyedView> = self
             .sections
             .iter()
             .flat_map(|sections| sections.iter())
@@ -960,6 +1342,20 @@ impl Component for Shell {
                 )
             })
             .collect();
+        menu.push(KeyedView::new(
+            HELP,
+            NavigationViewItem::new()
+                .tag(HELP)
+                .is_selected(selected_tag == HELP)
+                .selects_on_invoked(true)
+                .slots([
+                    SlotView::new(NavigationViewItemSlot::Content, plain(tr("_Help"))),
+                    SlotView::new(
+                        NavigationViewItemSlot::Icon,
+                        SymbolIcon::new().symbol(Symbol::Help),
+                    ),
+                ]),
+        ));
         let navigation = NavigationView::new()
             .pane_display_mode(NavigationViewPaneDisplayMode::Left)
             .is_pane_toggle_button_visible(false)
@@ -1047,14 +1443,25 @@ impl Shell {
                 tr("No sections: the sheet will be empty").to_owned(),
                 plain(tr("_Save")),
             ),
+            Some(Confirm::Info { title, text }) => (title.clone(), text.clone(), String::new()),
             None => (String::new(), String::new(), String::new()),
+        };
+        // Only read: the dialog only closes.
+        let close = if matches!(self.confirm, Some(Confirm::Info { .. })) {
+            plain(tr("_Close"))
+        } else {
+            plain(tr("_Cancel"))
         };
         ContentDialog::new()
             .title(title)
             .primary_button_text(action)
-            .close_button_text(plain(tr("_Cancel")))
+            .close_button_text(close)
             .is_open(self.confirm.is_some())
             .on_closed(context.callback(Message::Answered))
-            .content(crate::ui::body(text))
+            .content(
+                ScrollViewer::new()
+                    .max_height(480.0)
+                    .content(crate::ui::body(text).is_text_selection_enabled(true)),
+            )
     }
 }

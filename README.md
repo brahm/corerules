@@ -619,7 +619,7 @@ CORERULES_DIR="$HOME/.wine/drive_c/Program Files/AD&D Core Rules 2.0" cargo test
 | `cr-store` | Finds and opens an installation (case-insensitive paths) and builds the catalog the app shows |
 | `cr-cli` | `cr` command for inspecting data |
 | `cr-i18n` | Translations of the interface (`po/*.po`, built into the program) |
-| `cr-app` | What both apps share above the backend, with no GTK and no Windows: the names of their actions, the library's search, filters and commands, the pictures, the sheet's options and exports, the sheet laid out on printed pages and the sheet as a PDF |
+| `cr-app` | What both apps share above the backend, with no GTK and no Windows: the names of their actions, the library's search, filters and commands, the pictures, the help and About, the sheet's options and exports, the sheet laid out on printed pages and the sheet as a PDF |
 | `cr-gtk` | The GNOME app |
 | `cr-addons` | Core Rules Community Add-ons Collection, the add-ons and their installer |
 | `cr-win` | The Windows 11 app (WinUI 3 with windows-reactor), being ported screen by screen |

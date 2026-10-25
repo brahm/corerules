@@ -408,7 +408,7 @@ impl Window {
                 let this = this.clone();
                 move |_, _, _| {
                     let topic = topic::of_section(&userdb::Host::current_section(&this));
-                    this.open_help(&format!("Program.hlp#{topic}"))
+                    this.open_help(&cr_app::help::program(topic))
                 }
             })
             .build();
@@ -1043,14 +1043,7 @@ impl Window {
     /// contents topic, or `FILE#CONTEXT` or `FILE#NUMBER` (a `[MAP]`
     /// number).
     fn open_help(&self, spec: &str) {
-        let (file, topic) = spec.split_once('#').unwrap_or((spec, ""));
-        let target = if topic.is_empty() {
-            help::Target::Contents
-        } else if let Ok(n) = topic.parse() {
-            help::Target::Number(n)
-        } else {
-            help::Target::Context(topic.to_owned())
-        };
+        let (file, target) = help::Target::parse(spec);
         let opened = match &*self.install.borrow() {
             Some(install) => help::open(&self.window, install, file, target),
             None => Err(tr("Open a Core Rules folder to read its help").to_owned()),
@@ -1351,11 +1344,19 @@ fn open_menu() -> gtk::MenuButton {
     help.append_item(&item);
     help.append(
         Some(tr("_Online Manual")),
-        Some(&*format!("{}::Manual.hlp", action::HELP.detailed)),
+        Some(&*format!(
+            "{}::{}",
+            action::HELP.detailed,
+            cr_app::help::MANUAL
+        )),
     );
     help.append(
         Some(tr("_Tome of Help")),
-        Some(&*format!("{}::ADandD.hlp", action::HELP.detailed)),
+        Some(&*format!(
+            "{}::{}",
+            action::HELP.detailed,
+            cr_app::help::TOME
+        )),
     );
     help.append(Some(tr("_About Core Rules")), Some(action::ABOUT.detailed));
     menu.append_section(None, &help);

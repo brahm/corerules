@@ -398,6 +398,24 @@ fn details(shell: &Shell, entry: &Entry, context: &mut ViewContext<Shell>) -> Vi
             Message::ViewPage,
         );
     }
+    // The Monsters screen's View and Print: a shipped monster's help
+    // topic, a monster of the user database as it prints.
+    if commands.monster {
+        add(
+            "view",
+            tr("View"),
+            Symbol::Preview,
+            !busy,
+            Message::MonsterHelp(false),
+        );
+        add(
+            "print",
+            tr("Print"),
+            Symbol::Print,
+            !busy,
+            Message::MonsterHelp(true),
+        );
+    }
     if commands.sheet || (commands.print && !commands.monster) {
         add(
             "print",
@@ -443,6 +461,14 @@ fn details(shell: &Shell, entry: &Entry, context: &mut ViewContext<Shell>) -> Vi
             Message::AskDelete,
         );
     }
+    // What a right-click on its row shows in the original.
+    add(
+        "help",
+        tr("Help"),
+        Symbol::Help,
+        true,
+        Message::Act(action::HELP_CONTROL),
+    );
     let pictures = &shell.pictures;
     let heading = StackPanel::new()
         .spacing(2.0)
