@@ -4,6 +4,8 @@
 //! which commands an entry has come from [`cr_app::library`], as in the
 //! GNOME app.
 
+use std::collections::HashMap;
+
 use cr_app::action;
 use cr_app::library::{self, Commands};
 use cr_app::records;
@@ -72,15 +74,28 @@ impl Pictures {
     }
 }
 
-/// The section's glyph in the navigation, as the GNOME app gives each
-/// its icon.
-pub fn symbol(section: &str) -> Symbol {
+/// The GNOME app's sword, which Segoe Fluent Icons has no glyph for:
+/// its 16-pixel drawing turned 45 degrees, as path data.
+const SWORD: &str = "F1 M14.93,1.07 L14.43,3.69 L7.79,10.33 L5.67,8.21 L12.31,1.57 Z \
+    M4.04,6.59 L9.41,11.96 A1,1 0 0 1 8,13.37 L2.63,8 A1,1 0 0 1 4.04,6.59 Z \
+    M4.61,9.98 L6.02,11.39 L4.04,13.37 L2.63,11.96 Z \
+    M1.64,12.38 A1.4,1.4 0 1 1 3.62,14.36 A1.4,1.4 0 1 1 1.64,12.38 Z";
+
+/// The section's icon in the navigation, as the GNOME app gives each its
+/// own.
+pub fn icon(section: &str) -> View {
+    if section == "weapons" {
+        return PathIcon::new().data(SWORD).into();
+    }
+    SymbolIcon::new().symbol(symbol(section)).into()
+}
+
+fn symbol(section: &str) -> Symbol {
     match section {
         library::CHARACTERS => Symbol::People,
         "races" => Symbol::Contact,
         "classes" => Symbol::Manage,
         "kits" => Symbol::ContactInfo,
-        "weapons" => Symbol::Target,
         "armor" => Symbol::Permissions,
         "equipment" => Symbol::Shop,
         "magic-items" => Symbol::SolidStar,
@@ -300,11 +315,14 @@ fn filters(shell: &Shell, section: &Section, context: &mut ViewContext<Shell>) -
         .keyed_children(filters)
 }
 
-/// What the list depends on, so that a change makes it anew.
+/// What the list depends on, so that a change makes it anew: a new
+/// catalog too, whose rows may have new keys (a converted character's
+/// file) and whose items would lose the selection.
 fn list_key(shell: &Shell, section: &Section) -> String {
     let filter = &shell.filter;
     format!(
-        "{}\u{1}{}\u{1}{:?}\u{1}{:?}\u{1}{:?}\u{1}{}",
+        "{}\u{1}{}\u{1}{}\u{1}{:?}\u{1}{:?}\u{1}{:?}\u{1}{}",
+        shell.loads,
         section.id,
         filter.search,
         filter.origins,
@@ -326,6 +344,9 @@ fn list(
     if visible.is_empty() {
         return ui::caption(tr("No Results")).margin(12.0).into();
     }
+    // The standard data repeats some records (Garnet, Pearl and Spinel
+    // in Gems and Art), and Reactor needs each row's key once.
+    let mut seen: HashMap<&str, usize> = HashMap::new();
     ListView::new()
         .automation_name(section.title)
         .selected_index(
@@ -346,8 +367,14 @@ fn list(
                         ui::caption(entry.subtitle.clone()),
                     ))
                 };
+                let repeat = seen.entry(entry.key.as_str()).or_default();
+                let key = match *repeat {
+                    0 => entry.key.clone(),
+                    n => format!("{}\u{1}{n}", entry.key),
+                };
+                *repeat += 1;
                 KeyedView::new(
-                    entry.key.clone(),
+                    key,
                     ListViewItem::new().tag(entry.key.clone()).content(
                         Border::new()
                             .padding(Thickness::new(0.0, 6.0, 0.0, 6.0))
@@ -582,15 +609,12 @@ fn details(shell: &Shell, entry: &Entry, context: &mut ViewContext<Shell>) -> Vi
             .spacing(12.0)
             .margin(Thickness::new(0.0, 0.0, 12.0, 0.0))
             .children((
-                Grid::new()
-                    .columns([GridLength::STAR, GridLength::Auto])
-                    .children((
-                        heading,
-                        Border::new().grid_column(1).content(
-                            CommandBar::new()
-                                .collection_slot(CommandBarSlot::PrimaryCommands, buttons),
-                        ),
-                    )),
+                heading,
+                // Under the heading, where the commands that do not fit
+                // the pane's width go to its More menu.
+                CommandBar::new()
+                    .horizontal_alignment(HorizontalAlignment::Left)
+                    .collection_slot(CommandBarSlot::PrimaryCommands, buttons),
                 picture,
                 StackPanel::new().spacing(8.0).keyed_children(groups),
                 text,

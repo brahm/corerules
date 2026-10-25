@@ -19,7 +19,7 @@ use cr_app::help::{Files, Found, MonsterHelp, PROGRAM, Target};
 use cr_app::library::Filter;
 use cr_app::sheets::Export;
 use cr_formats::export::ExportFile;
-use cr_i18n::tr;
+use cr_i18n::{tr, trc};
 use cr_store::Installation;
 use cr_store::catalog::{Entry, Section};
 use cr_store::export::{Content, ImportReport};
@@ -66,8 +66,9 @@ pub struct Shell {
     /// Whether the installation takes changes: an Expansion installation
     /// the user may write to (Core Rules 2.0 is opened read-only).
     can_write: bool,
-    /// The catalog, once read.
+    /// The catalog, once read, and how many times it was.
     sections: Option<Arc<Vec<Section>>>,
+    loads: u64,
     /// The section shown, by id.
     section: String,
     filter: Filter,
@@ -679,6 +680,7 @@ impl Component for Shell {
             can_write: install.as_deref().is_some_and(can_write),
             install,
             sections: None,
+            loads: 0,
             section: cr_app::library::CHARACTERS.to_owned(),
             filter: Filter::default(),
             parties: vec![None],
@@ -725,6 +727,7 @@ impl Component for Shell {
                     self.section = first.id.to_owned();
                 }
                 self.sections = Some(sections);
+                self.loads += 1;
                 let key = key.or_else(|| self.selected.clone());
                 let key = key.filter(|k| {
                     self.current_section()
@@ -1334,10 +1337,7 @@ impl Component for Shell {
                         .selects_on_invoked(true)
                         .slots([
                             SlotView::new(NavigationViewItemSlot::Content, section.title),
-                            SlotView::new(
-                                NavigationViewItemSlot::Icon,
-                                SymbolIcon::new().symbol(library::symbol(section.id)),
-                            ),
+                            SlotView::new(NavigationViewItemSlot::Icon, library::icon(section.id)),
                         ]),
                 )
             })
@@ -1356,11 +1356,30 @@ impl Component for Shell {
                     ),
                 ]),
         ));
+        // Not NavigationView's own Settings item, which is named in the
+        // language of Windows rather than the app's.
+        menu.push(KeyedView::new(
+            SETTINGS,
+            NavigationViewItem::new()
+                .tag(SETTINGS)
+                .is_selected(selected_tag == SETTINGS)
+                .selects_on_invoked(true)
+                .slots([
+                    SlotView::new(
+                        NavigationViewItemSlot::Content,
+                        trc("preferences", "Settings"),
+                    ),
+                    SlotView::new(
+                        NavigationViewItemSlot::Icon,
+                        SymbolIcon::new().symbol(Symbol::Setting),
+                    ),
+                ]),
+        ));
         let navigation = NavigationView::new()
             .pane_display_mode(NavigationViewPaneDisplayMode::Left)
             .is_pane_toggle_button_visible(false)
             .is_back_button_visible(NavigationViewBackButtonVisible::Collapsed)
-            .is_settings_visible(true)
+            .is_settings_visible(false)
             .always_show_header(false)
             .is_pane_open(self.pane_open)
             .open_pane_length(240.0)
