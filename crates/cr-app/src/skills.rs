@@ -188,9 +188,14 @@ impl SkillsForm {
         skills
     }
 
-    /// Why the choices cannot be kept, if they cannot.
+    /// Why the choices cannot be kept, if they cannot. Without the rogue
+    /// skills, the points they keep are another page's to judge.
     pub fn problem(&self) -> Option<String> {
-        self.rules.problem(&self.character, &self.skills())
+        let mut skills = self.skills();
+        if !self.rogue_shown {
+            skills.rogue.clear();
+        }
+        self.rules.problem(&self.character, &skills)
     }
 
     fn psionic_level(&self) -> Option<u32> {
@@ -731,6 +736,30 @@ mod tests {
         assert_eq!(form.rogue().unwrap().rows[1].points, 0);
         // A thief has wild talents to test for.
         assert!(form.wild().is_some_and(|w| w.can_test));
+    }
+
+    #[test]
+    fn the_psionics_page_leaves_the_rogue_points_to_the_rogue_page() {
+        let Some((rules, mut character)) = character(&["Thief", "Psionicist"]) else {
+            return;
+        };
+        let Some((_, level)) = rules.rogue_level(&character) else {
+            return;
+        };
+        // More than a thief starts with, as Enter Character takes.
+        for entry in &mut character.data.rogue_skills.entries {
+            entry.1[level as usize - 1] = 85;
+        }
+        if character.data.rogue_skills.entries.is_empty() {
+            return;
+        }
+        assert!(
+            SkillsForm::new(rules.clone(), character.clone())
+                .problem()
+                .is_some()
+        );
+        let form = SkillsForm::new(rules, character).without_rogue_skills();
+        assert_eq!(form.problem(), None);
     }
 
     #[test]
