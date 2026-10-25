@@ -28,8 +28,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - run: cargo clippy -p cr-formats -p cr-store -p cr-i18n -p cr-cli -p cr-win --all-targets -- -D warnings
-      - run: cargo test --no-fail-fast -p cr-formats -p cr-store -p cr-i18n -p cr-cli -p cr-win
+      - run: cargo clippy -p cr-formats -p cr-store -p cr-i18n -p cr-app -p cr-cli -p cr-win --all-targets -- -D warnings
+      - run: cargo test --no-fail-fast -p cr-formats -p cr-store -p cr-i18n -p cr-app -p cr-cli -p cr-win
       - run: cargo build --release -p cr-cli -p cr-win
       - name: Package the MSIX
         shell: pwsh

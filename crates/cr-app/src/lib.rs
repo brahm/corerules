@@ -1,0 +1,26 @@
+//! What the GNOME and the Windows app share above the backend, with no
+//! GTK and no Windows in it: the names of their actions, the character
+//! sheet laid out on printed pages, and the sheet as a PDF. An interface
+//! draws, asks and reports; what it decides comes from here or from
+//! `cr-store`, so that every version of the app does the same.
+
+pub mod action;
+pub mod pages;
+pub mod pdf;
+
+/// The file name the original suggests when saving something called
+/// `title`: `Borin_Pedraforte.pdf`.
+pub fn file_name(title: &str, extension: &str) -> String {
+    format!("{}.{extension}", title.replace(' ', "_"))
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn file_names_join_words_with_underscores() {
+        assert_eq!(
+            super::file_name("Borin Pedraforte", "pdf"),
+            "Borin_Pedraforte.pdf"
+        );
+    }
+}

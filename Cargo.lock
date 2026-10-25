@@ -96,6 +96,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cr-app"
+version = "1.0.0"
+dependencies = [
+ "cr-formats",
+ "cr-store",
+ "flate2",
+]
+
+[[package]]
 name = "cr-cli"
 version = "1.0.0"
 dependencies = [
@@ -115,6 +124,7 @@ dependencies = [
 name = "cr-gtk"
 version = "1.0.0"
 dependencies = [
+ "cr-app",
  "cr-formats",
  "cr-i18n",
  "cr-store",
@@ -146,6 +156,7 @@ dependencies = [
 name = "cr-win"
 version = "1.0.0"
 dependencies = [
+ "cr-app",
  "cr-formats",
  "cr-i18n",
  "cr-store",

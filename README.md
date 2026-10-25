@@ -619,12 +619,20 @@ CORERULES_DIR="$HOME/.wine/drive_c/Program Files/AD&D Core Rules 2.0" cargo test
 | `cr-store` | Finds and opens an installation (case-insensitive paths) and builds the catalog the app shows |
 | `cr-cli` | `cr` command for inspecting data |
 | `cr-i18n` | Translations of the interface (`po/*.po`, built into the program) |
+| `cr-app` | What both apps share above the backend, with no GTK and no Windows: the names of their actions, the sheet laid out on printed pages and the sheet as a PDF |
 | `cr-gtk` | The GNOME app |
 | `cr-addons` | Core Rules Community Add-ons Collection, the add-ons and their installer |
 | `cr-win` | The Windows 11 app (WinUI 3 with windows-reactor), a prototype for now |
 
-The backend crates have no GTK dependency, and CI builds and tests them
-on Windows too, with `cr-win` and its MSIX package.
+The backend crates and `cr-app` have no GTK dependency, and CI builds and
+tests them on Windows too, with `cr-win` and its MSIX package.
+
+Both apps refer to their actions (menu items, buttons, shortcuts) only
+through the constants of `cr_app::action`, such as `action::SHEET_PDF` for
+`sheet.pdf`. `cargo test -p cr-app` fails when the GNOME app lacks one of
+them, or when the Windows app lacks one that `NOT_YET_ON_WINDOWS` does not
+list as still to port; a screen ported to Windows takes its actions off
+that list.
 
 ### Languages
 

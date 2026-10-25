@@ -1,0 +1,115 @@
+//! Every action is in both interfaces: the GNOME app refers to each
+//! action of [`cr_app::action`], and the Windows app to each one that
+//! [`NOT_YET_ON_WINDOWS`] does not list. An interface refers to an action
+//! only through its constant, so the sources are searched for
+//! `action::NAME`.
+
+use std::collections::BTreeSet;
+use std::path::{Path, PathBuf};
+
+use cr_app::action::{ALL, NOT_YET_ON_WINDOWS};
+
+/// The sources of the crate `name`, next to this one.
+fn sources(name: &str) -> Vec<(PathBuf, String)> {
+    fn walk(dir: &Path, out: &mut Vec<(PathBuf, String)>) {
+        let mut entries: Vec<_> = std::fs::read_dir(dir)
+            .unwrap_or_else(|e| panic!("{}: {e}", dir.display()))
+            .map(|e| e.unwrap().path())
+            .collect();
+        entries.sort();
+        for path in entries {
+            if path.is_dir() {
+                walk(&path, out);
+            } else if path.extension().is_some_and(|e| e == "rs") {
+                let text = std::fs::read_to_string(&path).unwrap();
+                out.push((path, text));
+            }
+        }
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join(name)
+        .join("src");
+    let mut out = Vec::new();
+    walk(&root, &mut out);
+    assert!(!out.is_empty(), "no sources in {}", root.display());
+    out
+}
+
+/// The constants the sources refer to as `action::NAME`.
+fn used(sources: &[(PathBuf, String)]) -> BTreeSet<String> {
+    let mut found = BTreeSet::new();
+    for (_, text) in sources {
+        for (at, _) in text.match_indices("action::") {
+            let name: String = text[at + "action::".len()..]
+                .chars()
+                .take_while(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || *c == '_')
+                .collect();
+            if !name.is_empty() {
+                found.insert(name);
+            }
+        }
+    }
+    found
+}
+
+fn names<'a>(actions: impl IntoIterator<Item = &'a cr_app::action::Action>) -> BTreeSet<String> {
+    actions.into_iter().map(|a| a.constant.to_owned()).collect()
+}
+
+#[test]
+fn the_gnome_app_has_every_action() {
+    let missing: Vec<_> = names(ALL)
+        .difference(&used(&sources("cr-gtk")))
+        .cloned()
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "actions the GNOME app does not refer to: {missing:?}"
+    );
+}
+
+#[test]
+fn the_windows_app_has_every_action_not_listed_as_pending() {
+    let used = used(&sources("cr-win"));
+    let expected = names(ALL)
+        .difference(&names(NOT_YET_ON_WINDOWS))
+        .cloned()
+        .collect::<BTreeSet<_>>();
+    let missing: Vec<_> = expected.difference(&used).cloned().collect();
+    assert!(
+        missing.is_empty(),
+        "actions the Windows app should have but does not refer to: {missing:?}"
+    );
+    // An action ported to Windows comes off the list of pending ones.
+    let ported: Vec<_> = names(NOT_YET_ON_WINDOWS)
+        .intersection(&used)
+        .cloned()
+        .collect();
+    assert!(
+        ported.is_empty(),
+        "actions the Windows app has that NOT_YET_ON_WINDOWS still lists: {ported:?}"
+    );
+}
+
+/// The GNOME app names no action of these groups by its string, which
+/// would add an action the catalog and the Windows app do not know.
+#[test]
+fn the_gnome_app_names_actions_only_through_the_catalog() {
+    let groups: BTreeSet<_> = ALL.iter().map(|a| a.group).collect();
+    let mut found = Vec::new();
+    for (path, text) in sources("cr-gtk") {
+        for group in &groups {
+            for (n, line) in text.lines().enumerate() {
+                if line.contains(&format!("\"{group}.")) {
+                    found.push(format!("{}:{}: {}", path.display(), n + 1, line.trim()));
+                }
+            }
+        }
+    }
+    assert!(
+        found.is_empty(),
+        "action names written out instead of taken from cr_app::action:\n{}",
+        found.join("\n")
+    );
+}

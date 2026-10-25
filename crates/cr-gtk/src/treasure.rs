@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_app::action;
 use cr_i18n::tr;
 use cr_store::help::topic;
 use cr_store::sheet::Sheet;
@@ -204,14 +205,20 @@ pub fn roller(
         .build();
     let menu = gio::Menu::new();
     let save_section = gio::Menu::new();
-    save_section.append(Some(tr("_Save…")), Some("treasure.save"));
+    save_section.append(Some(tr("_Save…")), Some(action::TREASURE_SAVE.detailed));
     menu.append_section(None, &save_section);
     let print_section = gio::Menu::new();
-    print_section.append(Some(tr("_Print…")), Some("treasure.print"));
-    print_section.append(Some(tr("Save as P_DF…")), Some("treasure.pdf"));
+    print_section.append(Some(tr("_Print…")), Some(action::TREASURE_PRINT.detailed));
+    print_section.append(
+        Some(tr("Save as P_DF…")),
+        Some(action::TREASURE_PDF.detailed),
+    );
     menu.append_section(None, &print_section);
     let delete_section = gio::Menu::new();
-    delete_section.append(Some(tr("_Delete Saved Treasure")), Some("treasure.delete"));
+    delete_section.append(
+        Some(tr("_Delete Saved Treasure")),
+        Some(action::TREASURE_DELETE.detailed),
+    );
     menu.append_section(None, &delete_section);
     let menu_button = gtk::MenuButton::builder()
         .icon_name("view-more-symbolic")
@@ -334,30 +341,23 @@ pub fn roller(
         actions.add_action(&a);
         a
     };
-    add("save", {
+    add(action::TREASURE_SAVE.name, {
         let (state, dialog, store, toast) =
             (state.clone(), dialog.clone(), store.clone(), toast.clone());
         Box::new(move || ask_name(&dialog, &state, &store, &toast))
     });
-    add("print", {
+    add(action::TREASURE_PRINT.name, {
         let (state, dialog, toast) = (state.clone(), dialog.clone(), toast.clone());
         Box::new(move || {
             let sheet = Rc::new(state.sheet());
-            crate::sheet::print_sheet(&dialog, &sheet, None, &*toast)
+            crate::sheet::print_sheet(&dialog, &sheet, &*toast)
         })
     });
-    add("pdf", {
+    add(action::TREASURE_PDF.name, {
         let (state, dialog, toast) = (state.clone(), dialog.clone(), toast.clone());
-        Box::new(move || {
-            let sheet = Rc::new(state.sheet());
-            let (dialog2, toast) = (dialog.clone(), toast.clone());
-            let title = sheet.title.clone();
-            crate::sheet::save_file(&dialog, &title, "pdf", tr("PDF documents"), move |path| {
-                crate::sheet::print_sheet(&dialog2, &sheet, Some(path), &*toast)
-            });
-        })
+        Box::new(move || crate::sheet::ask_pdf(&dialog, &Rc::new(state.sheet()), toast.clone()))
     });
-    let delete = add("delete", {
+    let delete = add(action::TREASURE_DELETE.name, {
         let (state, dialog, store, toast) =
             (state.clone(), dialog.clone(), store.clone(), toast.clone());
         Box::new(move || confirm_delete(&dialog, &state, &store, &toast))

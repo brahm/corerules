@@ -33,6 +33,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use adw::prelude::*;
+use cr_app::action;
 use cr_formats::character::Character;
 use cr_i18n::{tr, tr_noop, trn};
 use cr_store::Installation;
@@ -303,7 +304,7 @@ impl Window {
                                 return;
                             };
                             if print {
-                                sheet::print_sheet(&this.window, &Rc::new(page), None, &toast);
+                                sheet::print_sheet(&this.window, &Rc::new(page), &toast);
                             } else {
                                 sheet::preview(&this.window, page, toast);
                             }
@@ -313,7 +314,7 @@ impl Window {
             });
         }
 
-        let preferences = gio::ActionEntry::builder("preferences")
+        let preferences = gio::ActionEntry::builder(action::PREFERENCES.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| {
@@ -322,61 +323,61 @@ impl Window {
                 }
             })
             .build();
-        let open = gio::ActionEntry::builder("open")
+        let open = gio::ActionEntry::builder(action::OPEN.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| this.choose_folder()
             })
             .build();
-        let extract_data = gio::ActionEntry::builder("extract-data")
+        let extract_data = gio::ActionEntry::builder(action::EXTRACT_DATA.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| extract::choose_source(&Rc::new(this.clone()))
             })
             .build();
-        let new_character = gio::ActionEntry::builder("new-character")
+        let new_character = gio::ActionEntry::builder(action::NEW_CHARACTER.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| this.new_character(false)
             })
             .build();
-        let enter_character = gio::ActionEntry::builder("enter-character")
+        let enter_character = gio::ActionEntry::builder(action::ENTER_CHARACTER.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| this.new_character(true)
             })
             .build();
-        let new_npc = gio::ActionEntry::builder("new-npc")
+        let new_npc = gio::ActionEntry::builder(action::NEW_NPC.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| npc::new_npc(&Rc::new(this.clone()))
             })
             .build();
-        let new_npc_group = gio::ActionEntry::builder("new-npc-group")
+        let new_npc_group = gio::ActionEntry::builder(action::NEW_NPC_GROUP.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| npc::new_group(&Rc::new(this.clone()))
             })
             .build();
-        let roll_treasure = gio::ActionEntry::builder("roll-treasure")
+        let roll_treasure = gio::ActionEntry::builder(action::ROLL_TREASURE.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| this.roll_treasure(None)
             })
             .build();
-        let new_encounter = gio::ActionEntry::builder("new-encounter")
+        let new_encounter = gio::ActionEntry::builder(action::NEW_ENCOUNTER.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| encounter::choose_template(&Rc::new(this.clone()))
             })
             .build();
-        let new_table = gio::ActionEntry::builder("new-table")
+        let new_table = gio::ActionEntry::builder(action::NEW_TABLE.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| encounter::table_editor(&Rc::new(this.clone()), None)
             })
             .build();
-        let open_book = gio::ActionEntry::builder("open-book")
+        let open_book = gio::ActionEntry::builder(action::OPEN_BOOK.name)
             .parameter_type(Some(glib::VariantTy::STRING))
             .activate({
                 let this = this.clone();
@@ -387,7 +388,7 @@ impl Window {
                 }
             })
             .build();
-        let help = gio::ActionEntry::builder("help")
+        let help = gio::ActionEntry::builder(action::HELP.name)
             .parameter_type(Some(glib::VariantTy::STRING))
             .activate({
                 let this = this.clone();
@@ -400,7 +401,7 @@ impl Window {
             .build();
         // The original's Help > Main Menu and F1: the program help of the
         // screen shown.
-        let help_here = gio::ActionEntry::builder("help-here")
+        let help_here = gio::ActionEntry::builder(action::HELP_HERE.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| {
@@ -411,7 +412,7 @@ impl Window {
             .build();
         // A right-click on a control or a row: its screen and what it
         // reads.
-        let help_control = gio::ActionEntry::builder("help-control")
+        let help_control = gio::ActionEntry::builder(action::HELP_CONTROL.name)
             .parameter_type(Some(glib::VariantTy::STRING))
             .activate({
                 let this = this.clone();
@@ -432,49 +433,49 @@ impl Window {
                 }
             })
             .build();
-        let about = gio::ActionEntry::builder("about")
+        let about = gio::ActionEntry::builder(action::ABOUT.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| help::about(&this.window, this.install.borrow().as_ref())
             })
             .build();
-        let roll_table = gio::ActionEntry::builder("roll-table")
+        let roll_table = gio::ActionEntry::builder(action::ROLL_TABLE.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| this.roll_table()
             })
             .build();
-        let manage_parties = gio::ActionEntry::builder("manage-parties")
+        let manage_parties = gio::ActionEntry::builder(action::MANAGE_PARTIES.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| party::manage(&Rc::new(this.clone()))
             })
             .build();
-        let export = gio::ActionEntry::builder("export")
+        let export = gio::ActionEntry::builder(action::EXPORT.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| transfer::export(&Rc::new(this.clone()))
             })
             .build();
-        let import = gio::ActionEntry::builder("import")
+        let import = gio::ActionEntry::builder(action::IMPORT.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| transfer::import(&Rc::new(this.clone()))
             })
             .build();
-        let import_core20 = gio::ActionEntry::builder("import-core20")
+        let import_core20 = gio::ActionEntry::builder(action::IMPORT_CORE20.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| transfer::import_core20(&Rc::new(this.clone()))
             })
             .build();
-        let new_package = gio::ActionEntry::builder("new-package")
+        let new_package = gio::ActionEntry::builder(action::NEW_PACKAGE.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| transfer::new_package(&Rc::new(this.clone()))
             })
             .build();
-        let edit_package = gio::ActionEntry::builder("edit-package")
+        let edit_package = gio::ActionEntry::builder(action::EDIT_PACKAGE.name)
             .activate({
                 let this = this.clone();
                 move |_, _, _| transfer::edit_package(&Rc::new(this.clone()))
@@ -508,13 +509,13 @@ impl Window {
             new_encounter,
             new_table,
         ]);
-        app.set_accels_for_action("win.open", &["<Control>o"]);
-        app.set_accels_for_action("win.preferences", &["<Control>comma"]);
-        app.set_accels_for_action("win.new-character", &["<Control>n"]);
-        app.set_accels_for_action("win.new-npc", &["<Control><Shift>n"]);
-        app.set_accels_for_action("win.roll-treasure", &["<Control>t"]);
-        app.set_accels_for_action("win.roll-table", &["<Control><Shift>t"]);
-        app.set_accels_for_action("win.new-encounter", &["<Control>e"]);
+        app.set_accels_for_action(action::OPEN.detailed, &["<Control>o"]);
+        app.set_accels_for_action(action::PREFERENCES.detailed, &["<Control>comma"]);
+        app.set_accels_for_action(action::NEW_CHARACTER.detailed, &["<Control>n"]);
+        app.set_accels_for_action(action::NEW_NPC.detailed, &["<Control><Shift>n"]);
+        app.set_accels_for_action(action::ROLL_TREASURE.detailed, &["<Control>t"]);
+        app.set_accels_for_action(action::ROLL_TABLE.detailed, &["<Control><Shift>t"]);
+        app.set_accels_for_action(action::NEW_ENCOUNTER.detailed, &["<Control>e"]);
         userdb::add_actions(&this.window, Rc::new(this.clone()));
         this.set_can_create(false);
         this
@@ -553,14 +554,14 @@ impl Window {
             .label(tr("_Open Folder…"))
             .use_underline(true)
             .halign(gtk::Align::Center)
-            .action_name("win.open")
+            .action_name(action::OPEN.detailed)
             .css_classes(["pill"])
             .build();
         let extract = gtk::Button::builder()
             .label(tr("Extract Data from _CD…"))
             .use_underline(true)
             .halign(gtk::Align::Center)
-            .action_name("win.extract-data")
+            .action_name(action::EXTRACT_DATA.detailed)
             .css_classes(["pill", "suggested-action"])
             .build();
         let buttons = gtk::Box::builder()
@@ -1321,42 +1322,81 @@ fn template_name(key: &str) -> Option<&str> {
 
 fn open_menu() -> gtk::MenuButton {
     let menu = gio::Menu::new();
-    menu.append(Some(tr("_New Character…")), Some("win.new-character"));
-    menu.append(Some(tr("E_nter Character…")), Some("win.enter-character"));
-    menu.append(Some(tr("New N_PC…")), Some("win.new-npc"));
-    menu.append(Some(tr("New NPC _Group…")), Some("win.new-npc-group"));
-    let item = gio::MenuItem::new(Some(tr("Manage _Parties…")), Some("win.manage-parties"));
+    menu.append(
+        Some(tr("_New Character…")),
+        Some(action::NEW_CHARACTER.detailed),
+    );
+    menu.append(
+        Some(tr("E_nter Character…")),
+        Some(action::ENTER_CHARACTER.detailed),
+    );
+    menu.append(Some(tr("New N_PC…")), Some(action::NEW_NPC.detailed));
+    menu.append(
+        Some(tr("New NPC _Group…")),
+        Some(action::NEW_NPC_GROUP.detailed),
+    );
+    let item = gio::MenuItem::new(
+        Some(tr("Manage _Parties…")),
+        Some(action::MANAGE_PARTIES.detailed),
+    );
     item.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
     menu.append_item(&item);
-    menu.append(Some(tr("New _Encounter…")), Some("win.new-encounter"));
-    menu.append(Some(tr("New Encounter _Table…")), Some("win.new-table"));
-    menu.append(Some(tr("_Roll Treasure…")), Some("win.roll-treasure"));
-    menu.append(Some(tr("Roll on a _Table…")), Some("win.roll-table"));
+    menu.append(
+        Some(tr("New _Encounter…")),
+        Some(action::NEW_ENCOUNTER.detailed),
+    );
+    menu.append(
+        Some(tr("New Encounter _Table…")),
+        Some(action::NEW_TABLE.detailed),
+    );
+    menu.append(
+        Some(tr("_Roll Treasure…")),
+        Some(action::ROLL_TREASURE.detailed),
+    );
+    menu.append(
+        Some(tr("Roll on a _Table…")),
+        Some(action::ROLL_TABLE.detailed),
+    );
     let packages = gio::Menu::new();
-    packages.append(Some(tr("_Import…")), Some("win.import"));
+    packages.append(Some(tr("_Import…")), Some(action::IMPORT.detailed));
     let item = gio::MenuItem::new(
         Some(tr("Import Core _Rules 2.0…")),
-        Some("win.import-core20"),
+        Some(action::IMPORT_CORE20.detailed),
     );
     item.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
     packages.append_item(&item);
-    packages.append(Some(tr("E_xport…")), Some("win.export"));
-    packages.append(Some(tr("New P_ackage…")), Some("win.new-package"));
-    packages.append(Some(tr("E_dit Package…")), Some("win.edit-package"));
+    packages.append(Some(tr("E_xport…")), Some(action::EXPORT.detailed));
+    packages.append(
+        Some(tr("New P_ackage…")),
+        Some(action::NEW_PACKAGE.detailed),
+    );
+    packages.append(
+        Some(tr("E_dit Package…")),
+        Some(action::EDIT_PACKAGE.detailed),
+    );
     menu.append_section(None, &packages);
     let app = gio::Menu::new();
-    app.append(Some(tr("_Open Folder…")), Some("win.open"));
-    app.append(Some(tr("Extract Data from _CD…")), Some("win.extract-data"));
-    app.append(Some(tr("_Preferences")), Some("win.preferences"));
+    app.append(Some(tr("_Open Folder…")), Some(action::OPEN.detailed));
+    app.append(
+        Some(tr("Extract Data from _CD…")),
+        Some(action::EXTRACT_DATA.detailed),
+    );
+    app.append(Some(tr("_Preferences")), Some(action::PREFERENCES.detailed));
     menu.append_section(None, &app);
     let help = gio::Menu::new();
-    let item = gio::MenuItem::new(Some(tr("_Help")), Some("win.help-here"));
+    let item = gio::MenuItem::new(Some(tr("_Help")), Some(action::HELP_HERE.detailed));
     // F1 itself is handled by the window and by each dialog.
     item.set_attribute_value("accel", Some(&"F1".to_variant()));
     help.append_item(&item);
-    help.append(Some(tr("_Online Manual")), Some("win.help::Manual.hlp"));
-    help.append(Some(tr("_Tome of Help")), Some("win.help::ADandD.hlp"));
-    help.append(Some(tr("_About Core Rules")), Some("win.about"));
+    help.append(
+        Some(tr("_Online Manual")),
+        Some(&*format!("{}::Manual.hlp", action::HELP.detailed)),
+    );
+    help.append(
+        Some(tr("_Tome of Help")),
+        Some(&*format!("{}::ADandD.hlp", action::HELP.detailed)),
+    );
+    help.append(Some(tr("_About Core Rules")), Some(action::ABOUT.detailed));
     menu.append_section(None, &help);
     gtk::MenuButton::builder()
         .icon_name("open-menu-symbolic")
@@ -1735,7 +1775,7 @@ impl Browser {
         let new_button = gtk::Button::builder()
             .icon_name("list-add-symbolic")
             .tooltip_text(tr("New Character"))
-            .action_name("win.new-character")
+            .action_name(action::NEW_CHARACTER.detailed)
             .visible(false)
             .build();
         let entries_header = adw::HeaderBar::new();
@@ -1808,11 +1848,21 @@ impl Browser {
                 let section = &sections[index];
                 *current.borrow_mut() = index;
                 let new = match section.id {
-                    "characters" => Some(("win.new-character", tr("New Character").into())),
-                    "encounters" => Some(("win.new-encounter", tr("New Encounter").into())),
-                    "tables" => Some(("win.new-table", tr("New Encounter Table").into())),
-                    "treasure" => Some(("win.roll-treasure", tr("Roll Treasure").into())),
-                    id if userdb::can_create(id) => Some(("win.udb-new", userdb::new_tooltip(id))),
+                    "characters" => {
+                        Some((action::NEW_CHARACTER.detailed, tr("New Character").into()))
+                    }
+                    "encounters" => {
+                        Some((action::NEW_ENCOUNTER.detailed, tr("New Encounter").into()))
+                    }
+                    "tables" => {
+                        Some((action::NEW_TABLE.detailed, tr("New Encounter Table").into()))
+                    }
+                    "treasure" => {
+                        Some((action::ROLL_TREASURE.detailed, tr("Roll Treasure").into()))
+                    }
+                    id if userdb::can_create(id) => {
+                        Some((action::UDB_NEW.detailed, userdb::new_tooltip(id)))
+                    }
                     _ => None,
                 };
                 new_button.set_visible(new.is_some());

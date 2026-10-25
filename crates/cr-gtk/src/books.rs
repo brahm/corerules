@@ -13,6 +13,7 @@ use std::rc::{Rc, Weak};
 use std::time::{Duration, Instant};
 
 use adw::prelude::*;
+use cr_app::action;
 use cr_formats::rtf::{Align, Document, Format, Inline, Paragraph, Picture, Rgb, Script, TabKind};
 use cr_i18n::tr;
 use cr_store::Installation;
@@ -39,7 +40,7 @@ pub fn detail_group(key: &str) -> Option<adw::PreferencesGroup> {
         .label(tr("_Read Book"))
         .use_underline(true)
         .halign(gtk::Align::Start)
-        .action_name("win.open-book")
+        .action_name(action::OPEN_BOOK.detailed)
         .action_target(&name.to_variant())
         .css_classes(["pill", "suggested-action"])
         .build();
@@ -323,12 +324,15 @@ impl Reader {
         header.pack_start(&sidebar_button);
         let menu = gio::Menu::new();
         let find_section = gio::Menu::new();
-        find_section.append(Some(tr("_Find…")), Some("win.find"));
+        find_section.append(Some(tr("_Find…")), Some(action::BOOK_FIND.detailed));
         menu.append_section(None, &find_section);
         let zoom_section = gio::Menu::new();
-        zoom_section.append(Some(tr("Zoom _In")), Some("win.zoom-in"));
-        zoom_section.append(Some(tr("Zoom _Out")), Some("win.zoom-out"));
-        zoom_section.append(Some(tr("_Reset Zoom")), Some("win.zoom-reset"));
+        zoom_section.append(Some(tr("Zoom _In")), Some(action::BOOK_ZOOM_IN.detailed));
+        zoom_section.append(Some(tr("Zoom _Out")), Some(action::BOOK_ZOOM_OUT.detailed));
+        zoom_section.append(
+            Some(tr("_Reset Zoom")),
+            Some(action::BOOK_ZOOM_RESET.detailed),
+        );
         menu.append_section(None, &zoom_section);
         header.pack_end(
             &gtk::MenuButton::builder()
@@ -432,18 +436,18 @@ impl Reader {
             }
         };
         let actions: [(&str, Action); 6] = [
-            ("find", |r| {
+            (action::BOOK_FIND.name, |r| {
                 r.search_bar.set_search_mode(true);
                 r.search_entry.grab_focus();
                 r.search_entry.select_region(0, -1);
             }),
-            ("zoom-in", |r| r.step_zoom(1)),
-            ("zoom-out", |r| r.step_zoom(-1)),
-            ("zoom-reset", |r| r.set_zoom(1.0)),
-            ("toggle-contents", |r| {
+            (action::BOOK_ZOOM_IN.name, |r| r.step_zoom(1)),
+            (action::BOOK_ZOOM_OUT.name, |r| r.step_zoom(-1)),
+            (action::BOOK_ZOOM_RESET.name, |r| r.set_zoom(1.0)),
+            (action::BOOK_CONTENTS.name, |r| {
                 r.split.set_show_sidebar(!r.split.shows_sidebar())
             }),
-            ("close", |r| r.window.close()),
+            (action::BOOK_CLOSE.name, |r| r.window.close()),
         ];
         let entries: Vec<_> = actions
             .into_iter()
@@ -456,15 +460,21 @@ impl Reader {
             .collect();
         self.window.add_action_entries(entries);
         if let Some(app) = self.window.application() {
-            app.set_accels_for_action("win.find", &["<Control>f"]);
+            app.set_accels_for_action(action::BOOK_FIND.detailed, &["<Control>f"]);
             app.set_accels_for_action(
-                "win.zoom-in",
+                action::BOOK_ZOOM_IN.detailed,
                 &["<Control>plus", "<Control>equal", "<Control>KP_Add"],
             );
-            app.set_accels_for_action("win.zoom-out", &["<Control>minus", "<Control>KP_Subtract"]);
-            app.set_accels_for_action("win.zoom-reset", &["<Control>0", "<Control>KP_0"]);
-            app.set_accels_for_action("win.toggle-contents", &["F9"]);
-            app.set_accels_for_action("win.close", &["<Control>w"]);
+            app.set_accels_for_action(
+                action::BOOK_ZOOM_OUT.detailed,
+                &["<Control>minus", "<Control>KP_Subtract"],
+            );
+            app.set_accels_for_action(
+                action::BOOK_ZOOM_RESET.detailed,
+                &["<Control>0", "<Control>KP_0"],
+            );
+            app.set_accels_for_action(action::BOOK_CONTENTS.detailed, &["F9"]);
+            app.set_accels_for_action(action::BOOK_CLOSE.detailed, &["<Control>w"]);
         }
 
         let go = with(|r| r.step_match(1));
