@@ -13,6 +13,7 @@ pub mod books;
 pub mod bundle;
 pub mod create;
 pub mod editor;
+pub mod encounter;
 pub mod help;
 pub mod levels;
 pub mod library;

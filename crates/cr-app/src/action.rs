@@ -110,8 +110,6 @@ actions! {
 /// waits until it is empty.
 pub const NOT_YET_ON_WINDOWS: &[Action] = &[
     EXTRACT_DATA,
-    NEW_ENCOUNTER,
-    NEW_TABLE,
     EXPORT,
     IMPORT_CORE20,
     NEW_PACKAGE,
@@ -124,9 +122,6 @@ pub const NOT_YET_ON_WINDOWS: &[Action] = &[
     UDB_SCHOOLS,
     UDB_ALLOWED,
     UDB_RESTORE,
-    ENCOUNTER_PRINT,
-    ENCOUNTER_PDF,
-    ENCOUNTER_DELETE,
     TRAP_EDIT,
     TRAP_COPY,
     TRAP_DELETE,

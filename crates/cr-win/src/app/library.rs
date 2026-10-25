@@ -10,7 +10,7 @@ use cr_app::action;
 use cr_app::library::{self, Commands};
 use cr_app::records;
 use cr_i18n::tr;
-use cr_store::catalog::{Entry, Frames, Section, TREASURE_KEY};
+use cr_store::catalog::{ENCOUNTER_KEY, Entry, Frames, Section, TABLE_KEY, TREASURE_KEY};
 use cr_store::userdb::Filter as Origins;
 use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES};
 use cr_win::text::plain;
@@ -187,6 +187,12 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
             action::MANAGE_PARTIES,
             tr("Manage _Parties…"),
             Symbol::Contact2,
+        ),
+        (action::NEW_ENCOUNTER, tr("New _Encounter…"), Symbol::MapPin),
+        (
+            action::NEW_TABLE,
+            tr("New Encounter _Table…"),
+            Symbol::Bookmarks,
         ),
         (
             action::ROLL_TREASURE,
@@ -486,13 +492,26 @@ fn details(shell: &Shell, entry: &Entry, context: &mut ViewContext<Shell>) -> Vi
             Message::EditCharacter,
         );
     }
-    // A saved treasure opens in Roll Treasure, to change or (Copy) to
-    // save as another.
-    if commands.edit && entry.key.starts_with(TREASURE_KEY) {
+    // A saved treasure opens in Roll Treasure and an encounter or table
+    // on its page, to change or (Copy) to save as another.
+    if commands.edit
+        && [TREASURE_KEY, ENCOUNTER_KEY, TABLE_KEY]
+            .iter()
+            .any(|p| entry.key.starts_with(p))
+    {
         add("edit", tr("Edit"), Symbol::Edit, !busy, Message::EditEntry);
     }
-    if commands.copy && entry.key.starts_with(TREASURE_KEY) {
+    if commands.copy {
         add("copy", tr("Copy"), Symbol::Copy, !busy, Message::CopyEntry);
+    }
+    if commands.generate {
+        add(
+            "generate",
+            library::generate_label(&entry.key),
+            Symbol::Shuffle,
+            !busy,
+            Message::GenerateEntry,
+        );
     }
     if commands.view && !commands.monster {
         add(

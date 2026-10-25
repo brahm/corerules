@@ -1,7 +1,8 @@
 //! Manage Parties: the lists of `cr_app::parties` on a page of the
 //! window. The party chosen and New Party over the party's members and
 //! the characters in no party, each with the button that moves it to
-//! the other list; Delete Members deletes the party's characters.
+//! the other list; Group Encounter makes or prints an encounter of the
+//! party's NPCs and Delete Members deletes the party's characters.
 
 use cr_app::parties::{Member, PartyLists};
 use cr_i18n::tr;
@@ -125,6 +126,14 @@ pub fn view(page: &PartiesPage, busy: bool, context: &mut ViewContext<Shell>) ->
     let member_list: View = if party.is_empty() {
         View::empty()
     } else {
+        let group: View = if lists.group_encounter {
+            Button::new()
+                .is_enabled(!busy)
+                .on_click(context.message(Message::GroupEncounter))
+                .content(plain(tr("_Group Encounter…")))
+        } else {
+            View::empty()
+        };
         let delete: View = if lists.members.is_empty() {
             View::empty()
         } else {
@@ -140,10 +149,12 @@ pub fn view(page: &PartiesPage, busy: bool, context: &mut ViewContext<Shell>) ->
                 .columns([GridLength::STAR, GridLength::Auto])
                 .children((
                     heading(tr("Members"), lists.members_note()),
-                    Border::new()
+                    StackPanel::new()
                         .grid_column(1)
+                        .orientation(Orientation::Horizontal)
+                        .spacing(8.0)
                         .vertical_alignment(VerticalAlignment::Bottom)
-                        .content(delete),
+                        .children((group, delete)),
                 )),
             members(
                 &lists.members,
