@@ -155,8 +155,11 @@ pub fn row(shown: &Shown, context: &mut ViewContext<Shell>) -> View {
     )
 }
 
-/// The tiles of a group, a button each.
+/// The tiles of a group, a button each with its file under it: the dialog
+/// cannot hold tooltips, which windows-reactor refuses inside one.
 fn tiles(tiles: &[&Tile], context: &mut ViewContext<Shell>) -> View {
+    let height = 96.0;
+    let width = height * f64::from(PORTRAIT_WIDTH) / f64::from(PORTRAIT_HEIGHT);
     let buttons: Vec<KeyedView> = tiles
         .iter()
         .map(|tile| {
@@ -166,8 +169,16 @@ fn tiles(tiles: &[&Tile], context: &mut ViewContext<Shell>) -> View {
                     .margin(Thickness::new(0.0, 0.0, 6.0, 6.0))
                     .automation_name(tile.file.clone())
                     .on_click(context.message(Message::PortraitChosen(Some(tile.file.clone()))))
-                    .content(thumbnail(tile.image.as_ref(), 96.0))
-                    .tooltip(tile.file.clone()),
+                    .content(
+                        StackPanel::new().spacing(4.0).children((
+                            thumbnail(tile.image.as_ref(), height),
+                            ui::caption(tile.file.clone())
+                                .text_wrapping(TextWrapping::NoWrap)
+                                .text_trimming(TextTrimming::CharacterEllipsis)
+                                .max_width(width)
+                                .horizontal_alignment(HorizontalAlignment::Center),
+                        )),
+                    ),
             )
         })
         .collect();

@@ -1953,7 +1953,7 @@ msgstr "Combien ?"
 #: crates/cr-win/src/app/edit.rs:208
 #: crates/cr-win/src/app/import.rs:142
 #: crates/cr-win/src/app/levels.rs:256
-#: crates/cr-win/src/app/portrait.rs:230
+#: crates/cr-win/src/app/portrait.rs:241
 #: crates/cr-win/src/app/sheet.rs:460
 #: crates/cr-win/src/app.rs:1994
 msgid "_Cancel"
@@ -4675,7 +4675,7 @@ msgid "No Picture"
 msgstr "Aucune image"
 
 #: crates/cr-gtk/src/picture.rs:278
-#: crates/cr-win/src/app/portrait.rs:185
+#: crates/cr-win/src/app/portrait.rs:196
 msgid "Could Not List the Portraits"
 msgstr "Impossible de lister les portraits"
 
@@ -4685,7 +4685,7 @@ msgid "Could Not List the Pictures"
 msgstr "Impossible de lister les images"
 
 #: crates/cr-gtk/src/picture.rs:286
-#: crates/cr-win/src/app/portrait.rs:228
+#: crates/cr-win/src/app/portrait.rs:239
 msgid "Choose Portrait"
 msgstr "Choisir un portrait"
 
@@ -4695,17 +4695,17 @@ msgid "Choose Picture"
 msgstr "Choisir une image"
 
 #: crates/cr-gtk/src/picture.rs:303
-#: crates/cr-win/src/app/portrait.rs:197
+#: crates/cr-win/src/app/portrait.rs:208
 msgid "Portraits"
 msgstr "Portraits"
 
 #: crates/cr-gtk/src/picture.rs:306
-#: crates/cr-win/src/app/portrait.rs:201
+#: crates/cr-win/src/app/portrait.rs:212
 msgid "Portraits for {race}"
 msgstr "Portraits de {race}"
 
 #: crates/cr-gtk/src/picture.rs:307
-#: crates/cr-win/src/app/portrait.rs:204
+#: crates/cr-win/src/app/portrait.rs:215
 msgid "Other Portraits"
 msgstr "Autres portraits"
 
@@ -4719,7 +4719,7 @@ msgid "Monster Pictures"
 msgstr "Images de monstres"
 
 #: crates/cr-gtk/src/picture.rs:336
-#: crates/cr-win/src/app/portrait.rs:191
+#: crates/cr-win/src/app/portrait.rs:202
 msgid "No Portraits"
 msgstr "Aucun portrait"
 
@@ -4728,12 +4728,12 @@ msgid "No Pictures"
 msgstr "Aucune image"
 
 #: crates/cr-gtk/src/picture.rs:339
-#: crates/cr-win/src/app/portrait.rs:192
+#: crates/cr-win/src/app/portrait.rs:203
 msgid "Choose a picture of yours to make one"
 msgstr "Choisissez une de vos images pour en créer un"
 
 #: crates/cr-gtk/src/picture.rs:367
-#: crates/cr-win/src/app/portrait.rs:229
+#: crates/cr-win/src/app/portrait.rs:240
 msgid "Choose _File…"
 msgstr "Choisir un _fichier…"
 
