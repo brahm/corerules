@@ -259,7 +259,20 @@ The phases run in order:
      level, the hit points and the PSPs; the details page chooses the
      portrait among the installation's, the race's first, or makes one
      from a picture of the user's. 30 actions are left on
-     `NOT_YET_ON_WINDOWS`.
+     `NOT_YET_ON_WINDOWS`. The Windows test found Enter Character missing
+     from the Characters bar, which now has it, and Choose Portrait
+     closing the app (WinUI refuses a tooltip inside a dialog), whose
+     tiles now name their files under them. In both apps it found the
+     Psionics step of a thief and psionicist showing the rogue skills
+     again, in English, and saving those over the Rogue Skills step's,
+     which it no longer does; the details rolled again past the class
+     after the gender or the kit changed, which they no longer are; and
+     climbing walls scored without Dexterity's adjustment, which the
+     sheet gives it. Zero now takes the plural in Brazilian Portuguese,
+     thousands are grouped as the language does it, a psionicist's
+     allowance counts each kind of power, a subrace named as its race
+     is said once, and the Windows labels keep their words whole in a
+     narrow window.
    - Still to port: editing; the generators (NPCs, treasure,
      encounters, tables, parties); the user database editors; packages
      and Import Core Rules 2.0; Extract Data from CD….

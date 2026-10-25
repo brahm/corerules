@@ -582,6 +582,10 @@ impl Wizard {
             d.eliminated_schools.clear();
         }
         d.kit = page.kit.clone();
+        // The page's rolls are for the gender and the kit it chose.
+        if let Some(key) = &mut self.rolled {
+            key.set_details(d.male, &d.kit);
+        }
         d.social_class = SOCIAL_CLASSES[page.social_class].to_owned();
         // The starting money follows the kit (0x4330ab).
         if new_kit {
@@ -729,6 +733,47 @@ pub(super) mod tests {
             )
         );
         assert_eq!(page.player, "Brahm");
+    }
+
+    #[test]
+    fn a_gender_chosen_on_the_details_keeps_them_past_the_class() {
+        let Some(mut w) = at_details(false) else {
+            return;
+        };
+        w.input(Input::Gender(1));
+        while w.prompt().is_some() {
+            w.answer(Answer::Yes);
+        }
+        w.input(Input::Age(30));
+        let before = details(&w).clone();
+        w.input(Input::Next);
+        while w.prompt().is_some() {
+            w.answer(Answer::Yes);
+        }
+        assert!(w.back());
+        assert!(w.back());
+        w.input(Input::Next);
+        while w.prompt().is_some() {
+            w.answer(Answer::Yes);
+        }
+        let page = details(&w);
+        assert_eq!(
+            (
+                page.male,
+                page.age,
+                page.height,
+                page.weight,
+                page.social_class
+            ),
+            (
+                before.male,
+                30,
+                before.height,
+                before.weight,
+                before.social_class
+            )
+        );
+        assert_eq!(page.hit_dice, before.hit_dice);
     }
 
     #[test]

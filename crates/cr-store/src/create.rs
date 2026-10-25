@@ -441,22 +441,6 @@ pub const ROGUE_SKILLS: [(&str, i32, i32); 8] = [
 pub const THIEF_POINTS: (u32, u32) = (60, 30);
 pub const BARD_POINTS: (u32, u32) = (20, 20);
 
-/// Dexterity's adjustments to pick pockets, open locks, find/remove traps,
-/// move silently and hide in shadows (Player's Handbook, Table 28).
-fn dexterity_skill_adjustments(dexterity: u32) -> [i32; 5] {
-    match dexterity {
-        0..=9 => [-15, -10, -10, -20, -10],
-        10 => [-10, -5, -10, -15, -5],
-        11 => [-5, 0, -5, -10, 0],
-        12 => [0, 0, 0, -5, 0],
-        13..=15 => [0; 5],
-        16 => [0, 5, 0, 0, 0],
-        17 => [5, 10, 0, 5, 5],
-        18 => [10, 15, 5, 10, 10],
-        _ => [15, 20, 10, 15, 15],
-    }
-}
-
 /// The rogue skill a class ability gives: "Thief, Pick pockets* (10)" is
 /// pick pockets. The star marks the skills that take points; a ranger's
 /// "Hide in shadows (5)" is not one.
@@ -2484,11 +2468,24 @@ impl CreationRules {
         let racial = self
             .race(&draft.race)
             .map_or(0, |r| r.thief_adjustments[skill]);
-        let dexterity = self.draft_scores(draft)[1];
-        let dexterity = dexterity_skill_adjustments(dexterity)
-            .get(skill)
-            .copied()
-            .unwrap_or(0);
+        // Dexterity as the sheet adjusts the skills with it (0x59b19d):
+        // with Skills & Powers, Aim for the hands' skills and Balance for
+        // the others.
+        let dexterity = self.subability_scores(draft)[1];
+        let adjust =
+            |table: &[i32; 26], sub: usize| crate::sheet::tables::at(table, dexterity[sub] as i32);
+        let dexterity = {
+            use crate::sheet::tables::*;
+            match skill {
+                0 => adjust(&PICK_POCKETS, 1),
+                1 => adjust(&OPEN_LOCKS, 1),
+                2 => adjust(&FIND_TRAPS, 1),
+                3 => adjust(&MOVE_SILENTLY, 2),
+                4 => adjust(&HIDE_IN_SHADOWS, 2),
+                6 => adjust(&CLIMB_WALLS, 2),
+                _ => 0,
+            }
+        };
         let score = base
             + racial
             + dexterity
@@ -4306,6 +4303,11 @@ mod tests {
         assert_eq!(rules.rogue_skill_score(&d, 0), (45, 50));
         // The dwarf's -10 to climbing walls.
         assert_eq!(rules.rogue_skill_score(&d, 6), (75, 85));
+        // Dexterity 18 adds to climbing walls too, as the sheet has it.
+        let mut nimble = d.clone();
+        nimble.scores[1] = 18;
+        assert_eq!(rules.rogue_skill_score(&nimble, 0), (55, 60));
+        assert_eq!(rules.rogue_skill_score(&nimble, 6), (85, 95));
         let c = rules.build(&d).unwrap();
         let entries: Vec<(&str, u32)> = c
             .data

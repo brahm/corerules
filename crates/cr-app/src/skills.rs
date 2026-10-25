@@ -11,8 +11,8 @@
 use std::sync::Arc;
 
 use cr_formats::character::Character;
-use cr_i18n::tr;
-use cr_store::create::{Dice, Question};
+use cr_i18n::{tr, trn};
+use cr_store::create::{Dice, Question, ROGUE_SKILLS};
 use cr_store::skills::wild::{WildMode, WildTest};
 use cr_store::skills::{CharacterSkills, SkillRules};
 
@@ -41,6 +41,16 @@ pub fn power_text(rules: &SkillRules, name: &str) -> String {
     } else {
         kind
     }
+}
+
+/// Which of [`ROGUE_SKILLS`] a class ability ("Thief, Pick pockets*
+/// (10)") or a kit's name of a skill ("Pick Pockets") is.
+fn skill_of(name: &str) -> Option<usize> {
+    let name = name.split_once(", ").map_or(name, |(_, n)| n);
+    let name = name.split(['*', '(']).next().unwrap_or(name).trim();
+    ROGUE_SKILLS
+        .iter()
+        .position(|(skill, ..)| skill.eq_ignore_ascii_case(name))
 }
 
 /// A rogue skill's row.
@@ -107,6 +117,10 @@ pub struct SkillsForm {
     talents: Vec<String>,
     /// The kit's chosen skills ticked.
     chosen: Vec<String>,
+    /// The rogue skills, the kit's bonuses and chosen skills are on the
+    /// page; New Character's Psionics step leaves them to the Rogue Skills
+    /// step before it.
+    rogue_shown: bool,
 }
 
 impl SkillsForm {
@@ -128,7 +142,23 @@ impl SkillsForm {
             skills,
             talents,
             chosen: Vec::new(),
+            rogue_shown: true,
         }
+    }
+
+    /// The form without the rogue skills, the kit's bonuses and chosen
+    /// skills, which keep what the character has.
+    pub fn without_rogue_skills(mut self) -> Self {
+        self.rogue_shown = false;
+        self
+    }
+
+    /// The character's rogue level, while the page shows its skills.
+    fn rogue_level(&self) -> Option<(usize, u32)> {
+        if !self.rogue_shown {
+            return None;
+        }
+        self.rules.rogue_level(&self.character)
     }
 
     pub fn rules(&self) -> &Arc<SkillRules> {
@@ -169,7 +199,7 @@ impl SkillsForm {
 
     /// The rogue skills, for a character with any.
     pub fn rogue(&self) -> Option<RogueGroup> {
-        let (_, level) = self.rules.rogue_level(&self.character)?;
+        let (_, level) = self.rogue_level()?;
         let character = &self.character;
         let new = self.skills();
         let mut description = tr!(
@@ -209,7 +239,7 @@ impl SkillsForm {
                     }
                 }
                 SkillRow {
-                    label: skill.label,
+                    label: self.label(&skill.name),
                     points,
                     least: least.min(points),
                     subtitle,
@@ -224,8 +254,12 @@ impl SkillsForm {
         })
     }
 
-    /// A skill's label, for a kit's name of it.
+    /// A skill's label, for its name or a kit's name of it, as the Rogue
+    /// Skills step names it.
     fn label(&self, name: &str) -> String {
+        if let Some(skill) = skill_of(name) {
+            return tr(ROGUE_SKILLS[skill].0).to_owned();
+        }
         self.rules
             .rogue_skills(&self.character)
             .into_iter()
@@ -235,7 +269,7 @@ impl SkillsForm {
 
     /// The kit's bonus of each level still to go to a skill (62cc45).
     pub fn kit_bonuses(&self) -> Vec<BonusGroup> {
-        if self.rules.rogue_level(&self.character).is_none() {
+        if self.rogue_level().is_none() {
             return Vec::new();
         }
         self.rules
@@ -265,7 +299,7 @@ impl SkillsForm {
 
     /// The skills the kit has the character choose (62c8e6).
     pub fn chosen(&self) -> Option<ChosenGroup> {
-        self.rules.rogue_level(&self.character)?;
+        self.rogue_level()?;
         let pick = self.rules.chosen_pick(&self.character)?;
         let ticked: Vec<bool> = pick.names.iter().map(|n| self.chosen.contains(n)).collect();
         Some(ChosenGroup {
@@ -287,12 +321,11 @@ impl SkillsForm {
         let level = self.psionic_level()?;
         let (disciplines, sciences, devotions) = self.rules.allowed(&self.character);
         Some(tr!(
-            "At psionicist level {level}: up to {disciplines} disciplines, {sciences} sciences \
-             and {devotions} devotions.",
+            "At psionicist level {level}: up to {disciplines}, {sciences} and {devotions}.",
             level,
-            disciplines,
-            sciences,
-            devotions
+            disciplines = trn!("{n} discipline", "{n} disciplines", disciplines),
+            sciences = trn!("{n} science", "{n} sciences", sciences),
+            devotions = trn!("{n} devotion", "{n} devotions", devotions),
         ))
     }
 
@@ -461,6 +494,9 @@ impl SkillsForm {
     /// points past what is left, past the most one skill may get at this
     /// level, or past a 95% score.
     pub fn set_points(&mut self, row: usize, points: i32) -> bool {
+        if self.rogue_level().is_none() {
+            return false;
+        }
         let Some(&before) = self.skills.rogue.get(row) else {
             return false;
         };
@@ -489,6 +525,9 @@ impl SkillsForm {
 
     /// Gives the kit's bonus of a group to one of its skills.
     pub fn pick_bonus(&mut self, group: usize, name: usize) {
+        if self.rogue_level().is_none() {
+            return;
+        }
         let Some(pick) = self
             .rules
             .rogue_bonus_picks(&self.character)
@@ -506,6 +545,9 @@ impl SkillsForm {
     /// Ticks one of the kit's chosen skills, or not; no more than its
     /// count.
     pub fn tick_chosen(&mut self, name: usize, on: bool) {
+        if self.rogue_level().is_none() {
+            return;
+        }
         let Some(pick) = self.rules.chosen_pick(&self.character) else {
             return;
         };
@@ -621,6 +663,15 @@ impl SkillsForm {
 mod tests {
     use super::*;
     use crate::create::tests::wizard;
+
+    #[test]
+    fn rogue_skills_are_named_as_their_step_names_them() {
+        assert_eq!(skill_of("Thief, Pick pockets* (10)"), Some(0));
+        assert_eq!(skill_of("Thief, Find/remove traps* (10)"), Some(2));
+        assert_eq!(skill_of("Climb Walls"), Some(6));
+        assert_eq!(skill_of("Bard, Read languages* (5)"), Some(7));
+        assert_eq!(skill_of("Tunneling"), None);
+    }
 
     /// A character of `classes`, as New Character builds it.
     fn character(classes: &[&str]) -> Option<(Arc<SkillRules>, Character)> {

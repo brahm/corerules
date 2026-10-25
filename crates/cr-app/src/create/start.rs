@@ -418,6 +418,15 @@ pub(super) struct RollKey {
     method: RollMethod,
 }
 
+impl RollKey {
+    /// The details page chose the gender and the kit: its rolls are for
+    /// them.
+    pub(super) fn set_details(&mut self, male: bool, kit: &str) {
+        self.male = male;
+        kit.clone_into(&mut self.kit);
+    }
+}
+
 /// [`start_details`], which keeps the draft's rolls when they were made
 /// for `rolled`, the same race, gender, classes, kit and method: Back
 /// past the details page and Next again do not roll them anew. Gives

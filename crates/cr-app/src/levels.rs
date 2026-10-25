@@ -13,17 +13,9 @@ pub const MOST_LEVEL: u32 = 100;
 /// The experience Add Experience gives or takes at most.
 pub const MOST_EXPERIENCE: i64 = 10_000_000;
 
-/// "12,500".
+/// "12,500", as the interface language groups the digits.
 fn thousands(n: u32) -> String {
-    let digits = n.to_string();
-    let mut out = String::new();
-    for (i, c) in digits.chars().enumerate() {
-        if i > 0 && (digits.len() - i).is_multiple_of(3) {
-            out.push(',');
-        }
-        out.push(c);
-    }
-    out
+    cr_i18n::thousands(n.into())
 }
 
 /// "Level 3 · 2,500 XP · next level at 5,000", for a class.

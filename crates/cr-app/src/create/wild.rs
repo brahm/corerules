@@ -71,8 +71,9 @@ impl Wizard {
             // Back from a later step: what was chosen before.
             let _ = skills.apply(&mut character, psionics, &mut Dice::default());
         }
+        // The rogue skills were the Rogue Skills step's.
         self.push(Page::Psionics(Box::new(PsionicsPage {
-            form: SkillsForm::new(skills, character),
+            form: SkillsForm::new(skills, character).without_rogue_skills(),
         })));
     }
 

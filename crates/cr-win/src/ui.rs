@@ -1,4 +1,6 @@
-//! The Windows 11 type ramp and cards the pages are made of.
+//! The Windows 11 type ramp and cards the pages are made of. Text wraps
+//! between words only: in a narrow window a label keeps its words whole
+//! rather than breaking one over lines.
 
 use windows_reactor::*;
 
@@ -8,7 +10,7 @@ pub fn title(text: impl Into<String>) -> TextBlock {
         .text(text)
         .font_size(28.0)
         .font_weight(FontWeight::SEMI_BOLD)
-        .text_wrapping(TextWrapping::Wrap)
+        .text_wrapping(TextWrapping::WrapWholeWords)
 }
 
 /// A section title (SubtitleTextBlockStyle).
@@ -17,7 +19,7 @@ pub fn subtitle(text: impl Into<String>) -> TextBlock {
         .text(text)
         .font_size(20.0)
         .font_weight(FontWeight::SEMI_BOLD)
-        .text_wrapping(TextWrapping::Wrap)
+        .text_wrapping(TextWrapping::WrapWholeWords)
 }
 
 /// The heading of a group of cards (BodyStrongTextBlockStyle).
@@ -26,7 +28,7 @@ pub fn strong(text: impl Into<String>) -> TextBlock {
         .text(text)
         .font_size(14.0)
         .font_weight(FontWeight::SEMI_BOLD)
-        .text_wrapping(TextWrapping::Wrap)
+        .text_wrapping(TextWrapping::WrapWholeWords)
 }
 
 /// Body text.
@@ -34,7 +36,7 @@ pub fn body(text: impl Into<String>) -> TextBlock {
     TextBlock::new()
         .text(text)
         .font_size(14.0)
-        .text_wrapping(TextWrapping::Wrap)
+        .text_wrapping(TextWrapping::WrapWholeWords)
 }
 
 /// Secondary text under a heading (CaptionTextBlockStyle, dimmed).
@@ -43,7 +45,7 @@ pub fn caption(text: impl Into<String>) -> TextBlock {
         .text(text)
         .font_size(12.0)
         .opacity(0.75)
-        .text_wrapping(TextWrapping::Wrap)
+        .text_wrapping(TextWrapping::WrapWholeWords)
 }
 
 /// A card: the raised surface settings and details sit on.

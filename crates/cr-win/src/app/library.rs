@@ -178,8 +178,11 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
             context.message(Message::Act(action::OPEN)),
         ),
     ));
+    // The title keeps its width; the commands that do not fit beside it
+    // go to the bar's overflow menu.
     let header = Grid::new()
-        .columns([GridLength::STAR, GridLength::Auto])
+        .columns([GridLength::Auto, GridLength::STAR])
+        .column_spacing(16.0)
         .margin(Thickness::new(36.0, 24.0, 24.0, 12.0))
         .children((
             ui::title(section.title).vertical_alignment(VerticalAlignment::Center),
