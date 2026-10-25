@@ -4,11 +4,11 @@
 //! functions of the modules below, from that state.
 
 mod book;
+mod create;
 mod edit;
 mod help;
 mod import;
 mod library;
-mod new_character;
 mod settings;
 mod sheet;
 mod web;
@@ -19,6 +19,7 @@ use std::rc::Rc;
 use std::sync::{Arc, OnceLock};
 
 use cr_app::action::{self, Action};
+use cr_app::create::{Answer, Effect, Input, Needs, Wizard};
 use cr_app::help::{Files, Found, MonsterHelp, PROGRAM, Target};
 use cr_app::library::Filter;
 use cr_app::sheets::Export;
@@ -122,10 +123,7 @@ pub struct Shell {
 pub enum Page {
     Library,
     Edit(Box<Edit>),
-    NewCharacter {
-        skills_and_powers: bool,
-        setting: usize,
-    },
+    Create(Box<Wizard>),
     Import(Arc<Package>),
     Settings,
     Sheet(Arc<SheetPage>),
@@ -263,10 +261,13 @@ pub enum Message {
     Options(OptionsEdit),
     SaveOptions,
     OptionsSaved(Result<Sheet, String>),
+    /// A control's change that does nothing.
+    Nothing,
     // New Character.
-    Rules(Option<usize>),
-    Setting(Option<usize>),
-    Next,
+    WizardLoaded(Result<Box<Wizard>, String>),
+    Wizard(Input),
+    /// The answer to the prompt with this number.
+    WizardAnswer(u64, Answer),
     // Import.
     PackageChosen(Result<Option<Arc<Package>>, String>),
     Import,
@@ -414,6 +415,8 @@ impl Shell {
         match &self.page {
             Page::Edit(edit) => edit.changed(),
             Page::SheetOptions(options) => options.changed(),
+            // Past its first page the wizard has the choices made.
+            Page::Create(wizard) => wizard.depth() > 1,
             _ => false,
         }
     }
@@ -451,10 +454,7 @@ impl Shell {
                 |owner| native::dialogs::open_folder(owner, &plain(tr("_Open Folder…"))),
                 |r| Message::FolderChosen(r.map_err(|e| e.message())),
             ),
-            action::NEW_CHARACTER => self.go(Page::NewCharacter {
-                skills_and_powers: false,
-                setting: 0,
-            }),
+            action::NEW_CHARACTER => self.new_character(context),
             action::IMPORT => {
                 let install = self.install.clone();
                 let expansion = install.as_ref().is_some_and(|i| !i.is_core20());
@@ -591,6 +591,44 @@ impl Shell {
         });
     }
 
+    /// Starts New Character once its rules are read.
+    fn new_character(&mut self, context: &ComponentContext<Self>) {
+        let Some(install) = self.install.clone() else {
+            return;
+        };
+        if self.busy {
+            return;
+        }
+        self.busy = true;
+        let core_vs_option = crate::prefs::core_vs_option_shown();
+        context.spawn_background(move |_| {
+            Message::WizardLoaded(
+                Needs::load(&install, false, None, core_vs_option)
+                    .map(|(rules, needs)| Box::new(Wizard::new(rules, needs)))
+                    .map_err(|e| e.to_string()),
+            )
+        });
+    }
+
+    /// Does what the wizard asks of the app.
+    fn wizard_effects(&mut self) {
+        let Page::Create(wizard) = &mut self.page else {
+            return;
+        };
+        for effect in wizard.take_effects() {
+            match effect {
+                Effect::HideCoreVsOption => {
+                    if let Err(e) = crate::prefs::set_core_vs_option_shown(false) {
+                        self.show_error(
+                            &tr!("Could not save the preferences: {error}", error = e),
+                            "",
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     /// Zooms the book shown in, out (`direction` -1) or back to 1 (0).
     fn book_zoom(&mut self, direction: i32) {
         if let Page::Book(page) = &mut self.page
@@ -630,7 +668,7 @@ impl Shell {
         match &self.page {
             Page::Library => topic::of_section(&self.section),
             Page::Edit(_) => topic::CHARACTER_INFORMATION,
-            Page::NewCharacter { .. } => topic::CHARACTER_MANAGEMENT,
+            Page::Create(wizard) => wizard.help(),
             Page::Import(_) => topic::IMPORT,
             Page::Sheet(_) | Page::SheetOptions(_) => topic::CHARACTER_SHEET,
             Page::Settings | Page::Help(_) => topic::MAIN_MENU,
@@ -915,6 +953,11 @@ impl Component for Shell {
             }
             Message::Navigate(None) => {}
             Message::Back => {
+                if let Page::Create(wizard) = &mut self.page
+                    && wizard.back()
+                {
+                    return;
+                }
                 if self.changed() {
                     self.confirm = Some(Confirm::Discard { section: None });
                 } else {
@@ -1194,28 +1237,27 @@ impl Component for Shell {
                 }
                 self.show_error(tr("Character Sheet Options"), e);
             }
-            Message::Rules(Some(index)) => {
-                if let Page::NewCharacter {
-                    skills_and_powers, ..
-                } = &mut self.page
+            Message::Nothing => {}
+            Message::WizardLoaded(loaded) => {
+                self.busy = false;
+                match loaded {
+                    Ok(wizard) => self.go(Page::Create(wizard)),
+                    Err(e) => self.show_error(tr("New Character"), e),
+                }
+            }
+            Message::Wizard(input) => {
+                if let Page::Create(wizard) = &mut self.page {
+                    wizard.input(input);
+                    self.wizard_effects();
+                }
+            }
+            Message::WizardAnswer(serial, answer) => {
+                if let Page::Create(wizard) = &mut self.page
+                    && wizard.prompt_serial() == serial
                 {
-                    *skills_and_powers = index == 1;
+                    wizard.answer(answer);
+                    self.wizard_effects();
                 }
-            }
-            Message::Setting(Some(index)) => {
-                if let Page::NewCharacter { setting, .. } = &mut self.page {
-                    *setting = index;
-                }
-            }
-            Message::Rules(None) | Message::Setting(None) => {}
-            Message::Next => {
-                self.notice = Some(Notice::new(
-                    InfoBarSeverity::Informational,
-                    tr("Not in this version yet"),
-                    tr(
-                        "The other steps of New Character come to the Windows app in a later version.",
-                    ),
-                ));
             }
             Message::PackageChosen(chosen) => {
                 self.busy = false;
@@ -1607,10 +1649,7 @@ impl Component for Shell {
         let content = match &self.page {
             Page::Library => library::view(self, context),
             Page::Edit(edit) => edit::view(edit, context),
-            Page::NewCharacter {
-                skills_and_powers,
-                setting,
-            } => new_character::view(self, *skills_and_powers, *setting, context),
+            Page::Create(wizard) => create::view(wizard, context),
             Page::Import(package) => import::view(self, package, context),
             Page::Settings => settings::view(self, context),
             Page::Sheet(page) => sheet::view(self, page, context),
