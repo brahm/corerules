@@ -178,8 +178,8 @@
           <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.0.0/corerules-1.0.0-1-x86_64.pkg.tar.zst">corerules-1.0.0-1-x86_64.pkg.tar.zst</a>
           <code>sudo pacman -U ./corerules-1.0.0-1-x86_64.pkg.tar.zst</code></li>
         <li><span class="system">Bazzite, or any distribution with Flatpak</span><span class="kind">Flatpak</span>
-          <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.0.0/CoreRules-1.0.0.flatpak">CoreRules-1.0.0.flatpak</a>
-          <code>flatpak install --user CoreRules-1.0.0.flatpak</code></li>
+          <a class="file" href="io.github.brahm.CoreRules.flatpakref">io.github.brahm.CoreRules.flatpakref</a>
+          <code>flatpak install --user https://brahm.github.io/corerules/io.github.brahm.CoreRules.flatpakref</code></li>
         <li><span class="system">Any distribution (glibc 2.43+)</span><span class="kind">AppImage</span>
           <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.0.0/CoreRules-1.0.0-x86_64.AppImage">CoreRules-1.0.0-x86_64.AppImage</a>
           <code>chmod +x CoreRules-1.0.0-x86_64.AppImage</code></li>
@@ -188,8 +188,12 @@
           <code>chmod +x CoreRules-Community-Addons-x86_64.AppImage</code></li>
       </ul>
       <p class="tested"><span>Tested by players on</span> Fedora 45 beta · Ubuntu 26.10 · Bazzite · Arch Linux · CachyOS</p>
-      <p class="small">The Flatpak needs the GNOME 51 runtime from Flathub, which <code>flatpak install</code>
-      offers to fetch. The AppImage bundles GTK, libadwaita and the other GNOME 51 libraries. Update
+      <p class="small">The Flatpak comes from this site's own Flatpak repository, signed by the project,
+      so <code>flatpak update</code>, GNOME Software and Discover bring every new version; it needs the
+      GNOME 51 runtime from Flathub, which <code>flatpak install</code> offers to fetch. If you installed
+      the <a href="https://github.com/brahm/corerules/releases/download/v1.0.0/CoreRules-1.0.0.flatpak">CoreRules-1.0.0.flatpak</a>
+      file, which gets no updates, run <code>flatpak uninstall --user io.github.brahm.CoreRules</code> and
+      install from the repository; your files stay. The AppImage bundles GTK, libadwaita and the other GNOME 51 libraries. Update
       Arch first (<code>sudo pacman -Syu</code>), or build the package from source with its
       <a href="https://github.com/brahm/corerules/releases/download/v1.0.0/PKGBUILD">PKGBUILD</a>. The checksums of every file are in
       <a href="https://github.com/brahm/corerules/releases/download/v1.0.0/SHA256SUMS">SHA256SUMS</a>.</p>

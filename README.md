@@ -462,11 +462,13 @@ the latest release:
 | Fedora 44 or newer | [`corerules-1.0.0-1.fc44.x86_64.rpm`](https://github.com/brahm/corerules/releases/download/v1.0.0/corerules-1.0.0-1.fc44.x86_64.rpm) | `sudo dnf install ./corerules-1.0.0-1.fc44.x86_64.rpm` |
 | Ubuntu 26.04 or newer | [`corerules_1.0.0_amd64.deb`](https://github.com/brahm/corerules/releases/download/v1.0.0/corerules_1.0.0_amd64.deb) | `sudo apt install ./corerules_1.0.0_amd64.deb` |
 | Arch Linux, CachyOS, Omarchy | [`corerules-1.0.0-1-x86_64.pkg.tar.zst`](https://github.com/brahm/corerules/releases/download/v1.0.0/corerules-1.0.0-1-x86_64.pkg.tar.zst) | `sudo pacman -U ./corerules-1.0.0-1-x86_64.pkg.tar.zst` |
-| Any distribution with Flatpak, such as Bazzite | [`CoreRules-1.0.0.flatpak`](https://github.com/brahm/corerules/releases/download/v1.0.0/CoreRules-1.0.0.flatpak) | `flatpak install --user CoreRules-1.0.0.flatpak` |
+| Any distribution with Flatpak, such as Bazzite | [`io.github.brahm.CoreRules.flatpakref`](https://brahm.github.io/corerules/io.github.brahm.CoreRules.flatpakref), from the [Flatpak repository](#the-flatpak-repository) | `flatpak install --user https://brahm.github.io/corerules/io.github.brahm.CoreRules.flatpakref` |
 | Any distribution (glibc 2.43+) | [`CoreRules-1.0.0-x86_64.AppImage`](https://github.com/brahm/corerules/releases/download/v1.0.0/CoreRules-1.0.0-x86_64.AppImage) | `chmod +x CoreRules-1.0.0-x86_64.AppImage`, then run it |
 | Community add-ons (installer) | [`CoreRules-Community-Addons-x86_64.AppImage`](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage) | `chmod +x CoreRules-Community-Addons-x86_64.AppImage`, then run it |
 
 The release also has the
+[`CoreRules-1.0.0.flatpak`](https://github.com/brahm/corerules/releases/download/v1.0.0/CoreRules-1.0.0.flatpak)
+file, the
 [`PKGBUILD`](https://github.com/brahm/corerules/releases/download/v1.0.0/PKGBUILD)
 of the pacman package and
 [`SHA256SUMS`](https://github.com/brahm/corerules/releases/download/v1.0.0/SHA256SUMS),
@@ -495,6 +497,35 @@ distributions that follow its repositories, such as CachyOS, Omarchy
 and EndeavourOS; update the system (`sudo pacman -Syu`) before
 installing it. Each release also has its `PKGBUILD`, which builds the
 package from the release's source with `makepkg -si`.
+
+### The Flatpak repository
+
+The project has its own Flatpak repository, at
+`https://brahm.github.io/corerules/flatpak/` next to the
+[website](https://brahm.github.io/corerules/), signed with the project's
+key. It always holds the latest release: each new version reaches it when
+it is released, and `flatpak update`, GNOME Software and Discover bring it.
+The `.flatpakref` above adds the repository as the `corerules` remote, and
+Flathub for the GNOME runtime, and installs the app; on a desktop with GNOME
+Software or Discover, such as Bazzite, opening the downloaded file does the
+same. To add the repository yourself and install from it:
+
+```sh
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak remote-add --user --if-not-exists corerules https://brahm.github.io/corerules/corerules.flatpakrepo
+flatpak install --user corerules io.github.brahm.CoreRules
+```
+
+The release's `.flatpak` file installs the app without the repository.
+From the release after 1.0.0 on, it also adds the repository, so that
+installation updates the same way. The `CoreRules-1.0.0.flatpak` file gets no updates; if you
+installed it, move to the repository once (your characters, settings and
+Core Rules installation stay):
+
+```sh
+flatpak uninstall --user io.github.brahm.CoreRules
+flatpak install --user https://brahm.github.io/corerules/io.github.brahm.CoreRules.flatpakref
+```
 
 ## Getting the rules data
 
@@ -671,6 +702,28 @@ description. A tag with a suffix, such as `v1.0.0-rc1`, is published as
 a pre-release (a release candidate for `-rc` tags); the `.deb` and `.rpm`
 write the suffix with a tilde (`1.0.0~rc1`) and the pacman package drops
 the hyphen (`1.0.0rc1`), so that 1.0.0 sorts after it.
+
+The website's Flatpak repository is built by the Landing page workflow
+(`.github/workflows/pages.yml`) each time it publishes the site:
+`packaging/flatpak/repo.sh` imports the `.flatpak` of the latest release
+into a new repository, signs it and writes `corerules.flatpakrepo` and
+`io.github.brahm.CoreRules.flatpakref` next to the page. After a final
+release, the Packages workflow starts the Landing page workflow, so the
+repository gets the new version without anyone touching it; republishing
+the same release changes nothing for installed apps. Both workflows sign
+with the key in the `FLATPAK_GPG_PRIVATE_KEY` secret, and the Packages
+workflow also writes the repository's address and key into the `.flatpak`.
+Without the secret, the `.flatpak` is unsigned and the site is not
+published (a pull request signs with a throwaway key to test the rest).
+The key has no passphrase and is made once:
+
+```sh
+gpg --batch --passphrase '' --quick-gen-key 'Core Rules Flatpak' rsa4096 sign never
+gpg --armor --export-secret-keys 'Core Rules Flatpak'   # the secret's value
+```
+
+Keep a copy of it offline: with a new key, every installation has to add
+the repository again.
 
 ### Running from a source checkout
 

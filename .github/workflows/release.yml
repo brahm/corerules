@@ -126,12 +126,33 @@ jobs:
       options: --privileged
     steps:
       - uses: actions/checkout@v4
+      # With the FLATPAK_GPG_PRIVATE_KEY secret, the build is signed and the
+      # bundle names the website's Flatpak repository and its key, so
+      # installing the .flatpak also brings the updates published there.
+      - name: Signing key
+        env:
+          SIGNING_KEY: ${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}
+        run: |
+          if [ -n "$SIGNING_KEY" ]; then
+            command -v gpg >/dev/null || dnf install -y gnupg2
+            printf '%s\n' "$SIGNING_KEY" | gpg --batch --import
+            echo "KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/ {print $10; exit}')" >> "$GITHUB_ENV"
+          fi
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          bundle: CoreRules-${{ needs.version.outputs.version }}.flatpak
           manifest-path: packaging/flatpak/io.github.brahm.CoreRules.yml
           cache-key: flatpak-builder-${{ github.sha }}
+          gpg-sign: ${{ env.KEY_ID }}
+          build-bundle: false
           upload-artifact: false
+      - name: Bundle
+        run: |
+          set -- --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo
+          if [ -n "${KEY_ID:-}" ]; then
+            gpg --export "$KEY_ID" > "$RUNNER_TEMP/key.gpg"
+            set -- "$@" --repo-url=https://brahm.github.io/corerules/flatpak/ --gpg-keys="$RUNNER_TEMP/key.gpg"
+          fi
+          flatpak build-bundle "$@" repo CoreRules-${{ needs.version.outputs.version }}.flatpak io.github.brahm.CoreRules master
       - uses: actions/upload-artifact@v4
         with:
           name: flatpak
@@ -281,3 +302,18 @@ jobs:
           # the addons release never is.
           make_latest: ${{ !startsWith(needs.version.outputs.version, '0.') && !contains(needs.version.outputs.version, '-') }}
           files: dist/*
+
+  # A final release becomes the version in the website's Flatpak
+  # repository: the Landing page workflow republishes the site from main.
+  # Releases made with this workflow's token start no workflows by
+  # themselves, so it is started by hand here.
+  website:
+    needs: [version, release]
+    if: ${{ !startsWith(needs.version.outputs.version, '0.') && !contains(needs.version.outputs.version, '-') }}
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+    steps:
+      - run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}
