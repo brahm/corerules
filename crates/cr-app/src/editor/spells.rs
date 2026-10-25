@@ -46,6 +46,16 @@ pub fn ordinal(level: u32) -> String {
     }
 }
 
+/// What a memorized spell's level says under it: a priest spell of no
+/// level is one of the Tome of Magic's quest spells.
+pub fn spell_level_text(level: u32, wizard: bool) -> String {
+    if level == 0 && !wizard {
+        tr("Quest spell").to_owned()
+    } else {
+        tr!("{ordinal} level", ordinal = ordinal(level))
+    }
+}
+
 /// How many of `levels` are spells of `level`.
 fn used(levels: &[u32], level: u32) -> u32 {
     levels.iter().filter(|l| **l == level).count() as u32
@@ -432,10 +442,7 @@ impl Editor {
                     description: slots_text(slots, &levels).unwrap_or_default(),
                     rows: rows
                         .into_iter()
-                        .map(|(level, name)| {
-                            let level = tr!("{ordinal} level", ordinal = ordinal(level));
-                            (name, level, None)
-                        })
+                        .map(|(level, name)| (name, spell_level_text(level, wizard), None))
                         .collect(),
                     choices: offered
                         .iter()
@@ -625,6 +632,8 @@ mod tests {
             Some("No spell slots at this level")
         );
         assert_eq!(slots_text(None, &[1]), None);
+        assert_eq!(spell_level_text(0, false), "Quest spell");
+        assert_eq!(spell_level_text(2, false), "2nd level");
         assert_eq!(ordinal(11), "11th");
         assert_eq!(ordinal(22), "22nd");
     }

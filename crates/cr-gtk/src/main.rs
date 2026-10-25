@@ -34,7 +34,9 @@ use std::sync::Arc;
 
 use adw::prelude::*;
 use cr_app::action;
-use cr_app::editor::{ordinal, slots_fit, slots_text, social_class_shown, social_class_stored};
+use cr_app::editor::{
+    slots_fit, slots_text, social_class_shown, social_class_stored, spell_level_text,
+};
 use cr_app::library::{self, Commands};
 use cr_app::records;
 use cr_formats::character::Character;
@@ -3482,7 +3484,7 @@ impl ListEditors {
                         .map(move |name| RowSpec {
                             value: level as u32,
                             title: name.clone(),
-                            subtitle: tr!("{ordinal} level", ordinal = ordinal(level as u32)),
+                            subtitle: spell_level_text(level as u32, wizard),
                             number: None,
                         })
                 })
@@ -3511,7 +3513,7 @@ impl ListEditors {
                         move || {
                             list.add(RowSpec {
                                 value: level,
-                                subtitle: tr!("{ordinal} level", ordinal = ordinal(level)),
+                                subtitle: spell_level_text(level, wizard),
                                 title: name.clone(),
                                 number: None,
                             })
