@@ -9,6 +9,8 @@
 //! hit points and PSPs change; Save compares that copy with the character
 //! as read.
 
+mod abilities;
+mod combat;
 mod details;
 
 use std::sync::Arc;
@@ -16,7 +18,9 @@ use std::sync::Arc;
 use cr_formats::character::Character;
 use cr_i18n::tr_noop;
 use cr_store::Installation;
+use cr_store::abilities::{AbilityRules, CharacterAbilities};
 use cr_store::advance::{AdvanceRules, Advancement};
+use cr_store::combat::{CharacterCombat, CombatRules};
 use cr_store::create::{CreationRules, Dice};
 use cr_store::dual::ClassTable;
 use cr_store::edit::CharacterDetails;
@@ -24,13 +28,19 @@ use cr_store::help::topic;
 use cr_store::lists::CharacterLists;
 use cr_store::npc::Rand;
 
+use crate::create::ListKind;
 use crate::levels::{ExperienceForm, LevelsForm, LevelsInput};
 use crate::prompt::{Answer, Prompt as AnyPrompt};
 
+pub use abilities::{AbilityGroup, Check, Checks};
+pub use combat::CombatView;
 pub use details::{ClassOffer, MOST_AGE, MOST_HEIGHT, MOST_POINTS, MOST_WEIGHT, class_offer};
 
 /// A question, warning or message the editor waits on.
 pub type Prompt = AnyPrompt<Editor>;
+
+/// What answering a prompt does to the editor.
+type Then = crate::prompt::Then<Editor>;
 
 /// What the editor reads from the installation, once.
 pub struct EditNeeds {
@@ -40,15 +50,24 @@ pub struct EditNeeds {
     pub class_table: Arc<ClassTable>,
     /// The Background… dialog's events, "NONE" first.
     pub backgrounds: Vec<String>,
+    /// Subraces, racial and class abilities, schools and spheres.
+    pub abilities: Arc<AbilityRules>,
+    /// Weapon proficiencies and groups, specializations, unarmed combat,
+    /// shields, armor, fighting styles, traits and disadvantages.
+    pub combat: Arc<CombatRules>,
 }
 
 impl EditNeeds {
     pub fn load(install: &Installation) -> cr_store::Result<Self> {
+        let creation = Arc::new(install.creation_rules()?);
+        let advance = Arc::new(install.advance_rules()?);
         Ok(Self {
-            creation: Arc::new(install.creation_rules()?),
-            advance: Arc::new(install.advance_rules()?),
+            combat: Arc::new(install.combat_rules_with(creation.clone(), advance.clone())?),
+            creation,
+            advance,
             class_table: Arc::new(install.class_table()?),
             backgrounds: cr_store::edit::backgrounds(install)?,
+            abilities: Arc::new(install.ability_rules()?),
         })
     }
 }
@@ -57,15 +76,19 @@ impl EditNeeds {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
     Details,
+    Abilities,
+    Combat,
 }
 
 impl Tab {
     /// The pages, in order.
-    pub const ALL: &[Tab] = &[Tab::Details];
+    pub const ALL: &[Tab] = &[Tab::Details, Tab::Abilities, Tab::Combat];
 
     pub fn title(self) -> &'static str {
         match self {
             Tab::Details => tr_noop!("Details"),
+            Tab::Abilities => tr_noop!("Abilities"),
+            Tab::Combat => tr_noop!("Combat"),
         }
     }
 
@@ -73,6 +96,8 @@ impl Tab {
     pub fn help(self) -> u32 {
         match self {
             Tab::Details => topic::CHARACTER_INFORMATION,
+            Tab::Abilities => topic::ABILITY_SCORES,
+            Tab::Combat => topic::WEAPON_PROFICIENCIES,
         }
     }
 }
@@ -115,6 +140,27 @@ pub enum EditInput {
     HitPoints(u32),
     /// The PSPs, all levels together.
     Psp(u32),
+    // Abilities.
+    Subrace(usize),
+    /// A choice of a group ticked or not, by its index.
+    Tick(AbilityGroup, usize, bool),
+    // Combat.
+    /// A name chosen from what a list offers.
+    Add(ListKind, String),
+    /// A list's row taken out, by its index.
+    Remove(ListKind, usize),
+    /// The weapon of choice, expertise or mastery, the kit's focus or the
+    /// weapon it has the character pick (by slot): 0 for none, else the
+    /// weapon by its index in the choice's items.
+    WeaponOfChoice(usize),
+    Expertise(usize),
+    Mastery(usize),
+    Focus(usize),
+    KitPick(usize, usize),
+    /// An unarmed style, as `UNARMED`, taken or not.
+    Unarmed(usize, bool),
+    /// A shield proficiency, as `SHIELDS`.
+    Shield(usize, bool),
     Save,
 }
 
@@ -162,6 +208,15 @@ pub struct Editor {
     /// Counts Add Experience's openings and failed tries, for an app
     /// whose dialog closes on Add to open it again.
     pub experience_serial: u64,
+    /// The abilities and combat choices as read and as edited.
+    original_abilities: CharacterAbilities,
+    pub abilities: CharacterAbilities,
+    original_combat: CharacterCombat,
+    pub combat: CharacterCombat,
+    /// Skills & Powers: the broad and tight weapon groups are offered.
+    groups_shown: bool,
+    /// Removing a weapon proficiency or group said it refunds nothing.
+    refund_told: bool,
     prompt: Option<Prompt>,
     serial: u64,
     effects: Vec<EditEffect>,
@@ -195,6 +250,18 @@ impl Editor {
         } else {
             with(needs.backgrounds.clone(), &details.background)
         };
+        let abilities = needs.abilities.abilities_of(&character);
+        let combat = needs.combat.combat_of(&character);
+        let levels = needs
+            .advance
+            .levels(&character)
+            .map_or_else(|_| vec![1], |l| l.iter().map(|c| c.level).collect());
+        let groups_shown = !combat.broad_groups.is_empty()
+            || character.skills_and_powers()
+                && !needs
+                    .combat
+                    .group_choices(&character, &combat, &levels, true)
+                    .is_empty();
         Self {
             file: file.to_owned(),
             original_details: details.clone(),
@@ -210,6 +277,12 @@ impl Editor {
             levels: None,
             experience: None,
             experience_serial: 0,
+            original_abilities: abilities.clone(),
+            abilities,
+            original_combat: combat.clone(),
+            combat,
+            groups_shown,
+            refund_told: false,
             prompt: None,
             serial: 0,
             effects: Vec::new(),
@@ -240,11 +313,13 @@ impl Editor {
         self.details != self.original_details
             || self.new_class.is_some()
             || *self.advanced != *self.original
+            || self.abilities != self.original_abilities
+            || self.combat != self.original_combat
     }
 
     /// Why the character cannot be saved as it is, if it cannot.
     pub fn problem(&self) -> Option<String> {
-        self.details.problem()
+        self.details.problem().or_else(|| self.points_problem())
     }
 
     /// Whether Save may be pressed.
@@ -308,7 +383,23 @@ impl Editor {
         }
         match input {
             EditInput::Tab(tab) => self.tab = tab,
-            EditInput::Save => self.save(),
+            EditInput::Save => {
+                if self.can_save() {
+                    // Leaving the original's Weapon Proficiencies page
+                    // checks the kit's specializations first.
+                    self.check_leaving_combat(Arc::new(Editor::save));
+                }
+            }
+            input @ (EditInput::Subrace(_) | EditInput::Tick(..)) => self.abilities_input(input),
+            input @ (EditInput::Add(..)
+            | EditInput::Remove(..)
+            | EditInput::WeaponOfChoice(_)
+            | EditInput::Expertise(_)
+            | EditInput::Mastery(_)
+            | EditInput::Focus(_)
+            | EditInput::KitPick(..)
+            | EditInput::Unarmed(..)
+            | EditInput::Shield(..)) => self.combat_input(input),
             input => self.details_input(input),
         }
     }
@@ -332,6 +423,13 @@ impl Editor {
         if advancement != Advancement::of(&self.original) {
             lists.advancement = Some(advancement);
         }
+        if self.abilities != self.original_abilities {
+            lists.abilities = Some(self.abilities.clone());
+        }
+        if self.combat != self.original_combat {
+            lists.weapon_proficiencies.clone_from(&self.combat.weapons);
+            lists.combat = Some(self.combat.clone());
+        }
         self.error = None;
         self.saving = true;
         self.effects.push(EditEffect::Save(Box::new(Saving {
@@ -349,10 +447,24 @@ pub(crate) mod tests {
     /// The editor over the first character of the installation
     /// `CORERULES_DIR` names, if it is set and has one.
     pub(crate) fn editor() -> Option<Editor> {
+        editor_where(|_| true)
+    }
+
+    /// The editor over the first character of that installation `wanted`
+    /// takes.
+    pub(crate) fn editor_where(wanted: impl Fn(&Character) -> bool) -> Option<Editor> {
         let dir = std::env::var_os("CORERULES_DIR")?;
         let install = Installation::open(std::path::Path::new(&dir)).ok()?;
-        let file = install.characters().ok()?.entries.first()?.file.clone();
-        let character = install.character(&file).ok()?;
+        let (file, character) =
+            install
+                .characters()
+                .ok()?
+                .entries
+                .into_iter()
+                .find_map(|entry| {
+                    let character = install.character(&entry.file).ok()?;
+                    wanted(&character).then_some((entry.file, character))
+                })?;
         let needs = Arc::new(EditNeeds::load(&install).ok()?);
         Some(Editor::new(needs, &file, character))
     }
@@ -379,6 +491,38 @@ pub(crate) mod tests {
         e.failed("No".into());
         assert_eq!(e.error.as_deref(), Some("No"));
         assert!(e.can_save());
+    }
+
+    #[test]
+    fn every_character_opens_unchanged_on_every_page() {
+        let Some(dir) = std::env::var_os("CORERULES_DIR") else {
+            return;
+        };
+        let install = Installation::open(std::path::Path::new(&dir)).unwrap();
+        let needs = Arc::new(EditNeeds::load(&install).unwrap());
+        for entry in install.characters().unwrap().entries {
+            let Ok(character) = install.character(&entry.file) else {
+                continue;
+            };
+            let mut e = Editor::new(needs.clone(), &entry.file, character);
+            for tab in Tab::ALL {
+                e.input(EditInput::Tab(*tab));
+            }
+            let groups = e.ability_groups();
+            let view = e.combat_view();
+            assert!(!e.changed(), "{}", entry.file);
+            assert_eq!(
+                view.points_left.is_some(),
+                e.original.skills_and_powers(),
+                "{}",
+                entry.file
+            );
+            for group in groups {
+                for check in &group.checks {
+                    assert!(check.enabled || !check.on, "{}: {group:?}", entry.file);
+                }
+            }
+        }
     }
 
     #[test]

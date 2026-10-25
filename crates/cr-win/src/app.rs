@@ -6,6 +6,7 @@
 mod book;
 mod create;
 mod edit;
+mod forms;
 mod help;
 mod import;
 mod levels;
@@ -282,7 +283,7 @@ pub enum Message {
     /// The answer to the prompt with this number.
     WizardAnswer(u64, Answer),
     /// What the box of a list has chosen for Add.
-    WizardAdding(ListKind, String),
+    Adding(ListKind, String),
     /// Choose… on the Portrait row.
     ChoosePortrait,
     PortraitsListed(Result<Vec<portrait::Tile>, String>),
@@ -1161,10 +1162,17 @@ impl Component for Shell {
                     });
                 }
             }
-            Message::EditLoaded(Ok(editor)) => self.go(Page::Edit(editor)),
+            Message::EditLoaded(Ok(editor)) => {
+                self.adding.clear();
+                self.go(Page::Edit(editor));
+            }
             Message::EditLoaded(Err(e)) => self.show_error(tr("Edit Character"), e),
             Message::Editor(change) => {
                 if let Page::Edit(editor) = &mut self.page {
+                    // Added, the choice leaves the box.
+                    if let EditInput::Add(kind, _) = &change {
+                        self.adding.retain(|(k, _)| k != kind);
+                    }
                     editor.input(change);
                     self.editor_effects(context);
                 }
@@ -1442,7 +1450,7 @@ impl Component for Shell {
                 }
             }
             Message::ClosePortraits => self.portraits = None,
-            Message::WizardAdding(kind, name) => {
+            Message::Adding(kind, name) => {
                 self.adding.retain(|(k, _)| *k != kind);
                 self.adding.push((kind, name));
             }
@@ -1858,7 +1866,7 @@ impl Component for Shell {
             }
             Page::Edit(editor) => {
                 let portrait = self.portrait_shown(&editor.details.portrait);
-                let page = edit::view(editor, &portrait, context);
+                let page = edit::view(editor, &self.adding, &portrait, context);
                 self.with_portraits(page, context)
             }
             Page::Import(package) => import::view(self, package, context),

@@ -311,21 +311,21 @@ pub fn pick_texts(pick: &NonweaponPick) -> (String, String) {
 }
 
 /// "None", then `items`.
-fn with_none(items: impl IntoIterator<Item = String>) -> Vec<String> {
+pub(crate) fn with_none(items: impl IntoIterator<Item = String>) -> Vec<String> {
     std::iter::once(tr("None").to_owned())
         .chain(items)
         .collect()
 }
 
 /// The index of `chosen` among `items`, which start with "None".
-fn index_of(items: &[String], chosen: Option<&String>) -> usize {
+pub(crate) fn index_of(items: &[String], chosen: Option<&String>) -> usize {
     chosen
         .and_then(|c| items.iter().skip(1).position(|i| i == c))
         .map_or(0, |i| i + 1)
 }
 
 /// The item at `index` of `items`, none for "None".
-fn item_at(items: &[String], index: usize) -> Option<String> {
+pub(crate) fn item_at(items: &[String], index: usize) -> Option<String> {
     (index > 0).then(|| items.get(index).cloned()).flatten()
 }
 

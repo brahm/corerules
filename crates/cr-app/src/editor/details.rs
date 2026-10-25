@@ -161,6 +161,7 @@ impl Editor {
                 d.social_class = self.needs.creation.roll_social_class(&kit, &mut self.dice);
                 d.kit.clone_from(&kit);
                 self.advanced.data.kit.clone_from(&kit);
+                self.kit_weapons_changed();
                 if let Some(text) = self.needs.creation.kit_information(&kit) {
                     let text = text.to_owned();
                     self.message(tr("Kit Information"), text);
@@ -224,6 +225,7 @@ impl Editor {
             EditInput::CloseLevels => {
                 if let Some(levels) = self.levels.take() {
                     *self.advanced = levels.close(&advance);
+                    self.kit_weapons_changed();
                 }
             }
             EditInput::OpenExperience => {
@@ -241,6 +243,7 @@ impl Editor {
                 if let Some(experience) = &mut self.experience {
                     if experience.give(&advance, &mut self.advanced, (true, 3), &mut self.dice) {
                         self.experience = None;
+                        self.kit_weapons_changed();
                     } else {
                         self.experience_serial += 1;
                     }

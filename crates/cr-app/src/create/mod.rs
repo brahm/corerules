@@ -43,12 +43,13 @@ pub use proficiencies::{
     disadvantages_text, languages_text, nonweapon_subtitle, pick_texts, specialization_costs,
     weapon_subtitle,
 };
+pub(crate) use proficiencies::{index_of, item_at, with_none};
 pub use rogue::{RoguePage, RoguePicks, RogueRow};
 pub use spells::{Schools, SpellsPage};
 pub use start::{
     AbilitiesPage, ClassAbilitiesPage, ClassAbilityGroup, ClassPage, EnteredClassPage,
     EnteredScoresPage, GROUPS, RacePage, RacialPage, SettingPage, ability_rows, class_choice,
-    race_subtitle, start_details,
+    cost_text, race_subtitle, start_details,
 };
 pub use wild::{PsionicsPage, WildPage};
 

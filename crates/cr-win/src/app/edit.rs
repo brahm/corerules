@@ -2,9 +2,13 @@
 //! window, its pages chosen above them, with Save and Cancel under them.
 //! The Details page has the Name page of Update Character, the classes
 //! with Add Class, the experience with Levels… and Add…, the appearance,
-//! the ability scores and the history.
+//! the ability scores and the history; the Abilities page the subrace,
+//! the racial and class abilities, schools and spheres; the Combat page
+//! the weapon proficiencies and groups, the specializations, unarmed
+//! combat, the kit's weapons, shields, armor, fighting styles, traits and
+//! disadvantages.
 
-use cr_app::create::none_label;
+use cr_app::create::{ListKind, none_label, points};
 use cr_app::editor::{EditInput, Editor, MOST_AGE, MOST_HEIGHT, MOST_POINTS, MOST_WEIGHT, Tab};
 use cr_app::levels::LevelsInput;
 use cr_i18n::{tr, tr_noop};
@@ -13,7 +17,8 @@ use cr_store::edit::ABILITY_RANGE;
 use cr_win::text::plain;
 use windows_reactor::*;
 
-use super::create::{heading, prompt_dialog, with_buttons};
+use super::create::prompt_dialog;
+use super::forms::{self, Adding, ListMessages, heading, with_buttons};
 use super::portrait::Shown;
 use super::{Message, Shell};
 use crate::ui;
@@ -32,6 +37,13 @@ fn levels(change: LevelsInput) -> Message {
 fn experience(change: LevelsInput) -> Message {
     input(EditInput::Experience(change))
 }
+
+/// The editor's lists' messages; their rows have no number yet.
+const LISTS: ListMessages = ListMessages {
+    add: |kind, name| input(EditInput::Add(kind, name)),
+    remove: |kind, row| input(EditInput::Remove(kind, row)),
+    times: |_, _, _| Message::Nothing,
+};
 
 /// A NumberBox for a whole number in `0..=max`.
 fn number(
@@ -84,8 +96,14 @@ fn combo(
         }))
 }
 
-/// The editor; `portrait` is the one the Details page shows.
-pub fn view(editor: &Editor, portrait: &Shown, context: &mut ViewContext<Shell>) -> View {
+/// The editor; `adding` is what the lists' boxes chose for Add, and
+/// `portrait` the one the Details page shows.
+pub fn view(
+    editor: &Editor,
+    adding: &Adding,
+    portrait: &Shown,
+    context: &mut ViewContext<Shell>,
+) -> View {
     // The pages to choose from, once there are several.
     let tabs: View = if Tab::ALL.len() > 1 {
         let items: Vec<KeyedView> = Tab::ALL
@@ -116,6 +134,8 @@ pub fn view(editor: &Editor, portrait: &Shown, context: &mut ViewContext<Shell>)
     };
     let content = match editor.tab {
         Tab::Details => details(editor, portrait, context),
+        Tab::Abilities => abilities_tab(editor, context),
+        Tab::Combat => combat_tab(editor, adding, context),
     };
     let problem: View = match editor.error.clone().or_else(|| editor.problem()) {
         Some(problem) => InfoBar::new()
@@ -514,4 +534,149 @@ fn abilities(editor: &Editor, context: &mut ViewContext<Shell>) -> View {
                 })),
         ),
     ))
+}
+
+/// The Abilities page: the subrace and its package, then each group of
+/// abilities, schools and spheres to tick.
+fn abilities_tab(editor: &Editor, context: &mut ViewContext<Shell>) -> View {
+    let package: Vec<KeyedView> = editor
+        .package()
+        .into_iter()
+        .enumerate()
+        .map(|(i, name)| KeyedView::new(format!("{i}\u{1}{name}"), ui::body(name)))
+        .collect();
+    let groups: Vec<KeyedView> = editor
+        .ability_groups()
+        .into_iter()
+        .map(|group| {
+            let rows: Vec<(String, String, bool, bool)> = group
+                .checks
+                .into_iter()
+                .map(|c| (c.title, c.subtitle, c.on, c.enabled))
+                .collect();
+            let which = group.group;
+            let checks = if rows.is_empty() {
+                ui::card(ui::body(tr("None")).opacity(0.6))
+            } else {
+                forms::checks(
+                    &rows,
+                    move |i, on| input(EditInput::Tick(which, i, on)),
+                    context,
+                )
+            };
+            KeyedView::new(
+                group.title.clone(),
+                StackPanel::new()
+                    .spacing(4.0)
+                    .children((heading(&group.title, Some(&group.description)), checks)),
+            )
+        })
+        .collect();
+    StackPanel::new().spacing(4.0).children((
+        forms::points_left(&points(editor.points_left()), None),
+        heading(tr("Race"), Some(editor.subrace_description())),
+        ui::setting(
+            tr("Subrace"),
+            "",
+            combo(
+                tr("Subrace"),
+                editor.subraces(),
+                editor.subrace_index(),
+                EditInput::Subrace,
+                context,
+            ),
+        ),
+        heading(tr("Racial Package"), None),
+        ui::card(StackPanel::new().spacing(6.0).keyed_children(package)),
+        StackPanel::new().spacing(4.0).keyed_children(groups),
+    ))
+}
+
+/// The Combat page.
+fn combat_tab(editor: &Editor, adding: &Adding, context: &mut ViewContext<Shell>) -> View {
+    let v = editor.combat_view();
+    let list = |kind: ListKind, list: &cr_app::create::List, context: &mut ViewContext<Shell>| {
+        forms::list(kind, list, &[], adding, LISTS, context)
+    };
+    let weapon = tr("Weapon");
+    let points_left: View = match v.points_left {
+        Some(left) => forms::points_left(&points(left), Some(&v.description)),
+        None => View::empty(),
+    };
+    let shields: View = if v.shields.is_empty() {
+        View::empty()
+    } else {
+        let rows: Vec<(String, String, bool, bool)> = v
+            .shields
+            .iter()
+            .map(|(name, cost, on)| (name.clone(), cost.clone(), *on, true))
+            .collect();
+        StackPanel::new().spacing(4.0).children((
+            heading(tr("Shield Proficiencies"), None),
+            forms::checks(&rows, |i, on| input(EditInput::Shield(i, on)), context),
+        ))
+    };
+    let group = |children: (View, View, View, View, View)| -> View {
+        StackPanel::new().spacing(4.0).children(children)
+    };
+    let weapons = group((
+        points_left,
+        list(ListKind::Weapons, &v.weapons, context),
+        list(ListKind::Broad, &v.broad, context),
+        list(ListKind::Tight, &v.tight, context),
+        View::empty(),
+    ));
+    let specialization = group((
+        forms::choice(
+            &v.weapon_of_choice,
+            weapon,
+            |i| input(EditInput::WeaponOfChoice(i)),
+            context,
+        ),
+        forms::choice(
+            &v.expertise,
+            weapon,
+            |i| input(EditInput::Expertise(i)),
+            context,
+        ),
+        list(ListKind::Specializations, &v.specializations, context),
+        forms::choice(
+            &v.mastery,
+            weapon,
+            |i| input(EditInput::Mastery(i)),
+            context,
+        ),
+        forms::unarmed(
+            &v.unarmed,
+            |i, on| input(EditInput::Unarmed(i, on)),
+            context,
+        ),
+    ));
+    let kit = group((
+        forms::choice(&v.focus, weapon, |i| input(EditInput::Focus(i)), context),
+        forms::choice(
+            &v.picks[0],
+            weapon,
+            |i| input(EditInput::KitPick(0, i)),
+            context,
+        ),
+        forms::choice(
+            &v.picks[1],
+            weapon,
+            |i| input(EditInput::KitPick(1, i)),
+            context,
+        ),
+        View::empty(),
+        View::empty(),
+    ));
+    let rest = group((
+        shields,
+        list(ListKind::Armor, &v.armor, context),
+        list(ListKind::Styles, &v.styles, context),
+        list(ListKind::Traits, &v.traits, context),
+        list(ListKind::Disadvantages, &v.disadvantages, context),
+    ));
+    StackPanel::new()
+        .spacing(4.0)
+        .children((weapons, specialization, kit, rest))
 }
