@@ -207,8 +207,21 @@ The phases run in order:
      Rules Vs Player's Option message, and About the description, What's
      New, the credits, the legal notice, the original program's About box
      and Credits, and the details a bug report needs. 38 actions are left
-     on `NOT_YET_ON_WINDOWS`.
-   - Still to port: the books; character creation and Enter Character;
+     on `NOT_YET_ON_WINDOWS`. The same pull request fixed what the
+     Windows test of the first stage found: Other Parts no longer closes
+     the app, a character's details show at the default window size, and
+     reals read as the records keep them (0.1) in both apps.
+   - **The books (done).** `cr-app` gained the reader's zoom steps, the
+     reading positions and zoom kept between sessions, Find over the
+     book's folded text, and the heading a paragraph is under. The
+     Windows app reads a book on a page of the window: the contents
+     beside it, the book's fonts, colours, indents, tab stops and
+     pictures as one web page in a WebView2 (decision P25), Find with
+     every match highlighted, Zoom In, Out and Reset, and the place it
+     was left. F9, Ctrl+F, Ctrl+plus, Ctrl+minus, Ctrl+0 and Ctrl+W work
+     as in the GNOME reader. 31 actions are left on
+     `NOT_YET_ON_WINDOWS`.
+   - Still to port: character creation and Enter Character;
      editing; the generators (NPCs, treasure, encounters, tables,
      parties); the user database editors; packages and Import Core Rules
      2.0; Extract Data from CD….

@@ -88,6 +88,23 @@ pub fn js_string(text: &str) -> String {
     out
 }
 
+/// A path of Windows (`C:\Temp\Core Rules\a.html`) as a `file:` URI,
+/// what the WebView2 opens a page from.
+pub fn file_uri(path: &str) -> String {
+    let mut uri = String::from("file:///");
+    for byte in path.replace('\\', "/").bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' | b'/' | b':' => {
+                uri.push(char::from(byte))
+            }
+            _ => {
+                let _ = write!(uri, "%{byte:02X}");
+            }
+        }
+    }
+    uri
+}
+
 const STYLE: &str = "\
 :root{color-scheme:light dark}\
 html{background:#fff;color:#1a1a1a}\
@@ -95,7 +112,7 @@ body{margin:0;padding:18px 24px 24px;font:12pt 'Times New Roman',serif}\
 header{position:sticky;top:0;background:#fff;margin:-18px -24px 12px;padding:12px 24px 8px;\
 border-bottom:1px solid #d0d0d0}\
 .p{white-space:pre-wrap;tab-size:48px;overflow-wrap:break-word}\
-.t{display:inline-block;white-space:pre}\
+.t{display:inline-block;white-space:pre;text-indent:0}\
 .c{color:var(--l)}\
 .h{color:#1c7c3c;text-decoration:underline;cursor:pointer}\
 .h.u{text-decoration-style:dotted}\
@@ -408,13 +425,13 @@ fn family(face: &str) -> String {
     format!("'{}',{generic}", face.replace(['\'', '"', '\\', ';'], ""))
 }
 
-fn hex(Rgb(r, g, b): Rgb) -> String {
+pub(crate) fn hex(Rgb(r, g, b): Rgb) -> String {
     format!("#{r:02x}{g:02x}{b:02x}")
 }
 
 /// A colour as shown on a dark background: dark colours are lightened,
 /// as the GNOME app's help does.
-fn on_dark(color: Rgb) -> Rgb {
+pub(crate) fn on_dark(color: Rgb) -> Rgb {
     let Rgb(r, g, b) = color;
     let luminance = 0.2126 * f32::from(r) + 0.7152 * f32::from(g) + 0.0722 * f32::from(b);
     if luminance >= 127.5 {
@@ -424,7 +441,7 @@ fn on_dark(color: Rgb) -> Rgb {
     Rgb(lift(r), lift(g), lift(b))
 }
 
-fn escape(text: &str) -> String {
+pub(crate) fn escape(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     for c in text.chars() {
         match c {
@@ -457,7 +474,7 @@ fn picture(help: &HelpFile, n: u16) -> Option<(String, u32)> {
     Some((src, bitmap.width.min(PICTURE_WIDTH)))
 }
 
-fn base64(bytes: &[u8]) -> String {
+pub(crate) fn base64(bytes: &[u8]) -> String {
     const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
@@ -579,6 +596,14 @@ mod tests {
     fn scripts_take_any_text() {
         assert_eq!(js_string("a\"b\\c\nd"), r#""a\"b\\c\nd""#);
         assert_eq!(js_string("\u{2028}"), r#""\u2028""#);
+    }
+
+    #[test]
+    fn paths_make_file_uris() {
+        assert_eq!(
+            file_uri(r"C:\Users\Zoë\AppData\Local\Temp\Core Rules\MonBk.html"),
+            "file:///C:/Users/Zo%C3%AB/AppData/Local/Temp/Core%20Rules/MonBk.html"
+        );
     }
 
     #[test]

@@ -17,9 +17,23 @@ const CORE_VS_OPTION_OFF: &str = "core-vs-option-off";
 /// The system's language, read once.
 static SYSTEM: OnceLock<Language> = OnceLock::new();
 
-fn path() -> Option<PathBuf> {
+/// The app's folder of the user's local application data.
+fn folder() -> Option<PathBuf> {
     let base = std::env::var_os("LOCALAPPDATA")?;
-    Some(PathBuf::from(base).join("Core Rules").join("settings.ini"))
+    Some(PathBuf::from(base).join("Core Rules"))
+}
+
+fn path() -> Option<PathBuf> {
+    Some(folder()?.join("settings.ini"))
+}
+
+/// The book reader's positions and zoom, beside the settings.
+pub fn reader_state() -> cr_app::books::State {
+    cr_app::books::State::at(
+        folder()
+            .unwrap_or_else(std::env::temp_dir)
+            .join("reader-state"),
+    )
 }
 
 fn load() -> String {

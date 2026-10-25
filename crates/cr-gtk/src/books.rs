@@ -1,6 +1,6 @@
 //! The book reader: a window per book with the contents on the side, the
 //! text in a `TextView` with the book's formatting, find, zoom, and the
-//! reading position remembered between sessions.
+//! reading position remembered between sessions ([`cr_app::books`]).
 //!
 //! A book is read and parsed on a worker thread; the text then goes into
 //! the buffer a slice at a time from idle callbacks, so the window stays
@@ -8,26 +8,17 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
 use std::rc::{Rc, Weak};
 use std::time::{Duration, Instant};
 
 use adw::prelude::*;
 use cr_app::action;
+use cr_app::books::{Folded, MOST_HIGHLIGHTED, State, TEXT_WIDTH};
 use cr_formats::rtf::{Align, Document, Format, Inline, Paragraph, Picture, Rgb, Script, TabKind};
 use cr_i18n::tr;
 use cr_store::Installation;
-use cr_store::books::{BOOK_KEY, Book, Heading, fold_char, outline};
+use cr_store::books::{Book, Heading, outline};
 use gtk::{gdk, gio, glib, pango};
-
-/// The zoom levels Ctrl+plus and Ctrl+minus step through.
-const ZOOM_STEPS: [f64; 13] = [
-    0.5, 0.67, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 4.0,
-];
-
-/// The widest the text gets at zoom 1, in pixels; book pages are about
-/// 6.5 inches of text.
-const TEXT_WIDTH: f64 = 760.0;
 
 /// The space left and right of the text, in pixels.
 const MARGIN: i32 = 24;
@@ -35,7 +26,7 @@ const MARGIN: i32 = 24;
 /// The detail-page group of a book in the Books section: a button that
 /// opens it.
 pub fn detail_group(key: &str) -> Option<adw::PreferencesGroup> {
-    let name = key.strip_prefix(BOOK_KEY)?;
+    let name = cr_app::library::book_name(key)?;
     let button = gtk::Button::builder()
         .label(tr("_Read Book"))
         .use_underline(true)
@@ -61,7 +52,7 @@ pub fn open(
     let book = install
         .book(name)
         .ok_or_else(|| tr!("{name} is not in this installation", name))?;
-    let key = format!("{}|{}", install.root().display(), book.info.short_name());
+    let key = cr_app::books::position_key(install, &book);
     let existing = OPEN.with_borrow(|open| open.get(&key).and_then(Weak::upgrade));
     let reader = match existing {
         Some(reader) => reader,
@@ -157,12 +148,11 @@ struct Reader {
     current_tag: gtk::TextTag,
     jump: gtk::TextMark,
     insets: RefCell<Vec<Inset>>,
-    /// Character offset of each paragraph in the buffer.
-    starts: RefCell<Vec<i32>>,
-    /// The buffer's text folded for searching, one char per buffer char.
-    folded: RefCell<Vec<char>>,
+    /// The buffer's text folded for searching, one char per buffer char,
+    /// and where each paragraph starts in the buffer.
+    folded: RefCell<Folded>,
     /// Offsets of the matches of the find text, and its length.
-    matches: RefCell<Vec<i32>>,
+    matches: RefCell<Vec<usize>>,
     needle_len: Cell<i32>,
     current: Cell<Option<usize>>,
     /// The next search goes to the second match.
@@ -378,10 +368,7 @@ impl Reader {
         narrow.add_setter(&sidebar_button, "active", Some(&false.to_value()));
         window.add_breakpoint(narrow);
 
-        let zoom = state::get("zoom")
-            .and_then(|z| z.parse::<f64>().ok())
-            .filter(|z| (ZOOM_STEPS[0]..=ZOOM_STEPS[ZOOM_STEPS.len() - 1]).contains(z))
-            .unwrap_or(1.0);
+        let zoom = state().zoom();
         let reader = Rc::new(Self {
             window,
             view,
@@ -403,7 +390,6 @@ impl Reader {
             current_tag,
             jump,
             insets: RefCell::default(),
-            starts: RefCell::default(),
             folded: RefCell::default(),
             matches: RefCell::default(),
             needle_len: Cell::new(0),
@@ -623,13 +609,13 @@ impl Reader {
     fn insert_paragraph(&self, end: &mut gtk::TextIter, p: &Paragraph) {
         let para = self.para_tag(p);
         let mut folded = self.folded.borrow_mut();
-        self.starts.borrow_mut().push(folded.len() as i32);
+        folded.start_paragraph();
         for item in &p.items {
             match item {
                 Inline::Text(text, format) => {
                     let run = self.run_tag(format);
                     self.buffer.insert_with_tags(end, text, &[&run, &para]);
-                    folded.extend(text.chars().map(fold_char));
+                    folded.text(text);
                 }
                 Inline::Picture(picture) => {
                     let Some(inset) = self.inset(picture, end) else {
@@ -638,13 +624,13 @@ impl Reader {
                     let mut start = *end;
                     start.backward_char();
                     self.buffer.apply_tag(&para, &start, end);
-                    folded.push('\u{fffc}');
+                    folded.picture();
                     self.insets.borrow_mut().push(inset);
                 }
             }
         }
         self.buffer.insert_with_tags(end, "\n", &[&para]);
-        folded.push('\n');
+        folded.end_paragraph();
     }
 
     fn inset(&self, picture: &Picture, end: &mut gtk::TextIter) -> Option<Inset> {
@@ -690,7 +676,7 @@ impl Reader {
         glib::idle_add_local_once(move || {
             let Some(reader) = weak.upgrade() else { return };
             reader.loaded.set(true);
-            let saved = state::get(&reader.key).and_then(|p| p.parse::<usize>().ok());
+            let saved = state().position(&reader.key);
             if reader.search_bar.is_search_mode() && !reader.search_entry.text().is_empty() {
                 reader.search();
             } else if let Some(paragraph) = saved {
@@ -844,13 +830,7 @@ impl Reader {
     }
 
     fn step_zoom(&self, direction: i32) {
-        let zoom = self.zoom.get();
-        let next = if direction > 0 {
-            ZOOM_STEPS.iter().copied().find(|z| *z > zoom + 0.001)
-        } else {
-            ZOOM_STEPS.iter().rev().copied().find(|z| *z < zoom - 0.001)
-        };
-        if let Some(next) = next {
+        if let Some(next) = cr_app::books::step_zoom(self.zoom.get(), direction) {
             self.set_zoom(next);
         }
     }
@@ -862,7 +842,7 @@ impl Reader {
         let paragraph = self.paragraph_at_top();
         self.zoom.set(zoom);
         self.restyle();
-        state::set("zoom", &zoom.to_string());
+        state().set_zoom(zoom);
         if let Some(paragraph) = paragraph {
             self.go_to_paragraph(paragraph);
             self.keep_at_jump();
@@ -893,10 +873,10 @@ impl Reader {
     }
 
     fn go_to_paragraph(&self, paragraph: usize) {
-        let Some(&offset) = self.starts.borrow().get(paragraph) else {
+        let Some(offset) = self.folded.borrow().start_of(paragraph) else {
             return;
         };
-        let iter = self.buffer.iter_at_offset(offset);
+        let iter = self.buffer.iter_at_offset(offset as i32);
         self.buffer.move_mark(&self.jump, &iter);
         self.view.scroll_to_mark(&self.jump, 0.0, true, 0.0, 0.0);
     }
@@ -910,34 +890,29 @@ impl Reader {
             .view
             .window_to_buffer_coords(gtk::TextWindowType::Widget, 0, 0);
         let (iter, _) = self.view.line_at_y(y.max(0));
-        let starts = self.starts.borrow();
         Some(
-            starts
-                .partition_point(|&s| s <= iter.offset())
-                .saturating_sub(1),
+            self.folded
+                .borrow()
+                .paragraph_of(iter.offset().max(0) as usize),
         )
     }
 
     fn position_changed(&self) {
         if let Some(paragraph) = self.paragraph_at_top() {
             self.select_heading(paragraph);
-            state::set(&self.key, &paragraph.to_string());
+            state().set_position(&self.key, paragraph);
         }
     }
 
     fn save_position(&self) {
         if let Some(paragraph) = self.paragraph_at_top() {
-            state::set(&self.key, &paragraph.to_string());
+            state().set_position(&self.key, paragraph);
         }
     }
 
     /// Selects the heading of the section a paragraph is in.
     fn select_heading(&self, paragraph: usize) {
-        let index = self
-            .headings
-            .borrow()
-            .partition_point(|h| h.paragraph <= paragraph);
-        match index.checked_sub(1) {
+        match cr_app::books::heading_at(&self.headings.borrow(), paragraph) {
             Some(i) => {
                 if self.outline_selection.selected() != i as u32 {
                     self.outline_selection.set_selected(i as u32);
@@ -967,67 +942,41 @@ impl Reader {
         if !self.loaded.get() {
             return;
         }
-        let needle: Vec<char> = self.search_entry.text().chars().map(fold_char).collect();
-        if needle.is_empty() {
+        let text = self.search_entry.text();
+        if text.is_empty() {
             return;
         }
-        let matches: Vec<i32> = {
-            let hay = self.folded.borrow();
-            let mut found = Vec::new();
-            let mut i = 0;
-            while i + needle.len() <= hay.len() {
-                if hay[i] == needle[0] && hay[i..i + needle.len()] == needle[..] {
-                    found.push(i as i32);
-                    i += needle.len();
-                } else {
-                    i += 1;
-                }
-            }
-            found
-        };
-        let len = needle.len() as i32;
+        let matches = self.folded.borrow().find(&text);
+        let len = text.chars().count() as i32;
         self.needle_len.set(len);
-        // Highlighting tens of thousands of matches would stall the view.
-        for &offset in matches.iter().take(5000) {
-            let start = self.buffer.iter_at_offset(offset);
-            let end = self.buffer.iter_at_offset(offset + len);
+        for &offset in matches.iter().take(MOST_HIGHLIGHTED) {
+            let start = self.buffer.iter_at_offset(offset as i32);
+            let end = self.buffer.iter_at_offset(offset as i32 + len);
             self.buffer.apply_tag(&self.match_tag, &start, &end);
         }
         let top = self
             .paragraph_at_top()
-            .and_then(|p| self.starts.borrow().get(p).copied())
+            .and_then(|p| self.folded.borrow().start_of(p))
             .unwrap_or(0);
-        let first = matches.partition_point(|&m| m < top);
-        let count = matches.len();
+        let first = cr_app::books::first_match(&matches, top, self.skip_first_match.take());
         *self.matches.borrow_mut() = matches;
-        if count == 0 {
-            self.match_label.set_label(tr("No Results"));
-            return;
+        match first {
+            Some(first) => self.show_match(first),
+            None => self.match_label.set_label(tr("No Results")),
         }
-        if self.skip_first_match.take() {
-            return self.show_match(1.min(count - 1));
-        }
-        self.show_match(if first < count { first } else { 0 });
     }
 
     fn step_match(&self, direction: i32) {
         let count = self.matches.borrow().len();
-        if count == 0 {
-            if !self.search_entry.text().is_empty() && self.matches.borrow().is_empty() {
-                self.search();
-            }
-            return;
+        match cr_app::books::step_match(self.current.get(), count, direction) {
+            Some(next) => self.show_match(next),
+            None if !self.search_entry.text().is_empty() => self.search(),
+            None => {}
         }
-        let next = match self.current.get() {
-            Some(i) if direction > 0 => (i + 1) % count,
-            Some(i) => (i + count - 1) % count,
-            None => 0,
-        };
-        self.show_match(next);
     }
 
     fn show_match(&self, index: usize) {
-        let Some(&offset) = self.matches.borrow().get(index) else {
+        let Some(offset) = self.matches.borrow().get(index).map(|&o| o as i32) else {
             return;
         };
         let (start, end) = self.buffer.bounds();
@@ -1129,51 +1078,7 @@ fn shown_color(Rgb(r, g, b): Rgb, dark: bool) -> Option<gdk::RGBA> {
     Some(gdk::RGBA::new(r, g, b, 1.0))
 }
 
-/// The reader's state file: one `key<TAB>value` line per book position,
-/// and the zoom, under the user's data folder (never in the
-/// installation).
-mod state {
-    use super::*;
-
-    fn path() -> PathBuf {
-        glib::user_data_dir().join("corerules").join("reader-state")
-    }
-
-    fn load(path: &Path) -> Vec<(String, String)> {
-        std::fs::read_to_string(path)
-            .unwrap_or_default()
-            .lines()
-            .filter_map(|line| {
-                let (key, value) = line.rsplit_once('\t')?;
-                Some((key.to_owned(), value.to_owned()))
-            })
-            .collect()
-    }
-
-    pub fn get(key: &str) -> Option<String> {
-        load(&path())
-            .into_iter()
-            .find(|(k, _)| k == key)
-            .map(|(_, v)| v)
-    }
-
-    /// Stores a value; failures are ignored (the state is a convenience).
-    pub fn set(key: &str, value: &str) {
-        if key.contains(['\n', '\t']) {
-            return;
-        }
-        let path = path();
-        let mut entries = load(&path);
-        match entries.iter_mut().find(|(k, _)| k == key) {
-            Some(entry) if entry.1 == value => return,
-            Some(entry) => entry.1 = value.to_owned(),
-            None => entries.push((key.to_owned(), value.to_owned())),
-        }
-        let text: String = entries.iter().map(|(k, v)| format!("{k}\t{v}\n")).collect();
-        let Some(dir) = path.parent() else { return };
-        let temp = path.with_extension("tmp");
-        let _ = std::fs::create_dir_all(dir)
-            .and_then(|()| std::fs::write(&temp, text))
-            .and_then(|()| std::fs::rename(&temp, &path));
-    }
+/// The reader's state file, under the user's data folder.
+fn state() -> State {
+    State::at(glib::user_data_dir().join("corerules").join("reader-state"))
 }
