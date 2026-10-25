@@ -51,11 +51,14 @@ content; you need your own copy of Core Rules.
 | Any distribution (glibc 2.43+) | `CoreRules-1.0.0-x86_64.AppImage` | `chmod +x CoreRules-1.0.0-x86_64.AppImage` and run it |
 
 The Flatpak needs the GNOME 51 runtime from Flathub, which `flatpak install`
-offers to fetch. The AppImage bundles the GTK, libadwaita and other
-libraries of GNOME 51 and runs on Fedora 44, Ubuntu 26.04 and newer. The
-pacman package needs an up-to-date system (`sudo pacman -Syu`), and
-`PKGBUILD` builds it from source with `makepkg -si`. `SHA256SUMS` lists the
-checksums of every file.
+offers to fetch. It also installs from the project's own Flatpak repository,
+which brings every new version through `flatpak update`, GNOME Software and
+Discover:
+`flatpak install --user https://brahm.github.io/corerules/io.github.brahm.CoreRules.flatpakref`.
+The AppImage bundles the GTK, libadwaita and other libraries of GNOME 51
+and runs on Fedora 44, Ubuntu 26.04 and newer. The pacman package needs an
+up-to-date system (`sudo pacman -Syu`), and `PKGBUILD` builds it from
+source with `makepkg -si`. `SHA256SUMS` lists the checksums of every file.
 
 The [Community Add-ons Collection](https://github.com/brahm/corerules/blob/main/addons/README.md),
 672 community add-ons in one self-installing AppImage, has its own

@@ -18,7 +18,9 @@ plus #80 and #81 for the items that needed a decision). It ships as a
 `.deb` (Ubuntu 26.04), an `.rpm` (Fedora 44), a pacman package (Arch Linux,
 CachyOS, Omarchy), a Flatpak and an AppImage (both on GNOME 51), and the
 Community Add-ons Collection as its own AppImage, version 1.0.0. The
-[website](https://brahm.github.io/corerules/) links every file.
+[website](https://brahm.github.io/corerules/) links every file and serves
+the project's own Flatpak repository, which gets each final release
+(decision P16).
 
 The next step is Windows and macOS (step 2). Publishing on Flathub was
 dropped from the plan (decision P15). No issue is open on GitHub.
@@ -51,6 +53,7 @@ taken out of scope.
 | Real-user fixes | 1.0.0-rc2: saving with the mounted CD opened | Done (PR #85) |
 | 1.0 | Release candidate confirmed stable by its users, 1.0.0 released with the new About window and the website | Done |
 | Flathub | Publication on Flathub | Dropped (P15) |
+| Flatpak repository | The project's own signed Flatpak repository on the website, updated after each release | Done (P16) |
 
 ### Releases
 
