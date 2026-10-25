@@ -10,6 +10,7 @@
 pub mod about;
 pub mod action;
 pub mod books;
+pub mod bundle;
 pub mod create;
 pub mod editor;
 pub mod help;
@@ -23,6 +24,7 @@ pub mod prompt;
 pub mod records;
 pub mod sheets;
 pub mod skills;
+pub mod treasure;
 
 /// The file name the original suggests when saving something called
 /// `title`: `Borin_Pedraforte.pdf`.

@@ -4,6 +4,7 @@
 //! functions of the modules below, from that state.
 
 mod book;
+mod bundle;
 mod create;
 mod edit;
 mod forms;
@@ -15,6 +16,7 @@ mod npc;
 mod portrait;
 mod settings;
 mod sheet;
+mod treasure;
 mod web;
 
 use std::cell::{Cell, RefCell};
@@ -29,16 +31,17 @@ use cr_app::help::{Files, Found, MonsterHelp, PROGRAM, Target};
 use cr_app::library::Filter;
 use cr_app::npc::{GroupForm, GroupInput, NpcForm, NpcInput};
 use cr_app::sheets::Export;
+use cr_app::treasure::{Roller, TreasureEffect, TreasureInput};
 use cr_formats::export::ExportFile;
 use cr_i18n::{tr, trc};
 use cr_store::Installation;
-use cr_store::catalog::{Entry, Section};
+use cr_store::catalog::{Entry, Section, TREASURE_KEY};
 use cr_store::export::{Content, ImportReport};
 use cr_store::help::{ItemHelp, topic};
 use cr_store::npc::{Npc, NpcRules};
 use cr_store::pictures::stored_portrait;
 use cr_store::sheet::Sheet;
-use cr_store::treasure::Rand;
+use cr_store::treasure::{Bundle, Rand, TreasureRules};
 use cr_store::userdb::parts::OTHER_TYPES;
 use cr_win::text::plain;
 use windows_reactor::*;
@@ -137,6 +140,8 @@ pub struct Shell {
     rand: Arc<Mutex<Rand>>,
     /// The NPC generator of the installation, read once.
     npc_rules: Option<Arc<NpcRules>>,
+    /// The treasure tables of the installation, read once.
+    treasure_rules: Option<Arc<TreasureRules>>,
 }
 
 /// What the window shows.
@@ -153,6 +158,7 @@ pub enum Page {
     Book(Box<BookPage>),
     Npc(Box<NpcForm>),
     NpcGroup(Box<GroupForm>),
+    Treasure(Box<Roller>),
 }
 
 /// A package opened for import, with what it would bring in.
@@ -207,6 +213,9 @@ pub enum Confirm {
     },
     /// Character Sheet Options with no section.
     EmptySheet,
+    DeleteTreasure {
+        name: String,
+    },
     /// What a record says, or a popup of the program help: only read.
     Info {
         title: String,
@@ -358,6 +367,19 @@ pub enum Message {
     /// Create on New NPC or New NPC Group.
     CreateNpcs,
     NpcsSaved(Result<NpcsSaved, String>),
+    // Roll Treasure.
+    TreasureLoaded(Result<Box<Roller>, String>),
+    Treasure(TreasureInput),
+    /// Use Treasure, on an encounter's treasure.
+    UseTreasure,
+    /// The treasure was saved under this name.
+    TreasureSaved(Result<String, String>),
+    /// The saved treasure with this name was deleted.
+    TreasureDeleted(Result<String, String>),
+    /// Edit on the details of a saved treasure.
+    EditEntry,
+    /// Copy on the details of a saved treasure.
+    CopyEntry,
 }
 
 /// What Create on New NPC or New NPC Group made and saved.
@@ -515,6 +537,31 @@ impl Shell {
             action::ENTER_CHARACTER => self.new_character(true, context),
             action::NEW_NPC => self.new_npc(false, context),
             action::NEW_NPC_GROUP => self.new_npc(true, context),
+            action::ROLL_TREASURE => self.open_treasure(None, false, context),
+            action::TREASURE_SAVE => {
+                if matches!(self.page, Page::Treasure(_)) {
+                    self.update(Message::Treasure(TreasureInput::Save), context);
+                }
+            }
+            action::TREASURE_PRINT => {
+                if let Page::Treasure(roller) = &self.page {
+                    let sheet = Arc::new(roller.sheet());
+                    self.print(Printable::Sheet(sheet), context);
+                }
+            }
+            action::TREASURE_PDF => {
+                if let Page::Treasure(roller) = &self.page {
+                    let (sheet, title) = (Arc::new(roller.sheet()), roller.title());
+                    self.save_pdf(Printable::Sheet(sheet), &title, context);
+                }
+            }
+            action::TREASURE_DELETE => {
+                if let Page::Treasure(roller) = &self.page
+                    && let Some(name) = roller.saved.clone()
+                {
+                    self.confirm = Some(Confirm::DeleteTreasure { name });
+                }
+            }
             action::IMPORT => {
                 let install = self.install.clone();
                 let expansion = install.as_ref().is_some_and(|i| !i.is_core20());
@@ -537,29 +584,9 @@ impl Shell {
                 }
             }
             action::SHEET_PDF => {
-                let Some(((printable, title), install)) =
-                    self.printable().zip(self.install.clone())
-                else {
-                    return;
-                };
-                let name = cr_app::file_name(&title, "pdf");
-                self.dialog(
-                    context,
-                    move |owner| {
-                        let filters = [(tr("PDF documents").to_owned(), "*.pdf".to_owned())];
-                        let title = plain(tr("Save as _PDF…"));
-                        let Some(path) =
-                            native::dialogs::save_file(owner, &title, &name, "pdf", &filters)
-                                .map_err(|e| e.message())?
-                        else {
-                            return Ok(None);
-                        };
-                        let sheet = printable.sheet(&install)?;
-                        write(&path, &cr_app::pdf::sheet(&sheet, native::paper()))?;
-                        Ok(Some(path))
-                    },
-                    Message::PdfSaved,
-                );
+                if let Some((printable, title)) = self.printable() {
+                    self.save_pdf(printable, &title, context);
+                }
             }
             action::SHEET_HTML => self.export(Export::Html, context),
             action::SHEET_TXT => self.export(Export::Text, context),
@@ -744,6 +771,72 @@ impl Shell {
         });
     }
 
+    /// Opens Roll Treasure, on the saved bundle `saved` if given; with
+    /// `copy`, on its items under no name, for Save to add a new bundle
+    /// (the original's Copy…, 0x53f028).
+    fn open_treasure(
+        &mut self,
+        saved: Option<String>,
+        copy: bool,
+        context: &ComponentContext<Self>,
+    ) {
+        let Some(install) = self.install.clone() else {
+            return;
+        };
+        if self.busy {
+            return;
+        }
+        self.busy = true;
+        let rules = self.treasure_rules.clone();
+        context.spawn_background(move |_| {
+            let rules = match rules {
+                Some(rules) => Ok(rules),
+                None => install.treasure_rules().map(Arc::new),
+            };
+            let roller = rules.and_then(|rules| {
+                let Some(name) = saved else {
+                    return Ok(Roller::new(rules, [0; 26], Bundle::default()));
+                };
+                let bundle = install
+                    .saved_treasures()?
+                    .into_iter()
+                    .find(|t| t.name == name)
+                    .map(|t| t.bundle)
+                    .unwrap_or_default();
+                Ok(if copy {
+                    Roller::new(rules, [0; 26], bundle)
+                } else {
+                    Roller::saved(rules, &name, bundle)
+                })
+            });
+            Message::TreasureLoaded(roller.map(Box::new).map_err(|e| e.to_string()))
+        });
+    }
+
+    /// Does what the treasure roller asks of the app.
+    fn treasure_effects(&mut self, context: &ComponentContext<Self>) {
+        let Page::Treasure(roller) = &mut self.page else {
+            return;
+        };
+        for effect in roller.take_effects() {
+            match effect {
+                TreasureEffect::Save { old, name, bundle } => {
+                    let Some(install) = self.install.clone() else {
+                        roller.saving = false;
+                        continue;
+                    };
+                    context.spawn_background(move |_| {
+                        let saved = match &old {
+                            Some(old) => install.replace_saved_treasure(old, &name, &bundle),
+                            None => install.save_treasure(&name, &bundle),
+                        };
+                        Message::TreasureSaved(saved.map(|()| name).map_err(|e| e.to_string()))
+                    });
+                }
+            }
+        }
+    }
+
     /// Does what the wizard asks of the app.
     fn wizard_effects(&mut self, context: &ComponentContext<Self>) {
         let Page::Create(wizard) = &mut self.page else {
@@ -882,6 +975,30 @@ impl Shell {
         }
     }
 
+    /// Saves a sheet as a PDF the user names, after `title`.
+    fn save_pdf(&mut self, printable: Printable, title: &str, context: &ComponentContext<Self>) {
+        let Some(install) = self.install.clone() else {
+            return;
+        };
+        let name = cr_app::file_name(title, "pdf");
+        self.dialog(
+            context,
+            move |owner| {
+                let filters = [(tr("PDF documents").to_owned(), "*.pdf".to_owned())];
+                let title = plain(tr("Save as _PDF…"));
+                let Some(path) = native::dialogs::save_file(owner, &title, &name, "pdf", &filters)
+                    .map_err(|e| e.message())?
+                else {
+                    return Ok(None);
+                };
+                let sheet = printable.sheet(&install)?;
+                write(&path, &cr_app::pdf::sheet(&sheet, native::paper()))?;
+                Ok(Some(path))
+            },
+            Message::PdfSaved,
+        );
+    }
+
     /// Prints a sheet through the Windows print dialog.
     fn print(&mut self, printable: Printable, context: &ComponentContext<Self>) {
         let Some(install) = self.install.clone() else {
@@ -910,6 +1027,7 @@ impl Shell {
             Page::Book(_) => topic::BOOKS,
             Page::Npc(_) => topic::NPC_CREATION,
             Page::NpcGroup(_) => topic::NPC_GROUP,
+            Page::Treasure(_) => topic::ROLL_TREASURE,
         }
     }
 
@@ -1131,6 +1249,7 @@ impl Component for Shell {
             reading: Rc::default(),
             rand: Arc::new(Mutex::new(Rand::from_clock())),
             npc_rules: None,
+            treasure_rules: None,
         };
         let sender = context.sender();
         let reading = shell.reading.clone();
@@ -1269,6 +1388,7 @@ impl Component for Shell {
                             self.help_files = None;
                             self.items = Arc::default();
                             self.npc_rules = None;
+                            self.treasure_rules = None;
                             self.history.clear();
                             self.page = Page::Library;
                             self.select(None);
@@ -1384,6 +1504,16 @@ impl Component for Shell {
                 },
                 (Some(Confirm::EmptySheet), ContentDialogResult::Primary) => {
                     self.save_options(context)
+                }
+                (Some(Confirm::DeleteTreasure { name }), ContentDialogResult::Primary) => {
+                    self.with_install(context, move |install| {
+                        Message::TreasureDeleted(
+                            install
+                                .delete_saved_treasure(&name)
+                                .map(|()| name)
+                                .map_err(|e| e.to_string()),
+                        )
+                    });
                 }
                 _ => {}
             },
@@ -1623,8 +1753,9 @@ impl Component for Shell {
                 match result {
                     Ok(report) => {
                         // Imported races and classes change what the NPC
-                        // generator offers.
+                        // generator offers, imported items the treasure.
                         self.npc_rules = None;
+                        self.treasure_rules = None;
                         self.history.clear();
                         self.page = Page::Library;
                         self.notice = Some(import::report(&report));
@@ -2017,6 +2148,66 @@ impl Component for Shell {
                     _ => self.show_error(tr("NPC Generator"), e),
                 }
             }
+            Message::TreasureLoaded(loaded) => {
+                self.busy = false;
+                match loaded {
+                    Ok(roller) => {
+                        self.treasure_rules = Some(roller.rules().clone());
+                        self.go(Page::Treasure(roller));
+                    }
+                    Err(e) => self.show_error(tr("Roll Treasure"), e),
+                }
+            }
+            Message::Treasure(input) => {
+                if let Page::Treasure(roller) = &mut self.page {
+                    let mut rand = self.rand.lock().unwrap_or_else(|e| e.into_inner());
+                    roller.input(input, &mut rand);
+                    drop(rand);
+                    self.treasure_effects(context);
+                }
+            }
+            Message::UseTreasure => {
+                if let Page::Treasure(roller) = &self.page
+                    && roller.pick
+                {
+                    self.back();
+                }
+            }
+            Message::TreasureSaved(Ok(name)) => {
+                if let Page::Treasure(roller) = &mut self.page
+                    && roller.saving
+                {
+                    roller.saved_as(name.clone());
+                }
+                self.notice = Some(Notice::success(tr("Treasure saved")));
+                self.load(Some(format!("{TREASURE_KEY}{name}")), context);
+            }
+            Message::TreasureSaved(Err(e)) => {
+                if let Page::Treasure(roller) = &mut self.page {
+                    roller.saving = false;
+                }
+                self.show_error(tr("Save Treasure"), e);
+            }
+            Message::TreasureDeleted(Ok(_)) => {
+                if matches!(self.page, Page::Treasure(_)) {
+                    self.back();
+                }
+                self.notice = Some(Notice::success(tr("Saved treasure deleted")));
+                self.load(None, context);
+            }
+            Message::TreasureDeleted(Err(e)) => {
+                self.show_error(&plain(tr("_Delete Saved Treasure")), e)
+            }
+            Message::EditEntry | Message::CopyEntry => {
+                let copy = matches!(message, Message::CopyEntry);
+                if let Some(name) = self
+                    .selected
+                    .as_deref()
+                    .and_then(|key| key.strip_prefix(TREASURE_KEY))
+                {
+                    self.open_treasure(Some(name.to_owned()), copy, context);
+                }
+            }
         }
     }
 
@@ -2058,6 +2249,7 @@ impl Component for Shell {
             Page::Book(page) => book::view(self, page, context),
             Page::Npc(form) => npc::view(form, self.busy, context),
             Page::NpcGroup(form) => npc::group_view(form, self.busy, context),
+            Page::Treasure(roller) => treasure::view(roller, self.busy, context),
         };
         // The keyboard hook takes the reader's keys only while a book
         // shows.
@@ -2222,6 +2414,11 @@ impl Shell {
                 tr("No Sections").to_owned(),
                 tr("No sections: the sheet will be empty").to_owned(),
                 plain(tr("_Save")),
+            ),
+            Some(Confirm::DeleteTreasure { name }) => (
+                tr("Delete Saved Treasure?").to_owned(),
+                tr!("“{name}” will be removed from Saved Treasure", name = name.clone()),
+                plain(tr("_Delete")),
             ),
             Some(Confirm::Info { title, text }) => (title.clone(), text.clone(), String::new()),
             None => (String::new(), String::new(), String::new()),

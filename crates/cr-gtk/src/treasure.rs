@@ -426,8 +426,7 @@ impl State {
             self.items.add(row);
         }
         *self.rows.borrow_mut() = rows;
-        for line in self.rules.summary(&bundle).lines() {
-            let (title, value) = line.rsplit_once(": ").unwrap_or((&line, ""));
+        for (title, value) in cr_app::treasure::summary(&self.rules, &bundle) {
             let row = adw::ActionRow::builder().title(title).build();
             row.add_suffix(
                 &gtk::Label::builder()

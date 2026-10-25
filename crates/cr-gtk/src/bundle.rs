@@ -7,10 +7,11 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
-use cr_i18n::{tr, trn};
+use cr_app::bundle::{Node, copy_targets, edit_spells_offered, move_targets};
+use cr_i18n::tr;
 use cr_store::help::topic;
 use cr_store::treasure::{
-    ADD_CATEGORIES, Bundle, Item, MoveError, SCROLL_SPELL_LIMIT, SpellCopy, TreasureRules, list_cmp,
+    Bundle, Item, MoveError, SCROLL_SPELL_LIMIT, SpellCopy, TreasureRules, list_cmp,
 };
 use gtk::{gio, glib};
 
@@ -79,12 +80,7 @@ fn item_row(edit: &Edit, item: &Item, path: &[usize]) -> gtk::Widget {
         let (edit, path) = (edit.clone(), path.to_vec());
         Box::new(move || move_dialog(&edit, &path))
     }));
-    // Edit Scrolls refuses anything else (0x5452aa), so it is offered
-    // only where it can work or explains why not.
-    if item.extra.is_some()
-        || item.name == "Spell Scroll, Wizard"
-        || item.name == "Spell Scroll, Priest"
-    {
+    if edit_spells_offered(item) {
         entries.push((tr("Edit _Spells…"), {
             let (edit, path) = (edit.clone(), path.to_vec());
             Box::new(move || edit_spells(&edit, &path))
@@ -100,13 +96,7 @@ fn item_row(edit: &Edit, item: &Item, path: &[usize]) -> gtk::Widget {
         row.add_suffix(&menu);
         return row.upcast();
     }
-    let pages = item.extra.as_ref().map(|e| e.unknown_0x4);
-    let subtitle = match pages {
-        Some([capacity, used, _]) if !spells.is_empty() || capacity > 0 => {
-            tr!("{used} of {capacity} pages used", used, capacity)
-        }
-        _ => String::new(),
-    };
+    let subtitle = cr_app::bundle::pages_text(item);
     let row = adw::ExpanderRow::builder()
         .title(title)
         .subtitle(subtitle)
@@ -115,7 +105,7 @@ fn item_row(edit: &Edit, item: &Item, path: &[usize]) -> gtk::Widget {
     for (i, spell) in spells.iter().enumerate() {
         let spell_row = adw::ActionRow::builder()
             .title(glib::markup_escape_text(&spell.name).as_str())
-            .subtitle(trn!("{n} page", "{n} pages", spell.pages))
+            .subtitle(cr_app::bundle::spell_pages_text(spell.pages))
             .build();
         spell_row.add_prefix(&gtk::Image::from_icon_name(
             "accessories-text-editor-symbolic",
@@ -232,8 +222,7 @@ pub(crate) fn how_many(
 /// asks how many.
 fn add_dialog(edit: &Edit) {
     // The categories in English, for the lookups, shown translated.
-    let mut categories: Vec<&str> = ADD_CATEGORIES.iter().map(|c| c.0).collect();
-    categories.sort_by(|a, b| list_cmp(tr(a), tr(b)));
+    let categories = cr_app::bundle::categories();
     let shown: Vec<&str> = categories.iter().map(|c| tr(c)).collect();
     let category = gtk::DropDown::builder()
         .model(&gtk::StringList::new(&shown))
@@ -243,8 +232,7 @@ fn add_dialog(edit: &Edit) {
     let fill = {
         let (model, edit, categories) = (model.clone(), edit.clone(), categories.clone());
         move |i: u32| {
-            let mut names = edit.rules.category_parts(categories[i as usize]);
-            names.sort_by(|a, b| list_cmp(a, b));
+            let names = cr_app::bundle::parts(&edit.rules, categories[i as usize]);
             let n = model.n_items();
             model.splice(0, n, &names.iter().map(String::as_str).collect::<Vec<_>>());
         }
@@ -334,7 +322,9 @@ fn add_dialog(edit: &Edit) {
                 return;
             };
             let name = text.string().to_string();
-            let money = categories.get(category.selected() as usize) == Some(&"Money");
+            let money = categories
+                .get(category.selected() as usize)
+                .is_some_and(|c| cr_app::bundle::is_money(c));
             dialog.close();
             if money {
                 let edit2 = edit.clone();
@@ -383,46 +373,22 @@ fn remove(edit: &Edit, path: &[usize]) {
     }
 }
 
-/// Every node a drop could go to: the top, then each item, indented.
-fn destinations(bundle: &Bundle) -> Vec<(Vec<usize>, String)> {
-    fn walk(
-        bundle: &Bundle,
-        path: &mut Vec<usize>,
-        depth: usize,
-        out: &mut Vec<(Vec<usize>, String)>,
-    ) {
-        for (i, item) in bundle.items.iter().enumerate() {
-            path.push(i);
-            out.push((
-                path.clone(),
-                format!("{}{}", "    ".repeat(depth), item.label()),
-            ));
-            if let Some(contents) = &item.contents {
-                walk(contents, path, depth + 1, out);
-            }
-            path.pop();
-        }
-    }
-    let mut out = vec![(Vec::new(), tr("Treasure").to_string())];
-    walk(bundle, &mut Vec::new(), 1, &mut out);
-    out
-}
-
 /// A list of nodes to choose one from.
 fn choose_node(
     parent: &impl IsA<gtk::Widget>,
     title: &str,
-    nodes: Vec<(Vec<usize>, String)>,
+    nodes: Vec<Node>,
     chosen: impl Fn(Vec<usize>) + 'static,
 ) {
     let list = gtk::ListBox::builder()
         .css_classes(["boxed-list"])
         .selection_mode(gtk::SelectionMode::None)
         .build();
-    for (_, label) in &nodes {
+    for node in &nodes {
+        let label = format!("{}{}", "    ".repeat(node.depth), node.label);
         list.append(
             &adw::ActionRow::builder()
-                .title(glib::markup_escape_text(label).as_str())
+                .title(glib::markup_escape_text(&label).as_str())
                 .activatable(true)
                 .build(),
         );
@@ -455,7 +421,7 @@ fn choose_node(
     list.connect_row_activated({
         let dialog = dialog.clone();
         move |_, row| {
-            let path = nodes[row.index() as usize].0.clone();
+            let path = nodes[row.index() as usize].path.clone();
             dialog.close();
             chosen(path);
         }
@@ -467,10 +433,7 @@ fn choose_node(
 fn move_dialog(edit: &Edit, from: &[usize]) {
     let bundle = edit.bundle();
     let from = from.to_vec();
-    let nodes: Vec<_> = destinations(&bundle)
-        .into_iter()
-        .filter(|(p, _)| *p != from && *p != from[..from.len() - 1])
-        .collect();
+    let nodes = move_targets(&bundle, &from);
     let edit2 = edit.clone();
     choose_node(&edit.parent, tr("Move Into"), nodes, move |to| {
         let mut bundle = edit2.bundle();
@@ -502,10 +465,7 @@ fn move_dialog(edit: &Edit, from: &[usize]) {
 fn copy_spell_dialog(edit: &Edit, from: &[usize], index: usize) {
     let bundle = edit.bundle();
     let from = from.to_vec();
-    let nodes: Vec<_> = destinations(&bundle)
-        .into_iter()
-        .filter(|(p, _)| !p.is_empty() && *p != from)
-        .collect();
+    let nodes = copy_targets(&bundle, &from);
     let edit2 = edit.clone();
     choose_node(&edit.parent, tr("Copy Spell To"), nodes, move |to| {
         copy_spell(&edit2, from.clone(), index, to, false, false)

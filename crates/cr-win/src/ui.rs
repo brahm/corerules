@@ -18,6 +18,12 @@ pub fn set_room(width: f64) {
     ROOM.set(width);
 }
 
+/// The width beside the navigation pane, as the window last had it;
+/// infinite while it has not said.
+pub fn room() -> f64 {
+    ROOM.get()
+}
+
 /// The padding each side of a page's content.
 const PAGE_SIDE: f64 = 36.0;
 

@@ -10,7 +10,7 @@ use cr_app::action;
 use cr_app::library::{self, Commands};
 use cr_app::records;
 use cr_i18n::tr;
-use cr_store::catalog::{Entry, Frames, Section};
+use cr_store::catalog::{Entry, Frames, Section, TREASURE_KEY};
 use cr_store::userdb::Filter as Origins;
 use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES};
 use cr_win::text::plain;
@@ -183,6 +183,11 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
     let tools: Vec<KeyedView> = [
         (action::NEW_NPC, tr("New N_PC…"), Symbol::AddFriend),
         (action::NEW_NPC_GROUP, tr("New NPC _Group…"), Symbol::People),
+        (
+            action::ROLL_TREASURE,
+            tr("_Roll Treasure…"),
+            Symbol::Shuffle,
+        ),
     ]
     .into_iter()
     .filter(|(action, ..)| available(*action))
@@ -470,6 +475,14 @@ fn details(shell: &Shell, entry: &Entry, context: &mut ViewContext<Shell>) -> Vi
             !busy,
             Message::EditCharacter,
         );
+    }
+    // A saved treasure opens in Roll Treasure, to change or (Copy) to
+    // save as another.
+    if commands.edit && entry.key.starts_with(TREASURE_KEY) {
+        add("edit", tr("Edit"), Symbol::Edit, !busy, Message::EditEntry);
+    }
+    if commands.copy && entry.key.starts_with(TREASURE_KEY) {
+        add("copy", tr("Copy"), Symbol::Copy, !busy, Message::CopyEntry);
     }
     if commands.view && !commands.monster {
         add(
