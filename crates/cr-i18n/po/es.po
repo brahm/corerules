@@ -1061,7 +1061,7 @@ msgstr "{cost}, 1 menos en el arma predilecta"
 
 #: crates/cr-app/src/create/proficiencies.rs:1280
 #: crates/cr-gtk/src/create.rs:3731
-#: crates/cr-store/src/create.rs:2972
+#: crates/cr-store/src/create.rs:2971
 msgid "This character does not have any Class Abilities allowing specialization at 1st level."
 msgstr "Este personaje no tiene ninguna habilidad de clase que permita especializarse en el 1.er nivel."
 
@@ -6584,7 +6584,7 @@ msgid "Mastery in {weapon} needs a specialization in it"
 msgstr "La maestría con {weapon} necesita especialización en esa arma"
 
 #: crates/cr-store/src/combat.rs:1034
-#: crates/cr-store/src/create.rs:2826
+#: crates/cr-store/src/create.rs:2825
 msgid "A character may know at most {count} fighting styles"
 msgstr "Un personaje puede conocer como máximo {count} estilos de lucha"
 
@@ -7027,150 +7027,150 @@ msgstr "Leer idiomas"
 msgid "{race} needs {ability} {low} to {high}"
 msgstr "{race} requiere {ability} de {low} a {high}"
 
-#: crates/cr-store/src/create.rs:2627
+#: crates/cr-store/src/create.rs:2626
 #: crates/cr-store/src/edit.rs:92
 msgid "A character needs a name"
 msgstr "Un personaje necesita un nombre"
 
-#: crates/cr-store/src/create.rs:2630
+#: crates/cr-store/src/create.rs:2629
 msgid "Choose a race"
 msgstr "Elija una raza"
 
-#: crates/cr-store/src/create.rs:2647
+#: crates/cr-store/src/create.rs:2646
 msgid "The {kit} kit is not for this character"
 msgstr "El kit {kit} no es para este personaje"
 
-#: crates/cr-store/src/create.rs:2661
+#: crates/cr-store/src/create.rs:2660
 msgid "{name} is not for sale"
 msgstr "{name} no está a la venta"
 
-#: crates/cr-store/src/create.rs:2664
+#: crates/cr-store/src/create.rs:2663
 msgid "The equipment costs more than the {gold} gold pieces there are"
 msgstr "El equipo cuesta más que las {gold} piezas de oro disponibles"
 
-#: crates/cr-store/src/create.rs:2682
+#: crates/cr-store/src/create.rs:2681
 msgid "{race} is not a race of {setting}"
 msgstr "{race} no es una raza de {setting}"
 
-#: crates/cr-store/src/create.rs:2695
+#: crates/cr-store/src/create.rs:2694
 msgid "A {race} cannot be a {class} here"
 msgstr "Un personaje de raza {race} no puede ser {class} aquí"
 
-#: crates/cr-store/src/create.rs:2702
+#: crates/cr-store/src/create.rs:2701
 msgid "A {class} cannot be {alignment}"
 msgstr "Un personaje {class} no puede ser de alineamiento {alignment}"
 
-#: crates/cr-store/src/create.rs:2735
+#: crates/cr-store/src/create.rs:2734
 msgid "{count} languages are learned; the proficiencies teach {slots}"
 msgstr "Se aprenden {count} idiomas; las pericias enseñan {slots}"
 
-#: crates/cr-store/src/create.rs:2744
+#: crates/cr-store/src/create.rs:2743
 msgid "{language} is not a language"
 msgstr "{language} no es un idioma"
 
-#: crates/cr-store/src/create.rs:2747
+#: crates/cr-store/src/create.rs:2746
 msgid "{language} is known already"
 msgstr "{language} ya se conoce"
 
-#: crates/cr-store/src/create.rs:2762
+#: crates/cr-store/src/create.rs:2761
 msgid "The character has no {skill} skill"
 msgstr "El personaje no tiene la habilidad {skill}"
 
-#: crates/cr-store/src/create.rs:2768
+#: crates/cr-store/src/create.rs:2767
 msgid "{skill} may get at most {most} points"
 msgstr "{skill} puede recibir como máximo {most} puntos"
 
-#: crates/cr-store/src/create.rs:2777
+#: crates/cr-store/src/create.rs:2776
 msgid "The rogue skills get {count} points too many"
 msgstr "Las habilidades de bribón tienen {count} puntos de más"
 
-#: crates/cr-store/src/create.rs:2793
+#: crates/cr-store/src/create.rs:2792
 msgid "{weapon} needs its weapon proficiency"
 msgstr "{weapon} requiere su pericia con armas"
 
-#: crates/cr-store/src/create.rs:2799
-#: crates/cr-store/src/create.rs:2870
+#: crates/cr-store/src/create.rs:2798
+#: crates/cr-store/src/create.rs:2869
 msgid "There are no classes for this character which allow unarmed combat."
 msgstr "Ninguna clase de este personaje permite el combate sin armas."
 
-#: crates/cr-store/src/create.rs:2806
-#: crates/cr-store/src/create.rs:2876
+#: crates/cr-store/src/create.rs:2805
+#: crates/cr-store/src/create.rs:2875
 msgid "Unarmed combat and weapon specialization do not go together"
 msgstr "El combate sin armas y la especialización en arma no son compatibles"
 
-#: crates/cr-store/src/create.rs:2814
+#: crates/cr-store/src/create.rs:2813
 msgid "{u} is not an unarmed style"
 msgstr "{u} no es un estilo sin armas"
 
-#: crates/cr-store/src/create.rs:2823
+#: crates/cr-store/src/create.rs:2822
 msgid "{a} is not armor"
 msgstr "{a} no es una armadura"
 
-#: crates/cr-store/src/create.rs:2834
+#: crates/cr-store/src/create.rs:2833
 msgid "A {class} cannot learn {style}"
 msgstr "Un {class} no puede aprender {style}"
 
-#: crates/cr-store/src/create.rs:2841
+#: crates/cr-store/src/create.rs:2840
 msgid "{style} is taken twice"
 msgstr "{style} está elegido dos veces"
 
-#: crates/cr-store/src/create.rs:2852
+#: crates/cr-store/src/create.rs:2851
 msgid "The nonweapon proficiencies take {spent} slots; there are {slots}"
 msgstr "Las pericias sin armas ocupan {spent} casillas; hay {slots}"
 
-#: crates/cr-store/src/create.rs:2861
+#: crates/cr-store/src/create.rs:2860
 msgid "The weapon proficiencies take {spent} slots; there are {slots}"
 msgstr "Las pericias con armas ocupan {spent} espacios; hay {slots}"
 
-#: crates/cr-store/src/create.rs:2886
+#: crates/cr-store/src/create.rs:2885
 msgid "Player's Option characters need the Expansion"
 msgstr "Los personajes de Player's Option necesitan Expansion"
 
-#: crates/cr-store/src/create.rs:2893
+#: crates/cr-store/src/create.rs:2892
 msgid "A subability may be at most {most} from its score, not {spread}"
 msgstr "Una subcaracterística puede alejarse como máximo {most} de su puntuación, no {spread}"
 
-#: crates/cr-store/src/create.rs:2905
+#: crates/cr-store/src/create.rs:2904
 msgid "{ability} is not a racial ability of the {race}"
 msgstr "{ability} no es una habilidad racial de {race}"
 
-#: crates/cr-store/src/create.rs:2913
+#: crates/cr-store/src/create.rs:2912
 msgid "The racial abilities cost {count} points more than the race has"
 msgstr "Las habilidades raciales cuestan {count} puntos más de los que tiene la raza"
 
-#: crates/cr-store/src/create.rs:2927
+#: crates/cr-store/src/create.rs:2926
 msgid "{ability} is not a {class} ability"
 msgstr "{ability} no es una habilidad de {class}"
 
-#: crates/cr-store/src/create.rs:2935
+#: crates/cr-store/src/create.rs:2934
 msgid "The {class} abilities cost {count} points more than the class has"
 msgstr "Las habilidades de {class} cuestan {count} puntos más de los que tiene la clase"
 
-#: crates/cr-store/src/create.rs:2943
+#: crates/cr-store/src/create.rs:2942
 msgid "A character may have at most {count} disadvantages"
 msgstr "Un personaje puede tener como máximo {count} desventajas"
 
-#: crates/cr-store/src/create.rs:2953
+#: crates/cr-store/src/create.rs:2952
 msgid "{name} is not a trait"
 msgstr "{name} no es un rasgo"
 
-#: crates/cr-store/src/create.rs:2960
+#: crates/cr-store/src/create.rs:2959
 msgid "{name} is not a disadvantage"
 msgstr "{name} no es una desventaja"
 
-#: crates/cr-store/src/create.rs:2964
+#: crates/cr-store/src/create.rs:2963
 msgid "The nonweapon proficiencies and traits cost {count} points more than there are"
 msgstr "Las pericias sin armas y los rasgos cuestan {count} puntos más de los disponibles"
 
-#: crates/cr-store/src/create.rs:2982
+#: crates/cr-store/src/create.rs:2981
 msgid "Specializing in {weapon} needs its proficiency"
 msgstr "Especializarse en {weapon} requiere su pericia"
 
-#: crates/cr-store/src/create.rs:2993
+#: crates/cr-store/src/create.rs:2992
 msgid "Specializing in more than one weapon needs {ability}"
 msgstr "Especializarse en más de un arma requiere {ability}"
 
-#: crates/cr-store/src/create.rs:3004
+#: crates/cr-store/src/create.rs:3003
 msgid "The weapon proficiencies and combat options cost {count} points more than there are"
 msgstr "Las pericias con armas y las opciones de combate cuestan {count} puntos más de los disponibles"
 
