@@ -79,6 +79,10 @@ pub fn show(paragraph: usize, offset: usize, len: usize) -> String {
     format!("show({paragraph},{offset},{len})")
 }
 
+/// The width of the text's column at most, in pixels: `main`'s, less its
+/// padding.
+const COLUMN: i32 = 760 - 2 * 24;
+
 const STYLE: &str = "\
 :root{color-scheme:light dark}\
 html{background:#fff;color:#1a1a1a}\
@@ -86,7 +90,9 @@ body{margin:0}\
 main{box-sizing:border-box;max-width:760px;margin:0 auto;padding:24px 24px 48px;\
 font:12pt 'Times New Roman',serif}\
 main>div{white-space:pre-wrap;overflow-wrap:break-word;tab-size:48px}\
-.t{display:inline-block;white-space:pre;text-indent:0;tab-size:0}\
+.s{display:flex;align-items:baseline}\
+.t{display:inline-block;flex:none;white-space:pre;text-indent:0;tab-size:0}\
+.r{flex:1 1 0;min-width:0;text-indent:0}\
 img{max-width:100%;height:auto;vertical-align:middle}\
 ::highlight(m){background-color:rgba(246,211,45,.45)}\
 ::highlight(c){background-color:rgba(255,120,0,.8)}\
@@ -95,7 +101,7 @@ img{max-width:100%;height:auto;vertical-align:middle}\
 const SCRIPT: &str = "\
 const W=window.chrome.webview,P=document.querySelectorAll('main>div');let timer=0;\
 function topmost(){let lo=0,hi=P.length-1;if(hi<0)return 0;while(lo<hi){const m=(lo+hi)>>1;\
-if(P[m].getBoundingClientRect().bottom<=0)lo=m+1;else hi=m}return lo}\
+if(P[m].getBoundingClientRect().bottom<=2)lo=m+1;else hi=m}return lo}\
 function go(i){const p=P[Math.min(i,P.length-1)];if(p)p.scrollIntoView({block:'start'})}\
 function start(z,i){document.documentElement.style.zoom=z;go(i)}\
 function zoomTo(z){const i=topmost();document.documentElement.style.zoom=z;go(i)}\
@@ -167,18 +173,19 @@ impl Out {
 
     fn paragraph(&mut self, index: usize, p: &Paragraph, html: &mut String) {
         let layout = self.layout(p);
-        let _ = write!(html, "<div id=\"p{index}\" class=\"a{layout}\">");
         let empty = p.items.iter().all(|item| match item {
             Inline::Text(text, _) => text.is_empty(),
             Inline::Picture(_) => false,
         });
         if empty {
-            html.push_str("<br></div>");
+            let _ = write!(html, "<div id=\"p{index}\" class=\"a{layout}\"><br></div>");
             return;
         }
         // With tab stops of its own, the text before each tab is a
         // stretch that runs to the stop; the tab itself stays in it, as
-        // nothing, for Find.
+        // nothing, for Find. The stretches make a row that does not wrap,
+        // as a table's columns, and the text after the last tab wraps in
+        // the rest of it.
         let mut tabs: usize = p
             .items
             .iter()
@@ -187,9 +194,16 @@ impl Out {
                 Inline::Picture(_) => 0,
             })
             .sum();
-        let mut stops = (tabs > 0 && !p.tabs.is_empty()).then(|| Stops::of(p));
+        let mut stops = (tabs > 0 && !p.tabs.is_empty())
+            .then(|| Stops::of(p))
+            .filter(|stops| fits(p, stops.clone()));
         if let Some(stops) = &mut stops {
-            stretch(stops, html);
+            let _ = write!(html, "<div id=\"p{index}\" class=\"a{layout} s\">");
+            // A row has no first line to indent: its first stretch is.
+            let indent = px(stops.at);
+            stretch(stops, html, indent);
+        } else {
+            let _ = write!(html, "<div id=\"p{index}\" class=\"a{layout}\">");
         }
         for item in &p.items {
             match item {
@@ -202,7 +216,9 @@ impl Out {
                             if let Some(stops) = &mut stops {
                                 html.push_str("</span>");
                                 if tabs > 0 {
-                                    stretch(stops, html);
+                                    stretch(stops, html, 0);
+                                } else {
+                                    html.push_str("<span class=\"r\">");
                                 }
                             }
                         }
@@ -214,6 +230,9 @@ impl Out {
                 }
                 Inline::Picture(picture) => self::picture(picture, html),
             }
+        }
+        if stops.is_some() {
+            html.push_str("</span>");
         }
         html.push_str("</div>");
     }
@@ -290,17 +309,51 @@ impl Out {
     }
 }
 
-/// Opens the stretch up to the next tab stop.
-fn stretch(stops: &mut Stops, html: &mut String) {
+/// Opens the stretch up to the next tab stop, `margin` pixels from the
+/// one before.
+fn stretch(stops: &mut Stops, html: &mut String, margin: i32) {
     let _ = write!(
         html,
-        "<span class=\"t\" style=\"min-width:{}px\">",
+        "<span class=\"t\" style=\"min-width:{}px",
         stops.next_width()
     );
+    if margin != 0 {
+        let _ = write!(html, ";margin-left:{margin}px");
+    }
+    html.push_str("\">");
+}
+
+/// Whether the paragraph's stretches stay in the text's column and the
+/// text before each of its tabs fits, about, in its stretch. A paragraph
+/// with a tab after a long text, as some books have to start a new line,
+/// or with more tabs than the line has room for, flows as text instead
+/// of a row.
+fn fits(p: &Paragraph, mut stops: Stops) -> bool {
+    let left = p.left_indent.max(0);
+    // Half an em a character, in pixels.
+    let mut width = 0.0;
+    for item in &p.items {
+        let Inline::Text(text, format) = item else {
+            continue;
+        };
+        let em = f64::from(format.size) / 2.0 * 96.0 / 72.0;
+        for (n, piece) in text.split('\t').enumerate() {
+            if n > 0 {
+                if width > 2.0 * f64::from(stops.next_width()) + em || px(left + stops.at) > COLUMN
+                {
+                    return false;
+                }
+                width = 0.0;
+            }
+            width += piece.chars().count() as f64 * em / 2.0;
+        }
+    }
+    true
 }
 
 /// A paragraph's tab stops, in twips from its left indent, and where its
 /// text has got to on the first line.
+#[derive(Clone)]
 struct Stops {
     at: i32,
     stops: Vec<i32>,
@@ -485,22 +538,44 @@ mod tests {
         let html = page(&d);
         assert_eq!(html.matches("class=\"t\"").count(), 2, "{html}");
         assert!(html.contains("min-width:100px\"><span"), "{html}");
-        // The text after the last tab is not in a stretch.
+        // The stretches make a row; the text after the last tab is not in
+        // a stretch, and wraps in the rest of the row.
+        assert!(html.contains("class=\"a0 s\""), "{html}");
         assert!(
-            html.contains("</span>\t</span><span class=\"f0\">A long"),
+            html.contains("</span>\t</span><span class=\"r\"><span class=\"f0\">A long"),
             "{html}"
         );
+        assert!(html.contains("wraps</span></span></div>"), "{html}");
         // Without stops of its own, a tab is the default half inch.
         let plain = page(&doc(r"Name\tab Level\par"));
         assert!(!plain.contains("class=\"t\""));
     }
 
     #[test]
+    fn a_long_text_before_a_tab_flows() {
+        let d = doc(concat!(
+            r"\tx240 A first paragraph that runs on far past its tab stop, as one",
+            r" that only tabs to start the next does.\tab The next.\par"
+        ));
+        let html = page(&d);
+        assert!(!html.contains("class=\"t\""), "{html}");
+        assert!(!html.contains(" s\""), "{html}");
+        // Tabs past the column's edge.
+        let tabs = r"\tab".repeat(20);
+        let html = page(&doc(&format!(r"\tx2430\tx3600 {tabs} TOTAL\par")));
+        assert!(!html.contains(" s\""), "{html}");
+    }
+
+    #[test]
     fn a_hanging_indent_has_a_stop_at_the_left_indent() {
         let d = doc(r"\li720\fi-360\tx2000 \bullet\tab Text\par");
         let html = page(&d);
-        // From -360 to the indent's own stop at 0: 24 pixels.
-        assert!(html.contains("min-width:24px"), "{html}");
+        // From -360 to the indent's own stop at 0: 24 pixels, from 24
+        // pixels left of the indent.
+        assert!(
+            html.contains("min-width:24px;margin-left:-24px\">"),
+            "{html}"
+        );
         assert!(html.contains("text-indent:-24px"), "{html}");
     }
 

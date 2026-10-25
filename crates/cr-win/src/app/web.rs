@@ -14,6 +14,16 @@ use crate::native::webview::Web;
 /// before it says the page could not be shown.
 const TRIES: u32 = 20;
 
+/// The WinRT projection WinUI's WebView2 control loads when it starts,
+/// which the build puts next to the app. Without it the control starts
+/// nothing and says nothing.
+pub const CORE: &str = "Microsoft.Web.WebView2.Core.dll";
+
+/// How long a page waits for its CoreWebView2 before it says the page
+/// could not be shown: Reactor does not answer when WebView2 fails to
+/// start.
+pub const WAIT: std::time::Duration = std::time::Duration::from_secs(20);
+
 #[derive(Clone, Default)]
 pub struct WebHost {
     pub control: ElementRef<WebView2>,
@@ -56,6 +66,10 @@ impl WebHost {
                 });
             }
         };
+        if !core_present() {
+            sender.send(Message::WebFailed(format!("{CORE}: not found")));
+            return;
+        }
         let slot = self.web.clone();
         let found = self.misses.clone();
         let completion = {
@@ -89,4 +103,12 @@ impl WebHost {
             missed();
         }
     }
+}
+
+/// Whether WebView2's WinRT projection is next to the app.
+fn core_present() -> bool {
+    std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|dir| dir.join(CORE)))
+        .is_some_and(|path| path.is_file())
 }

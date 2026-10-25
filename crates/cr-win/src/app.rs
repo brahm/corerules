@@ -68,6 +68,10 @@ pub fn available(action: Action) -> bool {
 const SETTINGS: &str = "Settings";
 const HELP: &str = "Help";
 
+/// The width of the navigation, open; closed, only its icons show.
+const PANE: f64 = 240.0;
+const PANE_CLOSED: f64 = 48.0;
+
 pub struct Shell {
     install: Option<Arc<Installation>>,
     /// Whether the installation takes changes: an Expansion installation
@@ -95,6 +99,8 @@ pub struct Shell {
     notice: Option<Notice>,
     confirm: Option<Confirm>,
     pane_open: bool,
+    /// The window's width, once Reactor has said it; 0 before.
+    width: f64,
     /// A dialog or a print job is under way.
     busy: bool,
     /// The installation's help files and its records' help, read once.
@@ -220,6 +226,7 @@ pub enum Message {
     Back,
     TogglePane,
     PaneOpenChanged(bool),
+    WindowSized(WindowSize),
     Search(String),
     Origins(Option<usize>),
     Party(Option<usize>),
@@ -290,6 +297,8 @@ pub enum Message {
     /// What the book's page posted.
     BookPosted(String),
     BookHeading(Option<usize>),
+    /// The contents laid over the text were closed.
+    BookContentsClosed,
     BookFind(String),
     /// The match after (1) or before (-1) the one shown.
     BookMatch(i32),
@@ -299,6 +308,8 @@ pub enum Message {
     WebRetry,
     /// Its CoreWebView2 could not be made, for this reason.
     WebFailed(String),
+    /// Time to see whether it started.
+    WebWatch,
 }
 
 /// What a record's help shows.
@@ -527,8 +538,14 @@ impl Shell {
             action::BOOK_ZOOM_OUT => self.book_zoom(-1),
             action::BOOK_ZOOM_RESET => self.book_zoom(0),
             action::BOOK_CONTENTS => {
+                let narrow = book::narrow(self);
                 if let Page::Book(page) = &mut self.page {
-                    page.contents = !page.contents;
+                    // Over the text in a narrow window, beside it otherwise.
+                    if narrow {
+                        page.overlay = !page.overlay;
+                    } else {
+                        page.contents = !page.contents;
+                    }
                 }
             }
             action::BOOK_CLOSE => {
@@ -562,6 +579,15 @@ impl Shell {
         context.spawn_background(move |_| {
             let opened = book::open(&install, &name).map(Arc::new);
             Message::BookOpened(name, opened)
+        });
+    }
+
+    /// Sees, once WebView2 has had time to start, whether the page's
+    /// did.
+    fn watch_web(context: &ComponentContext<Self>) {
+        context.spawn_background(|_| {
+            std::thread::sleep(web::WAIT);
+            Message::WebWatch
         });
     }
 
@@ -815,6 +841,7 @@ impl Component for Shell {
             notice: None,
             confirm: None,
             pane_open: true,
+            width: 0.0,
             busy: false,
             help_files: None,
             items: Arc::default(),
@@ -896,6 +923,7 @@ impl Component for Shell {
             }
             Message::TogglePane => self.pane_open = !self.pane_open,
             Message::PaneOpenChanged(open) => self.pane_open = open,
+            Message::WindowSized(size) => self.width = size.width,
             Message::Search(text) => self.filter.search = text,
             Message::Origins(Some(index)) => {
                 self.filter.origins = cr_store::userdb::Filter::of(index as u32)
@@ -1287,6 +1315,9 @@ impl Component for Shell {
                 };
                 page.shown = Some(Arc::from(shown));
                 page.generation += 1;
+                if self.help_view.web().is_none() {
+                    Self::watch_web(context);
+                }
                 page.printing = std::mem::take(&mut page.print);
                 page.row = shown_row;
                 page.popup = None;
@@ -1443,11 +1474,28 @@ impl Component for Shell {
                     return;
                 }
                 match opened {
-                    Ok(book) => page.opened(book),
+                    Ok(book) => {
+                        page.opened(book);
+                        Self::watch_web(context);
+                    }
                     Err(e) => page.error = Some(e),
                 }
             }
             Message::WebRetry => self.web_tries += 1,
+            // The page's WebView2 should have started by now.
+            Message::WebWatch => {
+                let waiting = match &self.page {
+                    Page::Book(page) => page.book.is_some() && self.book_view.host.web().is_none(),
+                    Page::Help(page) => page.shown.is_some() && self.help_view.web().is_none(),
+                    _ => false,
+                };
+                if waiting && self.notice.is_none() {
+                    self.show_error(
+                        tr("The Page Could Not Be Shown"),
+                        tr!("WebView2 did not start ({reason}).", reason = "no answer"),
+                    );
+                }
+            }
             Message::WebFailed(reason) => self.show_error(
                 tr("The Page Could Not Be Shown"),
                 tr!("WebView2 did not start ({reason}).", reason),
@@ -1501,9 +1549,16 @@ impl Component for Shell {
                     return;
                 };
                 page.heading = Some(index);
+                // Contents laid over the text give way to it.
+                page.overlay = false;
                 self.run_in_book(&[cr_win::book::go(paragraph)]);
             }
             Message::BookHeading(None) => {}
+            Message::BookContentsClosed => {
+                if let Page::Book(page) = &mut self.page {
+                    page.overlay = false;
+                }
+            }
             Message::BookFind(query) => {
                 if let Page::Book(page) = &mut self.page
                     && page.query != query
@@ -1541,6 +1596,8 @@ impl Component for Shell {
 
     fn view(&self, _file: &Option<PathBuf>, context: &mut ViewContext<Self>) -> View {
         context.window_title("Core Rules");
+        let sized = context.callback(Message::WindowSized);
+        context.on_window_size(sized);
         context.window_visuals(
             WindowVisuals::new()
                 .backdrop(WindowBackdrop::Mica)
@@ -1641,7 +1698,7 @@ impl Component for Shell {
             .is_settings_visible(false)
             .always_show_header(false)
             .is_pane_open(self.pane_open)
-            .open_pane_length(240.0)
+            .open_pane_length(PANE)
             .on_is_pane_open_changed(context.callback(Message::PaneOpenChanged))
             .on_selected_tag_changed(context.callback(Message::Navigate))
             .grid_row(1)

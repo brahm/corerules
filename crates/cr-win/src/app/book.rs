@@ -34,6 +34,28 @@ pub struct Opened {
     pub folded: Folded,
 }
 
+/// The width of the contents, and the least the text keeps beside them.
+const SIDE: f64 = 300.0;
+const TEXT: f64 = 560.0;
+
+/// The ListView of the contents, for the native code to find.
+const CONTENTS: &str = "book-contents";
+
+/// Whether the window is too narrow for the contents beside the text.
+pub fn narrow(shell: &Shell) -> bool {
+    shell.width > 0.0 && room(shell) < SIDE + TEXT
+}
+
+/// The width beside the navigation.
+fn room(shell: &Shell) -> f64 {
+    let pane = if shell.pane_open {
+        super::PANE
+    } else {
+        super::PANE_CLOSED
+    };
+    shell.width - pane
+}
+
 /// Counts the books opened, for each page to have a file of its own: a
 /// book opened again while Back still has it keeps its page.
 static OPENED: AtomicU64 = AtomicU64::new(0);
@@ -111,7 +133,10 @@ pub struct BookPage {
     pub error: Option<String>,
     /// The page has loaded and takes scripts.
     pub ready: bool,
+    /// The contents show beside the text; in a window too narrow for
+    /// that, over it while `overlay`.
     pub contents: bool,
+    pub overlay: bool,
     /// The paragraph at the top of the text, and the heading it is under.
     pub top: usize,
     pub heading: Option<usize>,
@@ -137,6 +162,7 @@ impl BookPage {
             error: None,
             ready: false,
             contents: true,
+            overlay: false,
             top: 0,
             heading: None,
             zoom: prefs::reader_state().zoom(),
@@ -277,6 +303,8 @@ pub fn view(shell: &Shell, page: &BookPage, context: &mut ViewContext<Shell>) ->
         .book
         .as_ref()
         .map_or(&[][..], |b| b.headings.as_slice());
+    let narrow = narrow(shell);
+    let open = !headings.is_empty() && if narrow { page.overlay } else { page.contents };
     let commands = [
         KeyedView::new(
             "find",
@@ -291,7 +319,7 @@ pub fn view(shell: &Shell, page: &BookPage, context: &mut ViewContext<Shell>) ->
             "contents",
             ui::command(
                 tr("Contents"),
-                if page.contents {
+                if open {
                     Symbol::ClosePane
                 } else {
                     Symbol::OpenPane
@@ -337,17 +365,31 @@ pub fn view(shell: &Shell, page: &BookPage, context: &mut ViewContext<Shell>) ->
             ),
         ),
     ];
-    // The title takes the room it needs, up to a point, and the commands
-    // that do not fit in the rest go to the bar's overflow menu.
+    // The title takes the room it needs, up to a part of the page's, and
+    // the commands that do not fit in the rest go to the bar's overflow
+    // menu.
+    let title_width = if shell.width > 0.0 {
+        let beside = if open && !narrow { SIDE } else { 0.0 };
+        ((room(shell) - beside - 48.0) * 0.4).clamp(120.0, 360.0)
+    } else {
+        360.0
+    };
     let header = Grid::new()
         .columns([GridLength::Auto, GridLength::STAR])
         .margin(Thickness::new(24.0, 24.0, 24.0, 8.0))
         .children((
             StackPanel::new()
                 .spacing(2.0)
-                .max_width(360.0)
+                .max_width(title_width)
                 .vertical_alignment(VerticalAlignment::Center)
-                .children((ui::subtitle(title.clone()), ui::caption(category))),
+                .children((
+                    ui::subtitle(title.clone())
+                        .max_lines(2)
+                        .text_trimming(TextTrimming::CharacterEllipsis),
+                    ui::caption(category)
+                        .max_lines(1)
+                        .text_trimming(TextTrimming::CharacterEllipsis),
+                )),
             CommandBar::new()
                 .grid_column(1)
                 .horizontal_alignment(HorizontalAlignment::Right)
@@ -397,30 +439,48 @@ pub fn view(shell: &Shell, page: &BookPage, context: &mut ViewContext<Shell>) ->
             Border::new().grid_row(1).content(find),
             Border::new().grid_row(2).content(text),
         ));
-    if !page.contents || headings.is_empty() {
-        return Grid::new()
-            .columns([GridLength::Pixel(0.0), GridLength::STAR])
-            .children((View::empty(), main));
-    }
-    let side = Grid::new()
-        .rows([GridLength::Auto, GridLength::STAR])
-        .row_spacing(8.0)
-        .margin(Thickness::new(24.0, 24.0, 0.0, 24.0))
-        .children((
-            ui::strong(tr("Contents")),
-            Border::new()
-                .grid_row(1)
-                .content(contents(headings, page, context)),
-        ));
-    Grid::new()
-        .columns([GridLength::Pixel(300.0), GridLength::STAR])
-        .children((side, main))
+    // The contents beside the text, or over it in a narrow window; the
+    // text stays the same control either way.
+    let side: View = if open {
+        Grid::new()
+            .rows([GridLength::Auto, GridLength::STAR])
+            .row_spacing(8.0)
+            .margin(Thickness::new(24.0, 24.0, 0.0, 24.0))
+            .children((
+                ui::strong(tr("Contents")),
+                Border::new()
+                    .grid_row(1)
+                    .content(contents(headings, page, context)),
+            ))
+    } else {
+        View::empty()
+    };
+    SplitView::new()
+        .display_mode(if narrow {
+            SplitViewDisplayMode::Overlay
+        } else {
+            SplitViewDisplayMode::Inline
+        })
+        .open_pane_length(SIDE)
+        .is_pane_open(open)
+        .on_pane_closed(context.callback(|_: bool| Message::BookContentsClosed))
+        .slots([
+            SlotView::new(SplitViewSlot::Pane, side),
+            SlotView::new(SplitViewSlot::Content, main),
+        ])
 }
 
-/// The book's headings, the one the top of the text is under selected.
+/// The book's headings, the one the top of the text is under selected
+/// and scrolled to.
 fn contents(headings: &[Heading], page: &BookPage, context: &mut ViewContext<Shell>) -> View {
+    // Reactor cannot scroll a ListView; UI Automation can.
+    context.use_effect("book-contents", page.heading, || {
+        crate::native::uia::show_selected(crate::native::Owner::active(), CONTENTS);
+        None
+    });
     ListView::new()
         .automation_name(tr("Contents"))
+        .automation_id(CONTENTS)
         .selected_index(page.heading)
         .on_selection_changed(context.callback(Message::BookHeading))
         .collection_slot(

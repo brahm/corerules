@@ -213,16 +213,24 @@ The phases run in order:
      reals read as the records keep them (0.1) in both apps; About's
      sections open, and a record the data repeats (Garnet) is selected
      by its row.
-   - **The books (done).** `cr-app` gained the reader's zoom steps, the
-     reading positions and zoom kept between sessions, Find over the
-     book's folded text, and the heading a paragraph is under. The
-     Windows app reads a book on a page of the window: the contents
-     beside it, the book's fonts, colours, indents, tab stops and
-     pictures as one web page in a WebView2 (decision P25), Find with
-     every match highlighted, Zoom In, Out and Reset, and the place it
-     was left. F9, Ctrl+F, Ctrl+plus, Ctrl+minus, Ctrl+0 and Ctrl+W work
-     as in the GNOME reader. 31 actions are left on
-     `NOT_YET_ON_WINDOWS`.
+   - **The books (done, PR #102).** `cr-app` gained the reader's zoom
+     steps, the reading positions and zoom kept between sessions, Find
+     over the book's folded text, and the heading a paragraph is under.
+     The Windows app reads a book on a page of the window: the contents
+     beside it (over it in a narrow window, scrolled to the heading the
+     text is under), the book's fonts, colours, indents, tab stops and
+     pictures as one web page in a WebView2 (decision P25), tables whose
+     rows keep to one line, Find with every match highlighted, Zoom In,
+     Out and Reset, and the place it was left. F9, Ctrl+F, Ctrl+plus,
+     Ctrl+minus, Ctrl+0 and Ctrl+W work as in the GNOME reader. 31
+     actions are left on `NOT_YET_ON_WINDOWS`. The Windows test found the
+     help and the books blank: WinUI's WebView2 needs
+     Microsoft.Web.WebView2.Core.dll, which neither Windows nor the
+     Windows App Runtime has, so the build now puts it next to the app
+     and the MSIX declares its classes, and a WebView2 that does not
+     start says so. It also found the place kept moving back a paragraph
+     on every open, click in the contents and zoom, which it no longer
+     does.
    - Still to port: character creation and Enter Character;
      editing; the generators (NPCs, treasure, encounters, tables,
      parties); the user database editors; packages and Import Core Rules

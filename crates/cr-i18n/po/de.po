@@ -676,7 +676,7 @@ msgid "_Read Book"
 msgstr "Buch _lesen"
 
 #: crates/cr-gtk/src/books.rs:54
-#: crates/cr-win/src/app/book.rs:49
+#: crates/cr-win/src/app/book.rs:71
 msgid "{name} is not in this installation"
 msgstr "{name} ist in dieser Installation nicht vorhanden"
 
@@ -686,53 +686,53 @@ msgid "The application is shutting down"
 msgstr "Die Anwendung wird beendet"
 
 #: crates/cr-gtk/src/books.rs:230
-#: crates/cr-win/src/app/book.rs:376
+#: crates/cr-win/src/app/book.rs:418
 msgid "Opening Book…"
 msgstr "Buch wird geöffnet…"
 
 #: crates/cr-gtk/src/books.rs:257
 #: crates/cr-gtk/src/books.rs:311
 #: crates/cr-gtk/src/help.rs:379
-#: crates/cr-win/src/app/book.rs:293
-#: crates/cr-win/src/app/book.rs:410
-#: crates/cr-win/src/app/book.rs:423
+#: crates/cr-win/src/app/book.rs:321
+#: crates/cr-win/src/app/book.rs:450
+#: crates/cr-win/src/app/book.rs:482
 #: crates/cr-win/src/app/help.rs:218
 msgid "Contents"
 msgstr "Inhalt"
 
 #: crates/cr-gtk/src/books.rs:269
-#: crates/cr-win/src/app/book.rs:480
-#: crates/cr-win/src/app/book.rs:481
+#: crates/cr-win/src/app/book.rs:540
+#: crates/cr-win/src/app/book.rs:541
 msgid "Find in Book"
 msgstr "Im Buch suchen"
 
 #: crates/cr-gtk/src/books.rs:278
-#: crates/cr-win/src/app/book.rs:489
+#: crates/cr-win/src/app/book.rs:549
 msgid "Previous Match"
 msgstr "Vorheriger Treffer"
 
 #: crates/cr-gtk/src/books.rs:282
-#: crates/cr-win/src/app/book.rs:496
+#: crates/cr-win/src/app/book.rs:556
 msgid "Next Match"
 msgstr "Nächster Treffer"
 
 #: crates/cr-gtk/src/books.rs:317
-#: crates/cr-win/src/app/book.rs:284
+#: crates/cr-win/src/app/book.rs:312
 msgid "_Find…"
 msgstr "_Suchen…"
 
 #: crates/cr-gtk/src/books.rs:320
-#: crates/cr-win/src/app/book.rs:315
+#: crates/cr-win/src/app/book.rs:343
 msgid "Zoom _In"
 msgstr "Ver_größern"
 
 #: crates/cr-gtk/src/books.rs:321
-#: crates/cr-win/src/app/book.rs:306
+#: crates/cr-win/src/app/book.rs:334
 msgid "Zoom _Out"
 msgstr "Ver_kleinern"
 
 #: crates/cr-gtk/src/books.rs:323
-#: crates/cr-win/src/app/book.rs:324
+#: crates/cr-win/src/app/book.rs:352
 msgid "_Reset Zoom"
 msgstr "Zoom _zurücksetzen"
 
@@ -751,20 +751,20 @@ msgstr "Das Buch konnte nicht gelesen werden"
 
 #: crates/cr-gtk/src/books.rs:573
 #: crates/cr-gtk/src/main.rs:1038
-#: crates/cr-win/src/app/book.rs:367
+#: crates/cr-win/src/app/book.rs:409
 msgid "Could Not Open Book"
 msgstr "Buch konnte nicht geöffnet werden"
 
 #: crates/cr-gtk/src/books.rs:965
 #: crates/cr-gtk/src/encounter.rs:1412
 #: crates/cr-gtk/src/main.rs:1696
-#: crates/cr-win/src/app/book.rs:238
+#: crates/cr-win/src/app/book.rs:264
 #: crates/cr-win/src/app/library.rs:353
 msgid "No Results"
 msgstr "Keine Ergebnisse"
 
 #: crates/cr-gtk/src/books.rs:991
-#: crates/cr-win/src/app/book.rs:233
+#: crates/cr-win/src/app/book.rs:259
 msgid "{current} of {total}"
 msgstr "{current} von {total}"
 
@@ -887,7 +887,7 @@ msgstr "Wie viele?"
 #: crates/cr-win/src/app/import.rs:142
 #: crates/cr-win/src/app/new_character.rs:78
 #: crates/cr-win/src/app/sheet.rs:460
-#: crates/cr-win/src/app.rs:1731
+#: crates/cr-win/src/app.rs:1788
 msgid "_Cancel"
 msgstr "_Abbrechen"
 
@@ -1247,17 +1247,17 @@ msgstr "Sie sind dabei, einen Core-Rules-Charakter zu erstellen."
 #: crates/cr-gtk/src/picture.rs:686
 #: crates/cr-gtk/src/transfer.rs:124
 #: crates/cr-gtk/src/userdb.rs:2592
-#: crates/cr-win/src/app/book.rs:333
-#: crates/cr-win/src/app/book.rs:503
-#: crates/cr-win/src/app.rs:1729
+#: crates/cr-win/src/app/book.rs:361
+#: crates/cr-win/src/app/book.rs:563
+#: crates/cr-win/src/app.rs:1786
 msgid "_Close"
 msgstr "_Schließen"
 
 #: crates/cr-gtk/src/create.rs:243
 #: crates/cr-gtk/src/prefs.rs:130
 #: crates/cr-gtk/src/prefs.rs:148
-#: crates/cr-win/src/app.rs:1243
-#: crates/cr-win/src/app.rs:1252
+#: crates/cr-win/src/app.rs:1271
+#: crates/cr-win/src/app.rs:1280
 msgid "Could not save the preferences: {error}"
 msgstr "Die Einstellungen konnten nicht gespeichert werden: {error}"
 
@@ -2441,7 +2441,7 @@ msgstr "Schatz-EP"
 #: crates/cr-gtk/src/userdb.rs:2443
 #: crates/cr-win/src/app/edit.rs:204
 #: crates/cr-win/src/app/sheet.rs:465
-#: crates/cr-win/src/app.rs:1722
+#: crates/cr-win/src/app.rs:1779
 msgid "_Save"
 msgstr "_Speichern"
 
@@ -2610,7 +2610,7 @@ msgstr "_Bearbeiten…"
 #: crates/cr-gtk/src/userdb.rs:416
 #: crates/cr-gtk/src/userdb.rs:1498
 #: crates/cr-gtk/src/userdb.rs:2553
-#: crates/cr-win/src/app.rs:1702
+#: crates/cr-win/src/app.rs:1759
 msgid "_Delete"
 msgstr "_Löschen"
 
@@ -3211,9 +3211,9 @@ msgid "Help"
 msgstr "Hilfe"
 
 #: crates/cr-gtk/src/help.rs:284
-#: crates/cr-win/src/app.rs:698
-#: crates/cr-win/src/app.rs:707
-#: crates/cr-win/src/app.rs:1418
+#: crates/cr-win/src/app.rs:724
+#: crates/cr-win/src/app.rs:733
+#: crates/cr-win/src/app.rs:1449
 msgid "{name} has no help topic"
 msgstr "{name} hat kein Hilfethema"
 
@@ -3239,8 +3239,8 @@ msgstr "Wähle ein Thema aus der Liste."
 
 #: crates/cr-gtk/src/help.rs:668
 #: crates/cr-win/src/app/help.rs:81
-#: crates/cr-win/src/app.rs:673
-#: crates/cr-win/src/app.rs:1387
+#: crates/cr-win/src/app.rs:699
+#: crates/cr-win/src/app.rs:1418
 msgid "That topic is not in this installation"
 msgstr "Dieses Thema ist nicht in dieser Installation"
 
@@ -3250,7 +3250,7 @@ msgid "Assistant"
 msgstr "Assistent"
 
 #: crates/cr-gtk/src/help.rs:1213
-#: crates/cr-win/src/app/settings.rs:167
+#: crates/cr-win/src/app/settings.rs:170
 msgid "AD&D Core Rules"
 msgstr "AD&D Core Rules"
 
@@ -3298,7 +3298,7 @@ msgstr "Core-Rules-Ordner öffnen"
 #: crates/cr-gtk/src/main.rs:1333
 #: crates/cr-win/src/app/library.rs:162
 #: crates/cr-win/src/app/library.rs:695
-#: crates/cr-win/src/app.rs:440
+#: crates/cr-win/src/app.rs:451
 msgid "_Open Folder…"
 msgstr "Ordner ö_ffnen…"
 
@@ -3311,8 +3311,8 @@ msgstr "Daten von der _CD extrahieren…"
 #: crates/cr-win/src/app/import.rs:37
 #: crates/cr-win/src/app/library.rs:686
 #: crates/cr-win/src/app/settings.rs:29
-#: crates/cr-win/src/app.rs:963
-#: crates/cr-win/src/app.rs:966
+#: crates/cr-win/src/app.rs:991
+#: crates/cr-win/src/app.rs:994
 msgid "No Core Rules Installation"
 msgstr "Keine Core-Rules-Installation"
 
@@ -3363,32 +3363,32 @@ msgid "Character created"
 msgstr "Charakter erstellt"
 
 #: crates/cr-gtk/src/main.rs:907
-#: crates/cr-win/src/app.rs:1030
+#: crates/cr-win/src/app.rs:1058
 msgid "Converted to a character"
 msgstr "In einen Charakter umgewandelt"
 
 #: crates/cr-gtk/src/main.rs:917
-#: crates/cr-win/src/app.rs:1714
+#: crates/cr-win/src/app.rs:1771
 msgid "Convert to NPC?"
 msgstr "In NSC umwandeln?"
 
 #: crates/cr-gtk/src/main.rs:918
-#: crates/cr-win/src/app.rs:1715
+#: crates/cr-win/src/app.rs:1772
 msgid "This will move the selected Player Character to the NPC List in the DM Toolkit."
 msgstr "Der ausgewählte Spielercharakter wird in die NSC-Liste des DM-Toolkits verschoben."
 
 #: crates/cr-gtk/src/main.rs:924
-#: crates/cr-win/src/app.rs:1717
+#: crates/cr-win/src/app.rs:1774
 msgid "_Convert"
 msgstr "_Umwandeln"
 
 #: crates/cr-gtk/src/main.rs:936
-#: crates/cr-win/src/app.rs:1056
+#: crates/cr-win/src/app.rs:1084
 msgid "Converted to an NPC"
 msgstr "In einen NSC umgewandelt"
 
 #: crates/cr-gtk/src/main.rs:1049
-#: crates/cr-win/src/app.rs:640
+#: crates/cr-win/src/app.rs:666
 msgid "Open a Core Rules folder to read its help"
 msgstr "Öffne einen Core-Rules-Ordner, um seine Hilfe zu lesen"
 
@@ -3455,7 +3455,7 @@ msgstr "_Einstellungen"
 #: crates/cr-win/src/app/help.rs:198
 #: crates/cr-win/src/app/help.rs:226
 #: crates/cr-win/src/app/help.rs:324
-#: crates/cr-win/src/app.rs:1611
+#: crates/cr-win/src/app.rs:1668
 msgid "_Help"
 msgstr "_Hilfe"
 
@@ -3491,7 +3491,7 @@ msgstr "In NSC umwandeln"
 
 #: crates/cr-gtk/src/main.rs:1518
 #: crates/cr-win/src/app/library.rs:501
-#: crates/cr-win/src/app.rs:1076
+#: crates/cr-win/src/app.rs:1104
 msgid "Delete Character"
 msgstr "Charakter löschen"
 
@@ -3566,8 +3566,8 @@ msgstr "Einträge"
 
 #: crates/cr-gtk/src/main.rs:1823
 #: crates/cr-win/src/app/library.rs:211
-#: crates/cr-win/src/app.rs:208
-#: crates/cr-win/src/app.rs:1102
+#: crates/cr-win/src/app.rs:214
+#: crates/cr-win/src/app.rs:1130
 msgid "Could Not Read"
 msgstr "Konnte nicht gelesen werden"
 
@@ -3607,8 +3607,8 @@ msgstr "Fähigkeiten"
 #: crates/cr-gtk/src/main.rs:2739
 #: crates/cr-win/src/app/edit.rs:212
 #: crates/cr-win/src/app/library.rs:429
-#: crates/cr-win/src/app.rs:977
-#: crates/cr-win/src/app.rs:1009
+#: crates/cr-win/src/app.rs:1005
+#: crates/cr-win/src/app.rs:1037
 msgid "Edit Character"
 msgstr "Charakter bearbeiten"
 
@@ -4166,7 +4166,7 @@ msgstr[1] "{n} NSC wurden erstellt"
 
 #: crates/cr-gtk/src/party.rs:45
 #: crates/cr-gtk/src/userdb.rs:403
-#: crates/cr-win/src/app.rs:1073
+#: crates/cr-win/src/app.rs:1101
 msgid "“{name}” deleted"
 msgstr "„{name}“ gelöscht"
 
@@ -4417,7 +4417,7 @@ msgid "Game data from the original files stays in English"
 msgstr "Spieldaten aus den Originaldateien bleiben auf Englisch"
 
 #: crates/cr-gtk/src/prefs.rs:129
-#: crates/cr-win/src/app.rs:1238
+#: crates/cr-win/src/app.rs:1266
 msgid "Restart Core Rules to use the new language"
 msgstr "Starten Sie Core Rules neu, um die neue Sprache zu verwenden"
 
@@ -4440,7 +4440,7 @@ msgstr "Wird in Neuer Charakter nach der Wahl der Regeln angezeigt"
 #: crates/cr-gtk/src/print.rs:108
 #: crates/cr-gtk/src/print.rs:125
 #: crates/cr-gtk/src/sheet.rs:636
-#: crates/cr-win/src/app.rs:1114
+#: crates/cr-win/src/app.rs:1142
 msgid "Could not print: {error}"
 msgstr "Drucken nicht möglich: {error}"
 
@@ -4459,7 +4459,7 @@ msgstr "Drucken nicht möglich"
 #: crates/cr-gtk/src/sheet.rs:52
 #: crates/cr-win/src/app/library.rs:474
 #: crates/cr-win/src/app/sheet.rs:86
-#: crates/cr-win/src/app.rs:479
+#: crates/cr-win/src/app.rs:490
 msgid "Save as _PDF…"
 msgstr "Als _PDF speichern…"
 
@@ -4471,19 +4471,19 @@ msgstr "Speichern oder exportieren"
 #: crates/cr-gtk/src/sheet_options.rs:171
 #: crates/cr-win/src/app/sheet.rs:97
 #: crates/cr-win/src/app/sheet.rs:435
-#: crates/cr-win/src/app.rs:1167
+#: crates/cr-win/src/app.rs:1195
 msgid "Character Sheet Options"
 msgstr "Optionen des Charakterbogens"
 
 #: crates/cr-gtk/src/sheet.rs:132
-#: crates/cr-win/src/app.rs:1128
+#: crates/cr-win/src/app.rs:1156
 msgid "Sheet exported"
 msgstr "Bogen exportiert"
 
 #: crates/cr-gtk/src/sheet.rs:133
 #: crates/cr-gtk/src/sheet.rs:458
-#: crates/cr-win/src/app/book.rs:62
-#: crates/cr-win/src/app.rs:786
+#: crates/cr-win/src/app/book.rs:84
+#: crates/cr-win/src/app.rs:812
 msgid "Could not save {file}: {error}"
 msgstr "{file} konnte nicht gespeichert werden: {error}"
 
@@ -4496,12 +4496,12 @@ msgid "Save As"
 msgstr "Speichern unter"
 
 #: crates/cr-gtk/src/sheet.rs:457
-#: crates/cr-win/src/app.rs:1120
+#: crates/cr-win/src/app.rs:1148
 msgid "Sheet saved as PDF"
 msgstr "Bogen als PDF gespeichert"
 
 #: crates/cr-gtk/src/sheet.rs:473
-#: crates/cr-win/src/app.rs:478
+#: crates/cr-win/src/app.rs:489
 msgid "PDF documents"
 msgstr "PDF-Dokumente"
 
@@ -4519,7 +4519,7 @@ msgstr "Wie der gedruckte Bogen seine Kästen einrahmt"
 #: crates/cr-gtk/src/sheet_options.rs:47
 #: crates/cr-gtk/src/sheet_options.rs:203
 #: crates/cr-win/src/app/sheet.rs:429
-#: crates/cr-win/src/app.rs:1721
+#: crates/cr-win/src/app.rs:1778
 msgid "No sections: the sheet will be empty"
 msgstr "Keine Abschnitte: Der Bogen bleibt leer"
 
@@ -4540,7 +4540,7 @@ msgid "Printed in this order. A section can be added more than once."
 msgstr "In dieser Reihenfolge gedruckt. Ein Abschnitt kann mehrmals hinzugefügt werden."
 
 #: crates/cr-gtk/src/sheet_options.rs:202
-#: crates/cr-win/src/app.rs:1720
+#: crates/cr-win/src/app.rs:1777
 msgid "No Sections"
 msgstr "Keine Abschnitte"
 
@@ -4722,13 +4722,13 @@ msgid "Export Failed"
 msgstr "Export fehlgeschlagen"
 
 #: crates/cr-gtk/src/transfer.rs:329
-#: crates/cr-win/src/app.rs:1197
+#: crates/cr-win/src/app.rs:1225
 msgid "Not a Package"
 msgstr "Kein Paket"
 
 #: crates/cr-gtk/src/transfer.rs:339
 #: crates/cr-win/src/app/import.rs:117
-#: crates/cr-win/src/app.rs:454
+#: crates/cr-win/src/app.rs:465
 msgid "Import Package"
 msgstr "Paket importieren"
 
@@ -4777,7 +4777,7 @@ msgstr "Importieren"
 #: crates/cr-gtk/src/transfer.rs:451
 #: crates/cr-gtk/src/transfer.rs:661
 #: crates/cr-gtk/src/transfer.rs:667
-#: crates/cr-win/src/app.rs:1225
+#: crates/cr-win/src/app.rs:1253
 msgid "Import Failed"
 msgstr "Import fehlgeschlagen"
 
@@ -4866,7 +4866,7 @@ msgid "Items Not Added"
 msgstr "Elemente nicht hinzugefügt"
 
 #: crates/cr-gtk/src/transfer.rs:865
-#: crates/cr-win/src/app.rs:1705
+#: crates/cr-win/src/app.rs:1762
 msgid "Discard Changes?"
 msgstr "Änderungen verwerfen?"
 
@@ -4876,7 +4876,7 @@ msgstr "Das Paket enthält ungespeicherte Änderungen."
 
 #: crates/cr-gtk/src/transfer.rs:868
 #: crates/cr-gtk/src/userdb.rs:937
-#: crates/cr-win/src/app.rs:1711
+#: crates/cr-win/src/app.rs:1768
 msgid "_Discard"
 msgstr "_Verwerfen"
 
@@ -4896,7 +4896,7 @@ msgstr[1] "Das Paket enthält außerdem {n} Map-Maker-II-Karten, die bei einer �
 
 #: crates/cr-gtk/src/transfer.rs:971
 #: crates/cr-gtk/src/transfer.rs:973
-#: crates/cr-win/src/app.rs:1002
+#: crates/cr-win/src/app.rs:1030
 msgid "Saved {name}"
 msgstr "{name} gespeichert"
 
@@ -5477,7 +5477,7 @@ msgid "Standard records cannot be deleted"
 msgstr "Standarddatensätze können nicht gelöscht werden"
 
 #: crates/cr-gtk/src/userdb.rs:411
-#: crates/cr-win/src/app.rs:1700
+#: crates/cr-win/src/app.rs:1757
 msgid "Delete {name}?"
 msgstr "{name} löschen?"
 
@@ -11139,7 +11139,7 @@ msgid "Data folder"
 msgstr "Datenordner"
 
 #: crates/cr-win/src/app/settings.rs:47
-#: crates/cr-win/src/app.rs:1629
+#: crates/cr-win/src/app.rs:1686
 msgctxt "preferences"
 msgid "Settings"
 msgstr "Einstellungen"
@@ -11164,58 +11164,60 @@ msgstr "Übersetzer"
 msgid "Credits"
 msgstr "Mitwirkende"
 
-#: crates/cr-win/src/app/settings.rs:189
+#: crates/cr-win/src/app/settings.rs:202
 msgid "Legal"
 msgstr "Rechtliches"
 
-#: crates/cr-win/src/app/settings.rs:197
+#: crates/cr-win/src/app/settings.rs:210
 msgid "A bug report helps most with these details and what you did when it happened."
 msgstr "Ein Fehlerbericht hilft am meisten mit diesen Angaben und mit dem, was Sie taten, als es passierte."
 
-#: crates/cr-win/src/app/settings.rs:207
+#: crates/cr-win/src/app/settings.rs:220
 msgid "Copy Details"
 msgstr "Angaben kopieren"
 
-#: crates/cr-win/src/app/settings.rs:208
+#: crates/cr-win/src/app/settings.rs:221
 msgid "Report an Issue"
 msgstr "Problem melden"
 
-#: crates/cr-win/src/app/settings.rs:213
+#: crates/cr-win/src/app/settings.rs:226
 msgid "Troubleshooting"
 msgstr "Fehlerbehebung"
 
-#: crates/cr-win/src/app.rs:1112
+#: crates/cr-win/src/app.rs:1140
 msgid "Sent to the printer"
 msgstr "An den Drucker gesendet"
 
-#: crates/cr-win/src/app.rs:1186
+#: crates/cr-win/src/app.rs:1214
 msgid "Not in this version yet"
 msgstr "Noch nicht in dieser Version"
 
-#: crates/cr-win/src/app.rs:1187
+#: crates/cr-win/src/app.rs:1215
 msgid "The other steps of New Character come to the Windows app in a later version."
 msgstr "Die übrigen Schritte von „Neuer Charakter“ kommen in einer späteren Version in die Windows-App."
 
-#: crates/cr-win/src/app.rs:1264
+#: crates/cr-win/src/app.rs:1292
 msgid "Copied to the clipboard"
 msgstr "In die Zwischenablage kopiert"
 
-#: crates/cr-win/src/app.rs:1452
+#: crates/cr-win/src/app.rs:1494
+#: crates/cr-win/src/app.rs:1500
 msgid "The Page Could Not Be Shown"
 msgstr "Die Seite konnte nicht angezeigt werden"
 
-#: crates/cr-win/src/app.rs:1453
+#: crates/cr-win/src/app.rs:1495
+#: crates/cr-win/src/app.rs:1501
 msgid "WebView2 did not start ({reason})."
 msgstr "WebView2 ist nicht gestartet ({reason})."
 
-#: crates/cr-win/src/app.rs:1701
+#: crates/cr-win/src/app.rs:1758
 msgid "The character leaves the character list and its file is removed."
 msgstr "Der Charakter wird aus der Charakterliste entfernt und seine Datei gelöscht."
 
-#: crates/cr-win/src/app.rs:1707
+#: crates/cr-win/src/app.rs:1764
 msgid "The options have changes that are not saved."
 msgstr "Die Optionen enthalten ungespeicherte Änderungen."
 
-#: crates/cr-win/src/app.rs:1708
+#: crates/cr-win/src/app.rs:1765
 msgid "The character has changes that are not saved."
 msgstr "Der Charakter enthält ungespeicherte Änderungen."

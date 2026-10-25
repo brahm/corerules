@@ -15,6 +15,8 @@ $layout = Join-Path $root "target\msix"
 if (Test-Path $layout) { Remove-Item -Recurse -Force $layout }
 New-Item -ItemType Directory "$layout\Assets" | Out-Null
 Copy-Item "$root\target\release\CoreRules.exe" $layout
+# WinUI's WebView2 loads it; the build put it next to the exe.
+Copy-Item "$root\target\release\Microsoft.Web.WebView2.Core.dll" $layout
 Copy-Item "$PSScriptRoot\Assets\*" "$layout\Assets"
 $manifest = Get-Content "$PSScriptRoot\AppxManifest.xml" -Raw
 $manifest.Replace('Version="0.0.0.0"', "Version=""$Version.0""") |
