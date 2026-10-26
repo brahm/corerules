@@ -381,7 +381,7 @@ The phases run in order:
      test found a part of the other types shown on the wrong section once
      saved, a large category's partial choice not shown and two texts
      left in English, all fixed before the merge (PR #108).
-   - **Extract Data from CD (in progress).** `cr-app` gained what the app
+   - **Extract Data from CD (done).** `cr-app` gained what the app
      says around the copy and when a folder opened is copied first; the
      GNOME app says it with them. The Windows app asks for the CD's ISO
      image or a folder, copies its data into `Documents\Core Rules\data`
@@ -390,7 +390,18 @@ The phases run in order:
      when no installation is found. An Expansion CD opened with Open
      Folder… opens its copy instead, as in the GNOME app. With it
      `NOT_YET_ON_WINDOWS` is empty: every screen of the GNOME app is on
-     Windows.
+     Windows (PR #109).
+   - **Help and details (in progress).** The Windows test of the Help
+     page with the CD's help files found its side panel too wide for a
+     narrow window, long lines of some topics not wrapped, the book
+     list left blank after a search or a link to another file, and F1
+     opening the help behind a dialog. The Help page now shows its
+     contents through a Contents button in a narrow window, wraps the
+     topics' lines and names the book shown; F1 waits for the dialog to
+     close. A row just saved is no longer cut at the foot of the
+     library's list, the New Encounter templates list makes only the
+     rows it shows, and "not added" messages no longer repeat "Error."
+     in the translations.
 5. **Package and Store.** The release workflow builds and tests the MSIX;
    a beta goes to a closed group through the Microsoft Store.
 6. **Release with Windows**, once the beta's users confirm it, with the

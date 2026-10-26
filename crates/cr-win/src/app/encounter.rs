@@ -173,18 +173,26 @@ pub fn chooser_view(chooser: &Chooser, busy: bool, context: &mut ViewContext<She
                 }),
             )
     };
-    ui::page(
-        StackPanel::new().spacing(8.0).children((
-            header(tr("New Encounter").to_owned(), commands),
-            TextBox::new()
-                .automation_name(tr("Search Templates"))
-                .placeholder_text(tr("Search Templates"))
-                .text(chooser.search.clone())
-                .on_text_changed(context.callback(Message::TemplateSearch)),
-            // A new list for each search, which would otherwise keep a
-            // selection made in another.
-            Grid::new().keyed_children([KeyedView::new(chooser.search.clone(), list)]),
-        )),
+    // Not in a page that scrolls: a list given all the height it asks
+    // for makes every item, which a screen reader then waits on.
+    ui::fixed_page(
+        Grid::new()
+            .rows([GridLength::Auto, GridLength::Auto, GridLength::STAR])
+            .row_spacing(8.0)
+            .children((
+                header(tr("New Encounter").to_owned(), commands),
+                TextBox::new()
+                    .grid_row(1)
+                    .automation_name(tr("Search Templates"))
+                    .placeholder_text(tr("Search Templates"))
+                    .text(chooser.search.clone())
+                    .on_text_changed(context.callback(Message::TemplateSearch)),
+                // A new list for each search, which would otherwise keep a
+                // selection made in another.
+                Grid::new()
+                    .grid_row(2)
+                    .keyed_children([KeyedView::new(chooser.search.clone(), list)]),
+            )),
     )
 }
 

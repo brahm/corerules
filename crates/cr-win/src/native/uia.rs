@@ -12,9 +12,10 @@ use windows::Win32::System::Com::{
 use windows::Win32::System::Variant::{VARIANT, VT_BSTR, VariantClear};
 use windows::Win32::UI::Accessibility::{
     CUIAutomation, IUIAutomation, IUIAutomationElement, IUIAutomationScrollItemPattern,
-    IUIAutomationSelectionPattern, IUIAutomationVirtualizedItemPattern, TreeScope_Descendants,
-    UIA_AutomationIdPropertyId, UIA_ScrollItemPatternId, UIA_SelectionPatternId,
-    UIA_VirtualizedItemPatternId,
+    IUIAutomationScrollPattern, IUIAutomationSelectionPattern, IUIAutomationVirtualizedItemPattern,
+    ScrollAmount_NoAmount, ScrollAmount_SmallIncrement, TreeScope_Descendants,
+    UIA_AutomationIdPropertyId, UIA_ScrollItemPatternId, UIA_ScrollPatternId,
+    UIA_SelectionPatternId, UIA_VirtualizedItemPatternId,
 };
 use windows::core::{BSTR, Result};
 
@@ -74,7 +75,22 @@ fn scroll(owner: Owner, id: &str) -> Result<()> {
         }
         let scroll: IUIAutomationScrollItemPattern =
             item.GetCurrentPatternAs(UIA_ScrollItemPatternId)?;
-        scroll.ScrollIntoView()
+        scroll.ScrollIntoView()?;
+        // An item just made has its height once laid out: scrolled to
+        // the list's edge before, its last line would be left out of view.
+        std::thread::sleep(PAUSE);
+        scroll.ScrollIntoView()?;
+        let (shown, bounds) = (
+            list.CurrentBoundingRectangle()?,
+            item.CurrentBoundingRectangle()?,
+        );
+        if bounds.bottom > shown.bottom
+            && let Ok(pattern) =
+                list.GetCurrentPatternAs::<IUIAutomationScrollPattern>(UIA_ScrollPatternId)
+        {
+            let _ = pattern.Scroll(ScrollAmount_NoAmount, ScrollAmount_SmallIncrement);
+        }
+        Ok(())
     }
 }
 

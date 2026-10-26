@@ -112,7 +112,7 @@ body{margin:0;padding:18px 24px 24px;font:12pt 'Times New Roman',serif}\
 header{position:sticky;top:0;background:#fff;margin:-18px -24px 12px;padding:12px 24px 8px;\
 border-bottom:1px solid #d0d0d0}\
 .p{white-space:pre-wrap;tab-size:48px;overflow-wrap:break-word}\
-.t{display:inline-block;white-space:pre;text-indent:0}\
+.t{display:inline-block;white-space:pre-wrap;max-width:100%;vertical-align:top;text-indent:0}\
 .c{color:var(--l)}\
 .h{color:#1c7c3c;text-decoration:underline;cursor:pointer}\
 .h.u{text-decoration-style:dotted}\
