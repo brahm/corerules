@@ -206,7 +206,20 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
         ),
     ]
     .into_iter()
+    // The packages, after them, as in the GNOME app's menu; Import Core
+    // Rules 2.0 only in the Expansion, which it imports into.
+    .chain([
+        (
+            action::IMPORT_CORE20,
+            tr("Import Core _Rules 2.0…"),
+            Symbol::ImportAll,
+        ),
+        (action::EXPORT, tr("E_xport…"), Symbol::Upload),
+        (action::NEW_PACKAGE, tr("New P_ackage…"), Symbol::NewFolder),
+        (action::EDIT_PACKAGE, tr("E_dit Package…"), Symbol::OpenFile),
+    ])
     .filter(|(action, ..)| available(*action))
+    .filter(|(chosen, ..)| *chosen != action::IMPORT_CORE20 || shell.expansion())
     .map(|(action, label, symbol)| {
         KeyedView::new(
             action.name,

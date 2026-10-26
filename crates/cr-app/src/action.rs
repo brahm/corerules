@@ -108,13 +108,7 @@ actions! {
 /// The actions the Windows app does not have yet. A screen ported to
 /// Windows takes its actions off this list, and the release with Windows
 /// waits until it is empty.
-pub const NOT_YET_ON_WINDOWS: &[Action] = &[
-    EXTRACT_DATA,
-    EXPORT,
-    IMPORT_CORE20,
-    NEW_PACKAGE,
-    EDIT_PACKAGE,
-];
+pub const NOT_YET_ON_WINDOWS: &[Action] = &[EXTRACT_DATA];
 
 #[cfg(test)]
 mod tests {

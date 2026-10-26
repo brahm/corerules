@@ -9,13 +9,14 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_app::packages::{ROWS_SHOWN, Renaming, Step, category_label, clash_note};
 use cr_formats::export::ExportFile;
 use cr_i18n::{tr, trn};
 use cr_store::Installation;
-use cr_store::export::{Category, Clash, Content, Exportable, ImportReport, contents, remove};
+use cr_store::export::{Category, Content, Exportable, ImportReport, contents, remove};
 use cr_store::help::topic;
 use cr_store::userdb::UserDb;
-use cr_store::userdb::parts::{Parts, name_taken};
+use cr_store::userdb::parts::Parts;
 use gtk::{gio, glib};
 
 /// What the dialogs need from the window.
@@ -227,7 +228,7 @@ fn choose_items<H: Host + 'static>(
     categories.dedup();
     for category in categories {
         let group = adw::PreferencesGroup::builder()
-            .title(category.label())
+            .title(category_label(category))
             .build();
         for item in offered.iter().filter(|e| e.category == category) {
             let (row, check) = row(&item.name, "", false);
@@ -404,7 +405,7 @@ fn choose_imports<H: Host + 'static>(host: &Rc<H>, file: ExportFile, expansion: 
     let preview = Rc::new(preview);
     for category in categories {
         let group = adw::PreferencesGroup::builder()
-            .title(category.label())
+            .title(category_label(category))
             .build();
         let items: Vec<usize> = (0..preview.len())
             .filter(|n| preview[*n].category == category)
@@ -457,18 +458,14 @@ fn choose_imports<H: Host + 'static>(host: &Rc<H>, file: ExportFile, expansion: 
                 file: file.clone(),
                 preview: preview.clone(),
                 parts,
+                renaming: Rc::new(RefCell::new(Renaming::new(chosen.clone()))),
                 chosen: Rc::new(chosen),
             };
-            names.next(0, HashMap::new(), Vec::new());
+            names.next();
         }
     });
     dialog.present(Some(&host.parent()));
 }
-
-/// The most items of one category the Import dialog lists as they are;
-/// a category with more (a large package holds tens of thousands) is one
-/// row that lists them when opened.
-const ROWS_SHOWN: usize = 200;
 
 /// The row of the `n`th item of `preview`, its check kept in `chosen`.
 fn import_row(
@@ -478,12 +475,7 @@ fn import_row(
     chosen: &Rc<RefCell<Vec<bool>>>,
 ) -> adw::ActionRow {
     let item = &preview[n];
-    let note = match (item.clash, expansion) {
-        (Clash::None, _) => "",
-        (Clash::Standard, _) => tr("Renamed with a * as a standard part has this name"),
-        (Clash::Custom, true) => tr("Replaces your record of this name"),
-        (Clash::Custom, false) => tr("Not imported: you have a record of this name"),
-    };
+    let note = clash_note(item.clash, expansion);
     let (row, check) = row(&item.name, note, chosen.borrow()[n]);
     check.connect_toggled({
         let chosen = chosen.clone();
@@ -558,16 +550,15 @@ fn many_imports(
     expander
 }
 
-/// The names the parts a standard part's name hides take, asked one by one
-/// in the original's order before the import runs (0x49d704): the name
-/// with a "*", or what Name Conflict asks for when a part (a standard one,
-/// one of the user's or one imported before it) has that name.
+/// The import of the chosen items, once the names [`Renaming`] asks for
+/// are given.
 struct Rename<H: Host> {
     host: Rc<H>,
     dialog: adw::Dialog,
     file: Rc<ExportFile>,
     preview: Rc<Vec<Content>>,
     parts: Rc<UserDb<Parts>>,
+    renaming: Rc<RefCell<Renaming>>,
     chosen: Rc<Vec<usize>>,
 }
 
@@ -579,54 +570,32 @@ impl<H: Host> Clone for Rename<H> {
             file: self.file.clone(),
             preview: self.preview.clone(),
             parts: self.parts.clone(),
+            renaming: self.renaming.clone(),
             chosen: self.chosen.clone(),
         }
     }
 }
 
 impl<H: Host + 'static> Rename<H> {
-    /// Asks for the names of the chosen items from the `at`th on, when
-    /// they need one, with `names` given so far and `before` the names of
-    /// the parts chosen ahead of the `at`th. A loop, not a recursion: a
-    /// package holds tens of thousands of items, and only a Name Conflict
-    /// question stops it until the user answers.
-    fn next(self, mut at: usize, names: HashMap<usize, String>, mut before: Vec<String>) {
-        while let Some(&n) = self.chosen.get(at) {
-            let item = &self.preview[n];
-            let part = matches!(item.category, Category::Part(_));
-            // Only the Expansion renames (the preview says so).
-            if item.clash != Clash::Standard {
-                if part {
-                    before.push(item.name.clone());
-                }
-                at += 1;
-                continue;
+    /// Asks for the next name the import needs, if any, then imports.
+    fn next(self) {
+        let step = self.renaming.borrow_mut().next(&self.preview, &self.parts);
+        match step {
+            Step::Import(names) => self.run(&names),
+            Step::Ask { n, name } => {
+                let taken = {
+                    let (renaming, parts) = (self.renaming.clone(), self.parts.clone());
+                    move |name: &str| renaming.borrow().taken(name, &parts)
+                };
+                let parent = self.host.parent();
+                let this = self.clone();
+                let done = Rc::new(move |name: String| {
+                    this.renaming.borrow_mut().named(n, name);
+                    this.clone().next();
+                });
+                crate::userdb::name_conflict(&parent, &name, Rc::new(taken), done);
             }
-            let name = format!("{}*", item.name);
-            if !name_taken(&self.parts, &name, &before) {
-                if part {
-                    before.push(item.name.clone());
-                }
-                at += 1;
-                continue;
-            }
-            let taken = {
-                let (parts, before) = (self.parts.clone(), before.clone());
-                move |name: &str| name_taken(&parts, name, &before)
-            };
-            let parent = self.host.parent();
-            let this = self.clone();
-            let done = Rc::new(move |name: String| {
-                let (mut names, mut before) = (names.clone(), before.clone());
-                if part {
-                    before.push(name.clone());
-                }
-                names.insert(n, name);
-                this.clone().next(at + 1, names, before);
-            });
-            return crate::userdb::name_conflict(&parent, &name, Rc::new(taken), done);
         }
-        self.run(&names);
     }
 
     /// Imports on a worker thread, the dialog dimmed meanwhile: a large
@@ -674,39 +643,7 @@ impl<H: Host + 'static> Rename<H> {
 }
 
 fn report_alert(host: &impl Host, report: &ImportReport) {
-    let label = |c: &Content| format!("{} ({})", c.name, c.category.label());
-    let mut lines = Vec::new();
-    for (c, name) in &report.renamed {
-        lines.push(tr!("{item} was renamed {name}.", item = label(c), name));
-    }
-    if !report.replaced.is_empty() {
-        lines.push(tr!(
-            "Replaced your records: {names}.",
-            names = report
-                .replaced
-                .iter()
-                .map(|(c, n)| format!("{n} ({})", c.label()))
-                .collect::<Vec<_>>()
-                .join(", ")
-        ));
-    }
-    if !report.skipped.is_empty() {
-        lines.push(tr!(
-            "Not imported, as you have records of these names: {names}.",
-            names = report
-                .skipped
-                .iter()
-                .map(label)
-                .collect::<Vec<_>>()
-                .join(", ")
-        ));
-    }
-    lines.extend(report.warnings.iter().cloned());
-    let heading = trn!(
-        "Imported {n} Item",
-        "Imported {n} Items",
-        report.imported.len()
-    );
+    let (heading, lines) = cr_app::packages::report(report);
     if lines.is_empty() {
         host.toast(&heading);
     } else {
@@ -729,14 +666,8 @@ pub fn edit_package<H: Host + 'static>(host: &Rc<H>) {
         if file.is_expansion() {
             editor(host, file, Some(path));
         } else {
-            alert(
-                &**host,
-                tr("Core Rules 2.0 Package"),
-                tr(
-                    "Packages made by Core Rules 2.0 are only imported. Use Import… to bring \
-                    their content into this installation, then make a new package from it.",
-                ),
-            );
+            let (title, text) = cr_app::packages::core20_only();
+            alert(&**host, title, text);
         }
     });
 }
@@ -911,7 +842,7 @@ impl View {
         categories.dedup();
         for category in categories {
             let group = adw::PreferencesGroup::builder()
-                .title(category.label())
+                .title(category_label(category))
                 .build();
             for item in items.iter().filter(|c| c.category == category) {
                 let row = adw::ActionRow::builder()

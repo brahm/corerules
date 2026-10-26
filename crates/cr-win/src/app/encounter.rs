@@ -200,7 +200,7 @@ fn package_key(encounter: &Encounter, package: Package) -> String {
 
 /// An Expander open as the shell keeps it under `key`: WinUI's Expander
 /// opens only when its state says so.
-fn expander(
+pub(super) fn expander(
     key: String,
     name: &str,
     open: &[String],

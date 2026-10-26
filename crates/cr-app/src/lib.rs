@@ -18,6 +18,7 @@ pub mod help;
 pub mod levels;
 pub mod library;
 pub mod npc;
+pub mod packages;
 pub mod pages;
 pub mod parties;
 pub mod pdf;
