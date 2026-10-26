@@ -7,8 +7,8 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_app::extract;
 use cr_i18n::tr;
-use cr_store::extract::{Destination, Extraction};
 use gtk::{gio, glib};
 
 /// What the dialog needs from the window.
@@ -22,11 +22,7 @@ pub trait Host: 'static {
 pub fn choose_source(host: &Rc<impl Host>) {
     let alert = adw::AlertDialog::builder()
         .heading(tr("Extract Data from CD"))
-        .body(tr(
-            "Copies the rules databases, books and tables the app uses from a Core Rules 2.0 \
-             or Expansion CD into the app's data folder, so the CD is no longer needed. \
-             Choose the CD's ISO image, or the folder of the mounted CD or of an installation.",
-        ))
+        .body(extract::intro())
         .build();
     alert.add_response("cancel", tr("_Cancel"));
     alert.add_response("folder", tr("Choose _Folder…"));
@@ -42,16 +38,18 @@ pub fn choose_source(host: &Rc<impl Host>) {
         let host = host.clone();
         let picked = move |result: Result<gio::File, glib::Error>| {
             if let Some(path) = result.ok().and_then(|f| f.path()) {
-                extract(&host, path);
+                copy(&host, path);
             }
         };
         match response {
             "image" => {
-                let filter = gtk::FileFilter::new();
-                filter.set_name(Some(tr("CD Images (*.iso)")));
-                filter.add_suffix("iso");
                 let filters = gio::ListStore::new::<gtk::FileFilter>();
-                filters.append(&filter);
+                for (name, pattern) in extract::image_filters() {
+                    let filter = gtk::FileFilter::new();
+                    filter.set_name(Some(&name));
+                    filter.add_suffix(pattern.trim_start_matches("*."));
+                    filters.append(&filter);
+                }
                 dialog.set_title(tr("Choose the Core Rules CD Image"));
                 dialog.set_filters(Some(&filters));
                 dialog.open(window.as_ref(), gio::Cancellable::NONE, picked);
@@ -67,7 +65,7 @@ pub fn choose_source(host: &Rc<impl Host>) {
 }
 
 /// Copies the data on a worker thread, then opens it.
-fn extract(host: &Rc<impl Host>, source: PathBuf) {
+fn copy(host: &Rc<impl Host>, source: PathBuf) {
     let working = adw::Toast::builder()
         .title(tr("Extracting the Core Rules data…"))
         .timeout(0)
@@ -75,24 +73,14 @@ fn extract(host: &Rc<impl Host>, source: PathBuf) {
     host.add_toast(working.clone());
     let host = host.clone();
     glib::spawn_future_local(async move {
-        let done = gio::spawn_blocking(move || -> cr_store::Result<Destination> {
-            Extraction::probe(&source)?.install()
-        })
-        .await;
+        let done = gio::spawn_blocking(move || extract::extract(&source)).await;
         working.dismiss();
         let dest = match done {
             Ok(Ok(done)) => done,
-            Ok(Err(e)) => return failed(&*host, &e.to_string()),
+            Ok(Err(e)) => return failed(&*host, &e),
             Err(_) => return failed(&*host, tr("The data could not be copied")),
         };
-        let toast = adw::Toast::new(&match &dest.moved {
-            Some(moved) => cr_i18n::tr!(
-                "Data extracted into {path}; the Core Rules 2.0 data moved to {moved}",
-                path = dest.path.display(),
-                moved = moved.display()
-            ),
-            None => cr_i18n::tr!("Data extracted into {path}", path = dest.path.display()),
-        });
+        let toast = adw::Toast::new(&extract::extracted(&dest));
         if dest.is_data_folder {
             host.open(dest.path);
         } else {
@@ -118,28 +106,22 @@ pub fn open_local_copy(host: &Rc<impl Host>, source: PathBuf) {
     host.add_toast(working.clone());
     let host = host.clone();
     glib::spawn_future_local(async move {
-        let done = gio::spawn_blocking(move || cr_store::extract::local_copy(&source)).await;
+        let done = gio::spawn_blocking(move || extract::local_copy(&source)).await;
         working.dismiss();
         let copy = match done {
             Ok(Ok(copy)) => copy,
-            Ok(Err(e)) => return failed(&*host, &e.to_string()),
+            Ok(Err(e)) => return failed(&*host, &e),
             Err(_) => return failed(&*host, tr("The data could not be copied")),
         };
+        let (heading, body) = extract::copied(&copy);
         if !copy.made {
             host.open(copy.path);
-            host.add_toast(adw::Toast::new(tr(
-                "The CD cannot be written to: opened your copy of its data",
-            )));
+            host.add_toast(adw::Toast::new(heading));
             return;
         }
         let alert = adw::AlertDialog::builder()
-            .heading(tr("The CD Was Copied to This Computer"))
-            .body(cr_i18n::tr!(
-                "The CD cannot be written to, so its data was copied into {path}. \
-                 The characters and everything else you make are saved there, and \
-                 the app opens it on start without the CD.",
-                path = copy.path.display()
-            ))
+            .heading(heading)
+            .body(body)
             .build();
         alert.add_response("close", tr("_Close"));
         host.open(copy.path);

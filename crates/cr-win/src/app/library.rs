@@ -118,7 +118,7 @@ fn symbol(section: &str) -> Symbol {
 
 pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
     if shell.install.is_none() {
-        return no_installation(context);
+        return no_installation(shell.busy, context);
     }
     let Some(section) = shell.current_section() else {
         return ProgressRing::new()
@@ -218,15 +218,25 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
         (action::NEW_PACKAGE, tr("New P_ackage…"), Symbol::NewFolder),
         (action::EDIT_PACKAGE, tr("E_dit Package…"), Symbol::OpenFile),
     ])
-    .filter(|(action, ..)| available(*action))
     .filter(|(chosen, ..)| *chosen != action::IMPORT_CORE20 || shell.expansion())
-    .map(|(action, label, symbol)| {
+    .map(|(action, label, symbol)| (action, label, symbol, shell.can_write))
+    // Extract Data from CD… last, as in the GNOME app's menu, where it
+    // follows Open Folder…: it writes into the app's data folder, not
+    // into the installation open.
+    .chain([(
+        action::EXTRACT_DATA,
+        tr("Extract Data from _CD…"),
+        Symbol::Download,
+        true,
+    )])
+    .filter(|(action, ..)| available(*action))
+    .map(|(action, label, symbol, enabled)| {
         KeyedView::new(
             action.name,
             ui::command(
                 &plain(label),
                 symbol,
-                shell.can_write && !shell.busy,
+                enabled && !shell.busy,
                 context.message(Message::Act(action)),
             ),
         )
@@ -857,8 +867,9 @@ pub fn full_screen(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
         .content(content)
 }
 
-/// No installation was found: where the app looks, and Open Folder….
-fn no_installation(context: &mut ViewContext<Shell>) -> View {
+/// No installation was found: where the app looks, Extract Data from
+/// CD… and Open Folder….
+fn no_installation(busy: bool, context: &mut ViewContext<Shell>) -> View {
     ui::page(
         StackPanel::new().spacing(12.0).children((
             ui::title(tr("No Core Rules Installation")),
@@ -867,10 +878,20 @@ fn no_installation(context: &mut ViewContext<Shell>) -> View {
                  folder where AD&D Core Rules 2.0 is installed.",
                 folder = cr_store::DATA_PACKAGE_SHOWN
             )),
-            Button::new()
-                .style(ButtonStyle::Accent)
-                .on_click(context.message(Message::Act(action::OPEN)))
-                .content(plain(tr("_Open Folder…"))),
+            StackPanel::new()
+                .orientation(Orientation::Horizontal)
+                .spacing(8.0)
+                .children((
+                    Button::new()
+                        .style(ButtonStyle::Accent)
+                        .is_enabled(!busy)
+                        .on_click(context.message(Message::Act(action::EXTRACT_DATA)))
+                        .content(plain(tr("Extract Data from _CD…"))),
+                    Button::new()
+                        .is_enabled(!busy)
+                        .on_click(context.message(Message::Act(action::OPEN)))
+                        .content(plain(tr("_Open Folder…"))),
+                )),
         )),
     )
 }

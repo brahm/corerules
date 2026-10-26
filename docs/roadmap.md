@@ -335,7 +335,7 @@ The phases run in order:
      columns now regroup and a wide table wraps its words and is scaled
      down only by what still does not fit. Saving a treasure, encounter
      or table now shows its section, as in the GNOME app.
-   - **The user database editors (in progress).** `cr-app` gained the
+   - **The user database editors.** `cr-app` gained the
      record editor free of any toolkit: its pages and groups, every kind
      of field, the questions the original asks before a change or a save,
      the small dialogs of a group to choose from, a class level's free
@@ -362,8 +362,12 @@ The phases run in order:
      with an item. The GNOME app reads its lists and pickers' data with
      it; the Windows app edits a template on a page of the window, with
      NPC Creation in template mode for its NPCs. The library's list now
-     scrolls to the entry selected when it is made anew.
-   - **Packages (in progress).** `cr-app` gained what Export…, Import…
+     scrolls to the entry selected when it is made anew. Its Windows test
+     found dice rows cut in a narrow window, the placement's long choices
+     cut in a combo (radios now, as in the original), padding spaces in
+     the lines and texts left in English, the template's description
+     among them, all fixed before the merge (PR #107).
+   - **Packages.** `cr-app` gained what Export…, Import…
      and the package editor do free of any toolkit: the items of a package
      taken or left one by one, what a clash with a record already there
      does, Name Conflict's questions for a part a standard part's name
@@ -373,8 +377,20 @@ The phases run in order:
      and Edit Package… in the library's tools, and opens a package
      chosen in Import… or in File Explorer on a page with every item to
      take or leave; a category of hundreds lists them when opened. Only
-     Extract Data from CD… is left on `NOT_YET_ON_WINDOWS`.
-   - Still to port: Extract Data from CD….
+     Extract Data from CD… is left on `NOT_YET_ON_WINDOWS`. The Windows
+     test found a part of the other types shown on the wrong section once
+     saved, a large category's partial choice not shown and two texts
+     left in English, all fixed before the merge (PR #108).
+   - **Extract Data from CD (in progress).** `cr-app` gained what the app
+     says around the copy and when a folder opened is copied first; the
+     GNOME app says it with them. The Windows app asks for the CD's ISO
+     image or a folder, copies its data into `Documents\Core Rules\data`
+     (or beside it when a package is already there, with Open to open
+     it), and offers it in the library's tools and on the page shown
+     when no installation is found. An Expansion CD opened with Open
+     Folder… opens its copy instead, as in the GNOME app. With it
+     `NOT_YET_ON_WINDOWS` is empty: every screen of the GNOME app is on
+     Windows.
 5. **Package and Store.** The release workflow builds and tests the MSIX;
    a beta goes to a closed group through the Microsoft Store.
 6. **Release with Windows**, once the beta's users confirm it, with the
