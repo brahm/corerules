@@ -189,6 +189,14 @@ pub fn page(content: impl Into<View>) -> View {
     )
 }
 
+/// A page with the margins of `page` that does not scroll: its content
+/// has the window's height, for a list that scrolls by itself.
+pub fn fixed_page(content: impl Into<View>) -> View {
+    Border::new()
+        .padding(Thickness::new(PAGE_SIDE, 24.0, PAGE_SIDE, 24.0))
+        .content(Border::new().max_width(1000.0).content(content))
+}
+
 /// A command bar button with a symbol. It is wide enough for the
 /// longest word of its label, which WinUI would otherwise break over
 /// lines under the symbol when the bar opens.

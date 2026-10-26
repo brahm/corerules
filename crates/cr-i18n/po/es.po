@@ -9757,11 +9757,11 @@ msgstr "Carácter no válido en el nombre de la clase"
 
 #: crates/cr-store/src/userdb/classes.rs:267
 msgid "Class not added: Error. The name you chose for your class is identical to a standard class name.  Please choose a unique name."
-msgstr "Clase no añadida: error. El nombre elegido para la clase es idéntico al de una clase estándar. Elija un nombre único."
+msgstr "Clase no añadida: El nombre elegido para la clase es idéntico al de una clase estándar. Elija un nombre único."
 
 #: crates/cr-store/src/userdb/classes.rs:270
 msgid "Class not added: Error. {reason}"
-msgstr "Clase no añadida: error. {reason}"
+msgstr "Clase no añadida: {reason}"
 
 #: crates/cr-store/src/userdb/classes.rs:279
 msgid "Any character or NPC created from the deleted Class will no longer function correctly"
@@ -9781,7 +9781,7 @@ msgstr "Nombre del tipo"
 
 #: crates/cr-store/src/userdb/monsters.rs:103
 msgid "Monster Type not added: Error. {reason}"
-msgstr "Tipo de monstruo no añadido: error. {reason}"
+msgstr "Tipo de monstruo no añadido: {reason}"
 
 #: crates/cr-store/src/userdb/monsters.rs:122
 #: crates/cr-store/src/userdb/monsters.rs:129
@@ -12061,7 +12061,7 @@ msgstr "Nombre ya usado en la categoría {category}."
 
 #: crates/cr-store/src/userdb/parts.rs:463
 msgid "Part not added: Error. {reason}"
-msgstr "Pieza no añadida: error. {reason}"
+msgstr "Pieza no añadida: {reason}"
 
 #: crates/cr-store/src/userdb/parts.rs:483
 msgid "{price} gp"
@@ -12146,7 +12146,7 @@ msgstr "Nombre ya usado en la categoría {discipline}."
 
 #: crates/cr-store/src/userdb/powers.rs:141
 msgid "Power not added: Error. {reason}"
-msgstr "Poder no añadido: error. {reason}"
+msgstr "Poder no añadido: {reason}"
 
 #: crates/cr-store/src/userdb/races.rs:236
 msgid "Parent Race"
@@ -12327,7 +12327,7 @@ msgstr "No vetar nunca Truco"
 
 #: crates/cr-store/src/userdb/spells.rs:170
 msgid "Spell not added: Error. {reason}"
-msgstr "Conjuro no añadido: error. {reason}"
+msgstr "Conjuro no añadido: {reason}"
 
 #: crates/cr-store/src/userdb/spells.rs:172
 msgid "Spell not Modified. Error. {reason}"
@@ -12416,7 +12416,7 @@ msgstr "Número de personajes atrapados"
 
 #: crates/cr-store/src/userdb.rs:709
 msgid "{noun} not added: Error. {reason}"
-msgstr "{noun} no añadido: error. {reason}"
+msgstr "{noun} no añadido: {reason}"
 
 #: crates/cr-store/src/userdb.rs:757
 msgid "The name can have at most {max} characters."

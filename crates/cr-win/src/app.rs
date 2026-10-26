@@ -491,6 +491,8 @@ pub enum Message {
     // Help.
     HelpShown(Result<Box<Shown>, String>),
     HelpBook(Option<usize>),
+    /// Shows or hides the list in a narrow window.
+    HelpSide(bool),
     /// A row of the tree, by its title.
     HelpRow(String),
     HelpSearch(String),
@@ -992,8 +994,9 @@ impl Shell {
             action::HELP => self.open_help(PROGRAM.to_owned(), false, context),
             // The original's Help > Main Menu and F1: the program help of
             // the page shown.
+            // Not under a dialog, which the help page would open behind.
             action::HELP_HERE => {
-                if !matches!(self.page, Page::Help(_)) {
+                if !matches!(self.page, Page::Help(_)) && self.confirm.is_none() {
                     self.open_help(cr_app::help::program(self.here()), false, context);
                 }
             }
@@ -3365,8 +3368,12 @@ impl Component for Shell {
                 if let Some(rows) = shown.rows.clone() {
                     page.rows = rows;
                     page.listed = shown.place.file.clone();
+                    page.listed_title = shown.book_title.clone();
                     page.query.clear();
                 }
+                // In a narrow window, the topic chosen shows in place of
+                // the list.
+                page.side_open = false;
                 // A search's rows are not the ones it was found in.
                 let shown_row = if page.query.is_empty() {
                     shown.row
@@ -3396,13 +3403,18 @@ impl Component for Shell {
                 }
             }
             Message::HelpBook(None) => {}
+            Message::HelpSide(open) => {
+                if let Page::Help(page) = &mut self.page {
+                    page.side_open = open;
+                }
+            }
             Message::HelpRow(title) => {
                 let (Some(files), Page::Help(page)) = (self.help_files(), &self.page) else {
                     return;
                 };
                 // The tree says which row by its title; a heading only
                 // opens and closes its branch.
-                if let Some(row) = page.rows.iter().find(|r| r.title == title && r.is_topic()) {
+                if let Some(row) = help::row_named(&page.rows, &title) {
                     let place = files.row_place(row);
                     self.show_topic(place, true, context);
                 }

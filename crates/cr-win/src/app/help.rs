@@ -39,6 +39,8 @@ pub struct Shown {
     pub title: String,
     /// The file's title, when it is not the topic's.
     pub file_title: String,
+    /// The file's title.
+    pub book_title: String,
     pub page: html::Page,
     /// The rows beside it, when they change with it.
     pub rows: Option<Arc<Vec<Row>>>,
@@ -67,6 +69,41 @@ pub struct HelpPage {
     pub printing: bool,
     /// The row of the topic shown, whose branch of the tree is open.
     pub row: Option<usize>,
+    /// The title of the file listed, for the book selector when it is
+    /// none of its books.
+    pub listed_title: String,
+    /// In a narrow window, the list shows in place of the topic.
+    pub side_open: bool,
+}
+
+/// The side's width.
+const SIDE: f64 = 300.0;
+
+/// The width below which the side and the topic take turns.
+const NARROW: f64 = 760.0;
+
+/// Whether the window is too narrow for the side beside the topic.
+pub fn narrow() -> bool {
+    ui::room() < NARROW
+}
+
+/// A row's text in the tree: its title on one line, cut with an ellipsis
+/// where it would run past the side, which a tree item does not do itself.
+fn row_text(row: &Row) -> String {
+    // About 7.5 px a character, less the tree's indent for the level.
+    let indent = 24.0 * f64::from(row.level.saturating_sub(1));
+    let most = ((SIDE - 56.0 - indent) / 7.5).max(12.0) as usize;
+    let title = row.title.split_whitespace().collect::<Vec<_>>().join(" ");
+    if title.chars().count() <= most {
+        return title;
+    }
+    let cut: String = title.chars().take(most - 1).collect();
+    format!("{}…", cut.trim_end())
+}
+
+/// The row a tree item names by its text.
+pub fn row_named<'a>(rows: &'a [Row], text: &str) -> Option<&'a Row> {
+    rows.iter().find(|r| r.is_topic() && row_text(r) == text)
 }
 
 /// Shows topic `place` with what goes beside it: the rows of its file
@@ -82,6 +119,7 @@ pub fn show(
     let help = files.file(&place.file).ok_or_else(missing)?;
     let topic = help.topics.get(place.topic).ok_or_else(missing)?;
     let title = shared::title(&help, topic);
+    let book_title = help.title.clone();
     let file_title = if help.title == title {
         String::new()
     } else {
@@ -94,6 +132,7 @@ pub fn show(
         page: html::topic(&help, topic),
         title,
         file_title,
+        book_title,
         rows: new_rows,
         row,
         remember,
@@ -171,7 +210,7 @@ fn tree(rows: &[Row], current: Option<usize>) -> Vec<TreeNode> {
         let children = (i + 1..rows.len())
             .filter(|&c| parents[c] == Some(i))
             .map(|c| node(c, rows, parents, open));
-        TreeNode::new(i.to_string(), rows[i].title.clone())
+        TreeNode::new(i.to_string(), row_text(&rows[i]))
             .expanded(open[i])
             .children(children)
     }
@@ -182,26 +221,28 @@ fn tree(rows: &[Row], current: Option<usize>) -> Vec<TreeNode> {
 }
 
 pub fn view(shell: &Shell, page: &HelpPage, context: &mut ViewContext<Shell>) -> View {
-    let books = books();
-    let book = books.iter().position(|(file, _)| {
-        page.shown
-            .as_ref()
-            .is_some_and(|s| s.place.file.eq_ignore_ascii_case(file))
-            || page.listed.eq_ignore_ascii_case(file)
+    let mut books: Vec<String> = books().into_iter().map(|(_, name)| name).collect();
+    // Another file listed (a book's, a search's or a link's) shows as an
+    // entry of its own rather than none.
+    let book = help_books_position(&page.listed).or_else(|| {
+        (!page.listed_title.is_empty()).then(|| {
+            books.push(page.listed_title.clone());
+            books.len() - 1
+        })
     });
+    let narrow = narrow();
     let side = Grid::new()
         .rows([GridLength::Auto, GridLength::Auto, GridLength::STAR])
         .row_spacing(8.0)
-        .margin(Thickness::new(24.0, 24.0, 8.0, 12.0))
+        .margin(if narrow {
+            Thickness::new(16.0, 0.0, 16.0, 12.0)
+        } else {
+            Thickness::new(24.0, 24.0, 8.0, 12.0)
+        })
         .children((
             ComboBox::new()
                 .automation_name(plain(tr("_Help")))
-                .items_source(
-                    books
-                        .iter()
-                        .map(|(_, name)| name.clone())
-                        .collect::<Vec<_>>(),
-                )
+                .items_source(books)
                 .selected_index(book)
                 .horizontal_alignment(HorizontalAlignment::Stretch)
                 .on_selection_changed(context.callback(Message::HelpBook)),
@@ -225,7 +266,19 @@ pub fn view(shell: &Shell, page: &HelpPage, context: &mut ViewContext<Shell>) ->
         Some(shown) => (shown.title.clone(), shown.file_title.clone()),
         None => (plain(tr("_Help")), String::new()),
     };
-    let commands = [
+    let mut commands = Vec::new();
+    if narrow {
+        commands.push(KeyedView::new(
+            "contents",
+            ui::command(
+                tr("Contents"),
+                Symbol::List,
+                true,
+                context.message(Message::HelpSide(!page.side_open)),
+            ),
+        ));
+    }
+    commands.extend([
         KeyedView::new(
             "back",
             ui::command(
@@ -244,10 +297,14 @@ pub fn view(shell: &Shell, page: &HelpPage, context: &mut ViewContext<Shell>) ->
                 context.message(Message::HelpPrint),
             ),
         ),
-    ];
+    ]);
     let header = Grid::new()
         .columns([GridLength::STAR, GridLength::Auto])
-        .margin(Thickness::new(16.0, 24.0, 24.0, 8.0))
+        .margin(if narrow {
+            Thickness::new(16.0, 24.0, 16.0, 8.0)
+        } else {
+            Thickness::new(16.0, 24.0, 24.0, 8.0)
+        })
         .children((
             StackPanel::new()
                 .spacing(2.0)
@@ -300,7 +357,11 @@ pub fn view(shell: &Shell, page: &HelpPage, context: &mut ViewContext<Shell>) ->
         );
     }
     let topic = Border::new()
-        .margin(Thickness::new(16.0, 0.0, 24.0, 24.0))
+        .margin(if narrow {
+            Thickness::new(16.0, 0.0, 16.0, 16.0)
+        } else {
+            Thickness::new(16.0, 0.0, 24.0, 24.0)
+        })
         .corner_radius(8.0)
         .border_brush(ThemeBrush::CardStroke)
         .border_thickness(1.0)
@@ -309,13 +370,43 @@ pub fn view(shell: &Shell, page: &HelpPage, context: &mut ViewContext<Shell>) ->
                 .element_ref(&shell.help_view.control)
                 .automation_name(title_for_readers(page)),
         );
-    let main = Grid::new()
-        .grid_column(1)
-        .rows([GridLength::Auto, GridLength::STAR])
-        .children((header, Border::new().grid_row(1).content(topic)));
+    // One layout for both widths, only its sizes changing: a WebView2
+    // moved to another parent is left blank. In a narrow window the side
+    // and the topic take turns under the header, the topic kept (hidden)
+    // for its WebView2 not to start again.
+    let side_open = narrow && page.side_open;
     Grid::new()
-        .columns([GridLength::Pixel(300.0), GridLength::STAR])
-        .children((side, main))
+        .columns([
+            GridLength::Pixel(if narrow { 0.0 } else { SIDE }),
+            GridLength::STAR,
+        ])
+        .rows([GridLength::Auto, GridLength::STAR])
+        .children((
+            Border::new()
+                .grid_column(if narrow { 1 } else { 0 })
+                .grid_row(if narrow { 1 } else { 0 })
+                .grid_row_span(if narrow { 1 } else { 2 })
+                .height(hidden(narrow && !side_open))
+                .content(side),
+            Border::new().grid_column(1).content(header),
+            Border::new()
+                .grid_column(1)
+                .grid_row(1)
+                .height(hidden(side_open))
+                .content(topic),
+        ))
+}
+
+/// No height when `hide`, which hides a part without taking it away.
+fn hidden(hide: bool) -> Option<f64> {
+    hide.then_some(0.0)
+}
+
+/// Which of the book selector's books `listed` is.
+fn help_books_position(listed: &str) -> Option<usize> {
+    books()
+        .iter()
+        .position(|(file, _)| listed.eq_ignore_ascii_case(file))
 }
 
 fn title_for_readers(page: &HelpPage) -> String {
