@@ -391,7 +391,7 @@ The phases run in order:
      Folder… opens its copy instead, as in the GNOME app. With it
      `NOT_YET_ON_WINDOWS` is empty: every screen of the GNOME app is on
      Windows (PR #109).
-   - **Help and details (in progress).** The Windows test of the Help
+   - **Help and details (done, PR #110).** The Windows test of the Help
      page with the CD's help files found its side panel too wide for a
      narrow window, long lines of some topics not wrapped, the book
      list left blank after a search or a link to another file, and F1
@@ -404,6 +404,13 @@ The phases run in order:
      in the translations.
 5. **Package and Store.** The release workflow builds and tests the MSIX;
    a beta goes to a closed group through the Microsoft Store.
+   - **The MSIX in the release workflow (in progress).** The workflow
+     builds the MSIX with the version of the tag, installs it on a clean
+     Windows with the Windows App Runtime (signed there with a
+     certificate of its publisher that only that machine trusts), starts
+     the app from Start and runs the Windows App Certification Kit. The
+     MSIX stays among the run's artifacts for the Store, not in the
+     GitHub release, where Windows would not install it unsigned.
 6. **Release with Windows**, once the beta's users confirm it, with the
    same version and tag as Linux. The Community Add-ons Collection follows
    as a package the Windows app imports.

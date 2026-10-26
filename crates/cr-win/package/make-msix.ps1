@@ -21,11 +21,24 @@ Copy-Item "$PSScriptRoot\Assets\*" "$layout\Assets"
 $manifest = Get-Content "$PSScriptRoot\AppxManifest.xml" -Raw
 $manifest.Replace('Version="0.0.0.0"', "Version=""$Version.0""") |
     Set-Content -NoNewline -Encoding utf8 "$layout\AppxManifest.xml"
-$makeappx = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\makeappx.exe" |
-    Sort-Object FullName -Descending | Select-Object -First 1
-if (-not $makeappx) { throw "makeappx.exe not found; install the Windows SDK" }
+function Find-Kit($name) {
+    $tool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\$name" |
+        Sort-Object FullName -Descending | Select-Object -First 1
+    if (-not $tool) { throw "$name not found; install the Windows SDK" }
+    $tool.FullName
+}
+$makeappx = Find-Kit makeappx.exe
+# The logos come at 100% and 200% scale; resources.pri tells Windows (and
+# the Store's certification) which file a scale takes for each name in the
+# manifest.
+$makepri = Find-Kit makepri.exe
+$config = Join-Path $env:TEMP "corerules-priconfig.xml"
+& $makepri createconfig /cf $config /dq en-US /pv 10.0.0 /o | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "makepri createconfig failed" }
+& $makepri new /pr $layout /cf $config /mn "$layout\AppxManifest.xml" /of "$layout\resources.pri" /o
+if ($LASTEXITCODE -ne 0) { throw "makepri failed" }
 New-Item -ItemType Directory -Force $Out | Out-Null
 $package = Join-Path $Out "CoreRules_${Version}_x64.msix"
-& $makeappx.FullName pack /d $layout /p $package /o
+& $makeappx pack /d $layout /p $package /o
 if ($LASTEXITCODE -ne 0) { throw "makeappx failed" }
 Write-Output $package
