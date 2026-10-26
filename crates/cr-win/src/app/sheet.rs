@@ -132,6 +132,9 @@ pub fn view(shell: &Shell, page: &SheetPage, context: &mut ViewContext<Shell>) -
                     SlotView::collection(CommandBarSlot::SecondaryCommands, secondary),
                 ]),
         ));
+    // The width the sections have: the room beside the navigation pane
+    // less the margins, at most the page's widest.
+    let content = (ui::room() - 72.0).min(1100.0);
     let sections = page
         .sheet
         .sections
@@ -139,7 +142,7 @@ pub fn view(shell: &Shell, page: &SheetPage, context: &mut ViewContext<Shell>) -
         .enumerate()
         .filter_map(|(i, section)| match &section.content {
             SectionContent::Columns(columns) => {
-                Some(KeyedView::new(i, columns_view(columns, page)))
+                Some(KeyedView::new(i, columns_view(columns, page, content)))
             }
             SectionContent::PageBreak => None,
         });
@@ -158,30 +161,42 @@ pub fn view(shell: &Shell, page: &SheetPage, context: &mut ViewContext<Shell>) -
         ))
 }
 
-/// A row of columns, each a stack of boxes.
-fn columns_view(columns: &[Vec<SheetBox>], page: &SheetPage) -> View {
+/// A row of columns, each a stack of boxes, `content` wide; one column
+/// of them all, in order, when side by side they would be too narrow
+/// for their tables.
+fn columns_view(columns: &[Vec<SheetBox>], page: &SheetPage, content: f64) -> View {
+    const NARROWEST: f64 = 280.0;
     let count = columns.len().max(1);
+    let side_by_side = (content - 18.0 * (count - 1) as f64) / count as f64;
+    let (stacks, width): (Vec<Vec<&SheetBox>>, f64) = if side_by_side >= NARROWEST {
+        (
+            columns.iter().map(|c| c.iter().collect()).collect(),
+            side_by_side,
+        )
+    } else {
+        (vec![columns.iter().flatten().collect()], content)
+    };
+    // The room inside a card: its padding and border.
+    let inside = width - 34.0;
     Grid::new()
-        .columns(vec![GridLength::STAR; count])
+        .columns(vec![GridLength::STAR; stacks.len().max(1)])
         .column_spacing(18.0)
-        .keyed_children(columns.iter().enumerate().map(|(c, column)| {
+        .keyed_children(stacks.iter().enumerate().map(|(c, column)| {
             KeyedView::new(
                 c,
                 StackPanel::new()
                     .spacing(18.0)
                     .vertical_alignment(VerticalAlignment::Top)
                     .grid_column(c as i32)
-                    .keyed_children(
-                        column
-                            .iter()
-                            .enumerate()
-                            .map(|(b, sheet_box)| KeyedView::new(b, box_view(sheet_box, page))),
-                    ),
+                    .keyed_children(column.iter().enumerate().map(|(b, sheet_box)| {
+                        KeyedView::new(b, box_view(sheet_box, page, inside))
+                    })),
             )
         }))
 }
 
-fn box_view(sheet_box: &SheetBox, page: &SheetPage) -> View {
+/// A box, its card `inside` wide within.
+fn box_view(sheet_box: &SheetBox, page: &SheetPage, inside: f64) -> View {
     let title: View = if sheet_box.title.is_empty() {
         View::empty()
     } else {
@@ -197,7 +212,7 @@ fn box_view(sheet_box: &SheetBox, page: &SheetPage) -> View {
         .enumerate()
         .filter_map(|(i, block)| {
             let view: View = match block {
-                Block::Table(table) if !table.rows.is_empty() => table_view(table),
+                Block::Table(table) if !table.rows.is_empty() => table_view(table, inside),
                 Block::List(items) if !items.is_empty() => list_view(items, 0),
                 Block::Paragraph(text) if !text.trim().is_empty() => {
                     text_view(text.trim_end().replace('\t', "    "))
@@ -230,7 +245,10 @@ fn text_view(text: String) -> View {
     ui::body(text).is_text_selection_enabled(true).into()
 }
 
-fn table_view(table: &Table) -> View {
+/// A table, as wide as its cells; scaled down to `inside` when it is
+/// wider, so that every column shows whole and the page still scrolls
+/// under the wheel.
+fn table_view(table: &Table, inside: f64) -> View {
     let columns = table
         .rows
         .iter()
@@ -271,31 +289,26 @@ fn table_view(table: &Table) -> View {
             column += span;
         }
     }
-    // Each column a share of the card in proportion to its widest cell,
-    // up to about its width: a narrow card wraps every column a little,
-    // rather than cutting the table off or squeezing one column, and a
-    // wide one shows the table as it is.
-    let widths = column_widths(table, columns);
-    let natural = widths.iter().sum::<f64>() + 12.0 * (columns - 1) as f64;
-    Grid::new()
-        .columns(
-            widths
-                .iter()
-                .map(|w| GridLength::Star(w.max(8.0)))
-                .collect::<Vec<_>>(),
-        )
+    let grid = Grid::new()
+        .columns(vec![GridLength::Auto; columns])
         .rows(vec![GridLength::Auto; table.rows.len()])
         .column_spacing(12.0)
         .row_spacing(4.0)
-        .max_width(natural)
-        .horizontal_alignment(HorizontalAlignment::Left)
-        .keyed_children(cells)
+        .keyed_children(cells);
+    if natural_width(table, columns) > inside {
+        Viewbox::new()
+            .stretch(Stretch::Uniform)
+            .horizontal_alignment(HorizontalAlignment::Left)
+            .slots([SlotView::new(ViewboxSlot::Child, grid)])
+    } else {
+        grid
+    }
 }
 
-/// About how wide each column's widest cell is, generously, in the
-/// sizes [`table_view`] draws them; a cell over several columns widens
-/// them evenly when they are too narrow for it.
-fn column_widths(table: &Table, columns: usize) -> Vec<f64> {
+/// About how wide `table` is drawn, generously: each column as its
+/// widest cell, a cell over several columns widening them evenly when
+/// they are too narrow for it.
+fn natural_width(table: &Table, columns: usize) -> f64 {
     let width = |cell: &cr_store::sheet::Cell| {
         let chars = cell
             .text
@@ -304,15 +317,11 @@ fn column_widths(table: &Table, columns: usize) -> Vec<f64> {
             .max()
             .unwrap_or(0) as f64;
         let per_char = if cell.kind == CellKind::Large {
-            12.0
+            11.0
         } else {
-            8.0
+            7.5
         };
-        if chars == 0.0 {
-            0.0
-        } else {
-            chars * per_char + 10.0
-        }
+        chars * per_char
     };
     let mut widths = vec![0.0f64; columns];
     for row in &table.rows {
@@ -341,7 +350,7 @@ fn column_widths(table: &Table, columns: usize) -> Vec<f64> {
             c += span;
         }
     }
-    widths
+    widths.iter().sum::<f64>() + 12.0 * (columns - 1) as f64
 }
 
 fn list_view(items: &[ListItem], depth: u32) -> View {
