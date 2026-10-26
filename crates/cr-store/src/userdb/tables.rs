@@ -373,22 +373,45 @@ pub fn source_items(
     source: &str,
 ) -> Result<(Vec<String>, bool)> {
     if source == "Tables" {
+        return Ok(items_of(&[], db, source));
+    }
+    Ok(items_of(&parts::names_by_origin(install)?, db, source))
+}
+
+/// What every source shows, as [`source_items`] gives it, the parts read
+/// once: each of [`source_names`] with its items and whether they are
+/// tables.
+pub fn all_source_items(
+    install: &Installation,
+    db: &TableDb,
+) -> Result<Vec<(String, Vec<String>, bool)>> {
+    let by_origin = parts::names_by_origin(install)?;
+    Ok(source_names()
+        .into_iter()
+        .map(|source| {
+            let (items, tables) = items_of(&by_origin, db, &source);
+            (source, items, tables)
+        })
+        .collect())
+}
+
+/// [`source_items`] with the parts' names by origin already read.
+fn items_of(
+    by_origin: &[Vec<(String, Origin)>],
+    db: &TableDb,
+    source: &str,
+) -> (Vec<String>, bool) {
+    if source == "Tables" {
         let mut names: Vec<String> = db.tables.iter().map(|t| t.name.clone()).collect();
         names.sort_by_cached_key(|n| crate::collate::sort_key(n));
         names.dedup();
-        return Ok((names, true));
+        return (names, true);
     }
     let (category, which) = source.split_once(", ").unwrap_or((source, "All"));
-    let category = if category == "Magical Items" {
-        "Magical Items"
-    } else {
-        category
+    let Some(names) = parts::source_type(category).and_then(|t| by_origin.get(t)) else {
+        return (Vec::new(), false);
     };
-    let Some(t) = parts::source_type(category) else {
-        return Ok((Vec::new(), false));
-    };
-    let by_origin = parts::names_by_origin(install)?;
-    let mut names: Vec<String> = by_origin[t]
+    let mut names: Vec<String> = names
         .iter()
         .filter(|(_, o)| match which {
             "Custom" => *o == Origin::Custom,
@@ -399,7 +422,7 @@ pub fn source_items(
         .collect();
     names.sort_by_cached_key(|n| crate::collate::sort_key(n));
     names.dedup();
-    Ok((names, false))
+    (names, false)
 }
 
 #[cfg(test)]

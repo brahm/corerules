@@ -11,8 +11,8 @@ use cr_app::library::{self, Commands};
 use cr_app::records;
 use cr_i18n::tr;
 use cr_store::catalog::{ENCOUNTER_KEY, Entry, Frames, Section, TABLE_KEY, TREASURE_KEY};
-use cr_store::userdb::Filter as Origins;
 use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES};
+use cr_store::userdb::{self, Filter as Origins, Origin};
 use cr_win::text::plain;
 use windows_reactor::*;
 
@@ -134,8 +134,10 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
         .filter(|entry| visible.iter().any(|e| e.key == entry.key));
 
     let mut commands = Vec::new();
+    // The encounter templates' editor is still the GNOME app's.
     if let Some((new, tooltip)) = library::new_command(section.id)
         && available(new)
+        && records::kind_of(section.id) != Some(records::Kind::Templates)
     {
         commands.push(KeyedView::new(
             "new",
@@ -503,6 +505,77 @@ fn details(shell: &Shell, entry: &Entry, context: &mut ViewContext<Shell>) -> Vi
     }
     if commands.copy {
         add("copy", tr("Copy"), Symbol::Copy, !busy, Message::CopyEntry);
+    }
+    // A record of the user databases: Edit (the user's, and every
+    // treasure table), Copy, the extras of races, spells and tables, and
+    // Delete on the user's, as the GNOME app's details offer them.
+    if commands.records
+        && let Some((section, origin, _)) = userdb::parse_key(&entry.key)
+    {
+        let kind = records::kind_of(section);
+        // The encounter templates' editor is still the GNOME app's.
+        let templates = kind == Some(records::Kind::Templates);
+        if commands.edit && !templates {
+            add(
+                "edit",
+                tr("Edit"),
+                Symbol::Edit,
+                !busy,
+                Message::Act(action::UDB_EDIT),
+            );
+        }
+        if !templates {
+            add(
+                "copy",
+                tr("Copy"),
+                Symbol::Copy,
+                !busy,
+                Message::Act(action::UDB_COPY),
+            );
+        }
+        if kind == Some(records::Kind::Races) {
+            add(
+                "subrace",
+                &plain(tr("New _Subrace…")),
+                Symbol::People,
+                !busy,
+                Message::Act(action::UDB_SUBRACE),
+            );
+            add(
+                "allowed",
+                &plain(tr("_Allowed Classes…")),
+                Symbol::Permissions,
+                !busy,
+                Message::Act(action::UDB_ALLOWED),
+            );
+        }
+        if matches!(kind, Some(records::Kind::Spells(_))) {
+            add(
+                "schools",
+                &plain(tr("_Schools…")),
+                Symbol::Library,
+                !busy,
+                Message::Act(action::UDB_SCHOOLS),
+            );
+        }
+        if kind == Some(records::Kind::Tables) && origin == Origin::Standard {
+            add(
+                "restore",
+                &plain(tr("_Restore")),
+                Symbol::Undo,
+                !busy,
+                Message::Act(action::UDB_RESTORE),
+            );
+        }
+        if origin == Origin::Custom {
+            add(
+                "delete",
+                &plain(tr("_Delete")),
+                Symbol::Delete,
+                !busy,
+                Message::Act(action::UDB_DELETE),
+            );
+        }
     }
     if commands.generate {
         add(

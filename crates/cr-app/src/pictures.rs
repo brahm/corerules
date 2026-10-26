@@ -5,7 +5,10 @@
 use std::path::Path;
 
 use cr_formats::bmp::Image;
-use cr_store::pictures::{ICON_SIZE, Icon};
+use cr_i18n::{tr, tr_noop};
+use cr_store::pictures::{
+    CUSTOM_ICON, ICON_PART_TYPES, ICON_SIZE, Icon, IconGroup, icon_number, split_stored,
+};
 
 /// A bitmap file decoded.
 pub fn load(path: &Path) -> Option<Image> {
@@ -39,6 +42,59 @@ pub fn icon(icon: &Icon) -> Option<Image> {
     match icon.left {
         Some(left) => icon_in(&image, left),
         None => Some(image),
+    }
+}
+
+/// An icon as the user reads it: its file, or its number.
+pub fn icon_name(stored: &str) -> String {
+    match stored.get(..CUSTOM_ICON.len()) {
+        Some(prefix) if prefix.eq_ignore_ascii_case(CUSTOM_ICON) => {
+            stored[CUSTOM_ICON.len()..].to_owned()
+        }
+        _ => match icon_number(stored) {
+            Some(number) => tr!("Icon {number}", number),
+            None => stored.to_owned(),
+        },
+    }
+}
+
+/// What a picture's row says of the one a record keeps, `stored` (an
+/// item's icon with `icon`), found in the installation or not.
+pub fn picture_line(stored: &str, icon: bool, found: bool) -> String {
+    let name = if icon {
+        match stored.trim() {
+            "" => String::new(),
+            stored => icon_name(stored),
+        }
+    } else {
+        split_stored(stored).1.to_owned()
+    };
+    match name.as_str() {
+        "" => tr("None").to_owned(),
+        _ if !found => tr!("{file} (not in this installation)", file = name),
+        _ => name,
+    }
+}
+
+/// The part types' names, for the groups of icons.
+const PART_TYPE_NAMES: [&str; 6] = [
+    tr_noop!("Weapons"),
+    tr_noop!("Armor"),
+    tr_noop!("Equipment"),
+    tr_noop!("Magical Items"),
+    tr_noop!("Gems and Art"),
+    tr_noop!("Currency Types"),
+];
+
+/// The heading of a group of icons in Choose Picture.
+pub fn icon_group_title(group: IconGroup) -> &'static str {
+    match group {
+        IconGroup::User => tr("Your Pictures"),
+        IconGroup::PartType(part_type) => ICON_PART_TYPES
+            .iter()
+            .position(|t| *t == part_type)
+            .map_or(part_type, |at| tr(PART_TYPE_NAMES[at])),
+        IconGroup::Unused => tr("Other Pictures"),
     }
 }
 

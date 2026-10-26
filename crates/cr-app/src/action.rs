@@ -114,17 +114,6 @@ pub const NOT_YET_ON_WINDOWS: &[Action] = &[
     IMPORT_CORE20,
     NEW_PACKAGE,
     EDIT_PACKAGE,
-    UDB_NEW,
-    UDB_COPY,
-    UDB_EDIT,
-    UDB_DELETE,
-    UDB_SUBRACE,
-    UDB_SCHOOLS,
-    UDB_ALLOWED,
-    UDB_RESTORE,
-    TRAP_EDIT,
-    TRAP_COPY,
-    TRAP_DELETE,
 ];
 
 #[cfg(test)]

@@ -1,9 +1,47 @@
 //! The records of the user databases behind the catalog's sections:
 //! spells, parts, races, monsters, treasure tables and the rest, each
-//! kept in a user file of the original next to its standard records.
+//! kept in a user file of the original next to its standard records;
+//! what New, Copy, Edit and Delete do to them, and their editors.
+
+pub mod actions;
+pub mod allowed;
+pub mod dialogs;
+pub mod form;
+pub mod tables;
 
 use cr_i18n::tr;
 use cr_store::userdb::{self, Origin, parts};
+
+/// The sections backed by a user file, for a `'static` id.
+const SECTIONS: [&str; 16] = [
+    "wizard-spells",
+    "priest-spells",
+    "traps",
+    "psionics",
+    "monster-types",
+    "monsters",
+    "races",
+    "classes",
+    "weapons",
+    "armor",
+    "equipment",
+    "magic-items",
+    "kits",
+    "nonweapon",
+    "treasure-tables",
+    "templates",
+];
+
+/// The id of section `id` as one that lives as long as the program, for
+/// the sections backed by a user file.
+pub fn static_section(id: &str) -> Option<&'static str> {
+    SECTIONS
+        .iter()
+        .copied()
+        .chain(parts::OTHER_TYPES.iter().map(|(id, ..)| *id))
+        .chain([parts::OTHER_SECTION])
+        .find(|s| *s == id)
+}
 
 /// The record kind behind a catalog section.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -250,6 +250,19 @@ impl Picker {
         }
     }
 
+    /// The trap chosen, with where it comes from, for Edit, Copy and
+    /// Delete.
+    pub fn chosen_trap(&self) -> Option<(String, Origin)> {
+        let Pick::Trap(db, filter) = &self.pick else {
+            return None;
+        };
+        let name = self.chosen.as_ref()?;
+        db.list(*filter)
+            .into_iter()
+            .find(|e| &e.record.name == name)
+            .map(|e| (name.clone(), e.origin))
+    }
+
     /// The items the search lets through, by index.
     pub fn shown(&self) -> Vec<usize> {
         let needle = self.search.trim().to_lowercase();
@@ -549,6 +562,23 @@ impl EncounterForm {
         if let Err(e) = self.encounter.add_npc(character, flavor) {
             self.notice = Some((tr("Add NPC").to_owned(), e.to_string()));
         }
+    }
+
+    /// The trap New Trap made, by its name, among the traps read again,
+    /// as the original puts it in the encounter.
+    pub fn add_new_trap(&mut self, db: &UserDb<Traps>, name: &str) {
+        if let Err(e) = add_trap(&mut self.encounter.traps, db, name) {
+            self.notice = Some((tr("Unable to Add Trap").to_owned(), e.to_string()));
+        }
+    }
+
+    /// The monster New Monster made (0x64f291), by its name, with the
+    /// databases read again (`rules`), which Add Monster lists from now.
+    pub fn add_new_monster(&mut self, rules: Arc<EncounterRules>, name: &str, rand: &mut Rand) {
+        if let Some(package) = rules.new_monster_package(name, None, rand) {
+            self.encounter.monsters.push(package);
+        }
+        self.rules = rules;
     }
 
     pub fn input(&mut self, input: EncounterInput, rand: &mut Rand) {
