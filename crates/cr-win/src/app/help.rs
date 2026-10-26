@@ -90,9 +90,9 @@ pub fn narrow() -> bool {
 /// A row's text in the tree: its title on one line, cut with an ellipsis
 /// where it would run past the side, which a tree item does not do itself.
 fn row_text(row: &Row) -> String {
-    // About 7 px a character, less the tree's indent for the level.
-    let indent = 16.0 * f64::from(row.level.saturating_sub(1));
-    let most = ((SIDE - 56.0 - indent) / 7.0).max(12.0) as usize;
+    // About 7.5 px a character, less the tree's indent for the level.
+    let indent = 24.0 * f64::from(row.level.saturating_sub(1));
+    let most = ((SIDE - 56.0 - indent) / 7.5).max(12.0) as usize;
     let title = row.title.split_whitespace().collect::<Vec<_>>().join(" ");
     if title.chars().count() <= most {
         return title;
@@ -370,31 +370,31 @@ pub fn view(shell: &Shell, page: &HelpPage, context: &mut ViewContext<Shell>) ->
                 .element_ref(&shell.help_view.control)
                 .automation_name(title_for_readers(page)),
         );
-    if narrow {
-        // The side and the topic take turns under the header, the topic
-        // kept (hidden) for its WebView2 not to start again.
-        let side_open = page.side_open;
-        return Grid::new()
-            .rows([GridLength::Auto, GridLength::STAR])
-            .children((
-                header,
-                Border::new()
-                    .grid_row(1)
-                    .height(hidden(!side_open))
-                    .content(side),
-                Border::new()
-                    .grid_row(1)
-                    .height(hidden(side_open))
-                    .content(topic),
-            ));
-    }
-    let main = Grid::new()
-        .grid_column(1)
-        .rows([GridLength::Auto, GridLength::STAR])
-        .children((header, Border::new().grid_row(1).content(topic)));
+    // One layout for both widths, only its sizes changing: a WebView2
+    // moved to another parent is left blank. In a narrow window the side
+    // and the topic take turns under the header, the topic kept (hidden)
+    // for its WebView2 not to start again.
+    let side_open = narrow && page.side_open;
     Grid::new()
-        .columns([GridLength::Pixel(SIDE), GridLength::STAR])
-        .children((side, main))
+        .columns([
+            GridLength::Pixel(if narrow { 0.0 } else { SIDE }),
+            GridLength::STAR,
+        ])
+        .rows([GridLength::Auto, GridLength::STAR])
+        .children((
+            Border::new()
+                .grid_column(if narrow { 1 } else { 0 })
+                .grid_row(if narrow { 1 } else { 0 })
+                .grid_row_span(if narrow { 1 } else { 2 })
+                .height(hidden(narrow && !side_open))
+                .content(side),
+            Border::new().grid_column(1).content(header),
+            Border::new()
+                .grid_column(1)
+                .grid_row(1)
+                .height(hidden(side_open))
+                .content(topic),
+        ))
 }
 
 /// No height when `hide`, which hides a part without taking it away.
