@@ -134,10 +134,8 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
         .filter(|entry| visible.iter().any(|e| e.key == entry.key));
 
     let mut commands = Vec::new();
-    // The encounter templates' editor is still the GNOME app's.
     if let Some((new, tooltip)) = library::new_command(section.id)
         && available(new)
-        && records::kind_of(section.id) != Some(records::Kind::Templates)
     {
         commands.push(KeyedView::new(
             "new",
@@ -385,6 +383,9 @@ fn filters(shell: &Shell, section: &Section, context: &mut ViewContext<Shell>) -
     }
 }
 
+/// The section's list, for the native code to find.
+const LIST: &str = "library-list";
+
 /// What the list depends on, so that a change makes it anew: a new
 /// catalog too, whose rows may have new keys (a converted character's
 /// file) and whose items would lose the selection.
@@ -414,11 +415,25 @@ fn list(
     if visible.is_empty() {
         return ui::caption(tr("No Results")).margin(12.0).into();
     }
+    // A list made anew (a record just saved, a search) or a selection
+    // made elsewhere shows the entry selected, which may be far down.
+    // Reactor cannot scroll a ListView; UI Automation can.
+    let shown = format!(
+        "{}\u{1}{:?}\u{1}{}",
+        list_key(shell, section),
+        shell.selected,
+        shell.selected_copy
+    );
+    context.use_effect("library-list", shown, || {
+        crate::native::uia::show_selected(crate::native::Owner::active(), LIST);
+        None
+    });
     // The standard data repeats some records (Garnet, Pearl and Spinel
     // in Gems and Art), and Reactor needs each row's key once.
     let mut seen: HashMap<&str, usize> = HashMap::new();
     ListView::new()
         .automation_name(section.title)
+        .automation_id(LIST)
         .selected_index(
             shell
                 .selected_entry()
@@ -513,9 +528,7 @@ fn details(shell: &Shell, entry: &Entry, context: &mut ViewContext<Shell>) -> Vi
         && let Some((section, origin, _)) = userdb::parse_key(&entry.key)
     {
         let kind = records::kind_of(section);
-        // The encounter templates' editor is still the GNOME app's.
-        let templates = kind == Some(records::Kind::Templates);
-        if commands.edit && !templates {
+        if commands.edit {
             add(
                 "edit",
                 tr("Edit"),
@@ -524,15 +537,13 @@ fn details(shell: &Shell, entry: &Entry, context: &mut ViewContext<Shell>) -> Vi
                 Message::Act(action::UDB_EDIT),
             );
         }
-        if !templates {
-            add(
-                "copy",
-                tr("Copy"),
-                Symbol::Copy,
-                !busy,
-                Message::Act(action::UDB_COPY),
-            );
-        }
+        add(
+            "copy",
+            tr("Copy"),
+            Symbol::Copy,
+            !busy,
+            Message::Act(action::UDB_COPY),
+        );
         if kind == Some(records::Kind::Races) {
             add(
                 "subrace",

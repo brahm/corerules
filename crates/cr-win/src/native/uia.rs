@@ -1,6 +1,7 @@
 //! Scrolls a list of the window to its selected item, through UI
 //! Automation, which windows-reactor's ListView has nothing for: the
-//! book's contents follow the text.
+//! book's contents follow the text, and the library's list shows the
+//! entry selected.
 
 use std::mem::ManuallyDrop;
 use std::time::Duration;

@@ -174,41 +174,11 @@ pub fn view(form: &RecordForm, picture: PictureOf, context: &mut ViewContext<She
     let shown: Vec<usize> = (0..pages.len()).filter(|&p| form.page_visible(p)).collect();
     // The pages to choose from, once there are several.
     let tabs: View = if shown.len() > 1 {
-        let items: Vec<KeyedView> = shown
-            .iter()
-            .map(|&p| {
-                KeyedView::new(
-                    pages[p].name,
-                    SelectorBarItem::new()
-                        .text(tr(pages[p].name))
-                        .is_selected(p == form.page),
-                )
-            })
-            .collect();
-        let names: Vec<(usize, String)> = shown
+        let names = shown
             .iter()
             .map(|&p| (p, tr(pages[p].name).to_owned()))
             .collect();
-        ScrollViewer::new()
-            .horizontal_scroll_bar_visibility(ScrollBarVisibility::Auto)
-            .vertical_scroll_bar_visibility(ScrollBarVisibility::Disabled)
-            .margin(Thickness::new(0.0, 0.0, 0.0, 4.0))
-            .content(
-                Border::new()
-                    .padding(Thickness::new(0.0, 0.0, 0.0, 8.0))
-                    .content(
-                        SelectorBar::new()
-                            .on_selected_text_changed(context.callback(
-                                move |text: Option<String>| {
-                                    match names.iter().find(|(_, n)| text.as_deref() == Some(n)) {
-                                        Some((p, _)) => input(RecordInput::Page(*p)),
-                                        None => Message::Nothing,
-                                    }
-                                },
-                            ))
-                            .slots([SlotView::collection(SelectorBarSlot::Items, items)]),
-                    ),
-            )
+        tabs(names, form.page, |p| input(RecordInput::Page(p)), context)
     } else {
         View::empty()
     };
@@ -284,6 +254,46 @@ pub fn view(form: &RecordForm, picture: PictureOf, context: &mut ViewContext<She
         ))),
         Grid::new().keyed_children(dialogs),
     ))
+}
+
+/// The pages to choose from, in a SelectorBar that scrolls when they do
+/// not fit: each page's index and name, the one shown, and the message of
+/// a page chosen.
+pub fn tabs(
+    pages: Vec<(usize, String)>,
+    shown: usize,
+    choose: impl Fn(usize) -> Message + 'static,
+    context: &mut ViewContext<Shell>,
+) -> View {
+    let items: Vec<KeyedView> = pages
+        .iter()
+        .map(|(p, name)| {
+            KeyedView::new(
+                name.clone(),
+                SelectorBarItem::new()
+                    .text(name.as_str())
+                    .is_selected(*p == shown),
+            )
+        })
+        .collect();
+    ScrollViewer::new()
+        .horizontal_scroll_bar_visibility(ScrollBarVisibility::Auto)
+        .vertical_scroll_bar_visibility(ScrollBarVisibility::Disabled)
+        .margin(Thickness::new(0.0, 0.0, 0.0, 4.0))
+        .content(
+            Border::new()
+                .padding(Thickness::new(0.0, 0.0, 0.0, 8.0))
+                .content(
+                    SelectorBar::new()
+                        .on_selected_text_changed(context.callback(move |text: Option<String>| {
+                            match pages.iter().find(|(_, n)| text.as_deref() == Some(n)) {
+                                Some((p, _)) => choose(*p),
+                                None => Message::Nothing,
+                            }
+                        }))
+                        .slots([SlotView::collection(SelectorBarSlot::Items, items)]),
+                ),
+        )
 }
 
 /// Why an editor could not save, if it could not.

@@ -6,10 +6,11 @@
 
 use cr_formats::Object;
 use cr_formats::monster::Monster;
+use cr_i18n::{tr, trn};
 
 use super::{
     Dice, Encounter, EncounterRules, Flavor, MonsterLine, MonsterPackage, NpcPackage, Template,
-    coin_name, npc_inventory,
+    npc_inventory,
 };
 use crate::treasure::{Bundle, LETTERS, SUMMARY_TYPE_NAMES, thousands};
 
@@ -396,7 +397,7 @@ impl EncounterRules {
             }
         }
         if !encounter.traps.is_empty() {
-            out.push_str("\nTraps\n");
+            out.push_str(&format!("\n{}\n", tr("Traps")));
             for t in &encounter.traps {
                 out.push_str(&format!("{}\n", t.name));
                 for (label, value) in [
@@ -420,13 +421,17 @@ impl EncounterRules {
 
     /// The printout of a template (CEncTemplatePrinter 0x64d1f6).
     pub fn template_text(&self, template: &Template) -> String {
-        let mut out = format!("{}\nType: {}\n\n", template.name, template.monster_type);
+        let mut out = format!(
+            "{}\n{}\n\n",
+            template.name,
+            tr!("Type: {type}", type = template.monster_type)
+        );
         for line in &template.monsters {
             out.push_str(&monster_line_text(line));
             out.push('\n');
         }
         for line in &template.npcs {
-            let mut s = format!("There is a {}% chance that\n", line.percent);
+            let mut s = chance_text(line.percent);
             if line.dependent {
                 s.push_str(&dependency_text(
                     line.per,
@@ -440,26 +445,22 @@ impl EncounterRules {
                 format!("{} {}", n.race, classes.join("/"))
             };
             if line.list.len() < 2 {
-                s.push_str(&format!(
-                    "  {} {} appear.\n",
-                    dice_text(line.dice),
-                    npc(&line.npc)
+                s.push_str(&appear_text(
+                    line.dice,
+                    &npc(&line.npc),
+                    line.and || line.or,
                 ));
             } else {
-                s.push_str(&format!(
-                    "  {} selected from the following:\n",
-                    dice_text(line.dice)
-                ));
+                s.push_str(&selected_text(line.dice));
                 for n in &line.list {
                     s.push_str(&format!("    {}\n", npc(n)));
                 }
             }
             if line.and || line.or {
-                s.push_str(&format!(
-                    "  {} {} {}\n",
-                    if line.and { "and" } else { "or" },
-                    dice_text(line.second_dice),
-                    npc(&line.second_npc)
+                s.push_str(&second_text(
+                    line.and,
+                    line.second_dice,
+                    &npc(&line.second_npc),
                 ));
             }
             out.push_str(&s);
@@ -472,16 +473,16 @@ impl EncounterRules {
             .filter(|(n, _)| **n != 0)
             .map(|(n, c)| format!("{n}x{c}"))
             .collect();
-        out.push_str(&format!(
-            "Lair Treasure: {}\n",
-            if lair.is_empty() {
-                "None".to_string()
-            } else {
-                lair.join(", ")
-            }
-        ));
+        let treasure = if lair.is_empty() {
+            tr("None").to_owned()
+        } else {
+            lair.join(", ")
+        };
+        out.push_str(&tr!("Lair Treasure: {treasure}", treasure));
+        out.push('\n');
         for item in &template.items {
-            out.push_str(&format!("\nThere is a {}% chance that\n", item.percent));
+            out.push('\n');
+            out.push_str(&chance_text(item.percent));
             if !item.reference.name().is_empty() {
                 out.push_str(&dependency_text(
                     item.per,
@@ -489,34 +490,38 @@ impl EncounterRules {
                     item.reference.name(),
                 ));
             }
-            out.push_str(&format!(
-                "  {} {} worth {} {}\n",
-                dice_text(item.quantity),
-                item.item,
-                dice_text(item.coins),
-                coin_name(item.coin)
+            out.push_str("  ");
+            out.push_str(&tr!(
+                "{dice} {item} worth {coins} {coin}",
+                dice = dice_text(item.quantity),
+                item = item.item,
+                coins = dice_text(item.coins),
+                coin = coin_label(item.coin)
             ));
+            out.push('\n');
             if !item.escorts.is_empty() {
-                out.push_str("  With these items,\n");
+                out.push_str(&format!("  {}\n", tr("With these items,")));
                 for e in &item.escorts {
                     out.push_str(&format!("    {} {}\n", dice_text(e.dice), e.monster.name));
                 }
             }
             if !item.per_item.is_empty() {
-                out.push_str("  For each of these items\n");
+                out.push_str(&format!("  {}\n", tr("For each of these items")));
                 for e in &item.per_item {
                     out.push_str(&format!("    {} {}\n", dice_text(e.dice), e.monster.name));
                 }
             }
             if !item.doubled.is_empty() {
-                out.push_str(&format!(
-                    "  The presence of these items causes the {} appearing to double.\n",
-                    item.doubled.join(", ")
+                out.push_str("  ");
+                out.push_str(&tr!(
+                    "The presence of these items causes the {monsters} appearing to double.",
+                    monsters = item.doubled.join(", ")
                 ));
+                out.push('\n');
             }
         }
         if !template.traps.is_empty() {
-            out.push_str("\nTraps\n");
+            out.push_str(&format!("\n{}\n", tr("Traps")));
             for t in &template.traps {
                 out.push_str(&format!("  {}\n", t.name));
             }
@@ -526,20 +531,101 @@ impl EncounterRules {
 }
 
 fn dependency_text(per: i32, beyond: i32, reference: &str) -> String {
-    if per != 0 {
+    let text = if per != 0 {
         if beyond != 0 {
-            format!("  For every {per} {reference} beyond {beyond}\n")
+            tr!(
+                "For every {per} {reference} beyond {beyond}",
+                per,
+                reference,
+                beyond
+            )
         } else {
-            format!("  For every {per} {reference} present\n")
+            tr!("For every {per} {reference} present", per, reference)
         }
     } else {
-        format!("  If there are at least {beyond} {reference} then\n")
+        tr!(
+            "If there are at least {beyond} {reference} then",
+            beyond,
+            reference
+        )
+    };
+    format!("  {text}\n")
+}
+
+/// A coin as the printout names it ([`super::coin_name`]'s item, without
+/// its star).
+fn coin_label(coin: i32) -> &'static str {
+    match coin {
+        0 => tr("Platinum Pieces"),
+        1 => tr("Gold Pieces"),
+        3 => tr("Copper Pieces"),
+        _ => tr("Silver Pieces"),
     }
+}
+
+/// The first line of a template line's printout.
+fn chance_text(percent: i32) -> String {
+    tr!("There is a {percent}% chance that", percent) + "\n"
+}
+
+/// A line's one monster or NPC: "  1d4 Orc appear.", the verb left for
+/// the second box when there is one.
+fn appear_text(dice: Dice, name: &str, second: bool) -> String {
+    let text = dice_text(dice);
+    if second {
+        return format!("  {text} {name}\n");
+    }
+    let appear = trn!(
+        "{dice} {name} appears.",
+        "{dice} {name} appear.",
+        how_many(dice),
+        dice = text,
+        name
+    );
+    format!("  {appear}\n")
+}
+
+/// How many a dice text stands for, for the verb: the number when the
+/// dice give one, else 2.
+fn how_many(d: Dice) -> u64 {
+    how_many_text(&dice_text(d))
+}
+
+fn how_many_text(dice: &str) -> u64 {
+    dice.parse().unwrap_or(2)
+}
+
+/// The head of a line's random list.
+fn selected_text(dice: Dice) -> String {
+    format!(
+        "  {}\n",
+        tr!(
+            "{dice} selected from the following:",
+            dice = dice_text(dice)
+        )
+    )
+}
+
+/// A line's second box, after "and" or "or", with the line's verb.
+fn second_text(and: bool, dice: Dice, name: &str) -> String {
+    let dice = dice_text(dice);
+    let text = if and {
+        tr!("and {dice} {name} appear.", dice, name)
+    } else {
+        trn!(
+            "or {dice} {name} appears.",
+            "or {dice} {name} appear.",
+            how_many_text(&dice),
+            dice,
+            name
+        )
+    };
+    format!("  {text}\n")
 }
 
 /// One monster line of the template printout.
 fn monster_line_text(line: &MonsterLine) -> String {
-    let mut s = format!("There is a {}% chance that\n", line.percent);
+    let mut s = chance_text(line.percent);
     if line.dependent {
         s.push_str(&dependency_text(
             line.per,
@@ -548,27 +634,67 @@ fn monster_line_text(line: &MonsterLine) -> String {
         ));
     }
     if line.list.len() < 2 {
-        s.push_str(&format!(
-            "  {} {} appear.\n",
-            dice_text(line.dice),
-            line.monster
-        ));
+        s.push_str(&appear_text(line.dice, &line.monster, line.and || line.or));
     } else {
-        s.push_str(&format!(
-            "  {} selected from the following:\n",
-            dice_text(line.dice)
-        ));
+        s.push_str(&selected_text(line.dice));
         for m in &line.list {
             s.push_str(&format!("    {}\n", m.name));
         }
     }
     if line.and || line.or {
-        s.push_str(&format!(
-            "  {} {} {}\n",
-            if line.and { "and" } else { "or" },
-            dice_text(line.second_dice),
-            line.second_monster
+        s.push_str(&second_text(
+            line.and,
+            line.second_dice,
+            &line.second_monster,
         ));
     }
     s
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn line(dice: Dice, monster: &str) -> MonsterLine {
+        MonsterLine {
+            percent: 100,
+            dependent: false,
+            and: false,
+            or: false,
+            per: 0,
+            beyond: 0,
+            reference: Default::default(),
+            dice,
+            monster: monster.into(),
+            list: Vec::new(),
+            second_dice: Dice::new(1, 1, 1, 0),
+            second_monster: String::new(),
+        }
+    }
+
+    /// The verb ends the sentence, after the second box when there is
+    /// one, and agrees with a fixed count.
+    #[test]
+    fn a_line_reads_as_one_sentence() {
+        let one = line(Dice::new(1, 1, 1, 0), "Orc, Leader");
+        assert_eq!(
+            monster_line_text(&one),
+            "There is a 100% chance that\n  1 Orc, Leader appears.\n"
+        );
+        let mut two = line(Dice::new(2, 4, 1, 0), "Orc");
+        two.and = true;
+        two.second_dice = Dice::new(3, 1, 1, 0);
+        two.second_monster = "Orc assistant".into();
+        assert_eq!(
+            monster_line_text(&two),
+            "There is a 100% chance that\n  2d4 Orc\n  and 3 Orc assistant appear.\n"
+        );
+        two.and = false;
+        two.or = true;
+        two.second_dice = Dice::new(1, 1, 1, 0);
+        assert_eq!(
+            monster_line_text(&two),
+            "There is a 100% chance that\n  2d4 Orc\n  or 1 Orc assistant appears.\n"
+        );
+    }
 }

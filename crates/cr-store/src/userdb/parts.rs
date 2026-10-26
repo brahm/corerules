@@ -127,17 +127,26 @@ pub fn other_type(id: &str) -> Option<usize> {
 }
 
 /// The part types the Custom Data list offers ("Select the Type"),
-/// alphabetically, with their array index. Core Rules 2.0 has no Class
-/// Abilities type.
+/// alphabetically, with their array index and their name to translate.
+/// Core Rules 2.0 has no Class Abilities type.
 pub fn editable_types(flavor: Flavor) -> Vec<(usize, &'static str)> {
     let mut types: Vec<(usize, &'static str)> = PART_TYPES
         .iter()
         .enumerate()
-        .filter_map(|(i, t)| t.filter(|t| *t != "NOT").map(|t| (i, t)))
+        .filter_map(|(i, t)| t.filter(|t| *t != "NOT").map(|t| (i, type_label(i, t))))
         .filter(|(i, _)| flavor == Flavor::Expansion || *i != 14)
         .collect();
     types.sort_by_key(|(_, t)| *t);
     types
+}
+
+/// A part type's name to translate: the files' name but for "Schools Of
+/// Magic", which reads as the section lists it.
+fn type_label(part_type: usize, name: &'static str) -> &'static str {
+    OTHER_TYPES
+        .iter()
+        .find(|(_, t, _)| *t == part_type)
+        .map_or(name, |(.., label)| *label)
 }
 
 /// The array index of a part type name ("Weapons" is 0).

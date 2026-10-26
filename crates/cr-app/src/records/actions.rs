@@ -16,10 +16,11 @@ use cr_store::userdb::spells::{self, Spells};
 use cr_store::userdb::tables::{self, TableDb};
 use cr_store::userdb::templates::Templates;
 use cr_store::userdb::traps::Traps;
-use cr_store::userdb::{Flavor, Origin, UserDb, UserKind};
+use cr_store::userdb::{self as udb, Flavor, Origin, UserDb, UserKind};
 
 use super::form::{Only, Opening, RecordForm};
 use super::tables::{TableForm, TableSources};
+use super::templates::{TemplateData, TemplateForm};
 use super::{Kind, kind_of, new_title, static_section};
 
 /// What an action does to a record.
@@ -41,6 +42,8 @@ pub enum Opened {
     Form(Box<RecordForm>),
     /// The treasure table editor.
     Table(Box<TableForm>),
+    /// The encounter template editor.
+    Template(Box<TemplateForm>),
     /// Nothing opens, for this reason.
     Refused(String),
     /// Delete: ask this (a title and a text) first, or delete at once as
@@ -58,8 +61,9 @@ pub enum Opened {
 }
 
 /// Acts on the record `name` of `section` that comes from `origin` (New
-/// takes neither). `shown` is the section of the entry on the details,
-/// whose part type New in the other parts' section starts on.
+/// takes neither). `shown` is the key of the entry on the details, whose
+/// part type New in the other parts' section starts on, and whose
+/// monster type New in the templates' does.
 pub fn open(
     install: &Installation,
     section: &str,
@@ -89,13 +93,14 @@ pub fn open(
         Kind::Classes => act_on::<Classes>(install, &target, 0, act),
         Kind::Parts(t) => act_on::<Parts>(install, &target, t, act),
         Kind::OtherParts if act == Act::New => {
+            let shown = shown.and_then(udb::parse_key).map(|(section, ..)| section);
             Ok(choose_type(cr_store::encounter::flavor_of(install), shown))
         }
         Kind::OtherParts => Ok(Opened::Nothing),
         Kind::Tables => table(install, &target, act),
-        // Delete removes a template at once; the editor is another's.
+        // Delete removes a template at once, asking nothing.
         Kind::Templates if act == Act::Delete => act_on::<Templates>(install, &target, 0, act),
-        Kind::Templates => Ok(Opened::Nothing),
+        Kind::Templates => template(install, &target, act, shown),
     };
     opened.map_err(|e| e.to_string())
 }
@@ -259,6 +264,55 @@ pub fn choose_type(flavor: Flavor, shown: Option<&str>) -> Opened {
     Opened::ChooseType { types, chosen }
 }
 
+/// New, Copy and Edit on an encounter template: its editor.
+fn template(
+    install: &Installation,
+    target: &Target,
+    act: Act,
+    shown: Option<&str>,
+) -> cr_store::Result<Opened> {
+    let db = UserDb::<Templates>::load(install)?;
+    let found = position(&db, target.origin, 0, target.name);
+    let record = found.and_then(|i| db.get(target.origin, i)).cloned();
+    let editor = |record, editing, title| -> cr_store::Result<Opened> {
+        let data = Arc::new(TemplateData::load(install)?);
+        Ok(Opened::Template(Box::new(TemplateForm::new(
+            record, editing, title, data,
+        ))))
+    };
+    match (act, record, found) {
+        (Act::New, ..) => {
+            // The original starts from the monster type selected in its
+            // list; here, the shown template's.
+            let kind = shown
+                .and_then(udb::parse_key)
+                .filter(|(section, ..)| *section == target.section)
+                .and_then(|(_, origin, name)| {
+                    position(&db, origin, 0, name).and_then(|i| db.get(origin, i))
+                })
+                .map(|t| t.monster_type.clone())
+                .unwrap_or_default();
+            editor(
+                db.new_record(0, &kind),
+                None,
+                new_title(target.kind).to_owned(),
+            )
+        }
+        (Act::Copy, Some(record), _) => editor(
+            db.copy_of(&record),
+            None,
+            tr!("Copy of {name}", name = target.name.to_owned()),
+        ),
+        (Act::Edit, Some(_), _) if target.origin == Origin::Standard => Ok(Opened::Refused(
+            tr("Standard records cannot be edited; copy them instead").to_owned(),
+        )),
+        (Act::Edit, Some(record), Some(index)) => {
+            editor(record, Some(index), target.name.to_owned())
+        }
+        _ => Ok(Opened::Nothing),
+    }
+}
+
 fn table(install: &Installation, target: &Target, act: Act) -> cr_store::Result<Opened> {
     let db = TableDb::load(install)?;
     let index = db.position(target.name);
@@ -380,6 +434,10 @@ mod tests {
                     Opened::Table(form) => {
                         assert!(!form.sources().items.is_empty());
                         let _ = form.rows();
+                    }
+                    Opened::Template(form) => {
+                        assert!(!form.data().monsters.is_empty());
+                        assert!(!form.changed(), "{section}: changed on opening");
                     }
                     Opened::Refused(_) | Opened::Nothing => {}
                     Opened::Delete(_) | Opened::ChooseType { .. } => {
