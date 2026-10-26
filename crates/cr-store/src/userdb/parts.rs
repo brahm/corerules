@@ -455,7 +455,7 @@ impl UserKind for Parts {
             NameError::Used | NameError::UsedByStandard => {
                 tr!(
                     "Name already used in catagory {category}.",
-                    category = type_name(r.part_type)
+                    category = tr(type_label(r.part_type, type_name(r.part_type)))
                 )
             }
             e => default_reason(e),

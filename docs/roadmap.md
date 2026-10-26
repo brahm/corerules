@@ -363,8 +363,18 @@ The phases run in order:
      it; the Windows app edits a template on a page of the window, with
      NPC Creation in template mode for its NPCs. The library's list now
      scrolls to the entry selected when it is made anew.
-   - Still to port: packages and Import Core Rules 2.0; Extract Data from
-     CD….
+   - **Packages (in progress).** `cr-app` gained what Export…, Import…
+     and the package editor do free of any toolkit: the items of a package
+     taken or left one by one, what a clash with a record already there
+     does, Name Conflict's questions for a part a standard part's name
+     hides, the report of an import, and the editor's items, Add Items and
+     Save. The GNOME app asks its names and reports its imports with them.
+     The Windows app offers Import Core Rules 2.0…, Export…, New Package…
+     and Edit Package… in the library's tools, and opens a package
+     chosen in Import… or in File Explorer on a page with every item to
+     take or leave; a category of hundreds lists them when opened. Only
+     Extract Data from CD… is left on `NOT_YET_ON_WINDOWS`.
+   - Still to port: Extract Data from CD….
 5. **Package and Store.** The release workflow builds and tests the MSIX;
    a beta goes to a closed group through the Microsoft Store.
 6. **Release with Windows**, once the beta's users confirm it, with the

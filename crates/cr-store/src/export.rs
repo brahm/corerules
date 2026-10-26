@@ -712,7 +712,7 @@ impl Installation {
     pub fn core20_package(&self) -> Result<Export> {
         if flavor_of(self) == Flavor::Expansion {
             return Err(Error::Invalid(
-                "This is an Expansion installation, not a Core Rules 2.0 one".into(),
+                tr("This is an Expansion installation, not a Core Rules 2.0 one").into(),
             ));
         }
         self.export(&self.exportable()?)

@@ -15,6 +15,7 @@ mod import;
 mod levels;
 mod library;
 mod npc;
+mod packages;
 mod parties;
 mod portrait;
 mod record;
@@ -41,6 +42,7 @@ use cr_app::encounter::{
 use cr_app::help::{Files, Found, MonsterHelp, PROGRAM, Target};
 use cr_app::library::Filter;
 use cr_app::npc::{GroupForm, GroupInput, NpcForm, NpcInput};
+use cr_app::packages::{ItemChooser, PackageEditor, Renaming, Step, file_name};
 use cr_app::parties::PartyLists;
 use cr_app::records::actions::{self as record_actions, Act, Opened as Acted};
 use cr_app::records::allowed::{AllowedEffect, AllowedForm, AllowedInput};
@@ -60,14 +62,14 @@ use cr_i18n::{tr, trc, trn};
 use cr_store::Installation;
 use cr_store::catalog::{ENCOUNTER_KEY, Entry, Section, TABLE_KEY, TREASURE_KEY};
 use cr_store::encounter::{Encounter, EncounterRules, check_name};
-use cr_store::export::{Content, ImportReport};
+use cr_store::export::{Content, Exportable, ImportReport};
 use cr_store::help::{ItemHelp, topic};
 use cr_store::npc::{Npc, NpcRules};
 use cr_store::pictures::stored_portrait;
 use cr_store::sheet::Sheet;
 use cr_store::tables::{Leftovers, TableBook, TableRolls};
 use cr_store::treasure::{Bundle, Rand, TreasureRules};
-use cr_store::userdb::parts::OTHER_TYPES;
+use cr_store::userdb::parts::{OTHER_TYPES, Parts};
 use cr_store::userdb::traps::Traps;
 use cr_store::userdb::{FieldKind, Origin, UserDb, Value};
 use cr_win::text::plain;
@@ -205,7 +207,11 @@ pub enum Page {
     Library,
     Edit(Box<Editor>),
     Create(Box<Wizard>),
-    Import(Arc<Package>),
+    Import(Box<import::ImportPage>),
+    /// Export…, or Add Items on the package editor.
+    Export(Box<packages::ExportPage>),
+    /// New Package… or Edit Package….
+    Package(Box<PackageEditor>),
     Settings,
     Sheet(Arc<SheetPage>),
     SheetOptions(Box<SheetOptions>),
@@ -288,14 +294,6 @@ pub enum EncounterOpened {
     Table(Box<TableEditor>),
     /// Group Encounter's sheet, to preview or to print.
     Sheet(Arc<Sheet>, bool),
-}
-
-/// A package opened for import, with what it would bring in.
-pub struct Package {
-    pub path: PathBuf,
-    pub file: ExportFile,
-    pub preview: Vec<Content>,
-    pub expansion: bool,
 }
 
 /// The InfoBar at the top of the page.
@@ -468,7 +466,7 @@ pub enum Message {
     PortraitAdded(Result<Option<String>, String>, Choosing),
     ClosePortraits,
     // Import.
-    PackageChosen(Result<Option<Arc<Package>>, String>),
+    PackageChosen(Result<Option<Box<import::ImportPage>>, String>),
     Import,
     Imported(Result<Arc<ImportReport>, String>),
     // Settings.
@@ -627,6 +625,35 @@ pub enum Message {
     TemplateSaved(Result<Saved, String>),
     /// What NPC Creation made in template mode, or why it made nothing.
     TemplateNpcMade(Result<Box<Npc>, String>),
+    /// Import's check on an item, by index into the preview, or on every
+    /// item of a large category, by its place among the categories.
+    ImportCheck(usize, bool),
+    ImportCategory(usize, bool),
+    /// The parts, read for Name Conflict's questions.
+    ImportParts(Result<Arc<UserDb<Parts>>, String>),
+    /// The name typed in Name Conflict, and its Close or Help (true) on
+    /// the dialog with this number.
+    ConflictName(String),
+    ConflictAnswered(u64, bool),
+    /// What a Core Rules 2.0 installation hands over, none when it has
+    /// nothing, or why it cannot.
+    Core20Read(Result<Option<Option<Box<import::ImportPage>>>, String>),
+    /// What Export or Add Items offers, and whether it adds to the
+    /// package editor.
+    ExportOffered(Result<Vec<Exportable>, String>, bool),
+    ExportCheck(usize, bool),
+    ExportAll(bool),
+    ExportChosen,
+    /// Where the package was exported, with the warnings, or why not.
+    PackageExported(Result<Option<(PathBuf, Vec<String>)>, String>),
+    PackageAdd,
+    /// The editor's package with the items added, and the warnings.
+    PackageAdded(Result<(Box<ExportFile>, Vec<String>), String>),
+    PackageRemove(Box<Content>),
+    PackageSave,
+    PackageSaved(Result<Option<PathBuf>, String>),
+    /// The package Edit Package… opened, or why not.
+    PackageOpened(Result<Option<(PathBuf, Box<ExportFile>)>, String>),
 }
 
 /// What Create on New NPC or New NPC Group made and saved.
@@ -743,10 +770,16 @@ impl Shell {
     /// Makes `id` the library's section under the page shown, as the
     /// GNOME app shows the section of a record just saved.
     fn reveal(&mut self, id: &str) {
+        let id = cr_app::library::listing_section(id);
         if id != self.section {
             self.section = id.to_owned();
             self.filter.search.clear();
         }
+    }
+
+    /// Whether the open installation is the Expansion's.
+    fn expansion(&self) -> bool {
+        self.install.as_ref().is_some_and(|i| !i.is_core20())
     }
 
     /// Whether the page shown has changes that leaving it would lose.
@@ -762,6 +795,7 @@ impl Shell {
             Page::TreasureTable(form) => form.changed(),
             Page::Allowed(form) => form.changed(),
             Page::Template(form) => form.changed(),
+            Page::Package(editor) => editor.changed,
             _ => false,
         }
     }
@@ -873,6 +907,50 @@ impl Shell {
                         }
                     },
                     Message::PackageChosen,
+                );
+            }
+            action::IMPORT_CORE20 => {
+                let Some(install) = self.install.clone() else {
+                    return;
+                };
+                self.dialog(
+                    context,
+                    move |owner| {
+                        let title = tr("Import Core Rules 2.0 Installation");
+                        match native::dialogs::open_folder(owner, title) {
+                            Ok(Some(path)) => import::open_core20(&install, path).map(Some),
+                            Ok(None) => Ok(None),
+                            Err(e) => Err(e.message()),
+                        }
+                    },
+                    Message::Core20Read,
+                );
+            }
+            action::EXPORT => self.offer_exports(false, context),
+            action::NEW_PACKAGE => {
+                if let Some(install) = &self.install {
+                    let expansion = !install.is_core20();
+                    self.go(Page::Package(Box::new(PackageEditor::new(
+                        ExportFile::new(expansion),
+                        None,
+                        expansion,
+                    ))));
+                }
+            }
+            action::EDIT_PACKAGE => {
+                let expansion = self.expansion();
+                self.dialog(
+                    context,
+                    move |owner| {
+                        let filters = import::filters(expansion);
+                        match native::dialogs::open_file(owner, tr("Edit Package"), &filters) {
+                            Ok(Some(path)) => cr_app::packages::read(&path)
+                                .map(|file| Some((path, Box::new(file)))),
+                            Ok(None) => Ok(None),
+                            Err(e) => Err(e.message()),
+                        }
+                    },
+                    Message::PackageOpened,
                 );
             }
             action::SHEET_PRINT => {
@@ -1623,6 +1701,7 @@ impl Shell {
             Page::Edit(editor) => editor.help(),
             Page::Create(wizard) => wizard.help(),
             Page::Import(_) => topic::IMPORT,
+            Page::Export(_) | Page::Package(_) => topic::EXPORT,
             Page::Sheet(_) | Page::SheetOptions(_) => topic::CHARACTER_SHEET,
             Page::Settings | Page::Help(_) => topic::MAIN_MENU,
             Page::Book(_) => topic::BOOKS,
@@ -2022,6 +2101,139 @@ impl Shell {
         }
     }
 
+    /// Goes on with the names an import asks for: Name Conflict on the
+    /// next part that needs one, or the import once every one has its
+    /// name.
+    fn rename_next(
+        &mut self,
+        mut renaming: Renaming,
+        parts: Arc<UserDb<Parts>>,
+        serial: u64,
+        context: &ComponentContext<Self>,
+    ) {
+        let Page::Import(page) = &mut self.page else {
+            return;
+        };
+        match renaming.next(&page.choice.preview, &parts) {
+            Step::Ask { n, name } => {
+                page.asking = Some(import::Asking {
+                    renaming,
+                    parts,
+                    n,
+                    name,
+                    serial,
+                })
+            }
+            Step::Import(names) => self.run_import(names, context),
+        }
+    }
+
+    /// Imports the items chosen on the Import page, with `names` for the
+    /// parts Name Conflict named.
+    fn run_import(&mut self, names: HashMap<usize, String>, context: &ComponentContext<Self>) {
+        let (Page::Import(page), Some(install)) = (&self.page, self.install.clone()) else {
+            return;
+        };
+        self.busy = true;
+        let (file, chosen) = (page.choice.file.clone(), page.choice.chosen());
+        context.spawn_background(move |_| {
+            Message::Imported(
+                install
+                    .import_named(&file, Some(&chosen), &names)
+                    .map(Arc::new)
+                    .map_err(|e| e.to_string()),
+            )
+        });
+    }
+
+    /// Export…, or (`adding`) Add Items on the package editor: the user's
+    /// records and characters, read in the background.
+    fn offer_exports(&mut self, adding: bool, context: &ComponentContext<Self>) {
+        if self.busy || self.install.is_none() {
+            return;
+        }
+        self.busy = true;
+        self.with_install(context, move |install| {
+            Message::ExportOffered(install.exportable().map_err(|e| e.to_string()), adding)
+        });
+    }
+
+    /// Export's Export…: where to save the package, then the package; or
+    /// Add Items' Add, into the package editor's.
+    fn export_chosen(&mut self, context: &ComponentContext<Self>) {
+        let Page::Export(page) = &self.page else {
+            return;
+        };
+        let items = page.chooser.chosen();
+        let Some(install) = self.install.clone() else {
+            return;
+        };
+        if items.is_empty() || self.busy {
+            return;
+        }
+        if page.adding {
+            let Some(Page::Package(editor)) = self.history.last() else {
+                return;
+            };
+            let mut file = editor.file.clone();
+            self.busy = true;
+            context.spawn_background(move |_| {
+                Message::PackageAdded(
+                    install
+                        .add_to(&mut file, &items)
+                        .map(|warnings| (Box::new(file), warnings))
+                        .map_err(|e| e.to_string()),
+                )
+            });
+            return;
+        }
+        let expansion = !install.is_core20();
+        self.dialog(
+            context,
+            move |owner| {
+                let Some(path) = ask_package_path(owner, expansion)? else {
+                    return Ok(None);
+                };
+                let export = install.export(&items).map_err(|e| e.to_string())?;
+                cr_app::packages::write(&path, &export.file)?;
+                Ok(Some((path, export.warnings)))
+            },
+            Message::PackageExported,
+        );
+    }
+
+    /// Save on the package editor: where it is, or where the Save dialog
+    /// says for a new package.
+    fn save_package(&mut self, context: &ComponentContext<Self>) {
+        let Page::Package(editor) = &mut self.page else {
+            return;
+        };
+        if editor.saving || self.busy {
+            return;
+        }
+        editor.saving = true;
+        editor.error = None;
+        let (file, path, expansion) = (editor.file.clone(), editor.path.clone(), editor.expansion);
+        let save = move |path: PathBuf| -> Result<Option<PathBuf>, String> {
+            cr_app::packages::write(&path, &file)?;
+            Ok(Some(path))
+        };
+        match path {
+            Some(path) => {
+                self.busy = true;
+                context.spawn_background(move |_| Message::PackageSaved(save(path)));
+            }
+            None => self.dialog(
+                context,
+                move |owner| match ask_package_path(owner, expansion)? {
+                    Some(path) => save(path),
+                    None => Ok(None),
+                },
+                Message::PackageSaved,
+            ),
+        }
+    }
+
     /// Keeps what Choose Portrait or Choose Picture chose: a character's
     /// portrait by its file, a record's picture or icon as it is kept.
     fn picked(
@@ -2118,6 +2330,27 @@ fn new_part_dialog(
 }
 
 /// The title and text of topic `number` of `file`, as a popup shows it.
+/// Asks where to save a new package; the extension is added when the name
+/// has none.
+fn ask_package_path(owner: Owner, expansion: bool) -> Result<Option<PathBuf>, String> {
+    let extension = cr_app::packages::extension(expansion);
+    let filters = packages::save_filters(expansion);
+    let chosen = native::dialogs::save_file(
+        owner,
+        &plain(tr("Save Package")),
+        &format!("export.{extension}"),
+        extension,
+        &filters,
+    )
+    .map_err(|e| e.message())?;
+    Ok(chosen.map(|mut path| {
+        if path.extension().is_none() {
+            path.set_extension(extension);
+        }
+        path
+    }))
+}
+
 fn popup_text(files: &Files, file: &str, number: u32) -> Option<(String, String)> {
     let help = files.file(file)?;
     let topic = help.topics.get(help.topic_of_number(number)?)?;
@@ -2734,20 +2967,75 @@ impl Component for Shell {
                 }
             }
             Message::Import => {
-                if let (Page::Import(package), Some(install)) = (&self.page, self.install.clone())
-                    && !self.busy
-                {
+                let Page::Import(page) = &self.page else {
+                    return;
+                };
+                if self.busy || !page.choice.can_import() {
+                    return;
+                }
+                if import::renames(&page.choice) {
                     self.busy = true;
-                    let package = package.clone();
-                    context.spawn_background(move |_| {
-                        Message::Imported(
-                            install
-                                .import(&package.file, None)
+                    self.with_install(context, |install| {
+                        Message::ImportParts(
+                            UserDb::<Parts>::load(install)
                                 .map(Arc::new)
                                 .map_err(|e| e.to_string()),
                         )
                     });
+                } else {
+                    self.run_import(HashMap::new(), context);
                 }
+            }
+            Message::ImportCheck(n, on) => {
+                if let Page::Import(page) = &mut self.page {
+                    page.choice.set(n, on);
+                }
+            }
+            Message::ImportCategory(c, on) => {
+                if let Page::Import(page) = &mut self.page
+                    && let Some((_, items)) = page.choice.categories().get(c)
+                {
+                    page.choice.set_many(items, on);
+                }
+            }
+            Message::ImportParts(Ok(parts)) => {
+                self.busy = false;
+                if let Page::Import(page) = &self.page {
+                    let renaming = Renaming::new(page.choice.chosen());
+                    self.rename_next(renaming, parts, 0, context);
+                }
+            }
+            Message::ImportParts(Err(e)) => {
+                self.busy = false;
+                self.show_error(tr("Import Failed"), e);
+            }
+            Message::ConflictName(name) => {
+                if let Page::Import(page) = &mut self.page
+                    && let Some(asking) = &mut page.asking
+                {
+                    asking.name = name;
+                }
+            }
+            Message::ConflictAnswered(serial, help) => {
+                let Page::Import(page) = &mut self.page else {
+                    return;
+                };
+                let Some(asking) = page.asking.as_mut().filter(|a| a.serial == serial) else {
+                    return;
+                };
+                // Asked again after Help, and while a part has the name.
+                if help || asking.renaming.taken(&asking.name, &asking.parts) {
+                    asking.serial += 1;
+                    if help {
+                        self.open_help(cr_app::help::program(topic::NAME_CONFLICT), false, context);
+                    }
+                    return;
+                }
+                let Some(mut asking) = page.asking.take() else {
+                    return;
+                };
+                asking.renaming.named(asking.n, asking.name.clone());
+                self.rename_next(asking.renaming, asking.parts, asking.serial + 1, context);
             }
             Message::Imported(result) => {
                 self.busy = false;
@@ -2755,15 +3043,147 @@ impl Component for Shell {
                     Ok(report) => {
                         // Imported races and classes change what the NPC
                         // generator offers, imported items the treasure.
-                        self.npc_rules = None;
-                        self.treasure_rules = None;
-                        self.encounter_rules = None;
+                        self.forget_rules();
                         self.history.clear();
                         self.page = Page::Library;
                         self.notice = Some(import::report(&report));
                         self.load(None, context);
                     }
                     Err(e) => self.show_error(tr("Import Failed"), e),
+                }
+            }
+            Message::Core20Read(read) => {
+                self.busy = false;
+                match read {
+                    Ok(Some(Some(page))) => self.go(Page::Import(page)),
+                    Ok(Some(None)) => {
+                        self.confirm = Some(Confirm::Info {
+                            title: tr("Nothing to Import").to_owned(),
+                            text: tr(
+                                "This Core Rules 2.0 installation has no characters or records of its own.",
+                            )
+                            .to_owned(),
+                        })
+                    }
+                    Ok(None) => {}
+                    Err(e) => self.show_error(tr("Cannot Import"), e),
+                }
+            }
+            Message::ExportOffered(offered, adding) => {
+                self.busy = false;
+                match offered {
+                    Ok(items) => self.go(Page::Export(Box::new(packages::ExportPage {
+                        chooser: ItemChooser::new(items),
+                        adding,
+                    }))),
+                    Err(e) => self.show_error(tr("Export Failed"), e),
+                }
+            }
+            Message::ExportCheck(i, on) => {
+                if let Page::Export(page) = &mut self.page {
+                    page.chooser.set(i, on);
+                }
+            }
+            Message::ExportAll(on) => {
+                if let Page::Export(page) = &mut self.page {
+                    page.chooser.set_all(on);
+                }
+            }
+            Message::ExportChosen => self.export_chosen(context),
+            Message::PackageExported(exported) => {
+                self.busy = false;
+                match exported {
+                    Ok(Some((path, warnings))) => {
+                        self.back();
+                        let said = tr!("Exported to {name}", name = file_name(&path));
+                        self.notice = Some(Notice::new(
+                            if warnings.is_empty() {
+                                InfoBarSeverity::Success
+                            } else {
+                                InfoBarSeverity::Warning
+                            },
+                            said,
+                            warnings.join("\n"),
+                        ));
+                    }
+                    Ok(None) => {}
+                    Err(e) => self.show_error(tr("Export Failed"), e),
+                }
+            }
+            Message::PackageAdd => {
+                if let Page::Package(editor) = &self.page
+                    && editor.same_layout()
+                {
+                    self.offer_exports(true, context);
+                }
+            }
+            Message::PackageAdded(added) => {
+                self.busy = false;
+                match added {
+                    Ok((file, warnings)) => {
+                        self.back();
+                        if let Page::Package(editor) = &mut self.page {
+                            editor.file = *file;
+                            editor.added(warnings);
+                        }
+                    }
+                    Err(e) => self.show_error(tr("Items Not Added"), e),
+                }
+            }
+            Message::PackageRemove(item) => {
+                if let Page::Package(editor) = &mut self.page {
+                    editor.remove(&item);
+                }
+            }
+            Message::PackageSave => self.save_package(context),
+            Message::PackageSaved(saved) => {
+                self.busy = false;
+                let Page::Package(editor) = &mut self.page else {
+                    return;
+                };
+                match saved {
+                    Ok(Some(path)) => {
+                        let (said, warnings) = editor.saved(path);
+                        self.back();
+                        self.notice = Some(Notice::new(
+                            if warnings.is_empty() {
+                                InfoBarSeverity::Success
+                            } else {
+                                InfoBarSeverity::Warning
+                            },
+                            said,
+                            warnings.join("\n"),
+                        ));
+                    }
+                    Ok(None) => editor.saving = false,
+                    Err(e) => {
+                        editor.saving = false;
+                        editor.error = Some(e);
+                    }
+                }
+            }
+            Message::PackageOpened(opened) => {
+                self.busy = false;
+                match opened {
+                    // 2.0 content is only imported, converted to the
+                    // Expansion's layout on the way in.
+                    Ok(Some((path, file))) if file.is_expansion() => {
+                        let expansion = self.expansion();
+                        self.go(Page::Package(Box::new(PackageEditor::new(
+                            *file,
+                            Some(path),
+                            expansion,
+                        ))));
+                    }
+                    Ok(Some(_)) => {
+                        let (title, text) = cr_app::packages::core20_only();
+                        self.confirm = Some(Confirm::Info {
+                            title: title.to_owned(),
+                            text: text.to_owned(),
+                        });
+                    }
+                    Ok(None) => {}
+                    Err(e) => self.show_error(tr("Not a Package"), e),
                 }
             }
             Message::Language(Some(index)) => {
@@ -3891,7 +4311,9 @@ impl Component for Shell {
                 let page = edit::view(editor, &self.adding, &self.icons, &portrait, context);
                 self.with_portraits(page, context)
             }
-            Page::Import(package) => import::view(self, package, context),
+            Page::Import(page) => import::view(page, self, context),
+            Page::Export(page) => packages::export_view(page, self.busy, context),
+            Page::Package(editor) => packages::editor_view(editor, self.busy, context),
             Page::Settings => settings::view(self, context),
             Page::Sheet(page) => sheet::view(self, page, context),
             Page::SheetOptions(options) => sheet::options_view(options, context),
@@ -4087,6 +4509,7 @@ impl Shell {
                     Page::Record(_) | Page::Template(_) => {
                         tr("The record has changes that are not saved.")
                     }
+                    Page::Package(_) => tr("The package has changes that are not saved."),
                     Page::Allowed(_) => {
                         tr("The allowed classes have changes that are not saved.")
                     }
