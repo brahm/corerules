@@ -21,6 +21,7 @@ mod record;
 mod settings;
 mod sheet;
 mod tables;
+mod templates;
 mod treasure;
 mod treasure_tables;
 mod web;
@@ -46,6 +47,9 @@ use cr_app::records::allowed::{AllowedEffect, AllowedForm, AllowedInput};
 use cr_app::records::form::{RecordEffect, RecordForm, RecordInput, Saved};
 use cr_app::records::tables::{
     TableEffect as TreasureTableEffect, TableForm, TableInput as TreasureTableInput,
+};
+use cr_app::records::templates::{
+    NpcFor, TemplateEffect, TemplateForm, TemplateInput, template_npc,
 };
 use cr_app::sheets::Export;
 use cr_app::tables::{TableInput, TableRoller};
@@ -191,6 +195,8 @@ pub struct Shell {
     /// New in the other parts' section, while it asks for the type: the
     /// types by section id and name, and the one chosen.
     new_part: Option<(Vec<(&'static str, &'static str)>, usize)>,
+    /// What the NPC that NPC Creation makes in template mode goes to.
+    npc_for: Option<NpcFor>,
 }
 
 /// What the window shows.
@@ -217,6 +223,7 @@ pub enum Page {
     Record(Box<RecordForm>),
     TreasureTable(Box<TableForm>),
     Allowed(Box<AllowedForm>),
+    Template(Box<TemplateForm>),
 }
 
 /// What follows saving a record of the user databases.
@@ -615,6 +622,11 @@ pub enum Message {
     /// databases read again.
     NewTrapRead(Result<Arc<UserDb<Traps>>, String>, String),
     NewMonsterRead(Result<Arc<EncounterRules>, String>, String),
+    Template(TemplateInput),
+    TemplateAnswer(u64, Answer),
+    TemplateSaved(Result<Saved, String>),
+    /// What NPC Creation made in template mode, or why it made nothing.
+    TemplateNpcMade(Result<Box<Npc>, String>),
 }
 
 /// What Create on New NPC or New NPC Group made and saved.
@@ -749,6 +761,7 @@ impl Shell {
             Page::Record(form) => form.changed(),
             Page::TreasureTable(form) => form.changed(),
             Page::Allowed(form) => form.changed(),
+            Page::Template(form) => form.changed(),
             _ => false,
         }
     }
@@ -788,7 +801,10 @@ impl Shell {
             ),
             action::NEW_CHARACTER => self.new_character(false, context),
             action::ENTER_CHARACTER => self.new_character(true, context),
-            action::NEW_NPC => self.new_npc(false, context),
+            action::NEW_NPC => {
+                self.npc_for = None;
+                self.new_npc(false, context)
+            }
             action::NEW_NPC_GROUP => self.new_npc(true, context),
             action::ROLL_TREASURE => self.open_treasure(None, false, context),
             action::ROLL_TABLE => self.open_tables(context),
@@ -1070,6 +1086,17 @@ impl Shell {
         };
         self.busy = true;
         let rand = self.rand.clone();
+        // In template mode the NPC goes to the template, not to a file.
+        if let Form::One(form) = &form
+            && form.template
+        {
+            let form = form.clone();
+            context.spawn_background(move |_| {
+                let mut rand = rand.lock().unwrap_or_else(|e| e.into_inner());
+                Message::TemplateNpcMade(form.generate(&mut rand).map(Box::new))
+            });
+            return;
+        }
         context.spawn_background(move |_| {
             let mut rand = rand.lock().unwrap_or_else(|e| e.into_inner());
             let (npcs, party) = match &form {
@@ -1615,6 +1642,7 @@ impl Shell {
                 .unwrap_or_else(|| form.help()),
             Page::TreasureTable(form) => form.help(),
             Page::Allowed(form) => form.help(),
+            Page::Template(form) => form.help(),
         }
     }
 
@@ -1764,12 +1792,9 @@ impl Shell {
             return;
         }
         self.busy = true;
-        // New in the other parts' section starts on the shown part's type.
-        let shown = self
-            .selected
-            .as_deref()
-            .and_then(cr_store::userdb::parse_key)
-            .map(|(section, ..)| section.to_owned());
+        // New in the other parts' section starts on the shown part's type,
+        // and in the templates' on the shown template's monster type.
+        let shown = self.selected.clone();
         let target = RecordTarget {
             section: section.clone(),
             name: name.clone(),
@@ -1959,6 +1984,44 @@ impl Shell {
         }
     }
 
+    /// Does what the encounter template editor asks of the app.
+    fn template_effects(&mut self, context: &ComponentContext<Self>) {
+        let Page::Template(form) = &mut self.page else {
+            return;
+        };
+        let effects = form.take_effects();
+        for effect in effects {
+            match effect {
+                TemplateEffect::Npc(purpose) => {
+                    self.npc_for = Some(purpose);
+                    self.new_npc(false, context);
+                    return;
+                }
+                TemplateEffect::Save { editing, template } => {
+                    self.with_install(context, move |install| {
+                        Message::TemplateSaved(cr_app::records::templates::save(
+                            install, editing, *template,
+                        ))
+                    })
+                }
+                TemplateEffect::Done { key, said } => {
+                    if let Page::Template(form) = &mut self.page {
+                        form.saving = true;
+                    }
+                    self.forget_rules();
+                    self.revealing = Some(Revealing {
+                        section: cr_app::records::templates::SECTION,
+                        key: key.clone(),
+                        notice: Notice::success(said),
+                        told: None,
+                    });
+                    self.load(Some(key), context);
+                    return;
+                }
+            }
+        }
+    }
+
     /// Keeps what Choose Portrait or Choose Picture chose: a character's
     /// portrait by its file, a record's picture or icon as it is kept.
     fn picked(
@@ -2128,6 +2191,7 @@ impl Component for Shell {
             revealing: None,
             record_pictures: RefCell::default(),
             new_part: None,
+            npc_for: None,
         };
         let sender = context.sender();
         let reading = shell.reading.clone();
@@ -2163,7 +2227,10 @@ impl Component for Shell {
                     .revealing
                     .take_if(|r| key.as_deref() == Some(r.key.as_str()))
                 {
-                    if matches!(self.page, Page::Record(_) | Page::TreasureTable(_)) {
+                    if matches!(
+                        self.page,
+                        Page::Record(_) | Page::TreasureTable(_) | Page::Template(_)
+                    ) {
                         self.back();
                     }
                     self.reveal(revealing.section);
@@ -3051,7 +3118,7 @@ impl Component for Shell {
                         self.go(if group {
                             Page::NpcGroup(Box::new(GroupForm::new(rules)))
                         } else {
-                            Page::Npc(Box::new(NpcForm::new(rules, false)))
+                            Page::Npc(Box::new(NpcForm::new(rules, self.npc_for.is_some())))
                         });
                     }
                     Err(e) => self.show_error(tr("NPC Generator"), e),
@@ -3424,6 +3491,7 @@ impl Component for Shell {
                         self.go(Page::Record(form));
                     }
                     Ok(Acted::Table(form)) => self.go(Page::TreasureTable(form)),
+                    Ok(Acted::Template(form)) => self.go(Page::Template(form)),
                     Ok(Acted::Refused(why)) => {
                         self.notice = Some(Notice::new(InfoBarSeverity::Warning, why, ""))
                     }
@@ -3533,6 +3601,46 @@ impl Component for Shell {
                 if let Page::TreasureTable(form) = &mut self.page {
                     form.saved(saved);
                     self.treasure_table_effects(context);
+                }
+            }
+            Message::Template(change) => {
+                if let Page::Template(form) = &mut self.page {
+                    form.input(change);
+                    self.template_effects(context);
+                }
+            }
+            Message::TemplateAnswer(serial, answer) => {
+                if let Page::Template(form) = &mut self.page
+                    && form.prompt_serial() == serial
+                {
+                    form.answer(answer);
+                    self.template_effects(context);
+                }
+            }
+            Message::TemplateSaved(saved) => {
+                if let Page::Template(form) = &mut self.page {
+                    form.saved(saved);
+                    self.template_effects(context);
+                }
+            }
+            Message::TemplateNpcMade(Ok(npc)) => {
+                self.busy = false;
+                let purpose = self.npc_for.take().unwrap_or(NpcFor::Line);
+                self.back();
+                if let Page::Template(form) = &mut self.page {
+                    form.npc_made(purpose, template_npc(&npc));
+                }
+                if let Some(text) = cr_app::npc::messages([npc.as_ref()]) {
+                    self.confirm = Some(Confirm::Info {
+                        title: tr("NPC Generator").to_owned(),
+                        text,
+                    });
+                }
+            }
+            Message::TemplateNpcMade(Err(e)) => {
+                self.busy = false;
+                if let Page::Npc(form) = &mut self.page {
+                    form.error = Some(e);
                 }
             }
             Message::TableRestored(Ok(said), name) => {
@@ -3814,6 +3922,7 @@ impl Component for Shell {
             }
             Page::TreasureTable(form) => treasure_tables::view(form, context),
             Page::Allowed(form) => allowed::view(form, context),
+            Page::Template(form) => templates::view(form, context),
         };
         // New in the other parts' section asks for the type over the
         // library.
@@ -3975,7 +4084,9 @@ impl Shell {
                     Page::EncounterTable(_) | Page::TreasureTable(_) => {
                         tr("The table has changes that are not saved.")
                     }
-                    Page::Record(_) => tr("The record has changes that are not saved."),
+                    Page::Record(_) | Page::Template(_) => {
+                        tr("The record has changes that are not saved.")
+                    }
                     Page::Allowed(_) => {
                         tr("The allowed classes have changes that are not saved.")
                     }

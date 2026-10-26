@@ -8,10 +8,14 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use adw::prelude::*;
+use cr_app::records::templates::{
+    ALL_TYPES, TemplateData, item_reference, item_rows, monster_rows, npc_rows, random_monsters,
+    random_npcs, template_npc, trap_list,
+};
 use cr_formats::Object;
 use cr_formats::encounter::{
-    EncounterNpc, EncounterTemplate, TemplateItemProperties, TemplateMonsterProperties,
-    TemplateNpcProperties, TemplateNumAppear,
+    EncounterTemplate, TemplateItemProperties, TemplateMonsterProperties, TemplateNpcProperties,
+    TemplateNumAppear,
 };
 use cr_formats::monster::{Monster, MonsterType};
 use cr_formats::traps::Trap;
@@ -19,51 +23,12 @@ use cr_i18n::tr;
 use cr_store::catalog::TEMPLATES;
 use cr_store::help::topic;
 use cr_store::treasure::LETTERS;
-use cr_store::userdb::monsters::{CLIMATES, CUSTOM_TERRAIN, MonsterTypes, Monsters, TERRAINS};
-use cr_store::userdb::parts::{self, Parts};
+use cr_store::userdb::monsters::{CLIMATES, CUSTOM_TERRAIN, TERRAINS};
 use cr_store::userdb::templates::{self as tpl, Combo, Templates};
-use cr_store::userdb::traps::Traps;
-use cr_store::userdb::{self as udb, Filter, Flavor, Origin, UserDb};
-use cr_store::{Installation, Result};
+use cr_store::userdb::{self as udb, Filter, Origin, UserDb};
 use gtk::glib;
 
 use super::{Action, Host, Redraw, Shared, Target, act, errors, finish, position};
-
-/// What the editor offers to add: the monsters, monster types, traps and
-/// parts of both databases, and the climate/terrain categories.
-struct Data {
-    flavor: Flavor,
-    monsters: UserDb<Monsters>,
-    types: UserDb<MonsterTypes>,
-    traps: UserDb<Traps>,
-    parts: UserDb<Parts>,
-    terrains: Vec<String>,
-}
-
-impl Data {
-    fn load(install: &Installation) -> Result<Self> {
-        Ok(Self {
-            flavor: cr_store::encounter::flavor_of(install),
-            monsters: UserDb::load(install)?,
-            types: UserDb::load(install)?,
-            traps: UserDb::load(install)?,
-            parts: UserDb::load(install)?,
-            terrains: udb::monsters::distinct(install, "monster-terrain")?,
-        })
-    }
-
-    /// The type names of IDD 279's list, sorted.
-    fn type_names(&self) -> Vec<String> {
-        let mut names: Vec<String> = self
-            .types
-            .list(Filter::All)
-            .iter()
-            .map(|e| e.record.name.clone())
-            .collect();
-        names.dedup();
-        names
-    }
-}
 
 /// New, Copy and Edit open the editor; Delete removes a user template at
 /// once.
@@ -469,7 +434,7 @@ fn picker_dialog(
 /// type.
 fn pick_monster(
     parent: &impl IsA<gtk::Widget>,
-    data: &Rc<Data>,
+    data: &Rc<TemplateData>,
     title: &str,
     help: u32,
     start_type: &str,
@@ -480,8 +445,8 @@ fn pick_monster(
         .model(&gtk::StringList::new(&Filter::NAMES.map(tr)))
         .tooltip_text(tr("Show Standard or Custom Records"))
         .build();
-    let mut type_names = vec!["~All".to_owned()];
-    type_names.extend(data.type_names());
+    let mut type_names = vec![ALL_TYPES.to_owned()];
+    type_names.extend(data.type_names.iter().cloned());
     let type_row = adw::ComboRow::builder()
         .title(tr("Monster Types"))
         .model(&gtk::StringList::new(
@@ -510,22 +475,8 @@ fn pick_monster(
         .hexpand(true)
         .build();
 
-    let monsters: Rc<Vec<(Origin, Monster)>> = Rc::new(
-        data.monsters
-            .list(Filter::All)
-            .iter()
-            .map(|e| (e.origin, e.record.clone()))
-            .collect(),
-    );
-    let type_records: Rc<Vec<(Origin, MonsterType)>> = Rc::new(
-        data.types
-            .list(Filter::All)
-            .iter()
-            .map(|e| (e.origin, e.record.clone()))
-            .collect(),
-    );
     let monster_choices = Rc::new(
-        monsters
+        data.monsters
             .iter()
             .map(|(o, m)| Choice {
                 title: m.name.clone(),
@@ -535,7 +486,7 @@ fn pick_monster(
             .collect::<Vec<_>>(),
     );
     let type_choices = Rc::new(
-        type_records
+        data.types
             .iter()
             .map(|(o, t)| Choice {
                 title: t.name.clone(),
@@ -558,29 +509,29 @@ fn pick_monster(
     let (monster_list, monster_filter) = lazy_list(
         monster_choices,
         {
-            let (monsters, origin, type_row, search, type_names) = (
-                monsters.clone(),
+            let (data, origin, type_row, search, type_names) = (
+                data.clone(),
                 origin.clone(),
                 type_row.clone(),
                 search.clone(),
                 type_names.clone(),
             );
             move |i| {
-                let Some((o, m)) = monsters.get(i) else {
+                let Some((o, m)) = data.monsters.get(i) else {
                     return false;
                 };
                 let wanted = &type_names[(type_row.selected() as usize).min(type_names.len() - 1)];
                 Filter::of(origin.selected()).accepts(*o)
-                    && (wanted == "~All" || m.monster_type == *wanted)
+                    && (wanted == ALL_TYPES || m.monster_type == *wanted)
                     && m.name
                         .to_lowercase()
                         .contains(&search.text().to_lowercase())
             }
         },
         {
-            let (monsters, chosen, close) = (monsters.clone(), chosen.clone(), close.clone());
+            let (data, chosen, close) = (data.clone(), chosen.clone(), close.clone());
             move |i| {
-                if let Some((_, m)) = monsters.get(i) {
+                if let Some((_, m)) = data.monsters.get(i) {
                     close();
                     chosen(Picked::Monster(Box::new(m.clone())));
                 }
@@ -590,10 +541,9 @@ fn pick_monster(
     let (type_list, type_filter) = lazy_list(
         type_choices,
         {
-            let (type_records, origin, search) =
-                (type_records.clone(), origin.clone(), search.clone());
+            let (data, origin, search) = (data.clone(), origin.clone(), search.clone());
             move |i| {
-                let Some((o, t)) = type_records.get(i) else {
+                let Some((o, t)) = data.types.get(i) else {
                     return false;
                 };
                 Filter::of(origin.selected()).accepts(*o)
@@ -602,10 +552,13 @@ fn pick_monster(
                         .contains(&search.text().to_lowercase())
             }
         },
-        move |i| {
-            if let Some((_, t)) = type_records.get(i) {
-                close();
-                chosen(Picked::Type(t.clone()));
+        {
+            let data = data.clone();
+            move |i| {
+                if let Some((_, t)) = data.types.get(i) {
+                    close();
+                    chosen(Picked::Type(t.clone()));
+                }
             }
         },
     );
@@ -651,10 +604,10 @@ fn pick_monster(
 /// IDD 314: a part of one category, from either database.
 fn pick_item(
     parent: &impl IsA<gtk::Widget>,
-    data: &Rc<Data>,
+    data: &Rc<TemplateData>,
     chosen: impl Fn(cr_formats::parts::Part) + 'static,
 ) {
-    let categories = Rc::new(parts::editable_types(data.flavor));
+    let categories = Rc::new(data.categories.clone());
     let category =
         gtk::DropDown::from_strings(&categories.iter().map(|(_, n)| tr(n)).collect::<Vec<_>>());
     category.set_tooltip_text(Some(tr("Part Type")));
@@ -662,21 +615,13 @@ fn pick_item(
         .placeholder_text(tr("Search"))
         .hexpand(true)
         .build();
-    let entries: Rc<Vec<(usize, cr_formats::parts::Part)>> = Rc::new(
-        data.parts
-            .list(Filter::All)
-            .iter()
-            .map(|e| (e.record.part_type, e.record.part.clone()))
-            .collect(),
-    );
     let choices = Rc::new(
         data.parts
-            .list(Filter::All)
             .iter()
-            .map(|e| Choice {
-                title: e.record.part.head.name.clone(),
+            .map(|(_, origin, part)| Choice {
+                title: part.head.name.clone(),
                 subtitle: String::new(),
-                custom: e.origin == Origin::Custom,
+                custom: *origin == Origin::Custom,
             })
             .collect::<Vec<_>>(),
     );
@@ -684,14 +629,14 @@ fn pick_item(
     let (list, filter) = lazy_list(
         choices,
         {
-            let (entries, category, search, categories) = (
-                entries.clone(),
+            let (data, category, search, categories) = (
+                data.clone(),
                 category.clone(),
                 search.clone(),
                 categories.clone(),
             );
             move |i| {
-                let Some((t, part)) = entries.get(i) else {
+                let Some((t, _, part)) = data.parts.get(i) else {
                     return false;
                 };
                 categories.get(category.selected() as usize).map(|(c, _)| c) == Some(t)
@@ -703,9 +648,9 @@ fn pick_item(
             }
         },
         {
-            let dialog_cell = dialog_cell.clone();
+            let (data, dialog_cell) = (data.clone(), dialog_cell.clone());
             move |i| {
-                if let Some((_, part)) = entries.get(i) {
+                if let Some((_, _, part)) = data.parts.get(i) {
                     if let Some(d) = dialog_cell.upgrade() {
                         d.close();
                     }
@@ -737,7 +682,7 @@ fn pick_item(
 /// The template being edited and the lists its pages show.
 struct Editor<H: Host + 'static> {
     host: Shared<H>,
-    data: Rc<Data>,
+    data: Rc<TemplateData>,
     record: Rc<RefCell<EncounterTemplate>>,
     dialog: adw::Dialog,
     monsters: gtk::ListBox,
@@ -752,7 +697,7 @@ fn editor<H: Host + 'static>(
     title: String,
     record: EncounterTemplate,
 ) {
-    let Some(data) = errors(&**host, host.with_install(Data::load)) else {
+    let Some(data) = errors(&**host, host.with_install(TemplateData::load)) else {
         return;
     };
     let data = Rc::new(data);
@@ -775,11 +720,7 @@ fn editor<H: Host + 'static>(
         }
     });
     main.add(&name);
-    let mut types = data.type_names();
-    let current = record.borrow().monster_type.clone();
-    if !types.contains(&current) {
-        types.insert(0, current.clone());
-    }
+    let (types, current) = data.type_choices(&record.borrow().monster_type);
     let type_row = adw::ComboRow::builder()
         .title(tr("Monster Type"))
         .model(&gtk::StringList::new(
@@ -791,7 +732,7 @@ fn editor<H: Host + 'static>(
             None::<gtk::Expression>,
             "string",
         ))
-        .selected(types.iter().position(|t| *t == current).unwrap_or(0) as u32)
+        .selected(current as u32)
         .build();
     type_row.connect_selected_notify({
         let record = record.clone();
@@ -1057,7 +998,7 @@ fn treasure_page(record: &Rc<RefCell<EncounterTemplate>>) -> adw::PreferencesPag
 /// its hit dice and its climate and terrain (IDD 273).
 fn table_page<H: Host + 'static>(
     host: &Shared<H>,
-    data: &Rc<Data>,
+    data: &Rc<TemplateData>,
     record: &Rc<RefCell<EncounterTemplate>>,
 ) -> adw::PreferencesPage {
     let r = record.borrow().clone();
@@ -1160,26 +1101,6 @@ fn table_page<H: Host + 'static>(
     page
 }
 
-fn monster_names(objects: &[Object]) -> Vec<String> {
-    objects
-        .iter()
-        .filter_map(|o| match o {
-            Object::Monster(m) => Some(m.name.clone()),
-            _ => None,
-        })
-        .collect()
-}
-
-fn npc_list(objects: &[Object]) -> Vec<EncounterNpc> {
-    objects
-        .iter()
-        .filter_map(|o| match o {
-            Object::EncounterNpc(n) => Some((**n).clone()),
-            _ => None,
-        })
-        .collect()
-}
-
 impl<H: Host + 'static> Editor<H> {
     fn redraw(self: &Rc<Self>) {
         self.redraw_monsters();
@@ -1191,18 +1112,7 @@ impl<H: Host + 'static> Editor<H> {
     /// IDD 303's list, sorted by its text.
     fn redraw_monsters(self: &Rc<Self>) {
         clear(&self.monsters);
-        let mut lines: Vec<(String, usize)> = self
-            .record
-            .borrow()
-            .monsters
-            .iter()
-            .enumerate()
-            .filter_map(|(i, o)| match o {
-                Object::TemplateMonsterProperties(p) => Some((tpl::monster_line_text(p), i)),
-                _ => None,
-            })
-            .collect();
-        lines.sort_by_cached_key(|(text, _)| text.to_lowercase());
+        let lines = monster_rows(&self.record.borrow());
         for (text, i) in lines {
             let remove = {
                 let editor = self.clone();
@@ -1230,16 +1140,7 @@ impl<H: Host + 'static> Editor<H> {
 
     fn redraw_npcs(self: &Rc<Self>) {
         clear(&self.npcs);
-        let lines: Vec<String> = self
-            .record
-            .borrow()
-            .npcs
-            .iter()
-            .map(|o| match o {
-                Object::TemplateNpcProperties(p) => tpl::npc_line_text(p),
-                _ => String::new(),
-            })
-            .collect();
+        let lines = npc_rows(&self.record.borrow());
         for (i, text) in lines.into_iter().enumerate() {
             let remove = {
                 let editor = self.clone();
@@ -1260,22 +1161,7 @@ impl<H: Host + 'static> Editor<H> {
     /// IDD 315's list: the items' names.
     fn redraw_items(self: &Rc<Self>) {
         clear(&self.items);
-        let lines: Vec<(String, String)> = self
-            .record
-            .borrow()
-            .items
-            .iter()
-            .map(|o| match o {
-                Object::TemplateItemProperties(p) => (
-                    p.part.head.name.clone(),
-                    format!(
-                        "{}d{} * {} + {} · {}%",
-                        p.dice[0], p.dice[1], p.dice[2], p.dice[3], p.percent
-                    ),
-                ),
-                _ => Default::default(),
-            })
-            .collect();
+        let lines = item_rows(&self.record.borrow());
         for (i, (name, subtitle)) in lines.into_iter().enumerate() {
             let remove = {
                 let editor = self.clone();
@@ -1321,15 +1207,7 @@ impl<H: Host + 'static> Editor<H> {
     }
 
     fn trap_list(&self) -> Vec<Trap> {
-        self.record
-            .borrow()
-            .traps
-            .iter()
-            .filter_map(|o| match o {
-                Object::Trap(t) => Some((**t).clone()),
-                _ => None,
-            })
-            .collect()
+        trap_list(&self.record.borrow())
     }
 
     fn set_traps(self: &Rc<Self>, traps: Vec<Trap>) {
@@ -1371,7 +1249,7 @@ impl<H: Host + 'static> Editor<H> {
         self.host.template_npc(
             self.dialog.upcast_ref(),
             Box::new(move |npc| {
-                let line = tpl::new_npc_line(npc_of(npc));
+                let line = tpl::new_npc_line(template_npc(npc));
                 editor
                     .record
                     .borrow_mut()
@@ -1400,10 +1278,9 @@ impl<H: Host + 'static> Editor<H> {
     fn add_trap(self: &Rc<Self>) {
         let names: Vec<String> = self
             .data
-            .traps
-            .list(Filter::All)
+            .trap_rows
             .iter()
-            .map(|e| e.record.name.clone())
+            .map(|(_, name, _)| name.clone())
             .collect();
         let editor = self.clone();
         crate::lists::pick(&self.dialog, tr("Traps"), names, move |name| {
@@ -1484,9 +1361,8 @@ impl<H: Host + 'static> Editor<H> {
             let (line, list, draw) = (line.clone(), list.clone(), draw.clone());
             move || {
                 clear(&list);
-                let names = monster_names(&line.borrow().monsters);
-                let main = line.borrow().monster_name.clone();
-                for (k, name) in names.iter().enumerate() {
+                let names = random_monsters(&line.borrow());
+                for (k, (name, removable)) in names.iter().enumerate() {
                     let remove = {
                         let (line, draw) = (line.clone(), draw.clone());
                         move || {
@@ -1497,11 +1373,7 @@ impl<H: Host + 'static> Editor<H> {
                         }
                     };
                     let (row, button) = line_row(name, "", tr("Remove"), remove, None);
-                    // The line's own monster stays while it is the only
-                    // entry of that name (0x72dde2).
-                    button.set_sensitive(
-                        *name != main || names.iter().filter(|n| **n == main).count() > 1,
-                    );
+                    button.set_sensitive(*removable);
                     list.append(&row);
                 }
             }
@@ -1637,9 +1509,8 @@ impl<H: Host + 'static> Editor<H> {
             let (line, list, draw) = (line.clone(), list.clone(), draw.clone());
             move || {
                 clear(&list);
-                let npcs = npc_list(&line.borrow().npcs);
-                let main = line.borrow().npc.clone();
-                for (k, npc) in npcs.iter().enumerate() {
+                let npcs = random_npcs(&line.borrow());
+                for (k, (npc, removable)) in npcs.iter().enumerate() {
                     let remove = {
                         let (line, draw) = (line.clone(), draw.clone());
                         move || {
@@ -1656,11 +1527,7 @@ impl<H: Host + 'static> Editor<H> {
                         remove,
                         None,
                     );
-                    // 0x72f56f: the line's own NPC stays while it is there
-                    // only once.
-                    button.set_sensitive(
-                        *npc != main || npcs.iter().filter(|n| **n == main).count() > 1,
-                    );
+                    button.set_sensitive(*removable);
                     list.append(&row);
                 }
             }
@@ -1676,7 +1543,7 @@ impl<H: Host + 'static> Editor<H> {
                     Box::new(move |npc| {
                         line.borrow_mut()
                             .npcs
-                            .push(Object::EncounterNpc(Box::new(npc_of(npc))));
+                            .push(Object::EncounterNpc(Box::new(template_npc(npc))));
                         render();
                     }),
                 );
@@ -1696,7 +1563,7 @@ impl<H: Host + 'static> Editor<H> {
                 editor.host.template_npc(
                     editor.dialog.upcast_ref(),
                     Box::new(move |npc| {
-                        let npc = npc_of(npc);
+                        let npc = template_npc(npc);
                         second_npc.set_subtitle(escaped(&tpl::npc_description(&npc)).as_str());
                         line.borrow_mut().second_npc = npc;
                     }),
@@ -1757,14 +1624,7 @@ impl<H: Host + 'static> Editor<H> {
             .group
             .set_title(&escaped(&line.borrow().part.head.name));
         page.add(&first.group);
-        let reference = {
-            let p = line.borrow();
-            if p.monster.name.is_empty() {
-                p.monster_type.name.clone()
-            } else {
-                p.monster.name.clone()
-            }
-        };
+        let reference = item_reference(&line.borrow());
         let dependent = Dependent::new(
             self,
             line.borrow().dependency[0] != 0,
@@ -1785,11 +1645,7 @@ impl<H: Host + 'static> Editor<H> {
                             *p.monster = tpl::empty_monster();
                         }
                     }
-                    if p.monster.name.is_empty() {
-                        p.monster_type.name.clone()
-                    } else {
-                        p.monster.name.clone()
-                    }
+                    item_reference(&p)
                 }
             },
         );
@@ -2027,15 +1883,6 @@ impl<H: Host + 'static> Editor<H> {
         });
         dialog.present(Some(&self.dialog));
     }
-}
-
-/// The NPC as "Add to Template" stores it.
-fn npc_of(npc: &cr_store::npc::Npc) -> EncounterNpc {
-    tpl::npc_of(
-        &npc.character.data.name,
-        &npc.character.data.race,
-        &npc.classes,
-    )
 }
 
 /// The first box of a Properties dialog: how many appear and the chance.

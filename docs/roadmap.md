@@ -350,10 +350,15 @@ The phases run in order:
      and an item's icon (with a search over the items that have it), and
      New Trap, Edit, Copy and Delete in the encounter's Add Trap and New
      Monster in its Add Monster, which put what they make in the
-     encounter. 5 actions are left on `NOT_YET_ON_WINDOWS`. The encounter
-     templates' editor follows in a second pull request.
-   - Still to port: the encounter templates' editor; packages and Import
-     Core Rules 2.0; Extract Data from CD….
+     encounter. 5 actions are left on `NOT_YET_ON_WINDOWS`. In a second
+     pull request `cr-app` gained the encounter templates' editor: its
+     pages, the Properties of a monster, NPC or item line, the pickers of
+     monsters, monster types, items and traps, and the monsters that come
+     with an item. The GNOME app reads its lists and pickers' data with
+     it; the Windows app edits a template on a page of the window, with
+     NPC Creation in template mode for its NPCs.
+   - Still to port: packages and Import Core Rules 2.0; Extract Data from
+     CD….
 5. **Package and Store.** The release workflow builds and tests the MSIX;
    a beta goes to a closed group through the Microsoft Store.
 6. **Release with Windows**, once the beta's users confirm it, with the

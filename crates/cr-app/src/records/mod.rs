@@ -8,6 +8,7 @@ pub mod allowed;
 pub mod dialogs;
 pub mod form;
 pub mod tables;
+pub mod templates;
 
 use cr_i18n::tr;
 use cr_store::userdb::{self, Origin, parts};
