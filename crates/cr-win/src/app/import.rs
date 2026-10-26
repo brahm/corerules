@@ -162,17 +162,33 @@ pub fn view(page: &ImportPage, shell: &Shell, context: &mut ViewContext<Shell>) 
                 let key = open_key(c);
                 let open = shell.open_rows.contains(&key);
                 let all = choice.all(&items);
+                let chosen = items.iter().filter(|&&n| choice.checked[n]).count();
+                // WinUI's third state is out of reach: the count says
+                // what is chosen when it is some of them.
+                let count = if chosen == 0 || all {
+                    trn!("{n} item", "{n} items", items.len() as u64)
+                } else {
+                    trn!(
+                        "{chosen} of {n} item chosen",
+                        "{chosen} of {n} items chosen",
+                        items.len() as u64,
+                        chosen
+                    )
+                };
                 let header = CheckBox::new()
                     .automation_name(label)
                     .is_checked(all)
                     .on_is_checked_changed(
                         context.callback(move |on| Message::ImportCategory(c, on)),
                     )
-                    .content(ui::body(trn!("{n} item", "{n} items", items.len() as u64)));
-                // A ListView draws only the rows in view.
+                    .content(ui::body(count));
+                // A ListView draws only the rows in view. The Expander
+                // centers what is narrower than it, so the list takes its
+                // whole width.
                 let list: View = if open {
                     ListView::new()
                         .selection_mode(ListViewSelectionMode::None)
+                        .min_width((ui::card_room() - 8.0).max(0.0))
                         .max_height(360.0)
                         .collection_slot(
                             ListViewSlot::Items,

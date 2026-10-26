@@ -56,7 +56,7 @@ use cr_store::npc::NpcRules;
 use cr_store::pictures::{ICON_SIZE, ItemIcons};
 use cr_store::purse;
 use cr_store::treasure::Rand;
-use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES, other_type};
+use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES};
 use gtk::{gio, glib};
 use lists::{ListEditor, RowList, RowSpec, pick};
 
@@ -818,11 +818,7 @@ impl Window {
         let Some(install) = install.as_ref() else {
             return;
         };
-        // The other part types share one section.
-        let section = match other_type(section) {
-            Some(_) => OTHER_SECTION,
-            None => section,
-        };
+        let section = cr_app::library::listing_section(section);
         self.browser.show_section(section);
         self.browser.load(install.catalog(), key.as_deref());
         if key.is_none() {

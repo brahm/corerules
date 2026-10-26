@@ -5,7 +5,7 @@
 use cr_i18n::tr;
 use cr_store::books::BOOK_KEY;
 use cr_store::catalog::{ENCOUNTER_KEY, Entry, Section, TABLE_KEY, TEMPLATES, TREASURE_KEY};
-use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES};
+use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES, other_type};
 use cr_store::userdb::{self, Filter as Origins};
 
 use crate::action::{self, Action};
@@ -68,6 +68,15 @@ impl Filter {
             .filter(|(_, e)| self.shows(section.id, e))
             .map(|(i, _)| i)
             .collect()
+    }
+}
+
+/// The section that lists the records of section `id`: the other part
+/// types share one.
+pub fn listing_section(id: &str) -> &str {
+    match other_type(id) {
+        Some(_) => OTHER_SECTION,
+        None => id,
     }
 }
 
@@ -312,6 +321,13 @@ mod tests {
         assert!(matches("elf", "Lirael", "Elf Ranger"));
         assert!(matches("LIR", "Lirael", "Elf Ranger"));
         assert!(!matches("lirael elf", "Lirael", "Elf Ranger"));
+    }
+
+    #[test]
+    fn the_other_part_types_are_listed_together() {
+        assert_eq!(listing_section("racial-abilities"), OTHER_SECTION);
+        assert_eq!(listing_section(OTHER_SECTION), OTHER_SECTION);
+        assert_eq!(listing_section("weapons"), "weapons");
     }
 
     #[test]

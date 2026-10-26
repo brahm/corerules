@@ -770,6 +770,7 @@ impl Shell {
     /// Makes `id` the library's section under the page shown, as the
     /// GNOME app shows the section of a record just saved.
     fn reveal(&mut self, id: &str) {
+        let id = cr_app::library::listing_section(id);
         if id != self.section {
             self.section = id.to_owned();
             self.filter.search.clear();
