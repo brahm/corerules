@@ -30,9 +30,9 @@ mod group;
 mod tables;
 mod text;
 
-use std::cell::Cell;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicI32, Ordering};
 
 use cr_formats::Object;
 use cr_formats::character::{CORE20_VERSION, Character};
@@ -212,7 +212,34 @@ pub struct ItemLine {
     pub doubled: Vec<String>,
     /// Groups of items (+0xe10), kept between generations as the original
     /// keeps it in the template.
-    groups: Cell<i32>,
+    groups: Kept,
+}
+
+/// A number a template keeps between generations, which a generation
+/// changes through the rules it shares.
+#[derive(Debug, Default)]
+struct Kept(AtomicI32);
+
+impl Kept {
+    fn get(&self) -> i32 {
+        self.0.load(Ordering::Relaxed)
+    }
+
+    fn set(&self, value: i32) {
+        self.0.store(value, Ordering::Relaxed)
+    }
+}
+
+impl Clone for Kept {
+    fn clone(&self) -> Self {
+        Self(AtomicI32::new(self.get()))
+    }
+}
+
+impl PartialEq for Kept {
+    fn eq(&self, other: &Self) -> bool {
+        self.get() == other.get()
+    }
 }
 
 /// An encounter template (`CEncTemplateOb`).
@@ -541,7 +568,7 @@ impl Template {
                 escorts: escorts_of(&p.escorts)?,
                 per_item: escorts_of(&p.per_item)?,
                 doubled: p.monster_names.clone(),
-                groups: Cell::new(0),
+                groups: Kept::default(),
             });
         }
         let traps = t

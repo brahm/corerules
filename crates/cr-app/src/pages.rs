@@ -241,9 +241,11 @@ pub fn paginate(items: &[(Printed, f64)], height: f64) -> Vec<Page> {
     let mut open = false;
     for (i, (item, h)) in items.iter().enumerate() {
         let gap = matches!(item, Printed::Text(t, _) if t.is_empty());
-        // Keep a title with what follows it.
+        // Keep a title with what follows it: all of it when that fits on
+        // a page, else its start.
         let need = if matches!(item, Printed::Title(_)) {
-            h + 40.0
+            let next = items.get(i + 1).map_or(0.0, |(_, h)| *h);
+            h + if h + next <= height { next } else { 40.0 }
         } else {
             *h
         };
@@ -381,5 +383,25 @@ mod tests {
             .position(|(p, _)| *p == Printed::Title("Second".into()))
             .unwrap();
         assert_eq!(pages[1].placed[0], (second, 0.0));
+    }
+
+    #[test]
+    fn a_title_goes_with_a_block_that_fits_on_the_next_page() {
+        let statistics = SheetBox {
+            title: "Statistics".into(),
+            body: vec![Block::Paragraph("x".repeat(600))],
+        };
+        let laid = items(
+            &sheet(vec![table_box("First", 9), statistics], None),
+            &Fixed,
+            500.0,
+        );
+        let pages = paginate(&laid, 200.0);
+        let title = laid
+            .iter()
+            .position(|(p, _)| *p == Printed::Title("Statistics".into()))
+            .unwrap();
+        assert_eq!(pages[1].placed[0], (title, 0.0));
+        assert_eq!(pages[1].placed[1].0, title + 1);
     }
 }

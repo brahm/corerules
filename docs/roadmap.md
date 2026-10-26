@@ -30,7 +30,7 @@ shared crate `cr-app`, one PDF of the sheet for both systems and a test
 that fails when an action is in one app and not in the other. The screens
 are being ported (phase 4): the library, the character sheet, the help,
 Settings and About, the books, character creation with Enter Character,
-and editing are done.
+editing and the generators are done.
 Publishing on Flathub was dropped from the plan (decision P15).
 
 ## The original plan (2026-10-09)
@@ -276,7 +276,7 @@ The phases run in order:
      narrow window, where a settings card now puts its control under its
      header. Enter Character no longer refuses a thief and psionicist
      with more rogue points than New Character gives.
-   - **Editing (PR #104).** `cr-app` gained the character editor, free of
+   - **Editing (done, PR #104).** `cr-app` gained the character editor, free of
      any toolkit, with the original's Update Character in its tabs:
      Details (who the character is, the portrait, the background and
      history, the classes with Add Class for dual-classing, the Levels
@@ -307,9 +307,36 @@ The phases run in order:
      Combat and Proficiencies tabs now share the character points as they
      are edited. A quest spell is named so among the memorized spells,
      and a list's Add box keeps Add inside a narrow window.
-   - Still to port: the generators (NPCs, treasure,
-     encounters, tables, parties); the user database editors; packages
-     and Import Core Rules 2.0; Extract Data from CD….
+   - **The generators (done, PR #105).** `cr-app` gained the DM Tool Kit's generators,
+     free of any toolkit, and the GNOME app uses them: New NPC and New
+     NPC Group (the race, class, level and alignment, how the abilities
+     are rolled, and the party to put them in); Roll Treasure (the
+     treasure types and their counts, the bundles of items, saved
+     treasures to edit or copy, print and PDF); Roll on a Table (the
+     books' tables with their options and Roll Again, where a roll's
+     leftovers carry to the next); Manage Parties (the parties and their
+     members, New Party, Delete Members and Group Encounter); and the
+     encounters (New Encounter from a template or empty, the Encounter
+     page with its monsters, NPCs, traps, hit points, items and treasure,
+     the 2-20 encounter table editor with Roll and Create Encounter, and
+     Group Encounter's encounter or sheet). The encounter rules can now
+     be read away from the window, which the Windows app does. The
+     Windows app has every generator in the bar's More menu and Edit,
+     Copy and Create Encounter on saved encounters, tables and
+     templates. 16 actions are left on `NOT_YET_ON_WINDOWS`: the user
+     database editors with the traps, packages, Import Core Rules 2.0
+     and Extract Data from CD…. The Windows test found the Encounter
+     page's cards that never opened, which the window now keeps open;
+     an encounter just made, Group Encounter's among them, lost without
+     a word on leaving, where leaving an unsaved encounter or table now
+     asks first; thousands grouped the English way in the other
+     languages; a box title left alone at the foot of a printed page;
+     and sheet tables cut off in a narrow window, where a sheet's
+     columns now regroup and a wide table wraps its words and is scaled
+     down only by what still does not fit. Saving a treasure, encounter
+     or table now shows its section, as in the GNOME app.
+   - Still to port: the user database editors; packages and Import Core
+     Rules 2.0; Extract Data from CD….
 5. **Package and Store.** The release workflow builds and tests the MSIX;
    a beta goes to a closed group through the Microsoft Store.
 6. **Release with Windows**, once the beta's users confirm it, with the

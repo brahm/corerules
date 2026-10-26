@@ -51,7 +51,7 @@ struct Inner {
     entering: bool,
     /// The item check of the Equipment page (0x43d7bc), when the
     /// installation's program could be read.
-    items: Option<Rc<NpcRules>>,
+    items: Option<Arc<NpcRules>>,
     /// The Wild Talents step's rules.
     skills: Option<Rc<SkillRules>>,
     /// The installation, for the portraits and the items' icons.
@@ -81,7 +81,7 @@ pub struct Mode {
     pub advance: Arc<AdvanceRules>,
     pub learn: Arc<LearnRules>,
     /// The item check of the Equipment page, when the program was read.
-    pub items: Option<Rc<NpcRules>>,
+    pub items: Option<Arc<NpcRules>>,
     /// The Wild Talents step's rules, when the Expansion's were read.
     pub skills: Option<Rc<SkillRules>>,
     /// The installation, for the portraits and the items' icons.

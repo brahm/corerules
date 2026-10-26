@@ -1,14 +1,18 @@
 //! NPC Generation: the New NPC dialog (Create NPC, with Ability Scores…)
-//! and the New NPC Group dialog (Create Multiple NPCs).
+//! and the New NPC Group dialog (Create Multiple NPCs), drawn over the
+//! forms of `cr_app::npc`.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+use std::sync::Arc;
 
 use adw::prelude::*;
-use cr_i18n::{tr, tr_noop, trn};
+use cr_app::npc::{GROUPS, GroupForm, GroupInput, MOST_LEVEL, MOST_NUMBER, NpcForm, NpcInput};
+use cr_i18n::tr;
+use cr_store::create::ABILITIES;
 use cr_store::help::topic;
-use cr_store::npc::{Abilities, Choice, GroupOptions, Npc, NpcOptions, NpcRules};
-use cr_store::treasure::{Flavor, Rand};
+use cr_store::npc::{Npc, NpcRules};
+use cr_store::treasure::Rand;
 use cr_store::{Installation, Result};
 use gtk::glib;
 
@@ -17,31 +21,13 @@ pub trait Host {
     fn with_install<T>(&self, run: impl FnOnce(&Installation) -> Result<T>) -> Option<Result<T>>;
     /// The generator of the open installation, kept for the session as
     /// the original keeps its kit edits.
-    fn npc_rules(&self) -> Option<Rc<NpcRules>>;
+    fn npc_rules(&self) -> Option<Arc<NpcRules>>;
     fn rand(&self) -> Rc<RefCell<Rand>>;
     fn toast(&self, message: &str);
     /// Reloads the sections and shows the entry `key` of section `section`.
     fn reload(&self, section: &str, key: Option<String>);
     fn parent(&self) -> gtk::Widget;
 }
-
-const ABILITIES: [&str; 6] = [
-    tr_noop!("Strength"),
-    tr_noop!("Dexterity"),
-    tr_noop!("Constitution"),
-    tr_noop!("Intelligence"),
-    tr_noop!("Wisdom"),
-    tr_noop!("Charisma"),
-];
-
-/// The class groups of Create Multiple NPCs, in combination order.
-const GROUPS: [&str; 5] = [
-    tr_noop!("Warrior"),
-    tr_noop!("Rogue"),
-    tr_noop!("Priest"),
-    tr_noop!("Wizard"),
-    tr_noop!("Psionicist"),
-];
 
 fn spin_row(title: &str, value: i32, min: i32, max: i32) -> adw::SpinRow {
     adw::SpinRow::builder()
@@ -71,11 +57,9 @@ fn spin_button(value: i32, min: i32, max: i32) -> gtk::SpinButton {
         .build()
 }
 
-fn combo_row(title: &str, items: &[String]) -> adw::ComboRow {
-    let items: Vec<&str> = items.iter().map(String::as_str).collect();
+fn combo_row(title: &str) -> adw::ComboRow {
     adw::ComboRow::builder()
         .title(title)
-        .model(&gtk::StringList::new(&items))
         .enable_search(true)
         .expression(gtk::PropertyExpression::new(
             gtk::StringObject::static_type(),
@@ -85,6 +69,26 @@ fn combo_row(title: &str, items: &[String]) -> adw::ComboRow {
         .build()
 }
 
+/// Puts `items` in `row` with `selected` chosen; the model is made again
+/// only when the items changed.
+fn set_items(row: &adw::ComboRow, items: &[String], selected: usize) {
+    let same = row.model().is_some_and(|m| {
+        m.n_items() as usize == items.len()
+            && items.iter().enumerate().all(|(i, s)| {
+                m.item(i as u32)
+                    .and_downcast::<gtk::StringObject>()
+                    .is_some_and(|o| o.string() == s.as_str())
+            })
+    });
+    if !same {
+        let texts: Vec<&str> = items.iter().map(String::as_str).collect();
+        row.set_model(Some(&gtk::StringList::new(&texts)));
+    }
+    if row.selected() as usize != selected {
+        row.set_selected(selected as u32);
+    }
+}
+
 fn rules_row() -> adw::ComboRow {
     adw::ComboRow::builder()
         .title(tr("Rules"))
@@ -92,6 +96,13 @@ fn rules_row() -> adw::ComboRow {
             tr("Core Rules"),
             "Player's Option",
         ]))
+        .build()
+}
+
+fn switch_row(title: &str, subtitle: &str) -> adw::SwitchRow {
+    adw::SwitchRow::builder()
+        .title(title)
+        .subtitle(subtitle)
         .build()
 }
 
@@ -129,16 +140,8 @@ fn create_button(label: &str) -> gtk::Button {
 /// kit missing from the database, no spellbook part), as the original's
 /// messages do.
 fn show_messages<'a>(parent: &gtk::Widget, npcs: impl IntoIterator<Item = &'a Npc>) {
-    let lines: Vec<String> = npcs
-        .into_iter()
-        .flat_map(|npc| {
-            npc.messages
-                .iter()
-                .map(move |m| format!("{}: {m}", npc.character.data.name))
-        })
-        .collect();
-    if !lines.is_empty() {
-        crate::create::message(parent, tr("NPC Generator"), &lines.join("\n"));
+    if let Some(text) = cr_app::npc::messages(npcs) {
+        crate::create::message(parent, tr("NPC Generator"), &text);
     }
 }
 
@@ -157,28 +160,126 @@ pub fn template_npc<H: Host + 'static>(host: &Rc<H>, parent: &gtk::Widget, chose
     npc_dialog(host, Some(chosen), parent);
 }
 
+/// The widgets of the New NPC dialog, which show its form.
+struct NpcView<H: Host> {
+    host: Rc<H>,
+    form: RefCell<NpcForm>,
+    /// Set while the widgets are being filled, so their signals are
+    /// ignored.
+    filling: Cell<bool>,
+    race: adw::ComboRow,
+    all_races: adw::SwitchRow,
+    class: adw::ComboRow,
+    all_classes: adw::SwitchRow,
+    rules: adw::ComboRow,
+    levels_group: adw::PreferencesGroup,
+    level_rows: RefCell<Vec<adw::SpinRow>>,
+    abilities_group: adw::PreferencesGroup,
+    ability_rows: Vec<adw::SpinRow>,
+    exceptional: adw::SpinRow,
+    clear: gtk::Button,
+}
+
+impl<H: Host + 'static> NpcView<H> {
+    /// Changes the form and shows it as it now is.
+    fn input(self: &Rc<Self>, input: NpcInput) {
+        if self.filling.get() {
+            return;
+        }
+        self.form
+            .borrow_mut()
+            .input(input, &mut self.host.rand().borrow_mut());
+        let error = self.form.borrow_mut().error.take();
+        if let Some(error) = error {
+            self.host.toast(&error);
+        }
+        self.show();
+    }
+
+    /// Calls `input` with what `make` makes of the widget, while the view
+    /// lives.
+    fn on<W>(self: &Rc<Self>, make: impl Fn(&W) -> NpcInput + 'static) -> impl Fn(&W) + 'static {
+        let view = Rc::downgrade(self);
+        move |widget| {
+            if let Some(view) = view.upgrade() {
+                view.input(make(widget));
+            }
+        }
+    }
+
+    fn show(self: &Rc<Self>) {
+        self.filling.set(true);
+        let form = self.form.borrow();
+        set_items(&self.race, form.races(), form.race_index());
+        self.all_races.set_active(form.all_races);
+        set_items(&self.class, &form.class_names(), form.class_index());
+        self.all_classes.set_active(form.all_classes);
+        self.rules.set_selected(u32::from(form.players_option));
+        // A row for each class of the combination, named for it.
+        let names: Vec<String> = self
+            .level_rows
+            .borrow()
+            .iter()
+            .map(|r| r.title().to_string())
+            .collect();
+        if names != form.classes() {
+            for row in self.level_rows.borrow_mut().drain(..) {
+                self.levels_group.remove(&row);
+            }
+            for (i, name) in form.classes().iter().enumerate() {
+                let row = spin_row(name, form.levels[i], 1, MOST_LEVEL);
+                row.connect_value_notify(
+                    self.on(move |row: &adw::SpinRow| NpcInput::Level(i, row.value() as i32)),
+                );
+                self.levels_group.add(&row);
+                self.level_rows.borrow_mut().push(row);
+            }
+        }
+        for (row, level) in self.level_rows.borrow().iter().zip(&form.levels) {
+            row.set_value(f64::from(*level));
+        }
+        let rolled = form.abilities;
+        self.abilities_group
+            .set_description(Some(if rolled.is_some() {
+                tr("The NPC keeps these scores")
+            } else {
+                tr("Rolled with the NPC unless you roll them now")
+            }));
+        for (i, (row, (lo, hi))) in self
+            .ability_rows
+            .iter()
+            .zip(form.ability_ranges())
+            .enumerate()
+        {
+            row.set_visible(rolled.is_some());
+            row.set_range(f64::from(lo), f64::from(hi.max(lo)));
+            if let Some(a) = rolled {
+                row.set_value(f64::from(a.scores[i]));
+            }
+        }
+        self.exceptional.set_visible(form.exceptional_shown());
+        self.exceptional
+            .set_value(f64::from(rolled.map_or(0, |a| a.exceptional)));
+        self.clear.set_visible(rolled.is_some());
+        drop(form);
+        self.filling.set(false);
+    }
+}
+
 fn npc_dialog<H: Host + 'static>(host: &Rc<H>, template: Option<Chosen>, parent: &gtk::Widget) {
     let Some(rules) = host.npc_rules() else {
         return;
     };
-    let standard = rules.standard_races();
-    let all = rules.races();
-    let expansion = rules.flavor() == Flavor::Expansion;
+    let form = NpcForm::new(rules, template.is_some());
 
     // Race and class.
-    let all_races = adw::SwitchRow::builder()
-        .title(tr("All Races"))
-        .subtitle(tr("Include races that are not standard"))
-        .build();
-    let race = combo_row(
-        tr("Race"),
-        if standard.is_empty() { &all } else { &standard },
-    );
-    let all_classes = adw::SwitchRow::builder()
-        .title(tr("All Classes"))
-        .subtitle(tr("Include classes the race may not take"))
-        .build();
+    let race = combo_row(tr("Race"));
+    let all_races = switch_row(tr("All Races"), tr("Include races that are not standard"));
     let class = adw::ComboRow::builder().title(tr("Class")).build();
+    let all_classes = switch_row(
+        tr("All Classes"),
+        tr("Include classes the race may not take"),
+    );
     let rules_choice = rules_row();
     let character = adw::PreferencesGroup::builder()
         .title(tr("Character"))
@@ -191,8 +292,6 @@ fn npc_dialog<H: Host + 'static>(host: &Rc<H>, template: Option<Chosen>, parent:
 
     // Levels, one per class of the chosen combination.
     let levels_group = adw::PreferencesGroup::builder().title(tr("Levels")).build();
-    let level_rows: Rc<RefCell<Vec<adw::SpinRow>>> = Rc::default();
-    let options: Rc<RefCell<Vec<Vec<String>>>> = Rc::default();
 
     // Ability scores.
     let roll = gtk::Button::builder()
@@ -213,7 +312,6 @@ fn npc_dialog<H: Host + 'static>(host: &Rc<H>, template: Option<Chosen>, parent:
     ability_buttons.append(&roll);
     let abilities_group = adw::PreferencesGroup::builder()
         .title(tr("Ability Scores"))
-        .description(tr("Rolled with the NPC unless you roll them now"))
         .header_suffix(&ability_buttons)
         .build();
     let ability_rows: Vec<adw::SpinRow> = ABILITIES
@@ -229,13 +327,12 @@ fn npc_dialog<H: Host + 'static>(host: &Rc<H>, template: Option<Chosen>, parent:
     exceptional.set_subtitle(tr("1 to 100 for 18/01 to 18/00"));
     exceptional.set_visible(false);
     abilities_group.add(&exceptional);
-    let rolled: Rc<RefCell<Option<Abilities>>> = Rc::default();
 
     let party = adw::EntryRow::builder().title(tr("Party")).build();
     let save_group = adw::PreferencesGroup::new();
     save_group.add(&party);
-    save_group.set_visible(expansion && template.is_none());
-    abilities_group.set_visible(template.is_none());
+    save_group.set_visible(form.party_shown());
+    abilities_group.set_visible(!form.template);
 
     let page = adw::PreferencesPage::new();
     page.add(&character);
@@ -249,243 +346,57 @@ fn npc_dialog<H: Host + 'static>(host: &Rc<H>, template: Option<Chosen>, parent:
     });
     let dialog = dialog(tr("New NPC"), &page, &create, topic::NPC_CREATION);
 
-    let selected_race = {
-        let race = race.clone();
-        move || {
-            race.selected_item()
-                .and_downcast::<gtk::StringObject>()
-                .map(|s| s.string().to_string())
-                .unwrap_or_default()
-        }
-    };
-    let selected_classes = {
-        let (class, options) = (class.clone(), options.clone());
-        move || {
-            options
-                .borrow()
-                .get(class.selected() as usize)
-                .cloned()
-                .unwrap_or_default()
-        }
-    };
-    let show_levels = {
-        let (levels_group, level_rows) = (levels_group.clone(), level_rows.clone());
-        let selected_classes = selected_classes.clone();
-        move || {
-            let old: Vec<i32> = level_rows
-                .borrow()
-                .iter()
-                .map(|r| r.value() as i32)
-                .collect();
-            for row in level_rows.borrow_mut().drain(..) {
-                levels_group.remove(&row);
-            }
-            for (i, name) in selected_classes().iter().enumerate() {
-                let row = spin_row(name, old.get(i).copied().unwrap_or(1), 1, 30);
-                levels_group.add(&row);
-                level_rows.borrow_mut().push(row);
-            }
-        }
-    };
-    let show_classes = {
-        let (rules, class, all_classes, options) = (
-            rules.clone(),
-            class.clone(),
-            all_classes.clone(),
-            options.clone(),
+    let view = Rc::new(NpcView {
+        host: host.clone(),
+        form: RefCell::new(form),
+        filling: Cell::new(false),
+        race,
+        all_races,
+        class,
+        all_classes,
+        rules: rules_choice,
+        levels_group,
+        level_rows: RefCell::default(),
+        abilities_group,
+        ability_rows,
+        exceptional,
+        clear,
+    });
+    view.show();
+    view.race.connect_selected_notify(
+        view.on(|row: &adw::ComboRow| NpcInput::Race(row.selected() as usize)),
+    );
+    view.all_races
+        .connect_active_notify(view.on(|row: &adw::SwitchRow| NpcInput::AllRaces(row.is_active())));
+    view.class.connect_selected_notify(
+        view.on(|row: &adw::ComboRow| NpcInput::Class(row.selected() as usize)),
+    );
+    view.all_classes.connect_active_notify(
+        view.on(|row: &adw::SwitchRow| NpcInput::AllClasses(row.is_active())),
+    );
+    view.rules.connect_selected_notify(
+        view.on(|row: &adw::ComboRow| NpcInput::PlayersOption(row.selected() == 1)),
+    );
+    for (i, row) in view.ability_rows.iter().enumerate() {
+        row.connect_value_notify(
+            view.on(move |row: &adw::SpinRow| NpcInput::Ability(i, row.value() as i32)),
         );
-        let (selected_race, show_levels) = (selected_race.clone(), show_levels.clone());
-        move || {
-            let race = selected_race();
-            let mut list = if all_classes.is_active() {
-                Vec::new()
-            } else {
-                rules.class_options(&race)
-            };
-            if list.is_empty() {
-                list = rules.classes().into_iter().map(|c| vec![c]).collect();
-            }
-            // Single classes before multi-class combinations.
-            list.sort_by_key(Vec::len);
-            let names: Vec<String> = list.iter().map(|c| c.join("/")).collect();
-            let names: Vec<&str> = names.iter().map(String::as_str).collect();
-            *options.borrow_mut() = list;
-            class.set_model(Some(&gtk::StringList::new(&names)));
-            class.set_selected(0);
-            show_levels();
-        }
-    };
-    show_classes();
-    race.connect_selected_notify({
-        let show_classes = show_classes.clone();
-        move |_| show_classes()
-    });
-    all_classes.connect_active_notify({
-        let show_classes = show_classes.clone();
-        move |_| show_classes()
-    });
-    class.connect_selected_notify({
-        let show_levels = show_levels.clone();
-        move |_| show_levels()
-    });
-    all_races.connect_active_notify({
-        let race = race.clone();
-        move |row| {
-            let current = race
-                .selected_item()
-                .and_downcast::<gtk::StringObject>()
-                .map(|s| s.string().to_string());
-            let list = if row.is_active() || standard.is_empty() {
-                &all
-            } else {
-                &standard
-            };
-            let names: Vec<&str> = list.iter().map(String::as_str).collect();
-            race.set_model(Some(&gtk::StringList::new(&names)));
-            let keep = current.and_then(|c| list.iter().position(|r| *r == c));
-            race.set_selected(keep.unwrap_or(0) as u32);
-        }
-    });
-
-    let chosen = {
-        let level_rows = level_rows.clone();
-        let selected_classes = selected_classes.clone();
-        move || -> Vec<(String, i32)> {
-            selected_classes()
-                .into_iter()
-                .zip(level_rows.borrow().iter())
-                .map(|(c, row)| (c, row.value() as i32))
-                .collect()
-        }
-    };
-    let show_abilities = {
-        let (ability_rows, exceptional, clear, abilities_group) = (
-            ability_rows.clone(),
-            exceptional.clone(),
-            clear.clone(),
-            abilities_group.clone(),
-        );
-        move |a: Option<&Abilities>| {
-            abilities_group.set_description(Some(if a.is_some() {
-                tr("The NPC keeps these scores")
-            } else {
-                tr("Rolled with the NPC unless you roll them now")
-            }));
-            for (i, row) in ability_rows.iter().enumerate() {
-                row.set_visible(a.is_some());
-                if let Some(a) = a {
-                    row.set_value(a.scores[i] as f64);
-                }
-            }
-            exceptional.set_visible(a.is_some_and(|a| a.exceptional > 0));
-            exceptional.set_value(a.map_or(0, |a| a.exceptional) as f64);
-            clear.set_visible(a.is_some());
-        }
-    };
-    // The scores typed stay within the race's limits, and 18 Strength
-    // brings exceptional Strength for a race that rolls it.
-    let fit_abilities = Rc::new({
-        let (rules, ability_rows, exceptional, rolled, selected_race) = (
-            rules.clone(),
-            ability_rows.clone(),
-            exceptional.clone(),
-            rolled.clone(),
-            selected_race.clone(),
-        );
-        move || {
-            let race = selected_race();
-            for (row, (lo, hi)) in ability_rows.iter().zip(rules.ability_range(&race)) {
-                row.set_range(f64::from(lo), f64::from(hi));
-            }
-            let strong = rolled.borrow().is_some()
-                && ability_rows[0].value() as i32 == 18
-                && rules.exceptional_strength(&race);
-            if strong && exceptional.value() == 0.0 {
-                exceptional.set_value(1.0);
-            }
-            exceptional.set_visible(strong);
-        }
-    });
-    ability_rows[0].connect_value_notify({
-        let fit_abilities = fit_abilities.clone();
-        move |_| fit_abilities()
-    });
-    race.connect_selected_notify({
-        let fit_abilities = fit_abilities.clone();
-        move |_| fit_abilities()
-    });
-    roll.connect_clicked({
-        let (rules, host, rules_choice, rolled) = (
-            rules.clone(),
-            host.clone(),
-            rules_choice.clone(),
-            rolled.clone(),
-        );
-        let (selected_race, chosen, show_abilities) = (
-            selected_race.clone(),
-            chosen.clone(),
-            show_abilities.clone(),
-        );
-        move |_| {
-            let options = NpcOptions {
-                players_option: rules_choice.selected() == 1,
-                abilities: None,
-            };
-            let result = rules.roll_abilities_only(
-                &mut host.rand().borrow_mut(),
-                &selected_race(),
-                &chosen(),
-                &options,
-            );
-            match result {
-                Ok(a) => {
-                    show_abilities(Some(&a));
-                    *rolled.borrow_mut() = Some(a);
-                }
-                Err(e) => host.toast(&e.to_string()),
-            }
-        }
-    });
-    clear.connect_clicked({
-        let (rolled, show_abilities) = (rolled.clone(), show_abilities.clone());
-        move |_| {
-            *rolled.borrow_mut() = None;
-            show_abilities(None);
-        }
-    });
+    }
+    view.exceptional.connect_value_notify(
+        view.on(|row: &adw::SpinRow| NpcInput::Exceptional(row.value() as i32)),
+    );
+    roll.connect_clicked(view.on(|_: &gtk::Button| NpcInput::Roll));
+    view.clear
+        .connect_clicked(view.on(|_: &gtk::Button| NpcInput::Clear));
+    party.connect_changed(view.on(|row: &adw::EntryRow| NpcInput::Party(row.text().to_string())));
 
     create.connect_clicked({
-        let (host, dialog) = (host.clone(), dialog.clone());
+        let (host, dialog, view) = (host.clone(), dialog.clone(), view.clone());
         move |create| {
-            let classes = chosen();
-            if classes.is_empty() {
-                return host.toast(&rules.no_class_message());
-            }
-            // The spinners edit what Ability Scores… rolled.
-            let abilities = rolled.borrow().map(|mut a| {
-                for (i, row) in ability_rows.iter().enumerate() {
-                    a.scores[i] = row.value() as i32;
-                }
-                a.exceptional = if a.scores[0] == 18 {
-                    exceptional.value() as i32
-                } else {
-                    0
-                };
-                a
-            });
-            let options = NpcOptions {
-                players_option: rules_choice.selected() == 1,
-                abilities,
-            };
-            let npc = rules.generate(
-                &mut host.rand().borrow_mut(),
-                &selected_race(),
-                &classes,
-                &options,
-            );
+            let npc = view.form.borrow().generate(&mut host.rand().borrow_mut());
             let npc = match npc {
                 Ok(npc) => npc,
-                Err(e) => return host.toast(&e.to_string()),
+                Err(e) => return host.toast(&e),
             };
             if let Some(chosen) = &template {
                 // Clicks made meanwhile create nothing more.
@@ -494,7 +405,7 @@ fn npc_dialog<H: Host + 'static>(host: &Rc<H>, template: Option<Chosen>, parent:
                 show_messages(&host.parent(), [&npc]);
                 return chosen(&npc);
             }
-            let party = party.text().trim().to_owned();
+            let party = view.form.borrow().party.trim().to_owned();
             match host.with_install(|install| install.save_npc(&npc, &party)) {
                 Some(Ok(file)) => {
                     create.set_sensitive(false);
@@ -514,52 +425,91 @@ fn npc_dialog<H: Host + 'static>(host: &Rc<H>, template: Option<Chosen>, parent:
     dialog.present(Some(parent));
 }
 
-/// "~Random" in the dialog's choices.
-const RANDOM: &str = tr_noop!("~Random");
-/// The class choice that takes no class of a group.
-const NO_CLASS: &str = tr_noop!("None");
-/// The kit choice that takes no kit.
-const NO_KIT: &str = "NONE";
-
-/// The texts a choice row shows for `items`: the first `fixed` are the
-/// dialog's own choices ("~Random", "None"), translated; the rest are
-/// names from the data. The row's selection is read back from `items`.
-fn shown(items: &[String], fixed: usize) -> Vec<String> {
-    items
-        .iter()
-        .enumerate()
-        .map(|(i, s)| {
-            if i < fixed {
-                tr(s).to_owned()
-            } else {
-                s.clone()
-            }
-        })
-        .collect()
+/// The widgets of the New NPC Group dialog, which show its form.
+struct GroupView<H: Host> {
+    host: Rc<H>,
+    form: RefCell<GroupForm>,
+    filling: Cell<bool>,
+    race: adw::ComboRow,
+    all_races: adw::SwitchRow,
+    fewest: adw::SpinRow,
+    most: adw::SpinRow,
+    rules: adw::ComboRow,
+    allowed: adw::SwitchRow,
+    class_rows: Vec<adw::ComboRow>,
+    kit: adw::ComboRow,
+    all_kits: adw::SwitchRow,
+    alignment: adw::ComboRow,
+    any_alignment: adw::SwitchRow,
+    levels: Vec<(gtk::SpinButton, gtk::SpinButton)>,
+    lines_group: adw::PreferencesGroup,
+    line_rows: RefCell<Vec<adw::ActionRow>>,
 }
 
-/// A choice row's selection: `items[0]` is "~Random".
-fn choice(row: &adw::ComboRow, items: &[String]) -> Choice {
-    match row.selected() {
-        0 => Choice::Random,
-        i => items
-            .get(i as usize)
-            .map_or(Choice::Random, |n| Choice::Name(n.clone())),
+impl<H: Host + 'static> GroupView<H> {
+    fn input(&self, input: GroupInput) {
+        if self.filling.get() {
+            return;
+        }
+        self.form.borrow_mut().input(input);
+        let error = self.form.borrow_mut().error.take();
+        if let Some(error) = error {
+            self.host.toast(&error);
+        }
+        self.show();
     }
-}
 
-/// Puts `items` in a choice row as [`shown`] does, keeping the chosen
-/// name when it is still there and "~Random" (the first) otherwise.
-fn refill(row: &adw::ComboRow, list: &RefCell<Vec<String>>, items: Vec<String>, fixed: usize) {
-    let old = list.borrow().get(row.selected() as usize).cloned();
-    let at = old
-        .and_then(|o| items.iter().position(|i| *i == o))
-        .unwrap_or(0);
-    let texts = shown(&items, fixed);
-    let texts: Vec<&str> = texts.iter().map(String::as_str).collect();
-    *list.borrow_mut() = items;
-    row.set_model(Some(&gtk::StringList::new(&texts)));
-    row.set_selected(at as u32);
+    fn on<W>(self: &Rc<Self>, make: impl Fn(&W) -> GroupInput + 'static) -> impl Fn(&W) + 'static {
+        let view = Rc::downgrade(self);
+        move |widget| {
+            if let Some(view) = view.upgrade() {
+                view.input(make(widget));
+            }
+        }
+    }
+
+    fn show(&self) {
+        self.filling.set(true);
+        let form = self.form.borrow();
+        set_items(&self.race, &form.race_items(), form.race_index());
+        self.all_races.set_active(form.all_races);
+        self.fewest.set_value(f64::from(form.number.0));
+        self.most.set_value(f64::from(form.number.1));
+        self.rules.set_selected(u32::from(form.players_option));
+        self.allowed.set_active(form.allowed);
+        for (g, row) in self.class_rows.iter().enumerate() {
+            set_items(row, &form.class_items(g), form.class_index(g));
+            row.set_sensitive(form.classes_enabled());
+        }
+        set_items(&self.kit, &form.kit_items(), form.kit_index());
+        self.all_kits.set_active(form.all_kits);
+        set_items(
+            &self.alignment,
+            &form.alignment_items(),
+            form.alignment_index(),
+        );
+        self.alignment.set_sensitive(form.alignment_enabled());
+        self.any_alignment.set_active(form.any_alignment);
+        for ((low, high), (lo, hi)) in self.levels.iter().zip(form.levels) {
+            low.set_value(f64::from(lo));
+            high.set_value(f64::from(hi));
+        }
+        let lines = form.lines();
+        if lines.len() != self.line_rows.borrow().len() {
+            for row in self.line_rows.borrow_mut().drain(..) {
+                self.lines_group.remove(&row);
+            }
+            for line in &lines {
+                let row = adw::ActionRow::builder()
+                    .title(glib::markup_escape_text(line))
+                    .build();
+                self.lines_group.add(&row);
+                self.line_rows.borrow_mut().push(row);
+            }
+        }
+        drop(form);
+        self.filling.set(false);
+    }
 }
 
 /// Opens the New NPC Group dialog: one or more lines (number, race,
@@ -569,16 +519,10 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
     let Some(rules) = host.npc_rules() else {
         return;
     };
-    // Race, kit and alignment take the original's Standard/All,
-    // Standard/All and Allowed/Any choices; their lists follow the rest.
-    let races: Rc<RefCell<Vec<String>>> = Rc::default();
-    let race = combo_row(tr("Race"), &[]);
-    let all_races = adw::SwitchRow::builder()
-        .title(tr("All Races"))
-        .subtitle(tr("Include races that are not standard"))
-        .build();
-    let fewest = spin_row(tr("Fewest"), 1, 1, 100);
-    let most = spin_row(tr("Most"), 1, 1, 100);
+    let race = combo_row(tr("Race"));
+    let all_races = switch_row(tr("All Races"), tr("Include races that are not standard"));
+    let fewest = spin_row(tr("Fewest"), 1, 1, MOST_NUMBER);
+    let most = spin_row(tr("Most"), 1, 1, MOST_NUMBER);
     let rules_choice = rules_row();
     let party = adw::EntryRow::builder().title(tr("Group Name")).build();
     let group = adw::PreferencesGroup::builder().title(tr("Group")).build();
@@ -589,54 +533,33 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
     group.add(&most);
     group.add(&rules_choice);
 
-    let allowed = adw::SwitchRow::builder()
-        .title(tr("Allowed Combination"))
-        .subtitle(tr("Each NPC takes a class combination its race allows"))
-        .active(true)
-        .build();
+    let allowed = switch_row(
+        tr("Allowed Combination"),
+        tr("Each NPC takes a class combination its race allows"),
+    );
     let classes_group = adw::PreferencesGroup::builder()
         .title(tr("Classes"))
         .description(tr("A class of each group, or none"))
         .build();
     classes_group.add(&allowed);
-    let class_rows: Vec<(adw::ComboRow, Vec<String>)> = GROUPS
+    let class_rows: Vec<adw::ComboRow> = GROUPS
         .iter()
-        .enumerate()
-        .map(|(g, name)| {
-            let mut items = vec![RANDOM.to_owned(), NO_CLASS.to_owned()];
-            items.extend(rules.group_classes(g));
-            let row = combo_row(tr(name), &shown(&items, 2));
-            // Without a choice only the warrior group takes a class.
-            row.set_selected(if g == 0 { 0 } else { 1 });
-            row.set_sensitive(false);
+        .map(|name| {
+            let row = combo_row(tr(name));
             classes_group.add(&row);
-            (row, items)
+            row
         })
         .collect();
-    allowed.connect_active_notify({
-        let rows: Vec<adw::ComboRow> = class_rows.iter().map(|r| r.0.clone()).collect();
-        move |switch| {
-            for row in &rows {
-                row.set_sensitive(!switch.is_active());
-            }
-        }
-    });
-    let kits: Rc<RefCell<Vec<String>>> = Rc::default();
-    let kit = combo_row(tr("Kit"), &[]);
-    let all_kits = adw::SwitchRow::builder()
-        .title(tr("All Kits"))
-        .subtitle(tr(
-            "Include kits the race, classes or alignment may not take",
-        ))
-        .build();
-    let alignments: Rc<RefCell<Vec<String>>> = Rc::default();
-    let alignment = combo_row(tr("Alignment"), &[]);
-    let any_alignment = adw::SwitchRow::builder()
-        .title(tr("Any Alignment"))
-        .subtitle(tr(
-            "Include alignments the classes, race or kit do not allow",
-        ))
-        .build();
+    let kit = combo_row(tr("Kit"));
+    let all_kits = switch_row(
+        tr("All Kits"),
+        tr("Include kits the race, classes or alignment may not take"),
+    );
+    let alignment = combo_row(tr("Alignment"));
+    let any_alignment = switch_row(
+        tr("Any Alignment"),
+        tr("Include alignments the classes, race or kit do not allow"),
+    );
     classes_group.add(&kit);
     classes_group.add(&all_kits);
     classes_group.add(&alignment);
@@ -649,8 +572,8 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
     let levels: Vec<(gtk::SpinButton, gtk::SpinButton)> = GROUPS
         .iter()
         .map(|name| {
-            let low = spin_button(1, 1, 30);
-            let high = spin_button(1, 1, 30);
+            let low = spin_button(1, 1, MOST_LEVEL);
+            let high = spin_button(1, 1, MOST_LEVEL);
             let name = tr(name);
             low.update_property(&[gtk::accessible::Property::Label(&tr!(
                 "Lowest {name} Level",
@@ -672,7 +595,6 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
         .collect();
 
     // The lines added so far, shown sorted as the original's list.
-    let lines: Rc<RefCell<Vec<GroupOptions>>> = Rc::default();
     let lines_group = adw::PreferencesGroup::builder()
         .title(tr("Lines"))
         .description(tr("Without lines, Create makes the line above"))
@@ -683,166 +605,6 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
         .valign(gtk::Align::Center)
         .build();
     lines_group.set_header_suffix(Some(&add));
-    let line_rows: Rc<RefCell<Vec<adw::ActionRow>>> = Rc::default();
-
-    let class_rows_view: Vec<adw::ComboRow> = class_rows.iter().map(|r| r.0.clone()).collect();
-    let current = {
-        let (fewest, most) = (fewest.clone(), most.clone());
-        let (race, races) = (race.clone(), races.clone());
-        let (rules_choice, allowed) = (rules_choice.clone(), allowed.clone());
-        let (kit, kits) = (kit.clone(), kits.clone());
-        let (alignment, alignments) = (alignment.clone(), alignments.clone());
-        move || {
-            let mut options = GroupOptions {
-                number: (fewest.value() as i32, most.value() as i32),
-                race: match race.selected() {
-                    0 => None,
-                    i => races.borrow().get(i as usize).cloned(),
-                },
-                allowed_combination: allowed.is_active(),
-                kit: choice(&kit, &kits.borrow()),
-                alignment: choice(&alignment, &alignments.borrow()),
-                players_option: rules_choice.selected() == 1,
-                ..Default::default()
-            };
-            for (slot, (row, items)) in options.classes.iter_mut().zip(&class_rows) {
-                *slot = match row.selected() {
-                    1 => None,
-                    _ => Some(choice(row, items)),
-                };
-            }
-            for (slot, (low, high)) in options.levels.iter_mut().zip(&levels) {
-                let (low, high) = (low.value() as i32, high.value() as i32);
-                *slot = (low.min(high), low.max(high));
-            }
-            options
-        }
-    };
-    let current = Rc::new(current);
-
-    // 0x4e1cc3: the alignments, which a "~Random" kit holds at "~Random"
-    // under Allowed (0x4e3721).
-    let fill_alignments = {
-        let (rules, current) = (rules.clone(), current.clone());
-        let (alignment, alignments) = (alignment.clone(), alignments.clone());
-        let any_alignment = any_alignment.clone();
-        move || {
-            let options = current();
-            let mut items = vec![RANDOM.to_owned()];
-            items.extend(if any_alignment.is_active() {
-                rules.alignments()
-            } else {
-                rules.group_alignments(&options)
-            });
-            let locked = !any_alignment.is_active() && matches!(options.kit, Choice::Random);
-            refill(&alignment, &alignments, items, 1);
-            if locked {
-                alignment.set_selected(0);
-            }
-            alignment.set_sensitive(!locked && alignments.borrow().len() > 1);
-        }
-    };
-    let fill_alignments = Rc::new(fill_alignments);
-    // 0x4e15d3, then the alignments.
-    let fill_kits = {
-        let (rules, current) = (rules.clone(), current.clone());
-        let (kit, kits, all_kits) = (kit.clone(), kits.clone(), all_kits.clone());
-        let fill_alignments = fill_alignments.clone();
-        move || {
-            let mut items = vec![RANDOM.to_owned(), NO_KIT.to_owned()];
-            items.extend(rules.group_kits(!all_kits.is_active(), &current()));
-            refill(&kit, &kits, items, 1);
-            fill_alignments();
-        }
-    };
-    let fill_kits = Rc::new(fill_kits);
-    // 0x4e095e and 0x4e09ad, then the kits.
-    let fill_races = {
-        let rules = rules.clone();
-        let (race, races, all_races) = (race.clone(), races.clone(), all_races.clone());
-        let rules_choice = rules_choice.clone();
-        let fill_kits = fill_kits.clone();
-        move || {
-            let mut items = vec![RANDOM.to_owned()];
-            items.extend(if all_races.is_active() {
-                rules.races()
-            } else {
-                rules.group_standard_races(rules_choice.selected() == 1)
-            });
-            refill(&race, &races, items, 1);
-            fill_kits();
-        }
-    };
-    let fill_races = Rc::new(fill_races);
-    // Refilling a list notifies its row: the rows follow the person only.
-    let filling = Rc::new(std::cell::Cell::new(false));
-    let guarded = |fill: Rc<dyn Fn()>| {
-        let filling = filling.clone();
-        move || {
-            if !filling.replace(true) {
-                fill();
-                filling.set(false);
-            }
-        }
-    };
-    let races_changed = guarded(fill_races.clone());
-    let kits_changed = guarded(fill_kits.clone());
-    let alignments_changed = guarded(fill_alignments.clone());
-    races_changed();
-    all_races.connect_active_notify({
-        let f = races_changed.clone();
-        move |_| f()
-    });
-    rules_choice.connect_selected_notify({
-        let f = races_changed.clone();
-        move |_| f()
-    });
-    race.connect_selected_notify({
-        let f = kits_changed.clone();
-        move |_| f()
-    });
-    all_kits.connect_active_notify({
-        let f = kits_changed.clone();
-        move |_| f()
-    });
-    allowed.connect_active_notify({
-        let f = kits_changed.clone();
-        move |_| f()
-    });
-    for row in &class_rows_view {
-        row.connect_selected_notify({
-            let f = kits_changed.clone();
-            move |_| f()
-        });
-    }
-    kit.connect_selected_notify({
-        let f = alignments_changed.clone();
-        move |_| f()
-    });
-    any_alignment.connect_active_notify({
-        let f = alignments_changed.clone();
-        move |_| f()
-    });
-    add.connect_clicked({
-        let (lines, line_rows, lines_group) =
-            (lines.clone(), line_rows.clone(), lines_group.clone());
-        let current = current.clone();
-        move |_| {
-            let mut lines = lines.borrow_mut();
-            lines.push(current());
-            GroupOptions::sort(&mut lines);
-            for row in line_rows.borrow_mut().drain(..) {
-                lines_group.remove(&row);
-            }
-            for line in lines.iter() {
-                let row = adw::ActionRow::builder()
-                    .title(glib::markup_escape_text(&line.display_label()))
-                    .build();
-                lines_group.add(&row);
-                line_rows.borrow_mut().push(row);
-            }
-        }
-    });
 
     let page = adw::PreferencesPage::new();
     page.add(&group);
@@ -851,39 +613,80 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
     page.add(&lines_group);
     let create = create_button(tr("_Create"));
     let dialog = dialog(tr("New NPC Group"), &page, &create, topic::NPC_GROUP);
-    fewest.connect_value_notify({
-        let most = most.clone();
-        move |row| {
-            if most.value() < row.value() {
-                most.set_value(row.value());
-            }
-        }
+
+    let view = Rc::new(GroupView {
+        host: host.clone(),
+        form: RefCell::new(GroupForm::new(rules)),
+        filling: Cell::new(false),
+        race,
+        all_races,
+        fewest,
+        most,
+        rules: rules_choice,
+        allowed,
+        class_rows,
+        kit,
+        all_kits,
+        alignment,
+        any_alignment,
+        levels,
+        lines_group,
+        line_rows: RefCell::default(),
     });
-    most.connect_value_notify({
-        let fewest = fewest.clone();
-        move |row| {
-            if fewest.value() > row.value() {
-                fewest.set_value(row.value());
-            }
-        }
-    });
+    view.show();
+    party.connect_changed(view.on(|row: &adw::EntryRow| GroupInput::Name(row.text().to_string())));
+    view.race.connect_selected_notify(
+        view.on(|row: &adw::ComboRow| GroupInput::Race(row.selected() as usize)),
+    );
+    view.all_races.connect_active_notify(
+        view.on(|row: &adw::SwitchRow| GroupInput::AllRaces(row.is_active())),
+    );
+    view.fewest
+        .connect_value_notify(view.on(|row: &adw::SpinRow| GroupInput::Fewest(row.value() as i32)));
+    view.most
+        .connect_value_notify(view.on(|row: &adw::SpinRow| GroupInput::Most(row.value() as i32)));
+    view.rules.connect_selected_notify(
+        view.on(|row: &adw::ComboRow| GroupInput::PlayersOption(row.selected() == 1)),
+    );
+    view.allowed.connect_active_notify(
+        view.on(|row: &adw::SwitchRow| GroupInput::Allowed(row.is_active())),
+    );
+    for (g, row) in view.class_rows.iter().enumerate() {
+        row.connect_selected_notify(
+            view.on(move |row: &adw::ComboRow| GroupInput::Class(g, row.selected() as usize)),
+        );
+    }
+    view.kit.connect_selected_notify(
+        view.on(|row: &adw::ComboRow| GroupInput::Kit(row.selected() as usize)),
+    );
+    view.all_kits.connect_active_notify(
+        view.on(|row: &adw::SwitchRow| GroupInput::AllKits(row.is_active())),
+    );
+    view.alignment.connect_selected_notify(
+        view.on(|row: &adw::ComboRow| GroupInput::Alignment(row.selected() as usize)),
+    );
+    view.any_alignment.connect_active_notify(
+        view.on(|row: &adw::SwitchRow| GroupInput::AnyAlignment(row.is_active())),
+    );
+    for (g, (low, high)) in view.levels.iter().enumerate() {
+        low.connect_value_changed(
+            view.on(move |spin: &gtk::SpinButton| GroupInput::Low(g, spin.value_as_int())),
+        );
+        high.connect_value_changed(
+            view.on(move |spin: &gtk::SpinButton| GroupInput::High(g, spin.value_as_int())),
+        );
+    }
+    add.connect_clicked(view.on(|_: &gtk::Button| GroupInput::AddLine));
 
     create.connect_clicked({
-        let (host, dialog) = (host.clone(), dialog.clone());
+        let (host, dialog, view) = (host.clone(), dialog.clone(), view.clone());
         move |create| {
-            let name = party.text().trim().to_owned();
-            if name.is_empty() {
-                return host.toast(tr("A group name must be supplied."));
-            }
-            let mut lines = lines.borrow().clone();
-            if lines.is_empty() {
-                lines.push(current());
-            }
-            let npcs = rules.generate_groups(&mut host.rand().borrow_mut(), &lines);
+            let npcs = view.form.borrow().generate(&mut host.rand().borrow_mut());
             let npcs = match npcs {
                 Ok(npcs) => npcs,
-                Err(e) => return host.toast(&e.to_string()),
+                Err(e) => return host.toast(&e),
             };
+            let name = view.form.borrow().name.trim().to_owned();
             let saved = host.with_install(|install| {
                 let mut last = None;
                 for npc in &npcs {
@@ -897,11 +700,7 @@ pub fn new_group<H: Host + 'static>(host: &Rc<H>) {
                     dialog.close();
                     show_messages(&host.parent(), &npcs);
                     host.reload("characters", last);
-                    host.toast(&trn!(
-                        "{n} NPC was created",
-                        "{n} NPCs were created",
-                        npcs.len()
-                    ));
+                    host.toast(&cr_app::npc::created_text(npcs.len()));
                 }
                 Some(Err(e)) => host.toast(&e.to_string()),
                 None => {}

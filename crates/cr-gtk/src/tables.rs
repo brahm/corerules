@@ -6,18 +6,20 @@
 use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use adw::prelude::*;
+use cr_app::tables::{TableInput, TableRoller};
 use cr_i18n::tr;
 use cr_store::Installation;
 use cr_store::help::topic;
-use cr_store::tables::{Block, Leftovers, ListEntry, RollResult, Session, TableBook, TableRolls};
+use cr_store::tables::{Leftovers, RollResult, TableBook, TableRolls};
 use cr_store::treasure::Rand;
 use gtk::{gio, glib};
 
 thread_local! {
     /// The tables of the installation last opened, kept for the session.
-    static CACHE: RefCell<Option<(PathBuf, Rc<TableRolls>)>> = const { RefCell::new(None) };
+    static CACHE: RefCell<Option<(PathBuf, Arc<TableRolls>)>> = const { RefCell::new(None) };
     /// The book and table chosen last.
     static LAST: Cell<Option<(TableBook, usize)>> = const { Cell::new(None) };
     /// What the closed Roll Results dialogs left for the next one; it
@@ -82,7 +84,7 @@ pub fn open(
                 .await;
                 match loaded {
                     Ok(Ok(rolls)) => {
-                        let rolls = Rc::new(rolls);
+                        let rolls = Arc::new(rolls);
                         CACHE.with_borrow_mut(|c| *c = Some((root, rolls.clone())));
                         ui.show(rolls);
                     }
@@ -109,10 +111,8 @@ struct Ui {
 
 /// The dialog once the tables are loaded.
 struct Roller {
-    rolls: Rc<TableRolls>,
+    state: RefCell<TableRoller>,
     rand: Rc<RefCell<Rand>>,
-    books: Vec<TableBook>,
-    entries: RefCell<Vec<&'static ListEntry>>,
     book_row: adw::ComboRow,
     table_row: adw::ComboRow,
     options: adw::PreferencesGroup,
@@ -120,8 +120,6 @@ struct Roller {
     /// Set while the rows are being filled, so their signals are ignored.
     filling: Cell<bool>,
     results: gtk::TextBuffer,
-    result: RefCell<Option<RollResult>>,
-    session: RefCell<Session>,
     again: gtk::Button,
     read: gtk::Button,
     treasure: gtk::Button,
@@ -139,12 +137,14 @@ impl Ui {
         self.stack.set_visible_child_name("error");
     }
 
-    fn show(&self, rolls: Rc<TableRolls>) {
-        let books = rolls.books();
-        let titles: Vec<&str> = books.iter().map(|b| b.title()).collect();
+    fn show(&self, rolls: Arc<TableRolls>) {
+        let state = TableRoller::new(rolls, LAST.get());
+        let titles = state.book_titles();
+        let titles: Vec<&str> = titles.iter().map(String::as_str).collect();
         let book_row = adw::ComboRow::builder()
             .title(tr("Book"))
             .model(&gtk::StringList::new(&titles))
+            .selected(state.book as u32)
             .build();
         let table_row = adw::ComboRow::builder()
             .title(tr("Table"))
@@ -273,63 +273,53 @@ impl Ui {
         roll.grab_focus();
 
         let roller = Rc::new(Roller {
-            rolls,
+            state: RefCell::new(state),
             rand: self.rand.clone(),
-            books,
-            entries: RefCell::default(),
             book_row,
             table_row,
             options,
             param_rows: RefCell::default(),
             filling: Cell::new(false),
             results,
-            result: RefCell::default(),
-            session: RefCell::default(),
             again: again.clone(),
             read: read.clone(),
             treasure: treasure.clone(),
             copy: copy.clone(),
         });
-
-        let (last_book, last_table) = LAST.get().unwrap_or((TableBook::Dmg, 0));
-        let book = roller
-            .books
-            .iter()
-            .position(|b| *b == last_book)
-            .unwrap_or(0);
-        roller.book_row.set_selected(book as u32);
-        roller.fill_tables(last_table);
+        roller.fill_tables();
 
         let weak = Rc::downgrade(&roller);
-        roller.book_row.connect_selected_notify(move |_| {
+        roller.book_row.connect_selected_notify(move |row| {
             if let Some(r) = weak.upgrade() {
-                r.fill_tables(0);
+                r.input(TableInput::Book(row.selected() as usize));
+                r.fill_tables();
             }
         });
         let weak = Rc::downgrade(&roller);
-        roller.table_row.connect_selected_notify(move |_| {
+        roller.table_row.connect_selected_notify(move |row| {
             if let Some(r) = weak.upgrade()
                 && !r.filling.get()
             {
+                r.input(TableInput::Table(row.selected() as usize));
                 r.fill_params();
             }
         });
         let weak = Rc::downgrade(&roller);
         roll.connect_clicked(move |_| {
             if let Some(r) = weak.upgrade() {
-                r.roll(false);
+                r.roll(TableInput::Roll);
             }
         });
         let weak = Rc::downgrade(&roller);
         again.connect_clicked(move |_| {
             if let Some(r) = weak.upgrade() {
-                r.roll(true);
+                r.roll(TableInput::Again);
             }
         });
         let weak = Rc::downgrade(&roller);
         copy.connect_clicked(move |button| {
             if let Some(r) = weak.upgrade()
-                && let Some(result) = &*r.result.borrow()
+                && let Some(result) = &r.state.borrow().result
             {
                 button.clipboard().set_text(&result.to_text());
             }
@@ -339,7 +329,7 @@ impl Ui {
         let dialog = self.dialog.clone();
         read.connect_clicked(move |_| {
             let Some(r) = weak.upgrade() else { return };
-            let found = r.result.borrow().as_ref().and_then(|x| x.reference);
+            let found = r.state.borrow().result.as_ref().and_then(|x| x.reference);
             if let Some((book, number)) = found {
                 dialog.close();
                 open_book(book.short_name(), Some(&format!("Table {number}:")));
@@ -355,61 +345,43 @@ impl Ui {
         let keep = RefCell::new(Some(roller));
         self.dialog.connect_closed(move |_| {
             if let Some(roller) = keep.borrow_mut().take() {
-                roller.close_session();
+                LEFTOVERS.with_borrow_mut(|l| roller.state.borrow_mut().close(l));
             }
         });
     }
 }
 
 impl Roller {
-    fn book(&self) -> TableBook {
-        self.books
-            .get(self.book_row.selected() as usize)
-            .copied()
-            .unwrap_or(TableBook::Dmg)
+    fn input(&self, input: TableInput) {
+        LEFTOVERS.with_borrow_mut(|leftovers| {
+            self.state
+                .borrow_mut()
+                .input(input, leftovers, &mut self.rand.borrow_mut())
+        });
     }
 
-    fn entry(&self) -> Option<&'static ListEntry> {
-        self.entries
-            .borrow()
-            .get(self.table_row.selected() as usize)
-            .copied()
-    }
-
-    /// Lists the tables of the chosen book and selects `selected`.
-    fn fill_tables(self: &Rc<Self>, selected: usize) {
-        let entries = self.rolls.entries(self.book());
-        let titles: Vec<String> = entries.iter().map(|e| self.rolls.entry_title(e)).collect();
-        let titles: Vec<&str> = titles.iter().map(String::as_str).collect();
-        *self.entries.borrow_mut() = entries;
+    /// Lists the tables of the chosen book.
+    fn fill_tables(self: &Rc<Self>) {
+        let state = self.state.borrow();
+        let titles: Vec<&str> = state.table_titles().iter().map(String::as_str).collect();
         self.filling.set(true);
         self.table_row
             .set_model(Some(&gtk::StringList::new(&titles)));
-        self.table_row
-            .set_selected(selected.min(titles.len().saturating_sub(1)) as u32);
+        self.table_row.set_selected(state.table as u32);
         self.filling.set(false);
+        drop(state);
         self.fill_params();
     }
 
-    fn chosen(&self) -> Vec<usize> {
-        self.param_rows
-            .borrow()
-            .iter()
-            .map(|row| row.selected() as usize)
-            .collect()
-    }
-
-    /// Makes a row for each parameter of the chosen table. A new table is
-    /// a new Roll Results session.
+    /// Makes a row for each parameter of the chosen table.
     fn fill_params(self: &Rc<Self>) {
         for row in self.param_rows.borrow_mut().drain(..) {
             self.options.remove(&row);
         }
-        self.close_session();
-        self.again.set_sensitive(false);
-        let Some(entry) = self.entry() else { return };
-        LAST.set(Some((self.book(), self.table_row.selected() as usize)));
-        let params = self.rolls.params(entry, &[]);
+        let state = self.state.borrow();
+        self.again.set_sensitive(state.again_enabled());
+        LAST.set(state.last());
+        let params = state.params();
         self.options.set_visible(!params.is_empty());
         for (i, param) in params.iter().enumerate() {
             let options: Vec<&str> = param.options.iter().map(String::as_str).collect();
@@ -418,10 +390,11 @@ impl Roller {
                 .model(&gtk::StringList::new(&options))
                 .build();
             let weak = Rc::downgrade(self);
-            row.connect_selected_notify(move |_| {
+            row.connect_selected_notify(move |row| {
                 if let Some(r) = weak.upgrade()
                     && !r.filling.get()
                 {
+                    r.input(TableInput::Option(i, row.selected() as usize));
                     r.refresh_params(i);
                 }
             });
@@ -433,49 +406,31 @@ impl Roller {
     /// Options can depend on earlier choices (the called shots depend on
     /// the target): refreshes the rows after `changed`.
     fn refresh_params(&self, changed: usize) {
-        let Some(entry) = self.entry() else { return };
-        let chosen = self.chosen();
-        let params = self.rolls.params(entry, &chosen);
+        let state = self.state.borrow();
         let rows = self.param_rows.borrow();
         self.filling.set(true);
-        for (row, param) in rows.iter().zip(&params).skip(changed + 1) {
+        for ((row, param), chosen) in rows
+            .iter()
+            .zip(state.params())
+            .zip(&state.chosen)
+            .skip(changed + 1)
+        {
             let options: Vec<&str> = param.options.iter().map(String::as_str).collect();
-            let selected = row.selected();
             row.set_model(Some(&gtk::StringList::new(&options)));
-            if (selected as usize) < options.len() {
-                row.set_selected(selected);
-            }
+            row.set_selected(*chosen as u32);
         }
         self.filling.set(false);
     }
 
-    /// Ends the Roll Results session, as closing the original's dialog
-    /// does.
-    fn close_session(&self) {
-        let session = self.session.take();
-        LEFTOVERS.with_borrow_mut(|l| l.close(&session));
-    }
-
-    fn roll(&self, again: bool) {
-        let Some(entry) = self.entry() else { return };
-        if !again {
-            self.close_session();
-            let session = LEFTOVERS.with_borrow_mut(|l| l.open(entry));
-            self.session.replace(session);
-        }
-        let result = self.rolls.roll(
-            entry,
-            &self.chosen(),
-            &mut self.session.borrow_mut(),
-            &mut self.rand.borrow_mut(),
-        );
-        self.show(&result);
+    fn roll(&self, input: TableInput) {
+        self.input(input);
+        let state = self.state.borrow();
+        let Some(result) = &state.result else { return };
+        self.show(result);
         self.read.set_visible(result.reference.is_some());
         self.treasure.set_visible(result.treasure);
-        self.again
-            .set_sensitive(result.book_table.is_none() && !result.treasure);
+        self.again.set_sensitive(state.again_enabled());
         self.copy.set_sensitive(true);
-        self.result.replace(Some(result));
     }
 
     fn show(&self, result: &RollResult) {
@@ -492,13 +447,7 @@ impl Roller {
             if let Some(subtitle) = &block.subtitle {
                 buffer.insert_with_tags_by_name(&mut end, &format!("{subtitle}\n"), &["subtitle"]);
             }
-            let body = Block {
-                title: None,
-                subtitle: None,
-                notes: Vec::new(),
-                ..block.clone()
-            }
-            .to_text();
+            let body = cr_app::tables::columns(block);
             let headed = block.title.is_some() || block.subtitle.is_some();
             if !body.is_empty() {
                 if headed {

@@ -15,7 +15,7 @@ use cr_i18n::{tr, tr_noop, trn};
 
 use crate::encounter::{Encounter, EncounterRules, hit_point_text, npc_line};
 use crate::pictures::{Finder, Kind, joined};
-use crate::treasure::thousands;
+use crate::treasure::grouped;
 use crate::userdb::tables::{self, TableDb};
 use crate::userdb::{Origin, origin_label};
 use crate::{Error, Installation, Result};
@@ -516,12 +516,7 @@ impl Installation {
                         title: t.name.clone(),
                         subtitle: summary
                             .as_ref()
-                            .map(|s| {
-                                tr!(
-                                    "{value} gp",
-                                    value = crate::treasure::thousands(s.value_cp / 100)
-                                )
-                            })
+                            .map(|s| tr!("{value} gp", value = grouped(s.value_cp / 100)))
                             .unwrap_or_default(),
                         groups: treasure_groups(&t.bundle, summary.as_ref()),
                         text: String::new(),
@@ -693,9 +688,9 @@ fn encounter_entry(e: &Encounter, rules: Option<&EncounterRules>) -> Entry {
         groups.push(Group {
             title: tr("Encounter Totals").into(),
             rows: vec![
-                (tr("Gold Value").into(), thousands(t.gold_value)),
-                (tr("Monster XP").into(), thousands(t.monster_xp)),
-                (tr("Treasure XP").into(), thousands(t.treasure_xp)),
+                (tr("Gold Value").into(), grouped(t.gold_value)),
+                (tr("Monster XP").into(), grouped(t.monster_xp)),
+                (tr("Treasure XP").into(), grouped(t.treasure_xp)),
             ],
         });
     }

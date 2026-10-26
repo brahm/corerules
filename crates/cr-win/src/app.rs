@@ -4,46 +4,68 @@
 //! functions of the modules below, from that state.
 
 mod book;
+mod bundle;
 mod create;
 mod edit;
+mod encounter;
 mod forms;
 mod help;
 mod import;
 mod levels;
 mod library;
+mod npc;
+mod parties;
 mod portrait;
 mod settings;
 mod sheet;
+mod tables;
+mod treasure;
 mod web;
 
 use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use cr_app::action::{self, Action};
 use cr_app::create::{Answer, Effect, Input, ListKind, Needs, Page as CreatePage, Wizard};
 use cr_app::editor::{EditEffect, EditInput, EditNeeds, Editor, Tab as EditTab};
+use cr_app::encounter::{
+    EncounterEffect, EncounterForm, EncounterInput, TableEditInput, TableEditor, TableEffect,
+};
 use cr_app::help::{Files, Found, MonsterHelp, PROGRAM, Target};
 use cr_app::library::Filter;
+use cr_app::npc::{GroupForm, GroupInput, NpcForm, NpcInput};
+use cr_app::parties::PartyLists;
 use cr_app::sheets::Export;
+use cr_app::tables::{TableInput, TableRoller};
+use cr_app::treasure::{Roller, TreasureEffect, TreasureInput};
+use cr_formats::character::Character;
 use cr_formats::export::ExportFile;
-use cr_i18n::{tr, trc};
+use cr_i18n::{tr, trc, trn};
 use cr_store::Installation;
-use cr_store::catalog::{Entry, Section};
+use cr_store::catalog::{ENCOUNTER_KEY, Entry, Section, TABLE_KEY, TREASURE_KEY};
+use cr_store::encounter::{Encounter, EncounterRules, check_name};
 use cr_store::export::{Content, ImportReport};
 use cr_store::help::{ItemHelp, topic};
+use cr_store::npc::{Npc, NpcRules};
 use cr_store::pictures::stored_portrait;
 use cr_store::sheet::Sheet;
+use cr_store::tables::{Leftovers, TableBook, TableRolls};
+use cr_store::treasure::{Bundle, Rand, TreasureRules};
+use cr_store::userdb::UserDb;
 use cr_store::userdb::parts::OTHER_TYPES;
+use cr_store::userdb::traps::Traps;
 use cr_win::text::plain;
 use windows_reactor::*;
 
 use crate::native::keys::Key;
 use crate::native::{self, Owner};
 use book::{BookPage, BookView};
+use encounter::{Chooser, GroupDialog};
 use help::{HelpPage, Opened, Shown};
 use library::Pictures;
+use parties::PartiesPage;
 use sheet::{OptionsEdit, SheetOptions, SheetPage};
 use web::WebHost;
 
@@ -114,6 +136,9 @@ pub struct Shell {
     help_view: WebHost,
     /// The sections of About that are open.
     about_open: Vec<settings::Section>,
+    /// The keys of the Expanders opened on the Encounter page or the 2-20
+    /// table editor.
+    open_rows: Vec<String>,
     book_view: BookView,
     /// Counts the times a page asked again for its WebView2's
     /// CoreWebView2, for it to ask once more.
@@ -128,6 +153,23 @@ pub struct Shell {
     portrait: RefCell<Option<Rc<portrait::Shown>>>,
     /// A book is shown, whose keys the keyboard hook takes.
     reading: Rc<Cell<bool>>,
+    /// The dice of the generators, one sequence for the session as in
+    /// the GNOME app.
+    rand: Arc<Mutex<Rand>>,
+    /// The NPC generator of the installation, read once.
+    npc_rules: Option<Arc<NpcRules>>,
+    /// The treasure tables of the installation, read once.
+    treasure_rules: Option<Arc<TreasureRules>>,
+    /// The tables Roll on a Table rolls on, read once, the book and table
+    /// chosen last, and what its closed sessions left for the next roll
+    /// (the original's stack).
+    table_rolls: Option<Arc<TableRolls>>,
+    table_last: Option<(TableBook, usize)>,
+    leftovers: Leftovers,
+    /// The encounter templates, monsters and treasure, read once.
+    encounter_rules: Option<Arc<EncounterRules>>,
+    /// Group Encounter, while it asks.
+    group: Option<GroupDialog>,
 }
 
 /// What the window shows.
@@ -142,6 +184,46 @@ pub enum Page {
     SheetOptions(Box<SheetOptions>),
     Help(Box<HelpPage>),
     Book(Box<BookPage>),
+    Npc(Box<NpcForm>),
+    NpcGroup(Box<GroupForm>),
+    Treasure(Box<Roller>),
+    Table(Box<TableRoller>),
+    Parties(Box<PartiesPage>),
+    NewEncounter(Box<Chooser>),
+    Encounter(Box<EncounterForm>),
+    EncounterTable(Box<TableEditor>),
+}
+
+/// What an encounter page opens on.
+enum Opening {
+    /// New Encounter's templates.
+    Choose,
+    /// An encounter made from a template, saying `said` first.
+    Template {
+        name: String,
+        said: Option<String>,
+    },
+    /// Roll and Generate on a saved 2-20 table.
+    RollTable(String),
+    /// A saved encounter; with `copy`, under no name.
+    Saved {
+        name: String,
+        copy: bool,
+    },
+    /// The 2-20 table editor, on a saved table or a new one.
+    Table(Option<String>),
+    Group(GroupDialog),
+}
+
+/// What an encounter page was opened on.
+#[derive(Clone)]
+pub enum EncounterOpened {
+    Chooser(Box<Chooser>),
+    /// The Encounter page, with what generating it said.
+    Form(Box<EncounterForm>, Vec<String>),
+    Table(Box<TableEditor>),
+    /// Group Encounter's sheet, to preview or to print.
+    Sheet(Arc<Sheet>, bool),
 }
 
 /// A package opened for import, with what it would bring in.
@@ -196,6 +278,19 @@ pub enum Confirm {
     },
     /// Character Sheet Options with no section.
     EmptySheet,
+    DeleteTreasure {
+        name: String,
+    },
+    /// Delete Members… on the party chosen in Manage Parties.
+    DeleteParty {
+        party: String,
+    },
+    DeleteEncounter {
+        name: String,
+    },
+    DeleteTable {
+        name: String,
+    },
     /// What a record says, or a popup of the program help: only read.
     Info {
         title: String,
@@ -339,6 +434,95 @@ pub enum Message {
     WebFailed(String),
     /// Time to see whether it started.
     WebWatch,
+    // NPC Generation.
+    /// The NPC generator was read, for New NPC or (true) New NPC Group.
+    NpcRulesLoaded(Result<Arc<NpcRules>, String>, bool),
+    Npc(NpcInput),
+    Group(GroupInput),
+    /// Create on New NPC or New NPC Group.
+    CreateNpcs,
+    NpcsSaved(Result<NpcsSaved, String>),
+    // Roll Treasure.
+    TreasureLoaded(Result<Box<Roller>, String>),
+    Treasure(TreasureInput),
+    /// Use Treasure, on an encounter's treasure.
+    UseTreasure,
+    /// The treasure was saved under this name.
+    TreasureSaved(Result<String, String>),
+    /// The saved treasure with this name was deleted.
+    TreasureDeleted(Result<String, String>),
+    /// Edit on the details of a saved treasure.
+    EditEntry,
+    /// Copy on the details of a saved treasure.
+    CopyEntry,
+    // Roll on a Table.
+    TableRollsLoaded(Result<Arc<TableRolls>, String>),
+    Table(TableInput),
+    CopyResults,
+    /// Read in Book: the table rolled on, in its book.
+    ReadTable,
+    /// Open Treasure Generator, which a roll on DMG Table 84 opens.
+    TableTreasure,
+    // Manage Parties.
+    PartiesRead(Result<PartyLists, String>),
+    PartyChosen(String),
+    PartyName(String),
+    NewParty,
+    /// The lists with the party made, or why its name was refused.
+    NewPartyMade(Result<PartyLists, String>),
+    /// The character in this file goes to that party (none when empty).
+    MoveToParty(String, String),
+    /// The character moved: its file before and after, and the lists.
+    PartyMoved(Result<(String, String, PartyLists), String>),
+    AskDeleteParty,
+    /// How many characters of the party were deleted.
+    PartyDeleted(Result<(usize, String), String>),
+    // Encounters.
+    EncounterOpened(Result<(Arc<EncounterRules>, EncounterOpened), String>),
+    TemplateSearch(String),
+    /// A template chosen on New Encounter; empty for the empty encounter.
+    ChooseTemplate(String),
+    CreateEncounter,
+    Encounter(EncounterInput),
+    EncounterSaved(Result<String, String>),
+    EncounterDeleted(Result<(), String>),
+    AddNpc,
+    /// The saved characters, by name and file, for Add NPC.
+    NpcsListed(Result<Vec<(String, String)>, String>),
+    NpcLoaded(Result<Box<Character>, String>),
+    AddTrap,
+    TrapsLoaded(Result<Arc<UserDb<Traps>>, String>),
+    /// View NPC, or Print NPC, on the encounter's NPC package with this
+    /// index.
+    NpcSheet(usize, bool),
+    NpcSheetMade(Result<Arc<Sheet>, String>, bool),
+    /// Roll Treasure on the encounter.
+    EncounterTreasure,
+    EncounterTable(TableEditInput),
+    TableSaved(Result<String, String>),
+    AskDeleteTable,
+    /// An Expander of the Encounter page or the table editor opened or
+    /// closed, by its key.
+    RowOpen(String, bool),
+    TableDeleted(Result<(), String>),
+    /// Create Encounter on the details of a template or a 2-20 table.
+    GenerateEntry,
+    /// Group Encounter on Manage Parties.
+    GroupEncounter,
+    GroupPrint(bool),
+    GroupCondensed(bool),
+    GroupPreview(bool),
+    GroupAnswered(bool),
+}
+
+/// What Create on New NPC or New NPC Group made and saved.
+#[derive(Clone)]
+pub struct NpcsSaved {
+    /// The file of the last NPC saved.
+    file: Option<String>,
+    said: String,
+    /// The generator's notes on what it could not do.
+    messages: Option<String>,
 }
 
 /// What a record's help shows.
@@ -422,12 +606,16 @@ impl Shell {
     }
 
     fn back(&mut self) {
+        if let Page::Table(roller) = &mut self.page {
+            roller.close(&mut self.leftovers);
+        }
         self.page = self.history.pop().unwrap_or(Page::Library);
         self.notice = None;
     }
 
     /// Back to the library, at the section `id`.
     fn show_section(&mut self, id: String) {
+        self.close_tables();
         self.history.clear();
         self.page = Page::Library;
         if id != self.section {
@@ -438,6 +626,15 @@ impl Shell {
         }
     }
 
+    /// Makes `id` the library's section under the page shown, as the
+    /// GNOME app shows the section of a record just saved.
+    fn reveal(&mut self, id: &str) {
+        if id != self.section {
+            self.section = id.to_owned();
+            self.filter.search.clear();
+        }
+    }
+
     /// Whether the page shown has changes that leaving it would lose.
     fn changed(&self) -> bool {
         match &self.page {
@@ -445,6 +642,8 @@ impl Shell {
             Page::SheetOptions(options) => options.changed(),
             // Past its first page the wizard has the choices made.
             Page::Create(wizard) => wizard.depth() > 1,
+            Page::Encounter(form) => form.changed(),
+            Page::EncounterTable(editor) => editor.changed(),
             _ => false,
         }
     }
@@ -484,6 +683,61 @@ impl Shell {
             ),
             action::NEW_CHARACTER => self.new_character(false, context),
             action::ENTER_CHARACTER => self.new_character(true, context),
+            action::NEW_NPC => self.new_npc(false, context),
+            action::NEW_NPC_GROUP => self.new_npc(true, context),
+            action::ROLL_TREASURE => self.open_treasure(None, false, context),
+            action::ROLL_TABLE => self.open_tables(context),
+            action::NEW_ENCOUNTER => self.open_encounter(Opening::Choose, context),
+            action::NEW_TABLE => self.open_encounter(Opening::Table(None), context),
+            action::ENCOUNTER_PRINT => {
+                if let Page::Encounter(form) = &self.page {
+                    let sheet = Arc::new(form.sheet());
+                    self.print(Printable::Sheet(sheet), context);
+                }
+            }
+            action::ENCOUNTER_PDF => {
+                if let Page::Encounter(form) = &self.page {
+                    let (sheet, title) = (Arc::new(form.sheet()), form.title());
+                    self.save_pdf(Printable::Sheet(sheet), &title, context);
+                }
+            }
+            action::ENCOUNTER_DELETE => {
+                if let Page::Encounter(form) = &self.page
+                    && let Some(name) = form.saved.clone()
+                {
+                    self.confirm = Some(Confirm::DeleteEncounter { name });
+                }
+            }
+            action::MANAGE_PARTIES => {
+                if self.install.is_some() && !matches!(self.page, Page::Parties(_)) {
+                    self.go(Page::Parties(Box::default()));
+                    self.read_parties(String::new(), Vec::new(), context);
+                }
+            }
+            action::TREASURE_SAVE => {
+                if matches!(self.page, Page::Treasure(_)) {
+                    self.update(Message::Treasure(TreasureInput::Save), context);
+                }
+            }
+            action::TREASURE_PRINT => {
+                if let Page::Treasure(roller) = &self.page {
+                    let sheet = Arc::new(roller.sheet());
+                    self.print(Printable::Sheet(sheet), context);
+                }
+            }
+            action::TREASURE_PDF => {
+                if let Page::Treasure(roller) = &self.page {
+                    let (sheet, title) = (Arc::new(roller.sheet()), roller.title());
+                    self.save_pdf(Printable::Sheet(sheet), &title, context);
+                }
+            }
+            action::TREASURE_DELETE => {
+                if let Page::Treasure(roller) = &self.page
+                    && let Some(name) = roller.saved.clone()
+                {
+                    self.confirm = Some(Confirm::DeleteTreasure { name });
+                }
+            }
             action::IMPORT => {
                 let install = self.install.clone();
                 let expansion = install.as_ref().is_some_and(|i| !i.is_core20());
@@ -506,29 +760,9 @@ impl Shell {
                 }
             }
             action::SHEET_PDF => {
-                let Some(((printable, title), install)) =
-                    self.printable().zip(self.install.clone())
-                else {
-                    return;
-                };
-                let name = cr_app::file_name(&title, "pdf");
-                self.dialog(
-                    context,
-                    move |owner| {
-                        let filters = [(tr("PDF documents").to_owned(), "*.pdf".to_owned())];
-                        let title = plain(tr("Save as _PDF…"));
-                        let Some(path) =
-                            native::dialogs::save_file(owner, &title, &name, "pdf", &filters)
-                                .map_err(|e| e.message())?
-                        else {
-                            return Ok(None);
-                        };
-                        let sheet = printable.sheet(&install)?;
-                        write(&path, &cr_app::pdf::sheet(&sheet, native::paper()))?;
-                        Ok(Some(path))
-                    },
-                    Message::PdfSaved,
-                );
+                if let Some((printable, title)) = self.printable() {
+                    self.save_pdf(printable, &title, context);
+                }
             }
             action::SHEET_HTML => self.export(Export::Html, context),
             action::SHEET_TXT => self.export(Export::Text, context),
@@ -638,6 +872,389 @@ impl Shell {
                     .map_err(|e| e.to_string()),
             )
         });
+    }
+
+    /// Opens New NPC, or with `group` New NPC Group, once the generator
+    /// is read.
+    fn new_npc(&mut self, group: bool, context: &ComponentContext<Self>) {
+        if let Some(rules) = self.npc_rules.clone() {
+            self.update(Message::NpcRulesLoaded(Ok(rules), group), context);
+            return;
+        }
+        let Some(install) = self.install.clone() else {
+            return;
+        };
+        if self.busy {
+            return;
+        }
+        self.busy = true;
+        context.spawn_background(move |_| {
+            Message::NpcRulesLoaded(
+                install.npc_rules().map(Arc::new).map_err(|e| e.to_string()),
+                group,
+            )
+        });
+    }
+
+    /// Create on New NPC or New NPC Group: the NPCs are made and saved in
+    /// the background.
+    fn create_npcs(&mut self, context: &ComponentContext<Self>) {
+        if self.busy {
+            return;
+        }
+        enum Form {
+            One(Box<NpcForm>),
+            Group(Box<GroupForm>),
+        }
+        let form = match &self.page {
+            Page::Npc(form) => Form::One(form.clone()),
+            Page::NpcGroup(form) => Form::Group(form.clone()),
+            _ => return,
+        };
+        let Some(install) = self.install.clone() else {
+            return;
+        };
+        self.busy = true;
+        let rand = self.rand.clone();
+        context.spawn_background(move |_| {
+            let mut rand = rand.lock().unwrap_or_else(|e| e.into_inner());
+            let (npcs, party) = match &form {
+                Form::One(form) => (
+                    form.generate(&mut rand).map(|npc| vec![npc]),
+                    form.party.trim().to_owned(),
+                ),
+                Form::Group(form) => (form.generate(&mut rand), form.name.trim().to_owned()),
+            };
+            drop(rand);
+            let saved = npcs.and_then(|npcs: Vec<Npc>| {
+                let mut file = None;
+                for npc in &npcs {
+                    file = Some(install.save_npc(npc, &party).map_err(|e| e.to_string())?);
+                }
+                let said = match (&form, npcs.first()) {
+                    (Form::One(_), Some(npc)) => {
+                        tr!("{name} was created", name = npc.character.data.name.clone())
+                    }
+                    _ => cr_app::npc::created_text(npcs.len()),
+                };
+                Ok(NpcsSaved {
+                    file,
+                    said,
+                    messages: cr_app::npc::messages(&npcs),
+                })
+            });
+            Message::NpcsSaved(saved)
+        });
+    }
+
+    /// Opens Roll Treasure, on the saved bundle `saved` if given; with
+    /// `copy`, on its items under no name, for Save to add a new bundle
+    /// (the original's Copy…, 0x53f028).
+    fn open_treasure(
+        &mut self,
+        saved: Option<String>,
+        copy: bool,
+        context: &ComponentContext<Self>,
+    ) {
+        let Some(install) = self.install.clone() else {
+            return;
+        };
+        if self.busy {
+            return;
+        }
+        self.busy = true;
+        let rules = self.treasure_rules.clone();
+        context.spawn_background(move |_| {
+            let rules = match rules {
+                Some(rules) => Ok(rules),
+                None => install.treasure_rules().map(Arc::new),
+            };
+            let roller = rules.and_then(|rules| {
+                let Some(name) = saved else {
+                    return Ok(Roller::new(rules, [0; 26], Bundle::default()));
+                };
+                let bundle = install
+                    .saved_treasures()?
+                    .into_iter()
+                    .find(|t| t.name == name)
+                    .map(|t| t.bundle)
+                    .unwrap_or_default();
+                Ok(if copy {
+                    Roller::new(rules, [0; 26], bundle)
+                } else {
+                    Roller::saved(rules, &name, bundle)
+                })
+            });
+            Message::TreasureLoaded(roller.map(Box::new).map_err(|e| e.to_string()))
+        });
+    }
+
+    /// Opens Roll on a Table once the tables are read.
+    fn open_tables(&mut self, context: &ComponentContext<Self>) {
+        if let Some(rolls) = self.table_rolls.clone() {
+            self.update(Message::TableRollsLoaded(Ok(rolls)), context);
+            return;
+        }
+        let Some(install) = self.install.clone() else {
+            return;
+        };
+        if self.busy {
+            return;
+        }
+        self.busy = true;
+        context.spawn_background(move |_| {
+            Message::TableRollsLoaded(
+                install
+                    .table_rolls()
+                    .map(Arc::new)
+                    .map_err(|e| e.to_string()),
+            )
+        });
+    }
+
+    /// Opens an encounter page on `opening` once the rules are read.
+    fn open_encounter(&mut self, opening: Opening, context: &ComponentContext<Self>) {
+        let Some(install) = self.install.clone() else {
+            return;
+        };
+        if self.busy {
+            return;
+        }
+        self.busy = true;
+        let (cached, rand) = (self.encounter_rules.clone(), self.rand.clone());
+        context.spawn_background(move |_| {
+            let error = |e: cr_store::Error| e.to_string();
+            let opened = (|| {
+                let rules = match cached {
+                    Some(rules) => rules,
+                    None => Arc::new(install.encounter_rules().map_err(error)?),
+                };
+                let made = |name: &str, said: Option<String>| {
+                    let mut rand = rand.lock().unwrap_or_else(|e| e.into_inner());
+                    let made = cr_app::encounter::from_template(&rules, name, &mut rand);
+                    let mut messages: Vec<String> = said.into_iter().collect();
+                    messages.extend(made.messages);
+                    let form =
+                        EncounterForm::new(rules.clone(), made.encounter, None, made.pending);
+                    EncounterOpened::Form(Box::new(form), messages)
+                };
+                let opened = match opening {
+                    Opening::Choose => {
+                        EncounterOpened::Chooser(Box::new(Chooser::new(rules.clone())))
+                    }
+                    Opening::Template { name, said } => made(&name, said),
+                    Opening::RollTable(name) => {
+                        let tables = install.frequency_tables().map_err(error)?;
+                        let table = tables
+                            .table(&name)
+                            .ok_or_else(|| tr("Could Not Read").to_owned())?;
+                        let (template, said) = {
+                            let mut rand = rand.lock().unwrap_or_else(|e| e.into_inner());
+                            cr_app::encounter::roll_and_generate(&rules, table, &mut rand)?
+                        };
+                        made(&template, Some(said))
+                    }
+                    Opening::Saved { name, copy } => {
+                        let mut encounter = install
+                            .saved_encounters()
+                            .map_err(error)?
+                            .into_iter()
+                            .find(|e| e.name == name)
+                            .ok_or_else(|| tr("Could Not Read").to_owned())?;
+                        // The original's Copy (0x694117): no name, so that
+                        // Save adds a new one once it is named.
+                        if copy {
+                            encounter.name.clear();
+                        }
+                        let saved = (!copy).then_some(name);
+                        let form = EncounterForm::new(rules.clone(), encounter, saved, Vec::new());
+                        EncounterOpened::Form(Box::new(form), Vec::new())
+                    }
+                    Opening::Table(name) => {
+                        let table = match name {
+                            Some(name) => install
+                                .frequency_tables()
+                                .map_err(error)?
+                                .table(&name)
+                                .cloned(),
+                            None => None,
+                        };
+                        EncounterOpened::Table(Box::new(TableEditor::new(rules.clone(), table)))
+                    }
+                    Opening::Group(group) => {
+                        let members = group
+                            .members
+                            .iter()
+                            .map(|file| install.character(file))
+                            .collect::<Result<Vec<_>, _>>()
+                            .map_err(error)?;
+                        let mut encounter = Encounter::of_group(members);
+                        if group.print {
+                            encounter.name = group.party.clone();
+                            let sheet = rules.group_sheet(&encounter, group.condensed);
+                            EncounterOpened::Sheet(Arc::new(sheet), group.preview)
+                        } else {
+                            // The name is left for the user to give
+                            // (0x44e759).
+                            let form =
+                                EncounterForm::new(rules.clone(), encounter, None, Vec::new());
+                            EncounterOpened::Form(Box::new(form), Vec::new())
+                        }
+                    }
+                };
+                Ok((rules, opened))
+            })();
+            Message::EncounterOpened(opened)
+        });
+    }
+
+    /// Does what the Encounter page asks of the app, and says what it
+    /// could not do.
+    fn encounter_effects(&mut self, context: &ComponentContext<Self>) {
+        let Page::Encounter(form) = &mut self.page else {
+            return;
+        };
+        let notice = form.notice.take();
+        for effect in form.take_effects() {
+            match effect {
+                EncounterEffect::AddNpc(file) => self.with_install(context, move |install| {
+                    Message::NpcLoaded(
+                        install
+                            .character(&file)
+                            .map(Box::new)
+                            .map_err(|e| e.to_string()),
+                    )
+                }),
+                EncounterEffect::Save { old, encounter } => {
+                    self.with_install(context, move |install| {
+                        let saved = (|| {
+                            let mut list = install.saved_encounters().map_err(|e| e.to_string())?;
+                            let except = old
+                                .as_ref()
+                                .and_then(|o| list.iter().position(|e| &e.name == o));
+                            check_name(&list, &encounter.name, except)
+                                .map_err(|e| e.to_string())?;
+                            let name = encounter.name.clone();
+                            match except {
+                                Some(i) => list[i] = *encounter,
+                                None => list.push(*encounter),
+                            }
+                            install
+                                .write_saved_encounters(&list)
+                                .map_err(|e| e.to_string())?;
+                            Ok(name)
+                        })();
+                        Message::EncounterSaved(saved)
+                    })
+                }
+            }
+        }
+        if let Some((title, text)) = notice {
+            self.notice = Some(Notice::new(InfoBarSeverity::Warning, title, text));
+        }
+    }
+
+    /// Does what the 2-20 table editor asks of the app.
+    fn table_effects(&mut self, context: &ComponentContext<Self>) {
+        let Page::EncounterTable(editor) = &mut self.page else {
+            return;
+        };
+        for effect in editor.take_effects() {
+            match effect {
+                TableEffect::Notice(text) => {
+                    self.notice = Some(Notice::new(InfoBarSeverity::Informational, text, ""))
+                }
+                TableEffect::Generate { template, said } => self.open_encounter(
+                    Opening::Template {
+                        name: template,
+                        said: Some(said),
+                    },
+                    context,
+                ),
+                TableEffect::Save { old, table } => self.with_install(context, move |install| {
+                    let saved = (|| {
+                        let mut tables = install.frequency_tables().map_err(|e| e.to_string())?;
+                        let clash = tables.tables.iter().any(|x| {
+                            x.name.eq_ignore_ascii_case(&table.name)
+                                && Some(&x.name) != old.as_ref()
+                        });
+                        if clash {
+                            return Err(tr("Name already used.").to_owned());
+                        }
+                        let name = table.name.clone();
+                        match old
+                            .as_ref()
+                            .and_then(|o| tables.tables.iter().position(|x| &x.name == o))
+                        {
+                            Some(i) => tables.tables[i] = *table,
+                            None => tables.tables.push(*table),
+                        }
+                        install
+                            .write_frequency_tables(&tables)
+                            .map_err(|e| e.to_string())?;
+                        Ok(name)
+                    })();
+                    Message::TableSaved(saved)
+                }),
+            }
+        }
+    }
+
+    /// Shows `page` in place of New Encounter or the 2-20 table editor,
+    /// which close for it as the original's dialogs do, or over the page
+    /// shown.
+    fn open_page(&mut self, page: Page) {
+        self.open_rows.clear();
+        if matches!(self.page, Page::NewEncounter(_) | Page::EncounterTable(_)) {
+            self.page = page;
+            self.notice = None;
+        } else {
+            self.go(page);
+        }
+    }
+
+    /// Reads Manage Parties' lists again, on the party `selected`, with
+    /// the parties `new` made there.
+    fn read_parties(&self, selected: String, new: Vec<String>, context: &ComponentContext<Self>) {
+        self.with_install(context, move |install| {
+            Message::PartiesRead(
+                PartyLists::read(install, &selected, &new).map_err(|e| e.to_string()),
+            )
+        });
+    }
+
+    /// Ends the Roll Results session of Roll on a Table, shown or under
+    /// the page shown, as closing the original's dialog does.
+    fn close_tables(&mut self) {
+        for page in std::iter::once(&mut self.page).chain(&mut self.history) {
+            if let Page::Table(roller) = page {
+                roller.close(&mut self.leftovers);
+            }
+        }
+    }
+
+    /// Does what the treasure roller asks of the app.
+    fn treasure_effects(&mut self, context: &ComponentContext<Self>) {
+        let Page::Treasure(roller) = &mut self.page else {
+            return;
+        };
+        for effect in roller.take_effects() {
+            match effect {
+                TreasureEffect::Save { old, name, bundle } => {
+                    let Some(install) = self.install.clone() else {
+                        roller.saving = false;
+                        continue;
+                    };
+                    context.spawn_background(move |_| {
+                        let saved = match &old {
+                            Some(old) => install.replace_saved_treasure(old, &name, &bundle),
+                            None => install.save_treasure(&name, &bundle),
+                        };
+                        Message::TreasureSaved(saved.map(|()| name).map_err(|e| e.to_string()))
+                    });
+                }
+            }
+        }
     }
 
     /// Does what the wizard asks of the app.
@@ -778,6 +1395,30 @@ impl Shell {
         }
     }
 
+    /// Saves a sheet as a PDF the user names, after `title`.
+    fn save_pdf(&mut self, printable: Printable, title: &str, context: &ComponentContext<Self>) {
+        let Some(install) = self.install.clone() else {
+            return;
+        };
+        let name = cr_app::file_name(title, "pdf");
+        self.dialog(
+            context,
+            move |owner| {
+                let filters = [(tr("PDF documents").to_owned(), "*.pdf".to_owned())];
+                let title = plain(tr("Save as _PDF…"));
+                let Some(path) = native::dialogs::save_file(owner, &title, &name, "pdf", &filters)
+                    .map_err(|e| e.message())?
+                else {
+                    return Ok(None);
+                };
+                let sheet = printable.sheet(&install)?;
+                write(&path, &cr_app::pdf::sheet(&sheet, native::paper()))?;
+                Ok(Some(path))
+            },
+            Message::PdfSaved,
+        );
+    }
+
     /// Prints a sheet through the Windows print dialog.
     fn print(&mut self, printable: Printable, context: &ComponentContext<Self>) {
         let Some(install) = self.install.clone() else {
@@ -804,6 +1445,14 @@ impl Shell {
             Page::Sheet(_) | Page::SheetOptions(_) => topic::CHARACTER_SHEET,
             Page::Settings | Page::Help(_) => topic::MAIN_MENU,
             Page::Book(_) => topic::BOOKS,
+            Page::Npc(_) => topic::NPC_CREATION,
+            Page::NpcGroup(_) => topic::NPC_GROUP,
+            Page::Treasure(_) => topic::ROLL_TREASURE,
+            Page::Table(_) => topic::TABLES,
+            Page::Parties(_) => topic::PARTY_MANAGEMENT,
+            Page::NewEncounter(_) => topic::ENCOUNTERS,
+            Page::Encounter(_) => topic::ENCOUNTER,
+            Page::EncounterTable(_) => topic::ENCOUNTER_TABLE,
         }
     }
 
@@ -1016,6 +1665,7 @@ impl Component for Shell {
             items: Arc::default(),
             help_view: WebHost::default(),
             about_open: Vec::new(),
+            open_rows: Vec::new(),
             book_view: BookView::default(),
             web_tries: 0,
             adding: Vec::new(),
@@ -1023,6 +1673,14 @@ impl Component for Shell {
             portraits: None,
             portrait: RefCell::new(None),
             reading: Rc::default(),
+            rand: Arc::new(Mutex::new(Rand::from_clock())),
+            npc_rules: None,
+            treasure_rules: None,
+            table_rolls: None,
+            table_last: None,
+            leftovers: Leftovers::default(),
+            encounter_rules: None,
+            group: None,
         };
         let sender = context.sender();
         let reading = shell.reading.clone();
@@ -1160,6 +1818,10 @@ impl Component for Shell {
                             self.background = None;
                             self.help_files = None;
                             self.items = Arc::default();
+                            self.npc_rules = None;
+                            self.treasure_rules = None;
+                            self.table_rolls = None;
+                            self.encounter_rules = None;
                             self.history.clear();
                             self.page = Page::Library;
                             self.select(None);
@@ -1276,6 +1938,48 @@ impl Component for Shell {
                 (Some(Confirm::EmptySheet), ContentDialogResult::Primary) => {
                     self.save_options(context)
                 }
+                (Some(Confirm::DeleteParty { party }), ContentDialogResult::Primary) => {
+                    self.with_install(context, move |install| {
+                        // Without the GTK app's Undo, the kept files go at
+                        // once, as when its toast closes.
+                        let deleted = install
+                            .delete_party(&party)
+                            .and_then(|deleted| {
+                                install.forget_deleted(&deleted)?;
+                                Ok((deleted.len(), party))
+                            })
+                            .map_err(|e| e.to_string());
+                        Message::PartyDeleted(deleted)
+                    });
+                }
+                (Some(Confirm::DeleteEncounter { name }), ContentDialogResult::Primary) => {
+                    self.with_install(context, move |install| {
+                        let deleted = install.saved_encounters().and_then(|mut list| {
+                            list.retain(|e| e.name != name);
+                            install.write_saved_encounters(&list)
+                        });
+                        Message::EncounterDeleted(deleted.map_err(|e| e.to_string()))
+                    });
+                }
+                (Some(Confirm::DeleteTable { name }), ContentDialogResult::Primary) => {
+                    self.with_install(context, move |install| {
+                        let deleted = install.frequency_tables().and_then(|mut tables| {
+                            tables.tables.retain(|t| t.name != name);
+                            install.write_frequency_tables(&tables)
+                        });
+                        Message::TableDeleted(deleted.map_err(|e| e.to_string()))
+                    });
+                }
+                (Some(Confirm::DeleteTreasure { name }), ContentDialogResult::Primary) => {
+                    self.with_install(context, move |install| {
+                        Message::TreasureDeleted(
+                            install
+                                .delete_saved_treasure(&name)
+                                .map(|()| name)
+                                .map_err(|e| e.to_string()),
+                        )
+                    });
+                }
                 _ => {}
             },
             Message::Deleted(Ok(name)) => {
@@ -1327,7 +2031,7 @@ impl Component for Shell {
             Message::PdfSaved(result) => {
                 self.busy = false;
                 match result {
-                    Ok(Some(_)) => self.notice = Some(Notice::success(tr("Sheet saved as PDF"))),
+                    Ok(Some(_)) => self.notice = Some(Notice::success(tr("Saved as PDF"))),
                     Ok(None) => {}
                     Err(e) => self.show_error(&e, ""),
                 }
@@ -1513,6 +2217,11 @@ impl Component for Shell {
                 self.busy = false;
                 match result {
                     Ok(report) => {
+                        // Imported races and classes change what the NPC
+                        // generator offers, imported items the treasure.
+                        self.npc_rules = None;
+                        self.treasure_rules = None;
+                        self.encounter_rules = None;
                         self.history.clear();
                         self.page = Page::Library;
                         self.notice = Some(import::report(&report));
@@ -1554,6 +2263,12 @@ impl Component for Shell {
                 self.about_open.retain(|s| *s != section);
                 if open {
                     self.about_open.push(section);
+                }
+            }
+            Message::RowOpen(key, open) => {
+                self.open_rows.retain(|k| *k != key);
+                if open {
+                    self.open_rows.push(key);
                 }
             }
             Message::CopyDebugInfo => match native::copy(&settings::debug_info(self)) {
@@ -1859,6 +2574,537 @@ impl Component for Shell {
                 }
                 self.run_in_book(&[cr_win::book::UNMARK.to_owned()]);
             }
+            Message::NpcRulesLoaded(loaded, group) => {
+                self.busy = false;
+                match loaded {
+                    Ok(rules) => {
+                        self.npc_rules = Some(rules.clone());
+                        self.go(if group {
+                            Page::NpcGroup(Box::new(GroupForm::new(rules)))
+                        } else {
+                            Page::Npc(Box::new(NpcForm::new(rules, false)))
+                        });
+                    }
+                    Err(e) => self.show_error(tr("NPC Generator"), e),
+                }
+            }
+            Message::Npc(input) => {
+                if let Page::Npc(form) = &mut self.page {
+                    let mut rand = self.rand.lock().unwrap_or_else(|e| e.into_inner());
+                    form.input(input, &mut rand);
+                }
+            }
+            Message::Group(input) => {
+                if let Page::NpcGroup(form) = &mut self.page {
+                    form.input(input);
+                }
+            }
+            Message::CreateNpcs => self.create_npcs(context),
+            Message::NpcsSaved(Ok(saved)) => {
+                self.busy = false;
+                self.show_section(cr_app::library::CHARACTERS.to_owned());
+                self.notice = Some(Notice::success(saved.said));
+                if let Some(text) = saved.messages {
+                    self.confirm = Some(Confirm::Info {
+                        title: tr("NPC Generator").to_owned(),
+                        text,
+                    });
+                }
+                self.load(saved.file, context);
+            }
+            Message::NpcsSaved(Err(e)) => {
+                self.busy = false;
+                match &mut self.page {
+                    Page::Npc(form) => form.error = Some(e),
+                    Page::NpcGroup(form) => form.error = Some(e),
+                    _ => self.show_error(tr("NPC Generator"), e),
+                }
+            }
+            Message::TreasureLoaded(loaded) => {
+                self.busy = false;
+                match loaded {
+                    Ok(roller) => {
+                        self.treasure_rules = Some(roller.rules().clone());
+                        self.go(Page::Treasure(roller));
+                    }
+                    Err(e) => self.show_error(tr("Roll Treasure"), e),
+                }
+            }
+            Message::Treasure(input) => {
+                if let Page::Treasure(roller) = &mut self.page {
+                    let mut rand = self.rand.lock().unwrap_or_else(|e| e.into_inner());
+                    roller.input(input, &mut rand);
+                    drop(rand);
+                    self.treasure_effects(context);
+                }
+            }
+            Message::UseTreasure => {
+                let Page::Treasure(roller) = &self.page else {
+                    return;
+                };
+                if !roller.pick {
+                    return;
+                }
+                let bundle = roller.bundle.clone();
+                self.back();
+                self.update(
+                    Message::Encounter(EncounterInput::Treasure(bundle)),
+                    context,
+                );
+            }
+            Message::TreasureSaved(Ok(name)) => {
+                if let Page::Treasure(roller) = &mut self.page
+                    && roller.saving
+                {
+                    roller.saved_as(name.clone());
+                }
+                self.notice = Some(Notice::success(tr("Treasure saved")));
+                self.reveal("treasure");
+                self.load(Some(format!("{TREASURE_KEY}{name}")), context);
+            }
+            Message::TreasureSaved(Err(e)) => {
+                if let Page::Treasure(roller) = &mut self.page {
+                    roller.saving = false;
+                }
+                self.show_error(tr("Save Treasure"), e);
+            }
+            Message::TreasureDeleted(Ok(_)) => {
+                if matches!(self.page, Page::Treasure(_)) {
+                    self.back();
+                }
+                self.notice = Some(Notice::success(tr("Saved treasure deleted")));
+                self.load(None, context);
+            }
+            Message::TreasureDeleted(Err(e)) => {
+                self.show_error(&plain(tr("_Delete Saved Treasure")), e)
+            }
+            Message::EditEntry | Message::CopyEntry => {
+                let copy = matches!(message, Message::CopyEntry);
+                let Some(key) = self.selected.clone() else {
+                    return;
+                };
+                if let Some(name) = key.strip_prefix(TREASURE_KEY) {
+                    self.open_treasure(Some(name.to_owned()), copy, context);
+                } else if let Some(name) = key.strip_prefix(ENCOUNTER_KEY) {
+                    let name = name.to_owned();
+                    self.open_encounter(Opening::Saved { name, copy }, context);
+                } else if let Some(name) = key.strip_prefix(TABLE_KEY)
+                    && !copy
+                {
+                    self.open_encounter(Opening::Table(Some(name.to_owned())), context);
+                }
+            }
+            Message::GenerateEntry => {
+                let Some(key) = self.selected.clone() else {
+                    return;
+                };
+                if let Some(name) = cr_app::library::template_name(&key) {
+                    let name = name.to_owned();
+                    self.open_encounter(Opening::Template { name, said: None }, context);
+                } else if let Some(name) = key.strip_prefix(TABLE_KEY) {
+                    self.open_encounter(Opening::RollTable(name.to_owned()), context);
+                }
+            }
+            Message::EncounterOpened(opened) => {
+                self.busy = false;
+                match opened {
+                    Ok((rules, opened)) => {
+                        self.encounter_rules = Some(rules);
+                        match opened {
+                            EncounterOpened::Chooser(chooser) => {
+                                self.go(Page::NewEncounter(chooser))
+                            }
+                            EncounterOpened::Form(form, messages) => {
+                                self.open_page(Page::Encounter(form));
+                                if !messages.is_empty() {
+                                    self.notice = Some(Notice::new(
+                                        InfoBarSeverity::Informational,
+                                        messages.join("\n"),
+                                        "",
+                                    ));
+                                }
+                            }
+                            EncounterOpened::Table(editor) => {
+                                self.open_rows.clear();
+                                self.go(Page::EncounterTable(editor))
+                            }
+                            EncounterOpened::Sheet(sheet, true) => self.go(Page::Sheet(Arc::new(
+                                SheetPage::new((*sheet).clone(), None, None),
+                            ))),
+                            EncounterOpened::Sheet(sheet, false) => {
+                                self.print(Printable::Sheet(sheet), context)
+                            }
+                        }
+                    }
+                    Err(e) => self.show_error(&e, ""),
+                }
+            }
+            Message::TemplateSearch(search) => {
+                if let Page::NewEncounter(chooser) = &mut self.page {
+                    chooser.search = search;
+                    chooser.chosen = None;
+                }
+            }
+            Message::ChooseTemplate(name) => {
+                if let Page::NewEncounter(chooser) = &mut self.page {
+                    chooser.chosen = Some(name);
+                }
+            }
+            Message::CreateEncounter => {
+                let Page::NewEncounter(chooser) = &self.page else {
+                    return;
+                };
+                match chooser.chosen.clone() {
+                    Some(name) if name.is_empty() => {
+                        let form = EncounterForm::new(
+                            chooser.rules.clone(),
+                            Encounter::default(),
+                            None,
+                            Vec::new(),
+                        );
+                        self.open_page(Page::Encounter(Box::new(form)));
+                    }
+                    Some(name) => {
+                        self.open_encounter(Opening::Template { name, said: None }, context)
+                    }
+                    None => {}
+                }
+            }
+            Message::Encounter(input) => {
+                if let Page::Encounter(form) = &mut self.page {
+                    let mut rand = self.rand.lock().unwrap_or_else(|e| e.into_inner());
+                    form.input(input, &mut rand);
+                    drop(rand);
+                    self.encounter_effects(context);
+                }
+            }
+            Message::EncounterSaved(Ok(name)) => {
+                if let Page::Encounter(form) = &mut self.page
+                    && form.saving
+                {
+                    form.saved_as(name.clone());
+                }
+                self.notice = Some(Notice::success(tr("Encounter saved")));
+                self.reveal("encounters");
+                self.load(Some(format!("{ENCOUNTER_KEY}{name}")), context);
+            }
+            Message::EncounterSaved(Err(e)) => {
+                if let Page::Encounter(form) = &mut self.page {
+                    form.saving = false;
+                }
+                self.show_error(&e, "");
+            }
+            Message::EncounterDeleted(Ok(())) => {
+                if matches!(self.page, Page::Encounter(_)) {
+                    self.back();
+                }
+                self.notice = Some(Notice::success(tr("Encounter deleted")));
+                self.load(None, context);
+            }
+            Message::EncounterDeleted(Err(e)) => self.show_error(&e, ""),
+            Message::AddNpc => self.with_install(context, |install| {
+                Message::NpcsListed(
+                    install
+                        .characters()
+                        .map(|index| {
+                            index
+                                .entries
+                                .into_iter()
+                                .map(|e| (e.name, e.file))
+                                .collect()
+                        })
+                        .map_err(|e| e.to_string()),
+                )
+            }),
+            Message::NpcsListed(listed) => match listed {
+                Ok(list) => {
+                    if let Page::Encounter(form) = &mut self.page {
+                        form.open_npcs(list);
+                    }
+                }
+                Err(e) => self.show_error(tr("Add NPC"), e),
+            },
+            Message::NpcLoaded(loaded) => match loaded {
+                Ok(character) => {
+                    if let Page::Encounter(form) = &mut self.page {
+                        form.add_npc(*character);
+                        self.encounter_effects(context);
+                    }
+                }
+                Err(e) => self.show_error(tr("Add NPC"), e),
+            },
+            Message::AddTrap => self.with_install(context, |install| {
+                Message::TrapsLoaded(
+                    UserDb::<Traps>::load(install)
+                        .map(Arc::new)
+                        .map_err(|e| e.to_string()),
+                )
+            }),
+            Message::TrapsLoaded(loaded) => match loaded {
+                Ok(db) => {
+                    if let Page::Encounter(form) = &mut self.page {
+                        form.open_traps(db);
+                    }
+                }
+                Err(e) => self.show_error(tr("Add Trap"), e),
+            },
+            Message::NpcSheet(i, print) => {
+                let Page::Encounter(form) = &self.page else {
+                    return;
+                };
+                let Some(character) = form.encounter.npcs.get(i).map(|p| p.character.clone())
+                else {
+                    return;
+                };
+                self.with_install(context, move |install| {
+                    Message::NpcSheetMade(
+                        install
+                            .npc_sheet(&character)
+                            .map(Arc::new)
+                            .map_err(|e| e.to_string()),
+                        print,
+                    )
+                });
+            }
+            Message::NpcSheetMade(Ok(sheet), true) => self.print(Printable::Sheet(sheet), context),
+            Message::NpcSheetMade(Ok(sheet), false) => self.go(Page::Sheet(Arc::new(
+                SheetPage::new((*sheet).clone(), None, None),
+            ))),
+            Message::NpcSheetMade(Err(e), _) => self.show_error(&e, ""),
+            Message::EncounterTreasure => {
+                if let Page::Encounter(form) = &self.page {
+                    let roller = Roller::pick(
+                        form.treasure_rules().clone(),
+                        form.treasure_counts(),
+                        form.encounter.treasure.clone(),
+                    );
+                    self.go(Page::Treasure(Box::new(roller)));
+                }
+            }
+            Message::EncounterTable(input) => {
+                if let Page::EncounterTable(editor) = &mut self.page {
+                    let mut rand = self.rand.lock().unwrap_or_else(|e| e.into_inner());
+                    editor.input(input, &mut rand);
+                    drop(rand);
+                    self.table_effects(context);
+                }
+            }
+            Message::TableSaved(Ok(name)) => {
+                if matches!(self.page, Page::EncounterTable(_)) {
+                    self.show_section("tables".to_owned());
+                }
+                self.notice = Some(Notice::success(tr("Table saved")));
+                self.load(Some(format!("{TABLE_KEY}{name}")), context);
+            }
+            Message::TableSaved(Err(e)) => {
+                if let Page::EncounterTable(editor) = &mut self.page {
+                    editor.saving = false;
+                    editor.error = Some(e);
+                }
+            }
+            Message::AskDeleteTable => {
+                if let Page::EncounterTable(editor) = &self.page
+                    && let Some(name) = editor.saved.clone()
+                {
+                    self.confirm = Some(Confirm::DeleteTable { name });
+                }
+            }
+            Message::TableDeleted(Ok(())) => {
+                if matches!(self.page, Page::EncounterTable(_)) {
+                    self.back();
+                }
+                self.notice = Some(Notice::success(tr("Table deleted")));
+                self.load(None, context);
+            }
+            Message::TableDeleted(Err(e)) => self.show_error(&e, ""),
+            Message::GroupEncounter => {
+                if let Page::Parties(page) = &self.page
+                    && let Some(lists) = &page.lists
+                    && !lists.selected.is_empty()
+                {
+                    self.group = Some(GroupDialog {
+                        party: lists.selected.clone(),
+                        members: lists.npcs.clone(),
+                        print: false,
+                        condensed: false,
+                        preview: false,
+                    });
+                }
+            }
+            Message::GroupPrint(print) => {
+                if let Some(group) = &mut self.group {
+                    group.print = print;
+                }
+            }
+            Message::GroupCondensed(on) => {
+                if let Some(group) = &mut self.group {
+                    group.condensed = on;
+                }
+            }
+            Message::GroupPreview(on) => {
+                if let Some(group) = &mut self.group {
+                    group.preview = on;
+                }
+            }
+            Message::GroupAnswered(yes) => {
+                if let Some(group) = self.group.take()
+                    && yes
+                {
+                    self.open_encounter(Opening::Group(group), context);
+                }
+            }
+            Message::TableRollsLoaded(loaded) => {
+                self.busy = false;
+                match loaded {
+                    Ok(rolls) => {
+                        self.table_rolls = Some(rolls.clone());
+                        self.go(Page::Table(Box::new(TableRoller::new(
+                            rolls,
+                            self.table_last,
+                        ))));
+                    }
+                    Err(e) => self.show_error(tr("Could Not Read the Tables"), e),
+                }
+            }
+            Message::Table(input) => {
+                if let Page::Table(roller) = &mut self.page {
+                    let mut rand = self.rand.lock().unwrap_or_else(|e| e.into_inner());
+                    roller.input(input, &mut self.leftovers, &mut rand);
+                    self.table_last = roller.last();
+                }
+            }
+            Message::CopyResults => {
+                if let Page::Table(roller) = &self.page
+                    && let Some(result) = &roller.result
+                {
+                    match native::copy(&result.to_text()) {
+                        Ok(()) => {
+                            self.notice = Some(Notice::success(tr("Copied to the clipboard")))
+                        }
+                        Err(e) => self.show_error(&e.message(), ""),
+                    }
+                }
+            }
+            Message::ReadTable => {
+                let Page::Table(roller) = &mut self.page else {
+                    return;
+                };
+                if let Some((book, number)) = roller.result.as_ref().and_then(|r| r.reference) {
+                    roller.close(&mut self.leftovers);
+                    self.open_book(
+                        book.short_name().to_owned(),
+                        Some(format!("Table {number}:")),
+                        context,
+                    );
+                }
+            }
+            Message::PartiesRead(read) => match read {
+                Ok(lists) => {
+                    if let Page::Parties(page) = &mut self.page {
+                        page.lists = Some(lists);
+                    }
+                }
+                Err(e) => self.show_error(tr("Manage Parties"), e),
+            },
+            Message::PartyChosen(party) => {
+                if let Page::Parties(page) = &self.page
+                    && !party.eq_ignore_ascii_case(page.selected())
+                {
+                    let new = page.new_parties();
+                    self.read_parties(party, new, context);
+                }
+            }
+            Message::PartyName(name) => {
+                if let Page::Parties(page) = &mut self.page {
+                    page.name = name;
+                    page.problem = None;
+                }
+            }
+            Message::NewParty => {
+                let Page::Parties(page) = &self.page else {
+                    return;
+                };
+                let name = page.name.trim().to_owned();
+                let mut new = page.new_parties();
+                self.with_install(context, move |install| {
+                    let made = match install.party_name_problem(&name, &new) {
+                        Ok(None) => {
+                            new.push(name.clone());
+                            PartyLists::read(install, &name, &new).map_err(|e| e.to_string())
+                        }
+                        Ok(Some(problem)) => Err(problem),
+                        Err(e) => Err(e.to_string()),
+                    };
+                    Message::NewPartyMade(made)
+                });
+            }
+            Message::NewPartyMade(made) => {
+                if let Page::Parties(page) = &mut self.page {
+                    match made {
+                        Ok(lists) => {
+                            page.lists = Some(lists);
+                            page.name.clear();
+                            page.problem = None;
+                        }
+                        Err(problem) => page.problem = Some(problem),
+                    }
+                }
+            }
+            Message::MoveToParty(file, party) => {
+                let Page::Parties(page) = &self.page else {
+                    return;
+                };
+                let (selected, new) = (page.selected().to_owned(), page.new_parties());
+                self.with_install(context, move |install| {
+                    let moved = install.set_party(&file, &party).and_then(|moved| {
+                        let lists = PartyLists::read(install, &selected, &new)?;
+                        Ok((file, moved, lists))
+                    });
+                    Message::PartyMoved(moved.map_err(|e| e.to_string()))
+                });
+            }
+            Message::PartyMoved(Ok((before, after, lists))) => {
+                if let Page::Parties(page) = &mut self.page {
+                    page.lists = Some(lists);
+                }
+                // The character on the details keeps its place there under
+                // its new file.
+                let key = self
+                    .selected
+                    .as_deref()
+                    .is_some_and(|k| k.eq_ignore_ascii_case(&before))
+                    .then_some(after);
+                self.load(key, context);
+            }
+            Message::PartyMoved(Err(e)) => self.show_error(tr("Manage Parties"), e),
+            Message::AskDeleteParty => {
+                if let Page::Parties(page) = &self.page
+                    && !page.selected().is_empty()
+                {
+                    self.confirm = Some(Confirm::DeleteParty {
+                        party: page.selected().to_owned(),
+                    });
+                }
+            }
+            Message::PartyDeleted(Ok((n, party))) => {
+                if matches!(self.page, Page::Parties(_)) {
+                    self.back();
+                }
+                self.notice = Some(Notice::success(trn!(
+                    "{n} character of “{party}” deleted",
+                    "{n} characters of “{party}” deleted",
+                    n,
+                    party
+                )));
+                self.load(None, context);
+            }
+            Message::PartyDeleted(Err(e)) => self.show_error(tr("Manage Parties"), e),
+            Message::TableTreasure => {
+                if let Page::Table(roller) = &mut self.page {
+                    roller.close(&mut self.leftovers);
+                    self.open_treasure(None, false, context);
+                }
+            }
         }
     }
 
@@ -1898,6 +3144,24 @@ impl Component for Shell {
             Page::SheetOptions(options) => sheet::options_view(options, context),
             Page::Help(page) => help::view(self, page, context),
             Page::Book(page) => book::view(self, page, context),
+            Page::Npc(form) => npc::view(form, self.busy, context),
+            Page::NpcGroup(form) => npc::group_view(form, self.busy, context),
+            Page::Treasure(roller) => treasure::view(roller, self.busy, context),
+            Page::Table(roller) => tables::view(roller, context),
+            Page::Parties(page) => {
+                let page = parties::view(page, self.busy, context);
+                match &self.group {
+                    Some(group) => {
+                        Grid::new().children((page, encounter::group_dialog(group, context)))
+                    }
+                    None => page,
+                }
+            }
+            Page::NewEncounter(chooser) => encounter::chooser_view(chooser, self.busy, context),
+            Page::Encounter(form) => encounter::view(form, &self.open_rows, self.busy, context),
+            Page::EncounterTable(editor) => {
+                encounter::table_view(editor, &self.open_rows, self.busy, context)
+            }
         };
         // The keyboard hook takes the reader's keys only while a book
         // shows.
@@ -2047,6 +3311,8 @@ impl Shell {
                 plain(tr("Discard Changes?")),
                 match &self.page {
                     Page::SheetOptions(_) => tr("The options have changes that are not saved."),
+                    Page::Encounter(_) => tr("The encounter has changes that are not saved."),
+                    Page::EncounterTable(_) => tr("The table has changes that are not saved."),
                     _ => tr("The character has changes that are not saved."),
                 }
                 .to_owned(),
@@ -2062,6 +3328,32 @@ impl Shell {
                 tr("No Sections").to_owned(),
                 tr("No sections: the sheet will be empty").to_owned(),
                 plain(tr("_Save")),
+            ),
+            Some(Confirm::DeleteParty { party }) => (
+                tr("Delete Party Members?").to_owned(),
+                tr!(
+                    "Every character in “{party}” will be deleted, and the party with them.",
+                    party = party.clone()
+                ),
+                plain(tr("_Delete")),
+            ),
+            Some(Confirm::DeleteEncounter { name }) => (
+                tr("Delete Encounter?").to_owned(),
+                tr!(
+                    "“{name}” will be removed from the saved encounters",
+                    name = name.clone()
+                ),
+                plain(tr("_Delete")),
+            ),
+            Some(Confirm::DeleteTable { name }) => (
+                tr("Delete Encounter Table?").to_owned(),
+                tr!("“{name}” will be removed", name = name.clone()),
+                plain(tr("_Delete")),
+            ),
+            Some(Confirm::DeleteTreasure { name }) => (
+                tr("Delete Saved Treasure?").to_owned(),
+                tr!("“{name}” will be removed from Saved Treasure", name = name.clone()),
+                plain(tr("_Delete")),
             ),
             Some(Confirm::Info { title, text }) => (title.clone(), text.clone(), String::new()),
             None => (String::new(), String::new(), String::new()),

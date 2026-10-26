@@ -454,7 +454,7 @@ pub(crate) fn save_pdf(sheet: &Sheet, path: &std::path::Path, toast: &dyn Fn(&st
         _ => Paper::A4,
     };
     match std::fs::write(path, cr_app::pdf::sheet(sheet, paper)) {
-        Ok(()) => toast(tr("Sheet saved as PDF")),
+        Ok(()) => toast(tr("Saved as PDF")),
         Err(e) => toast(&tr!(
             "Could not save {file}: {error}",
             file = path.display(),

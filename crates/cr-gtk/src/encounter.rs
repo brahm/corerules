@@ -4,14 +4,17 @@
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+use std::sync::Arc;
 
 use adw::prelude::*;
 use cr_app::action;
-use cr_i18n::{tr, tr_noop, trn};
+use cr_app::encounter::{
+    CLIMATES, EncounterForm, EncounterInput, FREQUENCIES, LAIR_MODES, SOURCES, TERRAINS,
+};
+use cr_i18n::{tr, trn};
 use cr_store::encounter::{
     Encounter, EncounterRules, FrequencyTable, LairMode, NameError, PICK_ROLLS, Package,
-    PendingNpc, Source, TableFilter, add_trap, check_name, hit_point_text, remove_trap,
-    roll_2_to_20, roll_and_pick,
+    PendingNpc, Source, TableFilter, add_trap, check_name, roll_2_to_20,
 };
 use cr_store::help::topic;
 use cr_store::sheet::Sheet;
@@ -57,20 +60,11 @@ pub fn create_from_template<H: Host + 'static>(host: &Shared<H>, name: &str) {
     let Some(rules) = errors(&**host, host.with_install(|i| i.encounter_rules())) else {
         return;
     };
-    let generated = rules.generate(name, &mut host.rand().borrow_mut());
-    match generated {
-        Ok(g) => {
-            for message in &g.messages {
-                host.toast(message);
-            }
-            editor(host, Rc::new(rules), g.encounter, None, g.pending_npcs);
-        }
-        Err(e) => {
-            // As the original: "Creating an Empty Encounter".
-            host.toast(&tr!("{error}. Creating an empty encounter.", error = e));
-            editor(host, Rc::new(rules), Encounter::default(), None, Vec::new());
-        }
+    let made = cr_app::encounter::from_template(&rules, name, &mut host.rand().borrow_mut());
+    for message in &made.messages {
+        host.toast(message);
     }
+    editor(host, Arc::new(rules), made.encounter, None, made.pending);
 }
 
 /// Roll and Generate on a saved 2-20 table: a uniformly drawn filled roll.
@@ -84,17 +78,13 @@ pub fn roll_and_generate<H: Host + 'static>(host: &Shared<H>, table: &str) {
     let Some(table) = tables.table(table) else {
         return;
     };
-    let pick = roll_and_pick(&rules, table, &mut host.rand().borrow_mut());
-    match pick {
-        Some(i) => {
-            host.toast(&tr!(
-                "Rolled {roll}: {template}",
-                roll = i + 2,
-                template = table.slots[i]
-            ));
-            create_from_template(host, &table.slots[i].clone());
+    let rolled = cr_app::encounter::roll_and_generate(&rules, table, &mut host.rand().borrow_mut());
+    match rolled {
+        Ok((template, said)) => {
+            host.toast(&said);
+            create_from_template(host, &template);
         }
-        None => host.toast(tr("The table has no templates; fill it first")),
+        Err(e) => host.toast(&e),
     }
 }
 
@@ -124,7 +114,7 @@ fn open<H: Host + 'static>(host: &Shared<H>, name: &str, copy: bool) {
         encounter.name.clear();
     }
     let saved = (!copy).then(|| name.to_owned());
-    editor(host, Rc::new(rules), encounter, saved, Vec::new());
+    editor(host, Arc::new(rules), encounter, saved, Vec::new());
 }
 
 /// New Encounter: the original's "Select an Encounter Template", with an
@@ -133,12 +123,7 @@ pub fn choose_template<H: Host + 'static>(host: &Shared<H>) {
     let Some(rules) = errors(&**host, host.with_install(|i| i.encounter_rules())) else {
         return;
     };
-    let mut names: Vec<(String, String)> = rules
-        .templates()
-        .iter()
-        .map(|t| (t.name.clone(), t.monster_type.clone()))
-        .collect();
-    names.sort_by_cached_key(|(n, _)| cr_store::collate::sort_key(n));
+    let names = cr_app::encounter::templates(&rules);
     let search = gtk::SearchEntry::builder()
         .placeholder_text(tr("Search Templates"))
         .hexpand(true)
@@ -153,7 +138,7 @@ pub fn choose_template<H: Host + 'static>(host: &Shared<H>) {
         .activatable(true)
         .build();
     list.append(&empty);
-    let rows: Vec<(adw::ActionRow, String)> = names
+    let rows: Vec<adw::ActionRow> = names
         .iter()
         .map(|(name, kind)| {
             let row = adw::ActionRow::builder()
@@ -162,17 +147,17 @@ pub fn choose_template<H: Host + 'static>(host: &Shared<H>) {
                 .activatable(true)
                 .build();
             list.append(&row);
-            (row, format!("{name}\n{kind}").to_lowercase())
+            row
         })
         .collect();
     search.connect_search_changed({
-        let rows = rows.clone();
+        let (rows, names) = (rows.clone(), names.clone());
         let empty = empty.clone();
         move |s| {
-            let needle = s.text().to_lowercase();
-            empty.set_visible(needle.is_empty());
-            for (row, text) in &rows {
-                row.set_visible(text.contains(&needle));
+            let needle = s.text();
+            empty.set_visible(needle.trim().is_empty());
+            for (row, (name, kind)) in rows.iter().zip(&names) {
+                row.set_visible(cr_app::encounter::template_matches(name, kind, &needle));
             }
         }
     });
@@ -209,7 +194,7 @@ pub fn choose_template<H: Host + 'static>(host: &Shared<H>) {
         .height_request(294)
         .child(&view)
         .build();
-    let rules = Rc::new(rules);
+    let rules = Arc::new(rules);
     list.connect_row_activated({
         let (host, dialog, rules) = (host.clone(), dialog.clone(), rules.clone());
         move |_, row| {
@@ -299,7 +284,7 @@ pub fn group_encounter<H: Host + 'static>(
         let mut encounter = Encounter::of_group(members);
         if create.is_active() {
             // The name is left for the user to give (0x44e759).
-            editor(&host, Rc::new(rules), encounter, None, Vec::new());
+            editor(&host, Arc::new(rules), encounter, None, Vec::new());
             return;
         }
         encounter.name = party.clone();
@@ -319,15 +304,12 @@ pub fn group_encounter<H: Host + 'static>(
 
 struct State<H: Host> {
     host: Shared<H>,
-    rules: Rc<EncounterRules>,
+    rules: Arc<EncounterRules>,
     /// The databases Add Monster offers, read again after New Monster.
-    monster_rules: RefCell<Rc<EncounterRules>>,
+    monster_rules: RefCell<Arc<EncounterRules>>,
     /// New Monster was used since: Add Monster reads the databases again.
     monster_rules_stale: Cell<bool>,
-    encounter: RefCell<Encounter>,
-    /// The name the encounter is saved under.
-    saved: RefCell<Option<String>>,
-    pending: Vec<PendingNpc>,
+    form: RefCell<EncounterForm>,
     page: adw::PreferencesPage,
     /// The groups rebuilt when the encounter changes.
     groups: RefCell<Vec<adw::PreferencesGroup>>,
@@ -343,7 +325,7 @@ struct State<H: Host> {
 /// The Encounter dialog.
 pub fn editor<H: Host + 'static>(
     host: &Shared<H>,
-    rules: Rc<EncounterRules>,
+    rules: Arc<EncounterRules>,
     encounter: Encounter,
     saved: Option<String>,
     pending: Vec<PendingNpc>,
@@ -446,14 +428,13 @@ pub fn editor<H: Host + 'static>(
         .child(&view)
         .build();
 
+    let form = EncounterForm::new(rules.clone(), encounter, saved, pending);
     let state = Rc::new(State {
         host: host.clone(),
         monster_rules: RefCell::new(rules.clone()),
         rules,
         monster_rules_stale: Cell::new(false),
-        encounter: RefCell::new(encounter),
-        saved: RefCell::new(saved),
-        pending,
+        form: RefCell::new(form),
         page,
         groups: RefCell::default(),
         notes,
@@ -469,13 +450,13 @@ pub fn editor<H: Host + 'static>(
         parent: dialog.clone().upcast(),
         get: Box::new({
             let state = Rc::downgrade(&state);
-            move || Some(state.upgrade()?.encounter.borrow().items.clone())
+            move || Some(state.upgrade()?.form.borrow().encounter.items.clone())
         }),
         set: Box::new({
             let state = Rc::downgrade(&state);
             move |bundle| {
                 if let Some(state) = state.upgrade() {
-                    state.encounter.borrow_mut().items = bundle;
+                    state.form.borrow_mut().encounter.items = bundle;
                     state.refresh();
                 }
             }
@@ -485,16 +466,16 @@ pub fn editor<H: Host + 'static>(
 
     name.connect_changed({
         let state = state.clone();
-        move |e| state.encounter.borrow_mut().name = e.text().to_string()
+        move |e| state.form.borrow_mut().encounter.name = e.text().to_string()
     });
     kind.connect_changed({
         let state = state.clone();
-        move |e| state.encounter.borrow_mut().monster_type = e.text().to_string()
+        move |e| state.form.borrow_mut().encounter.monster_type = e.text().to_string()
     });
     description.buffer().connect_changed({
         let state = state.clone();
         move |b| {
-            state.encounter.borrow_mut().description =
+            state.form.borrow_mut().encounter.description =
                 b.text(&b.start_iter(), &b.end_iter(), false).to_string()
         }
     });
@@ -532,7 +513,7 @@ pub fn editor<H: Host + 'static>(
         let state = state.clone();
         Box::new(move || state.confirm_delete())
     });
-    delete.set_enabled(state.saved.borrow().is_some());
+    delete.set_enabled(state.form.borrow().saved.is_some());
     let _ = state.delete.set(delete);
     dialog.insert_action_group("encounter", Some(&actions));
     dialog.present(Some(&host.parent()));
@@ -579,13 +560,20 @@ impl<H: Host + 'static> State<H> {
     }
 
     fn update_totals(&self) {
-        let t = self.rules.totals(&self.encounter.borrow());
-        for (label, value) in self
-            .totals
-            .iter()
-            .zip([t.gold_value, t.monster_xp, t.treasure_xp])
-        {
-            label.set_label(&cr_store::treasure::thousands(value));
+        for (label, (_, value)) in self.totals.iter().zip(self.form.borrow().totals()) {
+            label.set_label(&value);
+        }
+    }
+
+    /// Applies `input` to the form, saying what it could not do.
+    fn input(&self, input: EncounterInput) {
+        let rand = self.host.rand();
+        let mut form = self.form.borrow_mut();
+        form.input(input, &mut rand.borrow_mut());
+        let notice = form.notice.take();
+        drop(form);
+        if let Some((_, text)) = notice {
+            self.host.toast(&text);
         }
     }
 
@@ -615,8 +603,8 @@ impl<H: Host + 'static> State<H> {
             .title(tr("Monsters and Nonplayer Characters"))
             .header_suffix(&buttons)
             .build();
-        let encounter = self.encounter.borrow();
-        if encounter.monsters.is_empty() && encounter.npcs.is_empty() {
+        let rows = self.form.borrow().rows();
+        if rows.is_empty() {
             group.add(
                 &adw::ActionRow::builder()
                     .title(tr("No monsters or characters"))
@@ -624,33 +612,11 @@ impl<H: Host + 'static> State<H> {
                     .build(),
             );
         }
-        for package in encounter.packages() {
-            let (title, subtitle, stats, count) = match package {
-                Package::Monster(i) => {
-                    let p = &encounter.monsters[i];
-                    (
-                        format!("{} × {}", p.count, p.monster.name),
-                        tr!(
-                            "Hit points {hit_points}",
-                            hit_points = hit_point_text(&p.hit_points)
-                        ),
-                        self.rules.stat_line(p),
-                        p.count,
-                    )
-                }
-                Package::Npc(i) => {
-                    let p = &encounter.npcs[i];
-                    (
-                        format!("{} × {}", p.count, self.rules.npc_name(p).trim()),
-                        tr("Nonplayer character").to_owned(),
-                        self.rules.npc_stat_line(p),
-                        p.count,
-                    )
-                }
-            };
+        for shown in rows {
+            let package = shown.package;
             let row = adw::ExpanderRow::builder()
-                .title(glib::markup_escape_text(&title).as_str())
-                .subtitle(glib::markup_escape_text(&subtitle).as_str())
+                .title(glib::markup_escape_text(&shown.title).as_str())
+                .subtitle(glib::markup_escape_text(&shown.subtitle).as_str())
                 .build();
             let remove = gtk::Button::builder()
                 .icon_name("user-trash-symbolic")
@@ -661,7 +627,7 @@ impl<H: Host + 'static> State<H> {
             remove.connect_clicked({
                 let state = self.clone();
                 move |_| {
-                    state.encounter.borrow_mut().remove(package);
+                    state.input(EncounterInput::Remove(package));
                     state.refresh();
                 }
             });
@@ -694,16 +660,16 @@ impl<H: Host + 'static> State<H> {
                     ""
                 })
                 .adjustment(&gtk::Adjustment::new(
-                    count as f64,
+                    shown.count as f64,
                     1.0,
-                    100_000_000.0,
+                    cr_app::encounter::MOST_COUNT as f64,
                     1.0,
                     10.0,
                     0.0,
                 ))
                 .build();
             let stat = gtk::Label::builder()
-                .label(&stats)
+                .label(&shown.stats)
                 .wrap(true)
                 .wrap_mode(gtk::pango::WrapMode::WordChar)
                 .xalign(0.0)
@@ -736,39 +702,23 @@ impl<H: Host + 'static> State<H> {
                 let (hit_points, with, filling) =
                     (hit_points.clone(), with.clone(), filling.clone());
                 move || {
-                    let Package::Monster(i) = package else {
+                    let rows = state.form.borrow().rows();
+                    let Some(shown) = rows.into_iter().find(|r| r.package == package) else {
                         return;
                     };
-                    let encounter = state.encounter.borrow();
-                    let Some(p) = encounter.monsters.get(i) else {
+                    let Some(hp) = shown.hit_points else {
                         return;
                     };
-                    row.set_title(&glib::markup_escape_text(&format!(
-                        "{} × {}",
-                        p.count, p.monster.name
-                    )));
-                    row.set_subtitle(&glib::markup_escape_text(&tr!(
-                        "Hit points {hit_points}",
-                        hit_points = hit_point_text(&p.hit_points)
-                    )));
-                    stat.set_label(&state.rules.stat_line(p));
+                    row.set_title(&glib::markup_escape_text(&shown.title));
+                    row.set_subtitle(&glib::markup_escape_text(&shown.subtitle));
+                    stat.set_label(&shown.stats);
                     filling.set(true);
-                    let (low, high) = p.hit_point_range();
-                    let value = hit_points.value() as i32;
-                    let value = if (low..=high).contains(&value) {
-                        value
-                    } else {
-                        low
-                    };
-                    hit_points.adjustment().set_lower(low.into());
-                    hit_points.adjustment().set_upper(high.into());
-                    hit_points.set_value(value.into());
-                    with.adjustment().set_upper(p.most_with(value).into());
-                    with.set_value(p.count_with(value).into());
-                    with.set_subtitle(&tr!(
-                        "With these hit points; {count} unassigned",
-                        count = p.unassigned().max(0)
-                    ));
+                    hit_points.adjustment().set_lower(hp.low.into());
+                    hit_points.adjustment().set_upper(hp.high.into());
+                    hit_points.set_value(hp.value.into());
+                    with.adjustment().set_upper(hp.most_with.into());
+                    with.set_value(hp.with.into());
+                    with.set_subtitle(&hp.note());
                     filling.set(false);
                 }
             };
@@ -776,53 +726,38 @@ impl<H: Host + 'static> State<H> {
             number.connect_value_notify({
                 let (state, show) = (self.clone(), show.clone());
                 move |spin| {
-                    let count = spin.value() as i32;
-                    let rand = state.host.rand();
-                    state.encounter.borrow_mut().set_count(
-                        package,
-                        count,
-                        &state.rules,
-                        &mut rand.borrow_mut(),
-                    );
+                    state.input(EncounterInput::Count(package, spin.value() as i32));
                     show();
                     state.update_totals();
                 }
             });
-            hit_points.connect_value_notify({
-                let (show, filling) = (show.clone(), filling.clone());
-                move |_| {
-                    if !filling.get() {
-                        show();
-                    }
-                }
-            });
-            with.connect_value_notify({
-                let (state, show, filling) = (self.clone(), show.clone(), filling.clone());
-                let hit_points = hit_points.clone();
-                move |spin| {
-                    if filling.get() {
-                        return;
-                    }
-                    if let Package::Monster(i) = package
-                        && let Some(p) = state.encounter.borrow_mut().monsters.get_mut(i)
-                    {
-                        p.set_count_with(hit_points.value() as i32, spin.value() as i32);
-                    }
-                    show();
-                }
-            });
-            reroll.connect_clicked({
-                let (state, show) = (self.clone(), show.clone());
-                move |_| {
-                    if let Package::Monster(i) = package {
-                        let rand = state.host.rand();
-                        if let Some(p) = state.encounter.borrow_mut().monsters.get_mut(i) {
-                            state.rules.roll_hit_points(p, &mut rand.borrow_mut());
+            if let Package::Monster(i) = package {
+                hit_points.connect_value_notify({
+                    let (state, show, filling) = (self.clone(), show.clone(), filling.clone());
+                    move |spin| {
+                        if !filling.get() {
+                            state.input(EncounterInput::HitPoints(i, spin.value() as i32));
+                            show();
                         }
                     }
-                    show();
-                }
-            });
+                });
+                with.connect_value_notify({
+                    let (state, show, filling) = (self.clone(), show.clone(), filling.clone());
+                    move |spin| {
+                        if !filling.get() {
+                            state.input(EncounterInput::With(i, spin.value() as i32));
+                            show();
+                        }
+                    }
+                });
+                reroll.connect_clicked({
+                    let (state, show) = (self.clone(), show.clone());
+                    move |_| {
+                        state.input(EncounterInput::Reroll(i));
+                        show();
+                    }
+                });
+            }
             hit_points.add_suffix(&reroll);
             row.add_row(&number);
             if matches!(package, Package::Monster(_)) {
@@ -836,7 +771,8 @@ impl<H: Host + 'static> State<H> {
     }
 
     fn pending_group(&self) -> Option<adw::PreferencesGroup> {
-        if self.pending.is_empty() {
+        let pending = self.form.borrow().pending_rows();
+        if pending.is_empty() {
             return None;
         }
         let group = adw::PreferencesGroup::builder()
@@ -847,19 +783,10 @@ impl<H: Host + 'static> State<H> {
                  saved characters with Add NPC instead.",
             ))
             .build();
-        for p in &self.pending {
-            let classes: Vec<String> = p
-                .npc
-                .classes
-                .iter()
-                .map(|(c, l)| format!("{c} {l}"))
-                .collect();
+        for (title, subtitle) in pending {
             let row = adw::ActionRow::builder()
-                .title(glib::markup_escape_text(&format!("{} × {}", p.count, p.npc.race)).as_str())
-                .subtitle(
-                    glib::markup_escape_text(&format!("{}\n{}", classes.join(" / "), p.reason))
-                        .as_str(),
-                )
+                .title(glib::markup_escape_text(&title).as_str())
+                .subtitle(glib::markup_escape_text(&subtitle).as_str())
                 .build();
             group.add(&row);
         }
@@ -876,32 +803,20 @@ impl<H: Host + 'static> State<H> {
             let state = self.clone();
             move |_| state.open_roller()
         });
-        let encounter = self.encounter.borrow();
-        let summary = self
-            .rules
-            .treasure_rules()
-            .summary_with(&encounter.treasure, encounter.prices());
+        let form = self.form.borrow();
         let group = adw::PreferencesGroup::builder()
             .title(tr("Treasure"))
+            .description(form.treasure_note())
             .header_suffix(&roll)
             .build();
-        if encounter.treasure.is_empty() {
-            group.set_description(Some(tr(
-                "Roll the treasure of the monsters' treasure types and the lair",
-            )));
-        } else {
-            group.set_description(Some(&tr!(
-                "{value} gp",
-                value = cr_store::treasure::thousands(summary.value_cp / 100)
-            )));
-        }
-        bundle_rows(&group, &encounter.treasure);
+        bundle_rows(&group, &form.encounter.treasure);
         Some(group)
     }
 
     fn items_group(&self) -> Option<adw::PreferencesGroup> {
         let edit = self.items.get()?;
-        let encounter = self.encounter.borrow();
+        let form = self.form.borrow();
+        let encounter = &form.encounter;
         let group = adw::PreferencesGroup::builder()
             .title(tr("Items"))
             .header_suffix(&crate::bundle::add_button(edit))
@@ -927,7 +842,8 @@ impl<H: Host + 'static> State<H> {
             let state = self.clone();
             move |_| state.choose_trap()
         });
-        let encounter = self.encounter.borrow();
+        let form = self.form.borrow();
+        let encounter = &form.encounter;
         let group = adw::PreferencesGroup::builder()
             .title(tr("Traps"))
             .header_suffix(&add)
@@ -949,11 +865,8 @@ impl<H: Host + 'static> State<H> {
             remove.connect_clicked({
                 let (state, name) = (self.clone(), trap.name.clone());
                 move |_| {
-                    let removed = remove_trap(&mut state.encounter.borrow_mut().traps, &name);
-                    match removed {
-                        Ok(()) => state.refresh(),
-                        Err(e) => state.host.toast(&e.to_string()),
-                    }
+                    state.input(EncounterInput::RemoveTrap(name.clone()));
+                    state.refresh();
                 }
             });
             row.add_suffix(&remove);
@@ -1035,7 +948,8 @@ impl<H: Host + 'static> State<H> {
                         ) else {
                             return;
                         };
-                        let added = add_trap(&mut state2.encounter.borrow_mut().traps, &db, name);
+                        let added =
+                            add_trap(&mut state2.form.borrow_mut().encounter.traps, &db, name);
                         match added {
                             Ok(()) => state2.refresh(),
                             Err(e) => state2.host.toast(&e.to_string()),
@@ -1090,7 +1004,7 @@ impl<H: Host + 'static> State<H> {
                             (state.clone(), dialog.clone(), db.clone(), trap.name.clone());
                         move |_| {
                             let added =
-                                add_trap(&mut state.encounter.borrow_mut().traps, &db, &name);
+                                add_trap(&mut state.form.borrow_mut().encounter.traps, &db, &name);
                             match added {
                                 Ok(()) => {
                                     dialog.close();
@@ -1121,11 +1035,8 @@ impl<H: Host + 'static> State<H> {
     /// Treasure…: the roller with the encounter's treasure types; Use
     /// Treasure puts the bundle in the encounter.
     fn open_roller(self: &Rc<Self>) {
-        let encounter = self.encounter.borrow();
-        let mut counts = [0u32; 26];
-        for (c, n) in counts.iter_mut().zip(encounter.treasure_counts()) {
-            *c = n.max(0) as u32;
-        }
+        let form = self.form.borrow();
+        let counts = form.treasure_counts();
         let state = self.clone();
         let host = self.host.clone();
         treasure::roller(
@@ -1134,11 +1045,11 @@ impl<H: Host + 'static> State<H> {
             self.host.rand(),
             treasure::Start {
                 counts,
-                bundle: encounter.treasure.clone(),
+                bundle: form.encounter.treasure.clone(),
             },
             treasure::Mode::Pick {
                 use_bundle: Box::new(move |bundle: Bundle| {
-                    state.encounter.borrow_mut().treasure = bundle;
+                    state.input(EncounterInput::Treasure(bundle));
                     state.refresh();
                 }),
             },
@@ -1155,7 +1066,7 @@ impl<H: Host + 'static> State<H> {
             else {
                 return;
             };
-            *self.monster_rules.borrow_mut() = Rc::new(rules);
+            *self.monster_rules.borrow_mut() = Arc::new(rules);
             self.monster_rules_stale.set(false);
         }
         let rules = self.monster_rules.borrow().clone();
@@ -1186,7 +1097,7 @@ impl<H: Host + 'static> State<H> {
                 let rand = state.host.rand();
                 let package = rules.new_monster_package(&name, None, &mut rand.borrow_mut());
                 if let Some(package) = package {
-                    state.encounter.borrow_mut().monsters.push(package);
+                    state.form.borrow_mut().encounter.monsters.push(package);
                     state.refresh();
                 }
             },
@@ -1200,13 +1111,13 @@ impl<H: Host + 'static> State<H> {
         else {
             return;
         };
-        let rules = Rc::new(rules);
+        let rules = Arc::new(rules);
         *self.monster_rules.borrow_mut() = rules.clone();
         self.monster_rules_stale.set(false);
         let rand = self.host.rand();
         let package = rules.new_monster_package(name, None, &mut rand.borrow_mut());
         if let Some(package) = package {
-            self.encounter.borrow_mut().monsters.push(package);
+            self.form.borrow_mut().encounter.monsters.push(package);
             self.refresh();
         }
     }
@@ -1232,13 +1143,18 @@ impl<H: Host + 'static> State<H> {
                 let Some((_, file)) = files.iter().find(|(n, _)| *n == name) else {
                     return;
                 };
-                let flavor = state.rules.flavor();
-                let added = state.host.with_install(|i| {
-                    let character = i.character(file)?;
-                    state.encounter.borrow_mut().add_npc(character, flavor)
-                });
-                if errors(&*state.host, added).is_some() {
-                    state.refresh();
+                let Some(character) =
+                    errors(&*state.host, state.host.with_install(|i| i.character(file)))
+                else {
+                    return;
+                };
+                let mut form = state.form.borrow_mut();
+                form.add_npc(character);
+                let notice = form.notice.take();
+                drop(form);
+                match notice {
+                    Some((_, text)) => state.host.toast(&text),
+                    None => state.refresh(),
                 }
             },
         );
@@ -1246,8 +1162,10 @@ impl<H: Host + 'static> State<H> {
 
     /// OK: checks the name, then adds or replaces the saved encounter.
     fn save(self: &Rc<Self>) {
-        let encounter = self.encounter.borrow().clone();
-        let old = self.saved.borrow().clone();
+        let (encounter, old) = {
+            let form = self.form.borrow();
+            (form.encounter.clone(), form.saved.clone())
+        };
         let result = self.host.with_install(|install| {
             let mut list = install.saved_encounters()?;
             let except = old
@@ -1264,7 +1182,7 @@ impl<H: Host + 'static> State<H> {
         if errors(&*self.host, result).is_some() {
             let name = encounter.name.clone();
             self.dialog.set_title(&name);
-            *self.saved.borrow_mut() = Some(name.clone());
+            self.form.borrow_mut().saved_as(name.clone());
             if let Some(delete) = self.delete.get() {
                 delete.set_enabled(true);
             }
@@ -1277,7 +1195,7 @@ impl<H: Host + 'static> State<H> {
     }
 
     fn confirm_delete(self: &Rc<Self>) {
-        let Some(name) = self.saved.borrow().clone() else {
+        let Some(name) = self.form.borrow().saved.clone() else {
             return;
         };
         let alert = adw::AlertDialog::builder()
@@ -1310,8 +1228,9 @@ impl<H: Host + 'static> State<H> {
     /// Shows or prints the sheet of the encounter's NPC `i`.
     fn npc_sheet(&self, i: usize, print: bool) {
         let Some(character) = self
-            .encounter
+            .form
             .borrow()
+            .encounter
             .npcs
             .get(i)
             .map(|p| p.character.clone())
@@ -1337,7 +1256,7 @@ impl<H: Host + 'static> State<H> {
 
     /// The encounter as a printable page (the original's View/Print).
     fn sheet(&self) -> Sheet {
-        self.rules.sheet(&self.encounter.borrow())
+        self.form.borrow().sheet()
     }
 }
 
@@ -1491,22 +1410,13 @@ fn pick_from(
     search.grab_focus();
 }
 
-/// The frequency categories of a roll's list (0x6559bd).
-const FREQUENCIES: [&str; 5] = [
-    tr_noop!("Common"),
-    tr_noop!("Uncommon"),
-    tr_noop!("Rare"),
-    tr_noop!("Very Rare"),
-    tr_noop!("Never"),
-];
-
 /// Picking roll `index` + 2 in the table dialog (0x6556a9): the templates of
 /// one frequency, the roll's own first ([`PICK_ROLLS`]), that pass
 /// `filter`. `chosen` gets the name, or "" for (None).
 fn pick_for_roll(
     parent: &impl IsA<gtk::Widget>,
     index: usize,
-    rules: &Rc<EncounterRules>,
+    rules: &Arc<EncounterRules>,
     filter: TableFilter,
     chosen: impl Fn(String) + 'static,
 ) {
@@ -1613,7 +1523,7 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
     ) else {
         return;
     };
-    let rules = Rc::new(rules);
+    let rules = Arc::new(rules);
     let table = saved
         .and_then(|n| tables.table(n).cloned())
         .unwrap_or_else(|| FrequencyTable::new(""));
@@ -1630,21 +1540,12 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
     let filter = table.borrow().filter.clone();
     let database = adw::ComboRow::builder()
         .title(tr("Database"))
-        .model(&gtk::StringList::new(&[
-            tr("All"),
-            tr("Standard"),
-            tr("Custom"),
-        ]))
+        .model(&gtk::StringList::new(&SOURCES.map(tr)))
         .selected(filter.source.clamp(0, 2) as u32)
         .build();
     let lair = adw::ComboRow::builder()
         .title(tr("Lair and/or Wandering"))
-        .model(&gtk::StringList::new(&[
-            tr("Lair and Wandering"),
-            tr("Lair or Wandering"),
-            tr("Wandering"),
-            tr("Lair"),
-        ]))
+        .model(&gtk::StringList::new(&LAIR_MODES.map(tr)))
         .selected(filter.lair.clamp(0, 3) as u32)
         .build();
     let min = adw::SpinRow::builder()
@@ -1928,48 +1829,3 @@ pub fn table_editor<H: Host + 'static>(host: &Shared<H>, saved: Option<&str>) {
     });
     dialog.present(Some(&host.parent()));
 }
-
-/// Climate flags 0-4 of templates and tables.
-const CLIMATES: [&str; 5] = [
-    tr_noop!("Arctic"),
-    tr_noop!("Sub-Arctic"),
-    tr_noop!("Temperate"),
-    tr_noop!("Sub-Tropical"),
-    tr_noop!("Tropical"),
-];
-
-/// Terrain flags 5-36 (table 0x67f3cc).
-const TERRAINS: [&str; 32] = [
-    tr_noop!("Aerial"),
-    tr_noop!("Bush"),
-    tr_noop!("Caves"),
-    tr_noop!("Coastal"),
-    tr_noop!("Deserts"),
-    tr_noop!("Farmland"),
-    tr_noop!("Forests"),
-    tr_noop!("Glaciers"),
-    tr_noop!("Grasslands"),
-    tr_noop!("Jungles"),
-    tr_noop!("Fresh-Water Lakes"),
-    tr_noop!("Salt-Water Lakes"),
-    tr_noop!("High Mountains"),
-    tr_noop!("High Mountain Forests"),
-    tr_noop!("High Mountain Lakes"),
-    tr_noop!("Low Mountains"),
-    tr_noop!("Low Mountain Forests"),
-    tr_noop!("Low Mountain Lakes"),
-    tr_noop!("Deep Oceans"),
-    tr_noop!("Shallow Oceans"),
-    tr_noop!("Parkland"),
-    tr_noop!("Scrub Plains"),
-    tr_noop!("Rain Forests"),
-    tr_noop!("Fresh-Water Rivers"),
-    tr_noop!("Salt-Water Rivers"),
-    tr_noop!("Rough/Hills"),
-    tr_noop!("Salt Marshes"),
-    tr_noop!("Steppes"),
-    tr_noop!("Subterranean"),
-    tr_noop!("Fresh-Water Swamps"),
-    tr_noop!("Salt-Water Swamps"),
-    tr_noop!("Tundras"),
-];

@@ -132,6 +132,9 @@ pub fn view(shell: &Shell, page: &SheetPage, context: &mut ViewContext<Shell>) -
                     SlotView::collection(CommandBarSlot::SecondaryCommands, secondary),
                 ]),
         ));
+    // The width the sections have: the room beside the navigation pane
+    // less the margins, at most the page's widest.
+    let content = (ui::room() - 72.0).min(1100.0);
     let sections = page
         .sheet
         .sections
@@ -139,7 +142,7 @@ pub fn view(shell: &Shell, page: &SheetPage, context: &mut ViewContext<Shell>) -
         .enumerate()
         .filter_map(|(i, section)| match &section.content {
             SectionContent::Columns(columns) => {
-                Some(KeyedView::new(i, columns_view(columns, page)))
+                Some(KeyedView::new(i, columns_view(columns, page, content)))
             }
             SectionContent::PageBreak => None,
         });
@@ -158,30 +161,41 @@ pub fn view(shell: &Shell, page: &SheetPage, context: &mut ViewContext<Shell>) -
         ))
 }
 
-/// A row of columns, each a stack of boxes.
-fn columns_view(columns: &[Vec<SheetBox>], page: &SheetPage) -> View {
+/// A row of columns, each a stack of boxes, `content` wide; when side by
+/// side they would be too narrow for their tables, as many as fit, the
+/// columns after one another in each.
+fn columns_view(columns: &[Vec<SheetBox>], page: &SheetPage, content: f64) -> View {
+    const NARROWEST: f64 = 240.0;
     let count = columns.len().max(1);
+    let fit = (((content + 18.0) / (NARROWEST + 18.0)).floor() as usize).clamp(1, count);
+    let per_stack = count.div_ceil(fit);
+    let stacks: Vec<Vec<&SheetBox>> = columns
+        .chunks(per_stack.max(1))
+        .map(|group| group.iter().flatten().collect())
+        .collect();
+    let shown = stacks.len().max(1);
+    let width = (content - 18.0 * (shown - 1) as f64) / shown as f64;
+    // The room inside a card: its padding and border.
+    let inside = width - 34.0;
     Grid::new()
-        .columns(vec![GridLength::STAR; count])
+        .columns(vec![GridLength::STAR; stacks.len().max(1)])
         .column_spacing(18.0)
-        .keyed_children(columns.iter().enumerate().map(|(c, column)| {
+        .keyed_children(stacks.iter().enumerate().map(|(c, column)| {
             KeyedView::new(
                 c,
                 StackPanel::new()
                     .spacing(18.0)
                     .vertical_alignment(VerticalAlignment::Top)
                     .grid_column(c as i32)
-                    .keyed_children(
-                        column
-                            .iter()
-                            .enumerate()
-                            .map(|(b, sheet_box)| KeyedView::new(b, box_view(sheet_box, page))),
-                    ),
+                    .keyed_children(column.iter().enumerate().map(|(b, sheet_box)| {
+                        KeyedView::new(b, box_view(sheet_box, page, inside))
+                    })),
             )
         }))
 }
 
-fn box_view(sheet_box: &SheetBox, page: &SheetPage) -> View {
+/// A box, its card `inside` wide within.
+fn box_view(sheet_box: &SheetBox, page: &SheetPage, inside: f64) -> View {
     let title: View = if sheet_box.title.is_empty() {
         View::empty()
     } else {
@@ -197,7 +211,7 @@ fn box_view(sheet_box: &SheetBox, page: &SheetPage) -> View {
         .enumerate()
         .filter_map(|(i, block)| {
             let view: View = match block {
-                Block::Table(table) if !table.rows.is_empty() => table_view(table),
+                Block::Table(table) if !table.rows.is_empty() => table_view(table, inside),
                 Block::List(items) if !items.is_empty() => list_view(items, 0),
                 Block::Paragraph(text) if !text.trim().is_empty() => {
                     text_view(text.trim_end().replace('\t', "    "))
@@ -230,7 +244,10 @@ fn text_view(text: String) -> View {
     ui::body(text).is_text_selection_enabled(true).into()
 }
 
-fn table_view(table: &Table) -> View {
+/// A table, as wide as its cells; scaled down to `inside` when it is
+/// wider, so that every column shows whole and the page still scrolls
+/// under the wheel.
+fn table_view(table: &Table, inside: f64) -> View {
     let columns = table
         .rows
         .iter()
@@ -271,12 +288,136 @@ fn table_view(table: &Table) -> View {
             column += span;
         }
     }
-    Grid::new()
-        .columns(vec![GridLength::Auto; columns])
-        .rows(vec![GridLength::Auto; table.rows.len()])
-        .column_spacing(12.0)
-        .row_spacing(4.0)
+    let measured = measure(table, columns);
+    let spacing = 12.0 * (columns - 1) as f64;
+    let natural = measured.iter().map(|c| c.natural).sum::<f64>() + spacing;
+    let grid = |lengths: Vec<GridLength>, width: Option<f64>| {
+        let grid = Grid::new()
+            .columns(lengths)
+            .rows(vec![GridLength::Auto; table.rows.len()])
+            .column_spacing(12.0)
+            .row_spacing(4.0);
+        match width {
+            Some(width) => grid.width(width),
+            None => grid,
+        }
         .keyed_children(cells)
+    };
+    if natural <= inside {
+        return grid(vec![GridLength::Auto; columns], None);
+    }
+    // Too wide: the columns of words wrap between them, in proportion,
+    // and the rest keep their width; what still does not fit is scaled
+    // down, so that no word is broken, nothing is cut off and the page
+    // keeps the wheel.
+    let fixed: f64 = measured
+        .iter()
+        .filter(|c| !c.wraps)
+        .map(|c| c.natural)
+        .sum();
+    let wrapping: f64 = measured.iter().filter(|c| c.wraps).map(|c| c.natural).sum();
+    let least = measured
+        .iter()
+        .filter(|c| c.wraps)
+        .map(|c| c.word / c.natural)
+        .fold(0.0, f64::max);
+    let lengths: Vec<GridLength> = measured
+        .iter()
+        .map(|c| {
+            if c.wraps {
+                GridLength::Star(c.natural)
+            } else {
+                GridLength::Auto
+            }
+        })
+        .collect();
+    if wrapping > 0.0 && inside - fixed - spacing >= least * wrapping {
+        return grid(lengths, None);
+    }
+    let width = (wrapping > 0.0).then_some(fixed + spacing + least * wrapping);
+    Viewbox::new()
+        .stretch(Stretch::Uniform)
+        .horizontal_alignment(HorizontalAlignment::Left)
+        .slots([SlotView::new(ViewboxSlot::Child, grid(lengths, width))])
+}
+
+/// A table column as [`measure`] finds it.
+struct Measured {
+    /// About how wide its widest cell is drawn, generously.
+    natural: f64,
+    /// Its longest word, which it must not be narrower than.
+    word: f64,
+    /// Whether it holds text of several words, which may wrap.
+    wraps: bool,
+}
+
+/// The columns of `table`, a cell over several columns widening them
+/// evenly when they are too narrow for it.
+fn measure(table: &Table, columns: usize) -> Vec<Measured> {
+    let per_char = |cell: &cr_store::sheet::Cell| {
+        if cell.kind == CellKind::Large {
+            11.0
+        } else {
+            7.5
+        }
+    };
+    let width = |cell: &cr_store::sheet::Cell| {
+        let chars = cell
+            .text
+            .lines()
+            .map(|l| l.chars().count())
+            .max()
+            .unwrap_or(0);
+        chars as f64 * per_char(cell)
+    };
+    let mut measured: Vec<Measured> = (0..columns)
+        .map(|_| Measured {
+            natural: 0.0,
+            word: 0.0,
+            wraps: false,
+        })
+        .collect();
+    for row in &table.rows {
+        let mut c = 0;
+        for cell in row {
+            let span = cell.colspan.max(1) as usize;
+            if span == 1 && c < columns {
+                let column = &mut measured[c];
+                column.natural = column.natural.max(width(cell));
+                let longest = cell
+                    .text
+                    .split_whitespace()
+                    .map(|w| w.chars().count())
+                    .max()
+                    .unwrap_or(0);
+                column.word = column.word.max(longest as f64 * per_char(cell) + 4.0);
+                let text = cell.text.trim();
+                column.wraps |= text.contains(' ') && text.chars().count() > 10;
+            }
+            c += span;
+        }
+    }
+    for row in &table.rows {
+        let mut c = 0;
+        for cell in row {
+            let span = cell.colspan.max(1) as usize;
+            let end = (c + span).min(columns);
+            if span > 1 && c < end {
+                let have = measured[c..end].iter().map(|m| m.natural).sum::<f64>()
+                    + 12.0 * (end - c - 1) as f64;
+                let need = width(cell);
+                if need > have {
+                    let extra = (need - have) / (end - c) as f64;
+                    measured[c..end].iter_mut().for_each(|m| m.natural += extra);
+                }
+            }
+            c += span;
+        }
+    }
+    for column in &mut measured {
+        column.natural = column.natural.max(column.word).max(1.0);
+    }
+    measured
 }
 
 fn list_view(items: &[ListItem], depth: u32) -> View {

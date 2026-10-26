@@ -10,7 +10,7 @@ use cr_app::action;
 use cr_app::library::{self, Commands};
 use cr_app::records;
 use cr_i18n::tr;
-use cr_store::catalog::{Entry, Frames, Section};
+use cr_store::catalog::{ENCOUNTER_KEY, Entry, Frames, Section, TABLE_KEY, TREASURE_KEY};
 use cr_store::userdb::Filter as Origins;
 use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES};
 use cr_win::text::plain;
@@ -178,6 +178,47 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
             context.message(Message::Act(action::OPEN)),
         ),
     ));
+    // The DM Tool Kit's generators, in the bar's More menu of every
+    // section as in the GNOME app's main menu.
+    let tools: Vec<KeyedView> = [
+        (action::NEW_NPC, tr("New N_PC…"), Symbol::AddFriend),
+        (action::NEW_NPC_GROUP, tr("New NPC _Group…"), Symbol::People),
+        (
+            action::MANAGE_PARTIES,
+            tr("Manage _Parties…"),
+            Symbol::Contact2,
+        ),
+        (action::NEW_ENCOUNTER, tr("New _Encounter…"), Symbol::MapPin),
+        (
+            action::NEW_TABLE,
+            tr("New Encounter _Table…"),
+            Symbol::Bookmarks,
+        ),
+        (
+            action::ROLL_TREASURE,
+            tr("_Roll Treasure…"),
+            Symbol::Shuffle,
+        ),
+        (
+            action::ROLL_TABLE,
+            tr("Roll on a _Table…"),
+            Symbol::ShowResults,
+        ),
+    ]
+    .into_iter()
+    .filter(|(action, ..)| available(*action))
+    .map(|(action, label, symbol)| {
+        KeyedView::new(
+            action.name,
+            ui::command(
+                &plain(label),
+                symbol,
+                shell.can_write && !shell.busy,
+                context.message(Message::Act(action)),
+            ),
+        )
+    })
+    .collect();
     // The title keeps its width; the commands that do not fit beside it
     // go to the bar's overflow menu.
     let header = Grid::new()
@@ -189,7 +230,10 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
             CommandBar::new()
                 .horizontal_alignment(HorizontalAlignment::Right)
                 .grid_column(1)
-                .collection_slot(CommandBarSlot::PrimaryCommands, commands),
+                .slots([
+                    SlotView::collection(CommandBarSlot::PrimaryCommands, commands),
+                    SlotView::collection(CommandBarSlot::SecondaryCommands, tools),
+                ]),
         ));
 
     let master = Grid::new()
@@ -446,6 +490,27 @@ fn details(shell: &Shell, entry: &Entry, context: &mut ViewContext<Shell>) -> Vi
             Symbol::Edit,
             !busy,
             Message::EditCharacter,
+        );
+    }
+    // A saved treasure opens in Roll Treasure and an encounter or table
+    // on its page, to change or (Copy) to save as another.
+    if commands.edit
+        && [TREASURE_KEY, ENCOUNTER_KEY, TABLE_KEY]
+            .iter()
+            .any(|p| entry.key.starts_with(p))
+    {
+        add("edit", tr("Edit"), Symbol::Edit, !busy, Message::EditEntry);
+    }
+    if commands.copy {
+        add("copy", tr("Copy"), Symbol::Copy, !busy, Message::CopyEntry);
+    }
+    if commands.generate {
+        add(
+            "generate",
+            library::generate_label(&entry.key),
+            Symbol::Shuffle,
+            !busy,
+            Message::GenerateEntry,
         );
     }
     if commands.view && !commands.monster {
