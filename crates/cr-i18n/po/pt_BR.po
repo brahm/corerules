@@ -471,7 +471,7 @@ msgstr "{rolls} · a Constituição o ajusta na ficha"
 #: crates/cr-gtk/src/userdb/attacks.rs:62
 #: crates/cr-gtk/src/userdb/templates.rs:193
 #: crates/cr-gtk/src/userdb.rs:1851
-#: crates/cr-store/src/encounter/text.rs:473
+#: crates/cr-store/src/encounter/text.rs:477
 #: crates/cr-store/src/userdb/monsters.rs:727
 #: crates/cr-store/src/userdb/parts/kit.rs:346
 #: crates/cr-win/src/app/allowed.rs:59
@@ -2799,7 +2799,7 @@ msgstr "Itens"
 #: crates/cr-store/src/catalog.rs:277
 #: crates/cr-store/src/catalog.rs:731
 #: crates/cr-store/src/encounter/text.rs:400
-#: crates/cr-store/src/encounter/text.rs:520
+#: crates/cr-store/src/encounter/text.rs:524
 #: crates/cr-win/src/app/encounter.rs:684
 #: crates/cr-win/src/app/templates.rs:414
 msgid "Traps"
@@ -8045,60 +8045,81 @@ msgstr "O gerador de PdMs não está disponível: {error}"
 msgid "Type: {type}"
 msgstr "Tipo: {type}"
 
-#: crates/cr-store/src/encounter/text.rs:477
+#: crates/cr-store/src/encounter/text.rs:481
 msgid "Lair Treasure: {treasure}"
 msgstr "Tesouro no covil: {treasure}"
 
-#: crates/cr-store/src/encounter/text.rs:490
+#: crates/cr-store/src/encounter/text.rs:494
 msgid "{dice} {item} worth {coins} {coin}"
 msgstr "{dice} {item} valendo {coins} {coin}"
 
-#: crates/cr-store/src/encounter/text.rs:499
+#: crates/cr-store/src/encounter/text.rs:503
 msgid "With these items,"
 msgstr "Com estes itens,"
 
-#: crates/cr-store/src/encounter/text.rs:505
+#: crates/cr-store/src/encounter/text.rs:509
 msgid "For each of these items"
 msgstr "Para cada um destes itens"
 
-#: crates/cr-store/src/encounter/text.rs:512
+#: crates/cr-store/src/encounter/text.rs:516
 msgid "The presence of these items causes the {monsters} appearing to double."
 msgstr "A presença destes itens dobra o número de {monsters} que aparecem."
 
-#: crates/cr-store/src/encounter/text.rs:532
+#: crates/cr-store/src/encounter/text.rs:536
 msgid "For every {per} {reference} beyond {beyond}"
 msgstr "A cada {per} {reference} além de {beyond}"
 
-#: crates/cr-store/src/encounter/text.rs:534
+#: crates/cr-store/src/encounter/text.rs:543
 msgid "For every {per} {reference} present"
 msgstr "A cada {per} {reference} presentes"
 
-#: crates/cr-store/src/encounter/text.rs:537
+#: crates/cr-store/src/encounter/text.rs:546
 msgid "If there are at least {beyond} {reference} then"
 msgstr "Se houver pelo menos {beyond} {reference}, então"
 
-#: crates/cr-store/src/encounter/text.rs:544
+#: crates/cr-store/src/encounter/text.rs:559
+#: crates/cr-store/src/userdb/parts/pages.rs:720
+msgid "Platinum Pieces"
+msgstr "Peças de platina"
+
+#: crates/cr-store/src/encounter/text.rs:560
+#: crates/cr-store/src/userdb/parts/pages.rs:721
+msgid "Gold Pieces"
+msgstr "Peças de ouro"
+
+#: crates/cr-store/src/encounter/text.rs:561
+#: crates/cr-store/src/userdb/parts/pages.rs:723
+msgid "Copper Pieces"
+msgstr "Peças de cobre"
+
+#: crates/cr-store/src/encounter/text.rs:562
+#: crates/cr-store/src/userdb/parts/pages.rs:722
+msgid "Silver Pieces"
+msgstr "Peças de prata"
+
+#: crates/cr-store/src/encounter/text.rs:568
 msgid "There is a {percent}% chance that"
 msgstr "Há {percent}% de chance de que"
 
-#: crates/cr-store/src/encounter/text.rs:551
-msgid "{dice} {name} appear."
-msgstr "{dice} {name} apareçam."
+#: crates/cr-store/src/encounter/text.rs:578
+msgid "{dice} {name} appears."
+msgid_plural "{dice} {name} appear."
+msgstr[0] "{dice} {name} apareça."
+msgstr[1] "{dice} {name} apareçam."
 
-#: crates/cr-store/src/encounter/text.rs:559
+#: crates/cr-store/src/encounter/text.rs:602
 msgid "{dice} selected from the following:"
 msgstr "{dice} escolhidos dentre os seguintes:"
 
-#: crates/cr-store/src/encounter/text.rs:567
-#: crates/cr-store/src/userdb/templates.rs:243
-msgid "and"
-msgstr "e"
+#: crates/cr-store/src/encounter/text.rs:613
+msgid "and {dice} {name} appear."
+msgstr "e {dice} {name} apareçam."
 
-#: crates/cr-store/src/encounter/text.rs:567
-#: crates/cr-store/src/userdb/templates.rs:243
-#: crates/cr-store/src/userdb/templates.rs:424
-msgid "or"
-msgstr "ou"
+#: crates/cr-store/src/encounter/text.rs:615
+msgid "or {dice} {name} appears."
+msgid_plural "or {dice} {name} appear."
+msgstr[0] "ou {dice} {name} apareça."
+msgstr[1] "ou {dice} {name} apareçam."
 
 #: crates/cr-store/src/encounter.rs:784
 msgid "{encounter}: the NPC {name} is a {version} character, which Core Rules 2.0 cannot read"
@@ -11371,22 +11392,6 @@ msgstr "Estojo de cajados (cajados)"
 msgid "Check the containers in which you may carry this item"
 msgstr "Marque os recipientes em que você pode carregar este item"
 
-#: crates/cr-store/src/userdb/parts/pages.rs:720
-msgid "Platinum Pieces"
-msgstr "Peças de platina"
-
-#: crates/cr-store/src/userdb/parts/pages.rs:721
-msgid "Gold Pieces"
-msgstr "Peças de ouro"
-
-#: crates/cr-store/src/userdb/parts/pages.rs:722
-msgid "Silver Pieces"
-msgstr "Peças de prata"
-
-#: crates/cr-store/src/userdb/parts/pages.rs:723
-msgid "Copper Pieces"
-msgstr "Peças de cobre"
-
 #: crates/cr-store/src/userdb/parts/pages.rs:739
 msgid "Minor Access"
 msgstr "Acesso menor"
@@ -12291,6 +12296,15 @@ msgstr "Modelo de encontro"
 #: crates/cr-store/src/userdb/templates.rs:243
 msgid "appear."
 msgstr "aparecem."
+
+#: crates/cr-store/src/userdb/templates.rs:243
+msgid "and"
+msgstr "e"
+
+#: crates/cr-store/src/userdb/templates.rs:243
+#: crates/cr-store/src/userdb/templates.rs:424
+msgid "or"
+msgstr "ou"
 
 #: crates/cr-store/src/userdb/templates.rs:476
 msgid "{race} {classes} Level: {level}"

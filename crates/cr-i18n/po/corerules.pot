@@ -471,7 +471,7 @@ msgstr ""
 #: crates/cr-gtk/src/userdb/attacks.rs:62
 #: crates/cr-gtk/src/userdb/templates.rs:193
 #: crates/cr-gtk/src/userdb.rs:1851
-#: crates/cr-store/src/encounter/text.rs:473
+#: crates/cr-store/src/encounter/text.rs:477
 #: crates/cr-store/src/userdb/monsters.rs:727
 #: crates/cr-store/src/userdb/parts/kit.rs:346
 #: crates/cr-win/src/app/allowed.rs:59
@@ -2799,7 +2799,7 @@ msgstr ""
 #: crates/cr-store/src/catalog.rs:277
 #: crates/cr-store/src/catalog.rs:731
 #: crates/cr-store/src/encounter/text.rs:400
-#: crates/cr-store/src/encounter/text.rs:520
+#: crates/cr-store/src/encounter/text.rs:524
 #: crates/cr-win/src/app/encounter.rs:684
 #: crates/cr-win/src/app/templates.rs:414
 msgid "Traps"
@@ -8043,60 +8043,81 @@ msgstr ""
 msgid "Type: {type}"
 msgstr ""
 
-#: crates/cr-store/src/encounter/text.rs:477
+#: crates/cr-store/src/encounter/text.rs:481
 msgid "Lair Treasure: {treasure}"
 msgstr ""
 
-#: crates/cr-store/src/encounter/text.rs:490
+#: crates/cr-store/src/encounter/text.rs:494
 msgid "{dice} {item} worth {coins} {coin}"
 msgstr ""
 
-#: crates/cr-store/src/encounter/text.rs:499
+#: crates/cr-store/src/encounter/text.rs:503
 msgid "With these items,"
 msgstr ""
 
-#: crates/cr-store/src/encounter/text.rs:505
+#: crates/cr-store/src/encounter/text.rs:509
 msgid "For each of these items"
 msgstr ""
 
-#: crates/cr-store/src/encounter/text.rs:512
+#: crates/cr-store/src/encounter/text.rs:516
 msgid "The presence of these items causes the {monsters} appearing to double."
 msgstr ""
 
-#: crates/cr-store/src/encounter/text.rs:532
+#: crates/cr-store/src/encounter/text.rs:536
 msgid "For every {per} {reference} beyond {beyond}"
 msgstr ""
 
-#: crates/cr-store/src/encounter/text.rs:534
+#: crates/cr-store/src/encounter/text.rs:543
 msgid "For every {per} {reference} present"
 msgstr ""
 
-#: crates/cr-store/src/encounter/text.rs:537
+#: crates/cr-store/src/encounter/text.rs:546
 msgid "If there are at least {beyond} {reference} then"
 msgstr ""
 
-#: crates/cr-store/src/encounter/text.rs:544
+#: crates/cr-store/src/encounter/text.rs:559
+#: crates/cr-store/src/userdb/parts/pages.rs:720
+msgid "Platinum Pieces"
+msgstr ""
+
+#: crates/cr-store/src/encounter/text.rs:560
+#: crates/cr-store/src/userdb/parts/pages.rs:721
+msgid "Gold Pieces"
+msgstr ""
+
+#: crates/cr-store/src/encounter/text.rs:561
+#: crates/cr-store/src/userdb/parts/pages.rs:723
+msgid "Copper Pieces"
+msgstr ""
+
+#: crates/cr-store/src/encounter/text.rs:562
+#: crates/cr-store/src/userdb/parts/pages.rs:722
+msgid "Silver Pieces"
+msgstr ""
+
+#: crates/cr-store/src/encounter/text.rs:568
 msgid "There is a {percent}% chance that"
 msgstr ""
 
-#: crates/cr-store/src/encounter/text.rs:551
-msgid "{dice} {name} appear."
-msgstr ""
+#: crates/cr-store/src/encounter/text.rs:578
+msgid "{dice} {name} appears."
+msgid_plural "{dice} {name} appear."
+msgstr[0] ""
+msgstr[1] ""
 
-#: crates/cr-store/src/encounter/text.rs:559
+#: crates/cr-store/src/encounter/text.rs:602
 msgid "{dice} selected from the following:"
 msgstr ""
 
-#: crates/cr-store/src/encounter/text.rs:567
-#: crates/cr-store/src/userdb/templates.rs:243
-msgid "and"
+#: crates/cr-store/src/encounter/text.rs:613
+msgid "and {dice} {name} appear."
 msgstr ""
 
-#: crates/cr-store/src/encounter/text.rs:567
-#: crates/cr-store/src/userdb/templates.rs:243
-#: crates/cr-store/src/userdb/templates.rs:424
-msgid "or"
-msgstr ""
+#: crates/cr-store/src/encounter/text.rs:615
+msgid "or {dice} {name} appears."
+msgid_plural "or {dice} {name} appear."
+msgstr[0] ""
+msgstr[1] ""
 
 #: crates/cr-store/src/encounter.rs:784
 msgid "{encounter}: the NPC {name} is a {version} character, which Core Rules 2.0 cannot read"
@@ -11341,22 +11362,6 @@ msgstr ""
 msgid "Check the containers in which you may carry this item"
 msgstr ""
 
-#: crates/cr-store/src/userdb/parts/pages.rs:720
-msgid "Platinum Pieces"
-msgstr ""
-
-#: crates/cr-store/src/userdb/parts/pages.rs:721
-msgid "Gold Pieces"
-msgstr ""
-
-#: crates/cr-store/src/userdb/parts/pages.rs:722
-msgid "Silver Pieces"
-msgstr ""
-
-#: crates/cr-store/src/userdb/parts/pages.rs:723
-msgid "Copper Pieces"
-msgstr ""
-
 #: crates/cr-store/src/userdb/parts/pages.rs:739
 msgid "Minor Access"
 msgstr ""
@@ -12260,6 +12265,15 @@ msgstr ""
 
 #: crates/cr-store/src/userdb/templates.rs:243
 msgid "appear."
+msgstr ""
+
+#: crates/cr-store/src/userdb/templates.rs:243
+msgid "and"
+msgstr ""
+
+#: crates/cr-store/src/userdb/templates.rs:243
+#: crates/cr-store/src/userdb/templates.rs:424
+msgid "or"
 msgstr ""
 
 #: crates/cr-store/src/userdb/templates.rs:476

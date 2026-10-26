@@ -6,11 +6,11 @@
 
 use cr_formats::Object;
 use cr_formats::monster::Monster;
-use cr_i18n::tr;
+use cr_i18n::{tr, trn};
 
 use super::{
     Dice, Encounter, EncounterRules, Flavor, MonsterLine, MonsterPackage, NpcPackage, Template,
-    coin_name, npc_inventory,
+    npc_inventory,
 };
 use crate::treasure::{Bundle, LETTERS, SUMMARY_TYPE_NAMES, thousands};
 
@@ -445,7 +445,11 @@ impl EncounterRules {
                 format!("{} {}", n.race, classes.join("/"))
             };
             if line.list.len() < 2 {
-                s.push_str(&appear_text(line.dice, &npc(&line.npc)));
+                s.push_str(&appear_text(
+                    line.dice,
+                    &npc(&line.npc),
+                    line.and || line.or,
+                ));
             } else {
                 s.push_str(&selected_text(line.dice));
                 for n in &line.list {
@@ -492,7 +496,7 @@ impl EncounterRules {
                 dice = dice_text(item.quantity),
                 item = item.item,
                 coins = dice_text(item.coins),
-                coin = coin_name(item.coin)
+                coin = coin_label(item.coin)
             ));
             out.push('\n');
             if !item.escorts.is_empty() {
@@ -548,17 +552,47 @@ fn dependency_text(per: i32, beyond: i32, reference: &str) -> String {
     format!("  {text}\n")
 }
 
+/// A coin as the printout names it ([`super::coin_name`]'s item, without
+/// its star).
+fn coin_label(coin: i32) -> &'static str {
+    match coin {
+        0 => tr("Platinum Pieces"),
+        1 => tr("Gold Pieces"),
+        3 => tr("Copper Pieces"),
+        _ => tr("Silver Pieces"),
+    }
+}
+
 /// The first line of a template line's printout.
 fn chance_text(percent: i32) -> String {
     tr!("There is a {percent}% chance that", percent) + "\n"
 }
 
-/// A line's one monster or NPC: "  1d4 Orc appear.".
-fn appear_text(dice: Dice, name: &str) -> String {
-    format!(
-        "  {}\n",
-        tr!("{dice} {name} appear.", dice = dice_text(dice), name)
-    )
+/// A line's one monster or NPC: "  1d4 Orc appear.", the verb left for
+/// the second box when there is one.
+fn appear_text(dice: Dice, name: &str, second: bool) -> String {
+    let text = dice_text(dice);
+    if second {
+        return format!("  {text} {name}\n");
+    }
+    let appear = trn!(
+        "{dice} {name} appears.",
+        "{dice} {name} appear.",
+        how_many(dice),
+        dice = text,
+        name
+    );
+    format!("  {appear}\n")
+}
+
+/// How many a dice text stands for, for the verb: the number when the
+/// dice give one, else 2.
+fn how_many(d: Dice) -> u64 {
+    how_many_text(&dice_text(d))
+}
+
+fn how_many_text(dice: &str) -> u64 {
+    dice.parse().unwrap_or(2)
 }
 
 /// The head of a line's random list.
@@ -572,13 +606,21 @@ fn selected_text(dice: Dice) -> String {
     )
 }
 
-/// A line's second box, after "and" or "or".
+/// A line's second box, after "and" or "or", with the line's verb.
 fn second_text(and: bool, dice: Dice, name: &str) -> String {
-    format!(
-        "  {} {} {name}\n",
-        if and { tr("and") } else { tr("or") },
-        dice_text(dice)
-    )
+    let dice = dice_text(dice);
+    let text = if and {
+        tr!("and {dice} {name} appear.", dice, name)
+    } else {
+        trn!(
+            "or {dice} {name} appears.",
+            "or {dice} {name} appear.",
+            how_many_text(&dice),
+            dice,
+            name
+        )
+    };
+    format!("  {text}\n")
 }
 
 /// One monster line of the template printout.
@@ -592,7 +634,7 @@ fn monster_line_text(line: &MonsterLine) -> String {
         ));
     }
     if line.list.len() < 2 {
-        s.push_str(&appear_text(line.dice, &line.monster));
+        s.push_str(&appear_text(line.dice, &line.monster, line.and || line.or));
     } else {
         s.push_str(&selected_text(line.dice));
         for m in &line.list {
@@ -607,4 +649,52 @@ fn monster_line_text(line: &MonsterLine) -> String {
         ));
     }
     s
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn line(dice: Dice, monster: &str) -> MonsterLine {
+        MonsterLine {
+            percent: 100,
+            dependent: false,
+            and: false,
+            or: false,
+            per: 0,
+            beyond: 0,
+            reference: Default::default(),
+            dice,
+            monster: monster.into(),
+            list: Vec::new(),
+            second_dice: Dice::new(1, 1, 1, 0),
+            second_monster: String::new(),
+        }
+    }
+
+    /// The verb ends the sentence, after the second box when there is
+    /// one, and agrees with a fixed count.
+    #[test]
+    fn a_line_reads_as_one_sentence() {
+        let one = line(Dice::new(1, 1, 1, 0), "Orc, Leader");
+        assert_eq!(
+            monster_line_text(&one),
+            "There is a 100% chance that\n  1 Orc, Leader appears.\n"
+        );
+        let mut two = line(Dice::new(2, 4, 1, 0), "Orc");
+        two.and = true;
+        two.second_dice = Dice::new(3, 1, 1, 0);
+        two.second_monster = "Orc assistant".into();
+        assert_eq!(
+            monster_line_text(&two),
+            "There is a 100% chance that\n  2d4 Orc\n  and 3 Orc assistant appear.\n"
+        );
+        two.and = false;
+        two.or = true;
+        two.second_dice = Dice::new(1, 1, 1, 0);
+        assert_eq!(
+            monster_line_text(&two),
+            "There is a 100% chance that\n  2d4 Orc\n  or 1 Orc assistant appears.\n"
+        );
+    }
 }

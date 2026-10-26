@@ -16,7 +16,7 @@ use cr_win::text::plain;
 use windows_reactor::*;
 
 use super::create::prompt_dialog;
-use super::forms::{heading, two_lines, with_buttons};
+use super::forms::{choices, heading, two_lines, with_buttons};
 use super::record::{self, number, tabs, text_button};
 use super::{Message, Shell};
 use crate::ui;
@@ -105,9 +105,6 @@ fn dice_setting(
         dice(title, values, ranges, room, changed, context),
     )
 }
-
-/// The width of the Encountered combo's longest choice, about.
-const ENCOUNTERED_WIDTH: f64 = 480.0;
 
 /// A setting whose control is a number in `min..=max`.
 fn count(
@@ -533,19 +530,14 @@ fn table_page(form: &TemplateForm, context: &mut ViewContext<Shell>) -> View {
             tr("Select the category under which this Encounter Template will appear"),
             None,
         ),
-        // Its longest choices take more room than a card has beside a
-        // header in a narrow window.
-        ui::wide_setting(
-            tr("Encountered"),
-            "",
-            ENCOUNTERED_WIDTH,
-            combo(
-                tr("Encountered"),
-                tpl::PLACEMENT_NAMES.map(|n| tr(n).to_owned()).to_vec(),
-                tpl::placement_choice(&t.placement),
-                |i| input(TemplateInput::Placement(i)),
-                context,
-            ),
+        // Radios, as the original has them: a combo cuts their long texts
+        // in a narrow window.
+        choices(
+            "placement",
+            &tpl::PLACEMENT_NAMES.map(|n| (tr(n).to_owned(), String::new())),
+            tpl::placement_choice(&t.placement),
+            |i| input(TemplateInput::Placement(i)),
+            context,
         ),
         ui::setting(
             tr("Frequency"),
