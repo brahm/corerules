@@ -350,13 +350,19 @@ The phases run in order:
      and an item's icon (with a search over the items that have it), and
      New Trap, Edit, Copy and Delete in the encounter's Add Trap and New
      Monster in its Add Monster, which put what they make in the
-     encounter. 5 actions are left on `NOT_YET_ON_WINDOWS`. In a second
+     encounter. 5 actions are left on `NOT_YET_ON_WINDOWS`. The Windows
+     test found a record just saved left unselected, the class's level
+     tables taking the wheel from the page (their columns now go to
+     tables below rather than scroll sideways), a new monster entering an
+     encounter as none, an empty group kept, and texts left untranslated,
+     all fixed before the merge (PR #106). In a second
      pull request `cr-app` gained the encounter templates' editor: its
      pages, the Properties of a monster, NPC or item line, the pickers of
      monsters, monster types, items and traps, and the monsters that come
      with an item. The GNOME app reads its lists and pickers' data with
      it; the Windows app edits a template on a page of the window, with
-     NPC Creation in template mode for its NPCs.
+     NPC Creation in template mode for its NPCs. The library's list now
+     scrolls to the entry selected when it is made anew.
    - Still to port: packages and Import Core Rules 2.0; Extract Data from
      CD….
 5. **Package and Store.** The release workflow builds and tests the MSIX;
