@@ -30,7 +30,7 @@ shared crate `cr-app`, one PDF of the sheet for both systems and a test
 that fails when an action is in one app and not in the other. The screens
 are being ported (phase 4): the library, the character sheet, the help,
 Settings and About, the books, character creation with Enter Character,
-and editing are done, and the generators are in review.
+editing and the generators are done.
 Publishing on Flathub was dropped from the plan (decision P15).
 
 ## The original plan (2026-10-09)
@@ -307,7 +307,7 @@ The phases run in order:
      Combat and Proficiencies tabs now share the character points as they
      are edited. A quest spell is named so among the memorized spells,
      and a list's Add box keeps Add inside a narrow window.
-   - **The generators.** `cr-app` gained the DM Tool Kit's generators,
+   - **The generators (done, PR #105).** `cr-app` gained the DM Tool Kit's generators,
      free of any toolkit, and the GNOME app uses them: New NPC and New
      NPC Group (the race, class, level and alignment, how the abilities
      are rolled, and the party to put them in); Roll Treasure (the
@@ -325,7 +325,16 @@ The phases run in order:
      Copy and Create Encounter on saved encounters, tables and
      templates. 16 actions are left on `NOT_YET_ON_WINDOWS`: the user
      database editors with the traps, packages, Import Core Rules 2.0
-     and Extract Data from CD….
+     and Extract Data from CD…. The Windows test found the Encounter
+     page's cards that never opened, which the window now keeps open;
+     an encounter just made, Group Encounter's among them, lost without
+     a word on leaving, where leaving an unsaved encounter or table now
+     asks first; thousands grouped the English way in the other
+     languages; a box title left alone at the foot of a printed page;
+     and sheet tables cut off in a narrow window, where a sheet's
+     columns now regroup and a wide table wraps its words and is scaled
+     down only by what still does not fit. Saving a treasure, encounter
+     or table now shows its section, as in the GNOME app.
    - Still to port: the user database editors; packages and Import Core
      Rules 2.0; Extract Data from CD….
 5. **Package and Store.** The release workflow builds and tests the MSIX;
