@@ -12,7 +12,7 @@ use cr_app::records::dialogs::{
 };
 use cr_app::records::form::{Field, GRID_ROWS, RecordForm, RecordInput};
 use cr_i18n::tr;
-use cr_store::userdb::classes::levels::FREQUENCIES;
+use cr_store::userdb::classes::levels::{FREQUENCIES, frequency_shown, frequency_stored};
 use cr_store::userdb::monsters::{AREAS, SAVE_RESULTS, SAVES, TO_HIT, area_labels};
 use cr_store::userdb::{FieldKind, Value};
 use cr_win::text::plain;
@@ -879,6 +879,12 @@ fn entries_rows(
     }
 }
 
+/// The width of a cell of a table of numbers, of its Level column, and
+/// the room between its columns.
+const CELL: f64 = 96.0;
+const LEVEL_CELL: f64 = 48.0;
+const CELL_SPACING: f64 = 6.0;
+
 /// A table of numbers, one row per level, shown ten levels at a time.
 fn grid(
     form: &RecordForm,
@@ -917,66 +923,85 @@ fn grid(
     } else {
         View::empty()
     };
-    let width = columns.len() + 1;
-    let mut cells: Vec<KeyedView> = Vec::new();
-    cells.push(KeyedView::new(
-        "level",
-        ui::strong(tr("Level")).vertical_alignment(VerticalAlignment::Bottom),
-    ));
-    for (c, title) in columns.iter().enumerate() {
-        cells.push(KeyedView::new(
-            format!("h{c}"),
-            ui::strong(tr(title))
-                .horizontal_alignment(HorizontalAlignment::Center)
-                .vertical_alignment(VerticalAlignment::Bottom)
-                .grid_column(c as i32 + 1),
-        ));
-    }
+    // The columns that do not fit beside each other go to a table below,
+    // which repeats the levels, rather than a table to scroll sideways,
+    // which would take the wheel from the page.
+    let room = (ui::room() - 72.0).min(1000.0) - 34.0;
+    let fit = (((room - LEVEL_CELL) / (CELL + CELL_SPACING)).floor() as usize).max(1);
+    let blocks = columns.len().div_ceil(fit).max(1);
+    let per = columns.len().div_ceil(blocks).max(1);
     let shown = &rows[start..(start + GRID_ROWS).min(rows.len())];
-    for (r, values) in shown.iter().enumerate() {
-        let level = first + (start + r) as i64;
-        cells.push(KeyedView::new(
-            format!("l{r}"),
-            ui::body(level.to_string())
-                .vertical_alignment(VerticalAlignment::Center)
-                .grid_row(r as i32 + 1),
-        ));
-        for (c, value) in values.iter().enumerate().take(columns.len()) {
-            let row = start + r;
+    let tables: Vec<KeyedView> = (0..columns.len())
+        .step_by(per)
+        .map(|from| {
+            let to = (from + per).min(columns.len());
+            let mut cells: Vec<KeyedView> = Vec::new();
             cells.push(KeyedView::new(
-                format!("c{r}\u{1}{c}"),
-                number(
-                    &format!("{} {level}: {}", tr("Level"), tr(columns[c])),
-                    *value,
-                    (min, max),
-                    field.enabled,
-                    move |v| input(RecordInput::Cell(index, row, c, v)),
-                    context,
-                )
-                .min_width(76.0)
-                .grid_row(r as i32 + 1)
-                .grid_column(c as i32 + 1),
+                "level",
+                ui::strong(tr("Level"))
+                    .width(LEVEL_CELL)
+                    .vertical_alignment(VerticalAlignment::Bottom),
             ));
-        }
-    }
-    let table = Grid::new()
-        .columns(std::iter::repeat_n(GridLength::Auto, width).collect::<Vec<_>>())
-        .rows(std::iter::repeat_n(GridLength::Auto, shown.len() + 1).collect::<Vec<_>>())
-        .column_spacing(6.0)
-        .row_spacing(4.0)
-        .keyed_children(cells);
+            for (at, c) in (from..to).enumerate() {
+                cells.push(KeyedView::new(
+                    format!("h{c}"),
+                    ui::strong(tr(columns[c]))
+                        .width(CELL)
+                        .text_wrapping(TextWrapping::Wrap)
+                        .vertical_alignment(VerticalAlignment::Bottom)
+                        .grid_column(at as i32 + 1),
+                ));
+            }
+            for (r, values) in shown.iter().enumerate() {
+                let level = first + (start + r) as i64;
+                cells.push(KeyedView::new(
+                    format!("l{r}"),
+                    ui::body(level.to_string())
+                        .vertical_alignment(VerticalAlignment::Center)
+                        .grid_row(r as i32 + 1),
+                ));
+                for (at, c) in (from..to).enumerate() {
+                    let Some(&value) = values.get(c) else {
+                        continue;
+                    };
+                    let row = start + r;
+                    cells.push(KeyedView::new(
+                        format!("c{r}\u{1}{c}"),
+                        number(
+                            &format!("{} {level}: {}", tr("Level"), tr(columns[c])),
+                            value,
+                            (min, max),
+                            field.enabled,
+                            move |v| input(RecordInput::Cell(index, row, c, v)),
+                            context,
+                        )
+                        .min_width(CELL)
+                        .width(CELL)
+                        .grid_row(r as i32 + 1)
+                        .grid_column(at as i32 + 1),
+                    ));
+                }
+            }
+            KeyedView::new(
+                format!("{from}\u{1}{to}"),
+                Grid::new()
+                    .columns(
+                        std::iter::once(GridLength::Auto)
+                            .chain(std::iter::repeat_n(GridLength::Auto, to - from))
+                            .collect::<Vec<_>>(),
+                    )
+                    .rows(
+                        std::iter::repeat_n(GridLength::Auto, shown.len() + 1).collect::<Vec<_>>(),
+                    )
+                    .column_spacing(CELL_SPACING)
+                    .row_spacing(4.0)
+                    .keyed_children(cells),
+            )
+        })
+        .collect();
     StackPanel::new().spacing(8.0).children((
         pager,
-        ui::card(
-            ScrollViewer::new()
-                .horizontal_scroll_bar_visibility(ScrollBarVisibility::Auto)
-                .vertical_scroll_bar_visibility(ScrollBarVisibility::Disabled)
-                .content(
-                    Border::new()
-                        .padding(Thickness::new(0.0, 0.0, 0.0, 12.0))
-                        .content(table),
-                ),
-        ),
+        ui::card(StackPanel::new().spacing(16.0).keyed_children(tables)),
     ))
 }
 
@@ -1026,6 +1051,7 @@ fn labelled(label: &str, control: impl Into<View>) -> View {
 /// Remove, and the box of those to add.
 fn dialog_list(
     list: usize,
+    add: &str,
     rows: &[(String, Option<i64>)],
     number: Option<(&str, i64, i64)>,
     choices: &[String],
@@ -1075,7 +1101,7 @@ fn dialog_list(
     StackPanel::new().spacing(8.0).children((
         shown,
         add_box(
-            tr("Add"),
+            add,
             choices,
             adding,
             true,
@@ -1102,6 +1128,7 @@ fn group_view(form: &RecordForm, d: &GroupEdit, context: &mut ViewContext<Shell>
         ),
         dialog_list(
             0,
+            tr("Add an Option…"),
             &rows,
             None,
             &form.dialog_choices(0),
@@ -1189,11 +1216,11 @@ fn free_spells_view(
             with_buttons(
                 TextBox::new()
                     .automation_name(tr("Frequency"))
-                    .text(level.frequency.clone())
+                    .text(frequency_shown(&level.frequency))
                     .min_width(160.0)
-                    .on_text_changed(
-                        context.callback(|t: String| change(DialogInput::Frequency(t))),
-                    ),
+                    .on_text_changed(context.callback(|t: String| {
+                        change(DialogInput::Frequency(frequency_stored(&t)))
+                    })),
                 ComboBox::new()
                     .automation_name(tr("Choose"))
                     .placeholder_text(tr("Choose"))
@@ -1264,6 +1291,7 @@ fn nwps_view(form: &RecordForm, d: &NwpsEdit, context: &mut ViewContext<Shell>) 
         ui::strong(tr("Bonus NWPs granted at this level")),
         dialog_list(
             0,
+            tr("Add a Proficiency…"),
             &granted,
             None,
             &form.dialog_choices(0),
@@ -1277,6 +1305,7 @@ fn nwps_view(form: &RecordForm, d: &NwpsEdit, context: &mut ViewContext<Shell>) 
         ui::strong(tr("NWP score modifications")),
         dialog_list(
             1,
+            tr("Modify a Proficiency…"),
             &modified,
             Some((tr("Modification"), 0, dialogs::MOST_MODIFICATION)),
             &form.dialog_choices(1),

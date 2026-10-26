@@ -582,13 +582,7 @@ pub fn groups_control(
                 );
                 move |_| {
                     let group = (spin.value() as i64, picked.borrow().clone());
-                    {
-                        let mut g = groups.borrow_mut();
-                        match at {
-                            Some(i) if i < g.len() => g[i] = group,
-                            _ => g.push(group),
-                        }
-                    }
+                    cr_app::records::dialogs::put_group(&mut groups.borrow_mut(), at, group);
                     changed(Value::Groups(groups.borrow().clone()));
                     if let Some(draw) = draw_slot.borrow().clone() {
                         draw();

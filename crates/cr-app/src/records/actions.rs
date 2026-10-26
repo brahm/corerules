@@ -262,17 +262,23 @@ pub fn choose_type(flavor: Flavor, shown: Option<&str>) -> Opened {
 fn table(install: &Installation, target: &Target, act: Act) -> cr_store::Result<Opened> {
     let db = TableDb::load(install)?;
     let index = db.position(target.name);
-    let editor = |table, editing| -> cr_store::Result<Opened> {
+    let editor = |table, editing, title: Option<String>| -> cr_store::Result<Opened> {
         let sources = Arc::new(TableSources::load(install, &db)?);
-        Ok(Opened::Table(Box::new(TableForm::new(
-            table, editing, sources,
-        ))))
+        let mut form = TableForm::new(table, editing, sources);
+        if let Some(title) = title {
+            form.set_title(title);
+        }
+        Ok(Opened::Table(Box::new(form)))
     };
     match (act, index) {
-        (Act::New, _) => editor(TableDb::new_table(), None),
-        (Act::Copy, Some(i)) => editor(TableDb::copy_of(&db.tables[i]), None),
+        (Act::New, _) => editor(TableDb::new_table(), None, None),
+        (Act::Copy, Some(i)) => editor(
+            TableDb::copy_of(&db.tables[i]),
+            None,
+            Some(tr!("Copy of {name}", name = target.name.to_owned())),
+        ),
         // Every table is edited, the standard ones in the user's copy.
-        (Act::Edit, Some(i)) => editor(db.tables[i].clone(), Some(i)),
+        (Act::Edit, Some(i)) => editor(db.tables[i].clone(), Some(i), None),
         (Act::Delete, Some(i)) if tables::is_standard(&db.tables[i]) => Ok(Opened::Refused(
             tr("Standard tables can be restored, not deleted").to_owned(),
         )),

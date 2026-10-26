@@ -60,6 +60,26 @@ pub const FREQUENCIES: [&str; 3] = [
 ];
 pub const FREQUENCY_MAX: usize = 40;
 
+/// How the frequency `stored` shows: one of [`FREQUENCIES`] translated,
+/// any other text as written.
+pub fn frequency_shown(stored: &str) -> String {
+    FREQUENCIES
+        .iter()
+        .find(|f| **f == stored)
+        .map_or(stored, |f| tr(f))
+        .to_owned()
+}
+
+/// What is stored for the frequency `shown`: one of [`FREQUENCIES`] as
+/// the original writes them, in English, any other text as written.
+pub fn frequency_stored(shown: &str) -> String {
+    FREQUENCIES
+        .iter()
+        .find(|f| tr(f) == shown)
+        .map_or(shown, |f| *f)
+        .to_owned()
+}
+
 /// The object version the Expansion writes.
 const FREE_SPELLS_VERSION: i32 = 4;
 
@@ -171,8 +191,11 @@ fn lines(class: &str, level: &FreeSpellLevel, t: fn(&'static str) -> &'static st
             .filter(|(_, spells): &(i32, Vec<&FreeSpell>)| !spells.is_empty())
             .collect()
     };
-    // The class's name made plural as the original does.
-    let classes = if class.ends_with(['s', 'S']) {
+    // The class's name made plural as the original does; a class not
+    // named yet (a copy) is the class.
+    let classes = if class.trim().is_empty() {
+        t(tr_noop!("members of the class")).to_owned()
+    } else if class.ends_with(['s', 'S']) {
         format!("{class}es")
     } else {
         format!("{class}s")

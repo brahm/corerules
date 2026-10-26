@@ -203,6 +203,11 @@ impl TableForm {
         &self.title
     }
 
+    /// Titles the editor `title`, as Copy does with the table copied.
+    pub fn set_title(&mut self, title: String) {
+        self.title = title;
+    }
+
     /// The help topic of the page in view.
     pub fn help(&self) -> u32 {
         if self.details.is_some() {

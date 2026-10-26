@@ -122,11 +122,7 @@ impl Dialog {
         Ok(match self {
             Dialog::Group(d) => {
                 let mut groups = value.groups();
-                let group = (d.count, d.names);
-                match d.at {
-                    Some(i) if i < groups.len() => groups[i] = group,
-                    _ => groups.push(group),
-                }
+                put_group(&mut groups, d.at, (d.count, d.names));
                 Value::Groups(groups)
             }
             Dialog::FreeSpells(d) => {
@@ -195,6 +191,25 @@ fn add_name(names: &mut Vec<String>, adding: &mut Option<String>) {
         && !names.contains(&name)
     {
         names.push(name);
+    }
+}
+
+/// Puts `group` in `groups`, at `at` when it changes one, else at the
+/// end. A group with nothing to choose from is not kept: an empty one
+/// changed takes its group out, a new one adds nothing.
+pub fn put_group(
+    groups: &mut Vec<(i64, Vec<String>)>,
+    at: Option<usize>,
+    group: (i64, Vec<String>),
+) {
+    let at = at.filter(|&i| i < groups.len());
+    match (at, group.1.is_empty()) {
+        (Some(i), true) => {
+            groups.remove(i);
+        }
+        (Some(i), false) => groups[i] = group,
+        (None, true) => {}
+        (None, false) => groups.push(group),
     }
 }
 
@@ -579,6 +594,17 @@ mod tests {
         dialog.input(DialogInput::Count(2));
         let value = dialog.finish(Value::Groups(Vec::new())).unwrap();
         assert_eq!(value, Value::Groups(vec![(2, vec!["Bow".to_owned()])]));
+    }
+
+    #[test]
+    fn a_group_with_nothing_to_choose_is_not_kept() {
+        let bow = (1, vec!["Bow".to_owned()]);
+        let dialog = Dialog::Group(GroupEdit::new(0, None, 1, Vec::new()));
+        let value = dialog.finish(Value::Groups(vec![bow.clone()])).unwrap();
+        assert_eq!(value, Value::Groups(vec![bow.clone()]));
+        let dialog = Dialog::Group(GroupEdit::new(0, Some(0), 1, Vec::new()));
+        let value = dialog.finish(Value::Groups(vec![bow])).unwrap();
+        assert_eq!(value, Value::Groups(Vec::new()));
     }
 
     #[test]

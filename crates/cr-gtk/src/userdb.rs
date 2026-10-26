@@ -2155,27 +2155,40 @@ fn add_table_entry<H: Host + 'static>(
     render: &Rc<dyn Fn()>,
 ) {
     let sources = tables::source_names();
+    let labels: Vec<String> = sources.iter().map(|s| tables::source_label(s)).collect();
     let (host2, table, render) = (host.clone(), table.clone(), render.clone());
-    pick(&host.parent(), "Category", sources, move |source| {
-        let items = host2.with_install(|install| {
-            let db = TableDb::load(install)?;
-            tables::source_items(install, &db, &source)
-        });
-        let Some((items, is_table)) = errors(&*host2, items) else {
-            return;
-        };
-        if items.is_empty() {
-            return host2.toast(tr("Nothing in this category"));
-        }
-        let (table, render) = (table.clone(), render.clone());
-        pick(&host2.parent(), &source, items, move |item| {
-            tables::push_entry(
-                &mut table.borrow_mut(),
-                tables::new_entry(&item, is_table, 1),
-            );
-            render();
-        });
-    });
+    pick(
+        &host.parent(),
+        tr("Category"),
+        labels.clone(),
+        move |label| {
+            let Some(source) = labels
+                .iter()
+                .position(|l| *l == label)
+                .map(|i| sources[i].clone())
+            else {
+                return;
+            };
+            let items = host2.with_install(|install| {
+                let db = TableDb::load(install)?;
+                tables::source_items(install, &db, &source)
+            });
+            let Some((items, is_table)) = errors(&*host2, items) else {
+                return;
+            };
+            if items.is_empty() {
+                return host2.toast(tr("Nothing in this category"));
+            }
+            let (table, render) = (table.clone(), render.clone());
+            pick(&host2.parent(), &label, items, move |item| {
+                tables::push_entry(
+                    &mut table.borrow_mut(),
+                    tables::new_entry(&item, is_table, 1),
+                );
+                render();
+            });
+        },
+    );
 }
 
 // ---- Allowed Classes (Expansion) ----

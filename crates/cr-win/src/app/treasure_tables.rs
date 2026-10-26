@@ -38,7 +38,12 @@ fn add_entry(
     add: Message,
     context: &mut ViewContext<Shell>,
 ) -> View {
-    let sources = form.sources().sources(contents);
+    let sources: Vec<String> = form
+        .sources()
+        .sources(contents)
+        .iter()
+        .map(|s| cr_store::userdb::tables::source_label(s))
+        .collect();
     let items = form.items(pick, contents).to_vec();
     let chosen = pick.item.and_then(|i| items.get(i)).map(String::as_str);
     let names = items.clone();

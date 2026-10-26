@@ -22,7 +22,7 @@ pub const STANDARD_FILE: &str = "Database/Treasure.dat";
 /// The message for an empty name.
 pub const EMPTY_NAME: &str = tr_noop!("You must specify a name for the table.");
 /// The name a new table starts with.
-pub const NEW_TABLE: &str = "New Table";
+pub const NEW_TABLE: &str = tr_noop!("New Table");
 pub const DELETE_WARNING: &str =
     tr_noop!("This will delete the selected table.  You will lose any customizations.");
 pub const RESTORE_WARNING: &str = tr_noop!(
@@ -87,7 +87,7 @@ impl TableDb {
     /// A new, empty user table.
     pub fn new_table() -> TreasureTable {
         TreasureTable {
-            name: NEW_TABLE.into(),
+            name: tr(NEW_TABLE).into(),
             flag_0x4: 0,
             entries: Vec::new(),
         }
@@ -344,25 +344,38 @@ pub fn ranges(table: &TreasureTable) -> Vec<String> {
 
 /// The categories of the editor's source combo.
 pub const CATEGORIES: [&str; 5] = [
-    "Armor",
-    "Equipment",
-    "Gems and Art",
-    "Magical Items",
-    "Weapons",
+    tr_noop!("Armor"),
+    tr_noop!("Equipment"),
+    tr_noop!("Gems and Art"),
+    tr_noop!("Magical Items"),
+    tr_noop!("Weapons"),
 ];
+
+/// What a category's source takes: every item, the user's or the
+/// standard ones.
+const WHICH: [&str; 3] = [tr_noop!("All"), tr_noop!("Custom"), tr_noop!("Standard")];
 
 /// What the source combo can show: each category × All/Custom/Standard,
 /// then Count and Tables.
 pub fn source_names() -> Vec<String> {
     let mut names = Vec::new();
     for category in CATEGORIES {
-        for which in ["All", "Custom", "Standard"] {
+        for which in WHICH {
             names.push(format!("{category}, {which}"));
         }
     }
-    names.push("Count".into());
-    names.push("Tables".into());
+    names.push(tr_noop!("Count").into());
+    names.push(tr_noop!("Tables").into());
     names
+}
+
+/// How the editor shows `source`, one of [`source_names`], translated:
+/// "Armor, Custom" as each of its words is.
+pub fn source_label(source: &str) -> String {
+    match source.split_once(", ") {
+        Some((category, which)) => format!("{}, {}", tr(category), tr(which)),
+        None => tr(source).to_owned(),
+    }
 }
 
 /// The items the source list shows for `source` (one of

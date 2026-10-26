@@ -183,6 +183,8 @@ pub struct Shell {
     group: Option<GroupDialog>,
     /// What follows saving the record on the record editor.
     record_then: Then,
+    /// A record just saved, shown when the catalog has been read again.
+    revealing: Option<Revealing>,
     /// What the record editor's picture fields show, by kind and what
     /// they keep, read once.
     record_pictures: RefCell<HashMap<String, (String, Option<EncodedImage>)>>,
@@ -227,6 +229,18 @@ pub enum Then {
     AddTrap,
     /// The monster New Monster made goes in the encounter.
     AddMonster,
+}
+
+/// A record just saved, which the library shows once the catalog has
+/// been read again: its editor stays until then, so that the library
+/// comes back with the record selected rather than with the list as it
+/// was, whose selection follows the keyboard focus to the record that
+/// was edited.
+pub struct Revealing {
+    section: &'static str,
+    key: String,
+    notice: Notice,
+    told: Option<(String, String)>,
 }
 
 /// The record an action on the user databases is about.
@@ -1831,7 +1845,8 @@ impl Shell {
         let Page::Record(form) = &mut self.page else {
             return;
         };
-        for effect in form.take_effects() {
+        let effects = form.take_effects();
+        for effect in effects {
             match effect {
                 RecordEffect::Save(job) => {
                     self.with_install(context, move |install| Message::RecordSaved(job(install)))
@@ -1844,10 +1859,23 @@ impl Shell {
                     told,
                 } => {
                     let then = std::mem::take(&mut self.record_then);
-                    self.back();
                     self.forget_rules();
+                    if then == Then::Show {
+                        if let Page::Record(form) = &mut self.page {
+                            form.saving = true;
+                        }
+                        self.revealing = Some(Revealing {
+                            section,
+                            key: key.clone(),
+                            notice: Notice::success(said),
+                            told,
+                        });
+                        self.load(Some(key), context);
+                        return;
+                    }
+                    self.back();
                     match then {
-                        Then::Show => self.reveal(section),
+                        Then::Show => {}
                         Then::AddTrap => self.with_install(context, move |install| {
                             let read = UserDb::<Traps>::load(install)
                                 .map(Arc::new)
@@ -1878,7 +1906,8 @@ impl Shell {
         let Page::TreasureTable(form) = &mut self.page else {
             return;
         };
-        for effect in form.take_effects() {
+        let effects = form.take_effects();
+        for effect in effects {
             match effect {
                 TreasureTableEffect::Save { editing, table } => {
                     self.with_install(context, move |install| {
@@ -1888,10 +1917,16 @@ impl Shell {
                     })
                 }
                 TreasureTableEffect::Done { key, said } => {
-                    self.back();
+                    if let Page::TreasureTable(form) = &mut self.page {
+                        form.saving = true;
+                    }
                     self.forget_rules();
-                    self.reveal(cr_app::records::tables::SECTION);
-                    self.notice = Some(Notice::success(said));
+                    self.revealing = Some(Revealing {
+                        section: cr_app::records::tables::SECTION,
+                        key: key.clone(),
+                        notice: Notice::success(said),
+                        told: None,
+                    });
                     self.load(Some(key), context);
                     return;
                 }
@@ -2090,6 +2125,7 @@ impl Component for Shell {
             encounter_rules: None,
             group: None,
             record_then: Then::Show,
+            revealing: None,
             record_pictures: RefCell::default(),
             new_part: None,
         };
@@ -2123,6 +2159,19 @@ impl Component for Shell {
     fn update(&mut self, message: Message, context: &ComponentContext<Self>) {
         match message {
             Message::Loaded(sections, key) => {
+                if let Some(revealing) = self
+                    .revealing
+                    .take_if(|r| key.as_deref() == Some(r.key.as_str()))
+                {
+                    if matches!(self.page, Page::Record(_) | Page::TreasureTable(_)) {
+                        self.back();
+                    }
+                    self.reveal(revealing.section);
+                    self.notice = Some(revealing.notice);
+                    if let Some((title, text)) = revealing.told {
+                        self.confirm = Some(Confirm::Info { title, text });
+                    }
+                }
                 self.parties = cr_app::library::parties(&sections);
                 if cr_app::library::party_position(&self.parties, self.filter.party.as_deref()) == 0
                 {
