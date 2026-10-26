@@ -2570,7 +2570,7 @@ msgstr "_Ignorieren"
 #: crates/cr-win/src/app/book.rs:563
 #: crates/cr-win/src/app/import.rs:282
 #: crates/cr-win/src/app/levels.rs:249
-#: crates/cr-win/src/app.rs:4710
+#: crates/cr-win/src/app.rs:4712
 msgid "_Close"
 msgstr "_Schließen"
 
@@ -3383,7 +3383,7 @@ msgstr "Wie viele?"
 #: crates/cr-win/src/app/treasure_tables.rs:409
 #: crates/cr-win/src/app/treasure_tables.rs:423
 #: crates/cr-win/src/app.rs:2368
-#: crates/cr-win/src/app.rs:4712
+#: crates/cr-win/src/app.rs:4714
 msgid "_Cancel"
 msgstr "_Abbrechen"
 
@@ -4678,18 +4678,16 @@ msgid "Character Points per Level"
 msgstr "Charakterpunkte pro Stufe"
 
 #: crates/cr-gtk/src/extract.rs:24
-#: crates/cr-win/src/app.rs:4688
-#: crates/cr-win/src/app.rs:4693
+#: crates/cr-win/src/app.rs:4690
+#: crates/cr-win/src/app.rs:4695
 msgid "Extract Data from CD"
 msgstr "Daten von der CD extrahieren"
 
 #: crates/cr-gtk/src/extract.rs:28
-#: crates/cr-win/src/app.rs:4701
 msgid "Choose _Folder…"
 msgstr "_Ordner wählen…"
 
 #: crates/cr-gtk/src/extract.rs:29
-#: crates/cr-win/src/app.rs:4690
 msgid "Choose _ISO Image…"
 msgstr "_ISO-Abbild wählen…"
 
@@ -4714,7 +4712,7 @@ msgid "The data could not be copied"
 msgstr "Die Daten konnten nicht kopiert werden"
 
 #: crates/cr-gtk/src/extract.rs:89
-#: crates/cr-win/src/app.rs:4695
+#: crates/cr-win/src/app.rs:4697
 msgid "_Open"
 msgstr "Ö_ffnen"
 
@@ -12600,3 +12598,11 @@ msgstr "Die erlaubten Klassen enthalten ungespeicherte Änderungen."
 #: crates/cr-win/src/app.rs:4637
 msgid "The character has changes that are not saved."
 msgstr "Der Charakter enthält ungespeicherte Änderungen."
+
+#: crates/cr-win/src/app.rs:4692
+msgid "_ISO Image…"
+msgstr "_ISO-Abbild…"
+
+#: crates/cr-win/src/app.rs:4703
+msgid "_Folder…"
+msgstr "_Ordner…"

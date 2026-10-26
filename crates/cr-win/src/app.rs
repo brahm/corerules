@@ -4684,10 +4684,12 @@ impl Shell {
                 let (title, text) = cr_app::records::tables::restore_question();
                 (title, text, plain(tr("_Restore")))
             }
+            // Three buttons share the dialog's width, so their labels are
+            // short: the text says what to choose.
             Some(Confirm::ExtractSource) => (
                 tr("Extract Data from CD").to_owned(),
                 cr_app::extract::intro().to_owned(),
-                plain(tr("Choose _ISO Image…")),
+                plain(tr("_ISO Image…")),
             ),
             Some(Confirm::OpenExtracted { text, .. }) => (
                 tr("Extract Data from CD").to_owned(),
@@ -4698,7 +4700,7 @@ impl Shell {
         };
         // Extract Data from CD… also takes a folder.
         let other = if matches!(self.confirm, Some(Confirm::ExtractSource)) {
-            plain(tr("Choose _Folder…"))
+            plain(tr("_Folder…"))
         } else {
             String::new()
         };
