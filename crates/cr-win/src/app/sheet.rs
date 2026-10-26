@@ -271,23 +271,77 @@ fn table_view(table: &Table) -> View {
             column += span;
         }
     }
-    let grid = Grid::new()
-        .columns(vec![GridLength::Auto; columns])
+    // Each column a share of the card in proportion to its widest cell,
+    // up to about its width: a narrow card wraps every column a little,
+    // rather than cutting the table off or squeezing one column, and a
+    // wide one shows the table as it is.
+    let widths = column_widths(table, columns);
+    let natural = widths.iter().sum::<f64>() + 12.0 * (columns - 1) as f64;
+    Grid::new()
+        .columns(
+            widths
+                .iter()
+                .map(|w| GridLength::Star(w.max(8.0)))
+                .collect::<Vec<_>>(),
+        )
         .rows(vec![GridLength::Auto; table.rows.len()])
         .column_spacing(12.0)
         .row_spacing(4.0)
-        .keyed_children(cells);
-    // A wide table (the weapons, a group encounter's NPCs) scrolls
-    // sideways inside its card when the window is narrower than it,
-    // keeping its rows as the printed page has them.
-    if columns > 3 {
-        ScrollViewer::new()
-            .horizontal_scroll_bar_visibility(ScrollBarVisibility::Auto)
-            .vertical_scroll_bar_visibility(ScrollBarVisibility::Disabled)
-            .content(grid)
-    } else {
-        grid
+        .max_width(natural)
+        .horizontal_alignment(HorizontalAlignment::Left)
+        .keyed_children(cells)
+}
+
+/// About how wide each column's widest cell is, generously, in the
+/// sizes [`table_view`] draws them; a cell over several columns widens
+/// them evenly when they are too narrow for it.
+fn column_widths(table: &Table, columns: usize) -> Vec<f64> {
+    let width = |cell: &cr_store::sheet::Cell| {
+        let chars = cell
+            .text
+            .lines()
+            .map(|l| l.chars().count())
+            .max()
+            .unwrap_or(0) as f64;
+        let per_char = if cell.kind == CellKind::Large {
+            12.0
+        } else {
+            8.0
+        };
+        if chars == 0.0 {
+            0.0
+        } else {
+            chars * per_char + 10.0
+        }
+    };
+    let mut widths = vec![0.0f64; columns];
+    for row in &table.rows {
+        let mut c = 0;
+        for cell in row {
+            let span = cell.colspan.max(1) as usize;
+            if span == 1 && c < columns {
+                widths[c] = widths[c].max(width(cell));
+            }
+            c += span;
+        }
     }
+    for row in &table.rows {
+        let mut c = 0;
+        for cell in row {
+            let span = cell.colspan.max(1) as usize;
+            let end = (c + span).min(columns);
+            if span > 1 && c < end {
+                let have = widths[c..end].iter().sum::<f64>() + 12.0 * (end - c - 1) as f64;
+                let need = width(cell);
+                if need > have {
+                    let extra = (need - have) / (end - c) as f64;
+                    widths[c..end].iter_mut().for_each(|w| *w += extra);
+                }
+            }
+            c += span;
+        }
+    }
+    widths
 }
 
 fn list_view(items: &[ListItem], depth: u32) -> View {
