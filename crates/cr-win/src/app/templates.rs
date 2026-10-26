@@ -33,17 +33,24 @@ fn pick(change: PickerInput) -> Message {
     input(TemplateInput::Picker(change))
 }
 
-/// Four NumberBoxes for "N d S * M + B", each kept in its range.
+/// The width of [`dice`]'s boxes and signs in one row.
+const DICE_ROW: f64 = 4.0 * 96.0 + 3.0 * 24.0;
+
+/// Four NumberBoxes for "N d S * M + B", each kept in its range: in two
+/// rows of two where `room` is narrower than one row of four.
 fn dice(
     name: &str,
     values: [i32; 4],
     ranges: Ranges,
+    room: f64,
     changed: impl Fn(usize, i32) -> Message + Clone + 'static,
     context: &mut ViewContext<Shell>,
 ) -> View {
     let parts = [tr("Dice"), tr("Sides"), tr("Multiplier"), tr("Bonus")];
-    let mut children: Vec<KeyedView> = Vec::new();
+    let mut rows: [Vec<KeyedView>; 2] = Default::default();
+    let split = room < DICE_ROW;
     for k in 0..4 {
+        let children = &mut rows[usize::from(split && k > 1)];
         if k > 0 {
             children.push(KeyedView::new(
                 format!("sep{k}"),
@@ -65,11 +72,42 @@ fn dice(
             .min_width(96.0),
         ));
     }
-    StackPanel::new()
-        .orientation(Orientation::Horizontal)
-        .spacing(6.0)
-        .keyed_children(children)
+    let row = |children| {
+        StackPanel::new()
+            .orientation(Orientation::Horizontal)
+            .spacing(6.0)
+            .keyed_children(children)
+    };
+    let [first, second] = rows;
+    if split {
+        StackPanel::new()
+            .spacing(6.0)
+            .children((row(first), row(second)))
+    } else {
+        row(first)
+    }
 }
+
+/// A setting of [`dice`]: they go under its title where the card has no
+/// room for them beside it.
+fn dice_setting(
+    title: &str,
+    values: [i32; 4],
+    ranges: Ranges,
+    changed: impl Fn(usize, i32) -> Message + Clone + 'static,
+    context: &mut ViewContext<Shell>,
+) -> View {
+    let room = ui::card_room();
+    ui::wide_setting(
+        title,
+        "",
+        DICE_ROW,
+        dice(title, values, ranges, room, changed, context),
+    )
+}
+
+/// The width of the Encountered combo's longest choice, about.
+const ENCOUNTERED_WIDTH: f64 = 480.0;
 
 /// A setting whose control is a number in `min..=max`.
 fn count(
@@ -495,9 +533,12 @@ fn table_page(form: &TemplateForm, context: &mut ViewContext<Shell>) -> View {
             tr("Select the category under which this Encounter Template will appear"),
             None,
         ),
-        ui::setting(
+        // Its longest choices take more room than a card has beside a
+        // header in a narrow window.
+        ui::wide_setting(
             tr("Encountered"),
             "",
+            ENCOUNTERED_WIDTH,
             combo(
                 tr("Encountered"),
                 tpl::PLACEMENT_NAMES.map(|n| tr(n).to_owned()).to_vec(),
@@ -594,16 +635,12 @@ fn line_view(edit: &LineEdit, context: &mut ViewContext<Shell>) -> View {
     StackPanel::new().spacing(4.0).children((
         record::header(edit.title(), context),
         item_name,
-        ui::setting(
+        dice_setting(
             first_title,
-            "",
-            dice(
-                first_title,
-                first,
-                edit.first_ranges(),
-                |k, v| line(LineInput::Dice(k, v)),
-                context,
-            ),
+            first,
+            edit.first_ranges(),
+            |k, v| line(LineInput::Dice(k, v)),
+            context,
         ),
         count(
             tr("Percent Chance"),
@@ -674,16 +711,12 @@ fn random_and_second(edit: &LineEdit, context: &mut ViewContext<Shell>) -> View 
             (tr("Monster"), plain(tr("_Monster…")))
         };
         StackPanel::new().spacing(4.0).children((
-            ui::setting(
+            dice_setting(
                 tr("Number Appearing"),
-                "",
-                dice(
-                    tr("Number Appearing"),
-                    edit.second_dice(),
-                    SECOND_RANGES,
-                    |k, v| line(LineInput::SecondDice(k, v)),
-                    context,
-                ),
+                edit.second_dice(),
+                SECOND_RANGES,
+                |k, v| line(LineInput::SecondDice(k, v)),
+                context,
             ),
             ui::setting(
                 who,
@@ -791,23 +824,19 @@ fn item_extra(edit: &LineEdit, context: &mut ViewContext<Shell>) -> View {
         .collect();
     StackPanel::new().spacing(4.0).children((
         heading(tr("Coins"), Some(tr("Coins each item holds"))),
-        ui::setting(
+        dice_setting(
             tr("Containing"),
-            "",
-            dice(
-                tr("Containing"),
-                coin_dice,
-                COIN_RANGES,
-                |k, v| line(LineInput::CoinDice(k, v)),
-                context,
-            ),
+            coin_dice,
+            COIN_RANGES,
+            |k, v| line(LineInput::CoinDice(k, v)),
+            context,
         ),
         ui::setting(
             tr("Coins"),
             "",
             combo(
                 tr("Coins"),
-                COINS.map(str::to_owned).to_vec(),
+                COINS.map(|c| tr(c).to_owned()).to_vec(),
                 coin,
                 |i| line(LineInput::Coin(i)),
                 context,
@@ -988,6 +1017,7 @@ fn escort_dialog(monster: &str, values: [i32; 4], context: &mut ViewContext<Shel
                     tr("Number Appearing"),
                     values,
                     ESCORT_RANGES,
+                    f64::INFINITY,
                     |k, v| input(TemplateInput::EscortDice(k, v)),
                     context,
                 ),

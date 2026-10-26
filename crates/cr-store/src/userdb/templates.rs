@@ -17,7 +17,7 @@ use cr_formats::encounter::{
 use cr_formats::inventory::InventoryBundle;
 use cr_formats::monster::{Arsenal, Monster, MonsterType};
 use cr_formats::parts::Part;
-use cr_i18n::tr_noop;
+use cr_i18n::{tr, tr_noop};
 
 use super::{FieldDesc, Flavor, NewContext, UserKind};
 use crate::{Installation, Result};
@@ -400,51 +400,38 @@ pub fn reference_text(reference_name: &str, monster_type: &MonsterType) -> Strin
     }
 }
 
-/// `" (NdS * M + B)"`, with five spaces of padding added to `pad` for each
-/// part left out.
-fn dice_part(dice: &[i32], pad: &mut String) -> String {
-    let mut s = format!(" ({}d{}", dice[0], dice[1]);
+/// `"(NdS * M + B)"`, leaving out a multiplier of 1 and a bonus of 0.
+/// The original pads five spaces for each part left out, to line its
+/// list up; the app does not.
+fn dice_part(dice: &[i32]) -> String {
+    let mut s = format!("({}d{}", dice[0], dice[1]);
     if dice[2] > 1 {
         s += &format!(" * {}", dice[2]);
-    } else {
-        pad.push_str("     ");
     }
     if dice[3] > 0 {
         s += &format!(" + {}", dice[3]);
-    } else {
-        pad.push_str("     ");
     }
     s.push(')');
     s
 }
 
-/// The second box after " and " or " or ": padded as the first (NPCs), or
-/// with one space before the name (monsters).
-fn second_part(dice: &[i32], name: &str, padded: bool) -> String {
-    let mut pad = String::from("  ");
-    let s = dice_part(dice, &mut pad);
-    if padded {
-        format!("{s}{pad}{name}")
-    } else {
-        format!("{s} {name}")
+/// The dice and the names joined by "or", then after "and" or "or" the
+/// second box's dice and name.
+fn line_text(dice: &[i32], names: &[String], combo: Combo, second: &str) -> String {
+    let s = format!(
+        "{} {}",
+        dice_part(&dice[..4]),
+        names.join(&format!(" {} ", tr("or")))
+    );
+    if combo == Combo::Appear {
+        return s;
     }
+    let joint = tr(Combo::NAMES[combo.index() as usize]);
+    format!("{s} {joint} {} {second}", dice_part(&dice[4..8]))
 }
 
-fn line_text(dice: &[i32], names: &[String], combo: Combo, second: &str, padded: bool) -> String {
-    let mut pad = String::from("  ");
-    let mut s = dice_part(&dice[..4], &mut pad);
-    s += &pad;
-    s += &names.join(" or ");
-    let joint = match combo {
-        Combo::Appear => return s,
-        Combo::And => " and ",
-        Combo::Or => " or ",
-    };
-    s + joint + &second_part(&dice[4..8], second, padded)
-}
-
-/// A line of IDD 303's list (0x7296c6): `" (1d1)            Aarakocra"`,
-/// then the second box after " and " or " or ".
+/// A line of IDD 303's list (0x7296c6): `"(1d1) Aarakocra"`, then the
+/// second box after "and" or "or".
 pub fn monster_line_text(p: &TemplateMonsterProperties) -> String {
     let names: Vec<String> = p
         .monsters
@@ -454,17 +441,11 @@ pub fn monster_line_text(p: &TemplateMonsterProperties) -> String {
             _ => None,
         })
         .collect();
-    line_text(
-        &p.dice,
-        &names,
-        Combo::of_flags(&p.flags),
-        &p.second_name,
-        false,
-    )
+    line_text(&p.dice, &names, Combo::of_flags(&p.flags), &p.second_name)
 }
 
-/// A line of IDD 383's list (0x72a5ac): as for monsters with the NPCs'
-/// descriptions, and the second box padded too.
+/// A line of IDD 383's list (0x72a5ac): as for monsters, with the NPCs'
+/// descriptions.
 pub fn npc_line_text(p: &TemplateNpcProperties) -> String {
     let names: Vec<String> = p
         .npcs
@@ -479,7 +460,6 @@ pub fn npc_line_text(p: &TemplateNpcProperties) -> String {
         &names,
         Combo::of_flags(&p.flags),
         &npc_description(&p.second_npc),
-        true,
     )
 }
 
@@ -491,19 +471,34 @@ pub fn npc_description(npc: &EncounterNpc) -> String {
         return String::new();
     };
     let classes = npc.classes[..=last].join("/");
-    let levels: Vec<String> = npc.levels[..=last].iter().map(i32::to_string).collect();
+    let race = &npc.race;
     if last == 0 {
-        format!("{} {classes} Level: {}", npc.race, levels[0])
+        tr!(
+            "{race} {classes} Level: {level}",
+            race,
+            classes,
+            level = npc.levels[0]
+        )
     } else {
-        format!("{} {classes} Levels: {}", npc.race, levels.join("/"))
+        let levels: Vec<String> = npc.levels[..=last].iter().map(i32::to_string).collect();
+        tr!(
+            "{race} {classes} Levels: {levels}",
+            race,
+            classes,
+            levels = levels.join("/")
+        )
     }
 }
 
 /// A line of IDD 311's escort lists (0x733991).
 pub fn escort_text(n: &TemplateNumAppear) -> String {
-    format!(
-        "Number Appearing:{}d{} * {} + {}  Name: {}",
-        n.dice[0], n.dice[1], n.dice[2], n.dice[3], n.monster.name
+    tr!(
+        "Number Appearing: {dice}, Name: {name}",
+        dice = format!(
+            "{}d{} * {} + {}",
+            n.dice[0], n.dice[1], n.dice[2], n.dice[3]
+        ),
+        name = n.monster.name
     )
 }
 
@@ -586,7 +581,7 @@ mod tests {
     #[test]
     fn lines_read_like_the_list() {
         let mut line = new_monster_line(&monster("Orc"));
-        assert_eq!(monster_line_text(&line), " (1d1)            Orc");
+        assert_eq!(monster_line_text(&line), "(1d1) Orc");
         line.dice[..4].copy_from_slice(&[2, 4, 10, 1]);
         line.flags = Combo::Or.flags(false);
         line.second_name = "Ogre".into();
@@ -594,7 +589,7 @@ mod tests {
             .push(Object::Monster(Box::new(monster("Goblin"))));
         assert_eq!(
             monster_line_text(&line),
-            " (2d4 * 10 + 1)  Orc or Goblin or  (1d1) Ogre"
+            "(2d4 * 10 + 1) Orc or Goblin or (1d1) Ogre"
         );
         let npc = npc_of("Bob", "Elf", &[("Fighter".into(), 3), ("Mage".into(), 4)]);
         assert_eq!(npc_description(&npc), "Elf Fighter/Mage Levels: 3/4");
@@ -604,7 +599,7 @@ mod tests {
         line.second_npc = npc_of("", "Human", &[("Cleric".into(), 1)]);
         assert_eq!(
             npc_line_text(&line),
-            " (1d1)            Dwarf Thief Level: 2 and  (1d1)            Human Cleric Level: 1"
+            "(1d1) Dwarf Thief Level: 2 and (1d1) Human Cleric Level: 1"
         );
     }
 

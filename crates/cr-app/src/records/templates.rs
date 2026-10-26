@@ -16,7 +16,7 @@ use cr_formats::encounter::{
 use cr_formats::monster::{Monster, MonsterType};
 use cr_formats::parts::Part;
 use cr_formats::traps::Trap;
-use cr_i18n::tr;
+use cr_i18n::{tr, tr_noop};
 use cr_store::Installation;
 use cr_store::help::topic;
 use cr_store::npc::Npc;
@@ -41,8 +41,14 @@ pub const MOST: i32 = 1_000_000;
 /// The most of each treasure type a lair holds.
 pub const MOST_TREASURE: i32 = 100;
 pub const MOST_HIT_DICE: i32 = 300_000_000;
-/// The coins an item's Containing counts, in the combo's order.
-pub const COINS: [&str; 4] = ["pp", "gp", "sp", "cp"];
+/// The coins an item's Containing counts, in the combo's order: the
+/// original's pp, gp, sp and cp.
+pub const COINS: [&str; 4] = [
+    tr_noop!("Platinum"),
+    tr_noop!("Gold"),
+    tr_noop!("Silver"),
+    tr_noop!("Copper"),
+];
 /// The type a monster picker shows first when it shows every type.
 pub const ALL_TYPES: &str = "~All";
 
@@ -1521,10 +1527,7 @@ mod tests {
         assert_eq!(form.picker_rows().len(), 2);
         form.input(TemplateInput::Picker(PickerInput::Origin(2)));
         choose(&mut form, "Red Dragon");
-        assert_eq!(
-            monster_rows(&form.template)[0].0,
-            " (1d1)            Red Dragon"
-        );
+        assert_eq!(monster_rows(&form.template)[0].0, "(1d1) Red Dragon");
         assert!(form.changed());
     }
 
@@ -1551,11 +1554,11 @@ mod tests {
         form.input(TemplateInput::Picker(PickerInput::Instead(true)));
         choose(&mut form, "Dragon");
         assert_eq!(form.line.as_ref().unwrap().reference(), "Dragon");
-        assert_eq!(monster_rows(&form.template)[0].0, " (1d1)            Orc");
+        assert_eq!(monster_rows(&form.template)[0].0, "(1d1) Orc");
         form.input(TemplateInput::CloseLine(true));
         assert_eq!(
             monster_rows(&form.template)[0].0,
-            " (2d1000)            Orc or Red Dragon or  (1d1) Orc"
+            "(2d1000) Orc or Red Dragon or (1d1) Orc"
         );
     }
 
@@ -1588,10 +1591,7 @@ mod tests {
         ));
         let npc = tpl::npc_of("Al", "Dwarf", &[("Thief".into(), 2)]);
         form.npc_made(NpcFor::Line, npc);
-        assert_eq!(
-            npc_rows(&form.template),
-            [" (1d1)            Dwarf Thief Level: 2"]
-        );
+        assert_eq!(npc_rows(&form.template), ["(1d1) Dwarf Thief Level: 2"]);
         form.input(TemplateInput::OpenNpc(0));
         form.input(TemplateInput::Line(LineInput::ChooseSecond));
         assert!(matches!(
@@ -1628,7 +1628,7 @@ mod tests {
         let line = form.line.as_ref().unwrap();
         assert_eq!(
             line.escorts(true),
-            ["Number Appearing:3d1 * 1 + 0  Name: Orc"]
+            ["Number Appearing: 3d1 * 1 + 0, Name: Orc"]
         );
         assert!(line.escorts(false).is_empty());
         assert!(!form.can_save());

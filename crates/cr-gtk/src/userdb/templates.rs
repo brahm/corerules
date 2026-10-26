@@ -9,8 +9,8 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use cr_app::records::templates::{
-    ALL_TYPES, TemplateData, item_reference, item_rows, monster_rows, npc_rows, random_monsters,
-    random_npcs, template_npc, trap_list,
+    ALL_TYPES, COINS, TemplateData, item_reference, item_rows, monster_rows, npc_rows,
+    random_monsters, random_npcs, template_npc, trap_list,
 };
 use cr_formats::Object;
 use cr_formats::encounter::{
@@ -1658,7 +1658,7 @@ impl<H: Host + 'static> Editor<H> {
         );
         let coin = adw::ComboRow::builder()
             .title(tr("Coins"))
-            .model(&gtk::StringList::new(&["pp", "gp", "sp", "cp"]))
+            .model(&gtk::StringList::new(&COINS.map(tr)))
             .selected(line.borrow().dice[4].clamp(0, 3) as u32)
             .build();
         let coin_group = adw::PreferencesGroup::builder()

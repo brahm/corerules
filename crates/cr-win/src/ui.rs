@@ -31,6 +31,9 @@ const PAGE_SIDE: f64 = 36.0;
 /// header, as the Windows Community Toolkit's SettingsCard does it.
 const STACKED_BELOW: f64 = 476.0;
 
+/// The width a setting's header takes beside a control, at the least.
+const HEADER_ROOM: f64 = 200.0;
+
 /// The page title (TitleTextBlockStyle).
 pub fn title(text: impl Into<String>) -> TextBlock {
     TextBlock::new()
@@ -130,16 +133,36 @@ fn setting_text(header: &str, description: &str) -> View {
     }
 }
 
+/// A settings card whose control is `width` wide: under its header
+/// where the card has no room for both side by side.
+pub fn wide_setting(header: &str, description: &str, width: f64, control: impl Into<View>) -> View {
+    let text = setting_text(header, description);
+    if card_room() < width + HEADER_ROOM {
+        stacked(text, control)
+    } else {
+        setting_of(text, control)
+    }
+}
+
+/// The width a card leaves for its content, as the window last had it.
+pub fn card_room() -> f64 {
+    (ROOM.get() - 2.0 * PAGE_SIDE).min(1000.0) - 34.0
+}
+
+fn stacked(text: View, control: impl Into<View>) -> View {
+    card(
+        StackPanel::new().spacing(8.0).children((
+            text,
+            Border::new()
+                .horizontal_alignment(HorizontalAlignment::Left)
+                .content(control),
+        )),
+    )
+}
+
 fn setting_of(text: View, control: impl Into<View>) -> View {
     if ROOM.get() - 2.0 * PAGE_SIDE < STACKED_BELOW {
-        return card(
-            StackPanel::new().spacing(8.0).children((
-                text,
-                Border::new()
-                    .horizontal_alignment(HorizontalAlignment::Left)
-                    .content(control),
-            )),
-        );
+        return stacked(text, control);
     }
     card(
         Grid::new()
