@@ -355,7 +355,13 @@ jobs:
           [xml]$report = Get-Content wack.xml
           $failed = $report.REPORT.REQUIREMENTS.REQUIREMENT.TEST |
             Where-Object { $_.RESULT.'#cdata-section' -eq 'FAIL' }
-          $failed | ForEach-Object { Write-Output "FAIL: $($_.NAME)" }
+          # A failed optional test leaves the result a WARNING, which the
+          # Store takes; what it found shows here, as the report says it.
+          $failed | ForEach-Object {
+            Write-Output "FAIL: $($_.NAME)"
+            $_.MESSAGES.MESSAGE | ForEach-Object { Write-Output "  $($_.TEXT)" }
+            Write-Output $_.OuterXml
+          }
           Write-Output "Overall: $($report.REPORT.OVERALL_RESULT)"
           if ($report.REPORT.OVERALL_RESULT -eq 'FAIL') { throw "the package fails certification" }
       - uses: actions/upload-artifact@v4
