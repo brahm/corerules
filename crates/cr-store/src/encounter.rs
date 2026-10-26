@@ -1202,7 +1202,9 @@ impl EncounterRules {
 
     /// A package as the Add… dialog makes it (0x64f007): the monster from
     /// the database, `count` kept only within its No. Appearing range
-    /// (else its low end), hit points rolled.
+    /// (else its low end), hit points rolled. A monster with no No.
+    /// Appearing, as a new one is made, comes one: a count of none is not
+    /// one the encounter can show or change.
     pub fn new_monster_package(
         &self,
         name: &str,
@@ -1214,7 +1216,8 @@ impl EncounterRules {
         let count = match count {
             Some(n) if (min..=max).contains(&n) => n,
             _ => min,
-        };
+        }
+        .max(1);
         let mut package = MonsterPackage {
             count,
             monster,

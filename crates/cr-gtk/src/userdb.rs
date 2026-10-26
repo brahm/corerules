@@ -11,6 +11,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use cr_app::action;
+use cr_app::records::tables::{self as record_tables, details_summary};
 use cr_app::records::{Kind, kind_of, new_menu_label, new_title};
 use cr_store::help::topic;
 use cr_store::userdb::allowed::{self, Allowed, AllowedDb};
@@ -29,7 +30,7 @@ use cr_store::userdb::{
 use cr_store::{Installation, Result};
 use gtk::{gio, glib};
 
-use cr_i18n::{tr, trn};
+use cr_i18n::tr;
 
 use crate::lists::pick;
 
@@ -555,8 +556,11 @@ fn editor<K: UserKind, H: Host + 'static>(
             }
             let mut edited = record.borrow().clone();
             fields[field].set(&mut edited, &value, &sources);
+            // Once a change was accepted, the record leaves the other
+            // files anyway: nothing more is asked.
             let Some(question) = (*stored)
                 .as_ref()
+                .filter(|_| !detach.get())
                 .and_then(|stored| K::change_question(stored, &edited))
             else {
                 *record.borrow_mut() = edited;
@@ -597,70 +601,32 @@ fn editor<K: UserKind, H: Host + 'static>(
     let sidebar = gtk::ListBox::builder()
         .css_classes(["navigation-sidebar"])
         .build();
-    let mut page_names: Vec<&'static str> = Vec::new();
-    for f in fields.iter() {
-        if !page_names.contains(&f.page) {
-            page_names.push(f.page);
-        }
-    }
-    for page_name in &page_names {
+    let layout = cr_app::records::form::layout(&fields);
+    let page_names: Vec<&'static str> = layout.iter().map(|p| p.name).collect();
+    for page_layout in &layout {
+        let page_name = &page_layout.name;
         let page = adw::PreferencesPage::new();
         let mut page_members = Vec::new();
-        let mut page_groups: Vec<(&'static str, adw::PreferencesGroup, Vec<usize>)> = Vec::new();
-        for (index, field) in fields
-            .iter()
-            .enumerate()
-            .filter(|(_, f)| f.page == *page_name)
-        {
-            let (widget, load) = control(field, index, &record, &sources, &changed, host);
-            // Lists and long text get a group of their own, titled with
-            // the label.
-            let own = matches!(
-                field.kind,
-                FieldKind::Dual(_)
-                    | FieldKind::MultiLine
-                    | FieldKind::Checked(_)
-                    | FieldKind::Pairs { .. }
-                    | FieldKind::Groups(_)
-                    | FieldKind::Grid { .. }
-                    | FieldKind::Items
-                    | FieldKind::Attacks
-                    | FieldKind::FreeSpells
-                    | FieldKind::LevelNwps(_)
-                    | FieldKind::LevelAbilities(_)
-                    | FieldKind::AutoFill
-            );
-            let group_title = if own && field.group.is_empty() {
-                field.label
-            } else {
-                field.group
-            };
-            let slot = page_groups
-                .iter()
-                .position(|(t, _, _)| *t == group_title && !own);
-            let slot = match slot {
-                Some(slot) => slot,
-                None => {
-                    let group = adw::PreferencesGroup::new();
-                    if !group_title.is_empty() && !(group_title == *page_name && own) {
-                        group.set_title(&glib::markup_escape_text(tr(group_title)));
-                    }
-                    page.add(&group);
-                    page_groups.push((group_title, group, Vec::new()));
-                    page_groups.len() - 1
-                }
-            };
-            page_groups[slot].1.add(&widget);
-            let b = bound.borrow().len();
-            page_groups[slot].2.push(b);
-            page_members.push(b);
-            bound.borrow_mut().push(Bound {
-                field: index,
-                widget,
-                load,
-            });
-        }
-        for (_, group, members) in page_groups {
+        for group_layout in &page_layout.groups {
+            let group = adw::PreferencesGroup::new();
+            if !group_layout.title.is_empty() {
+                group.set_title(&glib::markup_escape_text(tr(group_layout.title)));
+            }
+            page.add(&group);
+            let mut members = Vec::new();
+            for &index in &group_layout.fields {
+                let (widget, load) =
+                    control(&fields[index], index, &record, &sources, &changed, host);
+                group.add(&widget);
+                let b = bound.borrow().len();
+                members.push(b);
+                page_members.push(b);
+                bound.borrow_mut().push(Bound {
+                    field: index,
+                    widget,
+                    load,
+                });
+            }
             groups.borrow_mut().push((group.upcast(), members));
         }
         stack.add_titled(&page, Some(page_name), tr(page_name));
@@ -810,11 +776,12 @@ fn finish<K: UserKind, H: Host + 'static>(
             let r = record.borrow().clone();
             let result = host.with_install(|install| {
                 let mut db = UserDb::<K>::load(install)?;
+                // The record as it was stored, which the other files name.
+                let before = editing.and_then(|i| db.user.get(i).cloned());
                 let stored = match editing {
                     Some(i) if i < db.user.len() => db.replace(i, r.clone()),
                     _ => db.add(r.clone()),
                 };
-                let before = editing.and_then(|i| db.user.get(i).cloned());
                 match stored {
                     Ok(i) => {
                         db.save(install)?;
@@ -1517,9 +1484,10 @@ fn table_action<H: Host + 'static>(host: &Shared<H>, target: &Target, action: Ac
 }
 
 fn restore_table<H: Host + 'static>(host: &Shared<H>, name: &str) {
+    let (heading, body) = record_tables::restore_question();
     let alert = adw::AlertDialog::builder()
-        .heading(tr("Restore Table?"))
-        .body(tr(tables::RESTORE_WARNING))
+        .heading(heading)
+        .body(body)
         .default_response("cancel")
         .close_response("cancel")
         .build();
@@ -1527,19 +1495,17 @@ fn restore_table<H: Host + 'static>(host: &Shared<H>, name: &str) {
     alert.set_response_appearance("restore", adw::ResponseAppearance::Destructive);
     let (host2, name) = (host.clone(), name.to_owned());
     alert.connect_response(Some("restore"), move |_, _| {
-        let result = host2.with_install(|install| {
-            let mut db = TableDb::load(install)?;
-            if let Some(i) = db.position(&name) {
-                db.restore(i).map_err(cr_store::Error::Invalid)?;
+        let restored = host2.with_install(|install| Ok(record_tables::restore(install, &name)));
+        match errors(&*host2, restored) {
+            Some(Ok(said)) => {
+                host2.toast(&said);
+                host2.reload(
+                    record_tables::SECTION,
+                    Some(record_tables::restored_key(&name)),
+                );
             }
-            db.save(install)
-        });
-        if errors(&*host2, result).is_some() {
-            host2.toast(&tr!("“{name}” restored", name));
-            host2.reload(
-                "treasure-tables",
-                Some(udb::key("treasure-tables", Origin::Standard, &name)),
-            );
+            Some(Err(e)) => host2.toast(&e),
+            None => {}
         }
     });
     alert.present(Some(&host.parent()));
@@ -1761,51 +1727,6 @@ fn table_editor<H: Host + 'static>(
         }
     });
     dialog.present(Some(&host.parent()));
-}
-
-/// What the details of a row set, in a line: "1d4+2 found; 25%
-/// intelligent; …".
-fn details_summary(entry: &cr_formats::treasure::TreasureTableEntry) -> String {
-    let mut parts = vec![tr!("{dice} found", dice = dice_text(entry.quantity_dice))];
-    if entry.intelligent_chance != 0 {
-        parts.push(tr!(
-            "{percent}% intelligent",
-            percent = entry.intelligent_chance
-        ));
-    }
-    for (name, dice) in [
-        (&entry.sub_table_1, entry.sub_table_1_dice),
-        (&entry.sub_table_2, entry.sub_table_2_dice),
-    ] {
-        if !name.is_empty() {
-            parts.push(tr!(
-                "{dice} on {table}",
-                dice = dice_text(dice),
-                table = name
-            ));
-        }
-    }
-    let contained = tables::contained(entry);
-    if !contained.is_empty() {
-        let names: Vec<String> = contained.iter().map(tables::contained_line).collect();
-        parts.push(tr!("contains {items}", items = names.join(", ")));
-    }
-    if entry.spell_count != 0 {
-        parts.push(trn!("{n} spell", "{n} spells", entry.spell_count as usize));
-    }
-    parts.join("; ")
-}
-
-/// Dice as the details write them: "1d4+2", "1" for 0d0+1.
-fn dice_text([count, sides, bonus]: [u32; 3]) -> String {
-    if count == 0 || sides == 0 {
-        return bonus.to_string();
-    }
-    if bonus == 0 {
-        format!("{count}d{sides}")
-    } else {
-        format!("{count}d{sides}+{bonus}")
-    }
 }
 
 /// Three spin buttons for X d Y + Z, each 0 to 1000 as the original's
@@ -2234,27 +2155,40 @@ fn add_table_entry<H: Host + 'static>(
     render: &Rc<dyn Fn()>,
 ) {
     let sources = tables::source_names();
+    let labels: Vec<String> = sources.iter().map(|s| tables::source_label(s)).collect();
     let (host2, table, render) = (host.clone(), table.clone(), render.clone());
-    pick(&host.parent(), "Category", sources, move |source| {
-        let items = host2.with_install(|install| {
-            let db = TableDb::load(install)?;
-            tables::source_items(install, &db, &source)
-        });
-        let Some((items, is_table)) = errors(&*host2, items) else {
-            return;
-        };
-        if items.is_empty() {
-            return host2.toast(tr("Nothing in this category"));
-        }
-        let (table, render) = (table.clone(), render.clone());
-        pick(&host2.parent(), &source, items, move |item| {
-            tables::push_entry(
-                &mut table.borrow_mut(),
-                tables::new_entry(&item, is_table, 1),
-            );
-            render();
-        });
-    });
+    pick(
+        &host.parent(),
+        tr("Category"),
+        labels.clone(),
+        move |label| {
+            let Some(source) = labels
+                .iter()
+                .position(|l| *l == label)
+                .map(|i| sources[i].clone())
+            else {
+                return;
+            };
+            let items = host2.with_install(|install| {
+                let db = TableDb::load(install)?;
+                tables::source_items(install, &db, &source)
+            });
+            let Some((items, is_table)) = errors(&*host2, items) else {
+                return;
+            };
+            if items.is_empty() {
+                return host2.toast(tr("Nothing in this category"));
+            }
+            let (table, render) = (table.clone(), render.clone());
+            pick(&host2.parent(), &label, items, move |item| {
+                tables::push_entry(
+                    &mut table.borrow_mut(),
+                    tables::new_entry(&item, is_table, 1),
+                );
+                render();
+            });
+        },
+    );
 }
 
 // ---- Allowed Classes (Expansion) ----

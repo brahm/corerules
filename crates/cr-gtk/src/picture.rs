@@ -13,12 +13,13 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use adw::prelude::*;
-use cr_i18n::{tr, tr_noop};
+use cr_app::pictures::{icon_group_title, icon_name, picture_line};
+use cr_i18n::tr;
 use cr_store::Installation;
 use cr_store::help::topic;
 use cr_store::pictures::{
-    CUSTOM_ICON, ICON_SIZE, Icon, IconChoice, IconGroup, Kind, PORTRAIT_HEIGHT, PictureChoice,
-    icon_number, joined, split_stored, stored_icon, stored_portrait,
+    ICON_SIZE, Icon, IconChoice, IconGroup, Kind, PORTRAIT_HEIGHT, PictureChoice, joined,
+    split_stored, stored_icon, stored_portrait,
 };
 use gtk::{gdk, gio, glib};
 
@@ -78,11 +79,7 @@ pub fn row(
             let path = Installation::open(&root)
                 .ok()
                 .and_then(|i| i.picture_path(stored, kind));
-            let subtitle = match split_stored(stored).1 {
-                "" => tr("None").to_owned(),
-                file if path.is_none() => tr!("{file} (not in this installation)", file = file),
-                file => file.to_owned(),
-            };
+            let subtitle = picture_line(stored, false, path.is_some());
             (subtitle, path.as_deref().and_then(texture))
         }
     };
@@ -111,16 +108,11 @@ pub fn icon_row(
     let look = {
         let root = root.clone();
         move |stored: &str| {
-            let stored = stored.trim();
-            if stored.is_empty() {
-                return (tr("None").to_owned(), None);
-            }
-            let icon = Installation::open(&root).ok().and_then(|i| i.icon(stored));
-            let name = icon_name(stored);
-            match icon.as_ref().and_then(icon_texture) {
-                Some(texture) => (name, Some(texture)),
-                None => (tr!("{file} (not in this installation)", file = name), None),
-            }
+            let icon = Installation::open(&root)
+                .ok()
+                .and_then(|i| i.icon(stored.trim()));
+            let texture = icon.as_ref().and_then(icon_texture);
+            (picture_line(stored, true, texture.is_some()), texture)
         }
     };
     chooser(
@@ -132,19 +124,6 @@ pub fn icon_row(
         Rc::new(set),
         move |button, pick| icon_dialog(button, &root, pick),
     )
-}
-
-/// An icon as the user reads it: its file, or its number.
-fn icon_name(stored: &str) -> String {
-    match stored.get(..CUSTOM_ICON.len()) {
-        Some(prefix) if prefix.eq_ignore_ascii_case(CUSTOM_ICON) => {
-            stored[CUSTOM_ICON.len()..].to_owned()
-        }
-        _ => match icon_number(stored) {
-            Some(number) => tr!("Icon {number}", number),
-            None => stored.to_owned(),
-        },
-    }
 }
 
 /// A row titled `title` with a thumbnail, Choose… and a button that
@@ -386,16 +365,6 @@ fn scrolled(content: &impl IsA<gtk::Widget>) -> gtk::ScrolledWindow {
         .build()
 }
 
-/// The part types' names, for the groups of icons.
-const PART_TYPE_NAMES: [&str; 6] = [
-    tr_noop!("Weapons"),
-    tr_noop!("Armor"),
-    tr_noop!("Equipment"),
-    tr_noop!("Magical Items"),
-    tr_noop!("Gems and Art"),
-    tr_noop!("Currency Types"),
-];
-
 /// The Choose Picture dialog of an item, offering the bitmaps in
 /// `UserBMP` and the icons of the strips by the part type of the items
 /// that have them, with a search by item name; `pick` gets what the item
@@ -428,14 +397,7 @@ fn icon_dialog(parent: &impl IsA<gtk::Widget>, root: &Path, pick: Rc<dyn Fn(Stri
     let query: Rc<RefCell<String>> = Rc::default();
     let mut shown: Vec<(gtk::Label, gtk::FlowBox, Rc<Vec<String>>)> = Vec::new();
     for (group, choices) in groups {
-        let title = match group {
-            IconGroup::User => tr("Your Pictures"),
-            IconGroup::PartType(part_type) => cr_store::pictures::ICON_PART_TYPES
-                .iter()
-                .position(|t| *t == part_type)
-                .map_or(part_type, |at| tr(PART_TYPE_NAMES[at])),
-            IconGroup::Unused => tr("Other Pictures"),
-        };
+        let title = icon_group_title(group);
         let heading = gtk::Label::builder()
             .label(title)
             .xalign(0.0)

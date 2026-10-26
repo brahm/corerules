@@ -335,8 +335,25 @@ The phases run in order:
      columns now regroup and a wide table wraps its words and is scaled
      down only by what still does not fit. Saving a treasure, encounter
      or table now shows its section, as in the GNOME app.
-   - Still to port: the user database editors; packages and Import Core
-     Rules 2.0; Extract Data from CD….
+   - **The user database editors (in progress).** `cr-app` gained the
+     record editor free of any toolkit: its pages and groups, every kind
+     of field, the questions the original asks before a change or a save,
+     the small dialogs of a group to choose from, a class level's free
+     spells, NWPs and ability, and a monster's attack, and what New, Copy,
+     Edit, Delete, New Subrace and Schools… open; with it the treasure
+     table editor and its entry details, and a race's Allowed Classes.
+     The GNOME app lays its editor out and sums up a table's entries with
+     them, and a change it asks about now detaches the record as it was
+     stored rather than as edited, asking once. The Windows app edits the
+     records on a page of the window, with the commands of the GNOME
+     app's details, Choose Picture for a monster type's or race's picture
+     and an item's icon (with a search over the items that have it), and
+     New Trap, Edit, Copy and Delete in the encounter's Add Trap and New
+     Monster in its Add Monster, which put what they make in the
+     encounter. 5 actions are left on `NOT_YET_ON_WINDOWS`. The encounter
+     templates' editor follows in a second pull request.
+   - Still to port: the encounter templates' editor; packages and Import
+     Core Rules 2.0; Extract Data from CD….
 5. **Package and Store.** The release workflow builds and tests the MSIX;
    a beta goes to a closed group through the Microsoft Store.
 6. **Release with Windows**, once the beta's users confirm it, with the

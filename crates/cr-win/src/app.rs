@@ -3,6 +3,7 @@
 //! holds the state and handles every message; the pages are drawn by the
 //! functions of the modules below, from that state.
 
+mod allowed;
 mod book;
 mod bundle;
 mod create;
@@ -16,13 +17,16 @@ mod library;
 mod npc;
 mod parties;
 mod portrait;
+mod record;
 mod settings;
 mod sheet;
 mod tables;
 mod treasure;
+mod treasure_tables;
 mod web;
 
 use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex, OnceLock};
@@ -37,6 +41,12 @@ use cr_app::help::{Files, Found, MonsterHelp, PROGRAM, Target};
 use cr_app::library::Filter;
 use cr_app::npc::{GroupForm, GroupInput, NpcForm, NpcInput};
 use cr_app::parties::PartyLists;
+use cr_app::records::actions::{self as record_actions, Act, Opened as Acted};
+use cr_app::records::allowed::{AllowedEffect, AllowedForm, AllowedInput};
+use cr_app::records::form::{RecordEffect, RecordForm, RecordInput, Saved};
+use cr_app::records::tables::{
+    TableEffect as TreasureTableEffect, TableForm, TableInput as TreasureTableInput,
+};
 use cr_app::sheets::Export;
 use cr_app::tables::{TableInput, TableRoller};
 use cr_app::treasure::{Roller, TreasureEffect, TreasureInput};
@@ -53,9 +63,9 @@ use cr_store::pictures::stored_portrait;
 use cr_store::sheet::Sheet;
 use cr_store::tables::{Leftovers, TableBook, TableRolls};
 use cr_store::treasure::{Bundle, Rand, TreasureRules};
-use cr_store::userdb::UserDb;
 use cr_store::userdb::parts::OTHER_TYPES;
 use cr_store::userdb::traps::Traps;
+use cr_store::userdb::{FieldKind, Origin, UserDb, Value};
 use cr_win::text::plain;
 use windows_reactor::*;
 
@@ -66,6 +76,7 @@ use encounter::{Chooser, GroupDialog};
 use help::{HelpPage, Opened, Shown};
 use library::Pictures;
 use parties::PartiesPage;
+use portrait::Choosing;
 use sheet::{OptionsEdit, SheetOptions, SheetPage};
 use web::WebHost;
 
@@ -170,6 +181,16 @@ pub struct Shell {
     encounter_rules: Option<Arc<EncounterRules>>,
     /// Group Encounter, while it asks.
     group: Option<GroupDialog>,
+    /// What follows saving the record on the record editor.
+    record_then: Then,
+    /// A record just saved, shown when the catalog has been read again.
+    revealing: Option<Revealing>,
+    /// What the record editor's picture fields show, by kind and what
+    /// they keep, read once.
+    record_pictures: RefCell<HashMap<String, (String, Option<EncodedImage>)>>,
+    /// New in the other parts' section, while it asks for the type: the
+    /// types by section id and name, and the one chosen.
+    new_part: Option<(Vec<(&'static str, &'static str)>, usize)>,
 }
 
 /// What the window shows.
@@ -192,6 +213,42 @@ pub enum Page {
     NewEncounter(Box<Chooser>),
     Encounter(Box<EncounterForm>),
     EncounterTable(Box<TableEditor>),
+    /// A record of the user databases.
+    Record(Box<RecordForm>),
+    TreasureTable(Box<TableForm>),
+    Allowed(Box<AllowedForm>),
+}
+
+/// What follows saving a record of the user databases.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum Then {
+    /// The library shows the record.
+    #[default]
+    Show,
+    /// The trap New Trap made goes in the encounter, as the original's.
+    AddTrap,
+    /// The monster New Monster made goes in the encounter.
+    AddMonster,
+}
+
+/// A record just saved, which the library shows once the catalog has
+/// been read again: its editor stays until then, so that the library
+/// comes back with the record selected rather than with the list as it
+/// was, whose selection follows the keyboard focus to the record that
+/// was edited.
+pub struct Revealing {
+    section: &'static str,
+    key: String,
+    notice: Notice,
+    told: Option<(String, String)>,
+}
+
+/// The record an action on the user databases is about.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecordTarget {
+    section: String,
+    name: String,
+    then: Then,
 }
 
 /// What an encounter page opens on.
@@ -296,6 +353,17 @@ pub enum Confirm {
         title: String,
         text: String,
     },
+    /// Delete on a record of the user databases, asking `title` and
+    /// `text`.
+    DeleteRecord {
+        target: RecordTarget,
+        title: String,
+        text: String,
+    },
+    /// Restore on a standard treasure table.
+    RestoreTable {
+        name: String,
+    },
 }
 
 /// What Print and Save as PDF act on.
@@ -386,10 +454,11 @@ pub enum Message {
     PortraitsListed(Result<Vec<portrait::Tile>, String>),
     /// A portrait chosen by its file, or none.
     PortraitChosen(Option<String>),
-    /// Choose File… on Choose Portrait.
-    PortraitFile,
-    /// The portrait made from the user's picture, if one was chosen.
-    PortraitAdded(Result<Option<String>, String>),
+    /// Choose File… on Choose Portrait or Choose Picture.
+    PortraitFile(Choosing),
+    /// What is kept for the picture made from the user's, if one was
+    /// chosen.
+    PortraitAdded(Result<Option<String>, String>, Choosing),
     ClosePortraits,
     // Import.
     PackageChosen(Result<Option<Arc<Package>>, String>),
@@ -513,6 +582,39 @@ pub enum Message {
     GroupCondensed(bool),
     GroupPreview(bool),
     GroupAnswered(bool),
+    // The user databases.
+    /// What an action on a record led to, and the record.
+    RecordOpened(Result<Acted, String>, RecordTarget),
+    Record(RecordInput),
+    /// The answer to the record editor's prompt with this number.
+    RecordAnswer(u64, Answer),
+    RecordSaved(Result<Saved, String>),
+    /// The record was deleted, with what to say, or why it was not.
+    RecordDeleted(Result<String, String>, RecordTarget),
+    /// Choose… on the record editor's picture field with this index.
+    ChoosePicture(usize),
+    /// The search over Choose Picture's icons.
+    PictureSearch(String),
+    /// The type chosen for New in the other parts' section, and Create
+    /// (true) or Cancel on it.
+    NewPartType(Option<usize>),
+    NewPartAnswered(bool),
+    TreasureTable(TreasureTableInput),
+    TreasureTableAnswer(u64, Answer),
+    TreasureTableSaved(Result<Saved, String>),
+    /// The standard table with this name was restored, or why not.
+    TableRestored(Result<String, String>, String),
+    AllowedOpened(Result<Box<AllowedForm>, String>),
+    Allowed(AllowedInput),
+    AllowedAnswer(u64, Answer),
+    AllowedSaved(Result<(), String>),
+    /// New Trap on Add Trap, and New Monster on Add Monster.
+    NewTrap,
+    NewMonster,
+    /// What New Trap or New Monster made, by its name, with the
+    /// databases read again.
+    NewTrapRead(Result<Arc<UserDb<Traps>>, String>, String),
+    NewMonsterRead(Result<Arc<EncounterRules>, String>, String),
 }
 
 /// What Create on New NPC or New NPC Group made and saved.
@@ -644,6 +746,9 @@ impl Shell {
             Page::Create(wizard) => wizard.depth() > 1,
             Page::Encounter(form) => form.changed(),
             Page::EncounterTable(editor) => editor.changed(),
+            Page::Record(form) => form.changed(),
+            Page::TreasureTable(form) => form.changed(),
+            Page::Allowed(form) => form.changed(),
             _ => false,
         }
     }
@@ -816,6 +921,55 @@ impl Shell {
                     self.back();
                 }
             }
+            // The user databases: New on the section shown, the rest on
+            // the record on the details.
+            action::UDB_NEW => self.open_record(
+                self.section.clone(),
+                Origin::Standard,
+                String::new(),
+                Act::New,
+                Then::Show,
+                context,
+            ),
+            action::UDB_COPY => self.act_on_selected(Act::Copy, context),
+            action::UDB_EDIT => self.act_on_selected(Act::Edit, context),
+            action::UDB_DELETE => self.act_on_selected(Act::Delete, context),
+            action::UDB_SUBRACE => self.act_on_selected(Act::NewSubrace, context),
+            action::UDB_SCHOOLS => self.act_on_selected(Act::Schools, context),
+            action::UDB_ALLOWED => {
+                let race = self
+                    .selected
+                    .as_deref()
+                    .and_then(cr_store::userdb::parse_key)
+                    .map(|(_, _, name)| name.to_owned());
+                if let Some(race) = race
+                    && !self.busy
+                {
+                    self.busy = true;
+                    self.with_install(context, move |install| {
+                        Message::AllowedOpened(
+                            AllowedForm::open(install, &race)
+                                .map(Box::new)
+                                .map_err(|e| e.to_string()),
+                        )
+                    });
+                }
+            }
+            action::UDB_RESTORE => {
+                if let Some((_, _, name)) = self
+                    .selected
+                    .as_deref()
+                    .and_then(cr_store::userdb::parse_key)
+                {
+                    self.confirm = Some(Confirm::RestoreTable {
+                        name: name.to_owned(),
+                    });
+                }
+            }
+            // Add Trap's Edit, Copy and Delete, on the trap chosen there.
+            action::TRAP_EDIT => self.act_on_trap(Act::Edit, context),
+            action::TRAP_COPY => self.act_on_trap(Act::Copy, context),
+            action::TRAP_DELETE => self.act_on_trap(Act::Delete, context),
             _ => {}
         }
     }
@@ -1453,6 +1607,14 @@ impl Shell {
             Page::NewEncounter(_) => topic::ENCOUNTERS,
             Page::Encounter(_) => topic::ENCOUNTER,
             Page::EncounterTable(_) => topic::ENCOUNTER_TABLE,
+            // A monster attack's dialog has a topic of its own.
+            Page::Record(form) => form
+                .dialog
+                .as_ref()
+                .and_then(|d| d.help())
+                .unwrap_or_else(|| form.help()),
+            Page::TreasureTable(form) => form.help(),
+            Page::Allowed(form) => form.help(),
         }
     }
 
@@ -1583,6 +1745,256 @@ impl Shell {
         );
     }
 
+    /// Acts on the record `name` of `section` that comes from `origin`
+    /// (New takes neither), reading the databases in the background;
+    /// `then` is what follows saving it.
+    fn open_record(
+        &mut self,
+        section: String,
+        origin: Origin,
+        name: String,
+        act: Act,
+        then: Then,
+        context: &ComponentContext<Self>,
+    ) {
+        let Some(install) = self.install.clone() else {
+            return;
+        };
+        if self.busy {
+            return;
+        }
+        self.busy = true;
+        // New in the other parts' section starts on the shown part's type.
+        let shown = self
+            .selected
+            .as_deref()
+            .and_then(cr_store::userdb::parse_key)
+            .map(|(section, ..)| section.to_owned());
+        let target = RecordTarget {
+            section: section.clone(),
+            name: name.clone(),
+            then,
+        };
+        context.spawn_background(move |_| {
+            let opened =
+                record_actions::open(&install, &section, origin, &name, act, shown.as_deref());
+            Message::RecordOpened(opened, target)
+        });
+    }
+
+    /// Acts on the record on the details.
+    fn act_on_selected(&mut self, act: Act, context: &ComponentContext<Self>) {
+        let Some(key) = self.selected.clone() else {
+            return;
+        };
+        if let Some((section, origin, name)) = cr_store::userdb::parse_key(&key) {
+            let (section, name) = (section.to_owned(), name.to_owned());
+            self.open_record(section, origin, name, act, Then::Show, context);
+        }
+    }
+
+    /// Edit, Copy or Delete on the trap Add Trap chose, which closes for
+    /// it as the GNOME app's does.
+    fn act_on_trap(&mut self, act: Act, context: &ComponentContext<Self>) {
+        let Page::Encounter(form) = &mut self.page else {
+            return;
+        };
+        let Some((name, origin)) = form.picker.as_ref().and_then(|p| p.chosen_trap()) else {
+            return;
+        };
+        form.picker = None;
+        self.open_record("traps".to_owned(), origin, name, act, Then::Show, context);
+    }
+
+    /// New Trap or New Monster from the encounter's Add Trap or Add
+    /// Monster, which closes for it.
+    fn new_for_encounter(&mut self, section: &str, then: Then, context: &ComponentContext<Self>) {
+        if let Page::Encounter(form) = &mut self.page {
+            form.picker = None;
+        }
+        self.open_record(
+            section.to_owned(),
+            Origin::Custom,
+            String::new(),
+            Act::New,
+            then,
+            context,
+        );
+    }
+
+    /// The databases changed: what was read of them is read again when
+    /// it is needed.
+    fn forget_rules(&mut self) {
+        self.npc_rules = None;
+        self.treasure_rules = None;
+        self.table_rolls = None;
+        self.encounter_rules = None;
+        self.items = Arc::default();
+    }
+
+    /// Deletes the record `target`.
+    fn delete_record(&self, target: RecordTarget, context: &ComponentContext<Self>) {
+        self.with_install(context, move |install| {
+            let deleted = record_actions::delete(install, &target.section, &target.name);
+            Message::RecordDeleted(deleted, target)
+        });
+    }
+
+    /// Does what the record editor asks of the app.
+    fn record_effects(&mut self, context: &ComponentContext<Self>) {
+        let Page::Record(form) = &mut self.page else {
+            return;
+        };
+        let effects = form.take_effects();
+        for effect in effects {
+            match effect {
+                RecordEffect::Save(job) => {
+                    self.with_install(context, move |install| Message::RecordSaved(job(install)))
+                }
+                RecordEffect::Done {
+                    section,
+                    key,
+                    name,
+                    said,
+                    told,
+                } => {
+                    let then = std::mem::take(&mut self.record_then);
+                    self.forget_rules();
+                    if then == Then::Show {
+                        if let Page::Record(form) = &mut self.page {
+                            form.saving = true;
+                        }
+                        self.revealing = Some(Revealing {
+                            section,
+                            key: key.clone(),
+                            notice: Notice::success(said),
+                            told,
+                        });
+                        self.load(Some(key), context);
+                        return;
+                    }
+                    self.back();
+                    match then {
+                        Then::Show => {}
+                        Then::AddTrap => self.with_install(context, move |install| {
+                            let read = UserDb::<Traps>::load(install)
+                                .map(Arc::new)
+                                .map_err(|e| e.to_string());
+                            Message::NewTrapRead(read, name)
+                        }),
+                        Then::AddMonster => self.with_install(context, move |install| {
+                            let read = install
+                                .encounter_rules()
+                                .map(Arc::new)
+                                .map_err(|e| e.to_string());
+                            Message::NewMonsterRead(read, name)
+                        }),
+                    }
+                    self.notice = Some(Notice::success(said));
+                    if let Some((title, text)) = told {
+                        self.confirm = Some(Confirm::Info { title, text });
+                    }
+                    self.load(Some(key), context);
+                    return;
+                }
+            }
+        }
+    }
+
+    /// Does what the treasure table editor asks of the app.
+    fn treasure_table_effects(&mut self, context: &ComponentContext<Self>) {
+        let Page::TreasureTable(form) = &mut self.page else {
+            return;
+        };
+        let effects = form.take_effects();
+        for effect in effects {
+            match effect {
+                TreasureTableEffect::Save { editing, table } => {
+                    self.with_install(context, move |install| {
+                        Message::TreasureTableSaved(cr_app::records::tables::save(
+                            install, editing, *table,
+                        ))
+                    })
+                }
+                TreasureTableEffect::Done { key, said } => {
+                    if let Page::TreasureTable(form) = &mut self.page {
+                        form.saving = true;
+                    }
+                    self.forget_rules();
+                    self.revealing = Some(Revealing {
+                        section: cr_app::records::tables::SECTION,
+                        key: key.clone(),
+                        notice: Notice::success(said),
+                        told: None,
+                    });
+                    self.load(Some(key), context);
+                    return;
+                }
+            }
+        }
+    }
+
+    /// Does what Allowed Classes asks of the app.
+    fn allowed_effects(&mut self, context: &ComponentContext<Self>) {
+        let Page::Allowed(form) = &mut self.page else {
+            return;
+        };
+        for effect in form.take_effects() {
+            match effect {
+                AllowedEffect::Save { race, entries } => {
+                    self.with_install(context, move |install| {
+                        Message::AllowedSaved(cr_app::records::allowed::save(
+                            install, &race, &entries,
+                        ))
+                    })
+                }
+                AllowedEffect::Done { said } => {
+                    self.back();
+                    self.forget_rules();
+                    self.notice = Some(Notice::success(said));
+                    self.load(None, context);
+                    return;
+                }
+            }
+        }
+    }
+
+    /// Keeps what Choose Portrait or Choose Picture chose: a character's
+    /// portrait by its file, a record's picture or icon as it is kept.
+    fn picked(
+        &mut self,
+        choosing: Choosing,
+        stored: Option<String>,
+        context: &ComponentContext<Self>,
+    ) {
+        match choosing {
+            Choosing::Portrait => self.set_portrait(stored, context),
+            Choosing::Picture { field, .. } | Choosing::Icon { field } => self.update(
+                Message::Record(RecordInput::Set(
+                    field,
+                    Value::Text(stored.unwrap_or_default()),
+                )),
+                context,
+            ),
+        }
+    }
+
+    /// What the record editor's picture field of `kind` shows for what it
+    /// keeps, `stored`, read once.
+    fn record_picture(&self, kind: FieldKind, stored: &str) -> (String, Option<EncodedImage>) {
+        let (picture, icon) = match kind {
+            FieldKind::Picture(picture) => (picture, false),
+            _ => (cr_store::pictures::Kind::Item, true),
+        };
+        let key = format!("{picture:?}\u{1}{icon}\u{1}{stored}");
+        if let Some(found) = self.record_pictures.borrow().get(&key) {
+            return found.clone();
+        }
+        let found = portrait::look(self.install.as_deref(), picture, icon, stored);
+        self.record_pictures.borrow_mut().insert(key, found.clone());
+        found
+    }
+
     /// Runs a dialog of Windows on a thread of its own, with the window
     /// as its owner.
     fn dialog<T: Send + 'static>(
@@ -1609,6 +2021,37 @@ impl Shell {
             context.spawn_background(move |_| work(&install));
         }
     }
+}
+
+/// New in the other parts' section: the type of the new part ("Select
+/// the Type" of IDD 139).
+fn new_part_dialog(
+    types: &[(&'static str, &'static str)],
+    chosen: usize,
+    context: &mut ViewContext<Shell>,
+) -> View {
+    let names: Vec<String> = types.iter().map(|(_, n)| (*n).to_owned()).collect();
+    ContentDialog::new()
+        .title(tr("New Part"))
+        .primary_button_text(plain(tr("C_reate")))
+        .close_button_text(plain(tr("_Cancel")))
+        .is_open(true)
+        .on_closed(
+            context.callback(|result| {
+                Message::NewPartAnswered(result == ContentDialogResult::Primary)
+            }),
+        )
+        .content(
+            StackPanel::new().spacing(12.0).children((
+                crate::ui::body(tr("Select the type of the new part.")),
+                ComboBox::new()
+                    .automation_name(tr("New Part"))
+                    .items_source(names)
+                    .selected_index(Some(chosen))
+                    .min_width(240.0)
+                    .on_selection_changed(context.callback(Message::NewPartType)),
+            )),
+        )
 }
 
 /// The title and text of topic `number` of `file`, as a popup shows it.
@@ -1681,6 +2124,10 @@ impl Component for Shell {
             leftovers: Leftovers::default(),
             encounter_rules: None,
             group: None,
+            record_then: Then::Show,
+            revealing: None,
+            record_pictures: RefCell::default(),
+            new_part: None,
         };
         let sender = context.sender();
         let reading = shell.reading.clone();
@@ -1712,6 +2159,19 @@ impl Component for Shell {
     fn update(&mut self, message: Message, context: &ComponentContext<Self>) {
         match message {
             Message::Loaded(sections, key) => {
+                if let Some(revealing) = self
+                    .revealing
+                    .take_if(|r| key.as_deref() == Some(r.key.as_str()))
+                {
+                    if matches!(self.page, Page::Record(_) | Page::TreasureTable(_)) {
+                        self.back();
+                    }
+                    self.reveal(revealing.section);
+                    self.notice = Some(revealing.notice);
+                    if let Some((title, text)) = revealing.told {
+                        self.confirm = Some(Confirm::Info { title, text });
+                    }
+                }
                 self.parties = cr_app::library::parties(&sections);
                 if cr_app::library::party_position(&self.parties, self.filter.party.as_deref()) == 0
                 {
@@ -1970,6 +2430,14 @@ impl Component for Shell {
                         Message::TableDeleted(deleted.map_err(|e| e.to_string()))
                     });
                 }
+                (Some(Confirm::DeleteRecord { target, .. }), ContentDialogResult::Primary) => {
+                    self.delete_record(target, context)
+                }
+                (Some(Confirm::RestoreTable { name }), ContentDialogResult::Primary) => self
+                    .with_install(context, move |install| {
+                        let restored = cr_app::records::tables::restore(install, &name);
+                        Message::TableRestored(restored, name)
+                    }),
                 (Some(Confirm::DeleteTreasure { name }), ContentDialogResult::Primary) => {
                     self.with_install(context, move |install| {
                         Message::TreasureDeleted(
@@ -2132,12 +2600,9 @@ impl Component for Shell {
                 if let Some(race) = race
                     && self.portraits.is_none()
                 {
-                    self.portraits = Some(portrait::Chooser {
-                        race: race.clone(),
-                        tiles: None,
-                    });
+                    self.portraits = Some(portrait::Chooser::new(Choosing::Portrait));
                     self.with_install(context, move |install| {
-                        Message::PortraitsListed(portrait::list(install, &race))
+                        Message::PortraitsListed(portrait::list(install, Choosing::Portrait, &race))
                     });
                 }
             }
@@ -2146,11 +2611,15 @@ impl Component for Shell {
                     chooser.tiles = Some(tiles);
                 }
             }
-            Message::PortraitChosen(file) => {
-                self.portraits = None;
-                self.set_portrait(file, context);
+            Message::PortraitChosen(stored) => {
+                // The Portrait row's None chooses with no dialog open.
+                let choosing = self
+                    .portraits
+                    .take()
+                    .map_or(Choosing::Portrait, |c| c.choosing);
+                self.picked(choosing, stored, context);
             }
-            Message::PortraitFile => {
+            Message::PortraitFile(choosing) => {
                 self.portraits = None;
                 let Some(install) = self.install.clone() else {
                     return;
@@ -2160,18 +2629,18 @@ impl Component for Shell {
                     move |owner| {
                         let filters = portrait::filters();
                         match native::dialogs::open_file(owner, tr("Choose a Picture"), &filters) {
-                            Ok(Some(path)) => portrait::add(&install, &path).map(Some),
+                            Ok(Some(path)) => portrait::add(&install, choosing, &path).map(Some),
                             Ok(None) => Ok(None),
                             Err(e) => Err(e.message()),
                         }
                     },
-                    Message::PortraitAdded,
+                    move |added| Message::PortraitAdded(added, choosing),
                 );
             }
-            Message::PortraitAdded(added) => {
+            Message::PortraitAdded(added, choosing) => {
                 self.busy = false;
                 match added {
-                    Ok(Some(file)) => self.set_portrait(Some(file), context),
+                    Ok(Some(stored)) => self.picked(choosing, Some(stored), context),
                     Ok(None) => {}
                     Err(e) => self.show_error(tr("Could Not Use the Picture"), e),
                 }
@@ -2946,6 +3415,182 @@ impl Component for Shell {
                     group.preview = on;
                 }
             }
+            Message::RecordOpened(opened, target) => {
+                self.busy = false;
+                match opened {
+                    Ok(Acted::Form(form)) => {
+                        self.record_then = target.then;
+                        self.record_pictures.borrow_mut().clear();
+                        self.go(Page::Record(form));
+                    }
+                    Ok(Acted::Table(form)) => self.go(Page::TreasureTable(form)),
+                    Ok(Acted::Refused(why)) => {
+                        self.notice = Some(Notice::new(InfoBarSeverity::Warning, why, ""))
+                    }
+                    Ok(Acted::Delete(Some((title, text)))) => {
+                        self.confirm = Some(Confirm::DeleteRecord {
+                            target,
+                            title,
+                            text,
+                        })
+                    }
+                    // Some kinds are deleted at once, as in the original.
+                    Ok(Acted::Delete(None)) => self.delete_record(target, context),
+                    Ok(Acted::ChooseType { types, chosen }) => {
+                        self.new_part = Some((types, chosen))
+                    }
+                    Ok(Acted::Nothing) => {}
+                    Err(e) => self.show_error(&e, ""),
+                }
+            }
+            Message::Record(change) => {
+                if let Page::Record(form) = &mut self.page {
+                    form.input(change);
+                    self.record_effects(context);
+                }
+            }
+            Message::RecordAnswer(serial, answer) => {
+                if let Page::Record(form) = &mut self.page
+                    && form.prompt_serial() == serial
+                {
+                    form.answer(answer);
+                    self.record_effects(context);
+                }
+            }
+            Message::RecordSaved(saved) => {
+                if let Page::Record(form) = &mut self.page {
+                    form.saved(saved);
+                    self.record_effects(context);
+                }
+            }
+            Message::RecordDeleted(Ok(said), target) => {
+                let key = cr_store::userdb::key(&target.section, Origin::Custom, &target.name);
+                if self.selected.as_deref() == Some(key.as_str()) {
+                    self.select(None);
+                }
+                self.forget_rules();
+                self.notice = Some(Notice::success(said));
+                self.load(None, context);
+            }
+            Message::RecordDeleted(Err(e), _) => self.show_error(&plain(tr("_Delete")), e),
+            Message::ChoosePicture(field) => {
+                let Page::Record(form) = &self.page else {
+                    return;
+                };
+                let choosing = match form.field(field).kind {
+                    FieldKind::Picture(kind) => Choosing::Picture { field, kind },
+                    FieldKind::Icon => Choosing::Icon { field },
+                    _ => return,
+                };
+                if self.portraits.is_none() {
+                    self.portraits = Some(portrait::Chooser::new(choosing));
+                    self.with_install(context, move |install| {
+                        Message::PortraitsListed(portrait::list(install, choosing, ""))
+                    });
+                }
+            }
+            Message::PictureSearch(search) => {
+                if let Some(chooser) = &mut self.portraits {
+                    chooser.search = search;
+                }
+            }
+            Message::NewPartType(Some(index)) => {
+                if let Some((_, chosen)) = &mut self.new_part {
+                    *chosen = index;
+                }
+            }
+            Message::NewPartType(None) => {}
+            Message::NewPartAnswered(yes) => {
+                if let Some((types, chosen)) = self.new_part.take()
+                    && yes
+                    && let Some((id, _)) = types.get(chosen)
+                {
+                    self.open_record(
+                        (*id).to_owned(),
+                        Origin::Standard,
+                        String::new(),
+                        Act::New,
+                        Then::Show,
+                        context,
+                    );
+                }
+            }
+            Message::TreasureTable(change) => {
+                if let Page::TreasureTable(form) = &mut self.page {
+                    form.input(change);
+                    self.treasure_table_effects(context);
+                }
+            }
+            Message::TreasureTableAnswer(serial, answer) => {
+                if let Page::TreasureTable(form) = &mut self.page
+                    && form.prompt_serial() == serial
+                {
+                    form.answer(answer);
+                    self.treasure_table_effects(context);
+                }
+            }
+            Message::TreasureTableSaved(saved) => {
+                if let Page::TreasureTable(form) = &mut self.page {
+                    form.saved(saved);
+                    self.treasure_table_effects(context);
+                }
+            }
+            Message::TableRestored(Ok(said), name) => {
+                self.forget_rules();
+                self.notice = Some(Notice::success(said));
+                self.load(Some(cr_app::records::tables::restored_key(&name)), context);
+            }
+            Message::TableRestored(Err(e), _) => self.show_error(&plain(tr("_Restore")), e),
+            Message::AllowedOpened(opened) => {
+                self.busy = false;
+                match opened {
+                    Ok(form) => self.go(Page::Allowed(form)),
+                    Err(e) => self.show_error(&plain(tr("_Allowed Classes…")), e),
+                }
+            }
+            Message::Allowed(change) => {
+                if let Page::Allowed(form) = &mut self.page {
+                    form.input(change);
+                    self.allowed_effects(context);
+                }
+            }
+            Message::AllowedAnswer(serial, answer) => {
+                if let Page::Allowed(form) = &mut self.page
+                    && form.prompt_serial() == serial
+                {
+                    form.answer(answer);
+                    self.allowed_effects(context);
+                }
+            }
+            Message::AllowedSaved(saved) => {
+                if let Page::Allowed(form) = &mut self.page {
+                    form.saved(saved);
+                    self.allowed_effects(context);
+                }
+            }
+            Message::NewTrap => self.new_for_encounter("traps", Then::AddTrap, context),
+            Message::NewMonster => self.new_for_encounter("monsters", Then::AddMonster, context),
+            Message::NewTrapRead(read, name) => match read {
+                Ok(db) => {
+                    if let Page::Encounter(form) = &mut self.page {
+                        form.add_new_trap(&db, &name);
+                        self.encounter_effects(context);
+                    }
+                }
+                Err(e) => self.show_error(tr("Add Trap"), e),
+            },
+            Message::NewMonsterRead(read, name) => match read {
+                Ok(rules) => {
+                    self.encounter_rules = Some(rules.clone());
+                    if let Page::Encounter(form) = &mut self.page {
+                        let mut rand = self.rand.lock().unwrap_or_else(|e| e.into_inner());
+                        form.add_new_monster(rules, &name, &mut rand);
+                        drop(rand);
+                        self.encounter_effects(context);
+                    }
+                }
+                Err(e) => self.show_error(tr("Add Monster"), e),
+            },
             Message::GroupAnswered(yes) => {
                 if let Some(group) = self.group.take()
                     && yes
@@ -3162,6 +3807,21 @@ impl Component for Shell {
             Page::EncounterTable(editor) => {
                 encounter::table_view(editor, &self.open_rows, self.busy, context)
             }
+            Page::Record(form) => {
+                let picture = |kind: FieldKind, stored: &str| self.record_picture(kind, stored);
+                let page = record::view(form, &picture, context);
+                self.with_portraits(page, context)
+            }
+            Page::TreasureTable(form) => treasure_tables::view(form, context),
+            Page::Allowed(form) => allowed::view(form, context),
+        };
+        // New in the other parts' section asks for the type over the
+        // library.
+        let content = match &self.new_part {
+            Some((types, chosen)) => {
+                Grid::new().children((content, new_part_dialog(types, *chosen, context)))
+            }
+            None => content,
         };
         // The keyboard hook takes the reader's keys only while a book
         // shows.
@@ -3312,7 +3972,13 @@ impl Shell {
                 match &self.page {
                     Page::SheetOptions(_) => tr("The options have changes that are not saved."),
                     Page::Encounter(_) => tr("The encounter has changes that are not saved."),
-                    Page::EncounterTable(_) => tr("The table has changes that are not saved."),
+                    Page::EncounterTable(_) | Page::TreasureTable(_) => {
+                        tr("The table has changes that are not saved.")
+                    }
+                    Page::Record(_) => tr("The record has changes that are not saved."),
+                    Page::Allowed(_) => {
+                        tr("The allowed classes have changes that are not saved.")
+                    }
                     _ => tr("The character has changes that are not saved."),
                 }
                 .to_owned(),
@@ -3356,6 +4022,13 @@ impl Shell {
                 plain(tr("_Delete")),
             ),
             Some(Confirm::Info { title, text }) => (title.clone(), text.clone(), String::new()),
+            Some(Confirm::DeleteRecord { title, text, .. }) => {
+                (title.clone(), text.clone(), plain(tr("_Delete")))
+            }
+            Some(Confirm::RestoreTable { .. }) => {
+                let (title, text) = cr_app::records::tables::restore_question();
+                (title, text, plain(tr("_Restore")))
+            }
             None => (String::new(), String::new(), String::new()),
         };
         // Only read: the dialog only closes.

@@ -8,17 +8,18 @@ use std::sync::Arc;
 use cr_app::action;
 use cr_app::bundle::BundleInput;
 use cr_app::encounter::{
-    CLIMATES, EncounterForm, EncounterInput, FREQUENCIES, LAIR_MODES, MOST_COUNT, Picker, SOURCES,
-    TERRAINS, TableEditInput, TableEditor,
+    CLIMATES, EncounterForm, EncounterInput, FREQUENCIES, LAIR_MODES, MOST_COUNT, Pick, Picker,
+    SOURCES, TERRAINS, TableEditInput, TableEditor,
 };
 use cr_i18n::tr;
 use cr_store::encounter::{Encounter, EncounterRules, Package};
-use cr_store::userdb::Filter;
+use cr_store::userdb::{Filter, Origin};
 use cr_win::text::plain;
 use windows_reactor::*;
 
 use super::bundle::{self, BundleMessages};
 use super::forms::{self, heading};
+use super::record::text_button;
 use super::{Message, Shell};
 use crate::ui;
 
@@ -390,8 +391,58 @@ fn picker_dialog(picker: &Picker, context: &mut ViewContext<Shell>) -> View {
             .into(),
         None => View::empty(),
     };
+    // New Trap, and Edit, Copy and Delete on the trap chosen (the
+    // standard ones are only copied); New Monster. Each closes the dialog
+    // for its editor, as in the GNOME app.
+    let mut buttons: Vec<KeyedView> = Vec::new();
+    match &picker.pick {
+        Pick::Trap(..) => {
+            let chosen = picker.chosen_trap().map(|(_, origin)| origin);
+            let custom = chosen == Some(Origin::Custom);
+            for (key, label, enabled, message) in [
+                ("new", tr("New Trap").to_owned(), true, Message::NewTrap),
+                (
+                    "edit",
+                    plain(tr("_Edit…")),
+                    custom,
+                    Message::Act(action::TRAP_EDIT),
+                ),
+                (
+                    "copy",
+                    plain(tr("_Copy…")),
+                    chosen.is_some(),
+                    Message::Act(action::TRAP_COPY),
+                ),
+                (
+                    "delete",
+                    plain(tr("_Delete")),
+                    custom,
+                    Message::Act(action::TRAP_DELETE),
+                ),
+            ] {
+                buttons.push(KeyedView::new(
+                    key,
+                    text_button(&label, enabled, message, context),
+                ));
+            }
+        }
+        Pick::Monster => buttons.push(KeyedView::new(
+            "new",
+            text_button(tr("New Monster"), true, Message::NewMonster, context),
+        )),
+        Pick::Npc(_) => {}
+    }
+    let buttons: View = if buttons.is_empty() {
+        View::empty()
+    } else {
+        StackPanel::new()
+            .orientation(Orientation::Horizontal)
+            .spacing(8.0)
+            .keyed_children(buttons)
+    };
     let content = StackPanel::new().spacing(8.0).children((
         filter,
+        buttons,
         TextBox::new()
             .automation_name(picker.placeholder())
             .placeholder_text(picker.placeholder())

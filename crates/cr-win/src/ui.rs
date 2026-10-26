@@ -214,3 +214,22 @@ pub fn png(image: &cr_formats::bmp::Image) -> Option<EncodedImage> {
 pub fn picture(path: &std::path::Path) -> Option<EncodedImage> {
     png(&cr_app::pictures::load(path)?)
 }
+
+/// A bitmap file of the original as a PNG at most `side` pixels high and
+/// wide, for a dialog that shows many.
+pub fn thumbnail(path: &std::path::Path, side: u32) -> Option<EncodedImage> {
+    let image = cr_app::pictures::load(path)?;
+    if image.width <= side && image.height <= side {
+        return png(&image);
+    }
+    let rgba = image::RgbaImage::from_raw(image.width, image.height, image.rgba)?;
+    let scale = f64::from(side) / f64::from(rgba.width().max(rgba.height()));
+    let (width, height) = (
+        ((f64::from(rgba.width()) * scale).round() as u32).max(1),
+        ((f64::from(rgba.height()) * scale).round() as u32).max(1),
+    );
+    let small = image::imageops::resize(&rgba, width, height, image::imageops::Triangle);
+    let mut png = std::io::Cursor::new(Vec::new());
+    small.write_to(&mut png, image::ImageFormat::Png).ok()?;
+    Some(EncodedImage::new(png.into_inner()))
+}

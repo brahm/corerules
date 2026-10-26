@@ -276,7 +276,7 @@ fn free_spells_dialog(
     let uses = spin_row(tr("The spells may be cast this often"), start.uses, 0, 1000);
     let frequency = adw::EntryRow::builder()
         .title(tr("Frequency"))
-        .text(start.frequency.as_str())
+        .text(levels::frequency_shown(&start.frequency))
         .build();
     let choose = flat_button("view-list-symbolic", tr("Choose"));
     choose.connect_clicked({
@@ -284,13 +284,9 @@ fn free_spells_dialog(
         move |_| {
             let frequency = frequency.clone();
             let shown: Vec<String> = FREQUENCIES.iter().map(|f| tr(f).to_owned()).collect();
+            // Shown translated, stored as the original writes them.
             pick_titled(&parent, tr("Frequency"), shown, move |chosen| {
-                // Stored as the original writes them.
-                let f = FREQUENCIES
-                    .iter()
-                    .find(|f| tr(f) == chosen)
-                    .map_or(chosen.as_str(), |f| *f);
-                frequency.set_text(f);
+                frequency.set_text(&chosen);
             });
         }
     });
@@ -416,7 +412,10 @@ fn free_spells_dialog(
         done(FreeSpellLevel {
             level: level.value() as i32,
             uses: uses.value() as i32,
-            frequency: frequency.text().chars().take(FREQUENCY_MAX).collect(),
+            frequency: levels::frequency_stored(&frequency.text())
+                .chars()
+                .take(FREQUENCY_MAX)
+                .collect(),
             pick_one: pick_one.is_active(),
             spells: picked.borrow().clone(),
             unknown_0x4: start.unknown_0x4.clone(),
