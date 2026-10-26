@@ -1,7 +1,8 @@
 name: Packages
 
-# Builds the .deb, .rpm, pacman, Flatpak and AppImage packages, installs each one on
-# a clean system and starts the app there. Pushing a v* tag (or running the
+# Builds the .deb, .rpm, pacman, Flatpak and AppImage packages and the
+# MSIX for the Microsoft Store, installs each one on a clean system and
+# starts the app there. Pushing a v* tag (or running the
 # workflow by hand with a tag) also publishes them as a GitHub release.
 on:
   push:
@@ -9,6 +10,7 @@ on:
   pull_request:
     paths:
       - 'packaging/**'
+      - 'crates/cr-win/package/**'
       - 'data/**'
       - '.github/workflows/release.yml'
   workflow_dispatch:
@@ -277,8 +279,93 @@ jobs:
           flatpak install --user -y --noninteractive --bundle CoreRules-*.flatpak
       - run: packaging/smoke-test.sh flatpak run io.github.brahm.CoreRules
 
+  # The MSIX package for the Microsoft Store, which signs it. The Store
+  # wants a version of four numbers with the last 0, without a suffix.
+  msix:
+    needs: version
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --locked -p cr-win
+      - name: Package the MSIX
+        shell: pwsh
+        run: |
+          $version = "${{ needs.version.outputs.version }}" -replace '-.*$', ''
+          crates/cr-win/package/make-msix.ps1 -Version $version -Out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msix
+          path: dist/*.msix
+
+  # Installs the package on a clean Windows with the Windows App Runtime
+  # it needs, signed here with a certificate of its own publisher that
+  # only this machine trusts, starts the app from Start and runs the
+  # Windows App Certification Kit the Store runs.
+  test-msix:
+    needs: msix
+    runs-on: windows-2025
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: msix
+          path: dist
+      - name: Install the Windows App Runtime
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://aka.ms/windowsappsdk/2.5/2.5.1/windowsappruntimeinstall-x64.exe -OutFile runtime.exe
+          ./runtime.exe --quiet
+          if ($LASTEXITCODE -ne 0) { throw "the Windows App Runtime did not install" }
+      - name: Install the package
+        shell: pwsh
+        run: |
+          $package = Get-Item dist/*.msix
+          $kit = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert `
+            -Subject "CN=E77E0DF5-5354-4DC5-B7EC-3E228FF5F8E9" `
+            -CertStoreLocation Cert:\CurrentUser\My `
+            -TextExtension @("2.5.29.19={text}")
+          Export-Certificate -Cert $cert -FilePath test.cer | Out-Null
+          Import-Certificate -FilePath test.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople | Out-Null
+          & $kit.FullName sign /fd SHA256 /sha1 $cert.Thumbprint $package.FullName
+          if ($LASTEXITCODE -ne 0) { throw "signtool failed" }
+          Add-AppxPackage $package.FullName
+          Get-AppxPackage WagnerBrahm.CoreRules | Format-List Name, Version, PackageFamilyName, InstallLocation
+      - name: Start the app
+        shell: pwsh
+        run: |
+          $family = (Get-AppxPackage WagnerBrahm.CoreRules).PackageFamilyName
+          Start-Process "shell:AppsFolder\$family!CoreRules"
+          Start-Sleep 20
+          $app = Get-Process CoreRules -ErrorAction SilentlyContinue
+          if (-not $app) { throw "the app is not running 20 seconds after it started" }
+          if (-not $app.MainWindowHandle) { throw "the app has no window" }
+          Write-Output "running: $($app.MainWindowTitle)"
+          Stop-Process -Name CoreRules
+      - name: Windows App Certification Kit
+        shell: pwsh
+        run: |
+          $appcert = "${env:ProgramFiles(x86)}\Windows Kits\10\App Certification Kit\appcert.exe"
+          if (-not (Test-Path $appcert)) { throw "appcert.exe not found" }
+          $package = (Get-Item dist/*.msix).FullName
+          & $appcert reset
+          & $appcert test -appxpackagepath $package -reportoutputpath "$PWD\wack.xml"
+          [xml]$report = Get-Content wack.xml
+          $failed = $report.REPORT.REQUIREMENTS.REQUIREMENT.TEST |
+            Where-Object { $_.RESULT.'#cdata-section' -eq 'FAIL' }
+          $failed | ForEach-Object { Write-Output "FAIL: $($_.NAME)" }
+          Write-Output "Overall: $($report.REPORT.OVERALL_RESULT)"
+          if ($report.REPORT.OVERALL_RESULT -eq 'FAIL') { throw "the package fails certification" }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: wack-report
+          path: wack.xml
+
   release:
-    needs: [version, test-deb, refuse-deb, test-rpm, test-arch, test-appimage, test-flatpak]
+    needs: [version, test-deb, refuse-deb, test-rpm, test-arch, test-appimage, test-flatpak, test-msix]
     if: needs.version.outputs.tag != ''
     runs-on: ubuntu-24.04
     permissions:
@@ -289,6 +376,9 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+      # The MSIX goes to the Microsoft Store, not the release: unsigned,
+      # Windows would not install it.
+      - run: rm -f dist/*.msix dist/wack.xml
       - run: cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
       - uses: softprops/action-gh-release@v2
         with:
