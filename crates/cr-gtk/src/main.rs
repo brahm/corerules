@@ -546,7 +546,7 @@ impl Window {
             // A mounted CD or ISO image: what is made is saved into a copy
             // in the app's data folder instead. Core Rules 2.0 is only
             // browsed, so it opens from the CD.
-            Ok(install) if !install.is_core20() && !install.is_writable() => {
+            Ok(install) if cr_app::extract::opens_a_copy(&install) => {
                 extract::open_local_copy(&Rc::new(self.clone()), dir)
             }
             Ok(install) => self.show_installation(install),

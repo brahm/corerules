@@ -105,10 +105,10 @@ actions! {
     TRAP_DELETE = "trap"."delete";
 }
 
-/// The actions the Windows app does not have yet. A screen ported to
-/// Windows takes its actions off this list, and the release with Windows
-/// waits until it is empty.
-pub const NOT_YET_ON_WINDOWS: &[Action] = &[EXTRACT_DATA];
+/// The actions the Windows app does not have yet. Every screen is on
+/// Windows now; an action added to the GNOME app goes on this list until
+/// the Windows app has it too, and a release waits until it is empty.
+pub const NOT_YET_ON_WINDOWS: &[Action] = &[];
 
 #[cfg(test)]
 mod tests {

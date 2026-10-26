@@ -63,6 +63,7 @@ use cr_store::Installation;
 use cr_store::catalog::{ENCOUNTER_KEY, Entry, Section, TABLE_KEY, TREASURE_KEY};
 use cr_store::encounter::{Encounter, EncounterRules, check_name};
 use cr_store::export::{Content, Exportable, ImportReport};
+use cr_store::extract::{Destination, LocalCopy};
 use cr_store::help::{ItemHelp, topic};
 use cr_store::npc::{Npc, NpcRules};
 use cr_store::pictures::stored_portrait;
@@ -369,6 +370,14 @@ pub enum Confirm {
     RestoreTable {
         name: String,
     },
+    /// Extract Data from CD…: from an ISO image or a folder.
+    ExtractSource,
+    /// The data was extracted beside the app's data folder, which keeps
+    /// the package it holds: Open opens it.
+    OpenExtracted {
+        path: PathBuf,
+        text: String,
+    },
 }
 
 /// What Print and Save as PDF act on.
@@ -417,6 +426,11 @@ pub enum Message {
     /// A command, by the action that does the same in the GNOME app.
     Act(Action),
     FolderChosen(Result<Option<PathBuf>, String>),
+    /// The CD's image or folder to extract the data from.
+    ExtractFrom(Result<Option<PathBuf>, String>),
+    Extracted(Result<Destination, String>),
+    /// The copy opened in place of a CD the app cannot save into.
+    LocalCopied(Result<LocalCopy, String>),
     // An entry's commands.
     EditCharacter,
     EditLoaded(Result<Box<Editor>, String>),
@@ -833,6 +847,11 @@ impl Shell {
                 |owner| native::dialogs::open_folder(owner, &plain(tr("_Open Folder…"))),
                 |r| Message::FolderChosen(r.map_err(|e| e.message())),
             ),
+            action::EXTRACT_DATA => {
+                if !self.busy {
+                    self.confirm = Some(Confirm::ExtractSource);
+                }
+            }
             action::NEW_CHARACTER => self.new_character(false, context),
             action::ENTER_CHARACTER => self.new_character(true, context),
             action::NEW_NPC => {
@@ -2272,6 +2291,43 @@ impl Shell {
 
     /// Runs a dialog of Windows on a thread of its own, with the window
     /// as its owner.
+    /// Opens the installation in `path`, or, for a CD the app cannot save
+    /// into, its copy in the app's data folder, made first if there is
+    /// none.
+    fn open_folder(&mut self, path: PathBuf, context: &ComponentContext<Self>) {
+        match Installation::open(&path) {
+            Ok(install) if cr_app::extract::opens_a_copy(&install) => {
+                self.busy = true;
+                self.notice = Some(Notice::new(
+                    InfoBarSeverity::Informational,
+                    tr("The CD cannot be written to; copying its data…"),
+                    "",
+                ));
+                context.spawn_background(move |_| {
+                    Message::LocalCopied(cr_app::extract::local_copy(&path))
+                });
+            }
+            Ok(install) => {
+                self.can_write = can_write(&install);
+                self.install = Some(Arc::new(install));
+                self.sections = None;
+                self.background = None;
+                self.help_files = None;
+                self.items = Arc::default();
+                self.npc_rules = None;
+                self.treasure_rules = None;
+                self.table_rolls = None;
+                self.encounter_rules = None;
+                self.history.clear();
+                self.page = Page::Library;
+                self.select(None);
+                self.notice = None;
+                self.load(None, context);
+            }
+            Err(e) => self.show_error(tr("No Core Rules Installation"), e.to_string()),
+        }
+    }
+
     fn dialog<T: Send + 'static>(
         &mut self,
         context: &ComponentContext<Self>,
@@ -2570,28 +2626,69 @@ impl Component for Shell {
             Message::FolderChosen(chosen) => {
                 self.busy = false;
                 match chosen {
-                    Ok(Some(path)) => match Installation::open(&path) {
-                        Ok(install) => {
-                            self.can_write = can_write(&install);
-                            self.install = Some(Arc::new(install));
-                            self.sections = None;
-                            self.background = None;
-                            self.help_files = None;
-                            self.items = Arc::default();
-                            self.npc_rules = None;
-                            self.treasure_rules = None;
-                            self.table_rolls = None;
-                            self.encounter_rules = None;
-                            self.history.clear();
-                            self.page = Page::Library;
-                            self.select(None);
-                            self.notice = None;
-                            self.load(None, context);
-                        }
-                        Err(e) => self.show_error(tr("No Core Rules Installation"), e.to_string()),
-                    },
+                    Ok(Some(path)) => self.open_folder(path, context),
                     Ok(None) => {}
                     Err(e) => self.show_error(tr("No Core Rules Installation"), e),
+                }
+            }
+            Message::ExtractFrom(chosen) => {
+                self.busy = false;
+                match chosen {
+                    Ok(Some(source)) => {
+                        self.busy = true;
+                        self.notice = Some(Notice::new(
+                            InfoBarSeverity::Informational,
+                            tr("Extracting the Core Rules data…"),
+                            "",
+                        ));
+                        context.spawn_background(move |_| {
+                            Message::Extracted(cr_app::extract::extract(&source))
+                        });
+                    }
+                    Ok(None) => {}
+                    Err(e) => self.show_error(tr("Could Not Extract the Data"), e),
+                }
+            }
+            Message::Extracted(done) => {
+                self.busy = false;
+                self.notice = None;
+                match done {
+                    Ok(dest) => {
+                        let text = cr_app::extract::extracted(&dest);
+                        if dest.is_data_folder {
+                            self.open_folder(dest.path, context);
+                            self.notice = Some(Notice::success(text));
+                        } else {
+                            // The data folder already holds a package
+                            // (usually the other CD's), which stays the one
+                            // opened on start.
+                            self.confirm = Some(Confirm::OpenExtracted {
+                                path: dest.path,
+                                text,
+                            });
+                        }
+                    }
+                    Err(e) => self.show_error(tr("Could Not Extract the Data"), e),
+                }
+            }
+            Message::LocalCopied(done) => {
+                self.busy = false;
+                self.notice = None;
+                match done {
+                    Ok(copy) => {
+                        let (title, text) = cr_app::extract::copied(&copy);
+                        self.open_folder(copy.path, context);
+                        if copy.made {
+                            self.confirm = Some(Confirm::Info {
+                                title: title.to_owned(),
+                                text,
+                            });
+                        } else {
+                            self.notice =
+                                Some(Notice::new(InfoBarSeverity::Informational, title, ""));
+                        }
+                    }
+                    Err(e) => self.show_error(tr("Could Not Extract the Data"), e),
                 }
             }
             Message::EditCharacter => {
@@ -2689,6 +2786,30 @@ impl Component for Shell {
                                 .map_err(|e| e.to_string()),
                         )
                     });
+                }
+                (Some(Confirm::ExtractSource), ContentDialogResult::Primary) => self.dialog(
+                    context,
+                    |owner| {
+                        native::dialogs::open_file(
+                            owner,
+                            tr("Choose the Core Rules CD Image"),
+                            &cr_app::extract::image_filters(),
+                        )
+                    },
+                    |r| Message::ExtractFrom(r.map_err(|e| e.message())),
+                ),
+                (Some(Confirm::ExtractSource), ContentDialogResult::Secondary) => self.dialog(
+                    context,
+                    |owner| {
+                        native::dialogs::open_folder(
+                            owner,
+                            tr("Choose the Core Rules CD or Installation"),
+                        )
+                    },
+                    |r| Message::ExtractFrom(r.map_err(|e| e.message())),
+                ),
+                (Some(Confirm::OpenExtracted { path, .. }), ContentDialogResult::Primary) => {
+                    self.open_folder(path, context)
                 }
                 (Some(Confirm::Discard { section }), ContentDialogResult::Primary) => match section
                 {
@@ -4563,10 +4684,29 @@ impl Shell {
                 let (title, text) = cr_app::records::tables::restore_question();
                 (title, text, plain(tr("_Restore")))
             }
+            Some(Confirm::ExtractSource) => (
+                tr("Extract Data from CD").to_owned(),
+                cr_app::extract::intro().to_owned(),
+                plain(tr("Choose _ISO Image…")),
+            ),
+            Some(Confirm::OpenExtracted { text, .. }) => (
+                tr("Extract Data from CD").to_owned(),
+                text.clone(),
+                plain(tr("_Open")),
+            ),
             None => (String::new(), String::new(), String::new()),
         };
+        // Extract Data from CD… also takes a folder.
+        let other = if matches!(self.confirm, Some(Confirm::ExtractSource)) {
+            plain(tr("Choose _Folder…"))
+        } else {
+            String::new()
+        };
         // Only read: the dialog only closes.
-        let close = if matches!(self.confirm, Some(Confirm::Info { .. })) {
+        let close = if matches!(
+            self.confirm,
+            Some(Confirm::Info { .. } | Confirm::OpenExtracted { .. })
+        ) {
             plain(tr("_Close"))
         } else {
             plain(tr("_Cancel"))
@@ -4574,6 +4714,7 @@ impl Shell {
         ContentDialog::new()
             .title(title)
             .primary_button_text(action)
+            .secondary_button_text(other)
             .close_button_text(close)
             .is_open(self.confirm.is_some())
             .on_closed(context.callback(Message::Answered))
