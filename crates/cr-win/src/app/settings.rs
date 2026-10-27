@@ -163,6 +163,8 @@ fn credits(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
 /// About box and license.
 /// The license of Microsoft.Web.WebView2.Core.dll, which the app ships.
 const WEBVIEW2_LICENSE: &str = include_str!("../../package/WebView2-LICENSE.txt");
+/// The license of the Material Design Icons the navigation draws.
+const ICONS_LICENSE: &str = include_str!("../../package/MaterialDesignIcons-LICENSE.txt");
 
 fn legal(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
     let mut rows = vec![KeyedView::new(
@@ -193,6 +195,15 @@ fn legal(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
         credit(
             "Microsoft WebView2",
             ui::body(WEBVIEW2_LICENSE.trim_end())
+                .is_text_selection_enabled(true)
+                .into(),
+        ),
+    ));
+    rows.push(KeyedView::new(
+        "icons",
+        credit(
+            "Material Design Icons",
+            ui::body(ICONS_LICENSE.trim_end())
                 .is_text_selection_enabled(true)
                 .into(),
         ),

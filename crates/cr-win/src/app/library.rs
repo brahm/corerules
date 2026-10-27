@@ -16,7 +16,7 @@ use cr_store::userdb::{self, Filter as Origins, Origin};
 use cr_win::text::plain;
 use windows_reactor::*;
 
-use super::{Message, Shell, available};
+use super::{Message, Shell, available, section_icons};
 use crate::ui;
 
 /// The pictures of the entry on the details, made once when it is
@@ -87,32 +87,9 @@ pub fn icon(section: &str) -> View {
     if section == "weapons" {
         return PathIcon::new().data(SWORD).into();
     }
-    SymbolIcon::new().symbol(symbol(section)).into()
-}
-
-fn symbol(section: &str) -> Symbol {
-    match section {
-        library::CHARACTERS => Symbol::People,
-        "races" => Symbol::Contact,
-        "classes" => Symbol::Manage,
-        "kits" => Symbol::ContactInfo,
-        "armor" => Symbol::Permissions,
-        "equipment" => Symbol::Shop,
-        "magic-items" => Symbol::SolidStar,
-        "nonweapon" => Symbol::List,
-        OTHER_SECTION => Symbol::AllApps,
-        "wizard-spells" | "priest-spells" => Symbol::Highlight,
-        "psionics" => Symbol::Emoji2,
-        "monsters" => Symbol::Emoji,
-        "monster-types" => Symbol::ViewAll,
-        "traps" => Symbol::Important,
-        "encounters" => Symbol::MapPin,
-        "templates" => Symbol::Bullets,
-        "tables" => Symbol::ShowResults,
-        "treasure" => Symbol::Bookmarks,
-        "treasure-tables" => Symbol::Calculator,
-        "books" => Symbol::Library,
-        _ => Symbol::Document,
+    match section_icons::path(section) {
+        Some(data) => PathIcon::new().data(data).into(),
+        None => SymbolIcon::new().symbol(Symbol::Document).into(),
     }
 }
 

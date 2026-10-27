@@ -18,6 +18,8 @@ Copy-Item "$root\target\release\CoreRules.exe" $layout
 # WinUI's WebView2 loads it; the build put it next to the exe.
 Copy-Item "$root\target\release\Microsoft.Web.WebView2.Core.dll" $layout
 Copy-Item "$PSScriptRoot\Assets\*" "$layout\Assets"
+# The licence of the Material Design Icons the navigation draws.
+Copy-Item "$PSScriptRoot\MaterialDesignIcons-LICENSE.txt" $layout
 $manifest = Get-Content "$PSScriptRoot\AppxManifest.xml" -Raw
 $manifest.Replace('Version="0.0.0.0"', "Version=""$Version.0""") |
     Set-Content -NoNewline -Encoding utf8 "$layout\AppxManifest.xml"
