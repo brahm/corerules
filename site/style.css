@@ -140,6 +140,7 @@ cite { font-style: italic; }
 .downloads .kind { font-family: var(--display); font-size: 1rem; letter-spacing: .08em; color: var(--crimson); }
 .downloads .file { grid-column: 1 / -1; font-weight: 600; overflow-wrap: anywhere; }
 .downloads .file::before { content: "\2193\00a0"; }
+.downloads .file-soon { grid-column: 1 / -1; font-style: italic; color: var(--ink-soft); }
 .downloads code { grid-column: 1 / -1; justify-self: start; font-size: .8rem; color: var(--ink-soft); overflow-wrap: anywhere; }
 .tested {
   font-family: var(--display); font-size: 1.25rem; line-height: 1.35; color: var(--ink);
