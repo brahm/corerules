@@ -19,6 +19,7 @@ mod packages;
 mod parties;
 mod portrait;
 mod record;
+mod section_icons;
 mod settings;
 mod sheet;
 mod tables;
