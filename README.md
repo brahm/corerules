@@ -11,7 +11,7 @@ Edition. It is written in Rust and runs natively: with GTK 4 and libadwaita
 on Linux, with no Wine, and with WinUI 3 on Windows 11. On Linux it comes as
 a `.deb` for Ubuntu, an `.rpm` for Fedora, a pacman package for Arch Linux
 (and CachyOS and Omarchy), a Flatpak and an AppImage; on Windows 11 it comes
-from the Microsoft Store, where it is in a closed beta. See
+from the [Microsoft Store](https://apps.microsoft.com/detail/9nr2cgp649jm), where it is in a closed beta. See
 [Installing](#installing).
 
 Every screen of the original program is here: the Character Generator with
@@ -528,13 +528,16 @@ package from the release's source with `makepkg -si`.
 
 ### Windows 11
 
-The Windows 11 version comes from the Microsoft Store, which signs the
-package, so Windows and Smart App Control install it without warnings. It
-is in a closed beta now; the link to its Store page will be here once it is
-published. There is no direct download: the MSIX that the release workflow
-builds is not signed (the Store signs it), and Windows does not install an
-unsigned package. The Store also installs the Windows App Runtime that the
-app needs and brings every update.
+<a href="https://apps.microsoft.com/detail/9nr2cgp649jm"><img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200" alt="Get it from Microsoft"></a>
+
+The Windows 11 version comes from the
+[Microsoft Store](https://apps.microsoft.com/detail/9nr2cgp649jm), which signs the package, so
+Windows and Smart App Control install it without warnings. It is in a
+closed beta now: the Store page opens for the testers of the beta, and for
+everyone once the beta ends. There is no direct download: the MSIX that the
+release workflow builds is not signed (the Store signs it), and Windows does
+not install an unsigned package. The Store also installs the Windows App
+Runtime that the app needs and brings every update.
 
 The app keeps its data in `Documents\Core Rules\data`, copies the rules
 data from the CD or its ISO image with Extract Data from CD…, and also
