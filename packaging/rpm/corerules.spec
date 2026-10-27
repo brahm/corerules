@@ -4,7 +4,7 @@
 %global debug_package %{nil}
 
 Name:           corerules
-Version:        %{?version_override}%{!?version_override:1.0.0}
+Version:        %{?version_override}%{!?version_override:1.0.1}
 Release:        1%{?dist}
 Summary:        Browse and edit AD&D Core Rules 2.0 characters and rules
 License:        MIT
@@ -50,6 +50,11 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/io.github.brah
 %{_metainfodir}/io.github.brahm.CoreRules.metainfo.xml
 
 %changelog
+* Tue Oct 27 2026 Wagner Brahm - 1.0.1-1
+- Released with the Windows 11 version, on the Microsoft Store
+- Quest spells called so, the social class in the language chosen, clearer
+  editor wording and translations, Back keeps a creation page's choices
+
 * Sat Oct 24 2026 Wagner Brahm - 1.0.0-1
 - First stable release: 1.0.0-rc2, confirmed stable by its users on
   Fedora 45 beta, Ubuntu 26.10, Bazzite, Arch Linux and CachyOS, with a

@@ -6,7 +6,10 @@ what comes after 1.0. The decisions that shaped it are in the
 
 ## Where we are
 
-**1.0.0, published on 2026-10-24, the first stable release.** Its users
+**1.0.1, published on 2026-10-27, ready on Linux and Windows 11.** The
+Windows 11 version went through a beta on the Microsoft Store, where
+Wagner Brahm found no problem, and ships with Linux as 1.0.1 (decision
+P26). 1.0.0, published on 2026-10-24, was the first stable release. Its users
 ran 1.0.0-rc2 on Fedora 45 beta, Ubuntu 26.10, Bazzite, Arch Linux and
 CachyOS, and Wagner Brahm confirmed it stable, so 1.0.0 is the code of
 1.0.0-rc2 with the new About window (PR #89). It does everything
@@ -22,15 +25,12 @@ Community Add-ons Collection as its own AppImage, version 1.0.0. The
 the project's own Flatpak repository, which gets each final release
 (decision P16).
 
-The Windows 11 version (step 2) is under way: the backend and `cr` are
-built and tested on Windows (phase 1), Wagner Brahm approved the
-prototype of the Windows app on 2026-10-25 (phase 2, decision P21), and
-the groundwork that keeps both apps the same is in place (phase 3): the
-shared crate `cr-app`, one PDF of the sheet for both systems and a test
-that fails when an action is in one app and not in the other. The screens
-are being ported (phase 4): the library, the character sheet, the help,
-Settings and About, the books, character creation with Enter Character,
-editing and the generators are done.
+The Windows 11 version (step 2) is done: the backend and `cr` are built
+and tested on Windows (phase 1), Wagner Brahm approved the prototype on
+2026-10-25 (phase 2, decision P21), the groundwork that keeps both apps
+the same is in place (phase 3), every screen is ported (phase 4), the
+release workflow builds and tests the MSIX for the Microsoft Store
+(phase 5), and 1.0.1 is the first release on both systems (phase 6).
 Publishing on Flathub was dropped from the plan (decision P15).
 
 ## The original plan (2026-10-09)
@@ -79,6 +79,7 @@ taken out of scope.
 | 1.0.0-rc1 | 2026-10-24 | Fixes from the test round, pacman package |
 | 1.0.0-rc2 | 2026-10-24 | Saving with the mounted CD opened goes into a local copy |
 | 1.0.0 | 2026-10-24 | First stable release, the About window, the website |
+| 1.0.1 | 2026-10-27 | Windows 11 on the Microsoft Store, the Flatpak repository, small fixes |
 
 ## After 1.0
 
@@ -108,7 +109,7 @@ Done on 2026-10-24: Wagner Brahm's friends ran 1.0.0-rc2 on Fedora 45
 beta, Ubuntu 26.10, Bazzite, Arch Linux and CachyOS, found nothing wrong,
 and Wagner Brahm gave the go-ahead (decision P13).
 
-### Step 2: Windows 11 (in progress)
+### Step 2: Windows 11 (done)
 
 Decided by Wagner Brahm on 2026-10-25 (decisions S13 and P17 to P20): the
 Windows version lives in this repository, next to the Linux one, and from
@@ -402,18 +403,19 @@ The phases run in order:
      library's list, the New Encounter templates list makes only the
      rows it shows, and "not added" messages no longer repeat "Error."
      in the translations.
-5. **Package and Store.** The release workflow builds and tests the MSIX;
-   a beta goes to a closed group through the Microsoft Store.
-   - **The MSIX in the release workflow (in progress).** The workflow
+5. **Package and Store (done).** The release workflow builds and tests
+   the MSIX; a beta went to a closed group through the Microsoft Store.
+   - **The MSIX in the release workflow (done, PRs #111 and #112).** The workflow
      builds the MSIX with the version of the tag, installs it on a clean
      Windows with the Windows App Runtime (signed there with a
      certificate of its publisher that only that machine trusts), starts
      the app from Start and runs the Windows App Certification Kit. The
      MSIX stays among the run's artifacts for the Store, not in the
      GitHub release, where Windows would not install it unsigned.
-6. **Release with Windows**, once the beta's users confirm it, with the
-   same version and tag as Linux. The Community Add-ons Collection follows
-   as a package the Windows app imports.
+6. **Release with Windows (done).** Wagner Brahm found no problem in the
+   beta and released 1.0.1 on 2026-10-27 on Linux and Windows 11, with the
+   same version and tag (decision P26). The Community Add-ons Collection
+   follows as a package the Windows app imports.
 
 The interface follows Windows 11's patterns rather than GNOME's: settings
 cards with combo boxes, number boxes and toggle switches for the forms,
@@ -450,7 +452,7 @@ trusted its certificate by hand. The product Core Rules was reserved on
 2026-10-25; the Store drops a reservation not used within three months, so
 it may need to be reserved again before submission.
 
-Needs Wagner Brahm: confirming the beta (phase 5).
+Done on 2026-10-27 with 1.0.1.
 
 ### Step 3: new features, and independence from the original
 

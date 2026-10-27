@@ -1,34 +1,26 @@
-**Core Rules 1.0, the first stable release.** Core Rules does everything
-the original AD&D Core Rules 2.0 Expansion does, and every feature was
-checked against the original programs. Players and Dungeon Masters ran the
-release candidate on **Fedora 45 beta, Ubuntu 26.10, Bazzite, Arch Linux
-and CachyOS**, and it worked as it should, so 1.0.0 is the code of
-1.0.0-rc2 with the new About window. Characters and user databases made
-with the release candidates open as they are.
+**Core Rules 1.0.1, ready on Linux and Windows 11.** The Windows 11
+version has every screen of the Linux one, over the same backend and the
+same data files, with the look of a Windows 11 app. It went through a beta
+on the Microsoft Store without problems and is now a final release:
+[get it from the Microsoft Store](https://apps.microsoft.com/detail/9nr2cgp649jm),
+which signs it, installs the Windows App Runtime it needs and brings every
+update. Characters and user databases move freely between the two systems
+and the original programs.
 
-What's new since 1.0.0-rc2:
+What's new on Linux since 1.0.0:
 
-- **About**: the About window has the credits of the original program and
-  of this one, the legal notice, the details a bug report needs (version,
-  package, GTK and libadwaita, language and data folder) and these release
-  notes, and links to the new website, https://brahm.github.io/corerules/
-- **Packages**: the `.deb`, `.rpm` and pacman package are plain 1.0.0, and
-  replace a release candidate on update
-
-What the release candidates brought since 0.9.0:
-
-- **Saving with the CD** (rc2): opening the mounted Expansion CD or ISO
-  image with Open Folder… copies the disc to `~/.local/share/corerules/data`
-  (in the Flatpak, its own data folder), opens that copy and saves there
-- **Importing packages** (rc2): Import brings in, in one go, the race/class
-  combinations that name two classes of the package
-- **The test round of 0.9.0** (rc1): Edit Character keeps an elf's subrace,
-  a large package (36,525 items) imports in the background without
-  crashing, Extract Data from CD copies the pictures, New Character and
-  Enter Character have a Psionics step, and more than 40 smaller fixes
-- **Packages** (rc1): the `.deb` refuses to install on Ubuntu 24.04, which
-  is not supported; the Flatpak runs there; a pacman package installs on
-  Arch Linux, CachyOS and Omarchy
+- **Flatpak repository**: the Flatpak comes from the project's own signed
+  repository, so `flatpak update`, GNOME Software and Discover bring every
+  new version
+- **Editors**: a priest's quest spell is called a quest spell instead of
+  "0th level", the editors' wording is clearer, and Portuguese tells the
+  Abilities and Skills tabs apart
+- **Characters**: Edit Character shows the social class in the language
+  chosen, Back keeps what a creation page had, the points pages say why
+  they refuse a choice, and the Psionics page leaves the rogue points to
+  the Rogue page
+- **Translations**: the app shows the chosen language throughout, and the
+  translations lost the original's double spaces
 
 What the app does: it opens a Core Rules 2.0 Expansion installation (or its
 CD, or a data package), creates and edits characters with the Core Rules or
@@ -44,11 +36,12 @@ content; you need your own copy of Core Rules.
 
 | System | File | Install |
 | --- | --- | --- |
-| Ubuntu 26.04 or newer | `corerules_1.0.0_amd64.deb` | `sudo apt install ./corerules_1.0.0_amd64.deb` |
-| Fedora 44 or newer | `corerules-1.0.0-1.fc44.x86_64.rpm` | `sudo dnf install ./corerules-1.0.0-1.fc44.x86_64.rpm` |
-| Arch Linux, CachyOS, Omarchy | `corerules-1.0.0-1-x86_64.pkg.tar.zst` | `sudo pacman -U ./corerules-1.0.0-1-x86_64.pkg.tar.zst` |
-| Any distribution with Flatpak, such as Bazzite | `CoreRules-1.0.0.flatpak` | `flatpak install --user CoreRules-1.0.0.flatpak` |
-| Any distribution (glibc 2.43+) | `CoreRules-1.0.0-x86_64.AppImage` | `chmod +x CoreRules-1.0.0-x86_64.AppImage` and run it |
+| Ubuntu 26.04 or newer | `corerules_1.0.1_amd64.deb` | `sudo apt install ./corerules_1.0.1_amd64.deb` |
+| Fedora 44 or newer | `corerules-1.0.1-1.fc44.x86_64.rpm` | `sudo dnf install ./corerules-1.0.1-1.fc44.x86_64.rpm` |
+| Arch Linux, CachyOS, Omarchy | `corerules-1.0.1-1-x86_64.pkg.tar.zst` | `sudo pacman -U ./corerules-1.0.1-1-x86_64.pkg.tar.zst` |
+| Any distribution with Flatpak, such as Bazzite | `CoreRules-1.0.1.flatpak` | `flatpak install --user CoreRules-1.0.1.flatpak` |
+| Any distribution (glibc 2.43+) | `CoreRules-1.0.1-x86_64.AppImage` | `chmod +x CoreRules-1.0.1-x86_64.AppImage` and run it |
+| Windows 11 | [Microsoft Store](https://apps.microsoft.com/detail/9nr2cgp649jm) | Get it from the Store page |
 
 The Flatpak needs the GNOME 51 runtime from Flathub, which `flatpak install`
 offers to fetch. It also installs from the project's own Flatpak repository,

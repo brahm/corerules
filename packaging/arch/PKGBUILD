@@ -6,8 +6,8 @@
 pkgname=corerules
 # A pre-release (1.0.0-rc1) drops the hyphen, which pacman does not allow
 # in a version: 1.0.0rc1 sorts before 1.0.0.
-pkgver=1.0.0
-_tag=v1.0.0
+pkgver=1.0.1
+_tag=v1.0.1
 pkgrel=1
 pkgdesc='Browse and edit AD&D Core Rules 2.0 characters and rules'
 arch=('x86_64')

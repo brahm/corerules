@@ -11,7 +11,8 @@ Edition. It is written in Rust and runs natively: with GTK 4 and libadwaita
 on Linux, with no Wine, and with WinUI 3 on Windows 11. On Linux it comes as
 a `.deb` for Ubuntu, an `.rpm` for Fedora, a pacman package for Arch Linux
 (and CachyOS and Omarchy), a Flatpak and an AppImage; on Windows 11 it comes
-from the [Microsoft Store](https://apps.microsoft.com/detail/9nr2cgp649jm), where it is in a closed beta. See
+from the [Microsoft Store](https://apps.microsoft.com/detail/9nr2cgp649jm). Both versions are
+final releases. See
 [Installing](#installing).
 
 Every screen of the original program is here: the Character Generator with
@@ -22,11 +23,13 @@ the help. The app reads and writes the original's own data files, so
 characters, monsters, encounters and packages made in either program open
 in the other.
 
-> **Version 1.0.0, the first stable release.** Every feature was checked
-> against the original programs and went through a full round of manual
-> tests, and players and Dungeon Masters ran the release candidate on
-> Fedora 45 beta, Ubuntu 26.10, Bazzite, Arch Linux and CachyOS, where it
-> worked as it should. [Download it](#installing) for your distribution,
+> **Version 1.0.1, ready on Linux and Windows 11.** Every feature was
+> checked against the original programs and went through a full round of
+> manual tests. Players and Dungeon Masters ran 1.0 on Fedora 45 beta,
+> Ubuntu 26.10, Bazzite, Arch Linux and CachyOS, and the Windows 11
+> version went through a beta on the Microsoft Store, where both worked as
+> they should. [Download it](#installing) for your distribution, get it
+> from the [Microsoft Store](https://apps.microsoft.com/detail/9nr2cgp649jm),
 > or visit the [website](https://brahm.github.io/corerules/).
 
 ![The character list with a character made in the original program](docs/screenshots/character.png)
@@ -80,15 +83,14 @@ preserved by the Internet Archive:
 
 1. **Release candidates (done).** 1.0.0-rc1 and 1.0.0-rc2 went to real
    users, and the problems they found were fixed.
-2. **1.0 (now).** The release candidate was confirmed stable on Fedora 45
+2. **1.0 (done).** The release candidate was confirmed stable on Fedora 45
    beta, Ubuntu 26.10, Bazzite, Arch Linux and CachyOS, and became 1.0.0:
    a faithful replacement for the original program.
-3. **Windows 11 (in beta).** A Windows 11 version in this repository,
-   with a native WinUI 3 interface written in Rust over the same backend,
-   distributed through the Microsoft Store. Every screen is ported, and a
-   closed beta goes through the Store; once its users confirm it, it is
-   released with the same version as Linux. From then on every feature
-   ships on Linux and Windows together.
+3. **Windows 11 (done).** A Windows 11 version in this repository, with a
+   native WinUI 3 interface written in Rust over the same backend,
+   distributed through the Microsoft Store. Every screen is ported; after
+   a beta on the Store it was released as 1.0.1, the same version as
+   Linux. From now on every feature ships on Linux and Windows together.
 4. **New features.** From then on the app improves on the original and
    moves away from it, step by step, until it no longer needs the original
    program's files to work.
@@ -482,27 +484,27 @@ same:
 
 Every [release](https://github.com/brahm/corerules/releases) has
 packages for x86-64 Linux. These are the files of
-[Core Rules 1.0.0](https://github.com/brahm/corerules/releases/tag/v1.0.0),
-the latest release:
+[Core Rules 1.0.1](https://github.com/brahm/corerules/releases/tag/v1.0.1),
+the latest release, for Linux and Windows 11:
 
 | System | Download | Install |
 | --- | --- | --- |
-| Fedora 44 or newer | [`corerules-1.0.0-1.fc44.x86_64.rpm`](https://github.com/brahm/corerules/releases/download/v1.0.0/corerules-1.0.0-1.fc44.x86_64.rpm) | `sudo dnf install ./corerules-1.0.0-1.fc44.x86_64.rpm` |
-| Ubuntu 26.04 or newer | [`corerules_1.0.0_amd64.deb`](https://github.com/brahm/corerules/releases/download/v1.0.0/corerules_1.0.0_amd64.deb) | `sudo apt install ./corerules_1.0.0_amd64.deb` |
-| Arch Linux, CachyOS, Omarchy | [`corerules-1.0.0-1-x86_64.pkg.tar.zst`](https://github.com/brahm/corerules/releases/download/v1.0.0/corerules-1.0.0-1-x86_64.pkg.tar.zst) | `sudo pacman -U ./corerules-1.0.0-1-x86_64.pkg.tar.zst` |
+| Fedora 44 or newer | [`corerules-1.0.1-1.fc44.x86_64.rpm`](https://github.com/brahm/corerules/releases/download/v1.0.1/corerules-1.0.1-1.fc44.x86_64.rpm) | `sudo dnf install ./corerules-1.0.1-1.fc44.x86_64.rpm` |
+| Ubuntu 26.04 or newer | [`corerules_1.0.1_amd64.deb`](https://github.com/brahm/corerules/releases/download/v1.0.1/corerules_1.0.1_amd64.deb) | `sudo apt install ./corerules_1.0.1_amd64.deb` |
+| Arch Linux, CachyOS, Omarchy | [`corerules-1.0.1-1-x86_64.pkg.tar.zst`](https://github.com/brahm/corerules/releases/download/v1.0.1/corerules-1.0.1-1-x86_64.pkg.tar.zst) | `sudo pacman -U ./corerules-1.0.1-1-x86_64.pkg.tar.zst` |
 | Any distribution with Flatpak, such as Bazzite | [`io.github.brahm.CoreRules.flatpakref`](https://brahm.github.io/corerules/io.github.brahm.CoreRules.flatpakref), from the [Flatpak repository](#the-flatpak-repository) | `flatpak install --user https://brahm.github.io/corerules/io.github.brahm.CoreRules.flatpakref` |
-| Any distribution (glibc 2.43+) | [`CoreRules-1.0.0-x86_64.AppImage`](https://github.com/brahm/corerules/releases/download/v1.0.0/CoreRules-1.0.0-x86_64.AppImage) | `chmod +x CoreRules-1.0.0-x86_64.AppImage`, then run it |
+| Any distribution (glibc 2.43+) | [`CoreRules-1.0.1-x86_64.AppImage`](https://github.com/brahm/corerules/releases/download/v1.0.1/CoreRules-1.0.1-x86_64.AppImage) | `chmod +x CoreRules-1.0.1-x86_64.AppImage`, then run it |
 | Community add-ons (installer) | [`CoreRules-Community-Addons-x86_64.AppImage`](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage) | `chmod +x CoreRules-Community-Addons-x86_64.AppImage`, then run it |
 
 The release also has the
-[`CoreRules-1.0.0.flatpak`](https://github.com/brahm/corerules/releases/download/v1.0.0/CoreRules-1.0.0.flatpak)
+[`CoreRules-1.0.1.flatpak`](https://github.com/brahm/corerules/releases/download/v1.0.1/CoreRules-1.0.1.flatpak)
 file, the
-[`PKGBUILD`](https://github.com/brahm/corerules/releases/download/v1.0.0/PKGBUILD)
+[`PKGBUILD`](https://github.com/brahm/corerules/releases/download/v1.0.1/PKGBUILD)
 of the pacman package and
-[`SHA256SUMS`](https://github.com/brahm/corerules/releases/download/v1.0.0/SHA256SUMS),
+[`SHA256SUMS`](https://github.com/brahm/corerules/releases/download/v1.0.1/SHA256SUMS),
 the checksums of every file. Before 1.0 there were betas (0.x) and release
-candidates (`-rc`), marked as pre-releases on the releases page; the 1.0.0
-packages replace a release candidate on update.
+candidates (`-rc`), marked as pre-releases on the releases page; the 1.0.1
+packages replace 1.0.0 or a release candidate on update.
 
 Users ran 1.0 on Fedora 45 beta (the `.rpm`), Ubuntu 26.10 (the `.deb`),
 Bazzite (the Flatpak and the AppImage, as on any Fedora Atomic desktop),
@@ -532,9 +534,8 @@ package from the release's source with `makepkg -si`.
 
 The Windows 11 version comes from the
 [Microsoft Store](https://apps.microsoft.com/detail/9nr2cgp649jm), which signs the package, so
-Windows and Smart App Control install it without warnings. It is in a
-closed beta now: the Store page opens for the testers of the beta, and for
-everyone once the beta ends. There is no direct download: the MSIX that the
+Windows and Smart App Control install it without warnings. There is no
+direct download: the MSIX that the
 release workflow builds is not signed (the Store signs it), and Windows does
 not install an unsigned package. The Store also installs the Windows App
 Runtime that the app needs and brings every update.
