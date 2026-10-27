@@ -74,19 +74,9 @@ impl Pictures {
     }
 }
 
-/// The GNOME app's sword, which Segoe Fluent Icons has no glyph for:
-/// its 16-pixel drawing turned 45 degrees, as path data.
-const SWORD: &str = "F1 M14.93,1.07 L14.43,3.69 L7.79,10.33 L5.67,8.21 L12.31,1.57 Z \
-    M4.04,6.59 L9.41,11.96 A1,1 0 0 1 8,13.37 L2.63,8 A1,1 0 0 1 4.04,6.59 Z \
-    M4.61,9.98 L6.02,11.39 L4.04,13.37 L2.63,11.96 Z \
-    M1.64,12.38 A1.4,1.4 0 1 1 3.62,14.36 A1.4,1.4 0 1 1 1.64,12.38 Z";
-
 /// The section's icon in the navigation, as the GNOME app gives each its
 /// own.
 pub fn icon(section: &str) -> View {
-    if section == "weapons" {
-        return PathIcon::new().data(SWORD).into();
-    }
     match section_icons::path(section) {
         Some(data) => PathIcon::new().data(data).into(),
         None => SymbolIcon::new().symbol(Symbol::Document).into(),

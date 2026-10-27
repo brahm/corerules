@@ -2,8 +2,7 @@
 //! Fluent Icons has nothing fitting for: drawings of Material Design Icons
 //! (Pictogrammers, Apache License 2.0, see
 //! `package/MaterialDesignIcons-LICENSE.txt`), scaled from their 24-pixel
-//! grid to the navigation's 16 pixels, as path data. The sword of Weapons
-//! is the GNOME app's own, in `library.rs`.
+//! grid to the navigation's 16 pixels, as path data.
 
 use cr_store::userdb::parts::OTHER_SECTION;
 
@@ -16,6 +15,7 @@ pub fn path(section: &str) -> Option<&'static str> {
         "races" => RACES,
         "classes" => CLASSES,
         "kits" => KITS,
+        "weapons" => WEAPONS,
         "armor" => ARMOR,
         "equipment" => EQUIPMENT,
         "magic-items" => MAGIC_ITEMS,
@@ -92,6 +92,9 @@ const KITS: &str = "F1 M1.33,2 L14.67,2 C15.37,2 16,2.63 16,3.33 L16,12.67 C16,1
     5.33,8 C5.68,8 6.03,7.91 6.33,7.73 C6.64,7.56 6.89,7.3 7.07,7 C7.24,6.7 7.33,6.35 \
     7.33,6 C7.33,5.65 7.24,5.3 7.07,5 C6.89,4.7 6.64,4.44 6.33,4.27 C6.03,4.09 5.68,4 \
     5.33,4 Z";
+
+/// mdi-sword
+const WEAPONS: &str = "F1 M4.61,3.33 L3.33,3.33 L9.33,9.33 L10,8.71 M13.31,12.75 L12.75,13.31 C12.49,13.57 12.07,13.57 11.81,13.31 L9.73,11.23 L7.94,13 L7,12.06 L7.95,11.11 L2,5.17 L2,2 L5.17,2 L11.11,7.95 L12.06,7 L13,7.94 L11.22,9.72 L13.3,11.8 C13.57,12.07 13.57,12.49 13.31,12.75 Z";
 
 /// mdi-shield
 const ARMOR: &str = "F1 M8,0.67 L2,3.33 L2,7.33 C2,11.03 4.56,14.49 8,15.33 C11.44,14.49 14,11.03 14,7.33 \
