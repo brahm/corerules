@@ -4,13 +4,15 @@
 
 # Core Rules
 
-**Core Rules** is a complete Linux version of **AD&D Core Rules 2.0** and
-its **Expansion** (TSR/Evermore, 1998-1999), the character manager and
-Dungeon Master's toolkit for Advanced Dungeons & Dragons 2nd Edition. It is
-written in Rust with GTK 4 and libadwaita and runs natively, with no Wine
-and no Windows. It comes as a `.deb` for Ubuntu, an `.rpm` for Fedora, a
-pacman package for Arch Linux (and CachyOS and Omarchy), a Flatpak and an
-AppImage; see [Installing](#installing).
+**Core Rules** is a complete Linux and Windows 11 version of **AD&D Core
+Rules 2.0** and its **Expansion** (TSR/Evermore, 1998-1999), the character
+manager and Dungeon Master's toolkit for Advanced Dungeons & Dragons 2nd
+Edition. It is written in Rust and runs natively: with GTK 4 and libadwaita
+on Linux, with no Wine, and with WinUI 3 on Windows 11. On Linux it comes as
+a `.deb` for Ubuntu, an `.rpm` for Fedora, a pacman package for Arch Linux
+(and CachyOS and Omarchy), a Flatpak and an AppImage; on Windows 11 it comes
+from the Microsoft Store, where it is in a closed beta. See
+[Installing](#installing).
 
 Every screen of the original program is here: the Character Generator with
 Create, Enter and Update Character, kits and Player's Option, the character
@@ -28,6 +30,28 @@ in the other.
 > or visit the [website](https://brahm.github.io/corerules/).
 
 ![The character list with a character made in the original program](docs/screenshots/character.png)
+
+### On Windows 11
+
+The Windows 11 version has every screen of the Linux one, over the same
+backend and the same data files, with the look of a Windows 11 app: the
+navigation pane, command bars, settings cards, the system's light, dark
+and high-contrast themes and the Mica backdrop. The help files of the
+discs open in the app's own Help page, since Windows 11 no longer has a
+WinHelp reader.
+
+<p align="center">
+  <img src="docs/screenshots/windows/character.png" width="49%" alt="The character list on Windows 11">
+  <img src="docs/screenshots/windows/monster.png" width="49%" alt="A red dragon's page in the library on Windows 11">
+</p>
+<p align="center">
+  <img src="docs/screenshots/windows/encounter.png" width="49%" alt="An orc lair encounter on Windows 11">
+  <img src="docs/screenshots/windows/sheet.png" width="49%" alt="A character sheet on Windows 11">
+</p>
+<p align="center">
+  <img src="docs/screenshots/windows/new-character.png" width="49%" alt="Rolling ability scores in New Character on Windows 11">
+  <img src="docs/screenshots/windows/help.png" width="49%" alt="The Tome of Help on Windows 11">
+</p>
 
 ## You need the original discs
 
@@ -59,9 +83,11 @@ preserved by the Internet Archive:
 2. **1.0 (now).** The release candidate was confirmed stable on Fedora 45
    beta, Ubuntu 26.10, Bazzite, Arch Linux and CachyOS, and became 1.0.0:
    a faithful replacement for the original program.
-3. **Windows 11 (in progress).** A Windows 11 version in this repository,
+3. **Windows 11 (in beta).** A Windows 11 version in this repository,
    with a native WinUI 3 interface written in Rust over the same backend,
-   distributed through the Microsoft Store. From then on every feature
+   distributed through the Microsoft Store. Every screen is ported, and a
+   closed beta goes through the Store; once its users confirm it, it is
+   released with the same version as Linux. From then on every feature
    ships on Linux and Windows together.
 4. **New features.** From then on the app improves on the original and
    moves away from it, step by step, until it no longer needs the original
@@ -345,9 +371,9 @@ when and why each was decided.
 
 ### Platform and setup
 
-- **Linux only, no Wine.** The app is a native GTK 4 program. A Windows 11
-  version is being made over the same backend, which is already built
-  and tested on Windows.
+- **Linux and Windows 11, no Wine.** The app is a native GTK 4 program on
+  Linux and a native WinUI 3 program on Windows 11, over the same backend.
+  Windows 10 and older versions are not supported.
 - **No installation of the original needed.** Extract Data from CD… copies
   what the app uses from the CD, its ISO image (read directly, with no
   mounting) or an existing installation into a local data folder. The
@@ -500,6 +526,20 @@ and EndeavourOS; update the system (`sudo pacman -Syu`) before
 installing it. Each release also has its `PKGBUILD`, which builds the
 package from the release's source with `makepkg -si`.
 
+### Windows 11
+
+The Windows 11 version comes from the Microsoft Store, which signs the
+package, so Windows and Smart App Control install it without warnings. It
+is in a closed beta now; the link to its Store page will be here once it is
+published. There is no direct download: the MSIX that the release workflow
+builds is not signed (the Store signs it), and Windows does not install an
+unsigned package. The Store also installs the Windows App Runtime that the
+app needs and brings every update.
+
+The app keeps its data in `Documents\Core Rules\data`, copies the rules
+data from the CD or its ISO image with Extract Data from CD…, and also
+opens an installation of the original program on the same computer.
+
 ### The Flatpak repository
 
 The project has its own Flatpak repository, at
@@ -622,7 +662,7 @@ CORERULES_DIR="$HOME/.wine/drive_c/Program Files/AD&D Core Rules 2.0" cargo test
 | `cr-app` | What both apps share above the backend, with no GTK and no Windows: the names of their actions, the library's search, filters and commands, the pictures, the help and About, the book reader's zoom, Find and reading positions, the sheet's options and exports, the sheet laid out on printed pages and the sheet as a PDF |
 | `cr-gtk` | The GNOME app |
 | `cr-addons` | Core Rules Community Add-ons Collection, the add-ons and their installer |
-| `cr-win` | The Windows 11 app (WinUI 3 with windows-reactor), being ported screen by screen |
+| `cr-win` | The Windows 11 app (WinUI 3 with windows-reactor), with every screen of the GNOME app |
 
 The backend crates and `cr-app` have no GTK dependency, and CI builds and
 tests them on Windows too, with `cr-win` and its MSIX package.
@@ -749,8 +789,8 @@ cargo run -p cr-gtk                                # the data package or the Win
 cargo run -p cr-gtk -- "/media/cdrom"               # or any folder with Database/
 ```
 
-On Windows 11, with the Windows App Runtime 2.4 installed, the Windows app,
-still being ported, runs with `cargo run -p cr-win`; it opens the data
+On Windows 11, with the Windows App Runtime 2.4 installed, the Windows app
+runs with `cargo run -p cr-win`; it opens the data
 package in `Documents\Core Rules\data` or the original's installation.
 
 ## License
