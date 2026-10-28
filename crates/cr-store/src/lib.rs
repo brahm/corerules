@@ -262,10 +262,11 @@ fn can_write_in(dir: &Path) -> bool {
 }
 
 fn find_entry(dir: &Path, name: &str) -> Option<PathBuf> {
-    // On Windows every spelling exists, and the shortcut would give back
-    // the one asked for; the folder is read for the name as it is on disk,
-    // the one the original and Linux see.
-    if !cfg!(windows) {
+    // On Windows and macOS, whose disks ignore case, every spelling
+    // exists, and the shortcut would give back the one asked for; the
+    // folder is read for the name as it is on disk, the one the original
+    // and Linux see.
+    if !cfg!(any(windows, target_os = "macos")) {
         let exact = dir.join(name);
         if exact.exists() {
             return Some(exact);
