@@ -125,6 +125,7 @@ def main():
     shutil.copytree(SITE / "original", out / "original")
     shutil.copytree(SITE / "boxes", out / "boxes")
     shutil.copytree(SITE / "logo", out / "logo")
+    shutil.copytree(SITE / "privacy", out / "privacy")
     shutil.copytree(ROOT / "docs" / "screenshots", out / "screenshots")
     shutil.copytree(ROOT / "addons" / "screenshots", out / "addons")
     icons = out / "icons"
