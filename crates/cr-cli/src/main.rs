@@ -55,10 +55,16 @@ const COMMANDS: [&str; 17] = [
 
 /// The data package folder as the usage text names it
 /// ([`cr_store::DATA_PACKAGE_SHOWN`], which `concat!` cannot take).
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos")))]
 macro_rules! data_dir {
     () => {
         "~/.local/share/corerules/data"
+    };
+}
+#[cfg(target_os = "macos")]
+macro_rules! data_dir {
+    () => {
+        "~/Library/Application Support/Core Rules/data"
     };
 }
 #[cfg(windows)]

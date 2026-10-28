@@ -69,13 +69,23 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// Where Extract Data from CD… (`cr extract-data`) puts the data package:
 /// `$XDG_DATA_HOME/corerules/data`, else `~/.local/share/corerules/data`.
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos")))]
 pub fn data_package_dir() -> Option<PathBuf> {
     let data = std::env::var_os("XDG_DATA_HOME")
         .filter(|d| !d.is_empty())
         .map(PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|h| Path::new(&h).join(".local/share")))?;
     Some(data.join("corerules").join("data"))
+}
+
+/// Where Extract Data from CD… (`cr extract-data`) puts the data package:
+/// `~/Library/Application Support/Core Rules/data`, where Mac apps keep
+/// their data. Unlike Documents, macOS asks no permission for it, and
+/// moving the app to the Trash leaves it in place.
+#[cfg(target_os = "macos")]
+pub fn data_package_dir() -> Option<PathBuf> {
+    let home = std::env::var_os("HOME").filter(|h| !h.is_empty())?;
+    Some(Path::new(&home).join("Library/Application Support/Core Rules/data"))
 }
 
 /// Where Extract Data from CD… (`cr extract-data`) puts the data package:
@@ -120,8 +130,11 @@ fn documents_dir() -> Option<PathBuf> {
 }
 
 /// [`data_package_dir`] the way texts for the user name it.
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos")))]
 pub const DATA_PACKAGE_SHOWN: &str = "~/.local/share/corerules/data";
+/// [`data_package_dir`] the way texts for the user name it.
+#[cfg(target_os = "macos")]
+pub const DATA_PACKAGE_SHOWN: &str = "~/Library/Application Support/Core Rules/data";
 /// [`data_package_dir`] the way texts for the user name it.
 #[cfg(windows)]
 pub const DATA_PACKAGE_SHOWN: &str = r"Documents\Core Rules\data";

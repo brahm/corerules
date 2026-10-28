@@ -94,7 +94,11 @@ fn a_read_only_cd_is_saved_into_a_local_copy() {
     let first = String::from_utf8_lossy(&delete().stderr).into_owned();
     let again = String::from_utf8_lossy(&delete().stderr).into_owned();
     read_only(0o755);
-    let copy = data.join("corerules/data");
+    let copy = if cfg!(target_os = "macos") {
+        base.join("Library/Application Support/Core Rules/data")
+    } else {
+        data.join("corerules/data")
+    };
     assert!(
         first.contains("cannot be written to; copied its data into"),
         "{first}"
