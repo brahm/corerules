@@ -177,6 +177,24 @@ impl EncounterSession {
         Self::open(install, rules, State::Form(form), rand, said(all))
     }
 
+    /// The page on `encounter`, under no name: Group Encounter's, whose
+    /// name is left for the user to give (0x44e759).
+    pub(crate) fn unsaved(
+        install: Arc<Installation>,
+        rules: Arc<EncounterRules>,
+        encounter: Encounter,
+        rand: Arc<Mutex<Rand>>,
+    ) -> Arc<Self> {
+        let form = EncounterForm::new(rules.clone(), encounter, None, Vec::new());
+        Self::open(
+            install,
+            rules,
+            State::Form(Box::new(form)),
+            rand,
+            Vec::new(),
+        )
+    }
+
     /// The saved encounter `name`; with `copy`, under no name, so that
     /// Save adds a new one once it is named (the original's Copy).
     pub(crate) fn saved(

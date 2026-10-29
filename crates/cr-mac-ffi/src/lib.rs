@@ -12,6 +12,7 @@ mod form;
 mod help;
 mod import;
 mod npc;
+mod parties;
 mod prompt;
 mod sheet;
 mod tables;
@@ -39,6 +40,7 @@ pub use form::{
 pub use help::{HelpBook, HelpLinked, HelpRow, HelpSession, HelpTopic};
 pub use import::{ImportCategory, ImportItem, ImportReport, ImportSession};
 pub use npc::{NpcSession, NpcsCreated};
+pub use parties::{GroupRequest, PartiesSession};
 pub use prompt::{PromptGroup, PromptInfo, PromptKind};
 pub use sheet::{SheetOptions, SheetSectionInfo, SheetSession};
 pub use tables::{TableBlock, TableOption, TableReference, TableResult, TableSession};
@@ -394,6 +396,16 @@ impl Library {
 
     fn encounter_rules(&self) -> Result<Arc<cr_store::encounter::EncounterRules>, CoreError> {
         cached(&self.encounter_rules, || self.install.encounter_rules())
+    }
+
+    /// The party's NPCs of Group Encounter, as one encounter.
+    fn group(&self, group: &GroupRequest) -> Result<cr_store::encounter::Encounter, CoreError> {
+        let members = group
+            .members
+            .iter()
+            .map(|file| self.install.character(file))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(cr_store::encounter::Encounter::of_group(members))
     }
 
     fn help_files(&self) -> Result<Arc<cr_app::help::Files>, CoreError> {
@@ -1089,6 +1101,33 @@ impl Library {
             name,
             self.generators.rand.clone(),
         )
+    }
+
+    /// Manage Parties.
+    pub fn manage_parties(&self) -> Result<Arc<PartiesSession>, CoreError> {
+        PartiesSession::open(self.install.clone())
+    }
+
+    /// Group Encounter's Create and Save: the encounter of the party's
+    /// NPCs, to name and save.
+    pub fn group_encounter(&self, group: GroupRequest) -> Result<Arc<EncounterSession>, CoreError> {
+        let encounter = self.group(&group)?;
+        Ok(EncounterSession::unsaved(
+            self.install.clone(),
+            self.encounter_rules()?,
+            encounter,
+            self.generators.rand.clone(),
+        ))
+    }
+
+    /// Group Encounter's Print: the party's NPCs on one page.
+    pub fn group_sheet(&self, group: GroupRequest) -> Result<Arc<SheetSession>, CoreError> {
+        let mut encounter = self.group(&group)?;
+        encounter.name = group.party.clone();
+        let sheet = self
+            .encounter_rules()?
+            .group_sheet(&encounter, group.condensed);
+        Ok(SheetSession::of(self.install.clone(), sheet))
     }
 }
 

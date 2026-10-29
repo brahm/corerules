@@ -27,6 +27,7 @@ struct Action: Hashable {
     static let TREASURE_DELETE = Action("TREASURE_DELETE")
     static let NEW_ENCOUNTER = Action("NEW_ENCOUNTER")
     static let NEW_TABLE = Action("NEW_TABLE")
+    static let MANAGE_PARTIES = Action("MANAGE_PARTIES")
     static let ENCOUNTER_PRINT = Action("ENCOUNTER_PRINT")
     static let ENCOUNTER_PDF = Action("ENCOUNTER_PDF")
     static let ENCOUNTER_DELETE = Action("ENCOUNTER_DELETE")

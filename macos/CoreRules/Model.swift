@@ -12,6 +12,7 @@ enum Modal: Identifiable {
     case edit(EditModel)
     case npc(NpcModel)
     case importing(ImportModel)
+    case parties(PartiesModel)
 
     var id: ObjectIdentifier {
         switch self {
@@ -19,6 +20,7 @@ enum Modal: Identifiable {
         case .edit(let m): return ObjectIdentifier(m)
         case .npc(let m): return ObjectIdentifier(m)
         case .importing(let m): return ObjectIdentifier(m)
+        case .parties(let m): return ObjectIdentifier(m)
         }
     }
 }
@@ -215,7 +217,7 @@ final class AppModel: ObservableObject {
     func enabled(_ action: Action, sheet: SheetModel? = nil) -> Bool {
         switch action {
         case Action.NEW_CHARACTER, Action.ENTER_CHARACTER, Action.IMPORT, Action.NEW_NPC,
-            Action.NEW_NPC_GROUP:
+            Action.NEW_NPC_GROUP, Action.MANAGE_PARTIES:
             return writable && modal == nil
         case Action.ROLL_TABLE:
             return library != nil
@@ -261,6 +263,7 @@ final class AppModel: ObservableObject {
         case Action.ROLL_TREASURE: rollTreasure()
         case Action.NEW_ENCOUNTER: newEncounter()
         case Action.NEW_TABLE: editEncounterTable()
+        case Action.MANAGE_PARTIES: manageParties()
         case Action.SHEET_PRINT:
             if sheet == nil && details?.commands.monster == true {
                 monsterHelp(print: true)
@@ -552,6 +555,59 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Manage Parties, in a sheet.
+    private func manageParties() {
+        guard let library else { return }
+        do {
+            let parties = PartiesModel(try library.manageParties())
+            parties.grouped = { [weak self] (group: GroupRequest) in
+                self?.groupEncounter(group)
+            }
+            parties.deleted = { [weak self] (done: Result<String, Error>) in
+                guard let self else { return }
+                self.modal = nil
+                switch done {
+                case .success(let said):
+                    self.notice = Notice(title: said, text: "")
+                case .failure(let error):
+                    self.fail(tr("Manage Parties"), error)
+                }
+                self.entry = nil
+                self.reload()
+            }
+            modal = .parties(parties)
+        } catch {
+            fail(tr("Manage Parties"), error)
+        }
+    }
+
+    /// Manage Parties closed: the library shows the characters' parties
+    /// as they are now.
+    func closeParties() {
+        modal = nil
+        reload()
+    }
+
+    /// Group Encounter: the encounter of the party's NPCs in its window,
+    /// or their page printed or shown.
+    private func groupEncounter(_ group: GroupRequest) {
+        guard let library else { return }
+        do {
+            if group.print {
+                let sheet = SheetModel(try library.groupSheet(group: group), app: self)
+                if group.preview {
+                    present(sheet)
+                } else {
+                    sheet.print()
+                }
+            } else {
+                showEncounter(try library.groupEncounter(group: group))
+            }
+        } catch {
+            fail(tr("Group Encounter"), error)
+        }
+    }
+
     /// The encounter's window closed.
     func closeEncounter() {
         encounter = nil
@@ -785,6 +841,7 @@ final class AppModel: ObservableObject {
         case .edit(let edit): return edit.session.help()
         case .npc(let npc): return npc.session.help()
         case .importing: return screenHelp(screen: .`import`)
+        case .parties(let parties): return parties.session.help()
         case nil: return section.map { sectionHelp(section: $0) } ?? screenHelp(screen: .mainMenu)
         }
     }

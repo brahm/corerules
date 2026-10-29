@@ -95,6 +95,8 @@ struct ModalView: View {
             EditView(model: edit, close: { (saved: Bool) in model.closeEdit(edit, saved: saved) })
         case .npc(let npc):
             NpcView(model: npc, close: { model.modal = nil })
+        case .parties(let parties):
+            PartiesView(model: parties, close: { model.closeParties() })
         case .importing(let importing):
             ImportView(
                 model: importing,
