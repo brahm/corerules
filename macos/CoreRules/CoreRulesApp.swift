@@ -23,13 +23,27 @@ struct CoreRulesApp: App {
             ContentView()
                 .environmentObject(model)
         }
-        .commands { MenuCommands(model: model) }
+        .commands {
+            MenuCommands(model: model)
+            HelpCommands(model: model)
+        }
         WindowGroup(id: "sheet", for: UUID.self) { $id in
             if let id {
                 SheetWindow(id: id)
                     .environmentObject(model)
             }
         }
+        Window(tr("Help"), id: "help") {
+            HelpWindow()
+                .environmentObject(model)
+        }
+        .defaultSize(width: 980, height: 680)
+        Window(tr("_About Core Rules"), id: "about") {
+            AboutView()
+                .environmentObject(model)
+        }
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
         Settings {
             SettingsView()
                 .environmentObject(model)
@@ -90,5 +104,32 @@ struct MenuCommands: Commands {
     private func item(_ title: String, _ action: Action) -> some View {
         Button(title) { model.perform(action, sheet: sheet) }
             .disabled(!model.enabled(action, sheet: sheet))
+    }
+}
+
+/// The Help menu: the help of the screen in front, as the original's F1
+/// opens it, the books, and help on the entry in view.
+struct HelpCommands: Commands {
+    @ObservedObject var model: AppModel
+    @FocusedValue(\.sheet) private var sheet: SheetModel?
+
+    var body: some Commands {
+        CommandGroup(replacing: .help) {
+            Button(tr("Core Rules Help")) { model.perform(Action.HELP_HERE, sheet: sheet) }
+                .keyboardShortcut("?")
+                .disabled(!model.enabled(Action.HELP_HERE))
+            Button(entryHelpTitle) { model.perform(Action.HELP_CONTROL) }
+                .disabled(!model.enabled(Action.HELP_CONTROL))
+            Divider()
+            ForEach(helpBooks(), id: \.file) { (book: HelpBook) in
+                Button(plain(book.label)) { model.openHelp(book.file) }
+                    .disabled(!model.enabled(Action.HELP))
+            }
+        }
+    }
+
+    private var entryHelpTitle: String {
+        guard let details = model.details else { return tr("Help") }
+        return tr("Help on {name}", ["name": details.title])
     }
 }

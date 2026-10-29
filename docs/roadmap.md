@@ -515,7 +515,7 @@ The phases run in order:
    2026-10-29; its test found Open Anyway not offered, so the `.dmg`'s
    notes lead with removing the quarantine in Terminal, and the weapons
    drawn with a hammer, now the sword of the other apps.
-   - **The library and the sheet (in progress).** `cr-mac-ffi` gained the
+   - **The library and the sheet (done).** `cr-mac-ffi` gained the
      library's filters (origin, party, part type, Magic Only), the
      commands an entry offers, the items' icons and the pictures (a
      monster type's frames with Next Image, and Full Screen), and the
@@ -528,6 +528,17 @@ The phases run in order:
      Options; Print and Save in the menu bar act on the sheet's window in
      front. Convert to Character and Convert to NPC are in the
      character's More menu.
+   - **Help and About (in progress).** `cr-mac-ffi` holds the help as a
+     session (the book listed, its contents or what a search finds, the
+     topic as the web page `cr-app` makes, its links and popups, Back),
+     the help of an entry and of a monster, and About's texts. The Mac
+     app shows the help in a window of its own, with the book selector,
+     the search in the sidebar and the topic in a WKWebView, Back and
+     Print; the Help menu opens the help of the screen in front (⌘?),
+     the help of the entry in view and the books, and the entry's
+     toolbar has Help, and View and Print for a monster. About is a
+     window with What's New, Credits, Legal and Troubleshooting, as the
+     other apps' About.
 5. **Beta and release** on the three systems with the same tag, with an
    install page on the website and in the README that shows the Open
    Anyway steps.

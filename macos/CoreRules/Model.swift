@@ -77,11 +77,15 @@ final class AppModel: ObservableObject {
 
     /// The sheets open in their windows, by the id their window has.
     private(set) var sheets: [UUID: SheetModel] = [:]
+    /// The help of the installation opened, once it is read.
+    @Published private(set) var help: HelpModel?
 
-    /// Opens Settings and a sheet's window; the main window's view sets
-    /// them, as only a view can.
+    /// Opens Settings, a sheet's window, the help's and About; the main
+    /// window's view sets them, as only a view can.
     var openSettings: () -> Void = {}
     var openSheet: (UUID) -> Void = { _ in }
+    var openHelpWindow: () -> Void = {}
+    var openAbout: () -> Void = {}
 
     init() {
         if let folder = Prefs.folder, let library = try? Library.open(path: folder) {
@@ -94,6 +98,9 @@ final class AppModel: ObservableObject {
     // MARK: The library
 
     private func show(_ library: Library?) {
+        if library !== self.library {
+            help = nil
+        }
         self.library = library
         sections = library?.sections() ?? []
         if section == nil || !sections.contains(where: { $0.id == section }) {
@@ -191,7 +198,11 @@ final class AppModel: ObservableObject {
         case Action.SHEET_PRINT:
             if sheet != nil { return true }
             guard let commands = details?.commands else { return false }
-            return commands.sheet || (commands.print && !commands.monster)
+            return commands.sheet || commands.print
+        case Action.HELP, Action.HELP_HERE:
+            return library != nil
+        case Action.HELP_CONTROL:
+            return library != nil && details != nil
         case Action.SHEET_PDF:
             return sheet != nil || details?.commands.sheet == true
         case Action.SHEET_HTML, Action.SHEET_TXT, Action.SHEET_MD:
@@ -211,24 +222,25 @@ final class AppModel: ObservableObject {
         guard enabled(action, sheet: sheet) else { return }
         switch action {
         case Action.PREFERENCES: openSettings()
-        case Action.ABOUT: about()
+        case Action.ABOUT: openAbout()
         case Action.OPEN: chooseFolder()
         case Action.NEW_CHARACTER: newCharacter()
         case Action.IMPORT: chooseImport()
-        case Action.SHEET_PRINT: (sheet ?? selectedSheet())?.print()
+        case Action.SHEET_PRINT:
+            if sheet == nil && details?.commands.monster == true {
+                monsterHelp(print: true)
+            } else {
+                (sheet ?? selectedSheet())?.print()
+            }
         case Action.SHEET_PDF: (sheet ?? selectedSheet())?.savePdf()
         case Action.SHEET_HTML: (sheet ?? selectedSheet())?.export(.html)
         case Action.SHEET_TXT: (sheet ?? selectedSheet())?.export(.text)
         case Action.SHEET_MD: (sheet ?? selectedSheet())?.export(.markdown)
+        case Action.HELP: openHelp(helpBooks().first?.file ?? "")
+        case Action.HELP_HERE: openHelp(programHelp(number: here(sheet: sheet)))
+        case Action.HELP_CONTROL: entryHelp()
         default: break
         }
-    }
-
-    private func about() {
-        NSApp.orderFrontStandardAboutPanel(options: [
-            .applicationName: tr("Core Rules"),
-            .applicationVersion: version(),
-        ])
     }
 
     func chooseFolder() {
@@ -372,6 +384,10 @@ final class AppModel: ObservableObject {
     /// own.
     func showSheet() {
         guard let sheet = selectedSheet() else { return }
+        present(sheet)
+    }
+
+    private func present(_ sheet: SheetModel) {
         let id = UUID()
         sheets[id] = sheet
         openSheet(id)
@@ -383,6 +399,78 @@ final class AppModel: ObservableObject {
 
     func closeSheet(_ id: UUID) {
         sheets[id] = nil
+    }
+
+    // MARK: Help
+
+    /// Opens the help at `spec` in its window; `print` prints the topic
+    /// once it is shown.
+    func openHelp(_ spec: String, print: Bool = false) {
+        guard let library else {
+            notice = Notice(title: tr("Help"), text: tr("Open a Core Rules folder to read its help"))
+            return
+        }
+        do {
+            let help = try self.help ?? HelpModel(library.help(), app: self)
+            let before = help.topic?.html
+            help.printNext = print
+            try help.open(spec)
+            self.help = help
+            openHelpWindow()
+            // The same topic is not drawn again.
+            if print && help.topic?.html == before && help.webView != nil {
+                help.printNext = false
+                help.print()
+            }
+        } catch {
+            fail(tr("Help"), error)
+        }
+    }
+
+    /// The program help's topic of the screen in front.
+    private func here(sheet: SheetModel?) -> UInt32 {
+        if sheet != nil {
+            return screenHelp(screen: .characterSheet)
+        }
+        switch modal {
+        case .wizard(let wizard): return wizard.session.help()
+        case .edit(let edit): return edit.session.help()
+        case .importing: return screenHelp(screen: .`import`)
+        case nil: return section.map { sectionHelp(section: $0) } ?? screenHelp(screen: .mainMenu)
+        }
+    }
+
+    /// Help on the entry in view, as a right-click on its row shows it in
+    /// the original.
+    func entryHelp() {
+        guard let library, let section, let entry else { return }
+        showHelp(library.entryHelp(section: section, index: entry))
+    }
+
+    /// View or Print on a monster: its help topic, or its page.
+    func monsterHelp(print: Bool) {
+        guard let library, let section, let entry else { return }
+        showHelp(library.monsterHelp(section: section, index: entry), print: print)
+    }
+
+    private func showHelp(_ found: EntryHelp, print: Bool = false) {
+        switch found {
+        case .open(let spec):
+            openHelp(spec, print: print)
+        case .info(let title, let text):
+            notice = Notice(title: title, text: text)
+        case .page(let session):
+            let sheet = SheetModel(session, app: self)
+            if print {
+                sheet.print()
+            } else {
+                present(sheet)
+            }
+        case .nothing(let message):
+            if !message.isEmpty {
+                notice = Notice(title: tr("Help"), text: message)
+            }
+        }
     }
 
     // MARK: Messages

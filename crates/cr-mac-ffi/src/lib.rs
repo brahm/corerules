@@ -431,7 +431,7 @@ pub fn screen_help(screen: HelpScreen) -> u32 {
 pub struct AboutInfo {
     pub version: String,
     /// The description, one paragraph each.
-    pub description: Vec<String>,
+    pub paragraphs: Vec<String>,
     pub copyright: String,
     pub website: String,
     pub issues: String,
@@ -452,7 +452,7 @@ pub fn about() -> AboutInfo {
     use cr_app::about;
     AboutInfo {
         version: about::VERSION.to_owned(),
-        description: about::description(about::System::MacOs)
+        paragraphs: about::description(about::System::MacOs)
             .iter()
             .map(|p| (*p).to_owned())
             .collect(),
