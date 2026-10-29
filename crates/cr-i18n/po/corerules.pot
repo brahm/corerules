@@ -328,7 +328,7 @@ msgstr[1] ""
 #: crates/cr-app/src/bundle.rs:99
 #: crates/cr-gtk/src/encounter.rs:808
 #: crates/cr-gtk/src/treasure.rs:148
-#: crates/cr-mac-ffi/src/encounter.rs:660
+#: crates/cr-mac-ffi/src/encounter.rs:722
 #: crates/cr-mac-ffi/src/treasure.rs:278
 #: crates/cr-store/src/catalog.rs:869
 #: crates/cr-win/src/app/encounter.rs:635
@@ -392,8 +392,12 @@ msgstr ""
 #: crates/cr-mac-ffi/src/bundle.rs:142
 #: crates/cr-mac-ffi/src/bundle.rs:232
 #: crates/cr-mac-ffi/src/edit.rs:256
-#: crates/cr-mac-ffi/src/encounter.rs:825
+#: crates/cr-mac-ffi/src/encounter.rs:913
 #: crates/cr-mac-ffi/src/parties.rs:278
+#: crates/cr-mac-ffi/src/record.rs:536
+#: crates/cr-mac-ffi/src/record.rs:718
+#: crates/cr-mac-ffi/src/record.rs:882
+#: crates/cr-mac-ffi/src/record.rs:1043
 #: crates/cr-mac-ffi/src/wizard.rs:751
 #: crates/cr-win/src/app/bundle.rs:220
 #: crates/cr-win/src/app/bundle.rs:369
@@ -484,9 +488,9 @@ msgstr ""
 #: crates/cr-gtk/src/userdb/attacks.rs:62
 #: crates/cr-gtk/src/userdb/templates.rs:193
 #: crates/cr-gtk/src/userdb.rs:1851
-#: crates/cr-mac-ffi/src/encounter.rs:602
-#: crates/cr-mac-ffi/src/form.rs:366
-#: crates/cr-mac-ffi/src/form.rs:468
+#: crates/cr-mac-ffi/src/encounter.rs:664
+#: crates/cr-mac-ffi/src/form.rs:408
+#: crates/cr-mac-ffi/src/form.rs:510
 #: crates/cr-mac-ffi/src/prompt.rs:64
 #: crates/cr-mac-ffi/src/wizard.rs:780
 #: crates/cr-store/src/encounter/text.rs:477
@@ -510,7 +514,7 @@ msgstr ""
 #: crates/cr-win/src/app/record.rs:1207
 #: crates/cr-win/src/app/sheet.rs:234
 #: crates/cr-win/src/app/templates.rs:154
-#: macos/CoreRules/FormView.swift:494
+#: macos/CoreRules/FormView.swift:604
 msgid "None"
 msgstr ""
 
@@ -792,6 +796,7 @@ msgstr ""
 #: crates/cr-app/src/create/mod.rs:227
 #: crates/cr-gtk/src/create.rs:1706
 #: crates/cr-gtk/src/userdb/levels.rs:668
+#: crates/cr-mac-ffi/src/record.rs:1109
 #: crates/cr-store/src/catalog.rs:1133
 #: crates/cr-store/src/treasure.rs:450
 #: crates/cr-store/src/userdb/classes/pages.rs:96
@@ -857,6 +862,7 @@ msgstr ""
 #: crates/cr-gtk/src/create.rs:4632
 #: crates/cr-gtk/src/main.rs:2676
 #: crates/cr-gtk/src/userdb/levels.rs:304
+#: crates/cr-mac-ffi/src/record.rs:1000
 #: crates/cr-store/src/catalog.rs:1002
 #: crates/cr-store/src/userdb/monsters.rs:540
 #: crates/cr-win/src/app/record.rs:1253
@@ -2012,6 +2018,7 @@ msgstr ""
 #: crates/cr-gtk/src/userdb/templates.rs:1353
 #: crates/cr-gtk/src/userdb/templates.rs:1673
 #: crates/cr-gtk/src/userdb/templates.rs:1744
+#: crates/cr-mac-ffi/src/encounter.rs:566
 #: crates/cr-win/src/app/templates.rs:335
 #: crates/cr-win/src/app/templates.rs:736
 #: crates/cr-win/src/app/templates.rs:791
@@ -2025,8 +2032,8 @@ msgstr ""
 #: crates/cr-gtk/src/encounter.rs:1138
 #: crates/cr-gtk/src/userdb/templates.rs:778
 #: crates/cr-gtk/src/userdb/templates.rs:1501
-#: crates/cr-mac-ffi/src/encounter.rs:262
-#: crates/cr-mac-ffi/src/encounter.rs:289
+#: crates/cr-mac-ffi/src/encounter.rs:276
+#: crates/cr-mac-ffi/src/encounter.rs:323
 #: crates/cr-win/src/app/templates.rs:361
 #: crates/cr-win/src/app/templates.rs:734
 #: crates/cr-win/src/app.rs:3915
@@ -2038,7 +2045,8 @@ msgstr ""
 #: crates/cr-app/src/records/templates.rs:760
 #: crates/cr-gtk/src/encounter.rs:919
 #: crates/cr-gtk/src/userdb/templates.rs:780
-#: crates/cr-mac-ffi/src/encounter.rs:266
+#: crates/cr-mac-ffi/src/encounter.rs:280
+#: crates/cr-mac-ffi/src/encounter.rs:551
 #: crates/cr-win/src/app/templates.rs:413
 #: crates/cr-win/src/app.rs:3939
 #: crates/cr-win/src/app.rs:4242
@@ -2063,13 +2071,13 @@ msgstr ""
 #: crates/cr-app/src/library.rs:158
 #: crates/cr-gtk/src/encounter.rs:190
 #: crates/cr-gtk/src/encounter.rs:423
-#: crates/cr-mac-ffi/src/encounter.rs:126
-#: crates/cr-mac-ffi/src/encounter.rs:353
+#: crates/cr-mac-ffi/src/encounter.rs:140
+#: crates/cr-mac-ffi/src/encounter.rs:387
 #: crates/cr-win/src/app/encounter.rs:183
 #: macos/CoreRules/CoreRulesApp.swift:55
-#: macos/CoreRules/Model.swift:475
-#: macos/CoreRules/Model.swift:502
-#: macos/CoreRules/Model.swift:643
+#: macos/CoreRules/Model.swift:498
+#: macos/CoreRules/Model.swift:525
+#: macos/CoreRules/Model.swift:789
 msgid "New Encounter"
 msgstr ""
 
@@ -2119,7 +2127,7 @@ msgstr ""
 #: crates/cr-app/src/encounter.rs:688
 #: crates/cr-gtk/src/encounter.rs:861
 #: crates/cr-gtk/src/userdb/templates.rs:1205
-#: crates/cr-mac-ffi/src/encounter.rs:698
+#: crates/cr-mac-ffi/src/encounter.rs:760
 #: crates/cr-win/src/app/encounter.rs:681
 #: crates/cr-win/src/app/templates.rs:402
 msgid "Remove Trap"
@@ -2136,7 +2144,7 @@ msgstr ""
 #: crates/cr-app/src/encounter.rs:1011
 #: crates/cr-gtk/src/encounter.rs:1434
 #: crates/cr-gtk/src/encounter.rs:1663
-#: crates/cr-mac-ffi/src/encounter.rs:1160
+#: crates/cr-mac-ffi/src/encounter.rs:1248
 #: crates/cr-win/src/app/encounter.rs:756
 msgid "(None)"
 msgstr ""
@@ -2228,7 +2236,7 @@ msgstr ""
 #: crates/cr-gtk/src/treasure.rs:251
 #: crates/cr-win/src/app.rs:3720
 #: macos/CoreRules/CoreRulesApp.swift:50
-#: macos/CoreRules/Model.swift:436
+#: macos/CoreRules/Model.swift:459
 msgid "Roll Treasure"
 msgstr ""
 
@@ -2239,8 +2247,8 @@ msgstr ""
 #: crates/cr-app/src/library.rs:280
 #: crates/cr-gtk/src/main.rs:1527
 #: crates/cr-win/src/app/encounter.rs:136
-#: macos/CoreRules/Encounter.swift:208
-#: macos/CoreRules/Encounter.swift:211
+#: macos/CoreRules/Encounter.swift:220
+#: macos/CoreRules/Encounter.swift:223
 msgid "Create Encounter"
 msgstr ""
 
@@ -2267,6 +2275,7 @@ msgstr ""
 #: crates/cr-gtk/src/userdb/levels.rs:321
 #: crates/cr-gtk/src/userdb/levels.rs:361
 #: crates/cr-gtk/src/userdb.rs:2036
+#: crates/cr-mac-ffi/src/record.rs:1025
 #: crates/cr-store/src/npc.rs:221
 #: crates/cr-store/src/userdb/classes/pages.rs:239
 #: crates/cr-store/src/userdb/classes/pages.rs:663
@@ -2282,6 +2291,7 @@ msgstr ""
 #: crates/cr-app/src/npc.rs:18
 #: crates/cr-gtk/src/userdb/levels.rs:361
 #: crates/cr-gtk/src/userdb.rs:2036
+#: crates/cr-mac-ffi/src/record.rs:1025
 #: crates/cr-store/src/npc.rs:222
 #: crates/cr-store/src/userdb/classes/pages.rs:285
 #: crates/cr-store/src/userdb/classes/pages.rs:662
@@ -2354,7 +2364,8 @@ msgstr ""
 #: crates/cr-app/src/records/templates.rs:287
 #: crates/cr-gtk/src/encounter.rs:689
 #: crates/cr-gtk/src/userdb/templates.rs:783
-#: crates/cr-mac-ffi/src/encounter.rs:764
+#: crates/cr-mac-ffi/src/encounter.rs:826
+#: crates/cr-mac-ffi/src/encounter.rs:879
 #: crates/cr-store/src/catalog.rs:265
 #: crates/cr-win/src/app/encounter.rs:327
 #: crates/cr-win/src/app/encounter.rs:330
@@ -2388,7 +2399,8 @@ msgstr ""
 #: crates/cr-gtk/src/userdb/templates.rs:800
 #: crates/cr-gtk/src/userdb/templates.rs:800
 #: crates/cr-gtk/src/userdb/templates.rs:1286
-#: crates/cr-mac-ffi/src/encounter.rs:695
+#: crates/cr-mac-ffi/src/encounter.rs:757
+#: crates/cr-mac-ffi/src/encounter.rs:871
 #: crates/cr-store/src/catalog.rs:277
 #: crates/cr-store/src/catalog.rs:731
 #: crates/cr-store/src/encounter/text.rs:400
@@ -2508,7 +2520,7 @@ msgid "Icon {number}"
 msgstr ""
 
 #: crates/cr-app/src/pictures.rs:74
-#: crates/cr-mac-ffi/src/form.rs:469
+#: crates/cr-mac-ffi/src/form.rs:511
 #: crates/cr-win/src/app/portrait.rs:90
 msgid "{file} (not in this installation)"
 msgstr ""
@@ -2556,6 +2568,7 @@ msgstr ""
 
 #: crates/cr-app/src/pictures.rs:92
 #: crates/cr-gtk/src/picture.rs:289
+#: crates/cr-mac-ffi/src/record.rs:308
 #: crates/cr-win/src/app/portrait.rs:126
 msgid "Your Pictures"
 msgstr ""
@@ -2597,8 +2610,9 @@ msgstr ""
 #: crates/cr-gtk/src/userdb.rs:924
 #: crates/cr-gtk/src/userdb.rs:2111
 #: crates/cr-mac-ffi/src/bundle.rs:182
-#: crates/cr-mac-ffi/src/encounter.rs:1169
+#: crates/cr-mac-ffi/src/encounter.rs:1257
 #: crates/cr-mac-ffi/src/parties.rs:348
+#: crates/cr-mac-ffi/src/record.rs:1210
 #: crates/cr-win/src/app/bundle.rs:283
 #: crates/cr-win/src/app/encounter.rs:788
 #: crates/cr-win/src/app/encounter.rs:1072
@@ -2606,10 +2620,11 @@ msgstr ""
 #: crates/cr-win/src/app/templates.rs:666
 #: crates/cr-win/src/app/templates.rs:980
 #: crates/cr-win/src/app/treasure_tables.rs:413
-#: macos/CoreRules/ContentView.swift:126
-#: macos/CoreRules/Encounter.swift:192
-#: macos/CoreRules/Encounter.swift:373
+#: macos/CoreRules/ContentView.swift:132
+#: macos/CoreRules/Encounter.swift:204
+#: macos/CoreRules/Encounter.swift:385
 #: macos/CoreRules/Parties.swift:109
+#: macos/CoreRules/Record.swift:397
 msgid "_OK"
 msgstr ""
 
@@ -2699,7 +2714,7 @@ msgstr ""
 #: crates/cr-app/src/records/actions.rs:212
 #: crates/cr-gtk/src/userdb.rs:412
 #: crates/cr-win/src/app.rs:4631
-#: macos/CoreRules/ContentView.swift:145
+#: macos/CoreRules/ContentView.swift:151
 msgid "Delete {name}?"
 msgstr ""
 
@@ -2759,10 +2774,10 @@ msgstr ""
 #: crates/cr-win/src/app/record.rs:304
 #: macos/CoreRules/Encounter.swift:66
 #: macos/CoreRules/Encounter.swift:99
-#: macos/CoreRules/Model.swift:518
-#: macos/CoreRules/Model.swift:630
-#: macos/CoreRules/Model.swift:695
-#: macos/CoreRules/Model.swift:705
+#: macos/CoreRules/Model.swift:541
+#: macos/CoreRules/Model.swift:776
+#: macos/CoreRules/Model.swift:843
+#: macos/CoreRules/Model.swift:853
 #: macos/CoreRules/Sheet.swift:69
 msgid "Not Saved"
 msgstr ""
@@ -2810,6 +2825,7 @@ msgstr ""
 
 #: crates/cr-app/src/records/mod.rs:96
 #: crates/cr-gtk/src/encounter.rs:891
+#: crates/cr-mac-ffi/src/encounter.rs:864
 #: crates/cr-win/src/app/encounter.rs:411
 msgid "New Trap"
 msgstr ""
@@ -2824,6 +2840,7 @@ msgstr ""
 
 #: crates/cr-app/src/records/mod.rs:99
 #: crates/cr-gtk/src/encounter.rs:1095
+#: crates/cr-mac-ffi/src/encounter.rs:878
 #: crates/cr-win/src/app/encounter.rs:439
 msgid "New Monster"
 msgstr ""
@@ -2904,6 +2921,7 @@ msgstr ""
 #: crates/cr-gtk/src/userdb.rs:262
 #: crates/cr-win/src/app.rs:2370
 #: crates/cr-win/src/app.rs:2383
+#: macos/CoreRules/Record.swift:386
 msgid "New Part"
 msgstr ""
 
@@ -2991,6 +3009,7 @@ msgid "_New Encounter Template…"
 msgstr ""
 
 #: crates/cr-app/src/records/mod.rs:156
+#: macos/CoreRules/CoreRulesApp.swift:118
 msgid "New"
 msgstr ""
 
@@ -3044,7 +3063,7 @@ msgstr ""
 #: crates/cr-app/src/records/templates.rs:286
 #: crates/cr-gtk/src/encounter.rs:338
 #: crates/cr-gtk/src/userdb/templates.rs:774
-#: crates/cr-mac-ffi/src/encounter.rs:610
+#: crates/cr-mac-ffi/src/encounter.rs:672
 #: crates/cr-store/src/catalog.rs:824
 #: crates/cr-win/src/app/encounter.rs:549
 msgid "Template"
@@ -3058,7 +3077,7 @@ msgstr ""
 #: crates/cr-app/src/records/templates.rs:289
 #: crates/cr-gtk/src/encounter.rs:821
 #: crates/cr-gtk/src/userdb/templates.rs:795
-#: crates/cr-mac-ffi/src/encounter.rs:682
+#: crates/cr-mac-ffi/src/encounter.rs:744
 #: crates/cr-store/src/catalog.rs:722
 #: crates/cr-win/src/app/encounter.rs:659
 msgid "Items"
@@ -3250,8 +3269,8 @@ msgstr ""
 #: crates/cr-gtk/src/combat.rs:462
 #: crates/cr-gtk/src/create.rs:2724
 #: crates/cr-gtk/src/create.rs:3578
-#: crates/cr-mac-ffi/src/form.rs:718
-#: crates/cr-mac-ffi/src/form.rs:720
+#: crates/cr-mac-ffi/src/form.rs:760
+#: crates/cr-mac-ffi/src/form.rs:762
 #: crates/cr-win/src/app/forms.rs:354
 #: crates/cr-win/src/app/forms.rs:356
 msgid "Character Points Left"
@@ -3276,8 +3295,8 @@ msgstr ""
 
 #: crates/cr-gtk/src/books.rs:31
 #: crates/cr-win/src/app/library.rs:478
-#: macos/CoreRules/ContentView.swift:499
-#: macos/CoreRules/ContentView.swift:501
+#: macos/CoreRules/ContentView.swift:518
+#: macos/CoreRules/ContentView.swift:520
 msgid "_Read Book"
 msgstr ""
 
@@ -3386,8 +3405,8 @@ msgstr ""
 #: crates/cr-gtk/src/main.rs:1695
 #: crates/cr-mac-ffi/src/book.rs:320
 #: crates/cr-mac-ffi/src/bundle.rs:128
-#: crates/cr-mac-ffi/src/encounter.rs:556
-#: crates/cr-mac-ffi/src/encounter.rs:809
+#: crates/cr-mac-ffi/src/encounter.rs:618
+#: crates/cr-mac-ffi/src/encounter.rs:897
 #: crates/cr-win/src/app/book.rs:264
 #: crates/cr-win/src/app/bundle.rs:172
 #: crates/cr-win/src/app/encounter.rs:143
@@ -3395,7 +3414,7 @@ msgstr ""
 #: crates/cr-win/src/app/library.rs:406
 #: crates/cr-win/src/app/portrait.rs:411
 #: crates/cr-win/src/app/templates.rs:932
-#: macos/CoreRules/ContentView.swift:213
+#: macos/CoreRules/ContentView.swift:232
 msgid "No Results"
 msgstr ""
 
@@ -3406,7 +3425,8 @@ msgid "{current} of {total}"
 msgstr ""
 
 #: crates/cr-gtk/src/bundle.rs:50
-#: crates/cr-mac-ffi/src/encounter.rs:672
+#: crates/cr-mac-ffi/src/encounter.rs:734
+#: crates/cr-mac-ffi/src/record.rs:549
 #: crates/cr-mac-ffi/src/treasure.rs:262
 #: crates/cr-win/src/app/encounter.rs:643
 #: crates/cr-win/src/app/record.rs:564
@@ -3443,16 +3463,19 @@ msgstr ""
 #: crates/cr-gtk/src/userdb/attacks.rs:74
 #: crates/cr-gtk/src/userdb/levels.rs:159
 #: crates/cr-gtk/src/userdb/widgets.rs:615
+#: crates/cr-mac-ffi/src/record.rs:745
 #: crates/cr-win/src/app/library.rs:509
 #: crates/cr-win/src/app/library.rs:524
 #: crates/cr-win/src/app/record.rs:781
 #: crates/cr-win/src/app/record.rs:867
-#: macos/CoreRules/ContentView.swift:511
-#: macos/CoreRules/ContentView.swift:513
-#: macos/CoreRules/ContentView.swift:523
-#: macos/CoreRules/ContentView.swift:525
-#: macos/CoreRules/ContentView.swift:535
-#: macos/CoreRules/ContentView.swift:537
+#: macos/CoreRules/ContentView.swift:530
+#: macos/CoreRules/ContentView.swift:532
+#: macos/CoreRules/ContentView.swift:542
+#: macos/CoreRules/ContentView.swift:544
+#: macos/CoreRules/ContentView.swift:554
+#: macos/CoreRules/ContentView.swift:556
+#: macos/CoreRules/ContentView.swift:567
+#: macos/CoreRules/ContentView.swift:569
 msgid "Edit"
 msgstr ""
 
@@ -3499,9 +3522,10 @@ msgstr ""
 #: crates/cr-mac-ffi/src/bundle.rs:176
 #: crates/cr-mac-ffi/src/bundle.rs:248
 #: crates/cr-mac-ffi/src/edit.rs:250
-#: crates/cr-mac-ffi/src/encounter.rs:819
-#: crates/cr-mac-ffi/src/encounter.rs:1167
+#: crates/cr-mac-ffi/src/encounter.rs:907
+#: crates/cr-mac-ffi/src/encounter.rs:1255
 #: crates/cr-mac-ffi/src/parties.rs:347
+#: crates/cr-mac-ffi/src/record.rs:1205
 #: crates/cr-mac-ffi/src/treasure.rs:300
 #: crates/cr-mac-ffi/src/wizard.rs:750
 #: crates/cr-win/src/app/bundle.rs:228
@@ -3530,15 +3554,19 @@ msgstr ""
 #: crates/cr-win/src/app/treasure_tables.rs:423
 #: crates/cr-win/src/app.rs:2372
 #: crates/cr-win/src/app.rs:4727
-#: macos/CoreRules/ContentView.swift:173
+#: macos/CoreRules/ContentView.swift:183
 #: macos/CoreRules/Edit.swift:99
 #: macos/CoreRules/Edit.swift:145
-#: macos/CoreRules/Encounter.swift:181
-#: macos/CoreRules/Encounter.swift:368
-#: macos/CoreRules/FormView.swift:497
+#: macos/CoreRules/Encounter.swift:193
+#: macos/CoreRules/Encounter.swift:380
+#: macos/CoreRules/FormView.swift:607
 #: macos/CoreRules/Import.swift:76
 #: macos/CoreRules/Npc.swift:73
 #: macos/CoreRules/Parties.swift:101
+#: macos/CoreRules/Record.swift:136
+#: macos/CoreRules/Record.swift:172
+#: macos/CoreRules/Record.swift:241
+#: macos/CoreRules/Record.swift:395
 #: macos/CoreRules/Sheet.swift:274
 #: macos/CoreRules/Sheet.swift:284
 #: macos/CoreRules/Treasure.swift:159
@@ -3578,8 +3606,9 @@ msgstr ""
 #: crates/cr-win/src/app/portrait.rs:421
 #: crates/cr-win/src/app/templates.rs:968
 #: crates/cr-win/src/app/templates.rs:969
-#: macos/CoreRules/ContentView.swift:194
+#: macos/CoreRules/ContentView.swift:204
 #: macos/CoreRules/Help.swift:171
+#: macos/CoreRules/Record.swift:232
 msgid "Search"
 msgstr ""
 
@@ -3620,7 +3649,8 @@ msgstr ""
 #: crates/cr-mac-ffi/src/bundle.rs:69
 #: crates/cr-mac-ffi/src/bundle.rs:202
 #: crates/cr-mac-ffi/src/edit.rs:384
-#: crates/cr-mac-ffi/src/encounter.rs:734
+#: crates/cr-mac-ffi/src/encounter.rs:796
+#: crates/cr-mac-ffi/src/record.rs:751
 #: crates/cr-win/src/app/allowed.rs:40
 #: crates/cr-win/src/app/bundle.rs:120
 #: crates/cr-win/src/app/bundle.rs:306
@@ -3636,8 +3666,8 @@ msgstr ""
 #: crates/cr-win/src/app/sheet.rs:562
 #: crates/cr-win/src/app/templates.rs:685
 #: crates/cr-win/src/app/treasure_tables.rs:302
-#: macos/CoreRules/FormView.swift:391
-#: macos/CoreRules/FormView.swift:395
+#: macos/CoreRules/FormView.swift:399
+#: macos/CoreRules/FormView.swift:403
 #: macos/CoreRules/Sheet.swift:346
 #: macos/CoreRules/Sheet.swift:348
 msgid "Remove"
@@ -3741,7 +3771,7 @@ msgstr ""
 #: crates/cr-win/src/app/create.rs:244
 #: crates/cr-win/src/app/npc.rs:76
 #: macos/CoreRules/About.swift:47
-#: macos/CoreRules/ContentView.swift:196
+#: macos/CoreRules/ContentView.swift:215
 #: macos/CoreRules/CoreRulesApp.swift:22
 msgid "Core Rules"
 msgstr ""
@@ -3828,6 +3858,7 @@ msgid "Die {number}"
 msgstr ""
 
 #: crates/cr-gtk/src/create.rs:761
+#: crates/cr-mac-ffi/src/record.rs:660
 #: crates/cr-mac-ffi/src/wizard.rs:377
 #: crates/cr-store/src/userdb/races.rs:276
 #: crates/cr-store/src/userdb/races.rs:280
@@ -3985,8 +4016,9 @@ msgstr ""
 #: crates/cr-gtk/src/userdb/attacks.rs:257
 #: crates/cr-gtk/src/userdb.rs:1528
 #: crates/cr-mac-ffi/src/edit.rs:278
-#: crates/cr-mac-ffi/src/encounter.rs:607
-#: crates/cr-mac-ffi/src/encounter.rs:1060
+#: crates/cr-mac-ffi/src/encounter.rs:669
+#: crates/cr-mac-ffi/src/encounter.rs:1148
+#: crates/cr-mac-ffi/src/record.rs:1118
 #: crates/cr-mac-ffi/src/treasure.rs:299
 #: crates/cr-mac-ffi/src/wizard.rs:531
 #: crates/cr-store/src/userdb/classes/pages.rs:135
@@ -4285,6 +4317,7 @@ msgstr ""
 #: crates/cr-mac-ffi/src/edit.rs:241
 #: crates/cr-mac-ffi/src/npc.rs:235
 #: crates/cr-mac-ffi/src/npc.rs:384
+#: crates/cr-mac-ffi/src/record.rs:804
 #: crates/cr-mac-ffi/src/wizard.rs:670
 #: crates/cr-mac-ffi/src/wizard.rs:715
 #: crates/cr-store/src/userdb/classes/pages.rs:95
@@ -4328,19 +4361,19 @@ msgstr ""
 
 #: crates/cr-gtk/src/create.rs:2725
 #: crates/cr-gtk/src/create.rs:3579
-#: crates/cr-mac-ffi/src/form.rs:721
+#: crates/cr-mac-ffi/src/form.rs:763
 #: crates/cr-win/src/app/forms.rs:357
 msgid "Kept on the character for later levels"
 msgstr ""
 
 #: crates/cr-gtk/src/create.rs:3466
-#: crates/cr-mac-ffi/src/form.rs:710
+#: crates/cr-mac-ffi/src/form.rs:752
 #: crates/cr-win/src/app/forms.rs:342
 msgid "Unarmed Combat"
 msgstr ""
 
 #: crates/cr-gtk/src/create.rs:3467
-#: crates/cr-mac-ffi/src/form.rs:711
+#: crates/cr-mac-ffi/src/form.rs:753
 #: crates/cr-win/src/app/forms.rs:343
 msgid "Specialization in an unarmed style, not together with a weapon specialization"
 msgstr ""
@@ -4431,20 +4464,20 @@ msgid "C_reate"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:128
-#: crates/cr-mac-ffi/src/encounter.rs:548
+#: crates/cr-mac-ffi/src/encounter.rs:610
 #: crates/cr-win/src/app/encounter.rs:186
 #: crates/cr-win/src/app/encounter.rs:187
 msgid "Search Templates"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:136
-#: crates/cr-mac-ffi/src/encounter.rs:566
+#: crates/cr-mac-ffi/src/encounter.rs:628
 #: crates/cr-win/src/app/encounter.rs:159
 msgid "Empty Encounter"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:137
-#: crates/cr-mac-ffi/src/encounter.rs:567
+#: crates/cr-mac-ffi/src/encounter.rs:629
 #: crates/cr-win/src/app/encounter.rs:160
 msgid "Add monsters and characters yourself"
 msgstr ""
@@ -4483,7 +4516,7 @@ msgstr ""
 #: crates/cr-gtk/src/encounter.rs:261
 #: crates/cr-mac-ffi/src/parties.rs:352
 #: crates/cr-win/src/app/encounter.rs:1071
-#: macos/CoreRules/Model.swift:607
+#: macos/CoreRules/Model.swift:753
 msgid "Group Encounter"
 msgstr ""
 
@@ -4495,7 +4528,7 @@ msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:347
 #: crates/cr-gtk/src/userdb/templates.rs:725
-#: crates/cr-mac-ffi/src/encounter.rs:612
+#: crates/cr-mac-ffi/src/encounter.rs:674
 #: crates/cr-store/src/catalog.rs:787
 #: crates/cr-store/src/catalog.rs:1305
 #: crates/cr-store/src/userdb/monsters.rs:33
@@ -4508,15 +4541,15 @@ msgid "Monster Type"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:351
-#: crates/cr-mac-ffi/src/encounter.rs:606
+#: crates/cr-mac-ffi/src/encounter.rs:668
 #: crates/cr-win/src/app/encounter.rs:537
 msgid "Encounter"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:367
 #: crates/cr-gtk/src/main.rs:2159
-#: crates/cr-mac-ffi/src/encounter.rs:712
-#: crates/cr-mac-ffi/src/encounter.rs:713
+#: crates/cr-mac-ffi/src/encounter.rs:774
+#: crates/cr-mac-ffi/src/encounter.rs:775
 #: crates/cr-store/src/summary.rs:235
 #: crates/cr-store/src/userdb/classes/pages.rs:98
 #: crates/cr-store/src/userdb/classes/pages.rs:161
@@ -4532,12 +4565,12 @@ msgstr ""
 #: crates/cr-win/src/app/encounter.rs:700
 #: crates/cr-win/src/app/encounter.rs:702
 #: crates/cr-win/src/app/library.rs:774
-#: macos/CoreRules/ContentView.swift:368
+#: macos/CoreRules/ContentView.swift:387
 msgid "Description"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:372
-#: crates/cr-mac-ffi/src/encounter.rs:618
+#: crates/cr-mac-ffi/src/encounter.rs:680
 #: crates/cr-store/src/catalog.rs:689
 #: crates/cr-win/src/app/encounter.rs:568
 msgid "Encounter Totals"
@@ -4565,10 +4598,11 @@ msgstr ""
 #: crates/cr-win/src/app/treasure.rs:223
 #: crates/cr-win/src/app.rs:4664
 #: macos/CoreRules/Edit.swift:148
-#: macos/CoreRules/Encounter.swift:216
-#: macos/CoreRules/Encounter.swift:220
-#: macos/CoreRules/Encounter.swift:386
-#: macos/CoreRules/Encounter.swift:390
+#: macos/CoreRules/Encounter.swift:228
+#: macos/CoreRules/Encounter.swift:232
+#: macos/CoreRules/Encounter.swift:398
+#: macos/CoreRules/Encounter.swift:402
+#: macos/CoreRules/Record.swift:175
 #: macos/CoreRules/Sheet.swift:276
 #: macos/CoreRules/Sheet.swift:283
 msgid "_Save"
@@ -4579,10 +4613,10 @@ msgstr ""
 #: crates/cr-win/src/app/encounter.rs:512
 #: crates/cr-win/src/app/help.rs:294
 #: crates/cr-win/src/app/treasure.rs:121
-#: macos/CoreRules/ContentView.swift:547
-#: macos/CoreRules/ContentView.swift:549
-#: macos/CoreRules/CoreRulesApp.swift:125
-#: macos/CoreRules/Encounter.swift:222
+#: macos/CoreRules/ContentView.swift:579
+#: macos/CoreRules/ContentView.swift:581
+#: macos/CoreRules/CoreRulesApp.swift:126
+#: macos/CoreRules/Encounter.swift:234
 #: macos/CoreRules/Help.swift:221
 #: macos/CoreRules/Help.swift:223
 #: macos/CoreRules/Sheet.swift:156
@@ -4595,14 +4629,14 @@ msgstr ""
 #: crates/cr-gtk/src/treasure.rs:213
 #: crates/cr-win/src/app/encounter.rs:519
 #: crates/cr-win/src/app/treasure.rs:128
-#: macos/CoreRules/Encounter.swift:223
+#: macos/CoreRules/Encounter.swift:235
 #: macos/CoreRules/Treasure.swift:201
 msgid "Save as P_DF…"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:405
 #: crates/cr-win/src/app/encounter.rs:526
-#: macos/CoreRules/Encounter.swift:225
+#: macos/CoreRules/Encounter.swift:237
 msgid "_Delete Encounter"
 msgstr ""
 
@@ -4611,51 +4645,51 @@ msgid "Encounter Menu"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:582
-#: crates/cr-mac-ffi/src/encounter.rs:624
+#: crates/cr-mac-ffi/src/encounter.rs:686
 #: crates/cr-win/src/app/encounter.rs:584
 msgid "Add _Monster…"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:587
-#: crates/cr-mac-ffi/src/encounter.rs:629
+#: crates/cr-mac-ffi/src/encounter.rs:691
 #: crates/cr-win/src/app/encounter.rs:588
 msgid "Add _NPC…"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:603
-#: crates/cr-mac-ffi/src/encounter.rs:630
+#: crates/cr-mac-ffi/src/encounter.rs:692
 #: crates/cr-store/src/catalog.rs:698
 #: crates/cr-win/src/app/encounter.rs:591
 msgid "Monsters and Nonplayer Characters"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:610
-#: crates/cr-mac-ffi/src/encounter.rs:636
+#: crates/cr-mac-ffi/src/encounter.rs:698
 #: crates/cr-win/src/app/encounter.rs:574
 msgid "No monsters or characters"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:639
-#: crates/cr-mac-ffi/src/encounter.rs:730
+#: crates/cr-mac-ffi/src/encounter.rs:792
 #: crates/cr-win/src/app/encounter.rs:254
 msgid "Print NPC"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:640
-#: crates/cr-mac-ffi/src/encounter.rs:729
+#: crates/cr-mac-ffi/src/encounter.rs:791
 #: crates/cr-win/src/app/encounter.rs:245
 msgid "View NPC"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:656
-#: crates/cr-mac-ffi/src/encounter.rs:746
+#: crates/cr-mac-ffi/src/encounter.rs:808
 #: crates/cr-win/src/app/encounter.rs:286
 #: crates/cr-win/src/app/encounter.rs:293
 msgid "Number"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:658
-#: crates/cr-mac-ffi/src/encounter.rs:741
+#: crates/cr-mac-ffi/src/encounter.rs:803
 #: crates/cr-win/src/app/encounter.rs:288
 msgid "Changing it rolls the hit points again"
 msgstr ""
@@ -4664,7 +4698,7 @@ msgstr ""
 #: crates/cr-gtk/src/enter.rs:176
 #: crates/cr-gtk/src/main.rs:2994
 #: crates/cr-mac-ffi/src/edit.rs:417
-#: crates/cr-mac-ffi/src/encounter.rs:757
+#: crates/cr-mac-ffi/src/encounter.rs:819
 #: crates/cr-mac-ffi/src/wizard.rs:686
 #: crates/cr-store/src/userdb/parts/pages.rs:1124
 #: crates/cr-win/src/app/edit.rs:479
@@ -4677,7 +4711,7 @@ msgid "Hit Points"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:693
-#: crates/cr-mac-ffi/src/encounter.rs:755
+#: crates/cr-mac-ffi/src/encounter.rs:817
 #: crates/cr-win/src/app/encounter.rs:319
 msgid "_Re-roll"
 msgstr ""
@@ -4687,56 +4721,58 @@ msgid "Roll the hit points again, except those set by hand"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:779
-#: crates/cr-mac-ffi/src/encounter.rs:647
+#: crates/cr-mac-ffi/src/encounter.rs:709
 #: crates/cr-win/src/app/encounter.rs:607
 msgid "Characters Not Generated"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:780
-#: crates/cr-mac-ffi/src/encounter.rs:648
+#: crates/cr-mac-ffi/src/encounter.rs:710
 #: crates/cr-win/src/app/encounter.rs:608
 msgid "The template also calls for these nonplayer characters, but the NPC generator could not make them, for the reason under each one. Add saved characters with Add NPC instead."
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:798
 #: crates/cr-gtk/src/main.rs:1306
-#: crates/cr-mac-ffi/src/encounter.rs:659
+#: crates/cr-mac-ffi/src/encounter.rs:721
 #: crates/cr-win/src/app/encounter.rs:622
 #: crates/cr-win/src/app/library.rs:166
-#: macos/CoreRules/CoreRulesApp.swift:151
+#: macos/CoreRules/CoreRulesApp.swift:152
 msgid "_Roll Treasure…"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:825
-#: crates/cr-mac-ffi/src/encounter.rs:678
+#: crates/cr-mac-ffi/src/encounter.rs:740
 #: crates/cr-win/src/app/encounter.rs:663
 msgid "Items found with the encounter"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:837
-#: crates/cr-mac-ffi/src/encounter.rs:689
+#: crates/cr-mac-ffi/src/encounter.rs:751
 #: crates/cr-win/src/app/encounter.rs:669
 msgid "_Add Trap…"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:852
-#: crates/cr-mac-ffi/src/encounter.rs:691
+#: crates/cr-mac-ffi/src/encounter.rs:753
 #: crates/cr-win/src/app/encounter.rs:693
 msgid "No traps"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:887
-#: crates/cr-mac-ffi/src/encounter.rs:781
+#: crates/cr-mac-ffi/src/encounter.rs:843
 #: crates/cr-win/src/app/encounter.rs:391
 msgid "Show Standard or Custom Traps"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:981
+#: crates/cr-mac-ffi/src/encounter.rs:866
 #: crates/cr-win/src/app/encounter.rs:420
 msgid "_Copy…"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:983
+#: crates/cr-mac-ffi/src/encounter.rs:865
 #: crates/cr-win/src/app/encounter.rs:414
 #: crates/cr-win/src/app/templates.rs:190
 msgid "_Edit…"
@@ -4750,6 +4786,7 @@ msgstr ""
 #: crates/cr-gtk/src/userdb.rs:417
 #: crates/cr-gtk/src/userdb.rs:1465
 #: crates/cr-gtk/src/userdb.rs:2487
+#: crates/cr-mac-ffi/src/encounter.rs:867
 #: crates/cr-win/src/app/encounter.rs:426
 #: crates/cr-win/src/app/library.rs:574
 #: crates/cr-win/src/app.rs:4097
@@ -4759,10 +4796,12 @@ msgstr ""
 #: crates/cr-win/src/app.rs:4685
 #: crates/cr-win/src/app.rs:4690
 #: crates/cr-win/src/app.rs:4694
-#: macos/CoreRules/ContentView.swift:162
-#: macos/CoreRules/ContentView.swift:327
-#: macos/CoreRules/Encounter.swift:180
-#: macos/CoreRules/Encounter.swift:367
+#: macos/CoreRules/ContentView.swift:170
+#: macos/CoreRules/ContentView.swift:346
+#: macos/CoreRules/ContentView.swift:629
+#: macos/CoreRules/Encounter.swift:192
+#: macos/CoreRules/Encounter.swift:379
+#: macos/CoreRules/Model.swift:700
 #: macos/CoreRules/Parties.swift:100
 #: macos/CoreRules/Treasure.swift:158
 msgid "_Delete"
@@ -4774,30 +4813,30 @@ msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1189
 #: crates/cr-win/src/app.rs:3877
-#: macos/CoreRules/Model.swift:511
+#: macos/CoreRules/Model.swift:534
 msgid "Encounter saved"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1202
 #: crates/cr-win/src/app.rs:4675
-#: macos/CoreRules/Encounter.swift:179
+#: macos/CoreRules/Encounter.swift:191
 msgid "Delete Encounter?"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1203
 #: crates/cr-win/src/app.rs:4676
-#: macos/CoreRules/Encounter.swift:184
+#: macos/CoreRules/Encounter.swift:196
 msgid "“{name}” will be removed from the saved encounters"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1220
 #: crates/cr-win/src/app.rs:3891
-#: macos/CoreRules/Model.swift:521
+#: macos/CoreRules/Model.swift:544
 msgid "Encounter deleted"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1337
-#: crates/cr-mac-ffi/src/encounter.rs:807
+#: crates/cr-mac-ffi/src/encounter.rs:895
 #: crates/cr-win/src/app/encounter.rs:363
 msgid "Nothing to Add"
 msgstr ""
@@ -4806,7 +4845,8 @@ msgstr ""
 #: crates/cr-gtk/src/userdb/levels.rs:278
 #: crates/cr-gtk/src/userdb/levels.rs:288
 #: crates/cr-gtk/src/userdb/templates.rs:1015
-#: crates/cr-mac-ffi/src/encounter.rs:1145
+#: crates/cr-mac-ffi/src/encounter.rs:1233
+#: crates/cr-mac-ffi/src/record.rs:975
 #: crates/cr-store/src/catalog.rs:789
 #: crates/cr-store/src/userdb/monsters.rs:349
 #: crates/cr-store/src/userdb/monsters.rs:360
@@ -4824,20 +4864,20 @@ msgid "No Templates"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1444
-#: crates/cr-mac-ffi/src/encounter.rs:1153
+#: crates/cr-mac-ffi/src/encounter.rs:1241
 #: crates/cr-win/src/app/encounter.rs:764
 msgid "None of this frequency pass the filter"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1491
-#: crates/cr-mac-ffi/src/encounter.rs:1177
+#: crates/cr-mac-ffi/src/encounter.rs:1265
 #: crates/cr-win/src/app/encounter.rs:782
 #: crates/cr-win/src/app/encounter.rs:984
 msgid "Roll {roll}"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1542
-#: crates/cr-mac-ffi/src/encounter.rs:1071
+#: crates/cr-mac-ffi/src/encounter.rs:1159
 #: crates/cr-store/src/catalog.rs:794
 #: crates/cr-win/src/app/encounter.rs:928
 #: crates/cr-win/src/app/encounter.rs:931
@@ -4845,21 +4885,21 @@ msgid "Database"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1547
-#: crates/cr-mac-ffi/src/encounter.rs:1092
+#: crates/cr-mac-ffi/src/encounter.rs:1180
 #: crates/cr-win/src/app/encounter.rs:961
 #: crates/cr-win/src/app/encounter.rs:964
 msgid "Lair and/or Wandering"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1552
-#: crates/cr-mac-ffi/src/encounter.rs:1078
+#: crates/cr-mac-ffi/src/encounter.rs:1166
 #: crates/cr-win/src/app/encounter.rs:939
 #: crates/cr-win/src/app/encounter.rs:942
 msgid "Fewest Hit Dice"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1563
-#: crates/cr-mac-ffi/src/encounter.rs:1085
+#: crates/cr-mac-ffi/src/encounter.rs:1173
 #: crates/cr-win/src/app/encounter.rs:950
 #: crates/cr-win/src/app/encounter.rs:953
 msgid "Most Hit Dice"
@@ -4868,7 +4908,7 @@ msgstr ""
 #: crates/cr-gtk/src/encounter.rs:1574
 #: crates/cr-gtk/src/userdb/templates.rs:1049
 #: crates/cr-gtk/src/userdb/templates.rs:1094
-#: crates/cr-mac-ffi/src/encounter.rs:1112
+#: crates/cr-mac-ffi/src/encounter.rs:1200
 #: crates/cr-win/src/app/encounter.rs:905
 #: crates/cr-win/src/app/encounter.rs:909
 #: crates/cr-win/src/app/templates.rs:561
@@ -4877,27 +4917,27 @@ msgid "Climate and Terrain"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1575
-#: crates/cr-mac-ffi/src/encounter.rs:1113
+#: crates/cr-mac-ffi/src/encounter.rs:1201
 #: crates/cr-win/src/app/encounter.rs:910
 msgid "Where the templates may be encountered"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1592
-#: crates/cr-mac-ffi/src/encounter.rs:1067
+#: crates/cr-mac-ffi/src/encounter.rs:1155
 #: crates/cr-win/src/app/encounter.rs:922
 msgid "Filter"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1593
-#: crates/cr-mac-ffi/src/encounter.rs:1068
+#: crates/cr-mac-ffi/src/encounter.rs:1156
 #: crates/cr-win/src/app/encounter.rs:923
 msgid "Fill picks templates that pass the filter, by frequency"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1624
 #: crates/cr-win/src/app/encounter.rs:828
-#: macos/CoreRules/Encounter.swift:394
-#: macos/CoreRules/Encounter.swift:396
+#: macos/CoreRules/Encounter.swift:406
+#: macos/CoreRules/Encounter.swift:408
 msgid "_Fill"
 msgstr ""
 
@@ -4914,8 +4954,8 @@ msgstr ""
 #: crates/cr-win/src/app/npc.rs:237
 #: crates/cr-win/src/app/tables.rs:137
 #: crates/cr-win/src/app/treasure.rs:100
-#: macos/CoreRules/Encounter.swift:400
-#: macos/CoreRules/Encounter.swift:402
+#: macos/CoreRules/Encounter.swift:412
+#: macos/CoreRules/Encounter.swift:414
 #: macos/CoreRules/Tables.swift:227
 #: macos/CoreRules/Tables.swift:230
 #: macos/CoreRules/Treasure.swift:183
@@ -4928,26 +4968,26 @@ msgid "Roll 1d8+1d12 and create its encounter"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1639
-#: crates/cr-mac-ffi/src/encounter.rs:1117
+#: crates/cr-mac-ffi/src/encounter.rs:1205
 #: crates/cr-store/src/catalog.rs:487
 #: crates/cr-win/src/app/encounter.rs:993
 msgid "Rolls"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1640
-#: crates/cr-mac-ffi/src/encounter.rs:1118
+#: crates/cr-mac-ffi/src/encounter.rs:1206
 #: crates/cr-win/src/app/encounter.rs:994
 msgid "Pick a roll to choose its template from those that pass the filter"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1726
 #: crates/cr-win/src/app/encounter.rs:843
-#: macos/CoreRules/Encounter.swift:405
+#: macos/CoreRules/Encounter.swift:417
 msgid "Delete Table"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1781
-#: crates/cr-mac-ffi/src/encounter.rs:941
+#: crates/cr-mac-ffi/src/encounter.rs:1029
 #: crates/cr-store/src/encounter.rs:457
 #: crates/cr-store/src/treasure.rs:1206
 #: crates/cr-store/src/userdb.rs:756
@@ -4957,25 +4997,25 @@ msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1793
 #: crates/cr-win/src/app.rs:3986
-#: macos/CoreRules/Model.swift:623
+#: macos/CoreRules/Model.swift:769
 msgid "Table saved"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1807
 #: crates/cr-win/src/app.rs:4683
-#: macos/CoreRules/Encounter.swift:366
+#: macos/CoreRules/Encounter.swift:378
 msgid "Delete Encounter Table?"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1808
 #: crates/cr-win/src/app.rs:4684
-#: macos/CoreRules/Encounter.swift:370
+#: macos/CoreRules/Encounter.swift:382
 msgid "“{name}” will be removed"
 msgstr ""
 
 #: crates/cr-gtk/src/encounter.rs:1822
 #: crates/cr-win/src/app.rs:4006
-#: macos/CoreRules/Model.swift:633
+#: macos/CoreRules/Model.swift:779
 msgid "Table deleted"
 msgstr ""
 
@@ -5160,24 +5200,24 @@ msgstr ""
 #: crates/cr-win/src/app/library.rs:665
 #: crates/cr-win/src/app/packages.rs:44
 #: crates/cr-win/src/app/record.rs:351
-#: macos/CoreRules/ContentView.swift:569
-#: macos/CoreRules/ContentView.swift:571
+#: macos/CoreRules/ContentView.swift:601
+#: macos/CoreRules/ContentView.swift:603
 #: macos/CoreRules/CoreRulesApp.swift:65
-#: macos/CoreRules/CoreRulesApp.swift:208
+#: macos/CoreRules/CoreRulesApp.swift:209
 #: macos/CoreRules/Help.swift:57
 #: macos/CoreRules/Help.swift:68
 #: macos/CoreRules/Help.swift:76
 #: macos/CoreRules/Help.swift:93
 #: macos/CoreRules/Help.swift:147
-#: macos/CoreRules/Model.swift:814
-#: macos/CoreRules/Model.swift:830
-#: macos/CoreRules/Model.swift:877
+#: macos/CoreRules/Model.swift:962
+#: macos/CoreRules/Model.swift:978
+#: macos/CoreRules/Model.swift:1027
 msgid "Help"
 msgstr ""
 
 #: crates/cr-gtk/src/help.rs:284
-#: crates/cr-mac-ffi/src/lib.rs:842
-#: crates/cr-mac-ffi/src/lib.rs:888
+#: crates/cr-mac-ffi/src/lib.rs:845
+#: crates/cr-mac-ffi/src/lib.rs:891
 #: crates/cr-win/src/app.rs:1834
 #: crates/cr-win/src/app.rs:1843
 #: crates/cr-win/src/app.rs:3522
@@ -5254,7 +5294,8 @@ msgstr ""
 #: crates/cr-gtk/src/lists.rs:142
 #: crates/cr-gtk/src/lists.rs:371
 #: crates/cr-gtk/src/lists.rs:409
-#: crates/cr-mac-ffi/src/form.rs:669
+#: crates/cr-mac-ffi/src/form.rs:711
+#: crates/cr-mac-ffi/src/record.rs:725
 #: crates/cr-win/src/app/forms.rs:221
 #: crates/cr-win/src/app/record.rs:736
 msgid "Add to {list}"
@@ -5270,7 +5311,7 @@ msgstr ""
 #: crates/cr-win/src/app/library.rs:860
 #: crates/cr-win/src/app.rs:850
 #: macos/CoreRules/ContentView.swift:65
-#: macos/CoreRules/CoreRulesApp.swift:118
+#: macos/CoreRules/CoreRulesApp.swift:119
 #: macos/CoreRules/SettingsView.swift:69
 msgid "_Open Folder…"
 msgstr ""
@@ -5289,8 +5330,8 @@ msgstr ""
 #: crates/cr-win/src/app.rs:2331
 #: crates/cr-win/src/app.rs:2635
 #: macos/CoreRules/ContentView.swift:61
-#: macos/CoreRules/Model.swift:297
-#: macos/CoreRules/Model.swift:720
+#: macos/CoreRules/Model.swift:320
+#: macos/CoreRules/Model.swift:868
 #: macos/CoreRules/SettingsView.swift:63
 msgid "No Core Rules Installation"
 msgstr ""
@@ -5336,37 +5377,37 @@ msgstr ""
 #: crates/cr-gtk/src/main.rs:889
 #: crates/cr-gtk/src/main.rs:1024
 #: crates/cr-win/src/app.rs:3002
-#: macos/CoreRules/Model.swift:339
+#: macos/CoreRules/Model.swift:362
 msgid "Character saved"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:891
 #: crates/cr-win/src/app.rs:3004
-#: macos/CoreRules/Model.swift:339
+#: macos/CoreRules/Model.swift:362
 msgid "Character created"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:906
-#: crates/cr-mac-ffi/src/lib.rs:921
+#: crates/cr-mac-ffi/src/lib.rs:924
 #: crates/cr-win/src/app.rs:2763
 msgid "Converted to a character"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:916
 #: crates/cr-win/src/app.rs:4656
-#: macos/CoreRules/ContentView.swift:146
+#: macos/CoreRules/ContentView.swift:152
 msgid "Convert to NPC?"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:917
 #: crates/cr-win/src/app.rs:4657
-#: macos/CoreRules/ContentView.swift:155
+#: macos/CoreRules/ContentView.swift:162
 msgid "This will move the selected Player Character to the NPC List in the DM Toolkit."
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:923
 #: crates/cr-win/src/app.rs:4659
-#: macos/CoreRules/ContentView.swift:161
+#: macos/CoreRules/ContentView.swift:169
 msgid "_Convert"
 msgstr ""
 
@@ -5378,7 +5419,7 @@ msgstr ""
 #: crates/cr-gtk/src/main.rs:1048
 #: crates/cr-win/src/app.rs:1776
 #: macos/CoreRules/Help.swift:131
-#: macos/CoreRules/Model.swift:814
+#: macos/CoreRules/Model.swift:962
 msgid "Open a Core Rules folder to read its help"
 msgstr ""
 
@@ -5394,43 +5435,43 @@ msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1286
 #: crates/cr-win/src/app/library.rs:151
-#: macos/CoreRules/CoreRulesApp.swift:147
+#: macos/CoreRules/CoreRulesApp.swift:148
 msgid "New N_PC…"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1288
 #: crates/cr-win/src/app/library.rs:152
-#: macos/CoreRules/CoreRulesApp.swift:149
+#: macos/CoreRules/CoreRulesApp.swift:150
 msgid "New NPC _Group…"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1292
 #: crates/cr-win/src/app/library.rs:155
-#: macos/CoreRules/CoreRulesApp.swift:157
+#: macos/CoreRules/CoreRulesApp.swift:158
 msgid "Manage _Parties…"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1298
 #: crates/cr-win/src/app/library.rs:158
-#: macos/CoreRules/CoreRulesApp.swift:154
+#: macos/CoreRules/CoreRulesApp.swift:155
 msgid "New _Encounter…"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1302
 #: crates/cr-win/src/app/library.rs:161
-#: macos/CoreRules/CoreRulesApp.swift:155
+#: macos/CoreRules/CoreRulesApp.swift:156
 msgid "New Encounter _Table…"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1310
 #: crates/cr-win/src/app/library.rs:171
-#: macos/CoreRules/CoreRulesApp.swift:152
+#: macos/CoreRules/CoreRulesApp.swift:153
 msgid "Roll on a _Table…"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1314
 #: crates/cr-win/src/app/library.rs:133
-#: macos/CoreRules/CoreRulesApp.swift:121
+#: macos/CoreRules/CoreRulesApp.swift:122
 msgid "_Import…"
 msgstr ""
 
@@ -5488,49 +5529,52 @@ msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1502
 #: crates/cr-win/src/app/library.rs:487
-#: macos/CoreRules/ContentView.swift:486
-#: macos/CoreRules/ContentView.swift:489
+#: macos/CoreRules/ContentView.swift:505
+#: macos/CoreRules/ContentView.swift:508
 msgid "Character Sheet"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1507
 #: crates/cr-win/src/app/library.rs:638
-#: macos/CoreRules/ContentView.swift:554
+#: macos/CoreRules/ContentView.swift:586
 msgid "Convert to Character"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1512
 #: crates/cr-win/src/app/library.rs:647
-#: macos/CoreRules/ContentView.swift:557
+#: macos/CoreRules/ContentView.swift:589
 msgid "Convert to NPC"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1517
 #: crates/cr-win/src/app/library.rs:656
 #: crates/cr-win/src/app.rs:2883
-#: macos/CoreRules/ContentView.swift:561
+#: macos/CoreRules/ContentView.swift:593
 msgid "Delete Character"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1522
 #: crates/cr-gtk/src/userdb.rs:2438
+#: crates/cr-mac-ffi/src/record.rs:575
 #: crates/cr-win/src/app/library.rs:512
 #: crates/cr-win/src/app/library.rs:532
 #: crates/cr-win/src/app/record.rs:605
-#: macos/CoreRules/ContentView.swift:516
-#: macos/CoreRules/ContentView.swift:518
-#: macos/CoreRules/ContentView.swift:528
-#: macos/CoreRules/ContentView.swift:530
+#: macos/CoreRules/ContentView.swift:535
+#: macos/CoreRules/ContentView.swift:537
+#: macos/CoreRules/ContentView.swift:547
+#: macos/CoreRules/ContentView.swift:549
+#: macos/CoreRules/ContentView.swift:572
+#: macos/CoreRules/ContentView.swift:574
 msgid "Copy"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1532
 #: crates/cr-win/src/app/library.rs:593
 #: crates/cr-win/src/app/library.rs:604
-#: macos/CoreRules/ContentView.swift:486
-#: macos/CoreRules/ContentView.swift:489
-#: macos/CoreRules/ContentView.swift:493
-#: macos/CoreRules/ContentView.swift:495
+#: macos/CoreRules/ContentView.swift:505
+#: macos/CoreRules/ContentView.swift:508
+#: macos/CoreRules/ContentView.swift:512
+#: macos/CoreRules/ContentView.swift:514
 msgid "View"
 msgstr ""
 
@@ -5547,9 +5591,9 @@ msgstr ""
 #: crates/cr-gtk/src/main.rs:1827
 #: crates/cr-win/src/app/library.rs:264
 #: macos/CoreRules/Book.swift:175
-#: macos/CoreRules/ContentView.swift:347
-#: macos/CoreRules/Encounter.swift:155
-#: macos/CoreRules/Encounter.swift:342
+#: macos/CoreRules/ContentView.swift:366
+#: macos/CoreRules/Encounter.swift:167
+#: macos/CoreRules/Encounter.swift:354
 #: macos/CoreRules/Help.swift:202
 #: macos/CoreRules/Sheet.swift:106
 #: macos/CoreRules/Tables.swift:88
@@ -5559,44 +5603,44 @@ msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1582
 #: crates/cr-win/src/app/library.rs:328
-#: macos/CoreRules/ContentView.swift:260
+#: macos/CoreRules/ContentView.swift:279
 msgid "Show a Party"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1589
-#: crates/cr-mac-ffi/src/lib.rs:616
+#: crates/cr-mac-ffi/src/lib.rs:619
 #: crates/cr-win/src/app/library.rs:337
 msgid "All Types"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1593
 #: crates/cr-win/src/app/library.rs:346
-#: macos/CoreRules/ContentView.swift:263
+#: macos/CoreRules/ContentView.swift:282
 msgid "Show a Part Type"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1599
 #: crates/cr-win/src/app/library.rs:354
-#: macos/CoreRules/ContentView.swift:267
+#: macos/CoreRules/ContentView.swift:286
 msgid "Magic Only"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1692
 #: crates/cr-gtk/src/main.rs:1825
 #: crates/cr-win/src/app/library.rs:263
-#: macos/CoreRules/ContentView.swift:208
+#: macos/CoreRules/ContentView.swift:227
 msgid "No {section}"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1730
 #: crates/cr-win/src/app/library.rs:271
-#: macos/CoreRules/ContentView.swift:224
+#: macos/CoreRules/ContentView.swift:243
 msgid "Core Rules 2.0 is read-only"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1731
 #: crates/cr-win/src/app/library.rs:272
-#: macos/CoreRules/ContentView.swift:226
+#: macos/CoreRules/ContentView.swift:245
 msgid "Open an Expansion installation and import this content with Import Core Rules 2.0…"
 msgstr ""
 
@@ -5609,31 +5653,33 @@ msgid "Entries"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:1822
-#: crates/cr-mac-ffi/src/encounter.rs:211
-#: crates/cr-mac-ffi/src/encounter.rs:492
-#: crates/cr-mac-ffi/src/encounter.rs:874
-#: crates/cr-mac-ffi/src/lib.rs:1074
+#: crates/cr-mac-ffi/src/encounter.rs:225
+#: crates/cr-mac-ffi/src/encounter.rs:526
+#: crates/cr-mac-ffi/src/encounter.rs:962
+#: crates/cr-mac-ffi/src/lib.rs:1077
 #: crates/cr-mac-ffi/src/sheet.rs:85
 #: crates/cr-win/src/app/library.rs:261
 #: crates/cr-win/src/app.rs:402
 #: crates/cr-win/src/app.rs:1332
 #: crates/cr-win/src/app.rs:1345
 #: crates/cr-win/src/app.rs:2909
-#: macos/CoreRules/ContentView.swift:204
-#: macos/CoreRules/FormView.swift:509
-#: macos/CoreRules/Model.swift:143
-#: macos/CoreRules/Model.swift:316
-#: macos/CoreRules/Model.swift:348
-#: macos/CoreRules/Model.swift:485
-#: macos/CoreRules/Model.swift:545
-#: macos/CoreRules/Model.swift:649
-#: macos/CoreRules/Model.swift:750
+#: macos/CoreRules/ContentView.swift:223
+#: macos/CoreRules/FormView.swift:619
+#: macos/CoreRules/Model.swift:150
+#: macos/CoreRules/Model.swift:339
+#: macos/CoreRules/Model.swift:371
+#: macos/CoreRules/Model.swift:508
+#: macos/CoreRules/Model.swift:584
+#: macos/CoreRules/Model.swift:660
+#: macos/CoreRules/Model.swift:795
+#: macos/CoreRules/Model.swift:898
+#: macos/CoreRules/Record.swift:253
 msgid "Could Not Read"
 msgstr ""
 
 #: crates/cr-gtk/src/main.rs:2104
 #: crates/cr-win/src/app/library.rs:687
-#: macos/CoreRules/ContentView.swift:384
+#: macos/CoreRules/ContentView.swift:403
 msgid "Icon"
 msgstr ""
 
@@ -5655,9 +5701,9 @@ msgstr ""
 #: crates/cr-win/src/app/edit.rs:248
 #: crates/cr-win/src/app/library.rs:496
 #: crates/cr-win/src/app.rs:2715
-#: macos/CoreRules/ContentView.swift:323
-#: macos/CoreRules/ContentView.swift:505
-#: macos/CoreRules/ContentView.swift:507
+#: macos/CoreRules/ContentView.swift:342
+#: macos/CoreRules/ContentView.swift:524
+#: macos/CoreRules/ContentView.swift:526
 #: macos/CoreRules/Edit.swift:163
 msgid "Edit Character"
 msgstr ""
@@ -5910,8 +5956,8 @@ msgstr ""
 #: crates/cr-win/src/app.rs:3699
 #: crates/cr-win/src/app.rs:3710
 #: crates/cr-win/src/app.rs:4189
-#: macos/CoreRules/Model.swift:369
-#: macos/CoreRules/Model.swift:373
+#: macos/CoreRules/Model.swift:392
+#: macos/CoreRules/Model.swift:396
 msgid "NPC Generator"
 msgstr ""
 
@@ -6150,8 +6196,8 @@ msgstr ""
 #: crates/cr-win/src/app.rs:4314
 #: crates/cr-win/src/app.rs:4386
 #: crates/cr-win/src/app.rs:4408
-#: macos/CoreRules/Model.swift:573
-#: macos/CoreRules/Model.swift:580
+#: macos/CoreRules/Model.swift:719
+#: macos/CoreRules/Model.swift:726
 #: macos/CoreRules/Parties.swift:71
 #: macos/CoreRules/Parties.swift:108
 msgid "Manage Parties"
@@ -6220,20 +6266,21 @@ msgstr[1] ""
 #: crates/cr-gtk/src/picture.rs:49
 #: crates/cr-win/src/app/portrait.rs:249
 #: crates/cr-win/src/app/portrait.rs:286
-#: macos/CoreRules/FormView.swift:449
+#: macos/CoreRules/FormView.swift:559
 msgid "Portrait"
 msgstr ""
 
 #: crates/cr-gtk/src/picture.rs:155
 #: crates/cr-gtk/src/userdb/templates.rs:1944
-#: crates/cr-mac-ffi/src/encounter.rs:1121
+#: crates/cr-mac-ffi/src/encounter.rs:1209
+#: crates/cr-mac-ffi/src/record.rs:639
 #: crates/cr-win/src/app/encounter.rs:986
 #: crates/cr-win/src/app/portrait.rs:298
 #: crates/cr-win/src/app/record.rs:463
 #: crates/cr-win/src/app/record.rs:680
 #: crates/cr-win/src/app/templates.rs:492
 #: crates/cr-win/src/app/templates.rs:613
-#: macos/CoreRules/FormView.swift:446
+#: macos/CoreRules/FormView.swift:556
 msgid "_Choose…"
 msgstr ""
 
@@ -6243,6 +6290,7 @@ msgid "No Portrait"
 msgstr ""
 
 #: crates/cr-gtk/src/picture.rs:238
+#: crates/cr-mac-ffi/src/record.rs:633
 #: crates/cr-win/src/app/record.rs:654
 msgid "No Picture"
 msgstr ""
@@ -6270,24 +6318,25 @@ msgid "Choose Picture"
 msgstr ""
 
 #: crates/cr-gtk/src/picture.rs:282
-#: crates/cr-mac-ffi/src/lib.rs:949
+#: crates/cr-mac-ffi/src/lib.rs:952
 #: crates/cr-win/src/app/portrait.rs:120
 msgid "Portraits"
 msgstr ""
 
 #: crates/cr-gtk/src/picture.rs:285
-#: crates/cr-mac-ffi/src/lib.rs:952
+#: crates/cr-mac-ffi/src/lib.rs:955
 #: crates/cr-win/src/app/portrait.rs:122
 msgid "Portraits for {race}"
 msgstr ""
 
 #: crates/cr-gtk/src/picture.rs:286
-#: crates/cr-mac-ffi/src/lib.rs:953
+#: crates/cr-mac-ffi/src/lib.rs:956
 #: crates/cr-win/src/app/portrait.rs:123
 msgid "Other Portraits"
 msgstr ""
 
 #: crates/cr-gtk/src/picture.rs:290
+#: crates/cr-mac-ffi/src/record.rs:308
 #: crates/cr-win/src/app/portrait.rs:127
 msgid "Monster Pictures"
 msgstr ""
@@ -6309,7 +6358,8 @@ msgstr ""
 
 #: crates/cr-gtk/src/picture.rs:346
 #: crates/cr-win/src/app/portrait.rs:438
-#: macos/CoreRules/FormView.swift:495
+#: macos/CoreRules/FormView.swift:605
+#: macos/CoreRules/Record.swift:239
 msgid "Choose _File…"
 msgstr ""
 
@@ -6338,7 +6388,7 @@ msgstr ""
 
 #: crates/cr-gtk/src/picture.rs:674
 #: crates/cr-win/src/app/library.rs:705
-#: macos/CoreRules/ContentView.swift:409
+#: macos/CoreRules/ContentView.swift:428
 msgid "Next Image"
 msgstr ""
 
@@ -6346,7 +6396,7 @@ msgstr ""
 #: crates/cr-gtk/src/picture.rs:741
 #: crates/cr-win/src/app/library.rs:715
 #: crates/cr-win/src/app/library.rs:832
-#: macos/CoreRules/ContentView.swift:413
+#: macos/CoreRules/ContentView.swift:432
 msgid "Full Screen"
 msgstr ""
 
@@ -6428,7 +6478,7 @@ msgstr ""
 #: crates/cr-win/src/app/library.rs:629
 #: crates/cr-win/src/app/sheet.rs:86
 #: crates/cr-win/src/app.rs:1690
-#: macos/CoreRules/CoreRulesApp.swift:127
+#: macos/CoreRules/CoreRulesApp.swift:128
 #: macos/CoreRules/Sheet.swift:152
 #: macos/CoreRules/Sheet.swift:154
 msgid "Save as _PDF…"
@@ -6540,7 +6590,7 @@ msgstr ""
 #: crates/cr-gtk/src/tables.rs:41
 #: crates/cr-win/src/app/tables.rs:179
 #: macos/CoreRules/CoreRulesApp.swift:45
-#: macos/CoreRules/Model.swift:395
+#: macos/CoreRules/Model.swift:418
 #: macos/CoreRules/Tables.swift:134
 msgid "Roll on a Table"
 msgstr ""
@@ -6572,6 +6622,7 @@ msgid "Table"
 msgstr ""
 
 #: crates/cr-gtk/src/tables.rs:162
+#: crates/cr-mac-ffi/src/record.rs:951
 #: crates/cr-mac-ffi/src/treasure.rs:242
 #: crates/cr-store/src/userdb/races.rs:434
 #: crates/cr-store/src/userdb/races.rs:445
@@ -6747,9 +6798,9 @@ msgstr ""
 #: crates/cr-gtk/src/transfer.rs:636
 #: crates/cr-win/src/app.rs:3135
 #: crates/cr-win/src/app.rs:3177
-#: macos/CoreRules/ContentView.swift:107
+#: macos/CoreRules/ContentView.swift:113
 #: macos/CoreRules/Import.swift:48
-#: macos/CoreRules/Model.swift:726
+#: macos/CoreRules/Model.swift:874
 msgid "Import Failed"
 msgstr ""
 
@@ -6788,6 +6839,7 @@ msgstr ""
 #: crates/cr-gtk/src/transfer.rs:796
 #: crates/cr-win/src/app.rs:4636
 #: macos/CoreRules/Edit.swift:97
+#: macos/CoreRules/Record.swift:134
 msgid "Discard Changes?"
 msgstr ""
 
@@ -6800,6 +6852,7 @@ msgstr ""
 #: crates/cr-gtk/src/userdb.rs:904
 #: crates/cr-win/src/app.rs:4653
 #: macos/CoreRules/Edit.swift:98
+#: macos/CoreRules/Record.swift:135
 msgid "_Discard"
 msgstr ""
 
@@ -6909,7 +6962,7 @@ msgstr ""
 #: crates/cr-gtk/src/treasure.rs:219
 #: crates/cr-win/src/app/treasure.rs:135
 #: crates/cr-win/src/app.rs:3769
-#: macos/CoreRules/Model.swift:426
+#: macos/CoreRules/Model.swift:449
 #: macos/CoreRules/Treasure.swift:203
 msgid "_Delete Saved Treasure"
 msgstr ""
@@ -6929,7 +6982,7 @@ msgstr ""
 #: crates/cr-mac-ffi/src/treasure.rs:310
 #: crates/cr-win/src/app/treasure.rs:222
 #: crates/cr-win/src/app.rs:3759
-#: macos/CoreRules/Model.swift:420
+#: macos/CoreRules/Model.swift:443
 msgid "Save Treasure"
 msgstr ""
 
@@ -6941,7 +6994,7 @@ msgstr ""
 
 #: crates/cr-gtk/src/treasure.rs:495
 #: crates/cr-win/src/app.rs:3751
-#: macos/CoreRules/Model.swift:417
+#: macos/CoreRules/Model.swift:440
 msgid "Treasure saved"
 msgstr ""
 
@@ -6959,16 +7012,18 @@ msgstr ""
 
 #: crates/cr-gtk/src/treasure.rs:524
 #: crates/cr-win/src/app.rs:3765
-#: macos/CoreRules/Model.swift:429
+#: macos/CoreRules/Model.swift:452
 msgid "Saved treasure deleted"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/attacks.rs:134
+#: crates/cr-mac-ffi/src/record.rs:526
 #: crates/cr-win/src/app/record.rs:845
 msgid "New…"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/attacks.rs:149
+#: crates/cr-mac-ffi/src/record.rs:542
 #: crates/cr-store/src/catalog.rs:1267
 #: crates/cr-store/src/userdb/classes/pages.rs:765
 #: crates/cr-store/src/userdb/monsters.rs:334
@@ -6979,11 +7034,14 @@ msgid "Attacks"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/attacks.rs:260
+#: crates/cr-mac-ffi/src/record.rs:1121
 #: crates/cr-win/src/app/record.rs:1433
 msgid "Help ID"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/attacks.rs:264
+#: crates/cr-mac-ffi/src/record.rs:1124
+#: crates/cr-mac-ffi/src/record.rs:1130
 #: crates/cr-store/src/catalog.rs:1268
 #: crates/cr-store/src/catalog.rs:1319
 #: crates/cr-store/src/userdb/traps.rs:63
@@ -6993,11 +7051,13 @@ msgid "Damage"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/attacks.rs:273
+#: crates/cr-mac-ffi/src/record.rs:1138
 #: crates/cr-win/src/app/record.rs:1446
 msgid "Must make a to hit roll against"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/attacks.rs:281
+#: crates/cr-mac-ffi/src/record.rs:1144
 #: crates/cr-win/src/app/record.rs:1453
 #: crates/cr-win/src/app/record.rs:1455
 msgid "Special Effect"
@@ -7013,6 +7073,7 @@ msgid "Used to calculate modified HD for experience"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/attacks.rs:299
+#: crates/cr-mac-ffi/src/record.rs:1161
 #: crates/cr-store/src/userdb/monsters.rs:342
 #: crates/cr-store/src/userdb/powers.rs:95
 #: crates/cr-win/src/app/record.rs:1472
@@ -7024,6 +7085,7 @@ msgid "feet"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/attacks.rs:315
+#: crates/cr-mac-ffi/src/record.rs:1160
 #: crates/cr-store/src/catalog.rs:1194
 #: crates/cr-store/src/userdb/powers.rs:113
 #: crates/cr-store/src/userdb/spells.rs:120
@@ -7032,21 +7094,25 @@ msgid "Area of Effect"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/attacks.rs:338
+#: crates/cr-mac-ffi/src/record.rs:1182
 #: crates/cr-win/src/app/record.rs:1476
 msgid "Save Against"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/attacks.rs:345
+#: crates/cr-mac-ffi/src/record.rs:1189
 #: crates/cr-win/src/app/record.rs:1483
 msgid "Modified by"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/attacks.rs:347
+#: crates/cr-mac-ffi/src/record.rs:1196
 #: crates/cr-win/src/app/record.rs:1490
 msgid "To gain this"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/attacks.rs:355
+#: crates/cr-mac-ffi/src/record.rs:1179
 #: crates/cr-store/src/userdb/parts/pages.rs:258
 #: crates/cr-win/src/app/record.rs:1474
 msgid "Saving Throws"
@@ -7054,12 +7120,16 @@ msgstr ""
 
 #: crates/cr-gtk/src/userdb/attacks.rs:383
 #: crates/cr-gtk/src/userdb/attacks.rs:400
+#: crates/cr-mac-ffi/src/record.rs:1201
 #: crates/cr-win/src/app/record.rs:1031
 msgid "Monster Attack"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:60
 #: crates/cr-gtk/src/userdb/widgets.rs:679
+#: crates/cr-mac-ffi/src/record.rs:827
+#: crates/cr-mac-ffi/src/record.rs:837
+#: crates/cr-mac-ffi/src/record.rs:895
 #: crates/cr-store/src/catalog.rs:1187
 #: crates/cr-store/src/tables/data.rs:409
 #: crates/cr-store/src/tables/data.rs:414
@@ -7074,11 +7144,13 @@ msgid "Level"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:260
+#: crates/cr-mac-ffi/src/record.rs:520
 #: crates/cr-win/src/app/record.rs:551
 msgid "Add Free Spells…"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:276
+#: crates/cr-mac-ffi/src/record.rs:968
 #: crates/cr-win/src/app/record.rs:1214
 #: crates/cr-win/src/app/record.rs:1216
 msgid "The spells may be cast this often"
@@ -7087,22 +7159,26 @@ msgstr ""
 #: crates/cr-gtk/src/userdb/levels.rs:281
 #: crates/cr-gtk/src/userdb/templates.rs:1034
 #: crates/cr-gtk/src/userdb.rs:1084
+#: crates/cr-mac-ffi/src/record.rs:989
 #: crates/cr-win/src/app/record.rs:1235
 #: crates/cr-win/src/app/record.rs:1236
 msgid "Choose"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:295
+#: crates/cr-mac-ffi/src/record.rs:995
 #: crates/cr-win/src/app/record.rs:1252
 msgid "Must select one spell from the list"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:327
+#: crates/cr-mac-ffi/src/record.rs:1009
 #: crates/cr-win/src/app/record.rs:1188
 msgid "Uses"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:360
+#: crates/cr-mac-ffi/src/record.rs:1024
 #: crates/cr-win/src/app/record.rs:1256
 #: crates/cr-win/src/app/record.rs:1258
 msgid "Spell type"
@@ -7119,63 +7195,75 @@ msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:366
 #: crates/cr-gtk/src/userdb/levels.rs:390
+#: crates/cr-mac-ffi/src/record.rs:1050
 #: crates/cr-win/src/app/record.rs:1279
 msgid "Add a Spell…"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:411
+#: crates/cr-mac-ffi/src/record.rs:1056
 #: crates/cr-store/src/userdb/classes/pages.rs:922
 #: crates/cr-win/src/app/record.rs:1026
 msgid "Free Spells"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:490
+#: crates/cr-mac-ffi/src/record.rs:521
 #: crates/cr-win/src/app/record.rs:552
 msgid "Add NWPs…"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:509
+#: crates/cr-mac-ffi/src/record.rs:1063
 #: crates/cr-win/src/app/record.rs:1301
 msgid "Bonus NWPs granted at this level"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:523
+#: crates/cr-mac-ffi/src/record.rs:1076
 #: crates/cr-win/src/app/record.rs:1314
 msgid "May only pick one from the list above"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:530
+#: crates/cr-mac-ffi/src/record.rs:1087
 #: crates/cr-win/src/app/record.rs:1315
 msgid "NWP score modifications"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:535
+#: crates/cr-mac-ffi/src/record.rs:1094
 #: crates/cr-win/src/app/record.rs:1320
 msgid "Modification"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:552
+#: crates/cr-mac-ffi/src/record.rs:1097
 #: crates/cr-win/src/app/record.rs:1029
 msgid "NWPs"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:622
+#: crates/cr-mac-ffi/src/record.rs:523
 #: crates/cr-win/src/app/record.rs:554
 msgid "Add a Class Ability…"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:652
+#: crates/cr-mac-ffi/src/record.rs:1103
 #: crates/cr-win/src/app/record.rs:1333
 #: crates/cr-win/src/app/record.rs:1335
 msgid "Class Ability"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:685
+#: crates/cr-mac-ffi/src/record.rs:583
 #: crates/cr-win/src/app/record.rs:589
 msgid "Copy from another class…"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/levels.rs:686
+#: crates/cr-mac-ffi/src/record.rs:584
 #: crates/cr-win/src/app/record.rs:590
 msgid "Fills this page with what another class has on it"
 msgstr ""
@@ -7190,8 +7278,8 @@ msgstr ""
 #: crates/cr-gtk/src/userdb.rs:2499
 #: crates/cr-win/src/app/library.rs:310
 #: crates/cr-win/src/app/templates.rs:865
-#: macos/CoreRules/ContentView.swift:280
-#: macos/CoreRules/ContentView.swift:287
+#: macos/CoreRules/ContentView.swift:299
+#: macos/CoreRules/ContentView.swift:306
 msgid "Show Standard or Custom Records"
 msgstr ""
 
@@ -7203,6 +7291,7 @@ msgstr ""
 
 #: crates/cr-gtk/src/userdb/templates.rs:613
 #: crates/cr-win/src/app/templates.rs:914
+#: macos/CoreRules/Record.swift:388
 msgid "Part Type"
 msgstr ""
 
@@ -7257,6 +7346,7 @@ msgstr ""
 
 #: crates/cr-gtk/src/userdb/templates.rs:1041
 #: crates/cr-gtk/src/userdb.rs:1089
+#: crates/cr-mac-ffi/src/record.rs:478
 #: crates/cr-win/src/app/record.rs:457
 #: crates/cr-win/src/app/templates.rs:491
 msgid "Choose {field}"
@@ -7449,18 +7539,21 @@ msgid "Selected"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/widgets.rs:515
+#: crates/cr-mac-ffi/src/record.rs:943
 #: crates/cr-win/src/app/record.rs:1129
 #: crates/cr-win/src/app/record.rs:1131
 msgid "Number to choose"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb/widgets.rs:641
+#: crates/cr-mac-ffi/src/record.rs:519
 #: crates/cr-win/src/app/record.rs:550
 msgid "Add a Group…"
 msgstr ""
 
 #: crates/cr-gtk/src/userdb.rs:263
 #: crates/cr-win/src/app.rs:2381
+#: macos/CoreRules/Record.swift:387
 msgid "Select the type of the new part."
 msgstr ""
 
@@ -7635,6 +7728,7 @@ msgstr ""
 
 #: crates/cr-gtk/src/userdb.rs:2468
 #: crates/cr-win/src/app/library.rs:540
+#: macos/CoreRules/ContentView.swift:622
 msgid "New _Subrace…"
 msgstr ""
 
@@ -7646,6 +7740,7 @@ msgstr ""
 
 #: crates/cr-gtk/src/userdb.rs:2479
 #: crates/cr-win/src/app/library.rs:556
+#: macos/CoreRules/ContentView.swift:625
 msgid "_Schools…"
 msgstr ""
 
@@ -7665,27 +7760,27 @@ msgid "Score"
 msgstr ""
 
 #: crates/cr-mac-ffi/src/edit.rs:671
-#: crates/cr-mac-ffi/src/form.rs:607
+#: crates/cr-mac-ffi/src/form.rs:649
 #: crates/cr-win/src/app/edit.rs:876
 #: crates/cr-win/src/app/forms.rs:47
 msgid "Quantity"
 msgstr ""
 
-#: crates/cr-mac-ffi/src/encounter.rs:544
+#: crates/cr-mac-ffi/src/encounter.rs:606
 #: crates/cr-win/src/app/encounter.rs:146
 #: crates/cr-win/src/app/encounter.rs:744
 msgid "Templates"
 msgstr ""
 
-#: crates/cr-mac-ffi/src/encounter.rs:545
+#: crates/cr-mac-ffi/src/encounter.rs:607
 msgid "Choose a template to generate the encounter from"
 msgstr ""
 
-#: crates/cr-mac-ffi/src/encounter.rs:588
+#: crates/cr-mac-ffi/src/encounter.rs:650
 msgid "Showing {shown} of {count}; search to narrow the list"
 msgstr ""
 
-#: crates/cr-mac-ffi/src/form.rs:609
+#: crates/cr-mac-ffi/src/form.rs:651
 #: crates/cr-store/src/tables/data.rs:394
 #: crates/cr-win/src/app/forms.rs:49
 msgid "Rank"
@@ -7694,6 +7789,60 @@ msgstr ""
 #: crates/cr-mac-ffi/src/parties.rs:269
 #: crates/cr-win/src/app/parties.rs:177
 msgid "Empty parties are removed when you leave this page."
+msgstr ""
+
+#: crates/cr-mac-ffi/src/record.rs:660
+#: crates/cr-store/src/userdb/races.rs:277
+#: crates/cr-store/src/userdb/races.rs:281
+#: crates/cr-store/src/userdb/races.rs:284
+#: crates/cr-win/src/app/record.rs:80
+#: crates/cr-win/src/app/templates.rs:49
+msgid "Sides"
+msgstr ""
+
+#: crates/cr-mac-ffi/src/record.rs:660
+#: crates/cr-store/src/userdb/parts/kit.rs:599
+#: crates/cr-store/src/userdb/parts/kit.rs:600
+#: crates/cr-store/src/userdb/parts/kit.rs:1364
+#: crates/cr-store/src/userdb/parts/pages.rs:1120
+#: crates/cr-win/src/app/record.rs:80
+#: crates/cr-win/src/app/templates.rs:49
+msgid "Bonus"
+msgstr ""
+
+#: crates/cr-mac-ffi/src/record.rs:796
+#: crates/cr-win/src/app/record.rs:915
+msgid "Levels {from} to {to}"
+msgstr ""
+
+#: crates/cr-mac-ffi/src/record.rs:956
+#: crates/cr-win/src/app/record.rs:1141
+msgid "Add an Option…"
+msgstr ""
+
+#: crates/cr-mac-ffi/src/record.rs:1031
+#: crates/cr-win/src/app/record.rs:1268
+msgid "Spell level (0 for all)"
+msgstr ""
+
+#: crates/cr-mac-ffi/src/record.rs:1068
+#: crates/cr-win/src/app/record.rs:1304
+msgid "Add a Proficiency…"
+msgstr ""
+
+#: crates/cr-mac-ffi/src/record.rs:1092
+#: crates/cr-win/src/app/record.rs:1318
+msgid "Modify a Proficiency…"
+msgstr ""
+
+#: crates/cr-mac-ffi/src/record.rs:1152
+#: crates/cr-win/src/app/record.rs:1461
+msgid "Bonus Hit Dice (used to calculate modified HD for experience)"
+msgstr ""
+
+#: crates/cr-mac-ffi/src/record.rs:1172
+#: crates/cr-win/src/app/record.rs:1410
+msgid "{measure} (feet)"
 msgstr ""
 
 #: crates/cr-store/src/abilities.rs:507
@@ -9855,12 +10004,14 @@ msgid "Crossover Penalty"
 msgstr ""
 
 #: crates/cr-store/src/userdb/classes/pages.rs:97
-#: macos/CoreRules/ContentView.swift:564
-#: macos/CoreRules/ContentView.swift:566
-#: macos/CoreRules/Encounter.swift:230
-#: macos/CoreRules/Encounter.swift:232
-#: macos/CoreRules/Encounter.swift:407
-#: macos/CoreRules/Encounter.swift:409
+#: macos/CoreRules/ContentView.swift:596
+#: macos/CoreRules/ContentView.swift:598
+#: macos/CoreRules/ContentView.swift:632
+#: macos/CoreRules/ContentView.swift:634
+#: macos/CoreRules/Encounter.swift:242
+#: macos/CoreRules/Encounter.swift:244
+#: macos/CoreRules/Encounter.swift:419
+#: macos/CoreRules/Encounter.swift:421
 #: macos/CoreRules/Treasure.swift:208
 #: macos/CoreRules/Treasure.swift:210
 msgid "More"
@@ -11171,15 +11322,6 @@ msgstr ""
 
 #: crates/cr-store/src/userdb/parts/kit.rs:599
 msgid "Choose abilities"
-msgstr ""
-
-#: crates/cr-store/src/userdb/parts/kit.rs:599
-#: crates/cr-store/src/userdb/parts/kit.rs:600
-#: crates/cr-store/src/userdb/parts/kit.rs:1364
-#: crates/cr-store/src/userdb/parts/pages.rs:1120
-#: crates/cr-win/src/app/record.rs:80
-#: crates/cr-win/src/app/templates.rs:49
-msgid "Bonus"
 msgstr ""
 
 #: crates/cr-store/src/userdb/parts/kit.rs:600
@@ -12873,14 +13015,6 @@ msgstr ""
 msgid "Height (inches)"
 msgstr ""
 
-#: crates/cr-store/src/userdb/races.rs:277
-#: crates/cr-store/src/userdb/races.rs:281
-#: crates/cr-store/src/userdb/races.rs:284
-#: crates/cr-win/src/app/record.rs:80
-#: crates/cr-win/src/app/templates.rs:49
-msgid "Sides"
-msgstr ""
-
 #: crates/cr-store/src/userdb/races.rs:278
 #: crates/cr-store/src/userdb/races.rs:279
 #: crates/cr-store/src/userdb/races.rs:280
@@ -13136,36 +13270,8 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: crates/cr-win/src/app/library.rs:843
-#: macos/CoreRules/Model.swift:885
+#: macos/CoreRules/Model.swift:1035
 msgid "Put the data package made by Extract Data from CD… in {folder}, or open the folder where AD&D Core Rules 2.0 is installed."
-msgstr ""
-
-#: crates/cr-win/src/app/record.rs:915
-msgid "Levels {from} to {to}"
-msgstr ""
-
-#: crates/cr-win/src/app/record.rs:1141
-msgid "Add an Option…"
-msgstr ""
-
-#: crates/cr-win/src/app/record.rs:1268
-msgid "Spell level (0 for all)"
-msgstr ""
-
-#: crates/cr-win/src/app/record.rs:1304
-msgid "Add a Proficiency…"
-msgstr ""
-
-#: crates/cr-win/src/app/record.rs:1318
-msgid "Modify a Proficiency…"
-msgstr ""
-
-#: crates/cr-win/src/app/record.rs:1410
-msgid "{measure} (feet)"
-msgstr ""
-
-#: crates/cr-win/src/app/record.rs:1461
-msgid "Bonus Hit Dice (used to calculate modified HD for experience)"
 msgstr ""
 
 #: crates/cr-win/src/app/settings.rs:39
@@ -13258,7 +13364,7 @@ msgid "WebView2 did not start ({reason})."
 msgstr ""
 
 #: crates/cr-win/src/app.rs:4632
-#: macos/CoreRules/ContentView.swift:153
+#: macos/CoreRules/ContentView.swift:160
 msgid "The character leaves the character list and its file is removed."
 msgstr ""
 
@@ -13275,6 +13381,7 @@ msgid "The table has changes that are not saved."
 msgstr ""
 
 #: crates/cr-win/src/app.rs:4644
+#: macos/CoreRules/Record.swift:138
 msgid "The record has changes that are not saved."
 msgstr ""
 
@@ -13299,18 +13406,19 @@ msgstr ""
 msgid "Version {version}"
 msgstr ""
 
-#: macos/CoreRules/CoreRulesApp.swift:146
+#: macos/CoreRules/CoreRulesApp.swift:147
 msgid "Tools"
 msgstr ""
 
-#: macos/CoreRules/CoreRulesApp.swift:180
+#: macos/CoreRules/CoreRulesApp.swift:181
 msgid "Core Rules Help"
 msgstr ""
 
-#: macos/CoreRules/CoreRulesApp.swift:209
+#: macos/CoreRules/CoreRulesApp.swift:210
 msgid "Help on {name}"
 msgstr ""
 
 #: macos/CoreRules/Edit.swift:170
+#: macos/CoreRules/Record.swift:209
 msgid "Page"
 msgstr ""

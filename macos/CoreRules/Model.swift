@@ -13,6 +13,8 @@ enum Modal: Identifiable {
     case npc(NpcModel)
     case importing(ImportModel)
     case parties(PartiesModel)
+    case record(RecordModel)
+    case partType(PartTypeModel)
 
     var id: ObjectIdentifier {
         switch self {
@@ -21,6 +23,8 @@ enum Modal: Identifiable {
         case .npc(let m): return ObjectIdentifier(m)
         case .importing(let m): return ObjectIdentifier(m)
         case .parties(let m): return ObjectIdentifier(m)
+        case .record(let m): return ObjectIdentifier(m)
+        case .partType(let m): return ObjectIdentifier(m)
         }
     }
 }
@@ -36,6 +40,9 @@ struct Notice: Identifiable {
 enum Confirm {
     case delete(file: String, name: String)
     case toNpc(file: String)
+    /// Delete on a record of the user databases, with the question its
+    /// kind asks.
+    case deleteRecord(section: String, name: String, title: String, text: String)
 }
 
 @MainActor
@@ -227,6 +234,13 @@ final class AppModel: ObservableObject {
             if sheet != nil { return true }
             guard let commands = details?.commands else { return false }
             return commands.sheet || commands.print
+        case Action.UDB_NEW:
+            return writable && modal == nil && newRecordLabel != nil
+        case Action.UDB_COPY, Action.UDB_EDIT, Action.UDB_DELETE, Action.UDB_SUBRACE,
+            Action.UDB_SCHOOLS:
+            return writable && modal == nil && recordEntry != nil
+        case Action.TRAP_EDIT, Action.TRAP_COPY, Action.TRAP_DELETE:
+            return writable && modal == nil && pendingTrap != nil
         case Action.HELP, Action.HELP_HERE:
             return library != nil
         case Action.HELP_CONTROL:
@@ -264,6 +278,15 @@ final class AppModel: ObservableObject {
         case Action.NEW_ENCOUNTER: newEncounter()
         case Action.NEW_TABLE: editEncounterTable()
         case Action.MANAGE_PARTIES: manageParties()
+        case Action.UDB_NEW: newRecord()
+        case Action.UDB_COPY: actOnRecord(.copy)
+        case Action.UDB_EDIT: actOnRecord(.edit)
+        case Action.UDB_DELETE: actOnRecord(.delete)
+        case Action.UDB_SUBRACE: actOnRecord(.newSubrace)
+        case Action.UDB_SCHOOLS: actOnRecord(.schools)
+        case Action.TRAP_EDIT: actOnTrap(.edit)
+        case Action.TRAP_COPY: actOnTrap(.copy)
+        case Action.TRAP_DELETE: actOnTrap(.delete)
         case Action.SHEET_PRINT:
             if sheet == nil && details?.commands.monster == true {
                 monsterHelp(print: true)
@@ -533,6 +556,22 @@ final class AppModel: ObservableObject {
     /// View NPC, Print NPC and Roll Treasure on an encounter.
     private func encounterRequested(_ request: EncounterRequest, by encounter: EncounterModel) {
         switch request {
+        case .newRecord(let section):
+            openRecord(section: section, custom: true, name: "", act: .new) {
+                [weak encounter] (done: RecordDone) in
+                if section == "traps" {
+                    encounter?.addNewTrap(done.name)
+                } else {
+                    encounter?.addNewMonster(done.name)
+                }
+            }
+        case .trap(let act, let name, let custom):
+            pendingTrap = (name, custom)
+            switch act {
+            case .edit: perform(Action.TRAP_EDIT)
+            case .copy: perform(Action.TRAP_COPY)
+            default: perform(Action.TRAP_DELETE)
+            }
         case .npcSheet(let index, let print):
             do {
                 let sheet = SheetModel(try encounter.session.npcSheet(index: index), app: self)
@@ -552,6 +591,113 @@ final class AppModel: ObservableObject {
             }
             self.treasure = treasure
             openTreasureWindow()
+        }
+    }
+
+    // MARK: The user databases
+
+    /// The record of the user databases in view.
+    var recordEntry: RecordEntry? {
+        guard let library, let section, let entry else { return nil }
+        return library.entryRecord(section: section, index: entry)
+    }
+
+    /// What New makes in the section in view, when it makes a record.
+    var newRecordLabel: String? {
+        guard let library, let section else { return nil }
+        return library.newRecordLabel(section: section)
+    }
+
+    /// The trap Add Trap chose for Edit, Copy or Delete: its name, and
+    /// whether it is the user's.
+    private var pendingTrap: (String, Bool)?
+
+    private func newRecord() {
+        guard let section else { return }
+        openRecord(section: section, custom: false, name: "", act: .new)
+    }
+
+    private func actOnRecord(_ act: RecordAct) {
+        guard let record = recordEntry else { return }
+        openRecord(section: record.section, custom: record.custom, name: record.name, act: act)
+    }
+
+    private func actOnTrap(_ act: RecordAct) {
+        guard let trap = pendingTrap else { return }
+        pendingTrap = nil
+        openRecord(section: "traps", custom: trap.1, name: trap.0, act: act)
+    }
+
+    /// Acts on the record `name` of `section` (New takes neither); `then`
+    /// follows saving it, in place of showing it in the library.
+    func openRecord(
+        section: String, custom: Bool, name: String, act: RecordAct,
+        then: ((RecordDone) -> Void)? = nil
+    ) {
+        guard let library else { return }
+        do {
+            let opened = try library.recordAction(
+                section: section, custom: custom, name: name, act: act, shown: selectedRow?.key)
+            switch opened {
+            case .editor(let session):
+                let record = RecordModel(session)
+                record.done = { [weak self] (done: RecordDone) in
+                    self?.recordSaved(done, then: then)
+                }
+                modal = .record(record)
+            case .refused(let message):
+                notice = Notice(title: message, text: "")
+            case .askDelete(let title, let text):
+                confirm = .deleteRecord(section: section, name: name, title: title, text: text)
+            case .deleteNow:
+                deleteRecord(section: section, name: name)
+            case .chooseType(let types, let chosen):
+                modal = .partType(PartTypeModel(types: types, chosen: chosen))
+            case .nothing:
+                break
+            }
+        } catch {
+            fail(tr("Could Not Read"), error)
+        }
+    }
+
+    /// New in the other parts' section, on the part type chosen.
+    func newPart(_ type: PartType) {
+        modal = nil
+        openRecord(section: type.section, custom: false, name: "", act: .new)
+    }
+
+    /// The record editor saved: the library shows the record, unless
+    /// `then` takes it.
+    private func recordSaved(_ done: RecordDone, then: ((RecordDone) -> Void)?) {
+        modal = nil
+        library?.forgetRules()
+        if let then {
+            then(done)
+            reload()
+        } else {
+            if section != done.section, sections.contains(where: { $0.id == done.section }) {
+                section = done.section
+            }
+            reload(select: done.key)
+        }
+        if let told = done.told, told.count == 2 {
+            notice = Notice(title: told[0], text: told[1])
+        } else {
+            notice = Notice(title: done.said, text: "")
+        }
+    }
+
+    private func deleteRecord(section: String, name: String) {
+        guard let library else { return }
+        do {
+            let said = try library.deleteRecord(section: section, name: name)
+            library.forgetRules()
+            entry = nil
+            reload()
+            notice = Notice(title: said, text: "")
+        } catch {
+            fail(plain(tr("_Delete")), error)
         }
     }
 
@@ -690,6 +836,8 @@ final class AppModel: ObservableObject {
             case .toNpc(let file):
                 let npc = try library.convertToNpc(file: file)
                 reload(select: npc)
+            case .deleteRecord(let section, let name, _, _):
+                deleteRecord(section: section, name: name)
             }
         } catch {
             fail(tr("Not Saved"), error)
@@ -842,6 +990,8 @@ final class AppModel: ObservableObject {
         case .npc(let npc): return npc.session.help()
         case .importing: return screenHelp(screen: .`import`)
         case .parties(let parties): return parties.session.help()
+        case .record(let record): return record.session.help()
+        case .partType: return section.map { sectionHelp(section: $0) } ?? screenHelp(screen: .mainMenu)
         case nil: return section.map { sectionHelp(section: $0) } ?? screenHelp(screen: .mainMenu)
         }
     }

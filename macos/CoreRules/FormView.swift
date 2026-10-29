@@ -121,6 +121,14 @@ struct FormRowView: View {
             Label(text, systemImage: error ? "exclamationmark.octagon.fill" : "exclamationmark.triangle.fill")
                 .foregroundStyle(error ? Color.red : Color.orange)
                 .textSelection(.enabled)
+        case .numbers(let title, let numbers, let separators, let enabled):
+            NumbersRow(title: title, numbers: numbers, separators: separators, enabled: enabled, act: act)
+        case .grid(let columns, let rows, let enabled):
+            NumberGrid(columns: columns, rows: rows, enabled: enabled, act: act)
+        case .picture(let title, let subtitle, let png, let icon, let choose, let clear):
+            PictureRow(
+                title: title, subtitle: subtitle, png: png, icon: icon, choose: choose, clear: clear,
+                act: act)
         }
     }
 }
@@ -408,6 +416,108 @@ struct ItemRow: View {
     }
 }
 
+/// Whole numbers side by side, as dice: count d sides + bonus.
+struct NumbersRow: View {
+    let title: String
+    let numbers: [FormNumber]
+    let separators: [String]
+    let enabled: Bool
+    let act: FormAct
+
+    var body: some View {
+        LabeledContent {
+            HStack(spacing: 6) {
+                ForEach(Array(numbers.enumerated()), id: \.offset) { item in
+                    if item.offset > 0 && item.offset - 1 < separators.count {
+                        Text(separators[item.offset - 1])
+                            .foregroundStyle(.secondary)
+                    }
+                    NumberField(
+                        id: item.element.id, title: item.element.label, value: item.element.value,
+                        min: item.element.min, max: item.element.max, act: act)
+                    .help(item.element.label)
+                }
+            }
+            .disabled(!enabled)
+        } label: {
+            Text(title)
+        }
+    }
+}
+
+/// A table of whole numbers, one row per level, which scrolls sideways
+/// when it is wider than the form.
+struct NumberGrid: View {
+    let columns: [String]
+    let rows: [FormGridRow]
+    let enabled: Bool
+    let act: FormAct
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 4) {
+                GridRow {
+                    ForEach(0..<columns.count, id: \.self) { (c: Int) in
+                        Text(columns[c])
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: 110, alignment: .leading)
+                    }
+                }
+                ForEach(Array(rows.enumerated()), id: \.offset) { item in
+                    GridRow {
+                        Text(item.element.title)
+                            .monospacedDigit()
+                        ForEach(Array(item.element.cells.enumerated()), id: \.offset) { cell in
+                            NumberField(
+                                id: cell.element.id, title: cell.element.label,
+                                value: cell.element.value, min: cell.element.min,
+                                max: cell.element.max, act: act)
+                            .help(cell.element.label)
+                        }
+                    }
+                }
+            }
+            .padding(.vertical, 4)
+        }
+        .disabled(!enabled)
+    }
+}
+
+/// A record's picture or an item's icon, with Choose and No Picture.
+struct PictureRow: View {
+    let title: String
+    let subtitle: String
+    let png: Data?
+    let icon: Bool
+    let choose: FormButton
+    let clear: FormButton?
+    let act: FormAct
+
+    var body: some View {
+        LabeledContent {
+            HStack {
+                if let clear {
+                    FormButtonView(button: clear, act: act)
+                        .buttonStyle(.borderless)
+                }
+                FormButtonView(button: choose, act: act)
+            }
+        } label: {
+            HStack(spacing: 12) {
+                if let png, let image = NSImage(data: png) {
+                    Image(nsImage: image)
+                        .resizable()
+                        .interpolation(icon ? .none : .medium)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: icon ? 32 : 96, height: icon ? 32 : 64)
+                }
+                TwoLines(title: title, subtitle: subtitle)
+            }
+        }
+    }
+}
+
 /// Add on a list: a menu of what may be added.
 struct AddRow: View {
     let id: UInt32
@@ -421,7 +531,7 @@ struct AddRow: View {
                 Button(options[index]) { act(id, .index(index: UInt32(index))) }
             }
         } label: {
-            Label(label, systemImage: "plus")
+            Label(plain(label), systemImage: "plus")
         }
         .fixedSize()
         .disabled(options.isEmpty)

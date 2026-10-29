@@ -10,17 +10,18 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use cr_app::bundle::BundleInput;
 use cr_app::encounter::{
     CLIMATES, EncounterEffect, EncounterForm, EncounterInput, FREQUENCIES, LAIR_MODES, MOST_COUNT,
-    Picker, SOURCES, TERRAINS, TableEditInput, TableEditor, TableEffect,
+    Pick, Picker, SOURCES, TERRAINS, TableEditInput, TableEditor, TableEffect,
 };
 use cr_i18n::tr;
 use cr_store::Installation;
 use cr_store::encounter::{Encounter, EncounterRules, FrequencyTable, Package, check_name};
 use cr_store::treasure::Rand;
 use cr_store::userdb::traps::Traps;
-use cr_store::userdb::{Filter, UserDb};
+use cr_store::userdb::{Filter, Origin, UserDb};
 
 use crate::CoreError;
-use crate::form::{Acts, Builder, FormDialog, FormPage, FormValue};
+use crate::form::{Acts, Builder, FormDialog, FormPage, FormRow, FormValue};
+use crate::record::RecordAct;
 use crate::sheet::SheetSession;
 use crate::treasure::TreasureSession;
 
@@ -50,6 +51,17 @@ pub enum EncounterRequest {
     /// Roll Treasure…: the roller on the encounter's treasure
     /// ([`EncounterSession::treasure`]).
     Treasure,
+    /// New Trap or New Monster from Add Trap or Add Monster: the editor
+    /// of a new record of `section`, which, saved, goes in the encounter
+    /// ([`EncounterSession::add_new_trap`],
+    /// [`EncounterSession::add_new_monster`]).
+    NewRecord { section: String },
+    /// Edit, Copy or Delete on the trap Add Trap chose.
+    Trap {
+        act: RecordAct,
+        name: String,
+        custom: bool,
+    },
 }
 
 /// New Encounter: the original's "Select an Encounter Template", with an
@@ -96,6 +108,8 @@ enum In {
     AddTrap,
     NpcSheet(usize, bool),
     Treasure,
+    NewRecord(&'static str),
+    Trap(RecordAct),
 }
 
 fn input(input: EncounterInput) -> In {
@@ -275,6 +289,26 @@ impl EncounterSession {
             (State::Form(_), In::Treasure) => {
                 *self.request.lock().unwrap_or_else(|e| e.into_inner()) =
                     Some(EncounterRequest::Treasure);
+            }
+            // The picker closes for the editor, as the GNOME app's does.
+            (State::Form(form), In::NewRecord(section)) => {
+                form.picker = None;
+                *self.request.lock().unwrap_or_else(|e| e.into_inner()) =
+                    Some(EncounterRequest::NewRecord {
+                        section: section.to_owned(),
+                    });
+            }
+            (State::Form(form), In::Trap(act)) => {
+                let chosen = form.picker.as_ref().and_then(|p| p.chosen_trap());
+                if let Some((name, origin)) = chosen {
+                    form.picker = None;
+                    *self.request.lock().unwrap_or_else(|e| e.into_inner()) =
+                        Some(EncounterRequest::Trap {
+                            act,
+                            name,
+                            custom: origin == Origin::Custom,
+                        });
+                }
             }
             _ => {}
         }
@@ -507,6 +541,34 @@ impl EncounterSession {
             form.encounter.treasure.clone(),
             self.rand.clone(),
         ))
+    }
+
+    /// The trap New Trap saved as `name`, read again, goes in the
+    /// encounter, as the original puts it there.
+    pub fn add_new_trap(&self, name: String) {
+        let db = match UserDb::<Traps>::load(&self.install) {
+            Ok(db) => db,
+            Err(e) => return self.notice(tr("Add Trap"), e.to_string()),
+        };
+        if let State::Form(form) = &mut *self.state() {
+            form.add_new_trap(&db, &name);
+            if let Some((title, text)) = form.notice.take() {
+                self.notice(&title, text);
+            }
+        }
+    }
+
+    /// The monster New Monster saved as `name` goes in the encounter,
+    /// whose Add Monster lists it from now.
+    pub fn add_new_monster(&self, name: String) {
+        let rules = match self.install.encounter_rules() {
+            Ok(rules) => Arc::new(rules),
+            Err(e) => return self.notice(tr("Add Monster"), e.to_string()),
+        };
+        if let State::Form(form) = &mut *self.state() {
+            let mut rand = self.rand.lock().unwrap_or_else(|e| e.into_inner());
+            form.add_new_monster(rules, &name, &mut rand);
+        }
     }
 
     /// Use Treasure: the treasure of `roller` is the encounter's.
@@ -792,6 +854,32 @@ fn picker_dialog(form: &mut Builder<In>, picker: &Picker) -> FormDialog {
         Vec::new(),
         |text| input(EncounterInput::PickSearch(text)),
     );
+    // New Trap, and Edit, Copy and Delete on the trap chosen (the
+    // standard ones are only copied); New Monster.
+    match &picker.pick {
+        Pick::Trap(..) => {
+            let chosen = picker.chosen_trap().map(|(_, origin)| origin);
+            let custom = chosen == Some(Origin::Custom);
+            let buttons = [
+                (tr("New Trap"), true, In::NewRecord("traps")),
+                (tr("_Edit…"), custom, In::Trap(RecordAct::Edit)),
+                (tr("_Copy…"), chosen.is_some(), In::Trap(RecordAct::Copy)),
+                (tr("_Delete"), custom, In::Trap(RecordAct::Delete)),
+            ]
+            .map(|(label, enabled, input)| form.button(label, "", enabled, input));
+            form.row(FormRow::Value {
+                title: tr("Traps").to_owned(),
+                subtitle: String::new(),
+                value: String::new(),
+                buttons: buttons.to_vec(),
+            });
+        }
+        Pick::Monster => {
+            let new = form.button(tr("New Monster"), "", true, In::NewRecord("monsters"));
+            form.button_row(tr("Monsters"), "", new);
+        }
+        Pick::Npc(_) => {}
+    }
     let shown = picker.shown();
     let items: Vec<(String, String)> = shown
         .iter()

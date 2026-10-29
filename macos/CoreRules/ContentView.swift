@@ -95,6 +95,12 @@ struct ModalView: View {
             EditView(model: edit, close: { (saved: Bool) in model.closeEdit(edit, saved: saved) })
         case .npc(let npc):
             NpcView(model: npc, close: { model.modal = nil })
+        case .record(let record):
+            RecordView(model: record, close: { model.modal = nil })
+        case .partType(let choice):
+            PartTypeView(
+                model: choice, close: { model.modal = nil },
+                create: { (type: PartType) in model.newPart(type) })
         case .parties(let parties):
             PartiesView(model: parties, close: { model.closeParties() })
         case .importing(let importing):
@@ -144,6 +150,7 @@ struct ConfirmAlert: ViewModifier {
         switch model.confirm {
         case .delete(_, let name): return tr("Delete {name}?", ["name": name])
         case .toNpc: return tr("Convert to NPC?")
+        case .deleteRecord(_, _, let title, _): return title
         case nil: return ""
         }
     }
@@ -153,6 +160,7 @@ struct ConfirmAlert: ViewModifier {
         case .delete: return tr("The character leaves the character list and its file is removed.")
         case .toNpc:
             return tr("This will move the selected Player Character to the NPC List in the DM Toolkit.")
+        case .deleteRecord(_, _, _, let text): return text
         case nil: return ""
         }
     }
@@ -163,8 +171,10 @@ struct ConfirmAlert: ViewModifier {
     }
 
     private var destructive: Bool {
-        if case .delete = model.confirm { return true }
-        return false
+        switch model.confirm {
+        case .delete, .deleteRecord: return true
+        default: return false
+        }
     }
 
     func body(content: Content) -> some View {
@@ -192,6 +202,15 @@ struct EntryList: View {
             .overlay { empty }
         }
         .searchable(text: $model.filter.search, placement: .sidebar, prompt: tr("Search"))
+        .toolbar {
+            if let label = model.newRecordLabel {
+                Button { model.perform(Action.UDB_NEW) } label: {
+                    Label(label, systemImage: "plus")
+                }
+                .help(label)
+                .disabled(!model.enabled(Action.UDB_NEW))
+            }
+        }
         .onDeleteCommand { model.askDelete() }
         .navigationTitle(model.currentSection?.title ?? tr("Core Rules"))
     }
@@ -542,6 +561,19 @@ struct EntryTools: ToolbarContent {
                 }
                 .help(plain(label))
             }
+            if commands.records, let record = model.recordEntry {
+                if commands.edit {
+                    Button { model.perform(Action.UDB_EDIT) } label: {
+                        Label(tr("Edit"), systemImage: "pencil")
+                    }
+                    .help(tr("Edit"))
+                }
+                Button { model.perform(Action.UDB_COPY) } label: {
+                    Label(tr("Copy"), systemImage: "doc.on.doc")
+                }
+                .help(tr("Copy"))
+                RecordMenu(model: model, record: record)
+            }
             if commands.sheet || commands.print {
                 Button { model.perform(Action.SHEET_PRINT) } label: {
                     Label(more(tr("_Print…")), systemImage: "printer")
@@ -569,6 +601,37 @@ struct EntryTools: ToolbarContent {
                 Label(tr("Help"), systemImage: "questionmark.circle")
             }
             .help(tr("Help"))
+        }
+    }
+}
+
+/// The extras of a record of the user databases: New Subrace on a race,
+/// Schools on a spell, and Delete on the user's.
+struct RecordMenu: View {
+    @ObservedObject var model: AppModel
+    let record: RecordEntry
+
+    private var spell: Bool {
+        record.section == "wizard-spells" || record.section == "priest-spells"
+    }
+
+    var body: some View {
+        if record.section == "races" || spell || record.custom {
+            Menu {
+                if record.section == "races" {
+                    Button(more(tr("New _Subrace…"))) { model.perform(Action.UDB_SUBRACE) }
+                }
+                if spell {
+                    Button(more(tr("_Schools…"))) { model.perform(Action.UDB_SCHOOLS) }
+                }
+                if record.custom {
+                    Divider()
+                    Button(tr("_Delete"), role: .destructive) { model.perform(Action.UDB_DELETE) }
+                }
+            } label: {
+                Label(tr("More"), systemImage: "ellipsis.circle")
+            }
+            .help(tr("More"))
         }
     }
 }

@@ -14,6 +14,7 @@ mod import;
 mod npc;
 mod parties;
 mod prompt;
+mod record;
 mod sheet;
 mod tables;
 mod treasure;
@@ -35,13 +36,15 @@ pub use encounter::{
     TableGenerate,
 };
 pub use form::{
-    FormButton, FormDialog, FormGroup, FormNumber, FormOption, FormPage, FormRow, FormValue,
+    FormButton, FormDialog, FormGridRow, FormGroup, FormNumber, FormOption, FormPage, FormRow,
+    FormValue,
 };
 pub use help::{HelpBook, HelpLinked, HelpRow, HelpSession, HelpTopic};
 pub use import::{ImportCategory, ImportItem, ImportReport, ImportSession};
 pub use npc::{NpcSession, NpcsCreated};
 pub use parties::{GroupRequest, PartiesSession};
 pub use prompt::{PromptGroup, PromptInfo, PromptKind};
+pub use record::{PartType, PictureChoice, RecordAct, RecordDone, RecordOpened, RecordSession};
 pub use sheet::{SheetOptions, SheetSectionInfo, SheetSession};
 pub use tables::{TableBlock, TableOption, TableReference, TableResult, TableSession};
 pub use treasure::{TreasureSaved, TreasureSession};
@@ -1129,6 +1132,87 @@ impl Library {
             .group_sheet(&encounter, group.condensed);
         Ok(SheetSession::of(self.install.clone(), sheet))
     }
+
+    /// The record of the user databases in view: its section, whether
+    /// it is the user's, and its name.
+    pub fn entry_record(&self, section: String, index: u32) -> Option<RecordEntry> {
+        let key = &self.entry(&section, index)?.key;
+        let (section, origin, name) = cr_store::userdb::parse_key(key)?;
+        record::edited_here(section).then(|| RecordEntry {
+            section: section.to_owned(),
+            custom: origin == cr_store::userdb::Origin::Custom,
+            name: name.to_owned(),
+            key: key.clone(),
+        })
+    }
+
+    /// What New on section `section` makes, when it makes a record of
+    /// the user databases.
+    pub fn new_record_label(&self, section: String) -> Option<String> {
+        (cr_app::records::can_create(&section) && record::edited_here(&section))
+            .then(|| cr_app::records::new_tooltip(&section))
+    }
+
+    /// New, Copy, Edit, Delete, New Subrace or Schools… on the record
+    /// `name` of `section` (New takes neither); `shown` is the key of the
+    /// entry in view.
+    pub fn record_action(
+        &self,
+        section: String,
+        custom: bool,
+        name: String,
+        act: RecordAct,
+        shown: Option<String>,
+    ) -> Result<RecordOpened, CoreError> {
+        record::act_on(
+            &self.install,
+            &section,
+            custom,
+            &name,
+            act,
+            shown.as_deref(),
+        )
+    }
+
+    /// Deletes the user's record `name` of `section`, with what it takes
+    /// along; what to say.
+    pub fn delete_record(&self, section: String, name: String) -> Result<String, CoreError> {
+        cr_app::records::actions::delete(&self.install, &section, &name).map_err(CoreError::new)
+    }
+
+    /// The databases changed: the rules read from them are read again
+    /// when they are next used.
+    pub fn forget_rules(&self) {
+        for cache in [
+            &self.npc_rules as &dyn Forget,
+            &self.table_rolls,
+            &self.treasure_rules,
+            &self.encounter_rules,
+        ] {
+            cache.forget();
+        }
+    }
+}
+
+/// A cache of rules read from the databases.
+trait Forget {
+    fn forget(&self);
+}
+
+impl<T> Forget for Mutex<Option<Arc<T>>> {
+    fn forget(&self) {
+        *self.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    }
+}
+
+/// A record of the user databases in the library.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct RecordEntry {
+    pub section: String,
+    /// Whether it is the user's, which Edit and Delete change.
+    pub custom: bool,
+    pub name: String,
+    pub key: String,
 }
 
 /// An entry that opens an encounter window.
