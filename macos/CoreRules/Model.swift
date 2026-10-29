@@ -77,6 +77,8 @@ final class AppModel: ObservableObject {
 
     /// The sheets open in their windows, by the id their window has.
     private(set) var sheets: [UUID: SheetModel] = [:]
+    /// The books open in their windows, by the id their window has.
+    private(set) var books: [UUID: BookModel] = [:]
     /// The help of the installation opened, once it is read.
     @Published private(set) var help: HelpModel?
 
@@ -85,6 +87,7 @@ final class AppModel: ObservableObject {
     var openSettings: () -> Void = {}
     var openSheet: (UUID) -> Void = { _ in }
     var openHelpWindow: () -> Void = {}
+    var openBookWindow: (UUID) -> Void = { _ in }
     var openAbout: () -> Void = {}
 
     init() {
@@ -203,6 +206,8 @@ final class AppModel: ObservableObject {
             return library != nil
         case Action.HELP_CONTROL:
             return library != nil && details != nil
+        case Action.OPEN_BOOK:
+            return details?.commands.read == true
         case Action.SHEET_PDF:
             return sheet != nil || details?.commands.sheet == true
         case Action.SHEET_HTML, Action.SHEET_TXT, Action.SHEET_MD:
@@ -239,6 +244,7 @@ final class AppModel: ObservableObject {
         case Action.HELP: openHelp(helpBooks().first?.file ?? "")
         case Action.HELP_HERE: openHelp(programHelp(number: here(sheet: sheet)))
         case Action.HELP_CONTROL: entryHelp()
+        case Action.OPEN_BOOK: readBook()
         default: break
         }
     }
@@ -399,6 +405,38 @@ final class AppModel: ObservableObject {
 
     func closeSheet(_ id: UUID) {
         sheets[id] = nil
+    }
+
+    // MARK: The books
+
+    /// Read Book, on the book in view.
+    private func readBook() {
+        guard let library, let section, let entry,
+            let name = library.entryBook(section: section, index: entry)
+        else { return }
+        openBook(name)
+    }
+
+    /// Opens the book `name` in a window of its own; `find` starts Find
+    /// with a text.
+    func openBook(_ name: String, find: String? = nil) {
+        guard let library else { return }
+        let id = UUID()
+        books[id] = BookModel(name: name, find: find, library: library)
+        openBookWindow(id)
+    }
+
+    /// Help on the reader, as F1 in a book opens it.
+    func booksHelp() {
+        openHelp(programHelp(number: screenHelp(screen: .books)))
+    }
+
+    func book(_ id: UUID) -> BookModel? {
+        books[id]
+    }
+
+    func closeBook(_ id: UUID) {
+        books[id] = nil
     }
 
     // MARK: Help

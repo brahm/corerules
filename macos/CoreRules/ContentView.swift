@@ -16,6 +16,7 @@ struct ContentView: View {
                 model.openSettings = { openSettings() }
                 model.openSheet = { (id: UUID) in openWindow(id: "sheet", value: id) }
                 model.openHelpWindow = { openWindow(id: "help") }
+                model.openBookWindow = { (id: UUID) in openWindow(id: "book", value: id) }
                 model.openAbout = { openWindow(id: "about") }
             }
             .sheet(item: $model.modal) { modal in
@@ -484,6 +485,12 @@ struct EntryTools: ToolbarContent {
                     Label(tr("View"), systemImage: "doc.richtext")
                 }
                 .help(tr("View"))
+            }
+            if commands.read {
+                Button { model.perform(Action.OPEN_BOOK) } label: {
+                    Label(tr("_Read Book"), systemImage: "book")
+                }
+                .help(tr("_Read Book"))
             }
             if commands.edit && commands.sheet {
                 Button { model.editCharacter() } label: {

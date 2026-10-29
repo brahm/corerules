@@ -26,6 +26,7 @@ struct CoreRulesApp: App {
         .commands {
             MenuCommands(model: model)
             HelpCommands(model: model)
+            BookCommands()
         }
         WindowGroup(id: "sheet", for: UUID.self) { $id in
             if let id {
@@ -33,6 +34,13 @@ struct CoreRulesApp: App {
                     .environmentObject(model)
             }
         }
+        WindowGroup(id: "book", for: UUID.self) { $id in
+            if let id {
+                BookWindow(id: id)
+                    .environmentObject(model)
+            }
+        }
+        .defaultSize(width: 1100, height: 760)
         Window(tr("Help"), id: "help") {
             HelpWindow()
                 .environmentObject(model)
@@ -112,10 +120,17 @@ struct MenuCommands: Commands {
 struct HelpCommands: Commands {
     @ObservedObject var model: AppModel
     @FocusedValue(\.sheet) private var sheet: SheetModel?
+    @FocusedValue(\.book) private var book: BookModel?
 
     var body: some Commands {
         CommandGroup(replacing: .help) {
-            Button(tr("Core Rules Help")) { model.perform(Action.HELP_HERE, sheet: sheet) }
+            Button(tr("Core Rules Help")) {
+                if book != nil {
+                    model.booksHelp()
+                } else {
+                    model.perform(Action.HELP_HERE, sheet: sheet)
+                }
+            }
                 .keyboardShortcut("?")
                 .disabled(!model.enabled(Action.HELP_HERE))
             Button(entryHelpTitle) { model.perform(Action.HELP_CONTROL) }

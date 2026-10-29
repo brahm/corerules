@@ -539,6 +539,13 @@ The phases run in order:
      toolbar has Help, and View and Print for a monster. About is a
      window with What's New, Credits, Legal and Troubleshooting, as the
      other apps' About.
+   - **The books (in progress).** `cr-mac-ffi` reads a book as a session:
+     its page (`cr_app::web::book`) written to a file, its contents,
+     Find with its matches, zoom, and the reading position kept in the
+     reader's state file in Application Support. The Mac app's Read Book
+     opens each book in a window of its own, with the contents in the
+     sidebar, Find (⌘F, ⌘G, ⇧⌘G) in a bar over the text, and Zoom In,
+     Zoom Out and Reset Zoom in the View menu.
 5. **Beta and release** on the three systems with the same tag, with an
    install page on the website and in the README that shows the Open
    Anyway steps.
