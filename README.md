@@ -23,13 +23,13 @@ the help. The app reads and writes the original's own data files, so
 characters, monsters, encounters and packages made in either program open
 in the other.
 
-> **Version 1.0.1, ready on Linux and Windows 11.** Every feature was
-> checked against the original programs and went through a full round of
-> manual tests. Players and Dungeon Masters ran 1.0 on Fedora 45 beta,
-> Ubuntu 26.10, Bazzite, Arch Linux and CachyOS, and the Windows 11
-> version went through a beta on the Microsoft Store, where both worked as
-> they should. [Download it](#installing) for your distribution, get it
-> from the [Microsoft Store](https://apps.microsoft.com/detail/9nr2cgp649jm),
+> **Version 1.1.0, ready on Linux, Windows 11 and macOS.** Every feature
+> was checked against the original programs and went through a full round
+> of manual tests. Players and Dungeon Masters ran 1.0 on Fedora 45 beta,
+> Ubuntu 26.10, Bazzite, Arch Linux and CachyOS, and the Windows 11 and
+> macOS versions each went through a beta, where they worked as they
+> should. [Download it](#installing) for your distribution or your Mac, get
+> it from the [Microsoft Store](https://apps.microsoft.com/detail/9nr2cgp649jm),
 > or visit the [website](https://brahm.github.io/corerules/).
 
 ![The character list with a character made in the original program](docs/screenshots/character.png)
@@ -55,6 +55,15 @@ WinHelp reader.
   <img src="docs/screenshots/windows/new-character.png" width="49%" alt="Rolling ability scores in New Character on Windows 11">
   <img src="docs/screenshots/windows/help.png" width="49%" alt="The Tome of Help on Windows 11">
 </p>
+
+### On macOS
+
+The macOS version has every screen of the other two, over the same
+backend and the same data files. It is a native Mac app in SwiftUI: the
+sections, the entries and the details in three columns, every action in
+the menu bar, Settings, and the sheets, the help, the books and the
+generators in their own windows. It runs on Apple Silicon Macs with
+macOS 14 or newer ([installing](#macos)).
 
 ## You need the original discs
 
@@ -91,7 +100,11 @@ preserved by the Internet Archive:
    distributed through the Microsoft Store. Every screen is ported; after
    a beta on the Store it was released as 1.0.1, the same version as
    Linux. From now on every feature ships on Linux and Windows together.
-4. **New features.** From then on the app improves on the original and
+4. **macOS (done).** A native SwiftUI version for Apple Silicon Macs, in
+   this repository over the same backend, distributed as a `.dmg`. After a
+   beta it was released as 1.1.0 on the three systems, and from now on
+   every feature ships on all three together.
+5. **New features.** From then on the app improves on the original and
    moves away from it, step by step, until it no longer needs the original
    program's files to work.
 
@@ -483,27 +496,30 @@ same:
 ## Installing
 
 Every [release](https://github.com/brahm/corerules/releases) has
-packages for x86-64 Linux. These are the files of
-[Core Rules 1.0.1](https://github.com/brahm/corerules/releases/tag/v1.0.1),
-the latest release, for Linux and Windows 11:
+packages for x86-64 Linux and a `.dmg` for Apple Silicon Macs. These are
+the files of
+[Core Rules 1.1.0](https://github.com/brahm/corerules/releases/tag/v1.1.0),
+the latest release; Windows 11 comes from the
+[Microsoft Store](#windows-11):
 
 | System | Download | Install |
 | --- | --- | --- |
-| Fedora 44 or newer | [`corerules-1.0.1-1.fc44.x86_64.rpm`](https://github.com/brahm/corerules/releases/download/v1.0.1/corerules-1.0.1-1.fc44.x86_64.rpm) | `sudo dnf install ./corerules-1.0.1-1.fc44.x86_64.rpm` |
-| Ubuntu 26.04 or newer | [`corerules_1.0.1_amd64.deb`](https://github.com/brahm/corerules/releases/download/v1.0.1/corerules_1.0.1_amd64.deb) | `sudo apt install ./corerules_1.0.1_amd64.deb` |
-| Arch Linux, CachyOS, Omarchy | [`corerules-1.0.1-1-x86_64.pkg.tar.zst`](https://github.com/brahm/corerules/releases/download/v1.0.1/corerules-1.0.1-1-x86_64.pkg.tar.zst) | `sudo pacman -U ./corerules-1.0.1-1-x86_64.pkg.tar.zst` |
+| macOS 14 or newer, Apple Silicon | [`CoreRules-1.1.0-arm64.dmg`](https://github.com/brahm/corerules/releases/download/v1.1.0/CoreRules-1.1.0-arm64.dmg) | Open it, drag Core Rules to Applications, then [allow it to open](#macos) |
+| Fedora 44 or newer | [`corerules-1.1.0-1.fc44.x86_64.rpm`](https://github.com/brahm/corerules/releases/download/v1.1.0/corerules-1.1.0-1.fc44.x86_64.rpm) | `sudo dnf install ./corerules-1.1.0-1.fc44.x86_64.rpm` |
+| Ubuntu 26.04 or newer | [`corerules_1.1.0_amd64.deb`](https://github.com/brahm/corerules/releases/download/v1.1.0/corerules_1.1.0_amd64.deb) | `sudo apt install ./corerules_1.1.0_amd64.deb` |
+| Arch Linux, CachyOS, Omarchy | [`corerules-1.1.0-1-x86_64.pkg.tar.zst`](https://github.com/brahm/corerules/releases/download/v1.1.0/corerules-1.1.0-1-x86_64.pkg.tar.zst) | `sudo pacman -U ./corerules-1.1.0-1-x86_64.pkg.tar.zst` |
 | Any distribution with Flatpak, such as Bazzite | [`io.github.brahm.CoreRules.flatpakref`](https://brahm.github.io/corerules/io.github.brahm.CoreRules.flatpakref), from the [Flatpak repository](#the-flatpak-repository) | `flatpak install --user https://brahm.github.io/corerules/io.github.brahm.CoreRules.flatpakref` |
-| Any distribution (glibc 2.43+) | [`CoreRules-1.0.1-x86_64.AppImage`](https://github.com/brahm/corerules/releases/download/v1.0.1/CoreRules-1.0.1-x86_64.AppImage) | `chmod +x CoreRules-1.0.1-x86_64.AppImage`, then run it |
+| Any distribution (glibc 2.43+) | [`CoreRules-1.1.0-x86_64.AppImage`](https://github.com/brahm/corerules/releases/download/v1.1.0/CoreRules-1.1.0-x86_64.AppImage) | `chmod +x CoreRules-1.1.0-x86_64.AppImage`, then run it |
 | Community add-ons (installer) | [`CoreRules-Community-Addons-x86_64.AppImage`](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage) | `chmod +x CoreRules-Community-Addons-x86_64.AppImage`, then run it |
 
 The release also has the
-[`CoreRules-1.0.1.flatpak`](https://github.com/brahm/corerules/releases/download/v1.0.1/CoreRules-1.0.1.flatpak)
+[`CoreRules-1.1.0.flatpak`](https://github.com/brahm/corerules/releases/download/v1.1.0/CoreRules-1.1.0.flatpak)
 file, the
-[`PKGBUILD`](https://github.com/brahm/corerules/releases/download/v1.0.1/PKGBUILD)
+[`PKGBUILD`](https://github.com/brahm/corerules/releases/download/v1.1.0/PKGBUILD)
 of the pacman package and
-[`SHA256SUMS`](https://github.com/brahm/corerules/releases/download/v1.0.1/SHA256SUMS),
+[`SHA256SUMS`](https://github.com/brahm/corerules/releases/download/v1.1.0/SHA256SUMS),
 the checksums of every file. Before 1.0 there were betas (0.x) and release
-candidates (`-rc`), marked as pre-releases on the releases page; the 1.0.1
+candidates (`-rc`), marked as pre-releases on the releases page; the 1.1.0
 packages replace 1.0.0 or a release candidate on update.
 
 Users ran 1.0 on Fedora 45 beta (the `.rpm`), Ubuntu 26.10 (the `.deb`),
@@ -544,32 +560,36 @@ The app keeps its data in `Documents\Core Rules\data`, copies the rules
 data from the CD or its ISO image with Extract Data from CD…, and also
 opens an installation of the original program on the same computer.
 
-### macOS (beta)
+### macOS
 
-The Mac version is in beta, for Apple Silicon Macs (M1 or newer) with
-macOS 14 or newer: the
-[1.1.0 beta](https://github.com/brahm/corerules/releases/tag/v1.1.0-beta1)
-has `CoreRules-1.1.0-beta1-arm64.dmg`. Open it and drag Core Rules to
-Applications.
+The Mac version is for Apple Silicon Macs (M1 or newer) with macOS 14 or
+newer. Download
+[`CoreRules-1.1.0-arm64.dmg`](https://github.com/brahm/corerules/releases/download/v1.1.0/CoreRules-1.1.0-arm64.dmg),
+open it and drag Core Rules to Applications.
 
 The app is signed without a certificate from Apple and is not notarized,
-since the project has no Apple developer account, so macOS refuses it the
-first time, saying it could not check it. Run this once in Terminal, and
-from then on it opens as any app:
+because the project has no Apple developer account. So the first time
+you open it, macOS refuses it and says it could not check it. Run this
+once in Terminal. From then on it opens like any other app:
 
 ```sh
 xattr -dr com.apple.quarantine "/Applications/Core Rules.app"
 ```
 
-Without Terminal: open Core Rules once and press Done, then in System
-Settings › Privacy & Security, under Security, press **Open Anyway** next
-to "Core Rules" and confirm with your password. Some Macs do not offer
-Open Anyway, and a Mac managed by a company or school may not allow the
-app at all. Either way is needed again after each update.
+Without Terminal (the **Open Anyway** steps):
+
+1. Open Core Rules once, and press Done when macOS refuses it.
+2. Open System Settings › Privacy & Security.
+3. Under Security, press **Open Anyway** next to "Core Rules", and
+   confirm with your password.
+
+Some Macs do not offer Open Anyway, and a Mac managed by a company or
+school may not allow the app at all. You need to do this again after
+each update.
 
 The app keeps its data in `~/Library/Application Support/Core Rules/data`.
 Macs have no CD drive, so Extract Data from CD… copies the rules data from
-the CD's ISO image or from a folder the CD's files were copied into; Open
+the CD's ISO image or from a folder the CD's files were copied into. Open
 Folder… also opens an installation of the original.
 
 ### The Flatpak repository

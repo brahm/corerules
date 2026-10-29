@@ -35,9 +35,10 @@
     <div class="actions">
       <a class="btn primary" href="#download">Download for Linux</a>
       <a class="btn" href="https://apps.microsoft.com/detail/9nr2cgp649jm">Get it for Windows 11</a>
+      <a class="btn" href="#mac">Download for Mac</a>
       <a class="btn" href="#addons">Community Add-ons</a>
     </div>
-    <p class="version">Version 1.0.1 · ready on Linux and Windows 11</p>
+    <p class="version">Version 1.1.0 · ready on Linux, Windows 11 and macOS</p>
     <p class="small">Free and open source · Requires your original AD&amp;D Core Rules discs</p>
   </div>
   <p class="art-caption"><cite>Knight at the Crossroads</cite>, Viktor Vasnetsov, 1882</p>
@@ -171,7 +172,7 @@
       <article><h3>The library</h3><p>Races, classes, kits, items, spells, psionic powers and monsters, with their pictures and icons, and the Core Rules books in a reader with search.</p></article>
       <article><h3>Faithful files</h3><p>Characters, monsters, encounters and packages made in either program open in the other. Results were compared with files the original wrote.</p></article>
       <article><h3>Six languages</h3><p>English, Português (Brasil), Español, Italiano, Français and Deutsch.</p></article>
-      <article><h3>Linux and Windows 11</h3><p>.deb for Ubuntu, .rpm for Fedora, pacman for Arch, CachyOS and Omarchy, a Flatpak and an AppImage for Bazzite and every other distribution, and the Microsoft Store for Windows 11.</p></article>
+      <article><h3>Linux, Windows 11 and macOS</h3><p>.deb for Ubuntu, .rpm for Fedora, pacman for Arch, CachyOS and Omarchy, a Flatpak and an AppImage for Bazzite and every other distribution, the Microsoft Store for Windows 11, and a native app for Apple Silicon Macs.</p></article>
     </div>
   </div>
 </section>
@@ -181,33 +182,53 @@
     <div class="parchment">
       <p class="eyebrow dark">Ready the horses</p>
       <h2>Download Core Rules</h2>
-      <p class="callout">Version 1.0.1, for Linux and Windows 11</p>
-      <p>Pick the file for your system; each link downloads it directly. Every file is for
-      x86-64 Linux; Windows 11 comes from the Microsoft Store.</p>
+      <p class="callout">Version 1.1.0, for Linux, Windows 11 and macOS</p>
+      <p>Pick the file for your system; each link downloads it directly. The Linux files are for
+      x86-64; Windows 11 comes from the Microsoft Store, and the Mac file is for Apple Silicon.</p>
       <ul class="downloads">
         <li><span class="system">Ubuntu 26.04 or newer</span><span class="kind">.deb</span>
-          <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.0.1/corerules_1.0.1_amd64.deb">corerules_1.0.1_amd64.deb</a>
-          <code>sudo apt install ./corerules_1.0.1_amd64.deb</code></li>
+          <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.1.0/corerules_1.1.0_amd64.deb">corerules_1.1.0_amd64.deb</a>
+          <code>sudo apt install ./corerules_1.1.0_amd64.deb</code></li>
         <li><span class="system">Fedora 44 or newer</span><span class="kind">.rpm</span>
-          <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.0.1/corerules-1.0.1-1.fc44.x86_64.rpm">corerules-1.0.1-1.fc44.x86_64.rpm</a>
-          <code>sudo dnf install ./corerules-1.0.1-1.fc44.x86_64.rpm</code></li>
+          <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.1.0/corerules-1.1.0-1.fc44.x86_64.rpm">corerules-1.1.0-1.fc44.x86_64.rpm</a>
+          <code>sudo dnf install ./corerules-1.1.0-1.fc44.x86_64.rpm</code></li>
         <li><span class="system">Arch Linux, CachyOS, Omarchy</span><span class="kind">pacman</span>
-          <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.0.1/corerules-1.0.1-1-x86_64.pkg.tar.zst">corerules-1.0.1-1-x86_64.pkg.tar.zst</a>
-          <code>sudo pacman -U ./corerules-1.0.1-1-x86_64.pkg.tar.zst</code></li>
+          <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.1.0/corerules-1.1.0-1-x86_64.pkg.tar.zst">corerules-1.1.0-1-x86_64.pkg.tar.zst</a>
+          <code>sudo pacman -U ./corerules-1.1.0-1-x86_64.pkg.tar.zst</code></li>
         <li><span class="system">Bazzite, or any distribution with Flatpak</span><span class="kind">Flatpak</span>
           <a class="file" href="io.github.brahm.CoreRules.flatpakref">io.github.brahm.CoreRules.flatpakref</a>
           <code>flatpak install --user https://brahm.github.io/corerules/io.github.brahm.CoreRules.flatpakref</code></li>
         <li><span class="system">Any distribution (glibc 2.43+)</span><span class="kind">AppImage</span>
-          <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.0.1/CoreRules-1.0.1-x86_64.AppImage">CoreRules-1.0.1-x86_64.AppImage</a>
-          <code>chmod +x CoreRules-1.0.1-x86_64.AppImage</code></li>
+          <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.1.0/CoreRules-1.1.0-x86_64.AppImage">CoreRules-1.1.0-x86_64.AppImage</a>
+          <code>chmod +x CoreRules-1.1.0-x86_64.AppImage</code></li>
         <li><span class="system">Community Add-ons, for any of the above</span><span class="kind">Installer</span>
           <a class="file" href="https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage">CoreRules-Community-Addons-x86_64.AppImage</a>
           <code>chmod +x CoreRules-Community-Addons-x86_64.AppImage</code></li>
         <li><span class="system">Windows 11</span><span class="kind">Microsoft Store</span>
           <a class="file" href="https://apps.microsoft.com/detail/9nr2cgp649jm">Core Rules on the Microsoft Store</a>
           <span class="file-note">Free; the Store installs it with the Windows App Runtime it needs and brings every update.</span></li>
+        <li id="mac"><span class="system">macOS 14 or newer, Apple Silicon (M1 or newer)</span><span class="kind">.dmg</span>
+          <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.1.0/CoreRules-1.1.0-arm64.dmg">CoreRules-1.1.0-arm64.dmg</a>
+          <span class="file-note">Open it and drag Core Rules to Applications, then let macOS open it once, as below.</span></li>
       </ul>
-      <p class="tested"><span>Tested by players on</span> Fedora 45 beta · Ubuntu 26.10 · Bazzite · Arch Linux · CachyOS · Windows 11</p>
+      <p class="tested"><span>Tested by players on</span> Fedora 45 beta · Ubuntu 26.10 · Bazzite · Arch Linux · CachyOS · Windows 11 · macOS</p>
+      <h3>Opening it on a Mac the first time</h3>
+      <p>The Mac app is signed without a certificate from Apple and is not notarized, because the
+      project has no Apple developer account. So the first time you open it, macOS refuses it and
+      says it could not check it for malicious software. After copying it to Applications, run this
+      once in Terminal, and from then on it opens like any other app:</p>
+      <p><code>xattr -dr com.apple.quarantine "/Applications/Core Rules.app"</code></p>
+      <p>Or, without Terminal, the <strong>Open Anyway</strong> steps:</p>
+      <ol>
+        <li>Open Core Rules once, and press Done when macOS refuses it.</li>
+        <li>Open System Settings › Privacy &amp; Security.</li>
+        <li>Under Security, press <strong>Open Anyway</strong> next to “Core Rules”, and confirm
+        with your password.</li>
+      </ol>
+      <p class="small">Some Macs do not offer Open Anyway, and a Mac managed by a company or school
+      may not allow the app at all. You need to do this again after each update. Macs have no CD
+      drive, so File › Extract Data from CD… copies the rules data from the CD's ISO image or from
+      a folder the CD's files were copied into.</p>
       <p class="small">The Flatpak comes from this site's own Flatpak repository, signed by the project,
       so <code>flatpak update</code>, GNOME Software and Discover bring every new version; it needs the
       GNOME 51 runtime from Flathub, which <code>flatpak install</code> offers to fetch. If you installed
@@ -215,10 +236,10 @@
       file, which gets no updates, run <code>flatpak uninstall --user io.github.brahm.CoreRules</code> and
       install from the repository; your files stay. The AppImage bundles GTK, libadwaita and the other GNOME 51 libraries. Update
       Arch first (<code>sudo pacman -Syu</code>), or build the package from source with its
-      <a href="https://github.com/brahm/corerules/releases/download/v1.0.1/PKGBUILD">PKGBUILD</a>. The checksums of every file are in
-      <a href="https://github.com/brahm/corerules/releases/download/v1.0.1/SHA256SUMS">SHA256SUMS</a>.</p>
+      <a href="https://github.com/brahm/corerules/releases/download/v1.1.0/PKGBUILD">PKGBUILD</a>. The checksums of every file are in
+      <a href="https://github.com/brahm/corerules/releases/download/v1.1.0/SHA256SUMS">SHA256SUMS</a>.</p>
       <div class="actions left">
-        <a class="btn primary" href="https://github.com/brahm/corerules/releases/tag/v1.0.1">Release notes</a>
+        <a class="btn primary" href="https://github.com/brahm/corerules/releases/tag/v1.1.0">Release notes</a>
         <a class="btn dark" href="https://github.com/brahm/corerules">Source code</a>
       </div>
 

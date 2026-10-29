@@ -50,6 +50,10 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/io.github.brah
 %{_metainfodir}/io.github.brahm.CoreRules.metainfo.xml
 
 %changelog
+* Thu Oct 29 2026 Wagner Brahm - 1.1.0-1
+- Released with the macOS version, a .dmg for Apple Silicon Macs
+- The same app on Linux, with more of it shared with the other systems
+
 * Tue Oct 27 2026 Wagner Brahm - 1.0.1-1
 - Released with the Windows 11 version, on the Microsoft Store
 - Quest spells called so, the social class in the language chosen, clearer
