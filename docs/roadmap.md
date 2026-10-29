@@ -608,7 +608,13 @@ The phases run in order:
      and "How many to remove?" in a dialog over it (#131). Then the
      encounter template editor in the same sheet: its seven pages, and in
      a dialog over them a line's Properties, the monster, item and trap
-     pickers, an escort's numbers and NPC Creation's Add to Template.
+     pickers, an escort's numbers and NPC Creation's Add to Template
+     (#132).
+   - **Packages (done)**: Export… with the user's records and characters
+     checked by category, New Package… and Edit Package… in a sheet with
+     the items by category, Remove, Add Items and Save, and Import Core
+     Rules 2.0… from the folder of a Core Rules 2.0 installation, through
+     the Import… sheet; all in the File menu.
 5. **Beta and release** on the three systems with the same tag, with an
    install page on the website and in the README that shows the Open
    Anyway steps.

@@ -1,5 +1,6 @@
-//! Import…, as the Mac app draws it: what a package brings in, each item
-//! taken or left, from `cr_app::packages`. The parts whose names clash
+//! Import… and Import Core Rules 2.0…, as the Mac app draws them: what a
+//! package, or a Core Rules 2.0 installation, brings in, each item taken
+//! or left, from `cr_app::packages`. The parts whose names clash
 //! with the standard ones get the name with "*" the original gives; the
 //! Name Conflict question comes with the rest of the import.
 
@@ -40,7 +41,9 @@ pub struct ImportReport {
 #[derive(uniffi::Object)]
 pub struct ImportSession {
     install: Arc<Installation>,
+    /// The package's file name, or the installation's folder.
     file_name: String,
+    core20: bool,
     choice: Mutex<ImportChoice>,
 }
 
@@ -48,10 +51,33 @@ impl ImportSession {
     pub(crate) fn open(install: Arc<Installation>, path: &str) -> Result<Arc<Self>, CoreError> {
         let path = Path::new(path);
         let file = packages::read(path).map_err(CoreError::new)?;
+        Self::of(install, file, packages::file_name(path), false)
+    }
+
+    /// What the Core Rules 2.0 installation in `folder` hands over;
+    /// `None` when it has nothing of its own.
+    pub(crate) fn open_core20(
+        install: Arc<Installation>,
+        folder: &str,
+    ) -> Result<Option<Arc<Self>>, CoreError> {
+        let export = Installation::open(Path::new(folder))?.core20_package()?;
+        if cr_store::export::contents(&export.file).is_empty() {
+            return Ok(None);
+        }
+        Self::of(install, export.file, folder.to_owned(), true).map(Some)
+    }
+
+    fn of(
+        install: Arc<Installation>,
+        file: cr_formats::export::ExportFile,
+        file_name: String,
+        core20: bool,
+    ) -> Result<Arc<Self>, CoreError> {
         let preview = install.import_preview(&file)?;
         let expansion = !install.is_core20();
         Ok(Arc::new(Self {
-            file_name: packages::file_name(path),
+            file_name,
+            core20,
             choice: Mutex::new(ImportChoice::new(file, preview, expansion)),
             install,
         }))
@@ -64,9 +90,19 @@ impl ImportSession {
 
 #[uniffi::export]
 impl ImportSession {
-    /// The package's file name, for the sheet's title.
+    /// The package's file name, or the installation's folder.
     pub fn file_name(&self) -> String {
         self.file_name.clone()
+    }
+
+    /// The sheet's title.
+    pub fn title(&self) -> String {
+        if self.core20 {
+            cr_i18n::tr("Import Core Rules 2.0 Installation")
+        } else {
+            cr_i18n::tr("Import Package")
+        }
+        .to_owned()
     }
 
     /// The items by category, sorted by label.

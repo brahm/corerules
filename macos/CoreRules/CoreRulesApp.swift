@@ -121,6 +121,13 @@ struct MenuCommands: Commands {
             Divider()
             item(more(tr("_Import…")), Action.IMPORT)
                 .keyboardShortcut("i", modifiers: [.command, .shift])
+            if model.library?.isCore20() == false {
+                item(more(tr("Import Core _Rules 2.0…")), Action.IMPORT_CORE20)
+            }
+            item(more(tr("E_xport…")), Action.EXPORT)
+                .keyboardShortcut("e", modifiers: [.command, .shift])
+            item(more(tr("New P_ackage…")), Action.NEW_PACKAGE)
+            item(more(tr("E_dit Package…")), Action.EDIT_PACKAGE)
         }
         CommandGroup(replacing: .printItem) {
             item(more(tr("_Print…")), Action.SHEET_PRINT)

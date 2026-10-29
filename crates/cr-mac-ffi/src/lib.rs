@@ -13,6 +13,7 @@ mod form;
 mod help;
 mod import;
 mod npc;
+mod packages;
 mod parties;
 mod prompt;
 mod record;
@@ -45,6 +46,9 @@ pub use form::{
 pub use help::{HelpBook, HelpLinked, HelpRow, HelpSession, HelpTopic};
 pub use import::{ImportCategory, ImportItem, ImportReport, ImportSession};
 pub use npc::{NpcSession, NpcsCreated};
+pub use packages::{
+    ExportSession, PackageCategory, PackageDone, PackageItem, PackageOpened, PackageSession,
+};
 pub use parties::{GroupRequest, PartiesSession};
 pub use prompt::{PromptGroup, PromptInfo, PromptKind};
 pub use record::{PartType, PictureChoice, RecordAct, RecordDone, RecordOpened, RecordSession};
@@ -482,6 +486,8 @@ pub enum HelpScreen {
     MainMenu,
     CharacterSheet,
     Import,
+    /// Export…, New Package… and Edit Package….
+    Export,
     Books,
 }
 
@@ -492,6 +498,7 @@ pub fn screen_help(screen: HelpScreen) -> u32 {
         HelpScreen::MainMenu => topic::MAIN_MENU,
         HelpScreen::CharacterSheet => topic::CHARACTER_SHEET,
         HelpScreen::Import => topic::IMPORT,
+        HelpScreen::Export => topic::EXPORT,
         HelpScreen::Books => topic::BOOKS,
     }
 }
@@ -935,6 +942,28 @@ impl Library {
     /// Import…: what the package in `path` would bring in.
     pub fn import_package(&self, path: String) -> Result<Arc<ImportSession>, CoreError> {
         ImportSession::open(self.install.clone(), &path)
+    }
+
+    /// Import Core Rules 2.0…: what the Core Rules 2.0 installation in
+    /// `folder` would bring in; none when it has nothing of its own.
+    pub fn import_core20(&self, folder: String) -> Result<Option<Arc<ImportSession>>, CoreError> {
+        ImportSession::open_core20(self.install.clone(), &folder)
+    }
+
+    /// Export…, or a package's Add Items: the user's records and
+    /// characters.
+    pub fn exportable(&self) -> Result<Arc<ExportSession>, CoreError> {
+        ExportSession::open(self.install.clone())
+    }
+
+    /// New Package….
+    pub fn new_package(&self) -> Arc<PackageSession> {
+        packages::new_package(&self.install)
+    }
+
+    /// Edit Package… on the package at `path`.
+    pub fn edit_package(&self, path: String) -> Result<PackageOpened, CoreError> {
+        packages::edit_package(&self.install, &path)
     }
 
     /// New Character, from its first page. `core_vs_option` says whether

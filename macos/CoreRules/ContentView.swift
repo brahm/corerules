@@ -103,6 +103,20 @@ struct ModalView: View {
                 create: { (type: PartType) in model.newPart(type) })
         case .parties(let parties):
             PartiesView(model: parties, close: { model.closeParties() })
+        case .export(let export):
+            ExportView(
+                model: export,
+                close: { model.modal = nil },
+                exported: { (done: PackageDone) in model.packageDone(done) },
+                failed: { (error: Error) in
+                    model.modal = nil
+                    model.fail(tr("Export Failed"), error)
+                })
+        case .package(let package):
+            PackageView(
+                model: package,
+                close: { model.modal = nil },
+                saved: { (done: PackageDone) in model.packageDone(done) })
         case .importing(let importing):
             ImportView(
                 model: importing,

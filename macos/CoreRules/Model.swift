@@ -12,6 +12,8 @@ enum Modal: Identifiable {
     case edit(EditModel)
     case npc(NpcModel)
     case importing(ImportModel)
+    case export(ExportModel)
+    case package(PackageModel)
     case parties(PartiesModel)
     case record(RecordModel)
     case partType(PartTypeModel)
@@ -22,6 +24,8 @@ enum Modal: Identifiable {
         case .edit(let m): return ObjectIdentifier(m)
         case .npc(let m): return ObjectIdentifier(m)
         case .importing(let m): return ObjectIdentifier(m)
+        case .export(let m): return ObjectIdentifier(m)
+        case .package(let m): return ObjectIdentifier(m)
         case .parties(let m): return ObjectIdentifier(m)
         case .record(let m): return ObjectIdentifier(m)
         case .partType(let m): return ObjectIdentifier(m)
@@ -225,7 +229,8 @@ final class AppModel: ObservableObject {
     /// front, when one is.
     func enabled(_ action: Action, sheet: SheetModel? = nil) -> Bool {
         switch action {
-        case Action.NEW_CHARACTER, Action.ENTER_CHARACTER, Action.IMPORT, Action.NEW_NPC,
+        case Action.NEW_CHARACTER, Action.ENTER_CHARACTER, Action.IMPORT, Action.IMPORT_CORE20,
+            Action.EXPORT, Action.NEW_PACKAGE, Action.EDIT_PACKAGE, Action.NEW_NPC,
             Action.NEW_NPC_GROUP, Action.MANAGE_PARTIES:
             return writable && modal == nil
         case Action.ROLL_TABLE:
@@ -278,6 +283,10 @@ final class AppModel: ObservableObject {
         case Action.NEW_CHARACTER: newCharacter(entering: false)
         case Action.ENTER_CHARACTER: newCharacter(entering: true)
         case Action.IMPORT: chooseImport()
+        case Action.IMPORT_CORE20: chooseCore20()
+        case Action.EXPORT: export()
+        case Action.NEW_PACKAGE: newPackage()
+        case Action.EDIT_PACKAGE: chooseEditPackage()
         case Action.NEW_NPC: newNpc(group: false)
         case Action.NEW_NPC_GROUP: newNpc(group: true)
         case Action.ROLL_TABLE: rollTable()
@@ -912,6 +921,71 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Import Core Rules 2.0…: the folder of a Core Rules 2.0
+    /// installation, whose records and characters come in.
+    private func chooseCore20() {
+        guard let library else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.message = tr("Import Core Rules 2.0 Installation")
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            if let session = try library.importCore20(folder: url.path) {
+                modal = .importing(ImportModel(session))
+            } else {
+                notice = Notice(
+                    title: tr("Nothing to Import"),
+                    text: tr("This Core Rules 2.0 installation has no characters or records of its own."))
+            }
+        } catch {
+            fail(tr("Cannot Import"), error)
+        }
+    }
+
+    /// Export…: the user's records and characters, to take into a new
+    /// package.
+    private func export() {
+        guard let library else { return }
+        do {
+            modal = .export(ExportModel(try library.exportable()))
+        } catch {
+            fail(tr("Export Failed"), error)
+        }
+    }
+
+    private func newPackage() {
+        guard let library else { return }
+        modal = .package(PackageModel(library.newPackage(), library: library))
+    }
+
+    /// Edit Package…: a package of the Expansion, to change.
+    private func chooseEditPackage() {
+        guard let library else { return }
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = ["xpx", "xpt"].compactMap { UTType(filenameExtension: $0) }
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            switch try library.editPackage(path: url.path) {
+            case .editor(let session):
+                modal = .package(PackageModel(session, library: library))
+            case .core20(let title, let text):
+                notice = Notice(title: title, text: text)
+            }
+        } catch {
+            fail(tr("Not a Package"), error)
+        }
+    }
+
+    /// Export… or a package's Save finished: says so, with what it left
+    /// out.
+    func packageDone(_ done: PackageDone) {
+        modal = nil
+        notice = Notice(title: done.said, text: done.warnings.joined(separator: "\n"))
+    }
+
     /// Import… finished: shows what it did and reads the library again.
     func imported(_ report: ImportReport) {
         modal = nil
@@ -1026,6 +1100,7 @@ final class AppModel: ObservableObject {
         case .edit(let edit): return edit.session.help()
         case .npc(let npc): return npc.session.help()
         case .importing: return screenHelp(screen: .`import`)
+        case .export, .package: return screenHelp(screen: .export)
         case .parties(let parties): return parties.session.help()
         case .record(let record): return record.session.help()
         case .partType: return section.map { sectionHelp(section: $0) } ?? screenHelp(screen: .mainMenu)
