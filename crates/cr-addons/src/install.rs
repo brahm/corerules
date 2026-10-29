@@ -12,6 +12,7 @@ use cr_store::Installation;
 use cr_store::export::{Category, ImportReport, contents};
 
 /// The consolidated add-ons, compressed with xz.
+#[cfg(feature = "builtin")]
 static PACKAGE: &[u8] = include_bytes!("../../../addons/Comunidade.xpx.xz");
 
 /// Written into `UserDbas/` once the add-ons are in; a second install then
@@ -51,9 +52,15 @@ pub fn check(dir: &Path) -> Folder {
 }
 
 /// The built-in package, unpacked and read.
+#[cfg(feature = "builtin")]
 pub fn package() -> Result<ExportFile, String> {
+    read_package(PACKAGE)
+}
+
+/// The package `Comunidade.xpx.xz`, unpacked and read.
+pub fn read_package(xz: &[u8]) -> Result<ExportFile, String> {
     let mut data = Vec::new();
-    lzma_rs::xz_decompress(&mut io::Cursor::new(PACKAGE), &mut data)
+    lzma_rs::xz_decompress(&mut io::Cursor::new(xz), &mut data)
         .map_err(|e| tr!("The built-in add-ons are damaged: {e}", e))?;
     ExportFile::parse(&data).map_err(|e| tr!("Could not read the built-in add-ons: {e}", e))
 }
@@ -112,8 +119,18 @@ pub fn import(install: &Installation, file: &ExportFile, stamp: &str) -> Result<
 
 /// Writes the add-ons' pictures into `install`, beside nothing that is
 /// there already, and adds the files to the log.
+#[cfg(feature = "builtin")]
 pub fn pictures(install: &Installation, outcome: &mut Outcome) -> Result<(), String> {
-    let written = crate::extras::get()?.install_pictures(install)?;
+    pictures_from(crate::extras::get()?, install, outcome)
+}
+
+/// [`pictures`], from the pictures of `extras`.
+pub fn pictures_from(
+    extras: &crate::extras::Extras,
+    install: &Installation,
+    outcome: &mut Outcome,
+) -> Result<(), String> {
+    let written = extras.install_pictures(install)?;
     let mut log = String::from("=== pictures\n");
     for file in &written {
         let _ = writeln!(log, "wrote {}", file.display());
@@ -188,6 +205,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(feature = "builtin")]
     fn the_built_in_package_reads() {
         let file = package().unwrap();
         assert!(file.is_expansion());
@@ -201,7 +219,7 @@ mod tests {
     /// records of its own, the add-ons go into a copy of its user
     /// databases.
     #[test]
-    #[cfg(unix)]
+    #[cfg(all(unix, feature = "builtin"))]
     fn one_import_brings_every_combination() {
         let Some(dir) = std::env::var_os("CORERULES_DIR") else {
             return;

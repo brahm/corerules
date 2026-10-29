@@ -11,8 +11,9 @@ rust-version.workspace = true
 name = "cr_addons"
 path = "src/lib.rs"
 
-# The GNOME window; the Windows and Mac installers use the library alone
-# (default-features = false).
+# The GNOME window; the Windows installer uses the library alone
+# (default-features = false, features = ["builtin"]), and the Mac app
+# reads the package from the add-ons' own .coreaddons document.
 [[bin]]
 name = "corerules-community-addons"
 path = "src/main.rs"
@@ -20,7 +21,9 @@ required-features = ["gtk"]
 
 [features]
 default = ["gtk"]
-gtk = ["dep:gtk", "dep:adw"]
+gtk = ["builtin", "dep:gtk", "dep:adw"]
+# The package and its pictures built into the program (29 MB).
+builtin = []
 
 [dependencies]
 cr-formats.workspace = true

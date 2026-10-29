@@ -24,7 +24,8 @@ use std::path::{Path, PathBuf};
 use cr_i18n::tr;
 use cr_store::Installation;
 
-static EXTRAS: &[u8] = include_bytes!("../../../addons/Comunidade-extras.xz");
+#[cfg(feature = "builtin")]
+static BUILT_IN: &[u8] = include_bytes!("../../../addons/Comunidade-extras.xz");
 
 pub struct Extras {
     data: Vec<u8>,
@@ -66,19 +67,20 @@ impl Addon {
 }
 
 /// The built-in pictures and texts, unpacked on first use.
+#[cfg(feature = "builtin")]
 pub fn get() -> Result<&'static Extras, String> {
     static EXTRAS: std::sync::OnceLock<Result<Extras, String>> = std::sync::OnceLock::new();
     EXTRAS
-        .get_or_init(Extras::load)
+        .get_or_init(|| Extras::load(BUILT_IN))
         .as_ref()
         .map_err(Clone::clone)
 }
 
 impl Extras {
-    /// The built-in pictures and texts, unpacked.
-    fn load() -> Result<Self, String> {
+    /// The pictures and texts of `Comunidade-extras.xz`, unpacked.
+    pub fn load(xz: &[u8]) -> Result<Self, String> {
         let mut data = Vec::new();
-        lzma_rs::xz_decompress(&mut io::Cursor::new(EXTRAS), &mut data)
+        lzma_rs::xz_decompress(&mut io::Cursor::new(xz), &mut data)
             .map_err(|e| tr!("The built-in pictures are damaged: {e}", e))?;
         Self::parse(data).ok_or_else(|| tr("The built-in pictures are damaged.").to_string())
     }
@@ -244,6 +246,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(feature = "builtin")]
     fn the_built_in_extras_read() {
         let extras = get().unwrap();
         let addons = extras.addons();
