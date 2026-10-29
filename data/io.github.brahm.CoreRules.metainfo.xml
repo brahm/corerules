@@ -86,6 +86,11 @@
     <color type="primary" scheme_preference="dark">#77101b</color>
   </branding>
   <releases>
+    <release version="1.1.0" date="2026-10-29" type="stable">
+      <description>
+        <p>Core Rules is now on macOS too, for Apple Silicon Macs with macOS 14 or newer, with every screen of the Linux and Windows 11 versions over the same backend. On Linux nothing changes in what the app does: more of its workings are now shared by the three versions.</p>
+      </description>
+    </release>
     <release version="1.0.1" date="2026-10-27" type="stable">
       <description>
         <p>Core Rules is now ready on Linux and Windows 11, where it comes from the Microsoft Store with every screen of the Linux version. On Linux: a priest's quest spell is called a quest spell in the editors, Edit Character shows the social class in the language chosen, the editors' wording is clearer and Portuguese tells the Abilities and Skills tabs apart, Back keeps what a creation page had, the translations lost the original's double spaces, and the Flatpak comes from the project's own repository, which brings every update.</p>

@@ -6,8 +6,11 @@ what comes after 1.0. The decisions that shaped it are in the
 
 ## Where we are
 
-**1.0.1, published on 2026-10-27, ready on Linux and Windows 11.** The
-Windows 11 version went through a beta on the Microsoft Store, where
+**1.1.0, published on 2026-10-29, ready on Linux, Windows 11 and macOS.**
+The macOS version went through a beta (1.1.0-beta1) on Wagner Brahm's
+Mac, where it worked as it should, and ships with the other two as 1.1.0
+(decision P30). 1.0.1, published on 2026-10-27, brought the Windows 11
+version went through a beta on the Microsoft Store, where
 Wagner Brahm found no problem, and ships with Linux as 1.0.1 (decision
 P26). 1.0.0, published on 2026-10-24, was the first stable release. Its users
 ran 1.0.0-rc2 on Fedora 45 beta, Ubuntu 26.10, Bazzite, Arch Linux and
@@ -33,10 +36,11 @@ release workflow builds and tests the MSIX for the Microsoft Store
 (phase 5), and 1.0.1 is the first release on both systems (phase 6).
 Publishing on Flathub was dropped from the plan (decision P15).
 
-The macOS version (step 3) started on 2026-10-28: the backend and `cr`
-are built and tested on Apple Silicon (phase 1), the bridge between
-Swift and the Rust crates is laid (phase 2), and the prototype is built
-as a `.dmg` by CI (phase 3).
+The macOS version (step 3) is done: the backend and `cr` are built and
+tested on Apple Silicon (phase 1), the bridge between Swift and the Rust
+crates is laid (phase 2), the prototype is built as a `.dmg` by CI
+(phase 3), every screen is ported (phase 4), and 1.1.0 is the first
+release on the three systems (phase 5).
 
 ## The original plan (2026-10-09)
 
@@ -85,6 +89,7 @@ taken out of scope.
 | 1.0.0-rc2 | 2026-10-24 | Saving with the mounted CD opened goes into a local copy |
 | 1.0.0 | 2026-10-24 | First stable release, the About window, the website |
 | 1.0.1 | 2026-10-27 | Windows 11 on the Microsoft Store, the Flatpak repository, small fixes |
+| 1.1.0 | 2026-10-29 | macOS, as a `.dmg` for Apple Silicon |
 
 ## After 1.0
 
@@ -459,7 +464,7 @@ it may need to be reserved again before submission.
 
 Done on 2026-10-27 with 1.0.1.
 
-### Step 3: macOS (in progress)
+### Step 3: macOS (done)
 
 Decided by Wagner Brahm on 2026-10-28 (decisions S14 and P27 to P29): the
 macOS version lives in this repository too, and once it is released every
@@ -623,15 +628,20 @@ The phases run in order:
      that folder already holds the other CD's. It is in the File menu
      and on the No Installation screen. With it `NOT_YET_ON_MACOS` is
      empty.
-5. **Beta and release (in progress)** on the three systems with the same
+5. **Beta and release (done)** on the three systems with the same
    tag, with an install page on the website and in the README that shows
    the Open Anyway steps. The release workflow builds the `.dmg` on Apple
    Silicon, installs it into Applications as a user does, checks its
    signature and starts the app, and attaches it to the release. The
    1.1.0 beta (`v1.1.0-beta1`), a pre-release, takes it to Wagner Brahm's
    Mac; the README's install section and the release notes give the
-   Terminal command and the Open Anyway steps. After his test, 1.1.0 is
-   released on the three systems, with the Mac on the website.
+   Terminal command and the Open Anyway steps. Wagner Brahm found it
+   working; the one thing reported, the list's filters in a strip below
+   the toolbar in another gray, now sit in the toolbar's bar (#136).
+   1.1.0 is released on the three systems, with the Mac's download and
+   the Open Anyway steps on the website.
+
+Done on 2026-10-29 with 1.1.0.
 
 ### Step 4: new features, and independence from the original
 
