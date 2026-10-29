@@ -509,8 +509,8 @@ The phases run in order:
    `macos/scripts/make-app.sh` builds `Core Rules.app` with `swiftc`
    (no Xcode project), signs it ad hoc and packs the `.dmg`, which CI
    uploads on every pull request.
-4. **Porting the screens (in progress)**, in the stages of the Windows
-   port, one pull request each, until `NOT_YET_ON_MACOS` is empty.
+4. **Porting the screens (done)**, in the stages of the Windows
+   port, one pull request each, until `NOT_YET_ON_MACOS` was empty.
    Wagner Brahm approved the prototype on a MacBook Pro M4 Pro on
    2026-10-29; its test found Open Anyway not offered, so the `.dmg`'s
    notes lead with removing the quarantine in Terminal, and the weapons
@@ -614,7 +614,15 @@ The phases run in order:
      checked by category, New Package… and Edit Package… in a sheet with
      the items by category, Remove, Add Items and Save, and Import Core
      Rules 2.0… from the folder of a Core Rules 2.0 installation, through
-     the Import… sheet; all in the File menu.
+     the Import… sheet; all in the File menu (#133).
+   - **Extract Data from CD (done).** A Mac has had no CD drive for
+     years, so the Mac app takes only the CD's ISO image or a folder its
+     files were copied into, with its own wording of the question, and
+     extracts off the main thread under a progress sheet; the copy opens
+     at once when it is the data folder's, or is offered to open when
+     that folder already holds the other CD's. It is in the File menu
+     and on the No Installation screen. With it `NOT_YET_ON_MACOS` is
+     empty.
 5. **Beta and release** on the three systems with the same tag, with an
    install page on the website and in the README that shows the Open
    Anyway steps.

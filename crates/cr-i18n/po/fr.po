@@ -5269,8 +5269,8 @@ msgid "Help"
 msgstr "Aide"
 
 #: crates/cr-gtk/src/help.rs:284
-#: crates/cr-mac-ffi/src/lib.rs:855
-#: crates/cr-mac-ffi/src/lib.rs:901
+#: crates/cr-mac-ffi/src/lib.rs:892
+#: crates/cr-mac-ffi/src/lib.rs:938
 #: crates/cr-win/src/app.rs:1834
 #: crates/cr-win/src/app.rs:1843
 #: crates/cr-win/src/app.rs:3522
@@ -5441,7 +5441,7 @@ msgid "Character created"
 msgstr "Personnage créé"
 
 #: crates/cr-gtk/src/main.rs:906
-#: crates/cr-mac-ffi/src/lib.rs:934
+#: crates/cr-mac-ffi/src/lib.rs:971
 #: crates/cr-win/src/app.rs:2763
 msgid "Converted to a character"
 msgstr "Converti en personnage"
@@ -5665,7 +5665,7 @@ msgid "Show a Party"
 msgstr "Afficher une équipe"
 
 #: crates/cr-gtk/src/main.rs:1589
-#: crates/cr-mac-ffi/src/lib.rs:629
+#: crates/cr-mac-ffi/src/lib.rs:666
 #: crates/cr-win/src/app/library.rs:337
 msgid "All Types"
 msgstr "Tous les types"
@@ -5714,7 +5714,7 @@ msgstr "Entrées"
 #: crates/cr-mac-ffi/src/encounter.rs:225
 #: crates/cr-mac-ffi/src/encounter.rs:526
 #: crates/cr-mac-ffi/src/encounter.rs:962
-#: crates/cr-mac-ffi/src/lib.rs:1109
+#: crates/cr-mac-ffi/src/lib.rs:1146
 #: crates/cr-mac-ffi/src/sheet.rs:85
 #: crates/cr-win/src/app/library.rs:261
 #: crates/cr-win/src/app.rs:402
@@ -6380,19 +6380,19 @@ msgid "Choose Picture"
 msgstr "Choisir une image"
 
 #: crates/cr-gtk/src/picture.rs:282
-#: crates/cr-mac-ffi/src/lib.rs:984
+#: crates/cr-mac-ffi/src/lib.rs:1021
 #: crates/cr-win/src/app/portrait.rs:120
 msgid "Portraits"
 msgstr "Portraits"
 
 #: crates/cr-gtk/src/picture.rs:285
-#: crates/cr-mac-ffi/src/lib.rs:987
+#: crates/cr-mac-ffi/src/lib.rs:1024
 #: crates/cr-win/src/app/portrait.rs:122
 msgid "Portraits for {race}"
 msgstr "Portraits de {race}"
 
 #: crates/cr-gtk/src/picture.rs:286
-#: crates/cr-mac-ffi/src/lib.rs:988
+#: crates/cr-mac-ffi/src/lib.rs:1025
 #: crates/cr-win/src/app/portrait.rs:123
 msgid "Other Portraits"
 msgstr "Autres portraits"
@@ -7949,6 +7949,10 @@ msgstr "{shown} sur {count} affichés ; recherchez pour réduire la liste"
 #: crates/cr-win/src/app/forms.rs:49
 msgid "Rank"
 msgstr "Rang"
+
+#: crates/cr-mac-ffi/src/lib.rs:523
+msgid "Copies the rules databases, books and tables the app uses from a Core Rules 2.0 or Expansion CD into the app's data folder. Choose the CD's ISO image, or a folder the CD's files were copied into."
+msgstr "Copie les bases de règles, les livres et les tables que l’application utilise depuis un CD de Core Rules 2.0 ou de l’Expansion dans le dossier de données de l’application. Choisissez l’image ISO du CD, ou un dossier dans lequel les fichiers du CD ont été copiés."
 
 #: crates/cr-mac-ffi/src/parties.rs:269
 #: crates/cr-win/src/app/parties.rs:177

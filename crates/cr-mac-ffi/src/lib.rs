@@ -503,6 +503,43 @@ pub fn screen_help(screen: HelpScreen) -> u32 {
     }
 }
 
+/// What Extract Data from CD… did.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct Extracted {
+    /// The folder the data went into.
+    pub path: String,
+    pub said: String,
+    /// Whether it is the app's data folder, which the app opens on start;
+    /// else that holds a package already (usually the other CD's) and
+    /// the copy is only offered to open.
+    pub data_folder: bool,
+}
+
+/// What Extract Data from CD… does, asked before the source is chosen.
+/// A Mac has no CD drive: the data comes from the CD's ISO image or a
+/// folder its files were copied into.
+#[uniffi::export]
+pub fn extract_intro() -> String {
+    cr_i18n::tr(
+        "Copies the rules databases, books and tables the app uses from a Core Rules 2.0 \
+         or Expansion CD into the app's data folder. Choose the CD's ISO image, or a \
+         folder the CD's files were copied into.",
+    )
+    .to_owned()
+}
+
+/// Extract Data from CD… from the ISO image or folder `source`. Takes a
+/// while; the app calls it off the main thread.
+#[uniffi::export]
+pub fn extract_data(source: String) -> Result<Extracted, CoreError> {
+    let dest = cr_app::extract::extract(std::path::Path::new(&source)).map_err(CoreError::new)?;
+    Ok(Extracted {
+        path: dest.path.display().to_string(),
+        said: cr_app::extract::extracted(&dest),
+        data_folder: dest.is_data_folder,
+    })
+}
+
 /// What About shows of the app.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct AboutInfo {
