@@ -1,0 +1,30 @@
+[package]
+name = "cr-mac-ffi"
+description = "The bridge between the macOS app's Swift interface and the Rust backend"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "cr_mac_ffi"
+# The Mac app links the static library; uniffi-bindgen reads the Swift
+# interface out of the dynamic one.
+crate-type = ["lib", "staticlib", "cdylib"]
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+required-features = ["bindgen"]
+
+[features]
+# Builds uniffi-bindgen, which writes the Swift side of the bridge.
+bindgen = ["uniffi/cli"]
+
+[dependencies]
+cr-app.workspace = true
+cr-i18n.workspace = true
+cr-store.workspace = true
+thiserror.workspace = true
+uniffi = "0.32"

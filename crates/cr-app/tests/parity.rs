@@ -1,17 +1,18 @@
-//! Every action is in both interfaces: the GNOME app refers to each
-//! action of [`cr_app::action`], and the Windows app to each one that
-//! [`NOT_YET_ON_WINDOWS`] does not list. An interface refers to an action
-//! only through its constant, so the sources are searched for
-//! `action::NAME`.
+//! Every action is in every interface: the GNOME app refers to each
+//! action of [`cr_app::action`], the Windows app to each one that
+//! [`NOT_YET_ON_WINDOWS`] does not list, and the Mac app to each one that
+//! [`NOT_YET_ON_MACOS`] does not list. An interface refers to an action
+//! only through its constant, so the Rust sources are searched for
+//! `action::NAME` and the Swift ones for `Action.NAME`.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-use cr_app::action::{ALL, NOT_YET_ON_WINDOWS};
+use cr_app::action::{ALL, NOT_YET_ON_MACOS, NOT_YET_ON_WINDOWS};
 
-/// The sources of the crate `name`, next to this one.
-fn sources(name: &str) -> Vec<(PathBuf, String)> {
-    fn walk(dir: &Path, out: &mut Vec<(PathBuf, String)>) {
+/// The files with extension `extension` under `dir`, read.
+fn read_all(dir: &Path, extension: &str) -> Vec<(PathBuf, String)> {
+    fn walk(dir: &Path, extension: &str, out: &mut Vec<(PathBuf, String)>) {
         let mut entries: Vec<_> = std::fs::read_dir(dir)
             .unwrap_or_else(|e| panic!("{}: {e}", dir.display()))
             .map(|e| e.unwrap().path())
@@ -19,29 +20,42 @@ fn sources(name: &str) -> Vec<(PathBuf, String)> {
         entries.sort();
         for path in entries {
             if path.is_dir() {
-                walk(&path, out);
-            } else if path.extension().is_some_and(|e| e == "rs") {
+                walk(&path, extension, out);
+            } else if path.extension().is_some_and(|e| e == extension) {
                 let text = std::fs::read_to_string(&path).unwrap();
                 out.push((path, text));
             }
         }
     }
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join(name)
-        .join("src");
     let mut out = Vec::new();
-    walk(&root, &mut out);
-    assert!(!out.is_empty(), "no sources in {}", root.display());
+    walk(dir, extension, &mut out);
+    out
+}
+
+/// The repository's root.
+fn root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
+
+/// The sources of the crate `name`, next to this one.
+fn sources(name: &str) -> Vec<(PathBuf, String)> {
+    let dir = root().join("crates").join(name).join("src");
+    let out = read_all(&dir, "rs");
+    assert!(!out.is_empty(), "no sources in {}", dir.display());
     out
 }
 
 /// The constants the sources refer to as `action::NAME`.
 fn used(sources: &[(PathBuf, String)]) -> BTreeSet<String> {
+    used_as(sources, "action::")
+}
+
+/// The constants the sources refer to as `prefix` and the name.
+fn used_as(sources: &[(PathBuf, String)], prefix: &str) -> BTreeSet<String> {
     let mut found = BTreeSet::new();
     for (_, text) in sources {
-        for (at, _) in text.match_indices("action::") {
-            let name: String = text[at + "action::".len()..]
+        for (at, _) in text.match_indices(prefix) {
+            let name: String = text[at + prefix.len()..]
                 .chars()
                 .take_while(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || *c == '_')
                 .collect();
@@ -89,6 +103,29 @@ fn the_windows_app_has_every_action_not_listed_as_pending() {
     assert!(
         ported.is_empty(),
         "actions the Windows app has that NOT_YET_ON_WINDOWS still lists: {ported:?}"
+    );
+}
+
+#[test]
+fn the_mac_app_has_every_action_not_listed_as_pending() {
+    // The Swift sources of the Mac app, which has no screens yet.
+    let used = used_as(&read_all(&root().join("macos"), "swift"), "Action.");
+    let expected = names(ALL)
+        .difference(&names(NOT_YET_ON_MACOS))
+        .cloned()
+        .collect::<BTreeSet<_>>();
+    let missing: Vec<_> = expected.difference(&used).cloned().collect();
+    assert!(
+        missing.is_empty(),
+        "actions the Mac app should have but does not refer to: {missing:?}"
+    );
+    let ported: Vec<_> = names(NOT_YET_ON_MACOS)
+        .intersection(&used)
+        .cloned()
+        .collect();
+    assert!(
+        ported.is_empty(),
+        "actions the Mac app has that NOT_YET_ON_MACOS still lists: {ported:?}"
     );
 }
 

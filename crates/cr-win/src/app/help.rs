@@ -331,7 +331,7 @@ pub fn view(shell: &Shell, page: &HelpPage, context: &mut ViewContext<Shell>) ->
                 "</body>",
                 &format!(
                     "<script>addEventListener('load',()=>\
-                     window.chrome.webview.postMessage('{PRINT}'))</script></body>"
+                     post('{PRINT}'))</script></body>"
                 ),
             )
         } else {

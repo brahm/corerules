@@ -34,7 +34,8 @@ release workflow builds and tests the MSIX for the Microsoft Store
 Publishing on Flathub was dropped from the plan (decision P15).
 
 The macOS version (step 3) started on 2026-10-28: the backend and `cr`
-are being built and tested on Apple Silicon (phase 1).
+are built and tested on Apple Silicon (phase 1), and the bridge between
+Swift and the Rust crates is being laid (phase 2).
 
 ## The original plan (2026-10-09)
 
@@ -477,15 +478,22 @@ update, and a Mac managed by a company or school may not allow it at all.
 
 The phases run in order:
 
-1. **Backend on macOS (in progress).** A macOS job in CI lints and tests
-   `cr-formats`, `cr-store`, `cr-i18n`, `cr-app` and `cr` on Apple
+1. **Backend on macOS (done, PR #117).** A macOS job in CI lints and
+   tests `cr-formats`, `cr-store`, `cr-i18n`, `cr-app` and `cr` on Apple
    Silicon, and builds `cr`. The data package lives in
    `~/Library/Application Support/Core Rules/data`, where macOS asks no
-   permission and which stays when the app is moved to the Trash.
-2. **The bridge and the shared groundwork.** `cr-mac-ffi` with UniFFI;
-   the HTML of the help topics and the books moves from `cr-win` into
-   `cr-app`, so the Mac shows them in a `WKWebView` from the same pages;
-   `NOT_YET_ON_MACOS` joins the parity test with every action.
+   permission and which stays when the app is moved to the Trash. A name
+   is looked up on the Mac's disk as on Windows, since both ignore case.
+2. **The bridge and the shared groundwork (in progress).** The help
+   topics and the books as web pages moved from `cr-win` into
+   `cr_app::web`, and their scripts post to the app through a WebView2 or
+   a WKWebView, so the Mac shows the same pages. The new crate
+   `cr-mac-ffi` exports to Swift with UniFFI what the library needs
+   (the sections, the search, an entry's details), the languages and the
+   actions; `macos/scripts/make-bindings.sh` writes its Swift side, and
+   CI builds and runs a Swift program that calls it. `NOT_YET_ON_MACOS`
+   lists every action, and the parity test checks the Mac app's Swift
+   sources, which refer to an action as `Action.NAME`.
 3. **Prototype**, with the scope of the Windows one, packaged as a
    `.dmg`, approved by Wagner Brahm after a run on a Mac.
 4. **Porting the screens**, in the stages of the Windows port, until

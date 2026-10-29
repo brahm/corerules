@@ -48,8 +48,9 @@ jobs:
             target/package/*.msix
             target/msix/
 
-  # The backend and `cr` on an Apple Silicon Mac, the ground the macOS app
-  # will stand on; the GTK and Windows crates are left out.
+  # The backend, `cr` and the Mac app's bridge on an Apple Silicon Mac; the
+  # GTK and Windows crates are left out. A Swift program calls the bridge
+  # through its generated bindings.
   macos:
     runs-on: macos-15
     steps:
@@ -57,9 +58,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - run: cargo clippy -p cr-formats -p cr-store -p cr-i18n -p cr-app -p cr-cli --all-targets -- -D warnings
-      - run: cargo test --no-fail-fast -p cr-formats -p cr-store -p cr-i18n -p cr-app -p cr-cli
+      - run: cargo clippy -p cr-formats -p cr-store -p cr-i18n -p cr-app -p cr-cli -p cr-mac-ffi --all-targets -- -D warnings
+      - run: cargo test --no-fail-fast -p cr-formats -p cr-store -p cr-i18n -p cr-app -p cr-cli -p cr-mac-ffi
       - run: cargo build --release -p cr-cli
+      - run: macos/scripts/make-bindings.sh
+      - run: macos/scripts/smoke-test.sh
       - uses: actions/upload-artifact@v4
         with:
           name: cr-macos-arm64

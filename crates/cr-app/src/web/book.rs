@@ -1,12 +1,12 @@
 //! A rule book as one web page, which the Windows Book page shows in a
-//! WebView2: the book's fonts, sizes, colours, indents, tab stops and
+//! WebView2 and the Mac app in a WKWebView: the book's fonts, sizes, colours, indents, tab stops and
 //! pictures, laid out as the GNOME reader lays them out, and the script
 //! the app drives the page with. The script goes to a paragraph, zooms,
 //! highlights what Find found and says which paragraph is at the top.
 //!
 //! Every character of the book's text is in the page, a picture standing
 //! for one, so that a match Find makes in the book's folded text
-//! ([`cr_app::books::Folded`]) is at the same offset of its paragraph
+//! ([`crate::books::Folded`]) is at the same offset of its paragraph
 //! there.
 
 use std::collections::HashMap;
@@ -14,7 +14,7 @@ use std::fmt::Write;
 
 use cr_formats::rtf::{Align, Document, Font, Format, Inline, Paragraph, Picture, PictureFormat};
 
-use crate::html::{base64, escape, hex, on_dark};
+use super::help::{base64, escape, hex, on_dark};
 
 /// What the page posts once it has loaded.
 pub const READY: &str = "ready";
@@ -99,8 +99,10 @@ img{max-width:100%;height:auto;vertical-align:middle}\
 ::highlight(c){background-color:rgba(255,120,0,.8)}\
 @media (prefers-color-scheme:dark){html{background:#1f1f1f;color:#f0f0f0}}";
 
-const SCRIPT: &str = "\
-const W=window.chrome.webview,P=document.querySelectorAll('main>div');let timer=0;\
+const SCRIPT: &str = concat!(
+    post_script!(),
+    "\
+const P=document.querySelectorAll('main>div');let timer=0;\
 function topmost(){let lo=0,hi=P.length-1;if(hi<0)return 0;while(lo<hi){const m=(lo+hi)>>1;\
 if(P[m].getBoundingClientRect().bottom<=2)lo=m+1;else hi=m}return lo}\
 function go(i){const p=P[Math.min(i,P.length-1)];if(p)p.scrollIntoView({block:'start'})}\
@@ -120,14 +122,15 @@ function unmark(){CSS.highlights.clear()}\
 function show(p,o,len){const r=range(p,o,len);if(!r)return;CSS.highlights.set('c',new Highlight(r));\
 const e=r.startContainer.nodeType===1?r.startContainer:r.startContainer.parentElement;\
 if(e)e.scrollIntoView({block:'center'})}\
-addEventListener('scroll',()=>{clearTimeout(timer);timer=setTimeout(()=>W.postMessage('top:'+topmost()),600)},\
+addEventListener('scroll',()=>{clearTimeout(timer);timer=setTimeout(()=>post('top:'+topmost()),600)},\
 {passive:true});\
-addEventListener('keydown',e=>{const c=e.ctrlKey&&!e.altKey,k=e.key.toLowerCase();let a=null;\
+addEventListener('keydown',e=>{const c=(e.ctrlKey||e.metaKey)&&!e.altKey,k=e.key.toLowerCase();let a=null;\
 if(e.key==='F1')a='help';else if(e.key==='F9')a='contents';else if(c&&k==='f')a='find';\
 else if(c&&(k==='+'||k==='='))a='zoom-in';else if(c&&k==='-')a='zoom-out';\
 else if(c&&k==='0')a='zoom-reset';else if(c&&k==='w')a='close';\
-if(a){e.preventDefault();W.postMessage('key:'+a)}});\
-W.postMessage('ready');";
+if(a){e.preventDefault();post('key:'+a)}});\
+post('ready');"
+);
 
 /// A paragraph's layout, which paragraphs share as a class.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -503,7 +506,7 @@ fn picture(picture: &Picture, html: &mut String) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cr_app::books::Folded;
+    use crate::books::Folded;
 
     fn doc(body: &str) -> Document {
         Document::parse(
