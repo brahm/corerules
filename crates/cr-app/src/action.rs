@@ -1,6 +1,7 @@
 //! The app's actions, each with one name in every interface: the GNOME
 //! app registers each under that name (`win.new-character`), and the
-//! Windows app gives the command that does the same the same constant.
+//! Windows and Mac apps give the command that does the same the same
+//! constant.
 //! An interface refers to an action only through these constants, so a
 //! test can tell when one interface has an action that the other lacks.
 
@@ -110,6 +111,11 @@ actions! {
 /// the Windows app has it too, and a release waits until it is empty.
 pub const NOT_YET_ON_WINDOWS: &[Action] = &[];
 
+/// The actions the Mac app does not have yet: every one, until its
+/// screens are ported. An action comes off as the Mac app gets it, and the
+/// release with macOS waits until the list is empty.
+pub const NOT_YET_ON_MACOS: &[Action] = ALL;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -125,7 +131,7 @@ mod tests {
 
     #[test]
     fn pending_actions_are_actions() {
-        for action in NOT_YET_ON_WINDOWS {
+        for action in NOT_YET_ON_WINDOWS.iter().chain(NOT_YET_ON_MACOS) {
             assert!(ALL.contains(action), "{action:?}");
         }
     }
