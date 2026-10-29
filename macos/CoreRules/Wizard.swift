@@ -63,31 +63,40 @@ struct WizardView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Group {
-                if let prompt = model.prompt {
-                    PromptView(prompt: prompt, promptOff: { model.promptOff($0) }, answer: { model.answer($0) })
-                } else {
-                    page
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             Divider()
-            HStack {
-                if model.depth > 1 {
-                    Button(tr("Back")) { model.back() }
-                        .disabled(model.prompt != nil)
-                }
-                Spacer()
-                Button(tr("_Cancel"), role: .cancel, action: close)
-                    .keyboardShortcut(.cancelAction)
-                Button(tr("_Next")) { model.next() }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(!model.canGoOn || !drawn)
-            }
-            .padding()
+            buttons
         }
         .frame(minWidth: 560, minHeight: 460)
-        .navigationTitle(model.session.title())
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if let prompt = model.prompt {
+            PromptView(
+                prompt: prompt,
+                promptOff: { (off: Bool) in model.promptOff(off) },
+                answer: { (yes: Bool) in model.answer(yes) })
+        } else {
+            page
+        }
+    }
+
+    private var buttons: some View {
+        HStack {
+            if model.depth > 1 {
+                Button(tr("Back")) { model.back() }
+                    .disabled(model.prompt != nil)
+            }
+            Spacer()
+            Button(tr("_Cancel"), role: .cancel, action: close)
+                .keyboardShortcut(.cancelAction)
+            Button(tr("_Next")) { model.next() }
+                .keyboardShortcut(.defaultAction)
+                .disabled(!model.canGoOn || !drawn)
+        }
+        .padding()
     }
 
     /// Whether the Mac app draws the page in view yet.
@@ -100,52 +109,77 @@ struct WizardView: View {
     private var page: some View {
         switch model.page {
         case .setting(let expansion, let skillsAndPowers, let rulesText, let settings, let setting):
-            Form {
-                if expansion {
-                    Section {
-                        Picker(
-                            tr("Rules"),
-                            selection: Binding(
-                                get: { skillsAndPowers ? 1 : 0 },
-                                set: { model.chooseRules(UInt32($0)) })
-                        ) {
-                            Text(tr("Core Rules")).tag(0)
-                            Text(tr("Player's Option")).tag(1)
-                        }
-                        .pickerStyle(.segmented)
-                    } footer: {
-                        Text(rulesText).foregroundStyle(.secondary)
-                    }
-                }
-                Section(tr("Campaign Setting")) {
-                    Picker(
-                        tr("Campaign Setting"),
-                        selection: Binding(
-                            get: { Int(setting) },
-                            set: { model.chooseSetting(UInt32($0)) })
-                    ) {
-                        ForEach(Array(settings.enumerated()), id: \.offset) { index, s in
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(s.name)
-                                Text(s.description)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            .tag(index)
-                        }
-                    }
-                    .pickerStyle(.radioGroup)
-                    .labelsHidden()
-                }
-            }
-            .formStyle(.grouped)
+            SettingPage(
+                model: model, expansion: expansion, skillsAndPowers: skillsAndPowers,
+                rulesText: rulesText, settings: settings, setting: setting)
         case .other(let title):
             ContentUnavailableView {
                 Label(title, systemImage: "hammer")
             } description: {
                 Text(tr("The Mac version does not create characters yet"))
             }
+        }
+    }
+}
+
+/// The first page: the rules and the campaign setting.
+struct SettingPage: View {
+    @ObservedObject var model: WizardModel
+    let expansion: Bool
+    let skillsAndPowers: Bool
+    let rulesText: String
+    let settings: [SettingInfo]
+    let setting: UInt32
+
+    private var rules: Binding<Int> {
+        Binding<Int>(
+            get: { skillsAndPowers ? 1 : 0 },
+            set: { (index: Int) in model.chooseRules(UInt32(index)) })
+    }
+
+    private var chosen: Binding<Int> {
+        Binding<Int>(
+            get: { Int(setting) },
+            set: { (index: Int) in model.chooseSetting(UInt32(index)) })
+    }
+
+    var body: some View {
+        Form {
+            if expansion {
+                Section {
+                    Picker(tr("Rules"), selection: rules) {
+                        Text(tr("Core Rules")).tag(0)
+                        Text(tr("Player's Option")).tag(1)
+                    }
+                    .pickerStyle(.segmented)
+                } footer: {
+                    Text(rulesText).foregroundStyle(.secondary)
+                }
+            }
+            Section(tr("Campaign Setting")) {
+                Picker(tr("Campaign Setting"), selection: chosen) {
+                    ForEach(0..<settings.count, id: \.self) { (index: Int) in
+                        SettingRow(setting: settings[index]).tag(index)
+                    }
+                }
+                .pickerStyle(.radioGroup)
+                .labelsHidden()
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+struct SettingRow: View {
+    let setting: SettingInfo
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(setting.name)
+            Text(setting.description)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

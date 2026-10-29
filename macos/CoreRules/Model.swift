@@ -324,7 +324,7 @@ final class AppModel: ObservableObject {
 
     func fail(_ title: String, _ error: Error) {
         let text: String
-        if case CoreError.Failed(let message) = error {
+        if let error = error as? CoreError, case .Failed(let message) = error {
             text = message
         } else {
             text = error.localizedDescription

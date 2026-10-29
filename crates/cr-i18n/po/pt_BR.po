@@ -2538,7 +2538,7 @@ msgstr "Se você ignorar esta mensagem e salvar este personagem, ela não aparec
 #: crates/cr-win/src/app/templates.rs:666
 #: crates/cr-win/src/app/templates.rs:980
 #: crates/cr-win/src/app/treasure_tables.rs:413
-#: macos/CoreRules/ContentView.swift:60
+#: macos/CoreRules/ContentView.swift:102
 msgid "_OK"
 msgstr "_OK"
 
@@ -2621,7 +2621,7 @@ msgstr "Registros padrão não podem ser excluídos"
 #: crates/cr-app/src/records/actions.rs:212
 #: crates/cr-gtk/src/userdb.rs:412
 #: crates/cr-win/src/app.rs:4631
-#: macos/CoreRules/ContentView.swift:65
+#: macos/CoreRules/ContentView.swift:120
 msgid "Delete {name}?"
 msgstr "Excluir {name}?"
 
@@ -3390,11 +3390,11 @@ msgstr "Quantos?"
 #: crates/cr-win/src/app/treasure_tables.rs:423
 #: crates/cr-win/src/app.rs:2372
 #: crates/cr-win/src/app.rs:4727
-#: macos/CoreRules/ContentView.swift:71
-#: macos/CoreRules/Edit.swift:81
-#: macos/CoreRules/Edit.swift:100
-#: macos/CoreRules/Import.swift:71
-#: macos/CoreRules/Wizard.swift:81
+#: macos/CoreRules/ContentView.swift:128
+#: macos/CoreRules/Edit.swift:94
+#: macos/CoreRules/Edit.swift:134
+#: macos/CoreRules/Import.swift:76
+#: macos/CoreRules/Wizard.swift:93
 msgid "_Cancel"
 msgstr "_Cancelar"
 
@@ -3428,7 +3428,7 @@ msgstr "Categoria"
 #: crates/cr-win/src/app/portrait.rs:421
 #: crates/cr-win/src/app/templates.rs:968
 #: crates/cr-win/src/app/templates.rs:969
-#: macos/CoreRules/ContentView.swift:104
+#: macos/CoreRules/ContentView.swift:142
 msgid "Search"
 msgstr "Pesquisar"
 
@@ -3515,7 +3515,7 @@ msgstr "Perícias com escudos"
 
 #: crates/cr-gtk/src/create.rs:192
 #: crates/cr-win/src/app/create.rs:149
-#: macos/CoreRules/Wizard.swift:170
+#: macos/CoreRules/Wizard.swift:204
 msgid "_Do not show this window again"
 msgstr "_Não mostrar esta janela de novo"
 
@@ -3548,7 +3548,7 @@ msgstr "Escolher ao Acaso"
 #: crates/cr-win/src/app/create.rs:239
 #: crates/cr-win/src/app/npc.rs:72
 #: crates/cr-win/src/app/npc.rs:75
-#: macos/CoreRules/Wizard.swift:107
+#: macos/CoreRules/Wizard.swift:150
 msgid "Rules"
 msgstr "Regras"
 
@@ -3566,10 +3566,10 @@ msgstr "Os botões Core Rules e Player's Option do original"
 #: crates/cr-store/src/userdb/parts/pages.rs:427
 #: crates/cr-win/src/app/create.rs:244
 #: crates/cr-win/src/app/npc.rs:76
-#: macos/CoreRules/ContentView.swift:111
+#: macos/CoreRules/ContentView.swift:149
 #: macos/CoreRules/CoreRulesApp.swift:22
 #: macos/CoreRules/Model.swift:160
-#: macos/CoreRules/Wizard.swift:112
+#: macos/CoreRules/Wizard.swift:151
 msgid "Core Rules"
 msgstr "Core Rules"
 
@@ -3581,7 +3581,7 @@ msgstr "Player's Handbook: espaços de perícia"
 
 #: crates/cr-gtk/src/create.rs:644
 #: crates/cr-win/src/app/create.rs:244
-#: macos/CoreRules/Wizard.swift:113
+#: macos/CoreRules/Wizard.swift:152
 msgid "Player's Option"
 msgstr "Player's Option"
 
@@ -3593,8 +3593,8 @@ msgstr "Skills & Powers: subatributos e pontos de personagem para habilidades ra
 
 #: crates/cr-gtk/src/create.rs:662
 #: crates/cr-win/src/app/create.rs:261
-#: macos/CoreRules/Wizard.swift:120
-#: macos/CoreRules/Wizard.swift:122
+#: macos/CoreRules/Wizard.swift:159
+#: macos/CoreRules/Wizard.swift:160
 msgid "Campaign Setting"
 msgstr "Cenário de campanha"
 
@@ -3619,7 +3619,7 @@ msgstr "O cenário limita as raças e classes oferecidas nas próximas páginas.
 #: crates/cr-gtk/src/create.rs:4251
 #: crates/cr-gtk/src/create.rs:4598
 #: crates/cr-win/src/app/create.rs:84
-#: macos/CoreRules/Wizard.swift:83
+#: macos/CoreRules/Wizard.swift:95
 msgid "_Next"
 msgstr "_Próximo"
 
@@ -3802,7 +3802,7 @@ msgstr "Habilidades raciais"
 #: crates/cr-win/src/app/treasure.rs:239
 #: crates/cr-win/src/app/treasure_tables.rs:172
 #: crates/cr-win/src/app/treasure_tables.rs:175
-#: macos/CoreRules/Edit.swift:109
+#: macos/CoreRules/Edit.swift:146
 msgid "Name"
 msgstr "Nome"
 
@@ -3819,7 +3819,7 @@ msgstr "Nome aleatório"
 #: crates/cr-win/src/app/create.rs:902
 #: crates/cr-win/src/app/edit.rs:268
 #: crates/cr-win/src/app/edit.rs:270
-#: macos/CoreRules/Edit.swift:110
+#: macos/CoreRules/Edit.swift:147
 msgid "Player"
 msgstr "Jogador"
 
@@ -3830,7 +3830,7 @@ msgstr "Jogador"
 #: crates/cr-store/src/userdb/races.rs:278
 #: crates/cr-win/src/app/create.rs:707
 #: crates/cr-win/src/app/edit.rs:35
-#: macos/CoreRules/Edit.swift:112
+#: macos/CoreRules/Edit.swift:149
 msgid "Male"
 msgstr "Masculino"
 
@@ -3841,7 +3841,7 @@ msgstr "Masculino"
 #: crates/cr-store/src/userdb/races.rs:279
 #: crates/cr-win/src/app/create.rs:707
 #: crates/cr-win/src/app/edit.rs:35
-#: macos/CoreRules/Edit.swift:113
+#: macos/CoreRules/Edit.swift:150
 msgid "Female"
 msgstr "Feminino"
 
@@ -3852,7 +3852,7 @@ msgstr "Feminino"
 #: crates/cr-win/src/app/create.rs:903
 #: crates/cr-win/src/app/edit.rs:284
 #: crates/cr-win/src/app/edit.rs:287
-#: macos/CoreRules/Edit.swift:111
+#: macos/CoreRules/Edit.swift:148
 msgid "Gender"
 msgstr "Sexo"
 
@@ -3870,7 +3870,7 @@ msgstr "Sexo"
 #: crates/cr-win/src/app/edit.rs:324
 #: crates/cr-win/src/app/npc.rs:411
 #: crates/cr-win/src/app/npc.rs:414
-#: macos/CoreRules/Edit.swift:116
+#: macos/CoreRules/Edit.swift:152
 msgid "Alignment"
 msgstr "Tendência"
 
@@ -3909,7 +3909,7 @@ msgstr "Rolar classe social"
 #: crates/cr-win/src/app/create.rs:763
 #: crates/cr-win/src/app/edit.rs:378
 #: crates/cr-win/src/app/edit.rs:380
-#: macos/CoreRules/Edit.swift:127
+#: macos/CoreRules/Edit.swift:161
 msgid "History"
 msgstr "História"
 
@@ -3919,7 +3919,7 @@ msgstr "História"
 #: crates/cr-win/src/app/create.rs:788
 #: crates/cr-win/src/app/edit.rs:347
 #: crates/cr-win/src/app/edit.rs:349
-#: macos/CoreRules/Edit.swift:123
+#: macos/CoreRules/Edit.swift:157
 msgid "Age"
 msgstr "Idade"
 
@@ -3936,7 +3936,7 @@ msgstr "Anos"
 #: crates/cr-win/src/app/create.rs:797
 #: crates/cr-win/src/app/edit.rs:352
 #: crates/cr-win/src/app/edit.rs:355
-#: macos/CoreRules/Edit.swift:124
+#: macos/CoreRules/Edit.swift:158
 msgid "Height"
 msgstr "Altura"
 
@@ -3955,7 +3955,7 @@ msgstr "Polegadas"
 #: crates/cr-win/src/app/edit.rs:363
 #: crates/cr-win/src/app/edit.rs:366
 #: crates/cr-win/src/app/treasure_tables.rs:124
-#: macos/CoreRules/Edit.swift:125
+#: macos/CoreRules/Edit.swift:159
 msgid "Weight"
 msgstr "Peso"
 
@@ -4272,7 +4272,7 @@ msgstr "Totais do encontro"
 #: crates/cr-win/src/app/sheet.rs:606
 #: crates/cr-win/src/app/treasure.rs:223
 #: crates/cr-win/src/app.rs:4664
-#: macos/CoreRules/Edit.swift:89
+#: macos/CoreRules/Edit.swift:136
 msgid "_Save"
 msgstr "_Salvar"
 
@@ -4281,7 +4281,7 @@ msgstr "_Salvar"
 #: crates/cr-win/src/app/encounter.rs:512
 #: crates/cr-win/src/app/help.rs:294
 #: crates/cr-win/src/app/treasure.rs:121
-#: macos/CoreRules/ContentView.swift:164
+#: macos/CoreRules/ContentView.swift:275
 #: macos/CoreRules/CoreRulesApp.swift:73
 msgid "_Print…"
 msgstr "_Imprimir…"
@@ -4431,9 +4431,9 @@ msgstr "_Editar…"
 #: crates/cr-win/src/app.rs:4685
 #: crates/cr-win/src/app.rs:4690
 #: crates/cr-win/src/app.rs:4694
-#: macos/CoreRules/ContentView.swift:68
-#: macos/CoreRules/ContentView.swift:97
-#: macos/CoreRules/ContentView.swift:167
+#: macos/CoreRules/ContentView.swift:125
+#: macos/CoreRules/ContentView.swift:183
+#: macos/CoreRules/ContentView.swift:278
 msgid "_Delete"
 msgstr "_Excluir"
 
@@ -4792,7 +4792,7 @@ msgstr "O tópico de ajuda não está em {file}"
 #: crates/cr-gtk/src/help.rs:374
 #: crates/cr-win/src/app/create.rs:76
 #: crates/cr-win/src/app/help.rs:285
-#: macos/CoreRules/Wizard.swift:77
+#: macos/CoreRules/Wizard.swift:89
 msgid "Back"
 msgstr "Voltar"
 
@@ -4858,9 +4858,9 @@ msgstr "Abrir pasta do Core Rules"
 #: crates/cr-win/src/app/library.rs:142
 #: crates/cr-win/src/app/library.rs:860
 #: crates/cr-win/src/app.rs:850
-#: macos/CoreRules/ContentView.swift:19
+#: macos/CoreRules/ContentView.swift:49
 #: macos/CoreRules/CoreRulesApp.swift:66
-#: macos/CoreRules/SettingsView.swift:52
+#: macos/CoreRules/SettingsView.swift:69
 msgid "_Open Folder…"
 msgstr "_Abrir pasta…"
 
@@ -4877,10 +4877,10 @@ msgstr "Extrair dados do _CD…"
 #: crates/cr-win/src/app/settings.rs:29
 #: crates/cr-win/src/app.rs:2331
 #: crates/cr-win/src/app.rs:2635
-#: macos/CoreRules/ContentView.swift:15
+#: macos/CoreRules/ContentView.swift:45
 #: macos/CoreRules/Model.swift:177
 #: macos/CoreRules/Model.swift:244
-#: macos/CoreRules/SettingsView.swift:46
+#: macos/CoreRules/SettingsView.swift:63
 msgid "No Core Rules Installation"
 msgstr "Nenhuma instalação do Core Rules"
 
@@ -5106,7 +5106,7 @@ msgstr "Imprimir"
 #: crates/cr-gtk/src/main.rs:1553
 #: crates/cr-gtk/src/main.rs:1827
 #: crates/cr-win/src/app/library.rs:264
-#: macos/CoreRules/ContentView.swift:174
+#: macos/CoreRules/ContentView.swift:205
 msgid "Nothing Selected"
 msgstr "Nada selecionado"
 
@@ -5186,9 +5186,9 @@ msgstr "Origem"
 #: crates/cr-win/src/app/edit.rs:248
 #: crates/cr-win/src/app/library.rs:496
 #: crates/cr-win/src/app.rs:2715
-#: macos/CoreRules/ContentView.swift:93
-#: macos/CoreRules/ContentView.swift:160
-#: macos/CoreRules/Edit.swift:108
+#: macos/CoreRules/ContentView.swift:179
+#: macos/CoreRules/ContentView.swift:271
+#: macos/CoreRules/Edit.swift:145
 msgid "Edit Character"
 msgstr "Editar personagem"
 
@@ -5813,51 +5813,51 @@ msgstr "Preferências"
 
 #: crates/cr-gtk/src/prefs.rs:101
 #: crates/cr-win/src/app/settings.rs:48
-#: macos/CoreRules/SettingsView.swift:17
+#: macos/CoreRules/SettingsView.swift:28
 msgid "Interface"
 msgstr "Interface"
 
 #: crates/cr-gtk/src/prefs.rs:105
 #: crates/cr-win/src/app/settings.rs:15
-#: macos/CoreRules/SettingsView.swift:19
+#: macos/CoreRules/SettingsView.swift:30
 msgid "System Language ({language})"
 msgstr "Idioma do sistema ({language})"
 
 #: crates/cr-gtk/src/prefs.rs:112
 #: crates/cr-win/src/app/settings.rs:50
 #: crates/cr-win/src/app/settings.rs:53
-#: macos/CoreRules/SettingsView.swift:24
+#: macos/CoreRules/SettingsView.swift:35
 msgid "Language"
 msgstr "Idioma"
 
 #: crates/cr-gtk/src/prefs.rs:113
 #: crates/cr-win/src/app/settings.rs:51
-#: macos/CoreRules/SettingsView.swift:25
+#: macos/CoreRules/SettingsView.swift:36
 msgid "Game data from the original files stays in English"
 msgstr "Os dados de jogo dos arquivos originais permanecem em inglês"
 
 #: crates/cr-gtk/src/prefs.rs:129
 #: crates/cr-win/src/app.rs:3324
-#: macos/CoreRules/SettingsView.swift:31
+#: macos/CoreRules/SettingsView.swift:42
 msgid "Restart Core Rules to use the new language"
 msgstr "Reinicie o Core Rules para usar o novo idioma"
 
 #: crates/cr-gtk/src/prefs.rs:139
 #: crates/cr-win/src/app/settings.rs:59
-#: macos/CoreRules/SettingsView.swift:35
+#: macos/CoreRules/SettingsView.swift:49
 msgid "Character Creation"
 msgstr "Criação de personagem"
 
 #: crates/cr-gtk/src/prefs.rs:142
 #: crates/cr-win/src/app/settings.rs:61
 #: crates/cr-win/src/app/settings.rs:64
-#: macos/CoreRules/SettingsView.swift:37
+#: macos/CoreRules/SettingsView.swift:51
 msgid "Core Rules Vs Player's Option Message"
 msgstr "Aviso Core Rules ou Player's Option"
 
 #: crates/cr-gtk/src/prefs.rs:143
 #: crates/cr-win/src/app/settings.rs:62
-#: macos/CoreRules/SettingsView.swift:38
+#: macos/CoreRules/SettingsView.swift:52
 msgid "Shown in New Character after the rules are chosen"
 msgstr "Mostrado no Novo personagem depois da escolha das regras"
 
@@ -6156,7 +6156,7 @@ msgstr "Este pacote foi feito pelo Expansion, que o Core Rules 2.0 não consegue
 
 #: crates/cr-gtk/src/transfer.rs:397
 #: crates/cr-win/src/app/import.rs:264
-#: macos/CoreRules/Import.swift:73
+#: macos/CoreRules/Import.swift:78
 msgid "_Import"
 msgstr "_Importar"
 
@@ -6169,8 +6169,8 @@ msgstr "Importar"
 #: crates/cr-gtk/src/transfer.rs:636
 #: crates/cr-win/src/app.rs:3135
 #: crates/cr-win/src/app.rs:3177
-#: macos/CoreRules/ContentView.swift:51
-#: macos/CoreRules/Import.swift:39
+#: macos/CoreRules/ContentView.swift:83
+#: macos/CoreRules/Import.swift:48
 #: macos/CoreRules/Model.swift:250
 msgid "Import Failed"
 msgstr "Falha na importação"
@@ -6209,7 +6209,7 @@ msgstr "Itens não adicionados"
 
 #: crates/cr-gtk/src/transfer.rs:796
 #: crates/cr-win/src/app.rs:4636
-#: macos/CoreRules/Edit.swift:98
+#: macos/CoreRules/Edit.swift:92
 msgid "Discard Changes?"
 msgstr "Descartar alterações?"
 
@@ -6221,7 +6221,7 @@ msgstr "O pacote tem alterações que não foram salvas."
 #: crates/cr-gtk/src/transfer.rs:799
 #: crates/cr-gtk/src/userdb.rs:904
 #: crates/cr-win/src/app.rs:4653
-#: macos/CoreRules/Edit.swift:99
+#: macos/CoreRules/Edit.swift:93
 msgid "_Discard"
 msgstr "_Descartar"
 
@@ -7048,7 +7048,7 @@ msgid "Name Conflict"
 msgstr "Conflito de Nomes"
 
 #: crates/cr-mac-ffi/src/wizard.rs:76
-#: macos/CoreRules/Wizard.swift:147
+#: macos/CoreRules/Wizard.swift:119
 msgid "The Mac version does not create characters yet"
 msgstr "A versão para Mac ainda não cria personagens"
 
@@ -12576,7 +12576,7 @@ msgid "Bonus Hit Dice (used to calculate modified HD for experience)"
 msgstr "Dados de vida bônus (usados para calcular os DV modificados para a experiência)"
 
 #: crates/cr-win/src/app/settings.rs:39
-#: macos/CoreRules/SettingsView.swift:51
+#: macos/CoreRules/SettingsView.swift:68
 msgid "Data folder"
 msgstr "Pasta de dados"
 
@@ -12587,8 +12587,8 @@ msgid "Settings"
 msgstr "Configurações"
 
 #: crates/cr-win/src/app/settings.rs:70
-#: macos/CoreRules/SettingsView.swift:44
-#: macos/CoreRules/SettingsView.swift:45
+#: macos/CoreRules/SettingsView.swift:61
+#: macos/CoreRules/SettingsView.swift:62
 msgid "Installation"
 msgstr "Instalação"
 
@@ -12656,7 +12656,7 @@ msgid "WebView2 did not start ({reason})."
 msgstr "O WebView2 não iniciou ({reason})."
 
 #: crates/cr-win/src/app.rs:4632
-#: macos/CoreRules/ContentView.swift:73
+#: macos/CoreRules/ContentView.swift:130
 msgid "The character leaves the character list and its file is removed."
 msgstr "O personagem sai da lista de personagens e o arquivo dele é apagado."
 
@@ -12681,7 +12681,7 @@ msgid "The allowed classes have changes that are not saved."
 msgstr "As classes permitidas têm alterações que não foram salvas."
 
 #: crates/cr-win/src/app.rs:4650
-#: macos/CoreRules/Edit.swift:102
+#: macos/CoreRules/Edit.swift:96
 msgid "The character has changes that are not saved."
 msgstr "O personagem tem alterações que não foram salvas."
 

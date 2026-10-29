@@ -6,7 +6,7 @@ import SwiftUI
 
 @main
 struct CoreRulesApp: App {
-    @NSApplicationDelegateAdaptor private var delegate: AppDelegate
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model: AppModel
 
     init() {

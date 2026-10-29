@@ -34,55 +34,85 @@ struct ImportView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if let refused = model.session.refused() {
-                ContentUnavailableView {
-                    Label(tr("Import Failed"), systemImage: "exclamationmark.triangle")
-                } description: {
-                    Text(refused)
-                }
-            } else {
-                List {
-                    ForEach(model.categories, id: \.label) { category in
-                        Section(category.label) {
-                            ForEach(category.items, id: \.index) { item in
-                                Toggle(
-                                    isOn: Binding(get: { item.checked }, set: { model.set(item, $0) })
-                                ) {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(item.name)
-                                        if !item.note.isEmpty {
-                                            Text(item.note)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if let note = model.session.mapsNote() {
-                        Text(note).font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-            }
+            content
             Divider()
-            HStack {
-                Spacer()
-                Button(tr("_Cancel"), role: .cancel, action: close)
-                    .keyboardShortcut(.cancelAction)
-                Button(tr("_Import")) {
-                    do {
-                        imported(try model.session.`import`())
-                    } catch {
-                        failed(error)
-                    }
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(!model.canImport || model.session.refused() != nil)
-            }
-            .padding()
+            buttons
         }
         .frame(minWidth: 480, minHeight: 480)
-        .navigationTitle(model.session.fileName())
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if let refused = model.session.refused() {
+            ContentUnavailableView {
+                Label(tr("Import Failed"), systemImage: "exclamationmark.triangle")
+            } description: {
+                Text(refused)
+            }
+        } else {
+            List {
+                ForEach(model.categories, id: \.label) { (category: ImportCategory) in
+                    ImportCategoryView(model: model, category: category)
+                }
+                if let note = model.session.mapsNote() {
+                    Text(note).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private func importChosen() {
+        do {
+            imported(try model.session.`import`())
+        } catch {
+            failed(error)
+        }
+    }
+
+    private var buttons: some View {
+        HStack {
+            Text(model.session.fileName()).foregroundStyle(.secondary)
+            Spacer()
+            Button(tr("_Cancel"), role: .cancel, action: close)
+                .keyboardShortcut(.cancelAction)
+            Button(tr("_Import"), action: importChosen)
+                .keyboardShortcut(.defaultAction)
+                .disabled(!model.canImport || model.session.refused() != nil)
+        }
+        .padding()
+    }
+}
+
+struct ImportCategoryView: View {
+    @ObservedObject var model: ImportModel
+    let category: ImportCategory
+
+    var body: some View {
+        Section(category.label) {
+            ForEach(category.items, id: \.index) { (item: ImportItem) in
+                Toggle(isOn: checked(item)) {
+                    ImportItemLabel(item: item)
+                }
+            }
+        }
+    }
+
+    private func checked(_ item: ImportItem) -> Binding<Bool> {
+        Binding<Bool>(get: { item.checked }, set: { (on: Bool) in model.set(item, on) })
+    }
+}
+
+struct ImportItemLabel: View {
+    let item: ImportItem
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(item.name)
+            if !item.note.isEmpty {
+                Text(item.note)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 }

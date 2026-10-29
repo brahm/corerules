@@ -31,15 +31,40 @@ final class EditModel: ObservableObject {
     }
 
     /// A binding that hands each change to the session.
-    func binding<T>(_ get: @escaping (EditDetails) -> T, _ set: @escaping (EditSession, T) -> Void)
+    private func binding<T>(_ get: @escaping (EditDetails) -> T, _ set: @escaping (T) -> Void)
         -> Binding<T>
     {
-        Binding(
+        Binding<T>(
             get: { get(self.details) },
-            set: {
-                set(self.session, $0)
+            set: { (value: T) in
+                set(value)
                 self.refresh()
             })
+    }
+
+    var name: Binding<String> {
+        binding({ $0.name }, { self.session.setName(name: $0) })
+    }
+    var player: Binding<String> {
+        binding({ $0.player }, { self.session.setPlayer(player: $0) })
+    }
+    var male: Binding<Bool> {
+        binding({ $0.male }, { self.session.setMale(male: $0) })
+    }
+    var alignment: Binding<Int> {
+        binding({ Int($0.alignment) }, { self.session.setAlignment(index: UInt32($0)) })
+    }
+    var age: Binding<UInt32> {
+        binding({ $0.age }, { self.session.setAge(years: $0) })
+    }
+    var height: Binding<UInt32> {
+        binding({ $0.height }, { self.session.setHeight(inches: $0) })
+    }
+    var weight: Binding<UInt32> {
+        binding({ $0.weight }, { self.session.setWeight(pounds: $0) })
+    }
+    var history: Binding<String> {
+        binding({ $0.history }, { self.session.setHistory(history: $0) })
     }
 
     /// Save, or an answer to its question: true once the character is
@@ -59,40 +84,9 @@ struct EditView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if let prompt = model.prompt {
-                PromptView(
-                    prompt: prompt, promptOff: { _ in },
-                    answer: { yes in
-                        if model.settle(model.session.answer(yes: yes)) { close(true) }
-                    }
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            } else {
-                form
-            }
+            content
             Divider()
-            HStack {
-                if let message = model.error ?? model.problem {
-                    Label(message, systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-                Spacer()
-                Button(tr("_Cancel"), role: .cancel) {
-                    if model.session.changed() {
-                        discarding = true
-                    } else {
-                        close(false)
-                    }
-                }
-                .keyboardShortcut(.cancelAction)
-                Button(tr("_Save")) {
-                    if model.settle(model.session.save()) { close(true) }
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(!model.canSave || model.prompt != nil)
-            }
-            .padding()
+            buttons
         }
         .frame(minWidth: 520, minHeight: 560)
         .alert(tr("Discard Changes?"), isPresented: $discarding) {
@@ -103,29 +97,69 @@ struct EditView: View {
         }
     }
 
+    @ViewBuilder
+    private var content: some View {
+        if let prompt = model.prompt {
+            PromptView(prompt: prompt, promptOff: { (_: Bool) in }, answer: answer)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        } else {
+            form
+        }
+    }
+
+    private func answer(_ yes: Bool) {
+        if model.settle(model.session.answer(yes: yes)) { close(true) }
+    }
+
+    private func save() {
+        if model.settle(model.session.save()) { close(true) }
+    }
+
+    private func cancel() {
+        if model.session.changed() {
+            discarding = true
+        } else {
+            close(false)
+        }
+    }
+
+    private var buttons: some View {
+        HStack {
+            if let message = model.error ?? model.problem {
+                Label(message, systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            Spacer()
+            Button(tr("_Cancel"), role: .cancel, action: cancel)
+                .keyboardShortcut(.cancelAction)
+            Button(tr("_Save"), action: save)
+                .keyboardShortcut(.defaultAction)
+                .disabled(!model.canSave || model.prompt != nil)
+        }
+        .padding()
+    }
+
     private var form: some View {
         Form {
             Section(tr("Edit Character")) {
-                TextField(tr("Name"), text: model.binding({ $0.name }, { $0.setName(name: $1) }))
-                TextField(tr("Player"), text: model.binding({ $0.player }, { $0.setPlayer(player: $1) }))
-                Picker(tr("Gender"), selection: model.binding({ $0.male }, { $0.setMale(male: $1) })) {
+                TextField(tr("Name"), text: model.name)
+                TextField(tr("Player"), text: model.player)
+                Picker(tr("Gender"), selection: model.male) {
                     Text(tr("Male")).tag(true)
                     Text(tr("Female")).tag(false)
                 }
-                Picker(
-                    tr("Alignment"),
-                    selection: model.binding({ Int($0.alignment) }, { $0.setAlignment(index: UInt32($1)) })
-                ) {
-                    ForEach(Array(model.details.alignments.enumerated()), id: \.offset) { index, name in
-                        Text(name).tag(index)
+                Picker(tr("Alignment"), selection: model.alignment) {
+                    ForEach(0..<model.details.alignments.count, id: \.self) { (index: Int) in
+                        Text(model.details.alignments[index]).tag(index)
                     }
                 }
-                number(tr("Age"), model.binding({ $0.age }, { $0.setAge(years: $1) }))
-                number(tr("Height"), model.binding({ $0.height }, { $0.setHeight(inches: $1) }))
-                number(tr("Weight"), model.binding({ $0.weight }, { $0.setWeight(pounds: $1) }))
+                number(tr("Age"), model.age)
+                number(tr("Height"), model.height)
+                number(tr("Weight"), model.weight)
             }
             Section(tr("History")) {
-                TextEditor(text: model.binding({ $0.history }, { $0.setHistory(history: $1) }))
+                TextEditor(text: model.history)
                     .font(.body)
                     .frame(minHeight: 120)
             }
@@ -134,7 +168,7 @@ struct EditView: View {
     }
 
     private func number(_ label: String, _ value: Binding<UInt32>) -> some View {
-        TextField(label, value: value, format: .number)
+        TextField(label, value: value, format: IntegerFormatStyle<UInt32>())
             .multilineTextAlignment(.trailing)
     }
 }
