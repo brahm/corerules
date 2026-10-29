@@ -7,14 +7,25 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[lib]
+name = "cr_addons"
+path = "src/lib.rs"
+
+# The GNOME window; the Windows and Mac installers use the library alone
+# (default-features = false).
 [[bin]]
 name = "corerules-community-addons"
 path = "src/main.rs"
+required-features = ["gtk"]
+
+[features]
+default = ["gtk"]
+gtk = ["dep:gtk", "dep:adw"]
 
 [dependencies]
 cr-formats.workspace = true
 cr-i18n.workspace = true
 cr-store.workspace = true
-gtk = { package = "gtk4", version = "0.9", features = ["v4_14"] }
-adw = { package = "libadwaita", version = "0.7", features = ["v1_5"] }
+gtk = { package = "gtk4", version = "0.9", features = ["v4_14"], optional = true }
+adw = { package = "libadwaita", version = "0.7", features = ["v1_5"], optional = true }
 lzma-rs = "0.3"

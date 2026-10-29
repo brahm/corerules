@@ -6,7 +6,7 @@ use adw::prelude::*;
 use cr_i18n::{tr, trn};
 use gtk::glib;
 
-use crate::extras::{self, Addon, Extras};
+use cr_addons::extras::{self, Addon, Extras};
 
 /// Item names a category shows before the rest are only counted.
 const SHOWN: usize = 300;

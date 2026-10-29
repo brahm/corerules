@@ -201,6 +201,7 @@ mod tests {
     /// records of its own, the add-ons go into a copy of its user
     /// databases.
     #[test]
+    #[cfg(unix)]
     fn one_import_brings_every_combination() {
         let Some(dir) = std::env::var_os("CORERULES_DIR") else {
             return;
