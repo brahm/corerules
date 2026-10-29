@@ -20,6 +20,8 @@ struct ContentView: View {
                 model.openAbout = { openWindow(id: "about") }
                 model.openTablesWindow = { openWindow(id: "tables") }
                 model.openTreasureWindow = { openWindow(id: "treasure") }
+                model.openEncounterWindow = { openWindow(id: "encounter") }
+                model.openTableEditWindow = { openWindow(id: "encounter-table") }
             }
             .sheet(item: $model.modal) { modal in
                 ModalView(modal: modal)
@@ -513,6 +515,30 @@ struct EntryTools: ToolbarContent {
                     }
                     .help(tr("Copy"))
                 }
+            }
+            if commands.edit, let name = model.savedEncounter {
+                Button { model.openEncounter(name) } label: {
+                    Label(tr("Edit"), systemImage: "pencil")
+                }
+                .help(tr("Edit"))
+                if commands.copy {
+                    Button { model.openEncounter(name, copy: true) } label: {
+                        Label(tr("Copy"), systemImage: "doc.on.doc")
+                    }
+                    .help(tr("Copy"))
+                }
+            }
+            if commands.edit, let name = model.encounterTable {
+                Button { model.editEncounterTable(name) } label: {
+                    Label(tr("Edit"), systemImage: "pencil")
+                }
+                .help(tr("Edit"))
+            }
+            if commands.generate, let label = model.generateLabel {
+                Button { model.generateEntry() } label: {
+                    Label(plain(label), systemImage: "dice")
+                }
+                .help(plain(label))
             }
             if commands.sheet || commands.print {
                 Button { model.perform(Action.SHEET_PRINT) } label: {

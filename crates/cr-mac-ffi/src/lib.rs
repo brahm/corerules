@@ -7,6 +7,7 @@
 mod book;
 mod bundle;
 mod edit;
+mod encounter;
 mod form;
 mod help;
 mod import;
@@ -28,6 +29,10 @@ use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES};
 
 pub use book::{BookHeading, BookPosted, BookSession};
 pub use edit::{EditSession, SaveState};
+pub use encounter::{
+    EncounterNotice, EncounterRequest, EncounterSession, SaveResult, TableEditSession,
+    TableGenerate,
+};
 pub use form::{
     FormButton, FormDialog, FormGroup, FormNumber, FormOption, FormPage, FormRow, FormValue,
 };
@@ -366,6 +371,7 @@ pub struct Library {
     npc_rules: Mutex<Option<Arc<cr_store::npc::NpcRules>>>,
     table_rolls: Mutex<Option<Arc<cr_store::tables::TableRolls>>>,
     treasure_rules: Mutex<Option<Arc<cr_store::treasure::TreasureRules>>>,
+    encounter_rules: Mutex<Option<Arc<cr_store::encounter::EncounterRules>>>,
     generators: tables::Generators,
 }
 
@@ -381,8 +387,13 @@ impl Library {
             npc_rules: Mutex::default(),
             table_rolls: Mutex::default(),
             treasure_rules: Mutex::default(),
+            encounter_rules: Mutex::default(),
             generators: tables::Generators::default(),
         })
+    }
+
+    fn encounter_rules(&self) -> Result<Arc<cr_store::encounter::EncounterRules>, CoreError> {
+        cached(&self.encounter_rules, || self.install.encounter_rules())
     }
 
     fn help_files(&self) -> Result<Arc<cr_app::help::Files>, CoreError> {
@@ -762,6 +773,29 @@ impl Library {
             .map(str::to_owned)
     }
 
+    /// The saved encounter, encounter table or template in view, for
+    /// Edit, Copy and Generate.
+    pub fn entry_encounter(&self, section: String, index: u32) -> Option<EncounterEntry> {
+        use cr_store::catalog::{ENCOUNTER_KEY, TABLE_KEY};
+        let key = &self.entry(&section, index)?.key;
+        let generate = library::generate_label(key).to_owned();
+        if let Some(name) = key.strip_prefix(ENCOUNTER_KEY) {
+            Some(EncounterEntry::Encounter {
+                name: name.to_owned(),
+            })
+        } else if let Some(name) = key.strip_prefix(TABLE_KEY) {
+            Some(EncounterEntry::Table {
+                name: name.to_owned(),
+                generate,
+            })
+        } else {
+            library::template_name(key).map(|name| EncounterEntry::Template {
+                name: name.to_owned(),
+                generate,
+            })
+        }
+    }
+
     /// Reads the book `name` for its window; `state` is the reader's
     /// state file, and `find` starts Find with a text.
     pub fn open_book(
@@ -977,6 +1011,96 @@ impl Library {
             self.generators.rand.clone(),
         )
     }
+
+    /// New Encounter: the templates to generate an encounter from.
+    pub fn new_encounter(&self) -> Result<Arc<EncounterSession>, CoreError> {
+        Ok(EncounterSession::choose(
+            self.install.clone(),
+            self.encounter_rules()?,
+            self.generators.rand.clone(),
+        ))
+    }
+
+    /// The saved encounter `name`; with `copy`, under no name, for Save
+    /// to add a new one.
+    pub fn open_encounter(
+        &self,
+        name: String,
+        copy: bool,
+    ) -> Result<Arc<EncounterSession>, CoreError> {
+        EncounterSession::saved(
+            self.install.clone(),
+            self.encounter_rules()?,
+            name,
+            copy,
+            self.generators.rand.clone(),
+        )
+    }
+
+    /// An encounter generated from the template `name`, saying `said`
+    /// first.
+    pub fn generate_encounter(
+        &self,
+        name: String,
+        said: Option<String>,
+    ) -> Result<Arc<EncounterSession>, CoreError> {
+        Ok(EncounterSession::generate(
+            self.install.clone(),
+            self.encounter_rules()?,
+            &name,
+            said,
+            self.generators.rand.clone(),
+        ))
+    }
+
+    /// Roll and Generate on the saved encounter table `name`.
+    pub fn roll_encounter_table(&self, name: String) -> Result<Arc<EncounterSession>, CoreError> {
+        let rules = self.encounter_rules()?;
+        let tables = self.install.frequency_tables()?;
+        let table = tables
+            .table(&name)
+            .ok_or_else(|| CoreError::new(cr_i18n::tr("Could Not Read")))?;
+        let (template, said) = {
+            let mut rand = self
+                .generators
+                .rand
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
+            cr_app::encounter::roll_and_generate(&rules, table, &mut rand)
+                .map_err(CoreError::new)?
+        };
+        Ok(EncounterSession::generate(
+            self.install.clone(),
+            rules,
+            &template,
+            Some(said),
+            self.generators.rand.clone(),
+        ))
+    }
+
+    /// The 2-20 table editor, on the saved table `name` or a new one.
+    pub fn edit_encounter_table(
+        &self,
+        name: Option<String>,
+    ) -> Result<Arc<TableEditSession>, CoreError> {
+        TableEditSession::open(
+            self.install.clone(),
+            self.encounter_rules()?,
+            name,
+            self.generators.rand.clone(),
+        )
+    }
+}
+
+/// An entry that opens an encounter window.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
+pub enum EncounterEntry {
+    /// A saved encounter, which Edit and Copy open.
+    Encounter { name: String },
+    /// An encounter table, which Edit opens and `generate` rolls on.
+    Table { name: String, generate: String },
+    /// A template, which `generate` generates from.
+    Template { name: String, generate: String },
 }
 
 /// What `cache` holds, or what `read` reads into it.

@@ -21,10 +21,20 @@ final class TreasureModel: ObservableObject {
     var deleted: (Error?) -> Void = { _ in }
     /// Closes the window; its view sets it.
     var close: () -> Void = {}
+    /// Use Treasure, when an encounter opened the roller: gives it the
+    /// treasure.
+    var use: (() -> Void)?
 
     init(_ session: TreasureSession) {
         self.session = session
         refresh()
+    }
+
+    /// Use Treasure: the encounter takes the treasure, and the window
+    /// closes.
+    func useTreasure() {
+        use?()
+        close()
     }
 
     func refresh() {
@@ -116,7 +126,8 @@ struct TreasureWindow: View {
         if let treasure = app.treasure {
             TreasureView(treasure: treasure)
                 .focusedSceneValue(\.treasure, treasure)
-                .onAppear { treasure.close = { dismiss() } }
+                // A new one may take the window's place.
+                .task(id: ObjectIdentifier(treasure)) { treasure.close = { dismiss() } }
                 .onDisappear { app.closeTreasure() }
         } else {
             ContentUnavailableView(tr("Nothing Selected"), systemImage: "dollarsign.circle")
@@ -158,6 +169,14 @@ struct TreasureTools: ToolbarContent {
 
     var body: some ToolbarContent {
         ToolbarItemGroup {
+            if treasure.use != nil {
+                Button {
+                    treasure.useTreasure()
+                } label: {
+                    Label(tr("_Use Treasure"), systemImage: "checkmark.circle")
+                }
+                .help(tr("_Use Treasure"))
+            }
             Button {
                 treasure.roll()
             } label: {

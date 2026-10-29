@@ -116,8 +116,6 @@ pub const NOT_YET_ON_WINDOWS: &[Action] = &[];
 /// empty.
 pub const NOT_YET_ON_MACOS: &[Action] = &[
     EXTRACT_DATA,
-    NEW_ENCOUNTER,
-    NEW_TABLE,
     MANAGE_PARTIES,
     EXPORT,
     IMPORT_CORE20,
@@ -131,9 +129,6 @@ pub const NOT_YET_ON_MACOS: &[Action] = &[
     UDB_SCHOOLS,
     UDB_ALLOWED,
     UDB_RESTORE,
-    ENCOUNTER_PRINT,
-    ENCOUNTER_PDF,
-    ENCOUNTER_DELETE,
     TRAP_EDIT,
     TRAP_COPY,
     TRAP_DELETE,

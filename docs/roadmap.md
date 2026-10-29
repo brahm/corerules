@@ -565,7 +565,7 @@ The phases run in order:
      the page, the bundles show their items' icons, and Save's questions
      come in the page's place. The Levels dialog, the experience fields,
      the Skills form and the portrait row are those of the wizard.
-   - **The generators (in progress)**, in three pull requests. First New
+   - **The generators (in progress)**, in four pull requests. First New
      NPC and New NPC Group, as forms in a sheet whose Create makes and
      saves the NPCs off the main thread, and Roll on a Table in a window
      of its own, with Roll, Roll Again, Copy Results and Read in Book;
@@ -573,8 +573,20 @@ The phases run in order:
      #126). Then Roll Treasure in a window of its own, its treasure
      drawn as a tree with each item's edits and the bundle editor's
      dialogs, Save, Print, Save as PDF and Delete Saved Treasure, and Edit
-     and Copy on a saved treasure in the library. Then the encounters,
-     encounter tables, parties and traps.
+     and Copy on a saved treasure in the library (PR #127). Then the
+     encounters, in a window of their own: New Encounter's templates
+     with a search, then the encounter as a form, each monster or NPC
+     package with its number, hit points, Re-roll and stat line, Add
+     Monster, Add NPC and Add Trap as searchable dialogs, View NPC and
+     Print NPC, the items with the bundle editor, Roll Treasure opening
+     the treasure window with Use Treasure, Save, Print, Save as PDF and
+     Delete Encounter; the 2-20 table editor in another window, with its
+     filter, Fill, Roll (which opens the encounter generated) and the
+     dialog that picks each roll's template; and Edit, Copy, Create
+     Encounter and Roll and Create Encounter on the saved encounters,
+     tables and templates in the library. A list of more than 200 names
+     shows the first 200 and asks for a search. Last, the parties with
+     Group Encounter, and the traps.
 5. **Beta and release** on the three systems with the same tag, with an
    install page on the website and in the README that shows the Open
    Anyway steps.

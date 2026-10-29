@@ -52,6 +52,16 @@ struct CoreRulesApp: App {
                 .environmentObject(model)
         }
         .defaultSize(width: 720, height: 760)
+        Window(tr("New Encounter"), id: "encounter") {
+            EncounterWindow()
+                .environmentObject(model)
+        }
+        .defaultSize(width: 760, height: 820)
+        Window(tr("New Encounter Table"), id: "encounter-table") {
+            TableEditWindow()
+                .environmentObject(model)
+        }
+        .defaultSize(width: 680, height: 780)
         Window(tr("Help"), id: "help") {
             HelpWindow()
                 .environmentObject(model)
@@ -140,6 +150,9 @@ struct ToolsCommands: Commands {
             Divider()
             item(more(tr("_Roll Treasure…")), Action.ROLL_TREASURE)
             item(more(tr("Roll on a _Table…")), Action.ROLL_TABLE)
+            Divider()
+            item(more(tr("New _Encounter…")), Action.NEW_ENCOUNTER)
+            item(more(tr("New Encounter _Table…")), Action.NEW_TABLE)
         }
     }
 
@@ -157,6 +170,8 @@ struct HelpCommands: Commands {
     @FocusedValue(\.book) private var book: BookModel?
     @FocusedValue(\.tables) private var tables: TableModel?
     @FocusedValue(\.treasure) private var treasure: TreasureModel?
+    @FocusedValue(\.encounter) private var encounter: EncounterModel?
+    @FocusedValue(\.tableEdit) private var tableEdit: TableEditModel?
 
     var body: some Commands {
         CommandGroup(replacing: .help) {
@@ -167,6 +182,10 @@ struct HelpCommands: Commands {
                     model.openHelp(programHelp(number: tables.session.help()))
                 } else if let treasure {
                     model.openHelp(programHelp(number: treasure.session.help()))
+                } else if let encounter {
+                    model.openHelp(programHelp(number: encounter.session.help()))
+                } else if let tableEdit {
+                    model.openHelp(programHelp(number: tableEdit.session.help()))
                 } else {
                     model.perform(Action.HELP_HERE, sheet: sheet)
                 }
