@@ -83,13 +83,18 @@ impl SheetSession {
         let sheet = install
             .page(key)
             .ok_or_else(|| CoreError::new(cr_i18n::tr("Could Not Read")))?;
-        Ok(Arc::new(Self {
+        Ok(Self::of(install, sheet))
+    }
+
+    /// A page made elsewhere: a monster of the user database, a summary.
+    pub(crate) fn of(install: Arc<Installation>, sheet: Sheet) -> Arc<Self> {
+        Arc::new(Self {
             install,
             sheet: Mutex::new(sheet),
             file: None,
             choice: Mutex::new(None),
             writable: false,
-        }))
+        })
     }
 
     fn sheet(&self) -> MutexGuard<'_, Sheet> {

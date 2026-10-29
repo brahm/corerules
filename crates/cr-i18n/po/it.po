@@ -282,32 +282,36 @@ msgstr[1] "Vi sono state copiate {n} immagini degli add-on."
 msgid "If Core Rules is open, close it and open it again to see the add-ons."
 msgstr "Se Core Rules è aperto, chiudilo e riaprilo per vedere gli add-on."
 
-#: crates/cr-app/src/about.rs:30
+#: crates/cr-app/src/about.rs:31
 msgid "Core Rules is a complete Linux version of AD&D Core Rules 2.0 and its Expansion (TSR/Evermore, 1998-1999), the character manager and Dungeon Master's toolkit for Advanced Dungeons & Dragons 2nd Edition. It is written in Rust with GTK 4 and libadwaita and runs natively, with no Wine and no Windows."
 msgstr "Core Rules è una versione completa per Linux di AD&D Core Rules 2.0 e della sua Expansion (TSR/Evermore, 1998-1999), il gestore di personaggi e kit di strumenti del Dungeon Master per Advanced Dungeons & Dragons 2ª edizione. È scritto in Rust con GTK 4 e libadwaita e funziona in modo nativo, senza Wine e senza Windows."
 
-#: crates/cr-app/src/about.rs:36
+#: crates/cr-app/src/about.rs:37
 msgid "Core Rules is a complete Windows 11 version of AD&D Core Rules 2.0 and its Expansion (TSR/Evermore, 1998-1999), the character manager and Dungeon Master's toolkit for Advanced Dungeons & Dragons 2nd Edition. It is written in Rust with WinUI 3 and shares its code with the Linux version."
 msgstr "Core Rules è una versione completa per Windows 11 di AD&D Core Rules 2.0 e della sua Expansion (TSR/Evermore, 1998-1999), il gestore di personaggi e kit di strumenti del Dungeon Master per Advanced Dungeons & Dragons 2ª edizione. È scritto in Rust con WinUI 3 e condivide il suo codice con la versione per Linux."
 
 #: crates/cr-app/src/about.rs:43
+msgid "Core Rules is a complete macOS version of AD&D Core Rules 2.0 and its Expansion (TSR/Evermore, 1998-1999), the character manager and Dungeon Master's toolkit for Advanced Dungeons & Dragons 2nd Edition. Its interface is written in SwiftUI over the Rust code it shares with the Linux and Windows versions."
+msgstr "Core Rules è una versione completa per macOS di AD&D Core Rules 2.0 e della sua Expansion (TSR/Evermore, 1998-1999), il gestore di personaggi e kit di strumenti del Dungeon Master per Advanced Dungeons & Dragons 2ª edizione. La sua interfaccia è scritta in SwiftUI sul codice Rust che condivide con le versioni per Linux e Windows."
+
+#: crates/cr-app/src/about.rs:50
 msgid "Every screen of the original program is here: the Character Generator with Create, Enter and Update Character, kits and Player's Option, the character sheet, parties, the NPC, treasure and encounter generators, Table Rolls, editors for every user database, DM Toolkit packages, the rule books and the help. The app reads and writes the original's own data files, so characters, monsters, encounters and packages made in either program open in the other."
 msgstr "Ogni schermata del programma originale è qui: il Character Generator con Create, Enter e Update Character, kit e Player's Option, la scheda del personaggio, i gruppi, i generatori di PNG, tesori e incontri, le Table Rolls, gli editor per ogni database dell'utente, i pacchetti del DM Toolkit, i manuali e la guida. L'app legge e scrive i file di dati dell'originale, quindi personaggi, mostri, incontri e pacchetti creati in uno dei due programmi si aprono nell'altro."
 
-#: crates/cr-app/src/about.rs:51
+#: crates/cr-app/src/about.rs:58
 msgid "This project contains no TSR or Wizards of the Coast content. The rules, books, monsters, pictures and help all come from a copy of AD&D Core Rules 2.0 (and, for everything the app creates and edits, the Expansion) that you already own."
 msgstr "Questo progetto non contiene alcun contenuto di TSR o Wizards of the Coast. Le regole, i manuali, i mostri, le immagini e la guida provengono tutti da una copia di AD&D Core Rules 2.0 (e, per tutto ciò che l'app crea e modifica, della Expansion) che possiedi già."
 
-#: crates/cr-app/src/about.rs:61
+#: crates/cr-app/src/about.rs:68
 msgid "AD&D, Advanced Dungeons & Dragons and Core Rules are trademarks of Wizards of the Coast. The rules, books, monsters, pictures and help of AD&D Core Rules 2.0 and its Expansion are copyrighted by Wizards of the Coast and are not covered by this app's license. This project is not affiliated with Wizards of the Coast and contains none of their content: it needs the original discs, or a copy of them, that you own."
 msgstr "AD&D, Advanced Dungeons & Dragons e Core Rules sono marchi di Wizards of the Coast. Le regole, i manuali, i mostri, le immagini e la guida di AD&D Core Rules 2.0 e della sua Expansion sono protetti dal diritto d'autore di Wizards of the Coast e non sono coperti dalla licenza di questa app. Questo progetto non è affiliato a Wizards of the Coast e non contiene nulla dei suoi contenuti: richiede i dischi originali, o una loro copia, che possiedi."
 
-#: crates/cr-app/src/about.rs:73
+#: crates/cr-app/src/about.rs:80
 msgid "translator-credits"
 msgstr "Claude (Anthropic) https://www.anthropic.com/claude"
 
-#: crates/cr-app/src/about.rs:151
-#: crates/cr-app/src/about.rs:156
+#: crates/cr-app/src/about.rs:158
+#: crates/cr-app/src/about.rs:163
 msgid "{product} (original program)"
 msgstr "{product} (programma originale)"
 
@@ -3580,7 +3584,7 @@ msgid "Core Rules"
 msgstr "Core Rules"
 
 #: crates/cr-gtk/src/create.rs:641
-#: crates/cr-mac-ffi/src/wizard.rs:109
+#: crates/cr-mac-ffi/src/wizard.rs:114
 #: crates/cr-win/src/app/create.rs:234
 msgid "Player's Handbook: proficiency slots"
 msgstr "Player's Handbook: slot di competenza"
@@ -3592,7 +3596,7 @@ msgid "Player's Option"
 msgstr "Player's Option"
 
 #: crates/cr-gtk/src/create.rs:645
-#: crates/cr-mac-ffi/src/wizard.rs:104
+#: crates/cr-mac-ffi/src/wizard.rs:109
 #: crates/cr-win/src/app/create.rs:229
 msgid "Skills & Powers: subabilities, and character points for racial and class abilities, proficiencies and traits"
 msgstr "Skills & Powers: sottocaratteristiche e punti personaggio per abilità razziali e di classe, competenze e tratti"
@@ -4793,6 +4797,8 @@ msgid "Help"
 msgstr "Aiuto"
 
 #: crates/cr-gtk/src/help.rs:284
+#: crates/cr-mac-ffi/src/lib.rs:724
+#: crates/cr-mac-ffi/src/lib.rs:771
 #: crates/cr-win/src/app.rs:1834
 #: crates/cr-win/src/app.rs:1843
 #: crates/cr-win/src/app.rs:3522
@@ -4800,6 +4806,7 @@ msgid "{name} has no help topic"
 msgstr "{name} non ha un argomento della guida"
 
 #: crates/cr-gtk/src/help.rs:331
+#: crates/cr-mac-ffi/src/help.rs:171
 #: crates/cr-win/src/app/help.rs:153
 msgid "The help topic is not in {file}"
 msgstr "L'argomento della guida non è in {file}"
@@ -4822,6 +4829,8 @@ msgid "Choose a topic from the list."
 msgstr "Scegli un argomento dall'elenco."
 
 #: crates/cr-gtk/src/help.rs:668
+#: crates/cr-mac-ffi/src/help.rs:118
+#: crates/cr-mac-ffi/src/help.rs:263
 #: crates/cr-win/src/app/help.rs:118
 #: crates/cr-win/src/app.rs:1809
 #: crates/cr-win/src/app.rs:3491
@@ -4949,7 +4958,7 @@ msgid "Character created"
 msgstr "Personaggio creato"
 
 #: crates/cr-gtk/src/main.rs:906
-#: crates/cr-mac-ffi/src/lib.rs:573
+#: crates/cr-mac-ffi/src/lib.rs:804
 #: crates/cr-win/src/app.rs:2763
 msgid "Converted to a character"
 msgstr "Convertito in personaggio"
@@ -5144,7 +5153,7 @@ msgid "Show a Party"
 msgstr "Mostra una compagnia"
 
 #: crates/cr-gtk/src/main.rs:1589
-#: crates/cr-mac-ffi/src/lib.rs:415
+#: crates/cr-mac-ffi/src/lib.rs:552
 #: crates/cr-win/src/app/library.rs:337
 msgid "All Types"
 msgstr "Tutti i tipi"

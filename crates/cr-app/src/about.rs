@@ -10,6 +10,7 @@ use cr_store::help::OriginalAbout;
 pub enum System {
     Linux,
     Windows,
+    MacOs,
 }
 
 pub const DEVELOPER: &str = "Wagner Brahm";
@@ -38,6 +39,12 @@ pub fn description(system: System) -> [&'static str; 3] {
                 Expansion (TSR/Evermore, 1998-1999), the character manager and Dungeon Master's \
                 toolkit for Advanced Dungeons & Dragons 2nd Edition. It is written in Rust with \
                 WinUI 3 and shares its code with the Linux version.",
+            ),
+            System::MacOs => tr(
+                "Core Rules is a complete macOS version of AD&D Core Rules 2.0 and its \
+                Expansion (TSR/Evermore, 1998-1999), the character manager and Dungeon Master's \
+                toolkit for Advanced Dungeons & Dragons 2nd Edition. Its interface is written \
+                in SwiftUI over the Rust code it shares with the Linux and Windows versions.",
             ),
         },
         tr(
