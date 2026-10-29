@@ -387,7 +387,8 @@ msgstr "Combien en ajouter ?"
 #: crates/cr-gtk/src/main.rs:3205
 #: crates/cr-gtk/src/transfer.rs:753
 #: crates/cr-gtk/src/userdb/templates.rs:1849
-#: crates/cr-mac-ffi/src/wizard.rs:780
+#: crates/cr-mac-ffi/src/edit.rs:256
+#: crates/cr-mac-ffi/src/wizard.rs:751
 #: crates/cr-win/src/app/bundle.rs:220
 #: crates/cr-win/src/app/bundle.rs:369
 #: crates/cr-win/src/app/encounter.rs:473
@@ -477,10 +478,10 @@ msgstr "{rolls} · la Constitution l’ajuste sur la feuille"
 #: crates/cr-gtk/src/userdb/attacks.rs:62
 #: crates/cr-gtk/src/userdb/templates.rs:193
 #: crates/cr-gtk/src/userdb.rs:1851
-#: crates/cr-mac-ffi/src/form.rs:351
+#: crates/cr-mac-ffi/src/form.rs:356
+#: crates/cr-mac-ffi/src/form.rs:458
 #: crates/cr-mac-ffi/src/prompt.rs:64
-#: crates/cr-mac-ffi/src/wizard.rs:554
-#: crates/cr-mac-ffi/src/wizard.rs:809
+#: crates/cr-mac-ffi/src/wizard.rs:780
 #: crates/cr-store/src/encounter/text.rs:477
 #: crates/cr-store/src/userdb/monsters.rs:727
 #: crates/cr-store/src/userdb/parts/kit.rs:346
@@ -502,7 +503,7 @@ msgstr "{rolls} · la Constitution l’ajuste sur la feuille"
 #: crates/cr-win/src/app/record.rs:1207
 #: crates/cr-win/src/app/sheet.rs:234
 #: crates/cr-win/src/app/templates.rs:154
-#: macos/CoreRules/FormView.swift:473
+#: macos/CoreRules/FormView.swift:481
 msgid "None"
 msgstr "Aucune"
 
@@ -718,8 +719,8 @@ msgstr[1] "{count} points"
 #: crates/cr-gtk/src/create.rs:1092
 #: crates/cr-gtk/src/create.rs:1358
 #: crates/cr-gtk/src/npc.rs:314
-#: crates/cr-mac-ffi/src/wizard.rs:314
-#: crates/cr-mac-ffi/src/wizard.rs:507
+#: crates/cr-mac-ffi/src/wizard.rs:304
+#: crates/cr-mac-ffi/src/wizard.rs:497
 #: crates/cr-store/src/userdb/classes/pages.rs:85
 #: crates/cr-store/src/userdb/races.rs:414
 #: crates/cr-store/src/userdb/races.rs:428
@@ -736,7 +737,8 @@ msgstr "Caractéristiques"
 #: crates/cr-gtk/src/create.rs:1256
 #: crates/cr-gtk/src/npc.rs:276
 #: crates/cr-gtk/src/npc.rs:522
-#: crates/cr-mac-ffi/src/wizard.rs:442
+#: crates/cr-mac-ffi/src/edit.rs:494
+#: crates/cr-mac-ffi/src/wizard.rs:432
 #: crates/cr-store/src/catalog.rs:977
 #: crates/cr-store/src/catalog.rs:1074
 #: crates/cr-store/src/tables/data.rs:784
@@ -760,8 +762,8 @@ msgstr "Race"
 #: crates/cr-gtk/src/create.rs:1462
 #: crates/cr-gtk/src/create.rs:1534
 #: crates/cr-gtk/src/npc.rs:278
-#: crates/cr-mac-ffi/src/wizard.rs:496
-#: crates/cr-mac-ffi/src/wizard.rs:515
+#: crates/cr-mac-ffi/src/wizard.rs:486
+#: crates/cr-mac-ffi/src/wizard.rs:505
 #: crates/cr-store/src/catalog.rs:978
 #: crates/cr-store/src/catalog.rs:1001
 #: crates/cr-store/src/catalog.rs:1127
@@ -809,7 +811,7 @@ msgstr "Compétences"
 #: crates/cr-app/src/editor/mod.rs:172
 #: crates/cr-gtk/src/create.rs:3895
 #: crates/cr-gtk/src/main.rs:2657
-#: crates/cr-mac-ffi/src/wizard.rs:641
+#: crates/cr-mac-ffi/src/wizard.rs:611
 #: crates/cr-store/src/catalog.rs:1262
 #: crates/cr-store/src/userdb/monsters.rs:331
 #: crates/cr-store/src/userdb/monsters.rs:538
@@ -830,8 +832,8 @@ msgstr "Combat"
 #: crates/cr-gtk/src/create.rs:4249
 #: crates/cr-gtk/src/create.rs:4383
 #: crates/cr-gtk/src/skills.rs:114
-#: crates/cr-mac-ffi/src/wizard.rs:983
-#: crates/cr-mac-ffi/src/wizard.rs:1083
+#: crates/cr-mac-ffi/src/wizard.rs:954
+#: crates/cr-mac-ffi/src/wizard.rs:1056
 #: crates/cr-store/src/userdb/classes/pages.rs:554
 #: crates/cr-win/src/app/create.rs:1227
 #: crates/cr-win/src/app/forms.rs:455
@@ -853,7 +855,8 @@ msgstr "Sorts"
 #: crates/cr-gtk/src/create.rs:4042
 #: crates/cr-gtk/src/create.rs:4233
 #: crates/cr-gtk/src/skills.rs:428
-#: crates/cr-mac-ffi/src/wizard.rs:1039
+#: crates/cr-mac-ffi/src/edit.rs:586
+#: crates/cr-mac-ffi/src/wizard.rs:1010
 #: crates/cr-store/src/skills/wild.rs:39
 #: crates/cr-win/src/app/create.rs:1290
 #: crates/cr-win/src/app/edit.rs:746
@@ -866,7 +869,7 @@ msgstr "Talents sauvages"
 #: crates/cr-gtk/src/create.rs:3982
 #: crates/cr-gtk/src/create.rs:3997
 #: crates/cr-gtk/src/skills.rs:148
-#: crates/cr-mac-ffi/src/wizard.rs:1122
+#: crates/cr-mac-ffi/src/wizard.rs:1095
 #: crates/cr-win/src/app/forms.rs:536
 msgid "Psionics"
 msgstr "Psionique"
@@ -1122,7 +1125,7 @@ msgstr "Exigences du kit pour les compétences non martiales"
 #: crates/cr-gtk/src/create.rs:3104
 #: crates/cr-gtk/src/create.rs:3191
 #: crates/cr-gtk/src/create.rs:3216
-#: crates/cr-mac-ffi/src/wizard.rs:920
+#: crates/cr-mac-ffi/src/wizard.rs:891
 #: crates/cr-win/src/app/create.rs:1064
 msgid "Kit Weapon Proficiency Requirements"
 msgstr "Exigences du kit pour les compétences martiales"
@@ -1261,6 +1264,7 @@ msgstr "Conditions du kit"
 #: crates/cr-app/src/create/spells.rs:53
 #: crates/cr-gtk/src/create.rs:4550
 #: crates/cr-gtk/src/kit_magic.rs:176
+#: crates/cr-mac-ffi/src/edit.rs:603
 #: crates/cr-win/src/app/edit.rs:776
 msgid "Kit Class Ability Requirements"
 msgstr "Conditions du kit pour les capacités de classe"
@@ -1613,6 +1617,7 @@ msgstr "Vous devez placer une partie de votre argent dans l'Argent de poche avan
 #: crates/cr-app/src/editor/mod.rs:171
 #: crates/cr-gtk/src/main.rs:2222
 #: crates/cr-gtk/src/main.rs:2651
+#: crates/cr-mac-ffi/src/edit.rs:451
 #: crates/cr-store/src/catalog.rs:950
 #: crates/cr-store/src/catalog.rs:1079
 #: crates/cr-store/src/catalog.rs:1133
@@ -1649,7 +1654,7 @@ msgstr[1] "Le personnage a {n} emplacements de trop en compétences non martiale
 #: crates/cr-app/src/editor/proficiencies.rs:71
 #: crates/cr-gtk/src/create.rs:2426
 #: crates/cr-gtk/src/main.rs:3615
-#: crates/cr-mac-ffi/src/wizard.rs:910
+#: crates/cr-mac-ffi/src/wizard.rs:881
 #: crates/cr-win/src/app/create.rs:1107
 msgid "Native Languages"
 msgstr "Langues natales"
@@ -2288,6 +2293,7 @@ msgstr "Un nom de groupe doit être fourni."
 #: crates/cr-gtk/src/main.rs:2865
 #: crates/cr-gtk/src/main.rs:2908
 #: crates/cr-gtk/src/npc.rs:541
+#: crates/cr-mac-ffi/src/edit.rs:378
 #: crates/cr-store/src/catalog.rs:137
 #: crates/cr-win/src/app/edit.rs:439
 #: crates/cr-win/src/app/npc.rs:382
@@ -2467,14 +2473,14 @@ msgid "Icon {number}"
 msgstr "Icône {number}"
 
 #: crates/cr-app/src/pictures.rs:74
-#: crates/cr-mac-ffi/src/wizard.rs:555
+#: crates/cr-mac-ffi/src/form.rs:459
 #: crates/cr-win/src/app/portrait.rs:90
 msgid "{file} (not in this installation)"
 msgstr "{file} (absent de cette installation)"
 
 #: crates/cr-app/src/pictures.rs:81
 #: crates/cr-gtk/src/create.rs:3729
-#: crates/cr-mac-ffi/src/wizard.rs:950
+#: crates/cr-mac-ffi/src/wizard.rs:921
 #: crates/cr-store/src/catalog.rs:183
 #: crates/cr-store/src/catalog.rs:996
 #: crates/cr-store/src/treasure.rs:436
@@ -2592,7 +2598,8 @@ msgstr "_Ignorer"
 #: crates/cr-gtk/src/picture.rs:648
 #: crates/cr-gtk/src/transfer.rs:125
 #: crates/cr-gtk/src/userdb.rs:2526
-#: crates/cr-mac-ffi/src/wizard.rs:743
+#: crates/cr-mac-ffi/src/edit.rs:239
+#: crates/cr-mac-ffi/src/wizard.rs:713
 #: crates/cr-win/src/app/book.rs:361
 #: crates/cr-win/src/app/book.rs:563
 #: crates/cr-win/src/app/import.rs:282
@@ -2705,8 +2712,8 @@ msgstr "Comme sort de magicien"
 #: crates/cr-gtk/src/userdb.rs:1724
 #: crates/cr-gtk/src/userdb.rs:2568
 #: crates/cr-win/src/app/record.rs:304
-#: macos/CoreRules/Model.swift:352
-#: macos/CoreRules/Model.swift:362
+#: macos/CoreRules/Model.swift:354
+#: macos/CoreRules/Model.swift:364
 #: macos/CoreRules/Sheet.swift:69
 msgid "Not Saved"
 msgstr "Non enregistré"
@@ -3192,8 +3199,8 @@ msgstr "{points} points"
 #: crates/cr-gtk/src/combat.rs:462
 #: crates/cr-gtk/src/create.rs:2724
 #: crates/cr-gtk/src/create.rs:3578
-#: crates/cr-mac-ffi/src/form.rs:645
-#: crates/cr-mac-ffi/src/form.rs:647
+#: crates/cr-mac-ffi/src/form.rs:708
+#: crates/cr-mac-ffi/src/form.rs:710
 #: crates/cr-win/src/app/forms.rs:354
 #: crates/cr-win/src/app/forms.rs:356
 msgid "Character Points Left"
@@ -3201,7 +3208,8 @@ msgstr "Points de personnage restants"
 
 #: crates/cr-gtk/src/abilities.rs:195
 #: crates/cr-gtk/src/create.rs:1149
-#: crates/cr-mac-ffi/src/wizard.rs:454
+#: crates/cr-mac-ffi/src/edit.rs:496
+#: crates/cr-mac-ffi/src/wizard.rs:444
 #: crates/cr-win/src/app/create.rs:514
 #: crates/cr-win/src/app/create.rs:517
 #: crates/cr-win/src/app/edit.rs:604
@@ -3210,6 +3218,7 @@ msgid "Subrace"
 msgstr "Sous-race"
 
 #: crates/cr-gtk/src/abilities.rs:201
+#: crates/cr-mac-ffi/src/edit.rs:502
 #: crates/cr-win/src/app/edit.rs:614
 msgid "Racial Package"
 msgstr "Ensemble racial"
@@ -3418,7 +3427,8 @@ msgstr "Combien ?"
 #: crates/cr-gtk/src/userdb.rs:1670
 #: crates/cr-gtk/src/userdb.rs:2107
 #: crates/cr-gtk/src/userdb.rs:2373
-#: crates/cr-mac-ffi/src/wizard.rs:779
+#: crates/cr-mac-ffi/src/edit.rs:250
+#: crates/cr-mac-ffi/src/wizard.rs:750
 #: crates/cr-win/src/app/bundle.rs:228
 #: crates/cr-win/src/app/bundle.rs:247
 #: crates/cr-win/src/app/bundle.rs:276
@@ -3446,9 +3456,9 @@ msgstr "Combien ?"
 #: crates/cr-win/src/app.rs:2372
 #: crates/cr-win/src/app.rs:4727
 #: macos/CoreRules/ContentView.swift:165
-#: macos/CoreRules/Edit.swift:94
-#: macos/CoreRules/Edit.swift:134
-#: macos/CoreRules/FormView.swift:476
+#: macos/CoreRules/Edit.swift:99
+#: macos/CoreRules/Edit.swift:145
+#: macos/CoreRules/FormView.swift:484
 #: macos/CoreRules/Import.swift:76
 #: macos/CoreRules/Sheet.swift:274
 #: macos/CoreRules/Sheet.swift:284
@@ -3523,6 +3533,7 @@ msgstr "Sélectionnez les sorts que contiendra le parchemin."
 #: crates/cr-gtk/src/userdb/templates.rs:1526
 #: crates/cr-gtk/src/userdb/widgets.rs:623
 #: crates/cr-gtk/src/userdb.rs:1958
+#: crates/cr-mac-ffi/src/edit.rs:384
 #: crates/cr-win/src/app/allowed.rs:40
 #: crates/cr-win/src/app/bundle.rs:120
 #: crates/cr-win/src/app/bundle.rs:306
@@ -3538,8 +3549,8 @@ msgstr "Sélectionnez les sorts que contiendra le parchemin."
 #: crates/cr-win/src/app/sheet.rs:562
 #: crates/cr-win/src/app/templates.rs:685
 #: crates/cr-win/src/app/treasure_tables.rs:302
-#: macos/CoreRules/FormView.swift:377
-#: macos/CoreRules/FormView.swift:381
+#: macos/CoreRules/FormView.swift:378
+#: macos/CoreRules/FormView.swift:382
 #: macos/CoreRules/Sheet.swift:346
 #: macos/CoreRules/Sheet.swift:348
 msgid "Remove"
@@ -3571,7 +3582,8 @@ msgstr "Armes du kit"
 
 #: crates/cr-gtk/src/combat.rs:647
 #: crates/cr-gtk/src/create.rs:3789
-#: crates/cr-mac-ffi/src/wizard.rs:975
+#: crates/cr-mac-ffi/src/edit.rs:560
+#: crates/cr-mac-ffi/src/wizard.rs:946
 #: crates/cr-win/src/app/create.rs:1160
 #: crates/cr-win/src/app/edit.rs:672
 msgid "Shield Proficiencies"
@@ -3593,7 +3605,8 @@ msgid "Could not save the preferences: {error}"
 msgstr "Impossible d’enregistrer les préférences : {error}"
 
 #: crates/cr-gtk/src/create.rs:446
-#: crates/cr-mac-ffi/src/wizard.rs:598
+#: crates/cr-mac-ffi/src/edit.rs:328
+#: crates/cr-mac-ffi/src/wizard.rs:568
 #: crates/cr-win/src/app/create.rs:743
 #: crates/cr-win/src/app/create.rs:747
 #: crates/cr-win/src/app/edit.rs:299
@@ -3602,7 +3615,8 @@ msgid "Background Event"
 msgstr "Événement du passé"
 
 #: crates/cr-gtk/src/create.rs:447
-#: crates/cr-mac-ffi/src/wizard.rs:596
+#: crates/cr-mac-ffi/src/edit.rs:326
+#: crates/cr-mac-ffi/src/wizard.rs:566
 #: crates/cr-win/src/app/create.rs:753
 #: crates/cr-win/src/app/edit.rs:310
 msgid "Select Randomly"
@@ -3610,7 +3624,7 @@ msgstr "Choisir au hasard"
 
 #: crates/cr-gtk/src/create.rs:632
 #: crates/cr-gtk/src/npc.rs:94
-#: crates/cr-mac-ffi/src/wizard.rs:268
+#: crates/cr-mac-ffi/src/wizard.rs:258
 #: crates/cr-store/src/catalog.rs:983
 #: crates/cr-win/src/app/create.rs:239
 #: crates/cr-win/src/app/npc.rs:72
@@ -3619,7 +3633,7 @@ msgid "Rules"
 msgstr "Règles"
 
 #: crates/cr-gtk/src/create.rs:633
-#: crates/cr-mac-ffi/src/wizard.rs:269
+#: crates/cr-mac-ffi/src/wizard.rs:259
 #: crates/cr-win/src/app/create.rs:240
 msgid "The original's Core Rules and Player's Option buttons"
 msgstr "Les boutons Core Rules et Player's Option de l’original"
@@ -3627,7 +3641,7 @@ msgstr "Les boutons Core Rules et Player's Option de l’original"
 #: crates/cr-gtk/src/create.rs:640
 #: crates/cr-gtk/src/main.rs:947
 #: crates/cr-gtk/src/npc.rs:96
-#: crates/cr-mac-ffi/src/wizard.rs:273
+#: crates/cr-mac-ffi/src/wizard.rs:263
 #: crates/cr-store/src/catalog.rs:987
 #: crates/cr-store/src/userdb/parts/pages.rs:416
 #: crates/cr-store/src/userdb/parts/pages.rs:417
@@ -3641,31 +3655,31 @@ msgid "Core Rules"
 msgstr "Core Rules"
 
 #: crates/cr-gtk/src/create.rs:641
-#: crates/cr-mac-ffi/src/wizard.rs:265
+#: crates/cr-mac-ffi/src/wizard.rs:255
 #: crates/cr-win/src/app/create.rs:234
 msgid "Player's Handbook: proficiency slots"
 msgstr "Player's Handbook : emplacements de compétence"
 
 #: crates/cr-gtk/src/create.rs:644
-#: crates/cr-mac-ffi/src/wizard.rs:274
+#: crates/cr-mac-ffi/src/wizard.rs:264
 #: crates/cr-win/src/app/create.rs:244
 msgid "Player's Option"
 msgstr "Player's Option"
 
 #: crates/cr-gtk/src/create.rs:645
-#: crates/cr-mac-ffi/src/wizard.rs:260
+#: crates/cr-mac-ffi/src/wizard.rs:250
 #: crates/cr-win/src/app/create.rs:229
 msgid "Skills & Powers: subabilities, and character points for racial and class abilities, proficiencies and traits"
 msgstr "Skills & Powers : sous-caractéristiques, et points de personnage pour les capacités raciales et de classe, les compétences et les traits"
 
 #: crates/cr-gtk/src/create.rs:662
-#: crates/cr-mac-ffi/src/wizard.rs:285
+#: crates/cr-mac-ffi/src/wizard.rs:275
 #: crates/cr-win/src/app/create.rs:261
 msgid "Campaign Setting"
 msgstr "Univers de campagne"
 
 #: crates/cr-gtk/src/create.rs:663
-#: crates/cr-mac-ffi/src/wizard.rs:286
+#: crates/cr-mac-ffi/src/wizard.rs:276
 #: crates/cr-win/src/app/create.rs:262
 msgid "The setting limits the races and classes offered on the next pages. The original program has no settings; these follow each setting's campaign book."
 msgstr "L’univers limite les races et les classes proposées dans les pages suivantes. Le programme original n’a pas d’univers ; ceux-ci suivent le livre de campagne de chaque univers."
@@ -3691,16 +3705,16 @@ msgid "_Next"
 msgstr "_Suivant"
 
 #: crates/cr-gtk/src/create.rs:711
-#: crates/cr-mac-ffi/src/wizard.rs:302
-#: crates/cr-mac-ffi/src/wizard.rs:304
+#: crates/cr-mac-ffi/src/wizard.rs:292
+#: crates/cr-mac-ffi/src/wizard.rs:294
 #: crates/cr-win/src/app/create.rs:292
 msgid "Method"
 msgstr "Méthode"
 
 #: crates/cr-gtk/src/create.rs:717
 #: crates/cr-gtk/src/create.rs:1356
-#: crates/cr-mac-ffi/src/wizard.rs:318
-#: crates/cr-mac-ffi/src/wizard.rs:508
+#: crates/cr-mac-ffi/src/wizard.rs:308
+#: crates/cr-mac-ffi/src/wizard.rs:498
 #: crates/cr-win/src/app/create.rs:309
 #: crates/cr-win/src/app/create.rs:618
 msgid "Roll Again"
@@ -3716,13 +3730,13 @@ msgstr[0] "{n} dé"
 msgstr[1] "{n} dés"
 
 #: crates/cr-gtk/src/create.rs:754
-#: crates/cr-mac-ffi/src/wizard.rs:393
+#: crates/cr-mac-ffi/src/wizard.rs:383
 #: crates/cr-win/src/app/create.rs:390
 msgid "Die {number}"
 msgstr "Dé {number}"
 
 #: crates/cr-gtk/src/create.rs:761
-#: crates/cr-mac-ffi/src/wizard.rs:387
+#: crates/cr-mac-ffi/src/wizard.rs:377
 #: crates/cr-store/src/userdb/races.rs:276
 #: crates/cr-store/src/userdb/races.rs:280
 #: crates/cr-store/src/userdb/races.rs:283
@@ -3733,7 +3747,7 @@ msgid "Dice"
 msgstr "Dés"
 
 #: crates/cr-gtk/src/create.rs:762
-#: crates/cr-mac-ffi/src/wizard.rs:388
+#: crates/cr-mac-ffi/src/wizard.rs:378
 #: crates/cr-win/src/app/create.rs:414
 msgid "Each die is added to the ability chosen for it"
 msgstr "Chaque dé est ajouté à la caractéristique choisie pour lui"
@@ -3743,10 +3757,11 @@ msgstr "Chaque dé est ajouté à la caractéristique choisie pour lui"
 #: crates/cr-gtk/src/create.rs:1848
 #: crates/cr-gtk/src/main.rs:2256
 #: crates/cr-gtk/src/npc.rs:326
-#: crates/cr-mac-ffi/src/wizard.rs:374
-#: crates/cr-mac-ffi/src/wizard.rs:421
-#: crates/cr-mac-ffi/src/wizard.rs:654
-#: crates/cr-mac-ffi/src/wizard.rs:661
+#: crates/cr-mac-ffi/src/edit.rs:481
+#: crates/cr-mac-ffi/src/wizard.rs:364
+#: crates/cr-mac-ffi/src/wizard.rs:411
+#: crates/cr-mac-ffi/src/wizard.rs:624
+#: crates/cr-mac-ffi/src/wizard.rs:631
 #: crates/cr-win/src/app/create.rs:371
 #: crates/cr-win/src/app/create.rs:374
 #: crates/cr-win/src/app/create.rs:477
@@ -3763,14 +3778,14 @@ msgid "Exceptional Strength"
 msgstr "Force exceptionnelle"
 
 #: crates/cr-gtk/src/create.rs:770
-#: crates/cr-mac-ffi/src/wizard.rs:375
+#: crates/cr-mac-ffi/src/wizard.rs:365
 #: crates/cr-win/src/app/create.rs:372
 msgid "For warriors with Strength 18, 10% a point"
 msgstr "Pour les combattants ayant 18 en Force, 10 % par point"
 
 #: crates/cr-gtk/src/create.rs:779
 #: crates/cr-gtk/src/sheet_options.rs:114
-#: crates/cr-mac-ffi/src/wizard.rs:349
+#: crates/cr-mac-ffi/src/wizard.rs:339
 #: crates/cr-win/src/app/create.rs:347
 #: crates/cr-win/src/app/sheet.rs:555
 #: macos/CoreRules/Sheet.swift:336
@@ -3780,7 +3795,7 @@ msgstr "Monter"
 
 #: crates/cr-gtk/src/create.rs:786
 #: crates/cr-gtk/src/sheet_options.rs:115
-#: crates/cr-mac-ffi/src/wizard.rs:355
+#: crates/cr-mac-ffi/src/wizard.rs:345
 #: crates/cr-win/src/app/create.rs:348
 #: crates/cr-win/src/app/sheet.rs:557
 #: macos/CoreRules/Sheet.swift:341
@@ -3789,68 +3804,68 @@ msgid "Move Down"
 msgstr "Descendre"
 
 #: crates/cr-gtk/src/create.rs:847
-#: crates/cr-mac-ffi/src/wizard.rs:394
+#: crates/cr-mac-ffi/src/wizard.rs:384
 #: crates/cr-win/src/app/create.rs:395
 msgid "Rolled {roll}"
 msgstr "Résultat : {roll}"
 
 #: crates/cr-gtk/src/create.rs:1048
-#: crates/cr-mac-ffi/src/wizard.rs:407
+#: crates/cr-mac-ffi/src/wizard.rs:397
 #: crates/cr-win/src/app/create.rs:494
 msgid "Set your ability scores"
 msgstr "Définissez vos valeurs de caractéristique"
 
 #: crates/cr-gtk/src/create.rs:1049
-#: crates/cr-mac-ffi/src/wizard.rs:408
+#: crates/cr-mac-ffi/src/wizard.rs:398
 #: crates/cr-win/src/app/create.rs:495
 msgid "The scores are kept as entered, with no racial adjustments"
 msgstr "Les valeurs restent telles que saisies, sans ajustements raciaux"
 
 #: crates/cr-gtk/src/create.rs:1060
-#: crates/cr-mac-ffi/src/wizard.rs:422
+#: crates/cr-mac-ffi/src/wizard.rs:412
 #: crates/cr-win/src/app/create.rs:478
 msgid "1 to 99 for 18/01 to 18/99, 100 for 18/00, 0 for none"
 msgstr "1 à 99 pour 18/01 à 18/99, 100 pour 18/00, 0 pour aucune"
 
 #: crates/cr-gtk/src/create.rs:1125
-#: crates/cr-mac-ffi/src/wizard.rs:436
+#: crates/cr-mac-ffi/src/wizard.rs:426
 #: crates/cr-win/src/app/create.rs:531
 #: crates/cr-win/src/app/create.rs:534
 msgid "Standard Races Only"
 msgstr "Races standard uniquement"
 
 #: crates/cr-gtk/src/create.rs:1126
-#: crates/cr-mac-ffi/src/wizard.rs:437
+#: crates/cr-mac-ffi/src/wizard.rs:427
 #: crates/cr-win/src/app/create.rs:532
 msgid "Leave out the monster races, as the original's switch does"
 msgstr "Exclure les races monstrueuses, comme le fait l’option de l’original"
 
 #: crates/cr-gtk/src/create.rs:1155
-#: crates/cr-mac-ffi/src/wizard.rs:445
+#: crates/cr-mac-ffi/src/wizard.rs:435
 #: crates/cr-win/src/app/create.rs:506
 msgid "No race allows these scores"
 msgstr "Aucune race n’accepte ces valeurs"
 
 #: crates/cr-gtk/src/create.rs:1156
-#: crates/cr-mac-ffi/src/wizard.rs:446
+#: crates/cr-mac-ffi/src/wizard.rs:436
 #: crates/cr-win/src/app/create.rs:507
 msgid "Go back and roll again"
 msgstr "Revenez en arrière et relancez"
 
 #: crates/cr-gtk/src/create.rs:1409
-#: crates/cr-mac-ffi/src/wizard.rs:499
+#: crates/cr-mac-ffi/src/wizard.rs:489
 #: crates/cr-win/src/app/create.rs:599
 msgid "No class allows these scores"
 msgstr "Aucune classe n’accepte ces valeurs"
 
 #: crates/cr-gtk/src/create.rs:1410
-#: crates/cr-mac-ffi/src/wizard.rs:500
+#: crates/cr-mac-ffi/src/wizard.rs:490
 #: crates/cr-win/src/app/create.rs:600
 msgid "Go back and choose another race or roll again"
 msgstr "Revenez en arrière et choisissez une autre race ou relancez"
 
 #: crates/cr-gtk/src/create.rs:1456
-#: crates/cr-mac-ffi/src/wizard.rs:516
+#: crates/cr-mac-ffi/src/wizard.rs:506
 #: crates/cr-win/src/app/create.rs:646
 msgid "All Classes…"
 msgstr "Toutes les classes…"
@@ -3861,7 +3876,7 @@ msgid "Any combination, one class of each group"
 msgstr "N’importe quelle combinaison, une classe par groupe"
 
 #: crates/cr-gtk/src/create.rs:1547
-#: crates/cr-mac-ffi/src/wizard.rs:482
+#: crates/cr-mac-ffi/src/wizard.rs:472
 #: crates/cr-store/src/catalog.rs:1079
 #: crates/cr-store/src/treasure.rs:441
 #: crates/cr-store/src/userdb/parts.rs:102
@@ -3876,7 +3891,8 @@ msgstr "Capacités raciales"
 #: crates/cr-gtk/src/treasure.rs:456
 #: crates/cr-gtk/src/userdb/attacks.rs:257
 #: crates/cr-gtk/src/userdb.rs:1528
-#: crates/cr-mac-ffi/src/wizard.rs:541
+#: crates/cr-mac-ffi/src/edit.rs:278
+#: crates/cr-mac-ffi/src/wizard.rs:531
 #: crates/cr-store/src/userdb/classes/pages.rs:135
 #: crates/cr-store/src/userdb/monsters.rs:339
 #: crates/cr-store/src/userdb/parts/pages.rs:344
@@ -3900,69 +3916,69 @@ msgstr "Capacités raciales"
 #: crates/cr-win/src/app/treasure.rs:239
 #: crates/cr-win/src/app/treasure_tables.rs:172
 #: crates/cr-win/src/app/treasure_tables.rs:175
-#: macos/CoreRules/Edit.swift:146
 msgid "Name"
 msgstr "Nom"
 
 #: crates/cr-gtk/src/create.rs:1754
-#: crates/cr-mac-ffi/src/wizard.rs:536
+#: crates/cr-mac-ffi/src/wizard.rs:526
 #: crates/cr-win/src/app/create.rs:701
 msgid "Random Name"
 msgstr "Nom aléatoire"
 
 #: crates/cr-gtk/src/create.rs:1759
 #: crates/cr-gtk/src/main.rs:2209
-#: crates/cr-mac-ffi/src/wizard.rs:542
+#: crates/cr-mac-ffi/src/edit.rs:280
+#: crates/cr-mac-ffi/src/wizard.rs:532
 #: crates/cr-store/src/catalog.rs:563
 #: crates/cr-store/src/catalog.rs:976
 #: crates/cr-win/src/app/create.rs:706
 #: crates/cr-win/src/app/create.rs:902
 #: crates/cr-win/src/app/edit.rs:268
 #: crates/cr-win/src/app/edit.rs:270
-#: macos/CoreRules/Edit.swift:147
 msgid "Player"
 msgstr "Joueur"
 
 #: crates/cr-gtk/src/create.rs:1762
 #: crates/cr-gtk/src/main.rs:2299
-#: crates/cr-mac-ffi/src/wizard.rs:545
+#: crates/cr-mac-ffi/src/edit.rs:35
+#: crates/cr-mac-ffi/src/wizard.rs:535
 #: crates/cr-store/src/userdb/parts/kit.rs:488
 #: crates/cr-store/src/userdb/races.rs:274
 #: crates/cr-store/src/userdb/races.rs:278
 #: crates/cr-win/src/app/create.rs:707
 #: crates/cr-win/src/app/edit.rs:35
-#: macos/CoreRules/Edit.swift:149
 msgid "Male"
 msgstr "Masculin"
 
 #: crates/cr-gtk/src/create.rs:1762
 #: crates/cr-gtk/src/main.rs:2299
-#: crates/cr-mac-ffi/src/wizard.rs:545
+#: crates/cr-mac-ffi/src/edit.rs:35
+#: crates/cr-mac-ffi/src/wizard.rs:535
 #: crates/cr-store/src/userdb/parts/kit.rs:489
 #: crates/cr-store/src/userdb/races.rs:275
 #: crates/cr-store/src/userdb/races.rs:279
 #: crates/cr-win/src/app/create.rs:707
 #: crates/cr-win/src/app/edit.rs:35
-#: macos/CoreRules/Edit.swift:150
 msgid "Female"
 msgstr "Féminin"
 
 #: crates/cr-gtk/src/create.rs:1763
 #: crates/cr-gtk/src/main.rs:2300
-#: crates/cr-mac-ffi/src/wizard.rs:544
+#: crates/cr-mac-ffi/src/edit.rs:300
+#: crates/cr-mac-ffi/src/wizard.rs:534
 #: crates/cr-store/src/userdb/classes/pages.rs:680
 #: crates/cr-win/src/app/create.rs:709
 #: crates/cr-win/src/app/create.rs:903
 #: crates/cr-win/src/app/edit.rs:284
 #: crates/cr-win/src/app/edit.rs:287
-#: macos/CoreRules/Edit.swift:148
 msgid "Gender"
 msgstr "Sexe"
 
 #: crates/cr-gtk/src/create.rs:1779
 #: crates/cr-gtk/src/main.rs:2302
 #: crates/cr-gtk/src/npc.rs:558
-#: crates/cr-mac-ffi/src/wizard.rs:575
+#: crates/cr-mac-ffi/src/edit.rs:309
+#: crates/cr-mac-ffi/src/wizard.rs:545
 #: crates/cr-store/src/catalog.rs:980
 #: crates/cr-store/src/catalog.rs:1261
 #: crates/cr-store/src/userdb/classes/pages.rs:86
@@ -3974,14 +3990,14 @@ msgstr "Sexe"
 #: crates/cr-win/src/app/edit.rs:324
 #: crates/cr-win/src/app/npc.rs:411
 #: crates/cr-win/src/app/npc.rs:414
-#: macos/CoreRules/Edit.swift:152
 msgid "Alignment"
 msgstr "Alignement"
 
 #: crates/cr-gtk/src/create.rs:1780
 #: crates/cr-gtk/src/main.rs:2307
 #: crates/cr-gtk/src/npc.rs:553
-#: crates/cr-mac-ffi/src/wizard.rs:582
+#: crates/cr-mac-ffi/src/edit.rs:317
+#: crates/cr-mac-ffi/src/wizard.rs:552
 #: crates/cr-store/src/catalog.rs:979
 #: crates/cr-store/src/userdb/parts/kit.rs:369
 #: crates/cr-win/src/app/create.rs:723
@@ -3995,7 +4011,8 @@ msgstr "Kit"
 
 #: crates/cr-gtk/src/create.rs:1784
 #: crates/cr-gtk/src/main.rs:2211
-#: crates/cr-mac-ffi/src/wizard.rs:589
+#: crates/cr-mac-ffi/src/edit.rs:287
+#: crates/cr-mac-ffi/src/wizard.rs:559
 #: crates/cr-store/src/catalog.rs:981
 #: crates/cr-win/src/app/create.rs:731
 #: crates/cr-win/src/app/create.rs:913
@@ -4005,37 +4022,39 @@ msgid "Social Class"
 msgstr "Classe sociale"
 
 #: crates/cr-gtk/src/create.rs:1785
-#: crates/cr-mac-ffi/src/wizard.rs:572
+#: crates/cr-mac-ffi/src/wizard.rs:542
 #: crates/cr-win/src/app/create.rs:737
 msgid "Roll Social Class"
 msgstr "Tirer la classe sociale"
 
 #: crates/cr-gtk/src/create.rs:1796
 #: crates/cr-gtk/src/main.rs:2336
-#: crates/cr-mac-ffi/src/wizard.rs:686
-#: crates/cr-mac-ffi/src/wizard.rs:687
+#: crates/cr-mac-ffi/src/edit.rs:365
+#: crates/cr-mac-ffi/src/edit.rs:366
+#: crates/cr-mac-ffi/src/wizard.rs:656
+#: crates/cr-mac-ffi/src/wizard.rs:657
 #: crates/cr-win/src/app/create.rs:761
 #: crates/cr-win/src/app/create.rs:763
 #: crates/cr-win/src/app/edit.rs:378
 #: crates/cr-win/src/app/edit.rs:380
-#: macos/CoreRules/Edit.swift:161
 msgid "History"
 msgstr "Histoire"
 
 #: crates/cr-gtk/src/create.rs:1802
 #: crates/cr-gtk/src/main.rs:2214
-#: crates/cr-mac-ffi/src/wizard.rs:614
+#: crates/cr-mac-ffi/src/edit.rs:341
+#: crates/cr-mac-ffi/src/wizard.rs:584
 #: crates/cr-store/src/catalog.rs:992
 #: crates/cr-win/src/app/create.rs:788
 #: crates/cr-win/src/app/edit.rs:347
 #: crates/cr-win/src/app/edit.rs:349
-#: macos/CoreRules/Edit.swift:157
 msgid "Age"
 msgstr "Âge"
 
 #: crates/cr-gtk/src/create.rs:1802
 #: crates/cr-gtk/src/main.rs:2214
-#: crates/cr-mac-ffi/src/wizard.rs:614
+#: crates/cr-mac-ffi/src/edit.rs:341
+#: crates/cr-mac-ffi/src/wizard.rs:584
 #: crates/cr-win/src/app/create.rs:789
 #: crates/cr-win/src/app/edit.rs:348
 msgid "Years"
@@ -4043,18 +4062,19 @@ msgstr "Années"
 
 #: crates/cr-gtk/src/create.rs:1803
 #: crates/cr-gtk/src/main.rs:2215
-#: crates/cr-mac-ffi/src/wizard.rs:621
+#: crates/cr-mac-ffi/src/edit.rs:348
+#: crates/cr-mac-ffi/src/wizard.rs:591
 #: crates/cr-store/src/catalog.rs:993
 #: crates/cr-win/src/app/create.rs:797
 #: crates/cr-win/src/app/edit.rs:352
 #: crates/cr-win/src/app/edit.rs:355
-#: macos/CoreRules/Edit.swift:158
 msgid "Height"
 msgstr "Taille"
 
 #: crates/cr-gtk/src/create.rs:1803
 #: crates/cr-gtk/src/main.rs:2215
-#: crates/cr-mac-ffi/src/wizard.rs:621
+#: crates/cr-mac-ffi/src/edit.rs:348
+#: crates/cr-mac-ffi/src/wizard.rs:591
 #: crates/cr-win/src/app/create.rs:798
 #: crates/cr-win/src/app/edit.rs:353
 msgid "Inches"
@@ -4063,38 +4083,39 @@ msgstr "Pouces"
 #: crates/cr-gtk/src/create.rs:1804
 #: crates/cr-gtk/src/main.rs:2216
 #: crates/cr-gtk/src/userdb.rs:1586
-#: crates/cr-mac-ffi/src/wizard.rs:628
+#: crates/cr-mac-ffi/src/edit.rs:355
+#: crates/cr-mac-ffi/src/wizard.rs:598
 #: crates/cr-store/src/catalog.rs:994
 #: crates/cr-win/src/app/create.rs:806
 #: crates/cr-win/src/app/edit.rs:363
 #: crates/cr-win/src/app/edit.rs:366
 #: crates/cr-win/src/app/treasure_tables.rs:124
-#: macos/CoreRules/Edit.swift:159
 msgid "Weight"
 msgstr "Poids"
 
 #: crates/cr-gtk/src/create.rs:1804
 #: crates/cr-gtk/src/main.rs:2216
-#: crates/cr-mac-ffi/src/wizard.rs:628
+#: crates/cr-mac-ffi/src/edit.rs:355
+#: crates/cr-mac-ffi/src/wizard.rs:598
 #: crates/cr-win/src/app/create.rs:807
 #: crates/cr-win/src/app/edit.rs:364
 msgid "Pounds"
 msgstr "Livres"
 
 #: crates/cr-gtk/src/create.rs:1806
-#: crates/cr-mac-ffi/src/wizard.rs:608
+#: crates/cr-mac-ffi/src/wizard.rs:578
 #: crates/cr-win/src/app/create.rs:793
 msgid "Roll Age"
 msgstr "Tirer l’âge"
 
 #: crates/cr-gtk/src/create.rs:1807
-#: crates/cr-mac-ffi/src/wizard.rs:609
+#: crates/cr-mac-ffi/src/wizard.rs:579
 #: crates/cr-win/src/app/create.rs:802
 msgid "Roll Height"
 msgstr "Tirer la taille"
 
 #: crates/cr-gtk/src/create.rs:1808
-#: crates/cr-mac-ffi/src/wizard.rs:610
+#: crates/cr-mac-ffi/src/wizard.rs:580
 #: crates/cr-win/src/app/create.rs:811
 msgid "Roll Weight"
 msgstr "Tirer le poids"
@@ -4102,7 +4123,8 @@ msgstr "Tirer le poids"
 #: crates/cr-gtk/src/create.rs:1814
 #: crates/cr-gtk/src/main.rs:2340
 #: crates/cr-gtk/src/main.rs:3281
-#: crates/cr-mac-ffi/src/wizard.rs:606
+#: crates/cr-mac-ffi/src/edit.rs:339
+#: crates/cr-mac-ffi/src/wizard.rs:576
 #: crates/cr-store/src/catalog.rs:991
 #: crates/cr-store/src/create.rs:375
 #: crates/cr-store/src/userdb/monsters.rs:534
@@ -4114,43 +4136,43 @@ msgid "Appearance"
 msgstr "Apparence"
 
 #: crates/cr-gtk/src/create.rs:1822
-#: crates/cr-mac-ffi/src/wizard.rs:645
+#: crates/cr-mac-ffi/src/wizard.rs:615
 #: crates/cr-win/src/app/create.rs:816
 msgid "Hit Die Roll"
 msgstr "Jet de dé de vie"
 
 #: crates/cr-gtk/src/create.rs:1825
-#: crates/cr-mac-ffi/src/wizard.rs:643
+#: crates/cr-mac-ffi/src/wizard.rs:613
 #: crates/cr-win/src/app/create.rs:818
 msgid "Roll Hit Points"
 msgstr "Tirer les points de vie"
 
 #: crates/cr-gtk/src/create.rs:1849
-#: crates/cr-mac-ffi/src/wizard.rs:661
+#: crates/cr-mac-ffi/src/wizard.rs:631
 #: crates/cr-win/src/app/create.rs:842
 msgid "18/01 to 18/00"
 msgstr "18/01 à 18/00"
 
 #: crates/cr-gtk/src/create.rs:1854
-#: crates/cr-mac-ffi/src/wizard.rs:659
+#: crates/cr-mac-ffi/src/wizard.rs:629
 #: crates/cr-win/src/app/create.rs:852
 msgid "Roll Exceptional Strength"
 msgstr "Tirer la Force exceptionnelle"
 
 #: crates/cr-gtk/src/create.rs:1861
-#: crates/cr-mac-ffi/src/wizard.rs:655
+#: crates/cr-mac-ffi/src/wizard.rs:625
 #: crates/cr-win/src/app/create.rs:832
 msgid "Bought with the ability points"
 msgstr "Achetée avec les points de caractéristique"
 
 #: crates/cr-gtk/src/create.rs:1872
-#: crates/cr-mac-ffi/src/wizard.rs:671
+#: crates/cr-mac-ffi/src/wizard.rs:641
 #: crates/cr-win/src/app/create.rs:887
 msgid "Subabilities"
 msgstr "Sous-caractéristiques"
 
 #: crates/cr-gtk/src/create.rs:1873
-#: crates/cr-mac-ffi/src/wizard.rs:672
+#: crates/cr-mac-ffi/src/wizard.rs:642
 #: crates/cr-win/src/app/create.rs:888
 msgid "Raising one subability lowers the other as much"
 msgstr "Augmenter une sous-caractéristique diminue l’autre d’autant"
@@ -4162,8 +4184,9 @@ msgstr "Augmenter une sous-caractéristique diminue l’autre d’autant"
 #: crates/cr-gtk/src/enter.rs:413
 #: crates/cr-gtk/src/npc.rs:294
 #: crates/cr-gtk/src/npc.rs:569
-#: crates/cr-mac-ffi/src/wizard.rs:700
-#: crates/cr-mac-ffi/src/wizard.rs:745
+#: crates/cr-mac-ffi/src/edit.rs:241
+#: crates/cr-mac-ffi/src/wizard.rs:670
+#: crates/cr-mac-ffi/src/wizard.rs:715
 #: crates/cr-store/src/userdb/classes/pages.rs:95
 #: crates/cr-store/src/userdb/classes/pages.rs:979
 #: crates/cr-win/src/app/levels.rs:50
@@ -4180,8 +4203,9 @@ msgstr "Les autres langues s’apprennent par des compétences telles que Langue
 
 #: crates/cr-gtk/src/create.rs:2662
 #: crates/cr-gtk/src/create.rs:2693
-#: crates/cr-mac-ffi/src/wizard.rs:940
-#: crates/cr-mac-ffi/src/wizard.rs:942
+#: crates/cr-mac-ffi/src/edit.rs:539
+#: crates/cr-mac-ffi/src/wizard.rs:911
+#: crates/cr-mac-ffi/src/wizard.rs:913
 #: crates/cr-store/src/userdb/parts/kit.rs:1034
 #: crates/cr-store/src/userdb/parts/pages.rs:255
 #: crates/cr-win/src/app/create.rs:974
@@ -4190,40 +4214,41 @@ msgid "Weapon"
 msgstr "Arme"
 
 #: crates/cr-gtk/src/create.rs:2681
-#: crates/cr-mac-ffi/src/wizard.rs:930
+#: crates/cr-mac-ffi/src/wizard.rs:901
 #: crates/cr-win/src/app/create.rs:1077
 #: crates/cr-win/src/app/create.rs:1080
 msgid "Nonweapon slots used"
 msgstr "Emplacements de compétences non martiales utilisés"
 
 #: crates/cr-gtk/src/create.rs:2683
-#: crates/cr-mac-ffi/src/wizard.rs:928
+#: crates/cr-mac-ffi/src/wizard.rs:899
 #: crates/cr-win/src/app/create.rs:1073
 msgid "Nonweapon Slots for Weapons"
 msgstr "Emplacements non martiaux pour les armes"
 
 #: crates/cr-gtk/src/create.rs:2725
 #: crates/cr-gtk/src/create.rs:3579
-#: crates/cr-mac-ffi/src/form.rs:648
+#: crates/cr-mac-ffi/src/form.rs:711
 #: crates/cr-win/src/app/forms.rs:357
 msgid "Kept on the character for later levels"
 msgstr "Conservés sur le personnage pour les niveaux suivants"
 
 #: crates/cr-gtk/src/create.rs:3466
-#: crates/cr-mac-ffi/src/form.rs:637
+#: crates/cr-mac-ffi/src/form.rs:700
 #: crates/cr-win/src/app/forms.rs:342
 msgid "Unarmed Combat"
 msgstr "Combat à mains nues"
 
 #: crates/cr-gtk/src/create.rs:3467
-#: crates/cr-mac-ffi/src/form.rs:638
+#: crates/cr-mac-ffi/src/form.rs:701
 #: crates/cr-win/src/app/forms.rs:343
 msgid "Specialization in an unarmed style, not together with a weapon specialization"
 msgstr "Spécialisation dans un style à mains nues, pas en même temps qu'une spécialisation martiale"
 
 #: crates/cr-gtk/src/create.rs:4053
 #: crates/cr-gtk/src/skills.rs:436
-#: crates/cr-mac-ffi/src/wizard.rs:1041
+#: crates/cr-mac-ffi/src/edit.rs:584
+#: crates/cr-mac-ffi/src/wizard.rs:1012
 #: crates/cr-win/src/app/create.rs:1283
 #: crates/cr-win/src/app/edit.rs:753
 msgid "Test"
@@ -4231,7 +4256,8 @@ msgstr "Tester"
 
 #: crates/cr-gtk/src/create.rs:4053
 #: crates/cr-gtk/src/skills.rs:436
-#: crates/cr-mac-ffi/src/wizard.rs:1044
+#: crates/cr-mac-ffi/src/edit.rs:585
+#: crates/cr-mac-ffi/src/wizard.rs:1015
 #: crates/cr-win/src/app/create.rs:1295
 #: crates/cr-win/src/app/edit.rs:760
 msgid "Roll"
@@ -4239,7 +4265,8 @@ msgstr "Lancer"
 
 #: crates/cr-gtk/src/create.rs:4055
 #: crates/cr-gtk/src/skills.rs:438
-#: crates/cr-mac-ffi/src/wizard.rs:1042
+#: crates/cr-mac-ffi/src/edit.rs:587
+#: crates/cr-mac-ffi/src/wizard.rs:1013
 #: crates/cr-win/src/app/create.rs:1281
 #: crates/cr-win/src/app/edit.rs:748
 msgid "Test for Wild Talents"
@@ -4247,7 +4274,8 @@ msgstr "Tester les talents sauvages"
 
 #: crates/cr-gtk/src/create.rs:4060
 #: crates/cr-gtk/src/skills.rs:444
-#: crates/cr-mac-ffi/src/wizard.rs:1046
+#: crates/cr-mac-ffi/src/edit.rs:589
+#: crates/cr-mac-ffi/src/wizard.rs:1017
 #: crates/cr-win/src/app/create.rs:1293
 #: crates/cr-win/src/app/edit.rs:756
 msgid "Roll for Wild Talents"
@@ -4255,14 +4283,15 @@ msgstr "Lancer pour les talents sauvages"
 
 #: crates/cr-gtk/src/create.rs:4061
 #: crates/cr-gtk/src/skills.rs:445
-#: crates/cr-mac-ffi/src/wizard.rs:1047
+#: crates/cr-mac-ffi/src/edit.rs:590
+#: crates/cr-mac-ffi/src/wizard.rs:1018
 #: crates/cr-win/src/app/create.rs:1294
 #: crates/cr-win/src/app/edit.rs:757
 msgid "Table 83: Wild Talents"
 msgstr "Table 83 : Talents sauvages"
 
 #: crates/cr-gtk/src/create.rs:4685
-#: crates/cr-mac-ffi/src/wizard.rs:1166
+#: crates/cr-mac-ffi/src/wizard.rs:1141
 #: crates/cr-store/src/userdb/parts/kit.rs:635
 #: crates/cr-store/src/userdb/parts/kit.rs:637
 #: crates/cr-store/src/userdb/parts/kit.rs:640
@@ -4273,20 +4302,20 @@ msgid "Starting Money"
 msgstr "Argent de départ"
 
 #: crates/cr-gtk/src/create.rs:4687
-#: crates/cr-mac-ffi/src/wizard.rs:1163
+#: crates/cr-mac-ffi/src/wizard.rs:1138
 #: crates/cr-win/src/app/create.rs:1329
 msgid "Roll Starting Money"
 msgstr "Tirer l’argent de départ"
 
 #: crates/cr-gtk/src/create.rs:4696
-#: crates/cr-mac-ffi/src/wizard.rs:1172
+#: crates/cr-mac-ffi/src/wizard.rs:1147
 #: crates/cr-win/src/app/create.rs:1332
 #: crates/cr-win/src/app/create.rs:1335
 msgid "Standard Pack"
 msgstr "Paquetage standard"
 
 #: crates/cr-gtk/src/create.rs:4704
-#: crates/cr-mac-ffi/src/wizard.rs:1164
+#: crates/cr-mac-ffi/src/wizard.rs:1139
 #: crates/cr-store/src/treasure/edit.rs:17
 #: crates/cr-store/src/treasure.rs:452
 #: crates/cr-win/src/app/create.rs:1325
@@ -4418,7 +4447,7 @@ msgstr "Totaux de la rencontre"
 #: crates/cr-win/src/app/sheet.rs:606
 #: crates/cr-win/src/app/treasure.rs:223
 #: crates/cr-win/src/app.rs:4664
-#: macos/CoreRules/Edit.swift:136
+#: macos/CoreRules/Edit.swift:148
 #: macos/CoreRules/Sheet.swift:276
 #: macos/CoreRules/Sheet.swift:283
 msgid "_Save"
@@ -4500,7 +4529,8 @@ msgstr "Le modifier relance les points de vie"
 #: crates/cr-gtk/src/encounter.rs:685
 #: crates/cr-gtk/src/enter.rs:176
 #: crates/cr-gtk/src/main.rs:2994
-#: crates/cr-mac-ffi/src/wizard.rs:716
+#: crates/cr-mac-ffi/src/edit.rs:417
+#: crates/cr-mac-ffi/src/wizard.rs:686
 #: crates/cr-store/src/userdb/parts/pages.rs:1124
 #: crates/cr-win/src/app/edit.rs:479
 #: crates/cr-win/src/app/edit.rs:482
@@ -4770,14 +4800,16 @@ msgstr "Table supprimée"
 
 #: crates/cr-gtk/src/enter.rs:146
 #: crates/cr-gtk/src/main.rs:2959
-#: crates/cr-mac-ffi/src/wizard.rs:701
+#: crates/cr-mac-ffi/src/edit.rs:408
+#: crates/cr-mac-ffi/src/wizard.rs:671
 #: crates/cr-win/src/app/edit.rs:459
 #: crates/cr-win/src/app/levels.rs:45
 msgid "Levels…"
 msgstr "Niveaux…"
 
 #: crates/cr-gtk/src/enter.rs:177
-#: crates/cr-mac-ffi/src/wizard.rs:717
+#: crates/cr-mac-ffi/src/edit.rs:418
+#: crates/cr-mac-ffi/src/wizard.rs:687
 #: crates/cr-win/src/app/edit.rs:480
 #: crates/cr-win/src/app/levels.rs:72
 msgid "Changes the rolls of the highest level"
@@ -4785,7 +4817,8 @@ msgstr "Change les jets du niveau le plus élevé"
 
 #: crates/cr-gtk/src/enter.rs:178
 #: crates/cr-gtk/src/main.rs:3001
-#: crates/cr-mac-ffi/src/wizard.rs:728
+#: crates/cr-mac-ffi/src/edit.rs:429
+#: crates/cr-mac-ffi/src/wizard.rs:698
 #: crates/cr-win/src/app/edit.rs:493
 #: crates/cr-win/src/app/edit.rs:495
 #: crates/cr-win/src/app/levels.rs:85
@@ -4795,26 +4828,27 @@ msgstr "PPS"
 
 #: crates/cr-gtk/src/enter.rs:179
 #: crates/cr-gtk/src/main.rs:3002
-#: crates/cr-mac-ffi/src/wizard.rs:729
+#: crates/cr-mac-ffi/src/edit.rs:430
+#: crates/cr-mac-ffi/src/wizard.rs:699
 #: crates/cr-win/src/app/edit.rs:494
 #: crates/cr-win/src/app/levels.rs:86
 msgid "Changes those of the highest level that has them"
 msgstr "Change ceux du niveau le plus élevé qui en a"
 
 #: crates/cr-gtk/src/enter.rs:296
-#: crates/cr-mac-ffi/src/wizard.rs:785
+#: crates/cr-mac-ffi/src/wizard.rs:756
 #: crates/cr-win/src/app/levels.rs:226
 msgid "Add Experience…"
 msgstr "Ajouter de l’expérience…"
 
 #: crates/cr-gtk/src/enter.rs:302
-#: crates/cr-mac-ffi/src/wizard.rs:761
+#: crates/cr-mac-ffi/src/wizard.rs:732
 #: crates/cr-win/src/app/levels.rs:229
 msgid "A level puts the class at the experience it takes; each level gained rolls its hit points and PSPs"
 msgstr "Un niveau donne à la classe l’expérience qu’il demande ; chaque niveau gagné tire ses points de vie et ses PPS"
 
 #: crates/cr-gtk/src/enter.rs:323
-#: crates/cr-mac-ffi/src/wizard.rs:799
+#: crates/cr-mac-ffi/src/wizard.rs:770
 #: crates/cr-win/src/app/levels.rs:237
 #: crates/cr-win/src/app/levels.rs:240
 msgid "Apply Prime Requisite Experience Bonuses"
@@ -4822,15 +4856,15 @@ msgstr "Appliquer les bonus d’expérience des caractéristiques principales"
 
 #: crates/cr-gtk/src/enter.rs:324
 #: crates/cr-gtk/src/main.rs:3173
-#: crates/cr-mac-ffi/src/wizard.rs:800
-#: crates/cr-mac-ffi/src/wizard.rs:866
+#: crates/cr-mac-ffi/src/wizard.rs:771
+#: crates/cr-mac-ffi/src/wizard.rs:837
 #: crates/cr-win/src/app/levels.rs:238
 #: crates/cr-win/src/app/levels.rs:292
 msgid "10% more for a class whose prime requisites are all 16 or more"
 msgstr "10 % de plus pour une classe dont les caractéristiques principales sont toutes à 16 ou plus"
 
 #: crates/cr-gtk/src/enter.rs:331
-#: crates/cr-mac-ffi/src/wizard.rs:807
+#: crates/cr-mac-ffi/src/wizard.rs:778
 #: crates/cr-store/src/userdb/races.rs:362
 #: crates/cr-store/src/userdb/races.rs:374
 #: crates/cr-win/src/app/levels.rs:148
@@ -4839,20 +4873,21 @@ msgid "Level Limits"
 msgstr "Limites de niveau"
 
 #: crates/cr-gtk/src/enter.rs:334
-#: crates/cr-mac-ffi/src/wizard.rs:810
+#: crates/cr-mac-ffi/src/wizard.rs:781
 #: crates/cr-win/src/app/levels.rs:154
 msgid "Racial Limits"
 msgstr "Limites raciales"
 
 #: crates/cr-gtk/src/enter.rs:335
-#: crates/cr-mac-ffi/src/wizard.rs:811
+#: crates/cr-mac-ffi/src/wizard.rs:782
 #: crates/cr-win/src/app/levels.rs:155
 msgid "Racial Limits and Prime Requisite Bonus"
 msgstr "Limites raciales et bonus de caractéristique principale"
 
 #: crates/cr-gtk/src/enter.rs:342
 #: crates/cr-gtk/src/main.rs:3015
-#: crates/cr-mac-ffi/src/wizard.rs:820
+#: crates/cr-mac-ffi/src/edit.rs:439
+#: crates/cr-mac-ffi/src/wizard.rs:791
 #: crates/cr-store/src/userdb/classes/pages.rs:148
 #: crates/cr-store/src/userdb/parts/pages.rs:737
 #: crates/cr-store/src/userdb/parts/pages.rs:740
@@ -4869,7 +4904,8 @@ msgstr "Points de personnage"
 
 #: crates/cr-gtk/src/enter.rs:343
 #: crates/cr-gtk/src/main.rs:3016
-#: crates/cr-mac-ffi/src/wizard.rs:820
+#: crates/cr-mac-ffi/src/edit.rs:439
+#: crates/cr-mac-ffi/src/wizard.rs:791
 #: crates/cr-win/src/app/edit.rs:502
 #: crates/cr-win/src/app/levels.rs:171
 msgid "Unspent"
@@ -4877,8 +4913,8 @@ msgstr "Non dépensés"
 
 #: crates/cr-gtk/src/enter.rs:350
 #: crates/cr-gtk/src/main.rs:3180
-#: crates/cr-mac-ffi/src/wizard.rs:827
-#: crates/cr-mac-ffi/src/wizard.rs:873
+#: crates/cr-mac-ffi/src/wizard.rs:798
+#: crates/cr-mac-ffi/src/wizard.rs:844
 #: crates/cr-win/src/app/levels.rs:181
 #: crates/cr-win/src/app/levels.rs:184
 #: crates/cr-win/src/app/levels.rs:276
@@ -4952,9 +4988,9 @@ msgstr "Impossible d’extraire les données"
 #: macos/CoreRules/Help.swift:76
 #: macos/CoreRules/Help.swift:93
 #: macos/CoreRules/Help.swift:147
-#: macos/CoreRules/Model.swift:471
-#: macos/CoreRules/Model.swift:487
-#: macos/CoreRules/Model.swift:532
+#: macos/CoreRules/Model.swift:473
+#: macos/CoreRules/Model.swift:489
+#: macos/CoreRules/Model.swift:534
 msgid "Help"
 msgstr "Aide"
 
@@ -5014,17 +5050,20 @@ msgid "AD&D Core Rules"
 msgstr "AD&D Core Rules"
 
 #: crates/cr-gtk/src/kit_magic.rs:180
+#: crates/cr-mac-ffi/src/edit.rs:606
 #: crates/cr-win/src/app/edit.rs:778
 #: crates/cr-win/src/app/edit.rs:781
 msgid "Ignore"
 msgstr "Ignorer"
 
 #: crates/cr-gtk/src/kit_magic.rs:181
+#: crates/cr-mac-ffi/src/edit.rs:607
 #: crates/cr-win/src/app/edit.rs:779
 msgid "Keeps these schools; otherwise they are removed when the character is saved."
 msgstr "Conserve ces écoles ; sinon, elles sont retirées à l'enregistrement du personnage."
 
 #: crates/cr-gtk/src/kit_magic.rs:289
+#: crates/cr-mac-ffi/src/edit.rs:619
 #: crates/cr-win/src/app/edit.rs:831
 msgid "Selected Free Sphere"
 msgstr "Sphère gratuite choisie"
@@ -5034,7 +5073,7 @@ msgstr "Sphère gratuite choisie"
 #: crates/cr-gtk/src/lists.rs:142
 #: crates/cr-gtk/src/lists.rs:371
 #: crates/cr-gtk/src/lists.rs:409
-#: crates/cr-mac-ffi/src/form.rs:596
+#: crates/cr-mac-ffi/src/form.rs:659
 #: crates/cr-win/src/app/forms.rs:221
 #: crates/cr-win/src/app/record.rs:736
 msgid "Add to {list}"
@@ -5070,7 +5109,7 @@ msgstr "Extraire les données du _CD…"
 #: crates/cr-win/src/app.rs:2635
 #: macos/CoreRules/ContentView.swift:57
 #: macos/CoreRules/Model.swift:265
-#: macos/CoreRules/Model.swift:377
+#: macos/CoreRules/Model.swift:379
 #: macos/CoreRules/SettingsView.swift:63
 msgid "No Core Rules Installation"
 msgstr "Aucune installation de Core Rules"
@@ -5116,13 +5155,13 @@ msgstr "L’installation n’est plus ouverte"
 #: crates/cr-gtk/src/main.rs:889
 #: crates/cr-gtk/src/main.rs:1024
 #: crates/cr-win/src/app.rs:3002
-#: macos/CoreRules/Model.swift:305
+#: macos/CoreRules/Model.swift:307
 msgid "Character saved"
 msgstr "Personnage enregistré"
 
 #: crates/cr-gtk/src/main.rs:891
 #: crates/cr-win/src/app.rs:3004
-#: macos/CoreRules/Model.swift:305
+#: macos/CoreRules/Model.swift:307
 msgid "Character created"
 msgstr "Personnage créé"
 
@@ -5158,7 +5197,7 @@ msgstr "Converti en PNJ"
 #: crates/cr-gtk/src/main.rs:1048
 #: crates/cr-win/src/app.rs:1776
 #: macos/CoreRules/Help.swift:131
-#: macos/CoreRules/Model.swift:471
+#: macos/CoreRules/Model.swift:473
 msgid "Open a Core Rules folder to read its help"
 msgstr "Ouvrez un dossier Core Rules pour lire son aide"
 
@@ -5382,11 +5421,11 @@ msgstr "Entrées"
 #: crates/cr-win/src/app.rs:1345
 #: crates/cr-win/src/app.rs:2909
 #: macos/CoreRules/ContentView.swift:196
-#: macos/CoreRules/FormView.swift:488
+#: macos/CoreRules/FormView.swift:496
 #: macos/CoreRules/Model.swift:123
 #: macos/CoreRules/Model.swift:284
-#: macos/CoreRules/Model.swift:314
-#: macos/CoreRules/Model.swift:407
+#: macos/CoreRules/Model.swift:316
+#: macos/CoreRules/Model.swift:409
 msgid "Could Not Read"
 msgstr "Lecture impossible"
 
@@ -5397,12 +5436,14 @@ msgid "Icon"
 msgstr "Icône"
 
 #: crates/cr-gtk/src/main.rs:2257
+#: crates/cr-mac-ffi/src/edit.rs:481
 #: crates/cr-win/src/app/edit.rs:575
 msgid "18/01 to 18/00, 0 for none"
 msgstr "18/01 à 18/00, 0 pour aucune"
 
 #: crates/cr-gtk/src/main.rs:2330
-#: crates/cr-mac-ffi/src/wizard.rs:573
+#: crates/cr-mac-ffi/src/edit.rs:307
+#: crates/cr-mac-ffi/src/wizard.rs:543
 #: crates/cr-win/src/app/create.rs:910
 #: crates/cr-win/src/app/edit.rs:319
 msgid "Background"
@@ -5415,23 +5456,26 @@ msgstr "Passé"
 #: macos/CoreRules/ContentView.swift:315
 #: macos/CoreRules/ContentView.swift:497
 #: macos/CoreRules/ContentView.swift:499
-#: macos/CoreRules/Edit.swift:145
+#: macos/CoreRules/Edit.swift:163
 msgid "Edit Character"
 msgstr "Modifier le personnage"
 
 #: crates/cr-gtk/src/main.rs:2860
+#: crates/cr-mac-ffi/src/edit.rs:397
 #: crates/cr-win/src/app/edit.rs:424
 #: crates/cr-win/src/app/edit.rs:427
 msgid "Add Class"
 msgstr "Ajouter une classe"
 
 #: crates/cr-gtk/src/main.rs:2919
+#: crates/cr-mac-ffi/src/edit.rs:387
 #: crates/cr-win/src/app/edit.rs:414
 msgid "New, level 1"
 msgstr "Nouvelle, niveau 1"
 
 #: crates/cr-gtk/src/main.rs:2964
 #: crates/cr-gtk/src/userdb/attacks.rs:130
+#: crates/cr-mac-ffi/src/edit.rs:409
 #: crates/cr-win/src/app/edit.rs:462
 msgid "Add…"
 msgstr "Ajouter…"
@@ -5443,7 +5487,8 @@ msgstr "Ajouter ou retirer de l’expérience"
 
 #: crates/cr-gtk/src/main.rs:2973
 #: crates/cr-gtk/src/main.rs:3145
-#: crates/cr-mac-ffi/src/wizard.rs:849
+#: crates/cr-mac-ffi/src/edit.rs:407
+#: crates/cr-mac-ffi/src/wizard.rs:820
 #: crates/cr-win/src/app/edit.rs:451
 #: crates/cr-win/src/app/levels.rs:309
 #: crates/cr-win/src/app/levels.rs:312
@@ -5451,34 +5496,35 @@ msgid "Experience"
 msgstr "Expérience"
 
 #: crates/cr-gtk/src/main.rs:3146
-#: crates/cr-mac-ffi/src/wizard.rs:849
+#: crates/cr-mac-ffi/src/wizard.rs:820
 #: crates/cr-win/src/app/levels.rs:310
 msgid "Negative to take experience away"
 msgstr "Négatif pour retirer de l’expérience"
 
 #: crates/cr-gtk/src/main.rs:3163
-#: crates/cr-mac-ffi/src/wizard.rs:856
+#: crates/cr-mac-ffi/src/wizard.rs:827
 #: crates/cr-win/src/app/levels.rs:320
 #: crates/cr-win/src/app/levels.rs:323
 msgid "Give To"
 msgstr "Attribuer à"
 
 #: crates/cr-gtk/src/main.rs:3172
-#: crates/cr-mac-ffi/src/wizard.rs:865
+#: crates/cr-mac-ffi/src/wizard.rs:836
 #: crates/cr-win/src/app/levels.rs:291
 #: crates/cr-win/src/app/levels.rs:294
 msgid "Prime Requisite Bonus"
 msgstr "Bonus de caractéristique principale"
 
 #: crates/cr-gtk/src/main.rs:3193
-#: crates/cr-mac-ffi/src/wizard.rs:844
+#: crates/cr-mac-ffi/src/wizard.rs:815
 #: crates/cr-win/src/app/levels.rs:304
 msgid "Each level gained rolls its hit points. Levels lost keep their rolls, as in the original."
 msgstr "Chaque niveau gagné tire ses points de vie. Les niveaux perdus conservent leurs jets, comme dans l’original."
 
 #: crates/cr-gtk/src/main.rs:3222
-#: crates/cr-mac-ffi/src/wizard.rs:777
-#: crates/cr-mac-ffi/src/wizard.rs:790
+#: crates/cr-mac-ffi/src/edit.rs:262
+#: crates/cr-mac-ffi/src/wizard.rs:748
+#: crates/cr-mac-ffi/src/wizard.rs:761
 #: crates/cr-win/src/app/levels.rs:207
 #: crates/cr-win/src/app/levels.rs:345
 msgid "Add Experience"
@@ -5638,17 +5684,20 @@ msgid "Leadership"
 msgstr "Commandement"
 
 #: crates/cr-gtk/src/main.rs:3526
+#: crates/cr-mac-ffi/src/edit.rs:651
 #: crates/cr-win/src/app/edit.rs:888
 #: crates/cr-win/src/app/edit.rs:891
 msgid "Buy and Sell"
 msgstr "Acheter et vendre"
 
 #: crates/cr-gtk/src/main.rs:3527
+#: crates/cr-mac-ffi/src/edit.rs:652
 #: crates/cr-win/src/app/edit.rs:889
 msgid "Items added are paid for with the spending money, items removed are sold"
 msgstr "Les objets ajoutés sont payés avec l'argent de poche, les objets retirés sont vendus"
 
 #: crates/cr-gtk/src/main.rs:3650
+#: crates/cr-mac-ffi/src/edit.rs:649
 #: crates/cr-store/src/lists.rs:68
 #: crates/cr-win/src/app/edit.rs:886
 msgid "Spending Money"
@@ -5920,7 +5969,7 @@ msgstr[1] "{n} personnages de « {party} » supprimés"
 #: crates/cr-gtk/src/picture.rs:49
 #: crates/cr-win/src/app/portrait.rs:249
 #: crates/cr-win/src/app/portrait.rs:286
-#: macos/CoreRules/FormView.swift:428
+#: macos/CoreRules/FormView.swift:436
 msgid "Portrait"
 msgstr "Portrait"
 
@@ -5932,7 +5981,7 @@ msgstr "Portrait"
 #: crates/cr-win/src/app/record.rs:680
 #: crates/cr-win/src/app/templates.rs:492
 #: crates/cr-win/src/app/templates.rs:613
-#: macos/CoreRules/FormView.swift:425
+#: macos/CoreRules/FormView.swift:433
 msgid "_Choose…"
 msgstr "_Choisir…"
 
@@ -6008,7 +6057,7 @@ msgstr "Choisissez une de vos images pour l’utiliser ici"
 
 #: crates/cr-gtk/src/picture.rs:346
 #: crates/cr-win/src/app/portrait.rs:438
-#: macos/CoreRules/FormView.swift:474
+#: macos/CoreRules/FormView.swift:482
 msgid "Choose _File…"
 msgstr "Choisir un _fichier…"
 
@@ -6227,7 +6276,7 @@ msgid "No Sections"
 msgstr "Aucune section"
 
 #: crates/cr-gtk/src/skills.rs:116
-#: crates/cr-mac-ffi/src/wizard.rs:1084
+#: crates/cr-mac-ffi/src/wizard.rs:1057
 #: crates/cr-win/src/app/forms.rs:457
 msgid "Points Left"
 msgstr "Points restants"
@@ -6431,7 +6480,7 @@ msgstr "Importer"
 #: crates/cr-win/src/app.rs:3177
 #: macos/CoreRules/ContentView.swift:99
 #: macos/CoreRules/Import.swift:48
-#: macos/CoreRules/Model.swift:383
+#: macos/CoreRules/Model.swift:385
 msgid "Import Failed"
 msgstr "Échec de l’importation"
 
@@ -6469,7 +6518,7 @@ msgstr "Éléments non ajoutés"
 
 #: crates/cr-gtk/src/transfer.rs:796
 #: crates/cr-win/src/app.rs:4636
-#: macos/CoreRules/Edit.swift:92
+#: macos/CoreRules/Edit.swift:97
 msgid "Discard Changes?"
 msgstr "Abandonner les modifications ?"
 
@@ -6481,7 +6530,7 @@ msgstr "Le paquet comporte des modifications non enregistrées."
 #: crates/cr-gtk/src/transfer.rs:799
 #: crates/cr-gtk/src/userdb.rs:904
 #: crates/cr-win/src/app.rs:4653
-#: macos/CoreRules/Edit.swift:93
+#: macos/CoreRules/Edit.swift:98
 msgid "_Discard"
 msgstr "_Abandonner"
 
@@ -6891,6 +6940,7 @@ msgstr "Objets associés à ce modèle de rencontre"
 
 #: crates/cr-gtk/src/userdb/templates.rs:898
 #: crates/cr-gtk/src/userdb.rs:701
+#: crates/cr-mac-ffi/src/edit.rs:631
 #: crates/cr-win/src/app/edit.rs:806
 msgid "Pages"
 msgstr "Pages"
@@ -7309,13 +7359,24 @@ msgstr "_Écoles…"
 msgid "Name Conflict"
 msgstr "Conflit de noms"
 
-#: crates/cr-mac-ffi/src/form.rs:553
+#: crates/cr-mac-ffi/src/edit.rs:318
+#: crates/cr-win/src/app/edit.rs:333
+msgid "A new kit rolls the social class on its table"
+msgstr "Un nouveau kit tire la classe sociale sur sa table"
+
+#: crates/cr-mac-ffi/src/edit.rs:455
+#: crates/cr-win/src/app/edit.rs:552
+msgid "Score"
+msgstr "Score"
+
+#: crates/cr-mac-ffi/src/edit.rs:671
+#: crates/cr-mac-ffi/src/form.rs:597
 #: crates/cr-win/src/app/edit.rs:876
 #: crates/cr-win/src/app/forms.rs:47
 msgid "Quantity"
 msgstr "Quantité"
 
-#: crates/cr-mac-ffi/src/form.rs:555
+#: crates/cr-mac-ffi/src/form.rs:599
 #: crates/cr-store/src/tables/data.rs:394
 #: crates/cr-win/src/app/forms.rs:49
 msgid "Rank"
@@ -12780,14 +12841,6 @@ msgstr ""
 "Les noms de type de monstre commençant par « ~ » sont réservés.\n"
 " Veuillez saisir un autre nom"
 
-#: crates/cr-win/src/app/edit.rs:333
-msgid "A new kit rolls the social class on its table"
-msgstr "Un nouveau kit tire la classe sociale sur sa table"
-
-#: crates/cr-win/src/app/edit.rs:552
-msgid "Score"
-msgstr "Score"
-
 #: crates/cr-win/src/app/encounter.rs:146
 #: crates/cr-win/src/app/encounter.rs:744
 msgid "Templates"
@@ -12800,7 +12853,7 @@ msgstr[0] "{chosen} sur {n} élément choisis"
 msgstr[1] "{chosen} sur {n} éléments choisis"
 
 #: crates/cr-win/src/app/library.rs:843
-#: macos/CoreRules/Model.swift:540
+#: macos/CoreRules/Model.swift:542
 msgid "Put the data package made by Extract Data from CD… in {folder}, or open the folder where AD&D Core Rules 2.0 is installed."
 msgstr "Placez le paquet de données créé par Extraire les données du CD… dans {folder}, ou ouvrez le dossier où AD&D Core Rules 2.0 est installé."
 
@@ -12951,7 +13004,7 @@ msgid "The allowed classes have changes that are not saved."
 msgstr "Les classes autorisées comportent des modifications non enregistrées."
 
 #: crates/cr-win/src/app.rs:4650
-#: macos/CoreRules/Edit.swift:96
+#: macos/CoreRules/Edit.swift:101
 msgid "The character has changes that are not saved."
 msgstr "Le personnage comporte des modifications non enregistrées."
 
@@ -12974,3 +13027,7 @@ msgstr "Aide de Core Rules"
 #: macos/CoreRules/CoreRulesApp.swift:149
 msgid "Help on {name}"
 msgstr "Aide sur {name}"
+
+#: macos/CoreRules/Edit.swift:170
+msgid "Page"
+msgstr "Page"

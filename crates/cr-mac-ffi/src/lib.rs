@@ -23,7 +23,7 @@ use cr_store::userdb::Filter as Origins;
 use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES};
 
 pub use book::{BookHeading, BookPosted, BookSession};
-pub use edit::{EditDetails, EditSession, SaveState};
+pub use edit::{EditSession, SaveState};
 pub use form::{
     FormButton, FormDialog, FormGroup, FormNumber, FormOption, FormPage, FormRow, FormValue,
 };

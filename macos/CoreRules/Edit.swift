@@ -1,6 +1,6 @@
-// Edit Character, in a sheet over the main window. The form's checks and
-// questions come from `cr_app::editor` through the bridge; the prototype
-// draws the Details tab's description of the character.
+// Edit Character, in a sheet over the main window. Its pages, chosen
+// above them, come from `cr_app::editor` through the bridge, each
+// described as a form, with its questions and Save's checks.
 
 import SwiftUI
 
@@ -9,62 +9,56 @@ final class EditModel: ObservableObject {
     let session: EditSession
     /// The character's file, to select it again after saving.
     let file: String
-    @Published private(set) var details: EditDetails
+    let tabs: [String]
+    @Published private(set) var tab = 0
+    @Published private(set) var form = FormPage(groups: [], dialog: nil)
     @Published private(set) var problem: String?
     @Published private(set) var error: String?
     @Published private(set) var canSave = false
-    @Published var prompt: PromptInfo?
+    @Published private(set) var saving = false
+    @Published private(set) var prompt: PromptInfo?
 
     init(_ session: EditSession, file: String) {
         self.session = session
         self.file = file
-        details = session.details()
+        tabs = session.tabs()
         refresh()
     }
 
+    /// Takes the session's state after an input.
     func refresh() {
-        details = session.details()
+        tab = Int(session.tab())
+        form = session.form()
         problem = session.problem()
         error = session.error()
         canSave = session.canSave()
+        saving = session.saving()
         prompt = session.prompt()
     }
 
-    /// A binding that hands each change to the session.
-    private func binding<T>(_ get: @escaping (EditDetails) -> T, _ set: @escaping (T) -> Void)
-        -> Binding<T>
-    {
-        Binding<T>(
-            get: { get(self.details) },
-            set: { (value: T) in
-                set(value)
+    func act(_ id: UInt32, _ value: FormValue) {
+        session.act(id: id, value: value)
+        refresh()
+    }
+
+    var tabShown: Binding<Int> {
+        Binding<Int>(
+            get: { self.tab },
+            set: { (index: Int) in
+                self.session.setTab(index: UInt32(index))
                 self.refresh()
             })
     }
 
-    var name: Binding<String> {
-        binding({ $0.name }, { self.session.setName(name: $0) })
-    }
-    var player: Binding<String> {
-        binding({ $0.player }, { self.session.setPlayer(player: $0) })
-    }
-    var male: Binding<Bool> {
-        binding({ $0.male }, { self.session.setMale(male: $0) })
-    }
-    var alignment: Binding<Int> {
-        binding({ Int($0.alignment) }, { self.session.setAlignment(index: UInt32($0)) })
-    }
-    var age: Binding<UInt32> {
-        binding({ $0.age }, { self.session.setAge(years: $0) })
-    }
-    var height: Binding<UInt32> {
-        binding({ $0.height }, { self.session.setHeight(inches: $0) })
-    }
-    var weight: Binding<UInt32> {
-        binding({ $0.weight }, { self.session.setWeight(pounds: $0) })
-    }
-    var history: Binding<String> {
-        binding({ $0.history }, { self.session.setHistory(history: $0) })
+    /// Whether Levels or Add Experience is open over the page.
+    var dialogShown: Binding<Bool> {
+        Binding<Bool>(
+            get: { self.form.dialog != nil },
+            set: { (shown: Bool) in
+                if !shown, let close = self.form.dialog?.close {
+                    self.act(close.id, .press)
+                }
+            })
     }
 
     /// Save, or an answer to its question: true once the character is
@@ -77,6 +71,7 @@ final class EditModel: ObservableObject {
 }
 
 struct EditView: View {
+    @EnvironmentObject var app: AppModel
     @ObservedObject var model: EditModel
     /// Closes the sheet; true when the character was saved.
     let close: (Bool) -> Void
@@ -84,11 +79,21 @@ struct EditView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            EditHeading(model: model)
             content
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             Divider()
             buttons
         }
-        .frame(minWidth: 520, minHeight: 560)
+        .frame(minWidth: 680, idealWidth: 760, minHeight: 600, idealHeight: 720)
+        .sheet(isPresented: model.dialogShown) {
+            if let dialog = model.form.dialog {
+                FormDialogView(dialog: dialog) { (id: UInt32, value: FormValue) in
+                    model.act(id, value)
+                }
+                .environmentObject(app)
+            }
+        }
         .alert(tr("Discard Changes?"), isPresented: $discarding) {
             Button(tr("_Discard"), role: .destructive) { close(false) }
             Button(tr("_Cancel"), role: .cancel) {}
@@ -101,9 +106,10 @@ struct EditView: View {
     private var content: some View {
         if let prompt = model.prompt {
             PromptView(prompt: prompt, promptOff: { (_: Bool) in }, answer: answer)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         } else {
-            form
+            FormView(groups: model.form.groups) { (id: UInt32, value: FormValue) in
+                model.act(id, value)
+            }
         }
     }
 
@@ -126,49 +132,52 @@ struct EditView: View {
     private var buttons: some View {
         HStack {
             if let message = model.error ?? model.problem {
-                Label(message, systemImage: "exclamationmark.triangle")
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                Label(
+                    message,
+                    systemImage: model.error != nil
+                        ? "exclamationmark.octagon.fill" : "exclamationmark.triangle.fill"
+                )
+                .foregroundStyle(model.error != nil ? Color.red : Color.secondary)
+                .lineLimit(2)
+                .textSelection(.enabled)
             }
             Spacer()
             Button(tr("_Cancel"), role: .cancel, action: cancel)
                 .keyboardShortcut(.cancelAction)
+                .disabled(model.saving)
             Button(tr("_Save"), action: save)
                 .keyboardShortcut(.defaultAction)
                 .disabled(!model.canSave || model.prompt != nil)
         }
         .padding()
     }
+}
 
-    private var form: some View {
-        Form {
-            Section(tr("Edit Character")) {
-                TextField(tr("Name"), text: model.name)
-                TextField(tr("Player"), text: model.player)
-                Picker(tr("Gender"), selection: model.male) {
-                    Text(tr("Male")).tag(true)
-                    Text(tr("Female")).tag(false)
-                }
-                Picker(tr("Alignment"), selection: model.alignment) {
-                    ForEach(0..<model.details.alignments.count, id: \.self) { (index: Int) in
-                        Text(model.details.alignments[index]).tag(index)
-                    }
-                }
-                number(tr("Age"), model.age)
-                number(tr("Height"), model.height)
-                number(tr("Weight"), model.weight)
+/// The sheet's title, the character's name, and its pages.
+struct EditHeading: View {
+    @ObservedObject var model: EditModel
+
+    var body: some View {
+        VStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(tr("Edit Character"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(model.session.title())
+                    .font(.title2.bold())
             }
-            Section(tr("History")) {
-                TextEditor(text: model.history)
-                    .font(.body)
-                    .frame(minHeight: 120)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Picker(tr("Page"), selection: model.tabShown) {
+                ForEach(0..<model.tabs.count, id: \.self) { (index: Int) in
+                    Text(model.tabs[index]).tag(index)
+                }
             }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .disabled(model.prompt != nil)
         }
-        .formStyle(.grouped)
-    }
-
-    private func number(_ label: String, _ value: Binding<UInt32>) -> some View {
-        TextField(label, value: value, format: IntegerFormatStyle<UInt32>())
-            .multilineTextAlignment(.trailing)
+        .padding(.horizontal, 20)
+        .padding(.top, 16)
+        .padding(.bottom, 8)
     }
 }
