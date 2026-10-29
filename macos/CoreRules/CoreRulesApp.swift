@@ -153,6 +153,8 @@ struct ToolsCommands: Commands {
             Divider()
             item(more(tr("New _Encounter…")), Action.NEW_ENCOUNTER)
             item(more(tr("New Encounter _Table…")), Action.NEW_TABLE)
+            Divider()
+            item(more(tr("Manage _Parties…")), Action.MANAGE_PARTIES)
         }
     }
 

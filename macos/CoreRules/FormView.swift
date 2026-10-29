@@ -125,14 +125,15 @@ struct FormRowView: View {
     }
 }
 
-/// A title with a line under it.
+/// A title with a line under it; a label of the catalogs loses its
+/// mnemonic underscore.
 struct TwoLines: View {
     let title: String
     let subtitle: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title)
+            Text(plain(title))
             if !subtitle.isEmpty {
                 Text(subtitle)
                     .font(.caption)

@@ -585,8 +585,13 @@ The phases run in order:
      dialog that picks each roll's template; and Edit, Copy, Create
      Encounter and Roll and Create Encounter on the saved encounters,
      tables and templates in the library. A list of more than 200 names
-     shows the first 200 and asks for a search. Last, the parties with
-     Group Encounter, and the traps.
+     shows the first 200 and asks for a search (PR #128). Last, Manage
+     Parties in a sheet: the party chosen, New Party, the members and
+     the characters in no party each with the button that moves it,
+     Delete Members, and Group Encounter's dialog, which opens the
+     encounter of the party's NPCs or prints or shows their page. New
+     Trap, New Monster and the traps' Edit, Copy and Delete in Add Trap
+     come with the database editors.
 5. **Beta and release** on the three systems with the same tag, with an
    install page on the website and in the README that shows the Open
    Anyway steps.
