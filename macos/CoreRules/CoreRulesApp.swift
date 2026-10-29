@@ -115,6 +115,7 @@ struct MenuCommands: Commands {
             item(more(tr("New Character")), Action.NEW_CHARACTER)
                 .keyboardShortcut("n")
             item(tr("E_nter Character…"), Action.ENTER_CHARACTER)
+            item(more(model.newRecordLabel ?? tr("New")), Action.UDB_NEW)
             item(more(tr("_Open Folder…")), Action.OPEN)
                 .keyboardShortcut("o")
             Divider()

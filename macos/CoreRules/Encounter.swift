@@ -114,6 +114,18 @@ final class EncounterModel: ObservableObject {
         }
     }
 
+    /// The trap New Trap saved goes in the encounter.
+    func addNewTrap(_ name: String) {
+        session.addNewTrap(name: name)
+        refresh()
+    }
+
+    /// The monster New Monster saved goes in the encounter.
+    func addNewMonster(_ name: String) {
+        session.addNewMonster(name: name)
+        refresh()
+    }
+
     /// Use Treasure: the treasure of `roller` is the encounter's.
     func useTreasure(_ roller: TreasureSession) {
         session.useTreasure(roller: roller)

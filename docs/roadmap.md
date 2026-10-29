@@ -565,7 +565,7 @@ The phases run in order:
      the page, the bundles show their items' icons, and Save's questions
      come in the page's place. The Levels dialog, the experience fields,
      the Skills form and the portrait row are those of the wizard.
-   - **The generators (in progress)**, in four pull requests. First New
+   - **The generators (done)**, in four pull requests. First New
      NPC and New NPC Group, as forms in a sheet whose Create makes and
      saves the NPCs off the main thread, and Roll on a Table in a window
      of its own, with Roll, Roll Again, Copy Results and Read in Book;
@@ -591,7 +591,20 @@ The phases run in order:
      Delete Members, and Group Encounter's dialog, which opens the
      encounter of the party's NPCs or prints or shows their page. New
      Trap, New Monster and the traps' Edit, Copy and Delete in Add Trap
-     come with the database editors.
+     come with the database editors. (PR #129)
+   - **The user databases (in progress)**, in three pull requests. First
+     the record editor of `cr_app::records::form` in a sheet: each page
+     described as a form, every kind of field drawn (text, numbers with
+     their suggestion, choices, lists with their numbers, checks over a
+     number or a list, dice, tables of numbers by level, items, attacks,
+     groups and levels with their dialogs, Auto Fill, pictures and icons
+     with Choose Picture and the user's own), the questions it asks, and
+     Save; New in the list's toolbar and the File menu, Edit, Copy, New
+     Subrace, Schools… and Delete on a record, New Part asking for the
+     type, and New Trap, New Monster and the traps' Edit, Copy and
+     Delete in the encounter's Add Trap and Add Monster. Then Allowed
+     Classes, Restore and the treasure table editor, then the encounter
+     template editor.
 5. **Beta and release** on the three systems with the same tag, with an
    install page on the website and in the README that shows the Open
    Anyway steps.

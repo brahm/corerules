@@ -140,6 +140,38 @@ pub enum FormRow {
     },
     /// A warning or an error over the form.
     Banner { text: String, error: bool },
+    /// Whole numbers side by side, as dice: `separators[i]` goes before
+    /// number `i + 1`.
+    Numbers {
+        title: String,
+        numbers: Vec<FormNumber>,
+        separators: Vec<String>,
+        enabled: bool,
+    },
+    /// A table of whole numbers: its column headings, and each row's
+    /// heading with its cells.
+    Grid {
+        columns: Vec<String>,
+        rows: Vec<FormGridRow>,
+        enabled: bool,
+    },
+    /// A record's picture or an item's icon, as PNG, with Choose and,
+    /// when there is one, No Picture.
+    Picture {
+        title: String,
+        subtitle: String,
+        png: Option<Vec<u8>>,
+        icon: bool,
+        choose: FormButton,
+        clear: Option<FormButton>,
+    },
+}
+
+/// A row of a [`FormRow::Grid`].
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct FormGridRow {
+    pub title: String,
+    pub cells: Vec<FormNumber>,
 }
 
 /// A group of rows under a heading.
@@ -285,6 +317,16 @@ impl<I: 'static> Builder<I> {
 
     pub fn on_text(&mut self, make: impl Fn(String) -> I + Send + Sync + 'static) -> u32 {
         self.act(move |v| v.text().map(&make))
+    }
+
+    /// A control whose text, a real number, makes `make`'s input; a text
+    /// that is not one does nothing.
+    pub fn on_real(&mut self, make: impl Fn(f64) -> I + Send + Sync + 'static) -> u32 {
+        self.act(move |v| {
+            v.text()
+                .and_then(|t| t.trim().replace(',', ".").parse::<f64>().ok())
+                .map(&make)
+        })
     }
 
     pub fn on_toggle(&mut self, make: impl Fn(bool) -> I + Send + Sync + 'static) -> u32 {
