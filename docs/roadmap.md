@@ -528,7 +528,7 @@ The phases run in order:
      Options; Print and Save in the menu bar act on the sheet's window in
      front. Convert to Character and Convert to NPC are in the
      character's More menu.
-   - **Help and About (in progress).** `cr-mac-ffi` holds the help as a
+   - **Help and About (done).** `cr-mac-ffi` holds the help as a
      session (the book listed, its contents or what a search finds, the
      topic as the web page `cr-app` makes, its links and popups, Back),
      the help of an entry and of a monster, and About's texts. The Mac
@@ -539,6 +539,13 @@ The phases run in order:
      toolbar has Help, and View and Print for a monster. About is a
      window with What's New, Credits, Legal and Troubleshooting, as the
      other apps' About.
+   - **The books (in progress).** `cr-mac-ffi` reads a book as a session:
+     its page (`cr_app::web::book`) written to a file, its contents,
+     Find with its matches, zoom, and the reading position kept in the
+     reader's state file in Application Support. The Mac app's Read Book
+     opens each book in a window of its own, with the contents in the
+     sidebar, Find (⌘F, ⌘G, ⇧⌘G) in a bar over the text, and Zoom In,
+     Zoom Out and Reset Zoom in the View menu.
 5. **Beta and release** on the three systems with the same tag, with an
    install page on the website and in the README that shows the Open
    Anyway steps.

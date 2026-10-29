@@ -4,6 +4,7 @@
 //! the GNOME and Windows apps take them directly. The bridge grows with
 //! each screen ported to the Mac; it holds no rule of its own.
 
+mod book;
 mod edit;
 mod help;
 mod import;
@@ -20,6 +21,7 @@ use cr_store::catalog::{Entry, Section};
 use cr_store::userdb::Filter as Origins;
 use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES};
 
+pub use book::{BookHeading, BookPosted, BookSession};
 pub use edit::{EditDetails, EditSession, SaveState};
 pub use help::{HelpBook, HelpLinked, HelpRow, HelpSession, HelpTopic};
 pub use import::{ImportCategory, ImportItem, ImportReport, ImportSession};
@@ -414,6 +416,7 @@ pub enum HelpScreen {
     MainMenu,
     CharacterSheet,
     Import,
+    Books,
 }
 
 #[uniffi::export]
@@ -423,6 +426,7 @@ pub fn screen_help(screen: HelpScreen) -> u32 {
         HelpScreen::MainMenu => topic::MAIN_MENU,
         HelpScreen::CharacterSheet => topic::CHARACTER_SHEET,
         HelpScreen::Import => topic::IMPORT,
+        HelpScreen::Books => topic::BOOKS,
     }
 }
 
@@ -706,6 +710,28 @@ impl Library {
     }
 
     /// The help, to open with [`HelpSession::open`].
+    /// The book of the entry in view, for Read Book.
+    pub fn entry_book(&self, section: String, index: u32) -> Option<String> {
+        let entry = self.entry(&section, index)?;
+        library::book_name(&entry.key).map(str::to_owned)
+    }
+
+    /// Reads the book `name` for its window; `state` is the reader's
+    /// state file, and `find` starts Find with a text.
+    pub fn open_book(
+        &self,
+        name: String,
+        state: String,
+        find: Option<String>,
+    ) -> Result<Arc<BookSession>, CoreError> {
+        Ok(Arc::new(BookSession::open(
+            &self.install,
+            &name,
+            &state,
+            find,
+        )?))
+    }
+
     pub fn help(&self) -> Result<Arc<HelpSession>, CoreError> {
         Ok(HelpSession::new(self.help_files()?))
     }
