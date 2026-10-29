@@ -18,6 +18,7 @@ mod prompt;
 mod record;
 mod sheet;
 mod tables;
+mod templates;
 mod treasure;
 mod treasure_tables;
 mod wizard;
@@ -1173,6 +1174,10 @@ impl Library {
             &name,
             act,
             shown.as_deref(),
+            || {
+                let rules = cached(&self.npc_rules, || self.install.npc_rules())?;
+                Ok((rules, self.generators.rand.clone()))
+            },
         )
     }
 

@@ -592,7 +592,7 @@ The phases run in order:
      encounter of the party's NPCs or prints or shows their page. New
      Trap, New Monster and the traps' Edit, Copy and Delete in Add Trap
      come with the database editors. (PR #129)
-   - **The user databases (in progress)**, in three pull requests. First
+   - **The user databases (done)**, in three pull requests. First
      the record editor of `cr_app::records::form` in a sheet: each page
      described as a form, every kind of field drawn (text, numbers with
      their suggestion, choices, lists with their numbers, checks over a
@@ -605,8 +605,10 @@ The phases run in order:
      Delete in the encounter's Add Trap and Add Monster (#130). Then
      Allowed Classes on a race, Restore on a shipped treasure table, and
      the treasure table editor in the same sheet, with an entry's details
-     and "How many to remove?" in a dialog over it. Then the encounter
-     template editor.
+     and "How many to remove?" in a dialog over it (#131). Then the
+     encounter template editor in the same sheet: its seven pages, and in
+     a dialog over them a line's Properties, the monster, item and trap
+     pickers, an escort's numbers and NPC Creation's Add to Template.
 5. **Beta and release** on the three systems with the same tag, with an
    install page on the website and in the README that shows the Open
    Anyway steps.

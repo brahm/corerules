@@ -97,7 +97,7 @@ impl NpcSession {
     pub fn form(&self) -> FormPage {
         let mut builder = Builder::new();
         match &*self.form_lock() {
-            Form::One(form) => npc(&mut builder, form),
+            Form::One(form) => npc(&mut builder, form, Change::Npc),
             Form::Group(form) => group(&mut builder, form),
         }
         let (groups, acts) = builder.finish();
@@ -163,7 +163,11 @@ impl NpcSession {
 }
 
 /// The Rules choice: the Core Rules or Player's Option.
-fn rules(form: &mut Builder<Change>, players_option: bool, make: fn(bool) -> Change) {
+fn rules<I: 'static>(
+    form: &mut Builder<I>,
+    players_option: bool,
+    make: impl Fn(bool) -> I + Send + Sync + 'static,
+) {
     form.choice(
         (tr("Rules"), ""),
         vec![tr("Core Rules").to_owned(), "Player's Option".to_owned()],
@@ -174,7 +178,7 @@ fn rules(form: &mut Builder<Change>, players_option: bool, make: fn(bool) -> Cha
 }
 
 /// What stopped the form, over its buttons.
-fn error(form: &mut Builder<Change>, error: &Option<String>) {
+fn error<I: 'static>(form: &mut Builder<I>, error: &Option<String>) {
     if let Some(text) = error {
         form.group("", "").banner(text, true);
     }
@@ -198,26 +202,30 @@ fn maybe_choice(
 }
 
 /// The New NPC form.
-fn npc(form: &mut Builder<Change>, npc: &NpcForm) {
+pub(crate) fn npc<I: Clone + Send + Sync + 'static>(
+    form: &mut Builder<I>,
+    npc: &NpcForm,
+    wrap: fn(NpcInput) -> I,
+) {
     form.group(tr("Character"), "")
         .choice(
             (tr("Race"), ""),
             npc.races().to_vec(),
             Some(npc.race_index()),
             Vec::new(),
-            |i| Change::Npc(NpcInput::Race(i)),
+            move |i| wrap(NpcInput::Race(i)),
         )
         .toggle(
             (tr("All Races"), tr("Include races that are not standard")),
             npc.all_races,
-            |on| Change::Npc(NpcInput::AllRaces(on)),
+            move |on| wrap(NpcInput::AllRaces(on)),
         )
         .choice(
             (tr("Class"), ""),
             npc.class_names(),
             Some(npc.class_index()),
             Vec::new(),
-            |i| Change::Npc(NpcInput::Class(i)),
+            move |i| wrap(NpcInput::Class(i)),
         )
         .toggle(
             (
@@ -225,10 +233,10 @@ fn npc(form: &mut Builder<Change>, npc: &NpcForm) {
                 tr("Include classes the race may not take"),
             ),
             npc.all_classes,
-            |on| Change::Npc(NpcInput::AllClasses(on)),
+            move |on| wrap(NpcInput::AllClasses(on)),
         );
-    rules(form, npc.players_option, |on| {
-        Change::Npc(NpcInput::PlayersOption(on))
+    rules(form, npc.players_option, move |on| {
+        wrap(NpcInput::PlayersOption(on))
     });
 
     // A level for each class of the combination, named for it.
@@ -239,20 +247,40 @@ fn npc(form: &mut Builder<Change>, npc: &NpcForm) {
             (*level).max(1).into(),
             (1, MOST_LEVEL.into()),
             Vec::new(),
-            move |v| Change::Npc(NpcInput::Level(i, v as i32)),
+            move |v| wrap(NpcInput::Level(i, v as i32)),
         );
     }
 
+    // In template mode the NPC has no ability scores (0x4bd39a).
+    if !npc.template {
+        abilities(form, npc, wrap);
+    }
+
+    if npc.party_shown() {
+        form.group("", "")
+            .text(tr("Party"), &npc.party, false, Vec::new(), move |text| {
+                wrap(NpcInput::Party(text))
+            });
+    }
+    error(form, &npc.error);
+}
+
+/// New NPC's ability scores, which Roll rolls.
+fn abilities<I: Clone + Send + Sync + 'static>(
+    form: &mut Builder<I>,
+    npc: &NpcForm,
+    wrap: fn(NpcInput) -> I,
+) {
     let description = if npc.abilities.is_some() {
         tr("The NPC keeps these scores")
     } else {
         tr("Rolled with the NPC unless you roll them now")
     };
     form.group(tr("Ability Scores"), description);
-    let roll = form.button(tr("_Roll"), "", true, Change::Npc(NpcInput::Roll));
+    let roll = form.button(tr("_Roll"), "", true, wrap(NpcInput::Roll));
     form.heading_button(roll);
     if npc.abilities.is_some() {
-        let clear = form.button(tr("_Clear"), "", true, Change::Npc(NpcInput::Clear));
+        let clear = form.button(tr("_Clear"), "", true, wrap(NpcInput::Clear));
         form.heading_button(clear);
     }
     match npc.abilities {
@@ -263,7 +291,7 @@ fn npc(form: &mut Builder<Change>, npc: &NpcForm) {
                     rolled.scores[i].into(),
                     (lo.into(), hi.max(lo).into()),
                     Vec::new(),
-                    move |v| Change::Npc(NpcInput::Ability(i, v as i32)),
+                    move |v| wrap(NpcInput::Ability(i, v as i32)),
                 );
             }
             if npc.exceptional_shown() {
@@ -275,7 +303,7 @@ fn npc(form: &mut Builder<Change>, npc: &NpcForm) {
                     rolled.exceptional.into(),
                     (1, 100),
                     Vec::new(),
-                    |v| Change::Npc(NpcInput::Exceptional(v as i32)),
+                    move |v| wrap(NpcInput::Exceptional(v as i32)),
                 );
             }
         }
@@ -283,14 +311,6 @@ fn npc(form: &mut Builder<Change>, npc: &NpcForm) {
             form.none();
         }
     }
-
-    if npc.party_shown() {
-        form.group("", "")
-            .text(tr("Party"), &npc.party, false, Vec::new(), |text| {
-                Change::Npc(NpcInput::Party(text))
-            });
-    }
-    error(form, &npc.error);
 }
 
 /// The New NPC Group form.

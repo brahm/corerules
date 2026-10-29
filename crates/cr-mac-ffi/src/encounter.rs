@@ -26,7 +26,7 @@ use crate::sheet::SheetSession;
 use crate::treasure::TreasureSession;
 
 /// The most names a list of a dialog shows; a search narrows it.
-const MOST_SHOWN: usize = 200;
+pub(crate) const MOST_SHOWN: usize = 200;
 
 /// What a Save came to.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
@@ -644,7 +644,7 @@ fn describe_chooser(form: &mut Builder<In>, chooser: &Chooser) {
 }
 
 /// What a list cut at [`MOST_SHOWN`] says under it.
-fn more_shown(form: &mut Builder<In>, count: usize) {
+pub(crate) fn more_shown<I: 'static>(form: &mut Builder<I>, count: usize) {
     if count > MOST_SHOWN {
         form.row(crate::form::FormRow::Note {
             text: tr!(
