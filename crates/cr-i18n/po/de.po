@@ -396,10 +396,12 @@ msgstr "Wie viele hinzufügen?"
 #: crates/cr-mac-ffi/src/edit.rs:256
 #: crates/cr-mac-ffi/src/encounter.rs:913
 #: crates/cr-mac-ffi/src/parties.rs:278
-#: crates/cr-mac-ffi/src/record.rs:668
-#: crates/cr-mac-ffi/src/record.rs:850
-#: crates/cr-mac-ffi/src/record.rs:1014
-#: crates/cr-mac-ffi/src/record.rs:1175
+#: crates/cr-mac-ffi/src/record.rs:728
+#: crates/cr-mac-ffi/src/record.rs:910
+#: crates/cr-mac-ffi/src/record.rs:1074
+#: crates/cr-mac-ffi/src/record.rs:1235
+#: crates/cr-mac-ffi/src/templates.rs:639
+#: crates/cr-mac-ffi/src/templates.rs:696
 #: crates/cr-mac-ffi/src/treasure_tables.rs:119
 #: crates/cr-mac-ffi/src/wizard.rs:751
 #: crates/cr-win/src/app/bundle.rs:220
@@ -734,7 +736,7 @@ msgstr[1] "{count} Punkte"
 #: crates/cr-gtk/src/create.rs:1092
 #: crates/cr-gtk/src/create.rs:1358
 #: crates/cr-gtk/src/npc.rs:314
-#: crates/cr-mac-ffi/src/npc.rs:251
+#: crates/cr-mac-ffi/src/npc.rs:279
 #: crates/cr-mac-ffi/src/wizard.rs:304
 #: crates/cr-mac-ffi/src/wizard.rs:497
 #: crates/cr-store/src/userdb/classes/pages.rs:85
@@ -754,8 +756,8 @@ msgstr "Attributswerte"
 #: crates/cr-gtk/src/npc.rs:276
 #: crates/cr-gtk/src/npc.rs:522
 #: crates/cr-mac-ffi/src/edit.rs:494
-#: crates/cr-mac-ffi/src/npc.rs:204
-#: crates/cr-mac-ffi/src/npc.rs:303
+#: crates/cr-mac-ffi/src/npc.rs:212
+#: crates/cr-mac-ffi/src/npc.rs:323
 #: crates/cr-mac-ffi/src/wizard.rs:432
 #: crates/cr-store/src/catalog.rs:977
 #: crates/cr-store/src/catalog.rs:1074
@@ -780,7 +782,7 @@ msgstr "Volk"
 #: crates/cr-gtk/src/create.rs:1462
 #: crates/cr-gtk/src/create.rs:1534
 #: crates/cr-gtk/src/npc.rs:278
-#: crates/cr-mac-ffi/src/npc.rs:216
+#: crates/cr-mac-ffi/src/npc.rs:224
 #: crates/cr-mac-ffi/src/wizard.rs:486
 #: crates/cr-mac-ffi/src/wizard.rs:505
 #: crates/cr-store/src/catalog.rs:978
@@ -799,7 +801,7 @@ msgstr "Klasse"
 #: crates/cr-app/src/create/mod.rs:227
 #: crates/cr-gtk/src/create.rs:1706
 #: crates/cr-gtk/src/userdb/levels.rs:668
-#: crates/cr-mac-ffi/src/record.rs:1241
+#: crates/cr-mac-ffi/src/record.rs:1301
 #: crates/cr-store/src/catalog.rs:1133
 #: crates/cr-store/src/treasure.rs:450
 #: crates/cr-store/src/userdb/classes/pages.rs:96
@@ -865,7 +867,7 @@ msgstr "Schurkenfähigkeiten"
 #: crates/cr-gtk/src/create.rs:4632
 #: crates/cr-gtk/src/main.rs:2676
 #: crates/cr-gtk/src/userdb/levels.rs:304
-#: crates/cr-mac-ffi/src/record.rs:1132
+#: crates/cr-mac-ffi/src/record.rs:1192
 #: crates/cr-store/src/catalog.rs:1002
 #: crates/cr-store/src/userdb/monsters.rs:540
 #: crates/cr-win/src/app/record.rs:1253
@@ -1968,6 +1970,8 @@ msgstr "Standard"
 #: crates/cr-app/src/encounter.rs:284
 #: crates/cr-gtk/src/userdb.rs:2239
 #: crates/cr-mac-ffi/src/allowed.rs:48
+#: crates/cr-mac-ffi/src/templates.rs:651
+#: crates/cr-mac-ffi/src/templates.rs:652
 #: crates/cr-store/src/userdb/tables.rs:356
 #: crates/cr-store/src/userdb.rs:69
 #: crates/cr-store/src/userdb.rs:117
@@ -2024,6 +2028,10 @@ msgstr "Mit diesen Trefferpunkten; {count} ohne Wert"
 #: crates/cr-gtk/src/userdb/templates.rs:1673
 #: crates/cr-gtk/src/userdb/templates.rs:1744
 #: crates/cr-mac-ffi/src/encounter.rs:566
+#: crates/cr-mac-ffi/src/templates.rs:134
+#: crates/cr-mac-ffi/src/templates.rs:482
+#: crates/cr-mac-ffi/src/templates.rs:552
+#: crates/cr-mac-ffi/src/templates.rs:571
 #: crates/cr-win/src/app/templates.rs:335
 #: crates/cr-win/src/app/templates.rs:736
 #: crates/cr-win/src/app/templates.rs:791
@@ -2039,6 +2047,8 @@ msgstr "Monster hinzufügen"
 #: crates/cr-gtk/src/userdb/templates.rs:1501
 #: crates/cr-mac-ffi/src/encounter.rs:276
 #: crates/cr-mac-ffi/src/encounter.rs:323
+#: crates/cr-mac-ffi/src/templates.rs:149
+#: crates/cr-mac-ffi/src/templates.rs:480
 #: crates/cr-win/src/app/templates.rs:361
 #: crates/cr-win/src/app/templates.rs:734
 #: crates/cr-win/src/app.rs:3915
@@ -2052,6 +2062,7 @@ msgstr "NSC hinzufügen"
 #: crates/cr-gtk/src/userdb/templates.rs:780
 #: crates/cr-mac-ffi/src/encounter.rs:280
 #: crates/cr-mac-ffi/src/encounter.rs:551
+#: crates/cr-mac-ffi/src/templates.rs:179
 #: crates/cr-win/src/app/templates.rs:413
 #: crates/cr-win/src/app.rs:3939
 #: crates/cr-win/src/app.rs:4242
@@ -2133,6 +2144,7 @@ msgstr "Falle kann nicht hinzugefügt werden"
 #: crates/cr-gtk/src/encounter.rs:861
 #: crates/cr-gtk/src/userdb/templates.rs:1205
 #: crates/cr-mac-ffi/src/encounter.rs:760
+#: crates/cr-mac-ffi/src/templates.rs:181
 #: crates/cr-win/src/app/encounter.rs:681
 #: crates/cr-win/src/app/templates.rs:402
 msgid "Remove Trap"
@@ -2218,7 +2230,7 @@ msgstr "Stufe {level} · {xp} EP"
 #: crates/cr-app/src/levels.rs:173
 #: crates/cr-gtk/src/main.rs:3159
 #: crates/cr-gtk/src/npc.rs:280
-#: crates/cr-mac-ffi/src/npc.rs:224
+#: crates/cr-mac-ffi/src/npc.rs:232
 #: crates/cr-win/src/app/npc.rs:153
 msgid "All Classes"
 msgstr "Alle Klassen"
@@ -2280,7 +2292,7 @@ msgstr "Schurke"
 #: crates/cr-gtk/src/userdb/levels.rs:321
 #: crates/cr-gtk/src/userdb/levels.rs:361
 #: crates/cr-gtk/src/userdb.rs:2036
-#: crates/cr-mac-ffi/src/record.rs:1157
+#: crates/cr-mac-ffi/src/record.rs:1217
 #: crates/cr-mac-ffi/src/treasure_tables.rs:245
 #: crates/cr-store/src/npc.rs:221
 #: crates/cr-store/src/userdb/classes/pages.rs:239
@@ -2297,7 +2309,7 @@ msgstr "Priester"
 #: crates/cr-app/src/npc.rs:18
 #: crates/cr-gtk/src/userdb/levels.rs:361
 #: crates/cr-gtk/src/userdb.rs:2036
-#: crates/cr-mac-ffi/src/record.rs:1157
+#: crates/cr-mac-ffi/src/record.rs:1217
 #: crates/cr-mac-ffi/src/treasure_tables.rs:245
 #: crates/cr-store/src/npc.rs:222
 #: crates/cr-store/src/userdb/classes/pages.rs:285
@@ -2343,7 +2355,7 @@ msgstr "Ein Gruppenname muss angegeben werden."
 #: crates/cr-gtk/src/main.rs:2908
 #: crates/cr-gtk/src/npc.rs:541
 #: crates/cr-mac-ffi/src/edit.rs:378
-#: crates/cr-mac-ffi/src/npc.rs:332
+#: crates/cr-mac-ffi/src/npc.rs:352
 #: crates/cr-store/src/catalog.rs:137
 #: crates/cr-win/src/app/edit.rs:439
 #: crates/cr-win/src/app/npc.rs:382
@@ -2385,6 +2397,7 @@ msgstr "Monsterangriffe"
 
 #: crates/cr-app/src/packages.rs:31
 #: crates/cr-gtk/src/userdb/templates.rs:451
+#: crates/cr-mac-ffi/src/templates.rs:602
 #: crates/cr-store/src/catalog.rs:271
 #: crates/cr-win/src/app/templates.rs:894
 msgid "Monster Types"
@@ -2408,6 +2421,7 @@ msgstr "Begegnungsvorlagen"
 #: crates/cr-gtk/src/userdb/templates.rs:1286
 #: crates/cr-mac-ffi/src/encounter.rs:757
 #: crates/cr-mac-ffi/src/encounter.rs:871
+#: crates/cr-mac-ffi/src/templates.rs:178
 #: crates/cr-store/src/catalog.rs:277
 #: crates/cr-store/src/catalog.rs:731
 #: crates/cr-store/src/encounter/text.rs:400
@@ -2575,7 +2589,7 @@ msgstr "Währungen"
 
 #: crates/cr-app/src/pictures.rs:92
 #: crates/cr-gtk/src/picture.rs:289
-#: crates/cr-mac-ffi/src/record.rs:440
+#: crates/cr-mac-ffi/src/record.rs:500
 #: crates/cr-win/src/app/portrait.rs:126
 msgid "Your Pictures"
 msgstr "Ihre Bilder"
@@ -2619,7 +2633,8 @@ msgstr "Wenn Sie diese Meldung ignorieren und den Charakter speichern, erscheint
 #: crates/cr-mac-ffi/src/bundle.rs:182
 #: crates/cr-mac-ffi/src/encounter.rs:1257
 #: crates/cr-mac-ffi/src/parties.rs:348
-#: crates/cr-mac-ffi/src/record.rs:1342
+#: crates/cr-mac-ffi/src/record.rs:1402
+#: crates/cr-mac-ffi/src/templates.rs:449
 #: crates/cr-mac-ffi/src/treasure_tables.rs:278
 #: crates/cr-win/src/app/bundle.rs:283
 #: crates/cr-win/src/app/encounter.rs:788
@@ -3095,6 +3110,7 @@ msgstr "Gegenstände"
 #: crates/cr-app/src/records/templates.rs:291
 #: crates/cr-gtk/src/userdb/templates.rs:812
 #: crates/cr-gtk/src/userdb/templates.rs:988
+#: crates/cr-mac-ffi/src/templates.rs:187
 #: crates/cr-store/src/userdb/monsters.rs:439
 #: crates/cr-store/src/userdb/monsters.rs:452
 #: crates/cr-win/src/app/templates.rs:466
@@ -3416,6 +3432,7 @@ msgstr "Buch konnte nicht geöffnet werden"
 #: crates/cr-mac-ffi/src/bundle.rs:128
 #: crates/cr-mac-ffi/src/encounter.rs:618
 #: crates/cr-mac-ffi/src/encounter.rs:897
+#: crates/cr-mac-ffi/src/templates.rs:644
 #: crates/cr-win/src/app/book.rs:264
 #: crates/cr-win/src/app/bundle.rs:172
 #: crates/cr-win/src/app/encounter.rs:143
@@ -3435,7 +3452,7 @@ msgstr "{current} von {total}"
 
 #: crates/cr-gtk/src/bundle.rs:50
 #: crates/cr-mac-ffi/src/encounter.rs:734
-#: crates/cr-mac-ffi/src/record.rs:681
+#: crates/cr-mac-ffi/src/record.rs:741
 #: crates/cr-mac-ffi/src/treasure.rs:262
 #: crates/cr-win/src/app/encounter.rs:643
 #: crates/cr-win/src/app/record.rs:564
@@ -3472,7 +3489,7 @@ msgstr "_Kopieren nach…"
 #: crates/cr-gtk/src/userdb/attacks.rs:74
 #: crates/cr-gtk/src/userdb/levels.rs:159
 #: crates/cr-gtk/src/userdb/widgets.rs:615
-#: crates/cr-mac-ffi/src/record.rs:877
+#: crates/cr-mac-ffi/src/record.rs:937
 #: crates/cr-win/src/app/library.rs:509
 #: crates/cr-win/src/app/library.rs:524
 #: crates/cr-win/src/app/record.rs:781
@@ -3534,7 +3551,11 @@ msgstr "Wie viele?"
 #: crates/cr-mac-ffi/src/encounter.rs:907
 #: crates/cr-mac-ffi/src/encounter.rs:1255
 #: crates/cr-mac-ffi/src/parties.rs:347
-#: crates/cr-mac-ffi/src/record.rs:1337
+#: crates/cr-mac-ffi/src/record.rs:1397
+#: crates/cr-mac-ffi/src/templates.rs:444
+#: crates/cr-mac-ffi/src/templates.rs:665
+#: crates/cr-mac-ffi/src/templates.rs:690
+#: crates/cr-mac-ffi/src/templates.rs:713
 #: crates/cr-mac-ffi/src/treasure.rs:300
 #: crates/cr-mac-ffi/src/treasure_tables.rs:273
 #: crates/cr-mac-ffi/src/treasure_tables.rs:298
@@ -3591,6 +3612,8 @@ msgstr "_Abbrechen"
 #: crates/cr-gtk/src/userdb.rs:2004
 #: crates/cr-gtk/src/userdb.rs:2162
 #: crates/cr-mac-ffi/src/bundle.rs:118
+#: crates/cr-mac-ffi/src/templates.rs:305
+#: crates/cr-mac-ffi/src/templates.rs:315
 #: crates/cr-mac-ffi/src/treasure_tables.rs:111
 #: crates/cr-store/src/userdb/monsters.rs:529
 #: crates/cr-win/src/app/bundle.rs:196
@@ -3610,6 +3633,7 @@ msgstr "Kategorie"
 #: crates/cr-gtk/src/userdb/templates.rs:615
 #: crates/cr-gtk/src/userdb/widgets.rs:101
 #: crates/cr-mac-ffi/src/bundle.rs:124
+#: crates/cr-mac-ffi/src/templates.rs:632
 #: crates/cr-win/src/app/bundle.rs:205
 #: crates/cr-win/src/app/bundle.rs:206
 #: crates/cr-win/src/app/library.rs:235
@@ -3628,6 +3652,7 @@ msgstr "Suchen"
 #: crates/cr-gtk/src/userdb/templates.rs:779
 #: crates/cr-gtk/src/userdb.rs:1924
 #: crates/cr-mac-ffi/src/bundle.rs:140
+#: crates/cr-mac-ffi/src/templates.rs:164
 #: crates/cr-win/src/app/bundle.rs:175
 #: crates/cr-win/src/app/bundle.rs:225
 #: crates/cr-win/src/app/templates.rs:387
@@ -3663,7 +3688,8 @@ msgstr "Wählen Sie die Zauber für die Schriftrolle aus."
 #: crates/cr-mac-ffi/src/bundle.rs:202
 #: crates/cr-mac-ffi/src/edit.rs:384
 #: crates/cr-mac-ffi/src/encounter.rs:796
-#: crates/cr-mac-ffi/src/record.rs:883
+#: crates/cr-mac-ffi/src/record.rs:943
+#: crates/cr-mac-ffi/src/templates.rs:381
 #: crates/cr-win/src/app/allowed.rs:40
 #: crates/cr-win/src/app/bundle.rs:120
 #: crates/cr-win/src/app/bundle.rs:306
@@ -3757,7 +3783,7 @@ msgstr "Zufällig wählen"
 
 #: crates/cr-gtk/src/create.rs:632
 #: crates/cr-gtk/src/npc.rs:94
-#: crates/cr-mac-ffi/src/npc.rs:168
+#: crates/cr-mac-ffi/src/npc.rs:172
 #: crates/cr-mac-ffi/src/wizard.rs:258
 #: crates/cr-store/src/catalog.rs:983
 #: crates/cr-win/src/app/create.rs:239
@@ -3775,7 +3801,7 @@ msgstr "Die Knöpfe »Core Rules« und »Player's Option« des Originals"
 #: crates/cr-gtk/src/create.rs:640
 #: crates/cr-gtk/src/main.rs:947
 #: crates/cr-gtk/src/npc.rs:96
-#: crates/cr-mac-ffi/src/npc.rs:169
+#: crates/cr-mac-ffi/src/npc.rs:173
 #: crates/cr-mac-ffi/src/wizard.rs:263
 #: crates/cr-store/src/catalog.rs:987
 #: crates/cr-store/src/userdb/parts/pages.rs:416
@@ -3871,7 +3897,8 @@ msgid "Die {number}"
 msgstr "Würfel {number}"
 
 #: crates/cr-gtk/src/create.rs:761
-#: crates/cr-mac-ffi/src/record.rs:792
+#: crates/cr-mac-ffi/src/record.rs:852
+#: crates/cr-mac-ffi/src/templates.rs:343
 #: crates/cr-mac-ffi/src/wizard.rs:377
 #: crates/cr-store/src/userdb/races.rs:276
 #: crates/cr-store/src/userdb/races.rs:280
@@ -3894,7 +3921,7 @@ msgstr "Jeder Würfel wird zum dafür gewählten Attribut addiert"
 #: crates/cr-gtk/src/main.rs:2256
 #: crates/cr-gtk/src/npc.rs:326
 #: crates/cr-mac-ffi/src/edit.rs:481
-#: crates/cr-mac-ffi/src/npc.rs:272
+#: crates/cr-mac-ffi/src/npc.rs:300
 #: crates/cr-mac-ffi/src/wizard.rs:364
 #: crates/cr-mac-ffi/src/wizard.rs:411
 #: crates/cr-mac-ffi/src/wizard.rs:624
@@ -4031,7 +4058,7 @@ msgstr "Volksfähigkeiten"
 #: crates/cr-mac-ffi/src/edit.rs:278
 #: crates/cr-mac-ffi/src/encounter.rs:669
 #: crates/cr-mac-ffi/src/encounter.rs:1148
-#: crates/cr-mac-ffi/src/record.rs:1250
+#: crates/cr-mac-ffi/src/record.rs:1310
 #: crates/cr-mac-ffi/src/treasure.rs:299
 #: crates/cr-mac-ffi/src/treasure_tables.rs:30
 #: crates/cr-mac-ffi/src/wizard.rs:531
@@ -4120,7 +4147,7 @@ msgstr "Geschlecht"
 #: crates/cr-gtk/src/main.rs:2302
 #: crates/cr-gtk/src/npc.rs:558
 #: crates/cr-mac-ffi/src/edit.rs:309
-#: crates/cr-mac-ffi/src/npc.rs:368
+#: crates/cr-mac-ffi/src/npc.rs:388
 #: crates/cr-mac-ffi/src/wizard.rs:545
 #: crates/cr-store/src/catalog.rs:980
 #: crates/cr-store/src/catalog.rs:1261
@@ -4140,7 +4167,7 @@ msgstr "Gesinnung"
 #: crates/cr-gtk/src/main.rs:2307
 #: crates/cr-gtk/src/npc.rs:553
 #: crates/cr-mac-ffi/src/edit.rs:317
-#: crates/cr-mac-ffi/src/npc.rs:352
+#: crates/cr-mac-ffi/src/npc.rs:372
 #: crates/cr-mac-ffi/src/wizard.rs:552
 #: crates/cr-store/src/catalog.rs:979
 #: crates/cr-store/src/userdb/parts/kit.rs:369
@@ -4329,9 +4356,9 @@ msgstr "Wird ein Unterattribut erhöht, sinkt das andere um denselben Betrag"
 #: crates/cr-gtk/src/npc.rs:294
 #: crates/cr-gtk/src/npc.rs:569
 #: crates/cr-mac-ffi/src/edit.rs:241
-#: crates/cr-mac-ffi/src/npc.rs:235
-#: crates/cr-mac-ffi/src/npc.rs:384
-#: crates/cr-mac-ffi/src/record.rs:936
+#: crates/cr-mac-ffi/src/npc.rs:243
+#: crates/cr-mac-ffi/src/npc.rs:404
+#: crates/cr-mac-ffi/src/record.rs:996
 #: crates/cr-mac-ffi/src/wizard.rs:670
 #: crates/cr-mac-ffi/src/wizard.rs:715
 #: crates/cr-store/src/userdb/classes/pages.rs:95
@@ -4543,6 +4570,7 @@ msgstr "Eine Begegnung mit den NSC von „{party}“ erstellen oder drucken."
 #: crates/cr-gtk/src/encounter.rs:347
 #: crates/cr-gtk/src/userdb/templates.rs:725
 #: crates/cr-mac-ffi/src/encounter.rs:674
+#: crates/cr-mac-ffi/src/templates.rs:227
 #: crates/cr-store/src/catalog.rs:787
 #: crates/cr-store/src/catalog.rs:1305
 #: crates/cr-store/src/userdb/monsters.rs:33
@@ -4787,6 +4815,7 @@ msgstr "_Kopieren…"
 
 #: crates/cr-gtk/src/encounter.rs:983
 #: crates/cr-mac-ffi/src/encounter.rs:865
+#: crates/cr-mac-ffi/src/templates.rs:258
 #: crates/cr-win/src/app/encounter.rs:414
 #: crates/cr-win/src/app/templates.rs:190
 msgid "_Edit…"
@@ -4860,7 +4889,8 @@ msgstr "Nichts hinzuzufügen"
 #: crates/cr-gtk/src/userdb/levels.rs:288
 #: crates/cr-gtk/src/userdb/templates.rs:1015
 #: crates/cr-mac-ffi/src/encounter.rs:1233
-#: crates/cr-mac-ffi/src/record.rs:1107
+#: crates/cr-mac-ffi/src/record.rs:1167
+#: crates/cr-mac-ffi/src/templates.rs:287
 #: crates/cr-store/src/catalog.rs:789
 #: crates/cr-store/src/userdb/monsters.rs:349
 #: crates/cr-store/src/userdb/monsters.rs:360
@@ -4923,6 +4953,8 @@ msgstr "Meiste Trefferwürfel"
 #: crates/cr-gtk/src/userdb/templates.rs:1049
 #: crates/cr-gtk/src/userdb/templates.rs:1094
 #: crates/cr-mac-ffi/src/encounter.rs:1200
+#: crates/cr-mac-ffi/src/templates.rs:303
+#: crates/cr-mac-ffi/src/templates.rs:323
 #: crates/cr-win/src/app/encounter.rs:905
 #: crates/cr-win/src/app/encounter.rs:909
 #: crates/cr-win/src/app/templates.rs:561
@@ -4963,7 +4995,7 @@ msgstr "Für jeden Wurf eine Vorlage wählen"
 #: crates/cr-gtk/src/npc.rs:298
 #: crates/cr-gtk/src/tables.rs:262
 #: crates/cr-gtk/src/treasure.rs:197
-#: crates/cr-mac-ffi/src/npc.rs:252
+#: crates/cr-mac-ffi/src/npc.rs:280
 #: crates/cr-win/src/app/encounter.rs:835
 #: crates/cr-win/src/app/npc.rs:237
 #: crates/cr-win/src/app/tables.rs:137
@@ -5230,8 +5262,8 @@ msgid "Help"
 msgstr "Hilfe"
 
 #: crates/cr-gtk/src/help.rs:284
-#: crates/cr-mac-ffi/src/lib.rs:847
-#: crates/cr-mac-ffi/src/lib.rs:893
+#: crates/cr-mac-ffi/src/lib.rs:848
+#: crates/cr-mac-ffi/src/lib.rs:894
 #: crates/cr-win/src/app.rs:1834
 #: crates/cr-win/src/app.rs:1843
 #: crates/cr-win/src/app.rs:3522
@@ -5309,7 +5341,7 @@ msgstr "Gewählte freie Sphäre"
 #: crates/cr-gtk/src/lists.rs:371
 #: crates/cr-gtk/src/lists.rs:409
 #: crates/cr-mac-ffi/src/form.rs:711
-#: crates/cr-mac-ffi/src/record.rs:857
+#: crates/cr-mac-ffi/src/record.rs:917
 #: crates/cr-win/src/app/forms.rs:221
 #: crates/cr-win/src/app/record.rs:736
 msgid "Add to {list}"
@@ -5402,7 +5434,7 @@ msgid "Character created"
 msgstr "Charakter erstellt"
 
 #: crates/cr-gtk/src/main.rs:906
-#: crates/cr-mac-ffi/src/lib.rs:926
+#: crates/cr-mac-ffi/src/lib.rs:927
 #: crates/cr-win/src/app.rs:2763
 msgid "Converted to a character"
 msgstr "In einen Charakter umgewandelt"
@@ -5569,7 +5601,7 @@ msgstr "Charakter löschen"
 
 #: crates/cr-gtk/src/main.rs:1522
 #: crates/cr-gtk/src/userdb.rs:2438
-#: crates/cr-mac-ffi/src/record.rs:707
+#: crates/cr-mac-ffi/src/record.rs:767
 #: crates/cr-win/src/app/library.rs:512
 #: crates/cr-win/src/app/library.rs:532
 #: crates/cr-win/src/app/record.rs:605
@@ -5622,7 +5654,7 @@ msgid "Show a Party"
 msgstr "Eine Gruppe anzeigen"
 
 #: crates/cr-gtk/src/main.rs:1589
-#: crates/cr-mac-ffi/src/lib.rs:621
+#: crates/cr-mac-ffi/src/lib.rs:622
 #: crates/cr-win/src/app/library.rs:337
 msgid "All Types"
 msgstr "Alle Typen"
@@ -5671,7 +5703,7 @@ msgstr "Einträge"
 #: crates/cr-mac-ffi/src/encounter.rs:225
 #: crates/cr-mac-ffi/src/encounter.rs:526
 #: crates/cr-mac-ffi/src/encounter.rs:962
-#: crates/cr-mac-ffi/src/lib.rs:1079
+#: crates/cr-mac-ffi/src/lib.rs:1080
 #: crates/cr-mac-ffi/src/sheet.rs:85
 #: crates/cr-win/src/app/library.rs:261
 #: crates/cr-win/src/app.rs:402
@@ -5977,21 +6009,21 @@ msgid "NPC Generator"
 msgstr "NSC-Generator"
 
 #: crates/cr-gtk/src/npc.rs:244
-#: crates/cr-mac-ffi/src/npc.rs:247
+#: crates/cr-mac-ffi/src/npc.rs:275
 #: crates/cr-win/src/app/npc.rs:229
 msgid "The NPC keeps these scores"
 msgstr "Der NSC behält diese Werte"
 
 #: crates/cr-gtk/src/npc.rs:246
-#: crates/cr-mac-ffi/src/npc.rs:249
+#: crates/cr-mac-ffi/src/npc.rs:277
 #: crates/cr-win/src/app/npc.rs:231
 msgid "Rolled with the NPC unless you roll them now"
 msgstr "Werden mit dem NSC ausgewürfelt, sofern Sie sie nicht jetzt würfeln"
 
 #: crates/cr-gtk/src/npc.rs:277
 #: crates/cr-gtk/src/npc.rs:523
-#: crates/cr-mac-ffi/src/npc.rs:211
-#: crates/cr-mac-ffi/src/npc.rs:310
+#: crates/cr-mac-ffi/src/npc.rs:219
+#: crates/cr-mac-ffi/src/npc.rs:330
 #: crates/cr-win/src/app/npc.rs:134
 #: crates/cr-win/src/app/npc.rs:326
 msgid "All Races"
@@ -5999,41 +6031,41 @@ msgstr "Alle Völker"
 
 #: crates/cr-gtk/src/npc.rs:277
 #: crates/cr-gtk/src/npc.rs:523
-#: crates/cr-mac-ffi/src/npc.rs:211
-#: crates/cr-mac-ffi/src/npc.rs:310
+#: crates/cr-mac-ffi/src/npc.rs:219
+#: crates/cr-mac-ffi/src/npc.rs:330
 #: crates/cr-win/src/app/npc.rs:135
 #: crates/cr-win/src/app/npc.rs:327
 msgid "Include races that are not standard"
 msgstr "Auch Völker einbeziehen, die nicht Standard sind"
 
 #: crates/cr-gtk/src/npc.rs:281
-#: crates/cr-mac-ffi/src/npc.rs:225
+#: crates/cr-mac-ffi/src/npc.rs:233
 #: crates/cr-win/src/app/npc.rs:154
 msgid "Include classes the race may not take"
 msgstr "Auch Klassen einbeziehen, die das Volk nicht wählen darf"
 
 #: crates/cr-gtk/src/npc.rs:285
-#: crates/cr-mac-ffi/src/npc.rs:202
+#: crates/cr-mac-ffi/src/npc.rs:210
 #: crates/cr-store/src/catalog.rs:975
 #: crates/cr-win/src/app/npc.rs:120
 msgid "Character"
 msgstr "Charakter"
 
 #: crates/cr-gtk/src/npc.rs:304
-#: crates/cr-mac-ffi/src/npc.rs:255
+#: crates/cr-mac-ffi/src/npc.rs:283
 #: crates/cr-win/src/app/npc.rs:244
 msgid "_Clear"
 msgstr "_Leeren"
 
 #: crates/cr-gtk/src/npc.rs:327
-#: crates/cr-mac-ffi/src/npc.rs:273
+#: crates/cr-mac-ffi/src/npc.rs:301
 #: crates/cr-win/src/app/npc.rs:275
 msgid "1 to 100 for 18/01 to 18/00"
 msgstr "1 bis 100 für 18/01 bis 18/00"
 
 #: crates/cr-gtk/src/npc.rs:331
 #: crates/cr-gtk/src/party.rs:107
-#: crates/cr-mac-ffi/src/npc.rs:289
+#: crates/cr-mac-ffi/src/npc.rs:261
 #: crates/cr-mac-ffi/src/parties.rs:272
 #: crates/cr-store/src/catalog.rs:567
 #: crates/cr-win/src/app/npc.rs:199
@@ -6044,6 +6076,7 @@ msgid "Party"
 msgstr "Gruppe"
 
 #: crates/cr-gtk/src/npc.rs:343
+#: crates/cr-mac-ffi/src/templates.rs:714
 #: crates/cr-win/src/app/npc.rs:211
 msgid "Add to _Template"
 msgstr "Zur _Vorlage hinzufügen"
@@ -6058,6 +6091,7 @@ msgstr "_Erstellen"
 
 #: crates/cr-gtk/src/npc.rs:347
 #: crates/cr-mac-ffi/src/npc.rs:82
+#: crates/cr-mac-ffi/src/templates.rs:716
 #: crates/cr-win/src/app/npc.rs:216
 msgid "New NPC"
 msgstr "Neuer NSC"
@@ -6069,7 +6103,7 @@ msgid "{name} was created"
 msgstr "{name} wurde erstellt"
 
 #: crates/cr-gtk/src/npc.rs:524
-#: crates/cr-mac-ffi/src/npc.rs:315
+#: crates/cr-mac-ffi/src/npc.rs:335
 #: crates/cr-store/src/userdb/monsters.rs:413
 #: crates/cr-win/src/app/npc.rs:333
 #: crates/cr-win/src/app/npc.rs:336
@@ -6077,21 +6111,21 @@ msgid "Fewest"
 msgstr "Mindestens"
 
 #: crates/cr-gtk/src/npc.rs:525
-#: crates/cr-mac-ffi/src/npc.rs:322
+#: crates/cr-mac-ffi/src/npc.rs:342
 #: crates/cr-win/src/app/npc.rs:344
 #: crates/cr-win/src/app/npc.rs:347
 msgid "Most"
 msgstr "Höchstens"
 
 #: crates/cr-gtk/src/npc.rs:527
-#: crates/cr-mac-ffi/src/npc.rs:299
+#: crates/cr-mac-ffi/src/npc.rs:319
 #: crates/cr-win/src/app/npc.rs:305
 #: crates/cr-win/src/app/npc.rs:308
 msgid "Group Name"
 msgstr "Gruppenname"
 
 #: crates/cr-gtk/src/npc.rs:528
-#: crates/cr-mac-ffi/src/npc.rs:298
+#: crates/cr-mac-ffi/src/npc.rs:318
 #: crates/cr-store/src/catalog.rs:1128
 #: crates/cr-store/src/userdb/classes/pages.rs:142
 #: crates/cr-win/src/app/npc.rs:303
@@ -6099,61 +6133,61 @@ msgid "Group"
 msgstr "Gruppe"
 
 #: crates/cr-gtk/src/npc.rs:537
-#: crates/cr-mac-ffi/src/npc.rs:335
+#: crates/cr-mac-ffi/src/npc.rs:355
 #: crates/cr-win/src/app/npc.rs:384
 msgid "Allowed Combination"
 msgstr "Erlaubte Kombination"
 
 #: crates/cr-gtk/src/npc.rs:538
-#: crates/cr-mac-ffi/src/npc.rs:336
+#: crates/cr-mac-ffi/src/npc.rs:356
 #: crates/cr-win/src/app/npc.rs:385
 msgid "Each NPC takes a class combination its race allows"
 msgstr "Jeder NSC erhält eine Klassenkombination, die sein Volk erlaubt"
 
 #: crates/cr-gtk/src/npc.rs:542
-#: crates/cr-mac-ffi/src/npc.rs:332
+#: crates/cr-mac-ffi/src/npc.rs:352
 #: crates/cr-win/src/app/npc.rs:382
 msgid "A class of each group, or none"
 msgstr "Eine Klasse jeder Gruppe oder keine"
 
 #: crates/cr-gtk/src/npc.rs:555
-#: crates/cr-mac-ffi/src/npc.rs:360
+#: crates/cr-mac-ffi/src/npc.rs:380
 #: crates/cr-win/src/app/npc.rs:404
 msgid "All Kits"
 msgstr "Alle Kits"
 
 #: crates/cr-gtk/src/npc.rs:556
-#: crates/cr-mac-ffi/src/npc.rs:361
+#: crates/cr-mac-ffi/src/npc.rs:381
 #: crates/cr-win/src/app/npc.rs:405
 msgid "Include kits the race, classes or alignment may not take"
 msgstr "Kits einschließen, die Volk, Klassen oder Gesinnung nicht erlauben"
 
 #: crates/cr-gtk/src/npc.rs:560
-#: crates/cr-mac-ffi/src/npc.rs:376
+#: crates/cr-mac-ffi/src/npc.rs:396
 #: crates/cr-win/src/app/npc.rs:423
 msgid "Any Alignment"
 msgstr "Beliebige Gesinnung"
 
 #: crates/cr-gtk/src/npc.rs:561
-#: crates/cr-mac-ffi/src/npc.rs:377
+#: crates/cr-mac-ffi/src/npc.rs:397
 #: crates/cr-win/src/app/npc.rs:424
 msgid "Include alignments the classes, race or kit do not allow"
 msgstr "Gesinnungen einschließen, die Klassen, Volk oder Kit nicht erlauben"
 
 #: crates/cr-gtk/src/npc.rs:570
-#: crates/cr-mac-ffi/src/npc.rs:385
+#: crates/cr-mac-ffi/src/npc.rs:405
 #: crates/cr-win/src/app/npc.rs:468
 msgid "Lowest and highest level for each class group"
 msgstr "Niedrigste und höchste Stufe für jede Klassengruppe"
 
 #: crates/cr-gtk/src/npc.rs:578
-#: crates/cr-mac-ffi/src/npc.rs:390
+#: crates/cr-mac-ffi/src/npc.rs:410
 #: crates/cr-win/src/app/npc.rs:446
 msgid "Lowest {name} Level"
 msgstr "Niedrigste Stufe: {name}"
 
 #: crates/cr-gtk/src/npc.rs:582
-#: crates/cr-mac-ffi/src/npc.rs:397
+#: crates/cr-mac-ffi/src/npc.rs:417
 #: crates/cr-win/src/app/npc.rs:454
 msgid "Highest {name} Level"
 msgstr "Höchste Stufe: {name}"
@@ -6164,19 +6198,19 @@ msgid "to"
 msgstr "bis"
 
 #: crates/cr-gtk/src/npc.rs:599
-#: crates/cr-mac-ffi/src/npc.rs:406
+#: crates/cr-mac-ffi/src/npc.rs:426
 #: crates/cr-win/src/app/npc.rs:485
 msgid "Lines"
 msgstr "Zeilen"
 
 #: crates/cr-gtk/src/npc.rs:600
-#: crates/cr-mac-ffi/src/npc.rs:407
+#: crates/cr-mac-ffi/src/npc.rs:427
 #: crates/cr-win/src/app/npc.rs:486
 msgid "Without lines, Create makes the line above"
 msgstr "Ohne Zeilen erstellt »Erstellen« die obige Zeile"
 
 #: crates/cr-gtk/src/npc.rs:603
-#: crates/cr-mac-ffi/src/npc.rs:410
+#: crates/cr-mac-ffi/src/npc.rs:430
 #: crates/cr-win/src/app/npc.rs:492
 msgid "_Add Line"
 msgstr "Zeile _hinzufügen"
@@ -6288,7 +6322,9 @@ msgstr "Porträt"
 #: crates/cr-gtk/src/picture.rs:155
 #: crates/cr-gtk/src/userdb/templates.rs:1944
 #: crates/cr-mac-ffi/src/encounter.rs:1209
-#: crates/cr-mac-ffi/src/record.rs:771
+#: crates/cr-mac-ffi/src/record.rs:831
+#: crates/cr-mac-ffi/src/templates.rs:436
+#: crates/cr-mac-ffi/src/templates.rs:639
 #: crates/cr-win/src/app/encounter.rs:986
 #: crates/cr-win/src/app/portrait.rs:298
 #: crates/cr-win/src/app/record.rs:463
@@ -6305,7 +6341,7 @@ msgid "No Portrait"
 msgstr "Kein Porträt"
 
 #: crates/cr-gtk/src/picture.rs:238
-#: crates/cr-mac-ffi/src/record.rs:765
+#: crates/cr-mac-ffi/src/record.rs:825
 #: crates/cr-win/src/app/record.rs:654
 msgid "No Picture"
 msgstr "Kein Bild"
@@ -6333,25 +6369,25 @@ msgid "Choose Picture"
 msgstr "Bild wählen"
 
 #: crates/cr-gtk/src/picture.rs:282
-#: crates/cr-mac-ffi/src/lib.rs:954
+#: crates/cr-mac-ffi/src/lib.rs:955
 #: crates/cr-win/src/app/portrait.rs:120
 msgid "Portraits"
 msgstr "Porträts"
 
 #: crates/cr-gtk/src/picture.rs:285
-#: crates/cr-mac-ffi/src/lib.rs:957
+#: crates/cr-mac-ffi/src/lib.rs:958
 #: crates/cr-win/src/app/portrait.rs:122
 msgid "Portraits for {race}"
 msgstr "Porträts für {race}"
 
 #: crates/cr-gtk/src/picture.rs:286
-#: crates/cr-mac-ffi/src/lib.rs:958
+#: crates/cr-mac-ffi/src/lib.rs:959
 #: crates/cr-win/src/app/portrait.rs:123
 msgid "Other Portraits"
 msgstr "Weitere Porträts"
 
 #: crates/cr-gtk/src/picture.rs:290
-#: crates/cr-mac-ffi/src/record.rs:440
+#: crates/cr-mac-ffi/src/record.rs:500
 #: crates/cr-win/src/app/portrait.rs:127
 msgid "Monster Pictures"
 msgstr "Monsterbilder"
@@ -6637,7 +6673,7 @@ msgid "Table"
 msgstr "Tabelle"
 
 #: crates/cr-gtk/src/tables.rs:162
-#: crates/cr-mac-ffi/src/record.rs:1083
+#: crates/cr-mac-ffi/src/record.rs:1143
 #: crates/cr-mac-ffi/src/treasure.rs:242
 #: crates/cr-store/src/userdb/races.rs:434
 #: crates/cr-store/src/userdb/races.rs:445
@@ -7032,13 +7068,13 @@ msgid "Saved treasure deleted"
 msgstr "Gespeicherter Schatz gelöscht"
 
 #: crates/cr-gtk/src/userdb/attacks.rs:134
-#: crates/cr-mac-ffi/src/record.rs:658
+#: crates/cr-mac-ffi/src/record.rs:718
 #: crates/cr-win/src/app/record.rs:845
 msgid "New…"
 msgstr "Neu…"
 
 #: crates/cr-gtk/src/userdb/attacks.rs:149
-#: crates/cr-mac-ffi/src/record.rs:674
+#: crates/cr-mac-ffi/src/record.rs:734
 #: crates/cr-store/src/catalog.rs:1267
 #: crates/cr-store/src/userdb/classes/pages.rs:765
 #: crates/cr-store/src/userdb/monsters.rs:334
@@ -7049,14 +7085,14 @@ msgid "Attacks"
 msgstr "Angriffe"
 
 #: crates/cr-gtk/src/userdb/attacks.rs:260
-#: crates/cr-mac-ffi/src/record.rs:1253
+#: crates/cr-mac-ffi/src/record.rs:1313
 #: crates/cr-win/src/app/record.rs:1433
 msgid "Help ID"
 msgstr "Hilfe-ID"
 
 #: crates/cr-gtk/src/userdb/attacks.rs:264
-#: crates/cr-mac-ffi/src/record.rs:1256
-#: crates/cr-mac-ffi/src/record.rs:1262
+#: crates/cr-mac-ffi/src/record.rs:1316
+#: crates/cr-mac-ffi/src/record.rs:1322
 #: crates/cr-store/src/catalog.rs:1268
 #: crates/cr-store/src/catalog.rs:1319
 #: crates/cr-store/src/userdb/traps.rs:63
@@ -7066,13 +7102,13 @@ msgid "Damage"
 msgstr "Schaden"
 
 #: crates/cr-gtk/src/userdb/attacks.rs:273
-#: crates/cr-mac-ffi/src/record.rs:1270
+#: crates/cr-mac-ffi/src/record.rs:1330
 #: crates/cr-win/src/app/record.rs:1446
 msgid "Must make a to hit roll against"
 msgstr "Braucht einen Angriffswurf gegen"
 
 #: crates/cr-gtk/src/userdb/attacks.rs:281
-#: crates/cr-mac-ffi/src/record.rs:1276
+#: crates/cr-mac-ffi/src/record.rs:1336
 #: crates/cr-win/src/app/record.rs:1453
 #: crates/cr-win/src/app/record.rs:1455
 msgid "Special Effect"
@@ -7088,7 +7124,7 @@ msgid "Used to calculate modified HD for experience"
 msgstr "Dient zur Berechnung der veränderten TW für die Erfahrung"
 
 #: crates/cr-gtk/src/userdb/attacks.rs:299
-#: crates/cr-mac-ffi/src/record.rs:1293
+#: crates/cr-mac-ffi/src/record.rs:1353
 #: crates/cr-store/src/userdb/monsters.rs:342
 #: crates/cr-store/src/userdb/powers.rs:95
 #: crates/cr-win/src/app/record.rs:1472
@@ -7100,7 +7136,7 @@ msgid "feet"
 msgstr "Fuß"
 
 #: crates/cr-gtk/src/userdb/attacks.rs:315
-#: crates/cr-mac-ffi/src/record.rs:1292
+#: crates/cr-mac-ffi/src/record.rs:1352
 #: crates/cr-store/src/catalog.rs:1194
 #: crates/cr-store/src/userdb/powers.rs:113
 #: crates/cr-store/src/userdb/spells.rs:120
@@ -7109,25 +7145,25 @@ msgid "Area of Effect"
 msgstr "Wirkungsbereich"
 
 #: crates/cr-gtk/src/userdb/attacks.rs:338
-#: crates/cr-mac-ffi/src/record.rs:1314
+#: crates/cr-mac-ffi/src/record.rs:1374
 #: crates/cr-win/src/app/record.rs:1476
 msgid "Save Against"
 msgstr "Rettungswurf gegen"
 
 #: crates/cr-gtk/src/userdb/attacks.rs:345
-#: crates/cr-mac-ffi/src/record.rs:1321
+#: crates/cr-mac-ffi/src/record.rs:1381
 #: crates/cr-win/src/app/record.rs:1483
 msgid "Modified by"
 msgstr "Verändert um"
 
 #: crates/cr-gtk/src/userdb/attacks.rs:347
-#: crates/cr-mac-ffi/src/record.rs:1328
+#: crates/cr-mac-ffi/src/record.rs:1388
 #: crates/cr-win/src/app/record.rs:1490
 msgid "To gain this"
 msgstr "Um zu erreichen"
 
 #: crates/cr-gtk/src/userdb/attacks.rs:355
-#: crates/cr-mac-ffi/src/record.rs:1311
+#: crates/cr-mac-ffi/src/record.rs:1371
 #: crates/cr-store/src/userdb/parts/pages.rs:258
 #: crates/cr-win/src/app/record.rs:1474
 msgid "Saving Throws"
@@ -7135,16 +7171,16 @@ msgstr "Rettungswürfe"
 
 #: crates/cr-gtk/src/userdb/attacks.rs:383
 #: crates/cr-gtk/src/userdb/attacks.rs:400
-#: crates/cr-mac-ffi/src/record.rs:1333
+#: crates/cr-mac-ffi/src/record.rs:1393
 #: crates/cr-win/src/app/record.rs:1031
 msgid "Monster Attack"
 msgstr "Monsterangriff"
 
 #: crates/cr-gtk/src/userdb/levels.rs:60
 #: crates/cr-gtk/src/userdb/widgets.rs:679
-#: crates/cr-mac-ffi/src/record.rs:959
-#: crates/cr-mac-ffi/src/record.rs:969
-#: crates/cr-mac-ffi/src/record.rs:1027
+#: crates/cr-mac-ffi/src/record.rs:1019
+#: crates/cr-mac-ffi/src/record.rs:1029
+#: crates/cr-mac-ffi/src/record.rs:1087
 #: crates/cr-store/src/catalog.rs:1187
 #: crates/cr-store/src/tables/data.rs:409
 #: crates/cr-store/src/tables/data.rs:414
@@ -7159,13 +7195,13 @@ msgid "Level"
 msgstr "Stufe"
 
 #: crates/cr-gtk/src/userdb/levels.rs:260
-#: crates/cr-mac-ffi/src/record.rs:652
+#: crates/cr-mac-ffi/src/record.rs:712
 #: crates/cr-win/src/app/record.rs:551
 msgid "Add Free Spells…"
 msgstr "Freie Zauber hinzufügen…"
 
 #: crates/cr-gtk/src/userdb/levels.rs:276
-#: crates/cr-mac-ffi/src/record.rs:1100
+#: crates/cr-mac-ffi/src/record.rs:1160
 #: crates/cr-win/src/app/record.rs:1214
 #: crates/cr-win/src/app/record.rs:1216
 msgid "The spells may be cast this often"
@@ -7174,26 +7210,26 @@ msgstr "Die Zauber können so oft gewirkt werden"
 #: crates/cr-gtk/src/userdb/levels.rs:281
 #: crates/cr-gtk/src/userdb/templates.rs:1034
 #: crates/cr-gtk/src/userdb.rs:1084
-#: crates/cr-mac-ffi/src/record.rs:1121
+#: crates/cr-mac-ffi/src/record.rs:1181
 #: crates/cr-win/src/app/record.rs:1235
 #: crates/cr-win/src/app/record.rs:1236
 msgid "Choose"
 msgstr "Wählen"
 
 #: crates/cr-gtk/src/userdb/levels.rs:295
-#: crates/cr-mac-ffi/src/record.rs:1127
+#: crates/cr-mac-ffi/src/record.rs:1187
 #: crates/cr-win/src/app/record.rs:1252
 msgid "Must select one spell from the list"
 msgstr "Muss einen Zauber aus der Liste wählen"
 
 #: crates/cr-gtk/src/userdb/levels.rs:327
-#: crates/cr-mac-ffi/src/record.rs:1141
+#: crates/cr-mac-ffi/src/record.rs:1201
 #: crates/cr-win/src/app/record.rs:1188
 msgid "Uses"
 msgstr "Anwendungen"
 
 #: crates/cr-gtk/src/userdb/levels.rs:360
-#: crates/cr-mac-ffi/src/record.rs:1156
+#: crates/cr-mac-ffi/src/record.rs:1216
 #: crates/cr-win/src/app/record.rs:1256
 #: crates/cr-win/src/app/record.rs:1258
 msgid "Spell type"
@@ -7210,75 +7246,75 @@ msgstr "0 für alle"
 
 #: crates/cr-gtk/src/userdb/levels.rs:366
 #: crates/cr-gtk/src/userdb/levels.rs:390
-#: crates/cr-mac-ffi/src/record.rs:1182
+#: crates/cr-mac-ffi/src/record.rs:1242
 #: crates/cr-win/src/app/record.rs:1279
 msgid "Add a Spell…"
 msgstr "Zauber hinzufügen…"
 
 #: crates/cr-gtk/src/userdb/levels.rs:411
-#: crates/cr-mac-ffi/src/record.rs:1188
+#: crates/cr-mac-ffi/src/record.rs:1248
 #: crates/cr-store/src/userdb/classes/pages.rs:922
 #: crates/cr-win/src/app/record.rs:1026
 msgid "Free Spells"
 msgstr "Freie Zauber"
 
 #: crates/cr-gtk/src/userdb/levels.rs:490
-#: crates/cr-mac-ffi/src/record.rs:653
+#: crates/cr-mac-ffi/src/record.rs:713
 #: crates/cr-win/src/app/record.rs:552
 msgid "Add NWPs…"
 msgstr "Fertigkeiten hinzufügen…"
 
 #: crates/cr-gtk/src/userdb/levels.rs:509
-#: crates/cr-mac-ffi/src/record.rs:1195
+#: crates/cr-mac-ffi/src/record.rs:1255
 #: crates/cr-win/src/app/record.rs:1301
 msgid "Bonus NWPs granted at this level"
 msgstr "Bonusfertigkeiten auf dieser Stufe"
 
 #: crates/cr-gtk/src/userdb/levels.rs:523
-#: crates/cr-mac-ffi/src/record.rs:1208
+#: crates/cr-mac-ffi/src/record.rs:1268
 #: crates/cr-win/src/app/record.rs:1314
 msgid "May only pick one from the list above"
 msgstr "Darf nur eine aus der Liste oben wählen"
 
 #: crates/cr-gtk/src/userdb/levels.rs:530
-#: crates/cr-mac-ffi/src/record.rs:1219
+#: crates/cr-mac-ffi/src/record.rs:1279
 #: crates/cr-win/src/app/record.rs:1315
 msgid "NWP score modifications"
 msgstr "Änderungen der Fertigkeitswerte"
 
 #: crates/cr-gtk/src/userdb/levels.rs:535
-#: crates/cr-mac-ffi/src/record.rs:1226
+#: crates/cr-mac-ffi/src/record.rs:1286
 #: crates/cr-win/src/app/record.rs:1320
 msgid "Modification"
 msgstr "Änderung"
 
 #: crates/cr-gtk/src/userdb/levels.rs:552
-#: crates/cr-mac-ffi/src/record.rs:1229
+#: crates/cr-mac-ffi/src/record.rs:1289
 #: crates/cr-win/src/app/record.rs:1029
 msgid "NWPs"
 msgstr "Fertigkeiten"
 
 #: crates/cr-gtk/src/userdb/levels.rs:622
-#: crates/cr-mac-ffi/src/record.rs:655
+#: crates/cr-mac-ffi/src/record.rs:715
 #: crates/cr-win/src/app/record.rs:554
 msgid "Add a Class Ability…"
 msgstr "Klassenfähigkeit hinzufügen…"
 
 #: crates/cr-gtk/src/userdb/levels.rs:652
-#: crates/cr-mac-ffi/src/record.rs:1235
+#: crates/cr-mac-ffi/src/record.rs:1295
 #: crates/cr-win/src/app/record.rs:1333
 #: crates/cr-win/src/app/record.rs:1335
 msgid "Class Ability"
 msgstr "Klassenfähigkeit"
 
 #: crates/cr-gtk/src/userdb/levels.rs:685
-#: crates/cr-mac-ffi/src/record.rs:715
+#: crates/cr-mac-ffi/src/record.rs:775
 #: crates/cr-win/src/app/record.rs:589
 msgid "Copy from another class…"
 msgstr "Von einer anderen Klasse kopieren…"
 
 #: crates/cr-gtk/src/userdb/levels.rs:686
-#: crates/cr-mac-ffi/src/record.rs:716
+#: crates/cr-mac-ffi/src/record.rs:776
 #: crates/cr-win/src/app/record.rs:590
 msgid "Fills this page with what another class has on it"
 msgstr "Füllt diese Seite mit dem, was eine andere Klasse dort hat"
@@ -7291,6 +7327,7 @@ msgstr "Wähle eine Klasse zum Kopieren"
 
 #: crates/cr-gtk/src/userdb/templates.rs:446
 #: crates/cr-gtk/src/userdb.rs:2499
+#: crates/cr-mac-ffi/src/templates.rs:587
 #: crates/cr-win/src/app/library.rs:310
 #: crates/cr-win/src/app/templates.rs:865
 #: macos/CoreRules/ContentView.swift:302
@@ -7299,40 +7336,47 @@ msgid "Show Standard or Custom Records"
 msgstr "Standard- oder eigene Datensätze anzeigen"
 
 #: crates/cr-gtk/src/userdb/templates.rs:464
+#: crates/cr-mac-ffi/src/templates.rs:595
 #: crates/cr-win/src/app/templates.rs:882
 #: crates/cr-win/src/app/templates.rs:887
 msgid "Select Type instead of Monster"
 msgstr "Typ statt Monster wählen"
 
 #: crates/cr-gtk/src/userdb/templates.rs:613
+#: crates/cr-mac-ffi/src/templates.rs:618
 #: crates/cr-win/src/app/templates.rs:914
 #: macos/CoreRules/Record.swift:388
 msgid "Part Type"
 msgstr "Bestandteiltyp"
 
 #: crates/cr-gtk/src/userdb/templates.rs:711
+#: crates/cr-mac-ffi/src/templates.rs:220
 #: crates/cr-win/src/app/templates.rs:269
 #: crates/cr-win/src/app/templates.rs:272
 msgid "Encounter Template Name"
 msgstr "Name der Begegnungsvorlage"
 
 #: crates/cr-gtk/src/userdb/templates.rs:763
+#: crates/cr-mac-ffi/src/templates.rs:233
 #: crates/cr-win/src/app/templates.rs:288
 #: crates/cr-win/src/app/templates.rs:290
 msgid "Additional Notes for this Encounter"
 msgstr "Zusätzliche Notizen zu dieser Begegnung"
 
 #: crates/cr-gtk/src/userdb/templates.rs:785
+#: crates/cr-mac-ffi/src/templates.rs:133
 #: crates/cr-win/src/app/templates.rs:333
 msgid "Monsters associated with this Encounter Template"
 msgstr "Monster dieser Begegnungsvorlage"
 
 #: crates/cr-gtk/src/userdb/templates.rs:791
+#: crates/cr-mac-ffi/src/templates.rs:148
 #: crates/cr-win/src/app/templates.rs:359
 msgid "NPCs associated with this Encounter Template"
 msgstr "NSCs dieser Begegnungsvorlage"
 
 #: crates/cr-gtk/src/userdb/templates.rs:797
+#: crates/cr-mac-ffi/src/templates.rs:163
 #: crates/cr-win/src/app/templates.rs:385
 msgid "Items associated with this Encounter Template"
 msgstr "Gegenstände dieser Begegnungsvorlage"
@@ -7345,6 +7389,7 @@ msgid "Pages"
 msgstr "Seiten"
 
 #: crates/cr-gtk/src/userdb/templates.rs:989
+#: crates/cr-mac-ffi/src/templates.rs:188
 #: crates/cr-win/src/app/templates.rs:467
 msgid "How many of each treasure type the lair holds"
 msgstr "Wie viele Schätze jedes Typs der Unterschlupf birgt"
@@ -7355,56 +7400,67 @@ msgid "Encountered"
 msgstr "Angetroffen"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1025
+#: crates/cr-mac-ffi/src/templates.rs:297
 #: crates/cr-win/src/app/templates.rs:554
 msgid "Number Of Hit Dice"
 msgstr "Anzahl der Trefferwürfel"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1041
 #: crates/cr-gtk/src/userdb.rs:1089
-#: crates/cr-mac-ffi/src/record.rs:610
+#: crates/cr-mac-ffi/src/record.rs:670
+#: crates/cr-mac-ffi/src/templates.rs:315
 #: crates/cr-win/src/app/record.rs:457
 #: crates/cr-win/src/app/templates.rs:491
 msgid "Choose {field}"
 msgstr "{field} wählen"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1050
+#: crates/cr-mac-ffi/src/templates.rs:324
 #: crates/cr-win/src/app/templates.rs:565
 msgid "Chosen one by one in the ~Custom category"
 msgstr "Einzeln in der Kategorie ~Custom gewählt"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1086
+#: crates/cr-mac-ffi/src/templates.rs:274
 #: crates/cr-win/src/app/templates.rs:530
 msgid "Select the category under which this Encounter Template will appear"
 msgstr "Wählen Sie die Kategorie, unter der diese Begegnungsvorlage erscheint"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1132
+#: crates/cr-mac-ffi/src/templates.rs:136
 #: crates/cr-win/src/app/templates.rs:324
 msgid "Delete Monster"
 msgstr "Monster löschen"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1157
+#: crates/cr-mac-ffi/src/templates.rs:151
 #: crates/cr-win/src/app/templates.rs:350
 msgid "Delete NPC"
 msgstr "NSC löschen"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1181
+#: crates/cr-mac-ffi/src/templates.rs:166
 #: crates/cr-win/src/app/templates.rs:376
 msgid "Delete Item"
 msgstr "Gegenstand löschen"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1355
 #: crates/cr-gtk/src/userdb/templates.rs:1503
+#: crates/cr-mac-ffi/src/templates.rs:486
 #: crates/cr-win/src/app/templates.rs:722
 msgid "Randomly selected from the following list"
 msgstr "Zufällig aus der folgenden Liste gewählt"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1356
+#: crates/cr-mac-ffi/src/templates.rs:477
 #: crates/cr-win/src/app/templates.rs:726
 msgid "Each appearance picks one of these monsters"
 msgstr "Jedes Auftreten wählt eines dieser Monster"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1406
 #: crates/cr-gtk/src/userdb/templates.rs:1838
+#: crates/cr-mac-ffi/src/templates.rs:509
+#: crates/cr-mac-ffi/src/templates.rs:681
 #: crates/cr-store/src/userdb/monsters.rs:229
 #: crates/cr-store/src/userdb/monsters.rs:329
 #: crates/cr-win/src/app/templates.rs:703
@@ -7414,37 +7470,45 @@ msgstr "Monster"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1409
 #: crates/cr-gtk/src/userdb/templates.rs:1839
+#: crates/cr-mac-ffi/src/templates.rs:509
 #: crates/cr-win/src/app/templates.rs:703
 msgid "_Monster…"
 msgstr "_Monster…"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1504
+#: crates/cr-mac-ffi/src/templates.rs:475
 #: crates/cr-win/src/app/templates.rs:724
 msgid "Each appearance picks one of these NPCs"
 msgstr "Jedes Auftreten wählt einen dieser NSCs"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1555
+#: crates/cr-mac-ffi/src/templates.rs:507
 #: crates/cr-win/src/app/templates.rs:701
 msgid "NPC"
 msgstr "NSC"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1558
+#: crates/cr-mac-ffi/src/templates.rs:507
 #: crates/cr-win/src/app/templates.rs:701
 msgid "_NPC…"
 msgstr "_NSC…"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1622
+#: crates/cr-mac-ffi/src/templates.rs:400
 #: crates/cr-win/src/app/templates.rs:582
 msgid "Number of Items"
 msgstr "Anzahl der Gegenstände"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1655
+#: crates/cr-mac-ffi/src/templates.rs:520
 #: crates/cr-win/src/app/templates.rs:820
 msgid "Containing"
 msgstr "Mit Inhalt"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1660
 #: crates/cr-gtk/src/userdb/templates.rs:1665
+#: crates/cr-mac-ffi/src/templates.rs:519
+#: crates/cr-mac-ffi/src/templates.rs:524
 #: crates/cr-win/src/app/templates.rs:818
 #: crates/cr-win/src/app/templates.rs:827
 #: crates/cr-win/src/app/templates.rs:830
@@ -7452,16 +7516,19 @@ msgid "Coins"
 msgstr "Münzen"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1666
+#: crates/cr-mac-ffi/src/templates.rs:519
 #: crates/cr-win/src/app/templates.rs:818
 msgid "Coins each item holds"
 msgstr "Münzen in jedem Gegenstand"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1676
+#: crates/cr-mac-ffi/src/templates.rs:532
 #: crates/cr-win/src/app/templates.rs:781
 msgid "For each Item..."
 msgstr "Für jeden Gegenstand..."
 
 #: crates/cr-gtk/src/userdb/templates.rs:1678
+#: crates/cr-mac-ffi/src/templates.rs:534
 #: crates/cr-win/src/app/templates.rs:783
 msgid "These Monsters will appear if the previous Item(s) appear..."
 msgstr "Diese Monster erscheinen, wenn die vorigen Gegenstände erscheinen..."
@@ -7474,6 +7541,7 @@ msgid "Delete"
 msgstr "Löschen"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1745
+#: crates/cr-mac-ffi/src/templates.rs:569
 #: crates/cr-win/src/app/templates.rs:839
 msgid "Double the number of these Monsters..."
 msgstr "Die Anzahl dieser Monster verdoppeln..."
@@ -7481,6 +7549,9 @@ msgstr "Die Anzahl dieser Monster verdoppeln..."
 #: crates/cr-gtk/src/userdb/templates.rs:1828
 #: crates/cr-gtk/src/userdb/templates.rs:1898
 #: crates/cr-gtk/src/userdb/templates.rs:2005
+#: crates/cr-mac-ffi/src/templates.rs:402
+#: crates/cr-mac-ffi/src/templates.rs:501
+#: crates/cr-mac-ffi/src/templates.rs:684
 #: crates/cr-store/src/userdb/monsters.rs:418
 #: crates/cr-store/src/userdb/monsters.rs:426
 #: crates/cr-win/src/app/templates.rs:584
@@ -7491,47 +7562,56 @@ msgid "Number Appearing"
 msgstr "Anzahl"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1847
+#: crates/cr-mac-ffi/src/templates.rs:702
 #: crates/cr-win/src/app/templates.rs:995
 msgid "Select a Monster and the number appearing"
 msgstr "Wählen Sie ein Monster und die Anzahl"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1902
+#: crates/cr-mac-ffi/src/templates.rs:409
 #: crates/cr-win/src/app/templates.rs:638
 msgid "Percent Chance"
 msgstr "Prozentuale Chance"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1903
+#: crates/cr-mac-ffi/src/templates.rs:410
 #: crates/cr-win/src/app/templates.rs:639
 msgid "There is a percent chance that these appear"
 msgstr "Es gibt eine prozentuale Chance, dass sie erscheinen"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1934
+#: crates/cr-mac-ffi/src/templates.rs:418
 #: crates/cr-win/src/app/templates.rs:647
 #: crates/cr-win/src/app/templates.rs:650
 msgid "Dependent on the following"
 msgstr "Abhängig von Folgendem"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1937
+#: crates/cr-mac-ffi/src/templates.rs:423
 #: crates/cr-win/src/app/templates.rs:594
 msgid "For every"
 msgstr "Je"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1938
+#: crates/cr-mac-ffi/src/templates.rs:423
 #: crates/cr-win/src/app/templates.rs:595
 msgid "Enter 0 for a one time addition"
 msgstr "0 für eine einmalige Zugabe"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1939
+#: crates/cr-mac-ffi/src/templates.rs:430
 #: crates/cr-win/src/app/templates.rs:602
 msgid "Beyond"
 msgstr "Über"
 
 #: crates/cr-gtk/src/userdb/templates.rs:1941
+#: crates/cr-mac-ffi/src/templates.rs:437
 #: crates/cr-win/src/app/templates.rs:610
 msgid "Monster or Monster Type"
 msgstr "Monster oder Monstertyp"
 
 #: crates/cr-gtk/src/userdb/templates.rs:2000
+#: crates/cr-mac-ffi/src/templates.rs:492
 #: crates/cr-win/src/app/templates.rs:743
 #: crates/cr-win/src/app/templates.rs:746
 msgid "These then"
@@ -7554,14 +7634,14 @@ msgid "Selected"
 msgstr "Ausgewählt"
 
 #: crates/cr-gtk/src/userdb/widgets.rs:515
-#: crates/cr-mac-ffi/src/record.rs:1075
+#: crates/cr-mac-ffi/src/record.rs:1135
 #: crates/cr-win/src/app/record.rs:1129
 #: crates/cr-win/src/app/record.rs:1131
 msgid "Number to choose"
 msgstr "Anzahl zur Auswahl"
 
 #: crates/cr-gtk/src/userdb/widgets.rs:641
-#: crates/cr-mac-ffi/src/record.rs:651
+#: crates/cr-mac-ffi/src/record.rs:711
 #: crates/cr-win/src/app/record.rs:550
 msgid "Add a Group…"
 msgstr "Gruppe hinzufügen…"
@@ -7840,7 +7920,8 @@ msgstr "Rang"
 msgid "Empty parties are removed when you leave this page."
 msgstr "Leere Gruppen werden entfernt, wenn Sie diese Seite verlassen."
 
-#: crates/cr-mac-ffi/src/record.rs:792
+#: crates/cr-mac-ffi/src/record.rs:852
+#: crates/cr-mac-ffi/src/templates.rs:343
 #: crates/cr-store/src/userdb/races.rs:277
 #: crates/cr-store/src/userdb/races.rs:281
 #: crates/cr-store/src/userdb/races.rs:284
@@ -7849,7 +7930,8 @@ msgstr "Leere Gruppen werden entfernt, wenn Sie diese Seite verlassen."
 msgid "Sides"
 msgstr "Seiten"
 
-#: crates/cr-mac-ffi/src/record.rs:792
+#: crates/cr-mac-ffi/src/record.rs:852
+#: crates/cr-mac-ffi/src/templates.rs:343
 #: crates/cr-store/src/userdb/parts/kit.rs:599
 #: crates/cr-store/src/userdb/parts/kit.rs:600
 #: crates/cr-store/src/userdb/parts/kit.rs:1364
@@ -7859,40 +7941,46 @@ msgstr "Seiten"
 msgid "Bonus"
 msgstr "Bonus"
 
-#: crates/cr-mac-ffi/src/record.rs:928
+#: crates/cr-mac-ffi/src/record.rs:988
 #: crates/cr-win/src/app/record.rs:915
 msgid "Levels {from} to {to}"
 msgstr "Stufen {from} bis {to}"
 
-#: crates/cr-mac-ffi/src/record.rs:1088
+#: crates/cr-mac-ffi/src/record.rs:1148
 #: crates/cr-win/src/app/record.rs:1141
 msgid "Add an Option…"
 msgstr "Option hinzufügen…"
 
-#: crates/cr-mac-ffi/src/record.rs:1163
+#: crates/cr-mac-ffi/src/record.rs:1223
 #: crates/cr-win/src/app/record.rs:1268
 msgid "Spell level (0 for all)"
 msgstr "Zaubergrad (0 für alle)"
 
-#: crates/cr-mac-ffi/src/record.rs:1200
+#: crates/cr-mac-ffi/src/record.rs:1260
 #: crates/cr-win/src/app/record.rs:1304
 msgid "Add a Proficiency…"
 msgstr "Fertigkeit hinzufügen…"
 
-#: crates/cr-mac-ffi/src/record.rs:1224
+#: crates/cr-mac-ffi/src/record.rs:1284
 #: crates/cr-win/src/app/record.rs:1318
 msgid "Modify a Proficiency…"
 msgstr "Fertigkeit ändern…"
 
-#: crates/cr-mac-ffi/src/record.rs:1284
+#: crates/cr-mac-ffi/src/record.rs:1344
 #: crates/cr-win/src/app/record.rs:1461
 msgid "Bonus Hit Dice (used to calculate modified HD for experience)"
 msgstr "Bonus-Trefferwürfel (für die modifizierten TW der Erfahrung)"
 
-#: crates/cr-mac-ffi/src/record.rs:1304
+#: crates/cr-mac-ffi/src/record.rs:1364
 #: crates/cr-win/src/app/record.rs:1410
 msgid "{measure} (feet)"
 msgstr "{measure} (Fuß)"
+
+#: crates/cr-mac-ffi/src/templates.rs:343
+#: crates/cr-store/src/userdb/parts/kit.rs:642
+#: crates/cr-win/src/app/templates.rs:49
+msgid "Multiplier"
+msgstr "Multiplikator"
 
 #: crates/cr-mac-ffi/src/treasure_tables.rs:48
 #: crates/cr-win/src/app/treasure_tables.rs:111
@@ -11445,11 +11533,6 @@ msgstr "Anz. Würfel"
 #: crates/cr-store/src/userdb/parts/kit.rs:639
 msgid "# of sides"
 msgstr "Anz. Seiten"
-
-#: crates/cr-store/src/userdb/parts/kit.rs:642
-#: crates/cr-win/src/app/templates.rs:49
-msgid "Multiplier"
-msgstr "Multiplikator"
 
 #: crates/cr-store/src/userdb/parts/kit.rs:645
 msgid "Add"

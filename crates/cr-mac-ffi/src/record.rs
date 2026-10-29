@@ -9,12 +9,14 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use cr_app::bundle::BundleInput;
+use cr_app::npc::NpcInput;
 use cr_app::prompt::Answer;
 use cr_app::records::actions::{self, Act, Opened};
 use cr_app::records::allowed::{self, AllowedEffect, AllowedForm, AllowedInput};
 use cr_app::records::dialogs::{self, AttackInput, Dialog, DialogInput, FreeSpellsEdit};
 use cr_app::records::form::{Field, GRID_ROWS, RecordEffect, RecordForm, RecordInput};
 use cr_app::records::tables::{self, TableEffect, TableForm, TableInput};
+use cr_app::records::templates::{self, PickerInput, TemplateEffect, TemplateInput};
 use cr_i18n::tr;
 use cr_store::Installation;
 use cr_store::pictures::Kind;
@@ -26,6 +28,7 @@ use crate::form::{
     Acts, Builder, FormButton, FormDialog, FormGridRow, FormNumber, FormPage, FormRow, FormValue,
 };
 use crate::prompt::PromptInfo;
+use crate::templates::TemplateEditor;
 use crate::{CoreError, png};
 
 /// A control of the editor.
@@ -36,14 +39,21 @@ pub(crate) enum In {
     Picture(usize),
     Table(TableInput),
     Allowed(AllowedInput),
+    Template(TemplateInput),
+    /// A template picker's entry taken, by its index.
+    Pick(usize),
+    /// NPC Creation's changes, and Add to Template (true) or Cancel.
+    Npc(NpcInput),
+    NpcDone(bool),
 }
 
-/// What the sheet edits: a record, a treasure table, or a race's
-/// Allowed Classes, with the key of the race.
+/// What the sheet edits: a record, a treasure table, a race's Allowed
+/// Classes with the key of the race, or an encounter template.
 pub(crate) enum Editor {
     Record(Box<RecordForm>),
     Table(Box<TableForm>),
     Allowed(Box<AllowedForm>, String),
+    Template(Box<TemplateEditor>),
 }
 
 fn rec(input: RecordInput) -> In {
@@ -122,6 +132,32 @@ impl RecordSession {
             Editor::Record(form) => self.record_effects(form),
             Editor::Table(form) => self.table_effects(form),
             Editor::Allowed(form, key) => self.allowed_effects(form, key),
+            Editor::Template(editor) => self.template_effects(editor),
+        }
+    }
+
+    fn template_effects(&self, editor: &mut TemplateEditor) {
+        loop {
+            let effects = editor.form.take_effects();
+            if effects.is_empty() {
+                return;
+            }
+            for effect in effects {
+                match effect {
+                    TemplateEffect::Npc(purpose) => editor.open_npc(purpose),
+                    TemplateEffect::Save { editing, template } => {
+                        let saved = templates::save(&self.install, editing, *template);
+                        editor.form.saved(saved);
+                    }
+                    TemplateEffect::Done { key, said } => self.done(RecordDone {
+                        section: templates::SECTION.to_owned(),
+                        key,
+                        name: editor.form.template.name.clone(),
+                        said,
+                        told: None,
+                    }),
+                }
+            }
         }
     }
 
@@ -212,6 +248,15 @@ impl RecordSession {
             }
             (Editor::Table(form), In::Table(input)) => form.input(input),
             (Editor::Allowed(form, _), In::Allowed(input)) => form.input(input),
+            (Editor::Template(editor), In::Template(input)) => editor.form.input(input),
+            (Editor::Template(editor), In::Pick(index)) => {
+                editor
+                    .form
+                    .input(TemplateInput::Picker(PickerInput::Choose(index)));
+                editor.form.input(TemplateInput::ClosePicker(true));
+            }
+            (Editor::Template(editor), In::Npc(input)) => editor.npc_input(input),
+            (Editor::Template(editor), In::NpcDone(add)) => editor.npc_done(add),
             _ => return,
         }
         self.effects(&mut editor);
@@ -241,6 +286,7 @@ impl RecordSession {
             Editor::Record(form) => form.title().to_owned(),
             Editor::Table(form) => form.title().to_owned(),
             Editor::Allowed(form, _) => form.title(),
+            Editor::Template(editor) => editor.form.title().to_owned(),
         }
     }
 
@@ -250,38 +296,44 @@ impl RecordSession {
             Editor::Record(form) => form.help(),
             Editor::Table(form) => form.help(),
             Editor::Allowed(form, _) => form.help(),
+            Editor::Template(editor) => editor.help(),
         }
     }
 
     /// The pages to choose from.
     pub fn tabs(&self) -> Vec<String> {
-        let Editor::Record(form) = &*self.editor() else {
-            return Vec::new();
-        };
-        Self::shown(form)
-            .into_iter()
-            .map(|p| tr(form.pages()[p].name).to_owned())
-            .collect()
+        match &*self.editor() {
+            Editor::Record(form) => Self::shown(form)
+                .into_iter()
+                .map(|p| tr(form.pages()[p].name).to_owned())
+                .collect(),
+            Editor::Template(_) => TemplateEditor::tabs(),
+            _ => Vec::new(),
+        }
     }
 
     /// The page shown, by its place among [`Self::tabs`].
     pub fn tab(&self) -> u32 {
-        let Editor::Record(form) = &*self.editor() else {
-            return 0;
-        };
-        Self::shown(form)
-            .iter()
-            .position(|&p| p == form.page)
-            .unwrap_or(0) as u32
+        match &*self.editor() {
+            Editor::Record(form) => Self::shown(form)
+                .iter()
+                .position(|&p| p == form.page)
+                .unwrap_or(0) as u32,
+            Editor::Template(editor) => editor.tab(),
+            _ => 0,
+        }
     }
 
     pub fn set_tab(&self, index: u32) {
         let page = match &*self.editor() {
-            Editor::Record(form) => Self::shown(form).get(index as usize).copied(),
+            Editor::Record(form) => Self::shown(form)
+                .get(index as usize)
+                .map(|&page| rec(RecordInput::Page(page))),
+            Editor::Template(_) => Some(In::Template(TemplateInput::Page(index as usize))),
             _ => None,
         };
         if let Some(page) = page {
-            self.input(rec(RecordInput::Page(page)));
+            self.input(page);
         }
     }
 
@@ -308,6 +360,7 @@ impl RecordSession {
                 crate::allowed::describe(&mut builder, form);
                 None
             }
+            Editor::Template(editor) => crate::templates::describe(&mut builder, editor),
         };
         let (groups, acts) = builder.finish();
         *self.acts.lock().unwrap_or_else(|e| e.into_inner()) = acts;
@@ -332,6 +385,7 @@ impl RecordSession {
             Editor::Record(form) => form.prompt().map(PromptInfo::of),
             Editor::Table(form) => form.prompt().map(PromptInfo::of),
             Editor::Allowed(form, _) => form.prompt().map(PromptInfo::of),
+            Editor::Template(editor) => editor.form.prompt().map(PromptInfo::of),
         }
     }
 
@@ -342,6 +396,7 @@ impl RecordSession {
             Editor::Record(form) => form.answer(answer),
             Editor::Table(form) => form.answer(answer),
             Editor::Allowed(form, _) => form.answer(answer),
+            Editor::Template(editor) => editor.form.answer(answer),
         }
         self.effects(&mut editor);
     }
@@ -352,6 +407,7 @@ impl RecordSession {
             Editor::Record(form) => form.error.clone(),
             Editor::Table(form) => form.error.clone(),
             Editor::Allowed(form, _) => form.error.clone(),
+            Editor::Template(editor) => editor.form.error.clone(),
         }
     }
 
@@ -360,6 +416,7 @@ impl RecordSession {
             Editor::Record(form) => form.can_save(),
             Editor::Table(form) => form.can_save(),
             Editor::Allowed(form, _) => form.can_save(),
+            Editor::Template(editor) => editor.can_save(),
         }
     }
 
@@ -368,6 +425,7 @@ impl RecordSession {
             Editor::Record(form) => form.saving,
             Editor::Table(form) => form.saving,
             Editor::Allowed(form, _) => form.saving,
+            Editor::Template(editor) => editor.form.saving,
         }
     }
 
@@ -377,6 +435,7 @@ impl RecordSession {
             Editor::Record(form) => form.changed(),
             Editor::Table(form) => form.changed(),
             Editor::Allowed(form, _) => form.changed(),
+            Editor::Template(editor) => editor.form.changed(),
         }
     }
 
@@ -386,6 +445,7 @@ impl RecordSession {
             Editor::Record(_) => rec(RecordInput::Save),
             Editor::Table(_) => In::Table(TableInput::Save),
             Editor::Allowed(..) => In::Allowed(AllowedInput::Save),
+            Editor::Template(_) => In::Template(TemplateInput::Save),
         };
         self.input(save);
     }
@@ -1409,6 +1469,7 @@ pub(crate) fn act_on(
     name: &str,
     act: RecordAct,
     shown: Option<&str>,
+    npc: impl FnOnce() -> Result<NpcTools, CoreError>,
 ) -> Result<RecordOpened, CoreError> {
     let origin = if custom {
         Origin::Custom
@@ -1437,15 +1498,27 @@ pub(crate) fn act_on(
                 .collect(),
             chosen: chosen as u32,
         },
-        // The templates' editor comes next.
-        Opened::Template(_) | Opened::Nothing => RecordOpened::Nothing,
+        Opened::Template(form) => {
+            let (rules, rand) = npc()?;
+            RecordOpened::Editor {
+                session: RecordSession::new(
+                    install.clone(),
+                    Editor::Template(Box::new(TemplateEditor::new(*form, rules, rand))),
+                ),
+            }
+        }
+        Opened::Nothing => RecordOpened::Nothing,
     })
 }
 
-/// Whether the Mac app has the editor of `section`'s records yet.
+/// Whether the Mac app edits `section`'s records.
 pub(crate) fn edited_here(section: &str) -> bool {
-    !matches!(
-        cr_app::records::kind_of(section),
-        None | Some(cr_app::records::Kind::Templates)
-    )
+    cr_app::records::kind_of(section).is_some()
 }
+
+/// What NPC Creation needs, for an encounter template's NPCs: the rules
+/// and the dice.
+pub(crate) type NpcTools = (
+    Arc<cr_store::npc::NpcRules>,
+    Arc<Mutex<cr_store::treasure::Rand>>,
+);
