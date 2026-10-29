@@ -47,3 +47,20 @@ jobs:
           path: |
             target/package/*.msix
             target/msix/
+
+  # The backend and `cr` on an Apple Silicon Mac, the ground the macOS app
+  # will stand on; the GTK and Windows crates are left out.
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - run: cargo clippy -p cr-formats -p cr-store -p cr-i18n -p cr-app -p cr-cli --all-targets -- -D warnings
+      - run: cargo test --no-fail-fast -p cr-formats -p cr-store -p cr-i18n -p cr-app -p cr-cli
+      - run: cargo build --release -p cr-cli
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cr-macos-arm64
+          path: target/release/cr

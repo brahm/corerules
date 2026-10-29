@@ -33,6 +33,9 @@ release workflow builds and tests the MSIX for the Microsoft Store
 (phase 5), and 1.0.1 is the first release on both systems (phase 6).
 Publishing on Flathub was dropped from the plan (decision P15).
 
+The macOS version (step 3) started on 2026-10-28: the backend and `cr`
+are being built and tested on Apple Silicon (phase 1).
+
 ## The original plan (2026-10-09)
 
 The first plan had seven phases. All of them are closed, either done or
@@ -46,7 +49,7 @@ taken out of scope.
 | 3. Minimal GTK app | Library, sheet, creation wizard, rules browser, printing and PDF | Done. The dice roller was dropped (S6) |
 | 4. Generators | Encounters, treasure, NPCs, monsters, custom tables | Done |
 | 5. Maps and Expansion | Map Maker II and Campaign Mapper, Expansion classes, Flathub, pt-BR | Expansion classes and translations (six languages) done; maps dropped (S6); Flathub dropped (P15) |
-| 6. macOS and Windows | Other platforms over the same backend | Moved after 1.0 (P15); Windows 11 is step 2 after 1.0 |
+| 6. macOS and Windows | Other platforms over the same backend | Moved after 1.0 (P15); Windows 11 is step 2 after 1.0, macOS step 3 |
 
 ## The revised plan (2026-10-17 to 2026-10-25)
 
@@ -454,7 +457,44 @@ it may need to be reserved again before submission.
 
 Done on 2026-10-27 with 1.0.1.
 
-### Step 3: new features, and independence from the original
+### Step 3: macOS (in progress)
+
+Decided by Wagner Brahm on 2026-10-28 (decisions S14 and P27 to P29): the
+macOS version lives in this repository too, and once it is released every
+feature ships on GNOME, Windows 11 and macOS. Its interface is native
+SwiftUI, with AppKit where SwiftUI falls short, following Apple's Human
+Interface Guidelines and keeping the organization of the other two apps:
+the sections, the entries and the details as the three columns of a
+`NavigationSplitView`, and every action of `cr_app::action` in the menu
+bar. The Swift code only draws what `cr-app` decides; a new crate,
+`cr-mac-ffi`, exposes `cr-app` to Swift through UniFFI. It runs on Apple
+Silicon only, macOS 14 or newer, and is distributed as a `.dmg` attached
+to the same GitHub release as the other packages, without an Apple
+developer account: it is signed without a certificate from Apple and not
+notarized, so macOS blocks its first launch until the user allows it in
+System Settings › Privacy & Security › Open Anyway, again after each
+update, and a Mac managed by a company or school may not allow it at all.
+
+The phases run in order:
+
+1. **Backend on macOS (in progress).** A macOS job in CI lints and tests
+   `cr-formats`, `cr-store`, `cr-i18n`, `cr-app` and `cr` on Apple
+   Silicon, and builds `cr`. The data package lives in
+   `~/Library/Application Support/Core Rules/data`, where macOS asks no
+   permission and which stays when the app is moved to the Trash.
+2. **The bridge and the shared groundwork.** `cr-mac-ffi` with UniFFI;
+   the HTML of the help topics and the books moves from `cr-win` into
+   `cr-app`, so the Mac shows them in a `WKWebView` from the same pages;
+   `NOT_YET_ON_MACOS` joins the parity test with every action.
+3. **Prototype**, with the scope of the Windows one, packaged as a
+   `.dmg`, approved by Wagner Brahm after a run on a Mac.
+4. **Porting the screens**, in the stages of the Windows port, until
+   `NOT_YET_ON_MACOS` is empty.
+5. **Beta and release** on the three systems with the same tag, with an
+   install page on the website and in the README that shows the Open
+   Anyway steps.
+
+### Step 4: new features, and independence from the original
 
 From 1.0 on, the app improves on the original and moves away from it step
 by step, until it no longer needs the original's files to work
@@ -478,10 +518,12 @@ starts, from Wagner Brahm's ideas and the users' requests; this is the direction
    as users ask for it.
 
 Needs Wagner Brahm: the list of features for each release, and how far
-independence goes (step 3.3).
+independence goes (step 4.3).
 
 ## Decisions pending
 
 - Confirming the Windows beta (step 2).
+- Who tests the macOS prototype on a Mac, how its `.dmg` is signed
+  (a free self-signed certificate or ad-hoc), and its oldest macOS (step 3).
 - The first features after 1.0, and the source of rules content without
-  the discs (step 3).
+  the discs (step 4).
