@@ -87,6 +87,10 @@ final class AppModel: ObservableObject {
     @Published private(set) var tables: TableModel?
     /// Roll Treasure, while its window is open.
     @Published private(set) var treasure: TreasureModel?
+    /// New Encounter or an encounter, while its window is open.
+    @Published private(set) var encounter: EncounterModel?
+    /// The 2-20 table editor, while its window is open.
+    @Published private(set) var tableEdit: TableEditModel?
 
     /// Opens Settings, a sheet's window, the help's and About; the main
     /// window's view sets them, as only a view can.
@@ -97,6 +101,8 @@ final class AppModel: ObservableObject {
     var openAbout: () -> Void = {}
     var openTablesWindow: () -> Void = {}
     var openTreasureWindow: () -> Void = {}
+    var openEncounterWindow: () -> Void = {}
+    var openTableEditWindow: () -> Void = {}
 
     init() {
         if let folder = Prefs.folder, let library = try? Library.open(path: folder) {
@@ -113,6 +119,8 @@ final class AppModel: ObservableObject {
             help = nil
             tables = nil
             treasure = nil
+            encounter = nil
+            tableEdit = nil
         }
         self.library = library
         sections = library?.sections() ?? []
@@ -211,7 +219,7 @@ final class AppModel: ObservableObject {
             return writable && modal == nil
         case Action.ROLL_TABLE:
             return library != nil
-        case Action.ROLL_TREASURE:
+        case Action.ROLL_TREASURE, Action.NEW_ENCOUNTER, Action.NEW_TABLE:
             return writable
         case Action.SHEET_PRINT:
             if sheet != nil { return true }
@@ -251,6 +259,8 @@ final class AppModel: ObservableObject {
         case Action.NEW_NPC_GROUP: newNpc(group: true)
         case Action.ROLL_TABLE: rollTable()
         case Action.ROLL_TREASURE: rollTreasure()
+        case Action.NEW_ENCOUNTER: newEncounter()
+        case Action.NEW_TABLE: editEncounterTable()
         case Action.SHEET_PRINT:
             if sheet == nil && details?.commands.monster == true {
                 monsterHelp(print: true)
@@ -422,6 +432,171 @@ final class AppModel: ObservableObject {
         } catch {
             fail(tr("Roll Treasure"), error)
         }
+    }
+
+    // MARK: Encounters
+
+    /// The saved encounter, encounter table or template in view.
+    var encounterEntry: EncounterEntry? {
+        guard let library, let section, let entry else { return nil }
+        return library.entryEncounter(section: section, index: entry)
+    }
+
+    /// The saved encounter in view, which Edit and Copy open.
+    var savedEncounter: String? {
+        if case .encounter(let name)? = encounterEntry { return name }
+        return nil
+    }
+
+    /// The encounter table in view, which Edit opens.
+    var encounterTable: String? {
+        if case .table(let name, _)? = encounterEntry { return name }
+        return nil
+    }
+
+    /// What Generate says on the table or template in view.
+    var generateLabel: String? {
+        switch encounterEntry {
+        case .table(_, let generate)?: return generate
+        case .template(_, let generate)?: return generate
+        default: return nil
+        }
+    }
+
+    /// New Encounter: its templates, in the encounter's window.
+    private func newEncounter() {
+        guard let library else { return }
+        do {
+            showEncounter(try library.newEncounter())
+        } catch {
+            fail(tr("New Encounter"), error)
+        }
+    }
+
+    /// The saved encounter `name`; with `copy`, under no name.
+    func openEncounter(_ name: String, copy: Bool = false) {
+        guard let library else { return }
+        do {
+            showEncounter(try library.openEncounter(name: name, copy: copy))
+        } catch {
+            fail(tr("Could Not Read"), error)
+        }
+    }
+
+    /// Generate on the table or template in view: a new encounter.
+    func generateEntry() {
+        guard let library else { return }
+        do {
+            switch encounterEntry {
+            case .table(let name, _)?:
+                showEncounter(try library.rollEncounterTable(name: name))
+            case .template(let name, _)?:
+                showEncounter(try library.generateEncounter(name: name, said: nil))
+            default:
+                break
+            }
+        } catch {
+            fail(tr("New Encounter"), error)
+        }
+    }
+
+    /// The encounter `session` in its window, in place of the one open.
+    private func showEncounter(_ session: EncounterSession) {
+        let encounter = EncounterModel(session)
+        encounter.saved = { [weak self] (said: SaveResult) in
+            if case .saved = said {
+                self?.notice = Notice(title: tr("Encounter saved"), text: "")
+                self?.reload()
+            }
+        }
+        encounter.deleted = { [weak self] (error: Error?) in
+            guard let self else { return }
+            if let error {
+                self.fail(tr("Not Saved"), error)
+            } else {
+                self.encounter?.close()
+                self.notice = Notice(title: tr("Encounter deleted"), text: "")
+                self.reload()
+            }
+        }
+        encounter.requested = { [weak self, weak encounter] (request: EncounterRequest) in
+            guard let self, let encounter else { return }
+            self.encounterRequested(request, by: encounter)
+        }
+        self.encounter = encounter
+        openEncounterWindow()
+    }
+
+    /// View NPC, Print NPC and Roll Treasure on an encounter.
+    private func encounterRequested(_ request: EncounterRequest, by encounter: EncounterModel) {
+        switch request {
+        case .npcSheet(let index, let print):
+            do {
+                let sheet = SheetModel(try encounter.session.npcSheet(index: index), app: self)
+                if print {
+                    sheet.print()
+                } else {
+                    present(sheet)
+                }
+            } catch {
+                fail(tr("Could Not Read"), error)
+            }
+        case .treasure:
+            guard let session = encounter.session.treasure() else { return }
+            let treasure = TreasureModel(session)
+            treasure.use = { [weak encounter] in
+                encounter?.useTreasure(session)
+            }
+            self.treasure = treasure
+            openTreasureWindow()
+        }
+    }
+
+    /// The encounter's window closed.
+    func closeEncounter() {
+        encounter = nil
+    }
+
+    /// New Encounter Table, or Edit on the table `name`.
+    func editEncounterTable(_ name: String? = nil) {
+        guard let library else { return }
+        do {
+            let table = TableEditModel(try library.editEncounterTable(name: name))
+            table.saved = { [weak self] (said: SaveResult) in
+                if case .saved = said {
+                    self?.notice = Notice(title: tr("Table saved"), text: "")
+                    self?.reload()
+                }
+            }
+            table.deleted = { [weak self] (error: Error?) in
+                guard let self else { return }
+                if let error {
+                    self.fail(tr("Not Saved"), error)
+                } else {
+                    self.tableEdit?.close()
+                    self.notice = Notice(title: tr("Table deleted"), text: "")
+                    self.reload()
+                }
+            }
+            table.generate = { [weak self] (made: TableGenerate) in
+                guard let self, let library = self.library else { return }
+                do {
+                    self.showEncounter(
+                        try library.generateEncounter(name: made.template, said: made.said))
+                } catch {
+                    self.fail(tr("New Encounter"), error)
+                }
+            }
+            tableEdit = table
+            openTableEditWindow()
+        } catch {
+            fail(tr("Could Not Read"), error)
+        }
+    }
+
+    /// The table editor's window closed.
+    func closeTableEdit() {
+        tableEdit = nil
     }
 
     /// Roll Treasure's window closed.

@@ -11,7 +11,7 @@ use cr_app::bundle::BundleInput;
 use cr_app::treasure::{INDIVIDUAL, LAIR, MOST_COUNT, Roller, TreasureEffect, TreasureInput};
 use cr_i18n::tr;
 use cr_store::Installation;
-use cr_store::treasure::{Bundle, LETTERS, Rand, TreasureRules};
+use cr_store::treasure::{Bundle, Counts, LETTERS, Rand, TreasureRules};
 
 use crate::CoreError;
 use crate::form::{Acts, Builder, FormDialog, FormPage, FormValue};
@@ -69,6 +69,30 @@ impl TreasureSession {
             rand,
             saved: Mutex::new(None),
         }))
+    }
+
+    /// The roller as an encounter's Roll Treasure… opens it: on the
+    /// monsters' treasure types and the encounter's treasure, with Use
+    /// Treasure.
+    pub(crate) fn pick(
+        install: Arc<Installation>,
+        rules: Arc<TreasureRules>,
+        counts: Counts,
+        bundle: Bundle,
+        rand: Arc<Mutex<Rand>>,
+    ) -> Arc<Self> {
+        Arc::new(Self {
+            install,
+            roller: Mutex::new(Roller::pick(rules, counts, bundle)),
+            acts: Mutex::default(),
+            rand,
+            saved: Mutex::new(None),
+        })
+    }
+
+    /// The treasure as it is now, for Use Treasure.
+    pub(crate) fn bundle(&self) -> Bundle {
+        self.roller().bundle.clone()
     }
 
     fn roller(&self) -> MutexGuard<'_, Roller> {
