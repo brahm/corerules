@@ -623,9 +623,15 @@ The phases run in order:
      that folder already holds the other CD's. It is in the File menu
      and on the No Installation screen. With it `NOT_YET_ON_MACOS` is
      empty.
-5. **Beta and release** on the three systems with the same tag, with an
-   install page on the website and in the README that shows the Open
-   Anyway steps.
+5. **Beta and release (in progress)** on the three systems with the same
+   tag, with an install page on the website and in the README that shows
+   the Open Anyway steps. The release workflow builds the `.dmg` on Apple
+   Silicon, installs it into Applications as a user does, checks its
+   signature and starts the app, and attaches it to the release. The
+   1.1.0 beta (`v1.1.0-beta1`), a pre-release, takes it to Wagner Brahm's
+   Mac; the README's install section and the release notes give the
+   Terminal command and the Open Anyway steps. After his test, 1.1.0 is
+   released on the three systems, with the Mac on the website.
 
 ### Step 4: new features, and independence from the original
 

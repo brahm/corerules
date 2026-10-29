@@ -1,8 +1,8 @@
 name: Packages
 
-# Builds the .deb, .rpm, pacman, Flatpak and AppImage packages and the
-# MSIX for the Microsoft Store, installs each one on a clean system and
-# starts the app there. Pushing a v* tag (or running the
+# Builds the .deb, .rpm, pacman, Flatpak and AppImage packages, the MSIX
+# for the Microsoft Store and the macOS .dmg, installs each one on a clean
+# system and starts the app there. Pushing a v* tag (or running the
 # workflow by hand with a tag) also publishes them as a GitHub release.
 on:
   push:
@@ -11,6 +11,8 @@ on:
     paths:
       - 'packaging/**'
       - 'crates/cr-win/package/**'
+      - 'macos/Package/**'
+      - 'macos/scripts/**'
       - 'data/**'
       - '.github/workflows/release.yml'
   workflow_dispatch:
@@ -370,8 +372,53 @@ jobs:
           name: wack-report
           path: wack.xml
 
+  # The Mac app for Apple Silicon, macOS 14 or newer, signed ad hoc: there
+  # is no Apple developer account (decision P29).
+  dmg:
+    needs: version
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: macos/scripts/make-bindings.sh
+      - run: macos/scripts/make-app.sh
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dmg
+          path: target/macos/*.dmg
+
+  # Copies the app from the .dmg into Applications as a user does, checks
+  # its signature and starts it: it has to keep running with its window.
+  test-dmg:
+    needs: dmg
+    runs-on: macos-15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dmg
+      - name: Install from the .dmg
+        run: |
+          hdiutil attach -nobrowse -mountpoint /Volumes/CoreRules CoreRules-*.dmg
+          test -f "/Volumes/CoreRules/Read Me First.txt"
+          test -L /Volumes/CoreRules/Applications
+          cp -R "/Volumes/CoreRules/Core Rules.app" /Applications/
+          hdiutil detach /Volumes/CoreRules
+          codesign --verify --strict "/Applications/Core Rules.app"
+          lipo -archs "/Applications/Core Rules.app/Contents/MacOS/CoreRules" | grep -qx arm64
+          /usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "/Applications/Core Rules.app/Contents/Info.plist"
+      - name: Start the app
+        run: |
+          open "/Applications/Core Rules.app"
+          sleep 20
+          pgrep -x CoreRules || { echo "the app is not running 20 seconds after it started"; exit 1; }
+          osascript -e 'tell application "System Events" to count windows of process "CoreRules"' || true
+          pkill -x CoreRules
+
   release:
-    needs: [version, test-deb, refuse-deb, test-rpm, test-arch, test-appimage, test-flatpak, test-msix]
+    needs: [version, test-deb, refuse-deb, test-rpm, test-arch, test-appimage, test-flatpak, test-msix, test-dmg]
     if: needs.version.outputs.tag != ''
     runs-on: ubuntu-24.04
     permissions:
@@ -390,8 +437,9 @@ jobs:
         with:
           tag_name: ${{ needs.version.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          # 0.x releases are betas; a -rc suffix is a release candidate.
-          name: Core Rules ${{ needs.version.outputs.version }}${{ contains(needs.version.outputs.version, '-rc') && ' release candidate' || startsWith(needs.version.outputs.version, '0.') && ' beta' || '' }}
+          # 0.x releases and a -beta suffix are betas; a -rc suffix is a
+          # release candidate.
+          name: Core Rules ${{ needs.version.outputs.version }}${{ contains(needs.version.outputs.version, '-rc') && ' release candidate' || (startsWith(needs.version.outputs.version, '0.') || contains(needs.version.outputs.version, '-beta')) && ' beta' || '' }}
           body_path: packaging/release-notes.md
           prerelease: ${{ startsWith(needs.version.outputs.version, '0.') || contains(needs.version.outputs.version, '-') }}
           # A final release becomes the repository's latest release, which

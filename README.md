@@ -544,6 +544,34 @@ The app keeps its data in `Documents\Core Rules\data`, copies the rules
 data from the CD or its ISO image with Extract Data from CD…, and also
 opens an installation of the original program on the same computer.
 
+### macOS (beta)
+
+The Mac version is in beta, for Apple Silicon Macs (M1 or newer) with
+macOS 14 or newer: the
+[1.1.0 beta](https://github.com/brahm/corerules/releases/tag/v1.1.0-beta1)
+has `CoreRules-1.1.0-beta1-arm64.dmg`. Open it and drag Core Rules to
+Applications.
+
+The app is signed without a certificate from Apple and is not notarized,
+since the project has no Apple developer account, so macOS refuses it the
+first time, saying it could not check it. Run this once in Terminal, and
+from then on it opens as any app:
+
+```sh
+xattr -dr com.apple.quarantine "/Applications/Core Rules.app"
+```
+
+Without Terminal: open Core Rules once and press Done, then in System
+Settings › Privacy & Security, under Security, press **Open Anyway** next
+to "Core Rules" and confirm with your password. Some Macs do not offer
+Open Anyway, and a Mac managed by a company or school may not allow the
+app at all. Either way is needed again after each update.
+
+The app keeps its data in `~/Library/Application Support/Core Rules/data`.
+Macs have no CD drive, so Extract Data from CD… copies the rules data from
+the CD's ISO image or from a folder the CD's files were copied into; Open
+Folder… also opens an installation of the original.
+
 ### The Flatpak repository
 
 The project has its own Flatpak repository, at

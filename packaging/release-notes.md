@@ -1,59 +1,50 @@
-**Core Rules 1.0.1, ready on Linux and Windows 11.** The Windows 11
-version has every screen of the Linux one, over the same backend and the
-same data files, with the look of a Windows 11 app. It went through a beta
-on the Microsoft Store without problems and is now a final release:
-[get it from the Microsoft Store](https://apps.microsoft.com/detail/9nr2cgp649jm),
-which signs it, installs the Windows App Runtime it needs and brings every
-update. Characters and user databases move freely between the two systems
-and the original programs.
-
-What's new on Linux since 1.0.0:
-
-- **Flatpak repository**: the Flatpak comes from the project's own signed
-  repository, so `flatpak update`, GNOME Software and Discover bring every
-  new version
-- **Editors**: a priest's quest spell is called a quest spell instead of
-  "0th level", the editors' wording is clearer, and Portuguese tells the
-  Abilities and Skills tabs apart
-- **Characters**: Edit Character shows the social class in the language
-  chosen, Back keeps what a creation page had, the points pages say why
-  they refuse a choice, and the Psionics page leaves the rogue points to
-  the Rogue page
-- **Translations**: the app shows the chosen language throughout, and the
-  translations lost the original's double spaces
-
-What the app does: it opens a Core Rules 2.0 Expansion installation (or its
-CD, or a data package), creates and edits characters with the Core Rules or
-Player's Option, levels them up, manages parties and prints character
-sheets; it generates NPCs, treasure and encounters, rolls on the books'
-tables, edits every user database and imports and exports DM Toolkit
-packages, all in files the original programs still open. A Core Rules 2.0
-installation opens read-only and is imported into the Expansion. The
-[README](https://github.com/brahm/corerules#readme) lists every feature,
-where to find the disc images if yours are lost (you must own the original
-discs), and every difference from the original. It contains no rules
-content; you need your own copy of Core Rules.
+**Core Rules 1.1.0 beta: macOS.** This beta adds a native Mac version,
+with every screen of the Linux and Windows 11 versions, over the same
+backend and the same data files. It has the look of a Mac app: the
+sections, the entries and the details in three columns, every action in
+the menu bar, and the sheets, the help and the generators in windows of
+their own. It is a beta for testing on a Mac before 1.1.0 is released;
+1.0.1 stays the stable version for Linux and Windows 11, and the Linux
+packages here are the same app as 1.0.1. Characters and user databases
+move freely between the three systems and the original programs.
 
 | System | File | Install |
 | --- | --- | --- |
-| Ubuntu 26.04 or newer | `corerules_1.0.1_amd64.deb` | `sudo apt install ./corerules_1.0.1_amd64.deb` |
-| Fedora 44 or newer | `corerules-1.0.1-1.fc44.x86_64.rpm` | `sudo dnf install ./corerules-1.0.1-1.fc44.x86_64.rpm` |
-| Arch Linux, CachyOS, Omarchy | `corerules-1.0.1-1-x86_64.pkg.tar.zst` | `sudo pacman -U ./corerules-1.0.1-1-x86_64.pkg.tar.zst` |
-| Any distribution with Flatpak, such as Bazzite | `CoreRules-1.0.1.flatpak` | `flatpak install --user CoreRules-1.0.1.flatpak` |
-| Any distribution (glibc 2.43+) | `CoreRules-1.0.1-x86_64.AppImage` | `chmod +x CoreRules-1.0.1-x86_64.AppImage` and run it |
+| macOS 14 or newer, Apple Silicon (M1 or newer) | `CoreRules-1.1.0-beta1-arm64.dmg` | Open it and drag Core Rules to Applications, then see below |
 | Windows 11 | [Microsoft Store](https://apps.microsoft.com/detail/9nr2cgp649jm) | Get it from the Store page |
+| Linux | The `.deb`, `.rpm`, pacman package, Flatpak and AppImage below | As for [1.0.1](https://github.com/brahm/corerules/releases/tag/v1.0.1) |
 
-The Flatpak needs the GNOME 51 runtime from Flathub, which `flatpak install`
-offers to fetch. It also installs from the project's own Flatpak repository,
-which brings every new version through `flatpak update`, GNOME Software and
-Discover:
-`flatpak install --user https://brahm.github.io/corerules/io.github.brahm.CoreRules.flatpakref`.
-The AppImage bundles the GTK, libadwaita and other libraries of GNOME 51
-and runs on Fedora 44, Ubuntu 26.04 and newer. The pacman package needs an
-up-to-date system (`sudo pacman -Syu`), and `PKGBUILD` builds it from
-source with `makepkg -si`. `SHA256SUMS` lists the checksums of every file.
+**Opening it the first time.** The Mac app is signed without a
+certificate from Apple and is not notarized: the project has no Apple
+developer account. So macOS refuses it the first time, saying it could
+not check it for malicious software. After copying it to Applications,
+run this once in Terminal, and from then on it opens as any app:
 
-The [Community Add-ons Collection](https://github.com/brahm/corerules/blob/main/addons/README.md),
-672 community add-ons in one self-installing AppImage, has its own
-[release](https://github.com/brahm/corerules/releases/tag/addons):
-[CoreRules-Community-Addons-x86_64.AppImage](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage).
+```sh
+xattr -dr com.apple.quarantine "/Applications/Core Rules.app"
+```
+
+Without Terminal: open Core Rules once and press Done; then in System
+Settings › Privacy & Security, under Security, press **Open Anyway** next
+to "Core Rules" and confirm with your password. Some Macs do not offer
+Open Anyway, and a Mac managed by a company or school may not allow the
+app at all. Either way is needed again after each update. The `.dmg` has
+the same steps in English and Portuguese in `Read Me First.txt`.
+
+**The rules data.** The app opens the data package in
+`~/Library/Application Support/Core Rules/data`. Macs have no CD drive,
+so File › Extract Data from CD… makes it from the ISO image of a Core
+Rules 2.0 or Expansion CD, or from a folder the CD's files were copied
+into; File › Open Folder… also opens an installation of the original.
+
+What the app does: it opens a Core Rules 2.0 Expansion installation (or
+a data package), creates and edits characters with the Core Rules or
+Player's Option, levels them up, manages parties and prints character
+sheets; it generates NPCs, treasure and encounters, rolls on the books'
+tables, edits every user database and imports and exports DM Toolkit
+packages, all in files the original programs still open. The
+[README](https://github.com/brahm/corerules#readme) lists every feature,
+where to find the disc images if yours are lost (you must own the original
+discs), and every difference from the original. It contains no rules
+content; you need your own copy of Core Rules. `SHA256SUMS` lists the
+checksums of every file.

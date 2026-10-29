@@ -8,7 +8,10 @@
 set -eu
 cd "$(dirname "$0")/../.."
 profile=${PROFILE:-release}
-version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
+# VERSION, as the release workflow gives it from the tag (1.1.0-beta1),
+# names the .dmg; the bundle's version is its numbers, as macOS wants.
+version=${VERSION:-$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)}
+bundle_version=${version%%-*}
 out=target/macos
 app="$out/Core Rules.app"
 rm -rf "$out"
@@ -23,7 +26,7 @@ swiftc $optimize -parse-as-library -module-name CoreRules \
     "target/$profile/libcr_mac_ffi.a" \
     -o "$app/Contents/MacOS/CoreRules"
 
-sed "s/@VERSION@/$version/g" macos/Package/Info.plist > "$app/Contents/Info.plist"
+sed "s/@VERSION@/$bundle_version/g" macos/Package/Info.plist > "$app/Contents/Info.plist"
 printf 'APPL????' > "$app/Contents/PkgInfo"
 # The languages the menus macOS draws follow, as the interface's catalogs.
 for language in en pt-BR es it fr de; do
