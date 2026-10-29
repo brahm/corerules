@@ -70,6 +70,18 @@ app and in the original program.
 
 ## Installing
 
+On Windows, macOS or any Linux, download
+[`CoreRules-Community-Addons.zip`](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons.zip)
+from the [addons release](https://github.com/brahm/corerules/releases/tag/addons).
+It holds the same validated add-ons, as `Comunidade.xpx`, with the pictures,
+`pictures.tsv` (where each picture goes) and the texts. In Core Rules,
+choose **Import Add-ons…** and pick the folder that holds the zip; there is
+no need to extract it. The original Expansion program imports
+`Comunidade.xpx` too. `tools/addons_zip.py VERSION DIR` builds the zip from
+the files below.
+
+On Linux there is also the installer.
+
 The collection is a single AppImage, `CoreRules-Community-Addons-VERSION-x86_64.AppImage`,
 that carries the add-ons inside and installs them itself. It needs:
 
@@ -195,7 +207,7 @@ change to `main`.
 | --- | --- |
 | `Comunidade.xpx.xz` | The consolidated add-ons, as built into the installer |
 | `Comunidade-extras.xz` | The add-ons' pictures and texts, and where each picture goes |
-| `tools/` | The scripts that chose each picture's place and built `Comunidade-extras.xz` |
+| `tools/` | The scripts that chose each picture's place, built `Comunidade-extras.xz` and build the add-ons' zip |
 | [`relatorio.md`](relatorio.md) | The report, in Portuguese: what was converted, repaired or left out |
 | [`compatibilidade.csv`](compatibilidade.csv) | One line per add-on package, with its status and item count |
 | [`conflitos.csv`](conflitos.csv) | The names found in more than one package, and which version stayed |

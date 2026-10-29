@@ -1,0 +1,40 @@
+Coleção de Add-ons da Comunidade do Core Rules VERSION
+=====================================================
+
+Os add-ons que a comunidade do AD&D Core Rules fez para o AD&D Core Rules
+2.0 e seu Expansion, testados um a um e consolidados em um só pacote: 672
+pacotes de add-ons, 36.525 itens (raças, classes, kits, magias, monstros,
+equipamento, encontros, os personagens dos módulos publicados e o AD&D
+Core Rules User Database), com as 668 figuras e os textos dos autores.
+
+Como instalar
+-------------
+
+1. Abra o Core Rules (https://github.com/brahm/corerules) com os dados do
+   seu Expansion. Se ainda não estiverem lá, use antes Extrair dados do
+   CD...
+2. Escolha Importar add-ons... no menu e aponte a pasta onde está este
+   zip; não é preciso extraí-lo. O Core Rules lê todos os arquivos da
+   pasta e do zip de uma vez, valida cada add-on, importa e copia as
+   figuras para onde os registros as procuram, sem sobrescrever nenhum
+   arquivo. A pasta extraída, CoreRules-Community-Addons-VERSION, também
+   serve.
+
+O programa original do Expansion também importa o Comunidade.xpx, com o
+seu próprio comando Import.
+
+O que há na pasta
+-----------------
+
+Comunidade.xpx   Os add-ons consolidados, no formato de exportação do
+                 Expansion
+pictures/        As figuras (BMP de 8 bits), nas pastas dos seus add-ons
+pictures.tsv     Onde cada figura vai na pasta de dados, uma por linha: a
+                 figura, uma tabulação e o lugar (Bitmaps/Monsters/...,
+                 Bitmaps/Portrait/..., UserBMP/...)
+texts/           Os textos que os autores escreveram, em texto simples
+addons.tsv       O que cada pasta de add-on trouxe para a coleção
+
+Os add-ons pertencem aos seus autores na comunidade do Core Rules. Onde
+um nome aparecia em mais de um add-on, ficou a versão mais nova; o
+relatório completo está em https://github.com/brahm/corerules/tree/main/addons
