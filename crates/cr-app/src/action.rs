@@ -111,10 +111,52 @@ actions! {
 /// the Windows app has it too, and a release waits until it is empty.
 pub const NOT_YET_ON_WINDOWS: &[Action] = &[];
 
-/// The actions the Mac app does not have yet: every one, until its
-/// screens are ported. An action comes off as the Mac app gets it, and the
-/// release with macOS waits until the list is empty.
-pub const NOT_YET_ON_MACOS: &[Action] = ALL;
+/// The actions the Mac app does not have yet. An action comes off as the
+/// Mac app gets it, and the release with macOS waits until the list is
+/// empty.
+pub const NOT_YET_ON_MACOS: &[Action] = &[
+    EXTRACT_DATA,
+    ENTER_CHARACTER,
+    NEW_NPC,
+    NEW_NPC_GROUP,
+    ROLL_TREASURE,
+    NEW_ENCOUNTER,
+    NEW_TABLE,
+    ROLL_TABLE,
+    OPEN_BOOK,
+    MANAGE_PARTIES,
+    EXPORT,
+    IMPORT_CORE20,
+    NEW_PACKAGE,
+    EDIT_PACKAGE,
+    HELP,
+    HELP_HERE,
+    HELP_CONTROL,
+    UDB_NEW,
+    UDB_COPY,
+    UDB_EDIT,
+    UDB_DELETE,
+    UDB_SUBRACE,
+    UDB_SCHOOLS,
+    UDB_ALLOWED,
+    UDB_RESTORE,
+    BOOK_FIND,
+    BOOK_ZOOM_IN,
+    BOOK_ZOOM_OUT,
+    BOOK_ZOOM_RESET,
+    BOOK_CONTENTS,
+    BOOK_CLOSE,
+    TREASURE_SAVE,
+    TREASURE_PRINT,
+    TREASURE_PDF,
+    TREASURE_DELETE,
+    ENCOUNTER_PRINT,
+    ENCOUNTER_PDF,
+    ENCOUNTER_DELETE,
+    TRAP_EDIT,
+    TRAP_COPY,
+    TRAP_DELETE,
+];
 
 #[cfg(test)]
 mod tests {

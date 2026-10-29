@@ -34,8 +34,9 @@ release workflow builds and tests the MSIX for the Microsoft Store
 Publishing on Flathub was dropped from the plan (decision P15).
 
 The macOS version (step 3) started on 2026-10-28: the backend and `cr`
-are built and tested on Apple Silicon (phase 1), and the bridge between
-Swift and the Rust crates is being laid (phase 2).
+are built and tested on Apple Silicon (phase 1), the bridge between
+Swift and the Rust crates is laid (phase 2), and the prototype is built
+as a `.dmg` by CI (phase 3).
 
 ## The original plan (2026-10-09)
 
@@ -484,7 +485,7 @@ The phases run in order:
    `~/Library/Application Support/Core Rules/data`, where macOS asks no
    permission and which stays when the app is moved to the Trash. A name
    is looked up on the Mac's disk as on Windows, since both ignore case.
-2. **The bridge and the shared groundwork (in progress).** The help
+2. **The bridge and the shared groundwork (done, PR #118).** The help
    topics and the books as web pages moved from `cr-win` into
    `cr_app::web`, and their scripts post to the app through a WebView2 or
    a WKWebView, so the Mac shows the same pages. The new crate
@@ -494,8 +495,20 @@ The phases run in order:
    CI builds and runs a Swift program that calls it. `NOT_YET_ON_MACOS`
    lists every action, and the parity test checks the Mac app's Swift
    sources, which refer to an action as `Action.NAME`.
-3. **Prototype**, with the scope of the Windows one, packaged as a
-   `.dmg`, approved by Wagner Brahm after a run on a Mac.
+3. **Prototype (in progress)**, with the scope of the Windows one,
+   packaged as a `.dmg`, approved by Wagner Brahm after a run on a Mac.
+   The SwiftUI app in `macos/CoreRules` shows the library in three
+   columns with its search, the first page of New Character, the
+   character's description in Edit Character, Delete with its
+   confirmation, Import… of a `.xpx` or `.xpt` package (also opened from
+   the Finder), the sheet printed, saved as PDF and exported, and
+   Settings with the language. `cr-mac-ffi` holds the wizard, the editor
+   and the import as sessions over `cr-app`'s state machines, so the
+   Swift side keeps no rule. The Mac app's texts are wrapped in
+   `tr("…")` and extracted into the catalogs with the Rust ones.
+   `macos/scripts/make-app.sh` builds `Core Rules.app` with `swiftc`
+   (no Xcode project), signs it ad hoc and packs the `.dmg`, which CI
+   uploads on every pull request.
 4. **Porting the screens**, in the stages of the Windows port, until
    `NOT_YET_ON_MACOS` is empty.
 5. **Beta and release** on the three systems with the same tag, with an

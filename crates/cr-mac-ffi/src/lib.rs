@@ -4,11 +4,22 @@
 //! the GNOME and Windows apps take them directly. The bridge grows with
 //! each screen ported to the Mac; it holds no rule of its own.
 
+mod edit;
+mod import;
+mod prompt;
+mod wizard;
+
 use std::sync::Arc;
 
 use cr_app::library::Filter;
+use cr_app::sheets::Export;
 use cr_store::Installation;
 use cr_store::catalog::Section;
+
+pub use edit::{EditDetails, EditSession, SaveState};
+pub use import::{ImportCategory, ImportItem, ImportReport, ImportSession};
+pub use prompt::{PromptInfo, PromptKind};
+pub use wizard::{SettingInfo, WizardPage, WizardSession};
 
 uniffi::setup_scaffolding!();
 
@@ -19,11 +30,17 @@ pub enum CoreError {
     Failed { message: String },
 }
 
+impl CoreError {
+    fn new(message: impl ToString) -> Self {
+        CoreError::Failed {
+            message: message.to_string(),
+        }
+    }
+}
+
 impl From<cr_store::Error> for CoreError {
     fn from(e: cr_store::Error) -> Self {
-        CoreError::Failed {
-            message: e.to_string(),
-        }
+        CoreError::new(e)
     }
 }
 
@@ -134,6 +151,8 @@ pub struct EntryRow {
     pub key: String,
     pub title: String,
     pub subtitle: String,
+    /// A character of the list, which can be edited and deleted.
+    pub character: bool,
 }
 
 /// A label and its value in an entry's details.
@@ -150,6 +169,51 @@ pub struct Group {
     pub rows: Vec<Row>,
 }
 
+/// A file a character's sheet is exported to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum SheetExport {
+    Html,
+    Text,
+    Markdown,
+}
+
+impl SheetExport {
+    fn of(export: Export) -> Self {
+        match export {
+            Export::Html => Self::Html,
+            Export::Text => Self::Text,
+            Export::Markdown => Self::Markdown,
+        }
+    }
+
+    fn export(self) -> Export {
+        match self {
+            Self::Html => Export::Html,
+            Self::Text => Export::Text,
+            Self::Markdown => Export::Markdown,
+        }
+    }
+}
+
+/// The file name's extension of an export: `html`.
+#[uniffi::export]
+pub fn export_extension(export: SheetExport) -> String {
+    export.export().extension().to_owned()
+}
+
+/// The menu item of an export: "Export as _HTML…".
+#[uniffi::export]
+pub fn export_label(export: SheetExport) -> String {
+    export.export().label().to_owned()
+}
+
+/// The name the original suggests for a file of `title`:
+/// `Borin_Pedraforte.pdf`.
+#[uniffi::export]
+pub fn file_name(title: String, extension: String) -> String {
+    cr_app::file_name(title.trim(), &extension)
+}
+
 /// What the details pane shows of an entry.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct EntryDetails {
@@ -160,17 +224,22 @@ pub struct EntryDetails {
     pub text: String,
     /// The path of its picture, when it has one.
     pub picture: Option<String>,
+    /// A character of the list, which has a sheet and can be edited and
+    /// deleted.
+    pub character: bool,
 }
 
-/// A Core Rules installation or data package, and its catalog.
+/// A Core Rules installation or data package, and its catalog as it was
+/// read; [`Library::reload`] reads it again after a change.
 #[derive(uniffi::Object)]
 pub struct Library {
-    install: Installation,
+    install: Arc<Installation>,
     sections: Vec<Section>,
 }
 
 impl Library {
     fn new(install: Installation) -> Arc<Self> {
+        let install = Arc::new(install);
         let sections = install.catalog();
         Arc::new(Self { install, sections })
     }
@@ -193,6 +262,11 @@ impl Library {
     #[uniffi::constructor]
     pub fn open(path: String) -> Result<Arc<Self>, CoreError> {
         Ok(Self::new(Installation::open(path)?))
+    }
+
+    /// The same folder, its catalog read again.
+    pub fn reload(&self) -> Result<Arc<Self>, CoreError> {
+        Self::open(self.root())
     }
 
     /// The folder it was opened from.
@@ -238,6 +312,7 @@ impl Library {
                     key: e.key.clone(),
                     title: e.title.clone(),
                     subtitle: e.subtitle.clone(),
+                    character: cr_app::library::is_character(&e.key),
                 }
             })
             .collect()
@@ -266,7 +341,63 @@ impl Library {
                 .collect(),
             text: e.text.clone(),
             picture: e.picture.as_ref().map(|p| p.display().to_string()),
+            character: cr_app::library::is_character(&e.key),
         })
+    }
+
+    /// Removes the character of `Chars/<file>` from the list and its
+    /// file, as Delete does without the GNOME app's Undo; gives its name.
+    pub fn delete_character(&self, file: String) -> Result<String, CoreError> {
+        let deleted = self.install.delete_character(&file)?;
+        self.install
+            .forget_deleted(std::slice::from_ref(&deleted))?;
+        Ok(deleted.name.trim().to_owned())
+    }
+
+    /// The sheet of the character in `Chars/<file>` as a PDF, on Letter
+    /// paper or A4.
+    pub fn sheet_pdf(&self, file: String, letter: bool) -> Result<Vec<u8>, CoreError> {
+        let (sheet, _) = cr_app::sheets::character(&self.install, &file)?;
+        let paper = if letter {
+            cr_app::pdf::Paper::Letter
+        } else {
+            cr_app::pdf::Paper::A4
+        };
+        Ok(cr_app::pdf::sheet(&sheet, paper))
+    }
+
+    /// The files a sheet is exported to in this installation.
+    pub fn sheet_exports(&self) -> Vec<SheetExport> {
+        self.install
+            .sheet_rules()
+            .map(|rules| Export::of(rules.flavor()))
+            .unwrap_or_default()
+            .into_iter()
+            .map(SheetExport::of)
+            .collect()
+    }
+
+    /// The sheet of the character in `Chars/<file>` as `export` writes it.
+    pub fn sheet_export(&self, file: String, export: SheetExport) -> Result<Vec<u8>, CoreError> {
+        let (sheet, _) = cr_app::sheets::character(&self.install, &file)?;
+        Ok(export.export().write(&sheet))
+    }
+
+    /// Import…: what the package in `path` would bring in.
+    pub fn import_package(&self, path: String) -> Result<Arc<ImportSession>, CoreError> {
+        ImportSession::open(self.install.clone(), &path)
+    }
+
+    /// New Character, from its first page. `core_vs_option` says whether
+    /// the Expansion's Core Rules Vs Player's Option message is still
+    /// shown.
+    pub fn new_character(&self, core_vs_option: bool) -> Result<Arc<WizardSession>, CoreError> {
+        WizardSession::open(&self.install, core_vs_option)
+    }
+
+    /// Edit Character on the character in `Chars/<file>`.
+    pub fn edit_character(&self, file: String) -> Result<Arc<EditSession>, CoreError> {
+        EditSession::open(self.install.clone(), &file)
     }
 }
 
