@@ -245,15 +245,20 @@ struct EntryList: View {
     @EnvironmentObject var model: AppModel
 
     var body: some View {
-        VStack(spacing: 0) {
-            if model.library?.isCore20() == true {
-                ReadOnlyBanner()
+        List(model.entries, id: \.index, selection: $model.entry) { (row: EntryRow) in
+            EntryRowView(row: row)
+        }
+        .overlay { empty }
+        // The banner and the filters sit in the bar under the toolbar, in
+        // its material, and the list scrolls under them.
+        .safeAreaInset(edge: .top, spacing: 0) {
+            VStack(spacing: 0) {
+                if model.library?.isCore20() == true {
+                    ReadOnlyBanner()
+                }
+                FilterBar()
             }
-            FilterBar()
-            List(model.entries, id: \.index, selection: $model.entry) { (row: EntryRow) in
-                EntryRowView(row: row)
-            }
-            .overlay { empty }
+            .background(.bar)
         }
         .searchable(text: $model.filter.search, placement: .sidebar, prompt: tr("Search"))
         .toolbar {
