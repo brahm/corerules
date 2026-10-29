@@ -724,7 +724,12 @@ impl Library {
         state: String,
         find: Option<String>,
     ) -> Result<Arc<BookSession>, CoreError> {
-        Ok(Arc::new(BookSession::open(&self.install, &name, &state, find)?))
+        Ok(Arc::new(BookSession::open(
+            &self.install,
+            &name,
+            &state,
+            find,
+        )?))
     }
 
     pub fn help(&self) -> Result<Arc<HelpSession>, CoreError> {

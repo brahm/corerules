@@ -32,12 +32,18 @@ pub struct BookHeading {
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
 pub enum BookPosted {
     /// The page loaded: these scripts show where the reader was.
-    Ready { scripts: Vec<String> },
+    Ready {
+        scripts: Vec<String>,
+    },
     /// The text scrolled; the contents select this heading.
-    Moved { heading: Option<u32> },
+    Moved {
+        heading: Option<u32>,
+    },
     /// A key of the reader pressed in the page: `find`, `zoom-in`,
     /// `zoom-out`, `zoom-reset`, `contents`, `close` or `help`.
-    Key { key: String },
+    Key {
+        key: String,
+    },
     Nothing,
 }
 
@@ -87,7 +93,10 @@ impl BookSession {
         find: Option<String>,
     ) -> Result<Self, CoreError> {
         let book = install.book(name).ok_or_else(|| {
-            CoreError::new(tr!("{name} is not in this installation", name = name.to_owned()))
+            CoreError::new(tr!(
+                "{name} is not in this installation",
+                name = name.to_owned()
+            ))
         })?;
         let doc = book.read().map_err(|e| CoreError::new(e.to_string()))?;
         let folder = std::env::temp_dir().join("Core Rules");
@@ -289,8 +298,7 @@ impl BookSession {
     /// The match after (`direction` 1) or before (-1) the one shown.
     pub fn step_match(&self, direction: i32) -> Option<String> {
         let mut reader = self.reader();
-        let next =
-            cr_app::books::step_match(reader.current, reader.matches.len(), direction)?;
+        let next = cr_app::books::step_match(reader.current, reader.matches.len(), direction)?;
         self.show_match(&mut reader, next)
     }
 
