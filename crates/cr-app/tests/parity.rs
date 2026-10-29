@@ -108,7 +108,7 @@ fn the_windows_app_has_every_action_not_listed_as_pending() {
 
 #[test]
 fn the_mac_app_has_every_action_not_listed_as_pending() {
-    // The Swift sources of the Mac app, which has no screens yet.
+    // The Swift sources of the Mac app.
     let used = used_as(&read_all(&root().join("macos"), "swift"), "Action.");
     let expected = names(ALL)
         .difference(&names(NOT_YET_ON_MACOS))

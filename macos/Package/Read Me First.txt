@@ -1,0 +1,31 @@
+Core Rules for macOS (Apple Silicon, macOS 14 or newer)
+
+Install: drag Core Rules to the Applications folder.
+
+Opening it the first time: Core Rules is not notarized by Apple, so macOS
+refuses it the first time with a message that it could not check it.
+1. Open Core Rules once and press Done in that message.
+2. Open System Settings > Privacy & Security, scroll to Security, and
+   press Open Anyway next to "Core Rules".
+3. Confirm with your password. From then on Core Rules opens as any app.
+
+Game data: put the data package made by Extract Data from CD… in
+~/Library/Application Support/Core Rules/data, or use File > Open Folder…
+on the folder where AD&D Core Rules 2.0 is installed.
+
+---
+
+Core Rules para macOS (Apple Silicon, macOS 14 ou mais recente)
+
+Instalar: arraste o Core Rules para a pasta Aplicativos.
+
+Abrir pela primeira vez: o Core Rules não é autenticado pela Apple, então
+o macOS o recusa na primeira vez, dizendo que não pôde verificá-lo.
+1. Abra o Core Rules uma vez e clique em OK nessa mensagem.
+2. Abra Ajustes do Sistema > Privacidade e Segurança, desça até
+   Segurança e clique em Abrir Mesmo Assim ao lado de "Core Rules".
+3. Confirme com sua senha. Daí em diante ele abre como qualquer app.
+
+Dados do jogo: coloque o pacote de dados criado por Extrair Dados do CD…
+em ~/Library/Application Support/Core Rules/data, ou use Arquivo > Abrir
+Pasta… na pasta onde o AD&D Core Rules 2.0 está instalado.

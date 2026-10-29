@@ -63,7 +63,12 @@ jobs:
       - run: cargo build --release -p cr-cli
       - run: macos/scripts/make-bindings.sh
       - run: macos/scripts/smoke-test.sh
+      - run: macos/scripts/make-app.sh
       - uses: actions/upload-artifact@v4
         with:
           name: cr-macos-arm64
           path: target/release/cr
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CoreRules-macos-arm64-dmg
+          path: target/macos/*.dmg

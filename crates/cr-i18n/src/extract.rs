@@ -32,8 +32,9 @@ pub fn po_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("po")
 }
 
-/// Every wrapped text of the crates' `src` directories, in order of first
-/// use.
+/// Every wrapped text of the crates' `src` directories and of the Mac
+/// app's Swift sources (`macos`, which wraps its texts in `tr("…")` as
+/// well), in order of first use.
 pub fn messages() -> Vec<Message> {
     let root = workspace_root();
     let mut files = Vec::new();
@@ -46,8 +47,9 @@ pub fn messages() -> Vec<Message> {
         if dir.ends_with("cr-i18n") {
             continue;
         }
-        rust_files(&dir.join("src"), &mut files);
+        sources(&dir.join("src"), "rs", &mut files);
     }
+    sources(&root.join("macos"), "swift", &mut files);
     let mut out: Vec<Message> = Vec::new();
     for file in files {
         let Ok(src) = std::fs::read_to_string(&file) else {
@@ -77,7 +79,8 @@ pub fn messages() -> Vec<Message> {
     out
 }
 
-fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
+/// The files with extension `extension` under `dir`, sorted.
+fn sources(dir: &Path, extension: &str, out: &mut Vec<PathBuf>) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
     };
@@ -85,8 +88,8 @@ fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
     paths.sort();
     for path in paths {
         if path.is_dir() {
-            rust_files(&path, out);
-        } else if path.extension().is_some_and(|e| e == "rs") {
+            sources(&path, extension, out);
+        } else if path.extension().is_some_and(|e| e == extension) {
             out.push(path);
         }
     }
