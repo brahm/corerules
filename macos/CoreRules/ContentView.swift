@@ -128,6 +128,15 @@ struct ModalView: View {
                 model: package,
                 close: { model.modal = nil },
                 saved: { (done: PackageDone) in model.packageDone(done) })
+        case .addons(let addons):
+            AddonsView(
+                model: addons,
+                close: { model.modal = nil },
+                imported: { (report: ImportReport) in model.imported(report) },
+                failed: { (error: Error) in
+                    model.modal = nil
+                    model.fail(tr("Import Failed"), error)
+                })
         case .importing(let importing):
             ImportView(
                 model: importing,

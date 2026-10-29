@@ -1,14 +1,17 @@
 //! Import…, Export…, New Package… and Edit Package… of the main menu: the
 //! DM Toolkit's packages (`.xpx` from the Expansion, `.xpt` from Core
 //! Rules 2.0), and Import Core Rules 2.0…, which brings a 2.0
-//! installation's content into the Expansion as a 2.0 package would.
+//! installation's content into the Expansion as a 2.0 package would; and
+//! Import Add-ons…, every package in a folder brought in at once.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 use adw::prelude::*;
+use cr_app::addons::{self, AddonFolder};
 use cr_app::packages::{ROWS_SHOWN, Renaming, Step, category_label, clash_note};
 use cr_formats::export::ExportFile;
 use cr_i18n::{tr, trn};
@@ -371,6 +374,160 @@ pub fn import_core20<H: Host + 'static>(host: &Rc<H>) {
             }
         },
     );
+}
+
+/// Import Add-ons…: choose a folder, then see what of it comes in and
+/// import it all at once.
+pub fn import_addons<H: Host + 'static>(host: &Rc<H>) {
+    let Some(expansion) = is_expansion(&**host) else {
+        return;
+    };
+    let picker = gtk::FileDialog::builder()
+        .title(tr("Choose the Folder with the Add-ons"))
+        .modal(true)
+        .build();
+    let host = host.clone();
+    picker.select_folder(
+        window_of(&*host).as_ref(),
+        gio::Cancellable::NONE,
+        move |r| {
+            let Ok(Some(path)) = r.map(|f| f.path()) else {
+                return;
+            };
+            host.toast(tr("Reading the add-ons…"));
+            glib::spawn_future_local(async move {
+                let found = gio::spawn_blocking(move || addons::scan(&path, expansion)).await;
+                match found {
+                    Ok(Ok(found)) => confirm_addons(&host, Arc::new(found)),
+                    Ok(Err(e)) => alert(&*host, tr("Cannot Import"), &e),
+                    Err(_) => alert(
+                        &*host,
+                        tr("Cannot Import"),
+                        tr("The import stopped unexpectedly."),
+                    ),
+                }
+            });
+        },
+    );
+}
+
+/// What the folder holds, and Import to bring it in.
+fn confirm_addons<H: Host + 'static>(host: &Rc<H>, found: Arc<AddonFolder>) {
+    let button = gtk::Button::builder()
+        .label(tr("_Import"))
+        .use_underline(true)
+        .css_classes(["suggested-action"])
+        .sensitive(found.can_import())
+        .build();
+    let groups = groups_box();
+    for group in found.groups() {
+        let list = adw::PreferencesGroup::builder()
+            .description(glib::markup_escape_text(&group.heading).as_str())
+            .build();
+        for (path, detail) in &group.rows {
+            let row = adw::ActionRow::builder()
+                .title(glib::markup_escape_text(path).as_str())
+                .subtitle(glib::markup_escape_text(detail).as_str())
+                .build();
+            list.add(&row);
+        }
+        groups.append(&list);
+    }
+    let notes = found.notes();
+    if !notes.is_empty() {
+        groups.append(
+            &adw::PreferencesGroup::builder()
+                .description(glib::markup_escape_text(&notes.join("\n")).as_str())
+                .build(),
+        );
+    }
+    let dialog = dialog(found.title(), &button, &groups, topic::IMPORT);
+    button.connect_clicked({
+        let (host, dialog) = (host.clone(), dialog.clone());
+        move |_| {
+            dialog.close();
+            run_addons(&host, found.clone());
+        }
+    });
+    dialog.present(Some(&host.parent()));
+}
+
+/// Imports the add-ons on a worker thread, a bar showing which one is
+/// coming in, then says what came in.
+fn run_addons<H: Host + 'static>(host: &Rc<H>, found: Arc<AddonFolder>) {
+    let root = {
+        let install = host.installation();
+        let Some(install) = install.as_ref() else {
+            return;
+        };
+        install.root().to_path_buf()
+    };
+    let bar = gtk::ProgressBar::builder()
+        .show_text(true)
+        .ellipsize(gtk::pango::EllipsizeMode::Middle)
+        .margin_top(24)
+        .margin_bottom(24)
+        .margin_start(24)
+        .margin_end(24)
+        .build();
+    let view = adw::ToolbarView::new();
+    view.add_top_bar(
+        &adw::HeaderBar::builder()
+            .show_end_title_buttons(false)
+            .show_start_title_buttons(false)
+            .build(),
+    );
+    view.set_content(Some(&bar));
+    let dialog = adw::Dialog::builder()
+        .title(tr("Importing…"))
+        .content_width(420)
+        .can_close(false)
+        .child(&view)
+        .build();
+    dialog.present(Some(&host.parent()));
+    // The worker says where it is; the window reads it.
+    let at: Arc<Mutex<(usize, usize, String)>> = Arc::default();
+    let tick = glib::timeout_add_local(std::time::Duration::from_millis(100), {
+        let (bar, at) = (bar.clone(), at.clone());
+        move || {
+            if let Ok(at) = at.lock() {
+                let (done, total, path) = &*at;
+                if *total > 0 {
+                    bar.set_fraction(*done as f64 / *total as f64);
+                }
+                bar.set_text(Some(path));
+            }
+            glib::ControlFlow::Continue
+        }
+    });
+    let host = host.clone();
+    glib::spawn_future_local(async move {
+        let done = gio::spawn_blocking(move || {
+            let install = Installation::open(root).map_err(|e| e.to_string())?;
+            found.import(&install, &|done, total, path| {
+                if let Ok(mut at) = at.lock() {
+                    *at = (done, total, path.to_owned());
+                }
+            })
+        })
+        .await;
+        tick.remove();
+        dialog.set_can_close(true);
+        dialog.close();
+        match done {
+            Ok(Ok(done)) => {
+                host.reloaded();
+                let (heading, text) = done.report();
+                alert(&*host, &heading, &text);
+            }
+            Ok(Err(e)) => alert(&*host, tr("Import Failed"), &e),
+            Err(_) => alert(
+                &*host,
+                tr("Import Failed"),
+                tr("The import stopped unexpectedly."),
+            ),
+        }
+    });
 }
 
 fn choose_imports<H: Host + 'static>(host: &Rc<H>, file: ExportFile, expansion: bool) {

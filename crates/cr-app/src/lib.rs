@@ -10,6 +10,7 @@
 
 pub mod about;
 pub mod action;
+pub mod addons;
 pub mod books;
 pub mod bundle;
 pub mod create;

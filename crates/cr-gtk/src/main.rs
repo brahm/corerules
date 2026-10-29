@@ -63,7 +63,7 @@ use lists::{ListEditor, RowList, RowSpec, pick};
 const APP_ID: &str = "io.github.brahm.CoreRules";
 
 /// The actions that make or change content, off for Core Rules 2.0.
-const WRITE_ACTIONS: [&str; 21] = [
+const WRITE_ACTIONS: [&str; 22] = [
     "new-character",
     "enter-character",
     "new-npc",
@@ -74,6 +74,7 @@ const WRITE_ACTIONS: [&str; 21] = [
     "export",
     "import",
     "import-core20",
+    "import-addons",
     "new-package",
     "edit-package",
     "manage-parties",
@@ -474,6 +475,12 @@ impl Window {
                 move |_, _, _| transfer::import_core20(&Rc::new(this.clone()))
             })
             .build();
+        let import_addons = gio::ActionEntry::builder(action::IMPORT_ADDONS.name)
+            .activate({
+                let this = this.clone();
+                move |_, _, _| transfer::import_addons(&Rc::new(this.clone()))
+            })
+            .build();
         let new_package = gio::ActionEntry::builder(action::NEW_PACKAGE.name)
             .activate({
                 let this = this.clone();
@@ -501,6 +508,7 @@ impl Window {
             edit_package,
             manage_parties,
             import_core20,
+            import_addons,
         ]);
         this.window.add_action_entries([
             preferences,
@@ -709,6 +717,7 @@ impl Window {
             "edit-package",
             "manage-parties",
             "import-core20",
+            "import-addons",
         ] {
             if let Some(action) = self
                 .window
@@ -1318,6 +1327,10 @@ fn open_menu() -> gtk::MenuButton {
     );
     item.set_attribute_value("hidden-when", Some(&"action-disabled".to_variant()));
     packages.append_item(&item);
+    packages.append(
+        Some(tr("Import Add-_ons…")),
+        Some(action::IMPORT_ADDONS.detailed),
+    );
     packages.append(Some(tr("E_xport…")), Some(action::EXPORT.detailed));
     packages.append(
         Some(tr("New P_ackage…")),

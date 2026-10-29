@@ -125,6 +125,7 @@ struct MenuCommands: Commands {
             if model.library?.isCore20() == false {
                 item(more(tr("Import Core _Rules 2.0…")), Action.IMPORT_CORE20)
             }
+            item(more(tr("Import Add-_ons…")), Action.IMPORT_ADDONS)
             item(more(tr("E_xport…")), Action.EXPORT)
                 .keyboardShortcut("e", modifiers: [.command, .shift])
             item(more(tr("New P_ackage…")), Action.NEW_PACKAGE)

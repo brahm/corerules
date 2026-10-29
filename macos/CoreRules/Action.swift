@@ -45,6 +45,7 @@ struct Action: Hashable {
     static let IMPORT = Action("IMPORT")
     static let EXTRACT_DATA = Action("EXTRACT_DATA")
     static let IMPORT_CORE20 = Action("IMPORT_CORE20")
+    static let IMPORT_ADDONS = Action("IMPORT_ADDONS")
     static let EXPORT = Action("EXPORT")
     static let NEW_PACKAGE = Action("NEW_PACKAGE")
     static let EDIT_PACKAGE = Action("EDIT_PACKAGE")

@@ -57,6 +57,8 @@ actions! {
     IMPORT = "win"."import";
     /// Import from Core Rules 2.0…
     IMPORT_CORE20 = "win"."import-core20";
+    /// Import Add-ons…: every add-on in a folder at once.
+    IMPORT_ADDONS = "win"."import-addons";
     NEW_PACKAGE = "win"."new-package";
     EDIT_PACKAGE = "win"."edit-package";
     HELP = "win"."help";

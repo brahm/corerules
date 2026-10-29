@@ -903,8 +903,11 @@ impl Installation {
         let mut classes = Vec::new();
         let mut class_warnings = Vec::new();
         let all = contents(file);
+        // A set: a package holds tens of thousands of items.
+        let chosen: Option<std::collections::HashSet<usize>> =
+            chosen.map(|c| c.iter().copied().collect());
         for (n, item) in all.iter().enumerate() {
-            if chosen.is_some_and(|c| !c.contains(&n)) {
+            if chosen.as_ref().is_some_and(|c| !c.contains(&n)) {
                 continue;
             }
             match item.category {

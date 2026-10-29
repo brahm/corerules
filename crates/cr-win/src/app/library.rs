@@ -181,6 +181,11 @@ pub fn view(shell: &Shell, context: &mut ViewContext<Shell>) -> View {
             tr("Import Core _Rules 2.0…"),
             Symbol::ImportAll,
         ),
+        (
+            action::IMPORT_ADDONS,
+            tr("Import Add-_ons…"),
+            Symbol::Library,
+        ),
         (action::EXPORT, tr("E_xport…"), Symbol::Upload),
         (action::NEW_PACKAGE, tr("New P_ackage…"), Symbol::NewFolder),
         (action::EDIT_PACKAGE, tr("E_dit Package…"), Symbol::OpenFile),

@@ -4,6 +4,7 @@
 //! the GNOME and Windows apps take them directly. The bridge grows with
 //! each screen ported to the Mac; it holds no rule of its own.
 
+mod addons;
 mod allowed;
 mod book;
 mod bundle;
@@ -33,6 +34,7 @@ use cr_store::catalog::{Entry, Section};
 use cr_store::userdb::Filter as Origins;
 use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES};
 
+pub use addons::AddonsSession;
 pub use book::{BookHeading, BookPosted, BookSession};
 pub use edit::{EditSession, SaveState};
 pub use encounter::{
@@ -985,6 +987,12 @@ impl Library {
     /// `folder` would bring in; none when it has nothing of its own.
     pub fn import_core20(&self, folder: String) -> Result<Option<Arc<ImportSession>>, CoreError> {
         ImportSession::open_core20(self.install.clone(), &folder)
+    }
+
+    /// Import Add-ons…: what the folder `folder` holds. Takes a while
+    /// with large archives; the app calls it off the main thread.
+    pub fn read_addons(&self, folder: String) -> Result<Arc<AddonsSession>, CoreError> {
+        AddonsSession::open(self.install.clone(), &folder)
     }
 
     /// Export…, or a package's Add Items: the user's records and
