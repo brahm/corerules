@@ -25,6 +25,7 @@ struct CoreRulesApp: App {
         }
         .commands {
             MenuCommands(model: model)
+            ToolsCommands(model: model)
             HelpCommands(model: model)
             BookCommands()
         }
@@ -41,6 +42,11 @@ struct CoreRulesApp: App {
             }
         }
         .defaultSize(width: 1100, height: 760)
+        Window(tr("Roll on a Table"), id: "tables") {
+            TableWindow()
+                .environmentObject(model)
+        }
+        .defaultSize(width: 760, height: 720)
         Window(tr("Help"), id: "help") {
             HelpWindow()
                 .environmentObject(model)
@@ -116,18 +122,42 @@ struct MenuCommands: Commands {
     }
 }
 
+/// The Tools menu: the DM Tool Kit's generators, as the GNOME app's main
+/// menu and the Windows app's More menu have them.
+struct ToolsCommands: Commands {
+    @ObservedObject var model: AppModel
+
+    var body: some Commands {
+        CommandMenu(tr("Tools")) {
+            item(more(tr("New N_PC…")), Action.NEW_NPC)
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+            item(more(tr("New NPC _Group…")), Action.NEW_NPC_GROUP)
+            Divider()
+            item(more(tr("Roll on a _Table…")), Action.ROLL_TABLE)
+        }
+    }
+
+    private func item(_ title: String, _ action: Action) -> some View {
+        Button(title) { model.perform(action) }
+            .disabled(!model.enabled(action))
+    }
+}
+
 /// The Help menu: the help of the screen in front, as the original's F1
 /// opens it, the books, and help on the entry in view.
 struct HelpCommands: Commands {
     @ObservedObject var model: AppModel
     @FocusedValue(\.sheet) private var sheet: SheetModel?
     @FocusedValue(\.book) private var book: BookModel?
+    @FocusedValue(\.tables) private var tables: TableModel?
 
     var body: some Commands {
         CommandGroup(replacing: .help) {
             Button(tr("Core Rules Help")) {
                 if book != nil {
                     model.booksHelp()
+                } else if let tables {
+                    model.openHelp(programHelp(number: tables.session.help()))
                 } else {
                     model.perform(Action.HELP_HERE, sheet: sheet)
                 }

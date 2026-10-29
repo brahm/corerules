@@ -558,13 +558,20 @@ The phases run in order:
      Portrait with the race's portraits first or a picture of the user's,
      and Create, which writes the character and shows it in the library,
      are on the Mac.
-   - **Edit Character (in progress).** Every page of `cr_app::editor`
+   - **Edit Character (done, PR #125).** Every page of `cr_app::editor`
      (Details, Abilities, Combat, Proficiencies, Skills, Spells and
      Equipment) is described as a form like the wizard's, chosen with a
      segmented control above it; Levels… and Add… open as dialogs over
      the page, the bundles show their items' icons, and Save's questions
      come in the page's place. The Levels dialog, the experience fields,
      the Skills form and the portrait row are those of the wizard.
+   - **The generators (in progress)**, in three pull requests. First New
+     NPC and New NPC Group, as forms in a sheet whose Create makes and
+     saves the NPCs off the main thread, and Roll on a Table in a window
+     of its own, with Roll, Roll Again, Copy Results and Read in Book;
+     they are in a Tools menu, as in the GNOME app's main menu. Then Roll
+     Treasure and the saved treasure, then the encounters, encounter
+     tables, parties and traps.
 5. **Beta and release** on the three systems with the same tag, with an
    install page on the website and in the README that shows the Open
    Anyway steps.

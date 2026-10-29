@@ -10,12 +10,14 @@ import UniformTypeIdentifiers
 enum Modal: Identifiable {
     case wizard(WizardModel)
     case edit(EditModel)
+    case npc(NpcModel)
     case importing(ImportModel)
 
     var id: ObjectIdentifier {
         switch self {
         case .wizard(let m): return ObjectIdentifier(m)
         case .edit(let m): return ObjectIdentifier(m)
+        case .npc(let m): return ObjectIdentifier(m)
         case .importing(let m): return ObjectIdentifier(m)
         }
     }
@@ -81,6 +83,8 @@ final class AppModel: ObservableObject {
     private(set) var books: [UUID: BookModel] = [:]
     /// The help of the installation opened, once it is read.
     @Published private(set) var help: HelpModel?
+    /// Roll on a Table, while its window is open.
+    @Published private(set) var tables: TableModel?
 
     /// Opens Settings, a sheet's window, the help's and About; the main
     /// window's view sets them, as only a view can.
@@ -89,6 +93,7 @@ final class AppModel: ObservableObject {
     var openHelpWindow: () -> Void = {}
     var openBookWindow: (UUID) -> Void = { _ in }
     var openAbout: () -> Void = {}
+    var openTablesWindow: () -> Void = {}
 
     init() {
         if let folder = Prefs.folder, let library = try? Library.open(path: folder) {
@@ -103,6 +108,7 @@ final class AppModel: ObservableObject {
     private func show(_ library: Library?) {
         if library !== self.library {
             help = nil
+            tables = nil
         }
         self.library = library
         sections = library?.sections() ?? []
@@ -196,8 +202,11 @@ final class AppModel: ObservableObject {
     /// front, when one is.
     func enabled(_ action: Action, sheet: SheetModel? = nil) -> Bool {
         switch action {
-        case Action.NEW_CHARACTER, Action.ENTER_CHARACTER, Action.IMPORT:
+        case Action.NEW_CHARACTER, Action.ENTER_CHARACTER, Action.IMPORT, Action.NEW_NPC,
+            Action.NEW_NPC_GROUP:
             return writable && modal == nil
+        case Action.ROLL_TABLE:
+            return library != nil
         case Action.SHEET_PRINT:
             if sheet != nil { return true }
             guard let commands = details?.commands else { return false }
@@ -232,6 +241,9 @@ final class AppModel: ObservableObject {
         case Action.NEW_CHARACTER: newCharacter(entering: false)
         case Action.ENTER_CHARACTER: newCharacter(entering: true)
         case Action.IMPORT: chooseImport()
+        case Action.NEW_NPC: newNpc(group: false)
+        case Action.NEW_NPC_GROUP: newNpc(group: true)
+        case Action.ROLL_TABLE: rollTable()
         case Action.SHEET_PRINT:
             if sheet == nil && details?.commands.monster == true {
                 monsterHelp(print: true)
@@ -323,6 +335,54 @@ final class AppModel: ObservableObject {
         if saved {
             reload(select: edit.file)
         }
+    }
+
+    /// New NPC, or New NPC Group with `group`.
+    private func newNpc(group: Bool) {
+        guard let library else { return }
+        do {
+            let npc = NpcModel(try library.newNpc(group: group))
+            npc.created = { [weak self] (made: NpcsCreated) in
+                self?.npcsCreated(made)
+            }
+            npc.failed = { [weak self] (error: Error) in
+                self?.fail(tr("NPC Generator"), error)
+            }
+            modal = .npc(npc)
+        } catch {
+            fail(tr("NPC Generator"), error)
+        }
+    }
+
+    /// The NPCs Create saved, shown in the characters' section.
+    private func npcsCreated(_ made: NpcsCreated) {
+        modal = nil
+        if let characters = sections.first(where: { $0.id == characterSection() }) {
+            section = characters.id
+        }
+        reload(select: made.file)
+        // The generator's notes on what it could not do say more.
+        notice = Notice(title: made.said, text: made.messages ?? "")
+    }
+
+    /// Roll on a Table, in its window, on the table last rolled on.
+    private func rollTable() {
+        guard let library else { return }
+        if tables == nil {
+            do {
+                tables = TableModel(try library.rollTable())
+            } catch {
+                fail(tr("Roll on a Table"), error)
+                return
+            }
+        }
+        openTablesWindow()
+    }
+
+    /// Roll on a Table's window closed.
+    func closeTables() {
+        tables?.session.close()
+        tables = nil
     }
 
     func askDelete() {
@@ -498,6 +558,7 @@ final class AppModel: ObservableObject {
         switch modal {
         case .wizard(let wizard): return wizard.session.help()
         case .edit(let edit): return edit.session.help()
+        case .npc(let npc): return npc.session.help()
         case .importing: return screenHelp(screen: .`import`)
         case nil: return section.map { sectionHelp(section: $0) } ?? screenHelp(screen: .mainMenu)
         }
