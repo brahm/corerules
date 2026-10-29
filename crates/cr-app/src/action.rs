@@ -114,7 +114,7 @@ pub const NOT_YET_ON_WINDOWS: &[Action] = &[];
 /// The actions the Mac app does not have yet. An action comes off as the
 /// Mac app gets it, and the release with macOS waits until the list is
 /// empty.
-pub const NOT_YET_ON_MACOS: &[Action] = &[EXTRACT_DATA];
+pub const NOT_YET_ON_MACOS: &[Action] = &[];
 
 #[cfg(test)]
 mod tests {

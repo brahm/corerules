@@ -43,6 +43,7 @@ struct Action: Hashable {
     static let TRAP_COPY = Action("TRAP_COPY")
     static let TRAP_DELETE = Action("TRAP_DELETE")
     static let IMPORT = Action("IMPORT")
+    static let EXTRACT_DATA = Action("EXTRACT_DATA")
     static let IMPORT_CORE20 = Action("IMPORT_CORE20")
     static let EXPORT = Action("EXPORT")
     static let NEW_PACKAGE = Action("NEW_PACKAGE")

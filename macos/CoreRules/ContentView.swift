@@ -33,6 +33,16 @@ struct ContentView: View {
             }
             .modifier(NoticeAlert())
             .modifier(ConfirmAlert())
+            .sheet(isPresented: working) {
+                WorkingView(text: model.working ?? "")
+            }
+    }
+
+    /// Whether something runs under the progress sheet.
+    private var working: Binding<Bool> {
+        Binding<Bool>(
+            get: { model.working != nil },
+            set: { (_: Bool) in })
     }
 
     @ViewBuilder
@@ -62,6 +72,7 @@ struct NoInstallation: View {
         } description: {
             Text(model.noInstallation)
         } actions: {
+            Button(more(tr("Extract Data from _CD…"))) { model.perform(Action.EXTRACT_DATA) }
             Button(more(tr("_Open Folder…"))) { model.perform(Action.OPEN) }
         }
     }
@@ -166,6 +177,7 @@ struct ConfirmAlert: ViewModifier {
         case .toNpc: return tr("Convert to NPC?")
         case .deleteRecord(_, _, let title, _): return title
         case .restoreTable(_, let title, _): return title
+        case .extractSource, .openExtracted: return tr("Extract Data from CD")
         case nil: return ""
         }
     }
@@ -177,6 +189,8 @@ struct ConfirmAlert: ViewModifier {
             return tr("This will move the selected Player Character to the NPC List in the DM Toolkit.")
         case .deleteRecord(_, _, _, let text): return text
         case .restoreTable(_, _, let text): return text
+        case .extractSource: return extractIntro()
+        case .openExtracted(_, let text): return text
         case nil: return ""
         }
     }
@@ -184,6 +198,7 @@ struct ConfirmAlert: ViewModifier {
     private var yes: String {
         if case .toNpc = model.confirm { return tr("_Convert") }
         if case .restoreTable = model.confirm { return tr("_Restore") }
+        if case .openExtracted = model.confirm { return tr("_Open") }
         return tr("_Delete")
     }
 
@@ -196,11 +211,33 @@ struct ConfirmAlert: ViewModifier {
 
     func body(content: Content) -> some View {
         content.alert(title, isPresented: shown) {
-            Button(yes, role: destructive ? .destructive : nil) { model.answer(true) }
-            Button(tr("_Cancel"), role: .cancel) { model.answer(false) }
+            if case .extractSource = model.confirm {
+                Button(more(tr("_ISO Image…"))) { model.extractFrom(folder: false) }
+                Button(more(tr("_Folder…"))) { model.extractFrom(folder: true) }
+                Button(tr("_Cancel"), role: .cancel) { model.answer(false) }
+            } else {
+                Button(yes, role: destructive ? .destructive : nil) { model.answer(true) }
+                Button(tr("_Cancel"), role: .cancel) { model.answer(false) }
+            }
         } message: {
             Text(text)
         }
+    }
+}
+
+/// What runs, under a sheet that cannot be closed until it is done.
+struct WorkingView: View {
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ProgressView()
+                .controlSize(.small)
+            Text(text)
+        }
+        .padding(24)
+        .frame(minWidth: 320)
+        .interactiveDismissDisabled()
     }
 }
 

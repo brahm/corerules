@@ -49,6 +49,11 @@ enum Confirm {
     case deleteRecord(section: String, name: String, title: String, text: String)
     /// Restore on a shipped treasure table.
     case restoreTable(name: String, title: String, text: String)
+    /// Extract Data from CD…: from the CD's ISO image or a folder.
+    case extractSource
+    /// The data extracted went beside the package already in the data
+    /// folder: open it?
+    case openExtracted(path: String, text: String)
 }
 
 @MainActor
@@ -87,6 +92,8 @@ final class AppModel: ObservableObject {
     @Published var modal: Modal?
     @Published var notice: Notice?
     @Published var confirm: Confirm?
+    /// What runs under a progress sheet, said in it.
+    @Published var working: String?
 
     static let noFilter = ListFilter(
         search: "", origins: 0, party: nil, partType: nil, magicOnly: false)
@@ -235,6 +242,8 @@ final class AppModel: ObservableObject {
             return writable && modal == nil
         case Action.ROLL_TABLE:
             return library != nil
+        case Action.EXTRACT_DATA:
+            return modal == nil && working == nil
         case Action.ROLL_TREASURE, Action.NEW_ENCOUNTER, Action.NEW_TABLE:
             return writable
         case Action.SHEET_PRINT:
@@ -280,6 +289,7 @@ final class AppModel: ObservableObject {
         case Action.PREFERENCES: openSettings()
         case Action.ABOUT: openAbout()
         case Action.OPEN: chooseFolder()
+        case Action.EXTRACT_DATA: confirm = .extractSource
         case Action.NEW_CHARACTER: newCharacter(entering: false)
         case Action.ENTER_CHARACTER: newCharacter(entering: true)
         case Action.IMPORT: chooseImport()
@@ -320,6 +330,61 @@ final class AppModel: ObservableObject {
         case Action.HELP_CONTROL: entryHelp()
         case Action.OPEN_BOOK: readBook()
         default: break
+        }
+    }
+
+    /// Opens the installation in `path`, and opens it on start.
+    private func openLibrary(at path: String) {
+        do {
+            let library = try Library.open(path: path)
+            Prefs.folder = path
+            section = nil
+            show(library)
+        } catch {
+            fail(tr("No Core Rules Installation"), error)
+        }
+    }
+
+    /// Extract Data from CD…'s ISO Image… or Folder…: a Mac has no CD
+    /// drive, so the data comes from the CD's image or a copy of its
+    /// files.
+    func extractFrom(folder: Bool) {
+        confirm = nil
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        if folder {
+            panel.canChooseFiles = false
+            panel.canChooseDirectories = true
+            panel.message = tr("Choose the Core Rules CD or Installation")
+        } else {
+            panel.allowedContentTypes = [UTType(filenameExtension: "iso")].compactMap { $0 }
+            panel.message = tr("Choose the Core Rules CD Image")
+        }
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        working = tr("Extracting the Core Rules data…")
+        let source = url.path
+        Task { [weak self] in
+            let result = await Task.detached {
+                Result { try extractData(source: source) }
+            }.value
+            self?.extracted(result)
+        }
+    }
+
+    private func extracted(_ result: Result<Extracted, Error>) {
+        working = nil
+        switch result {
+        case .success(let done):
+            if done.dataFolder {
+                openLibrary(at: done.path)
+                notice = Notice(title: done.said, text: "")
+            } else {
+                // The data folder already holds a package (usually the
+                // other CD's), which stays the one opened on start.
+                confirm = .openExtracted(path: done.path, text: done.said)
+            }
+        case .failure(let error):
+            fail(tr("Could Not Extract the Data"), error)
         }
     }
 
@@ -867,6 +932,10 @@ final class AppModel: ObservableObject {
     func answer(_ yes: Bool) {
         guard let asked = confirm else { return }
         confirm = nil
+        if case .openExtracted(let path, _) = asked {
+            if yes { openLibrary(at: path) }
+            return
+        }
         guard yes, let library else { return }
         do {
             switch asked {
@@ -884,6 +953,8 @@ final class AppModel: ObservableObject {
                 library.forgetRules()
                 reload(select: done.key)
                 notice = Notice(title: done.said, text: "")
+            case .extractSource, .openExtracted:
+                break
             }
         } catch {
             fail(tr("Not Saved"), error)

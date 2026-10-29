@@ -117,6 +117,7 @@ struct MenuCommands: Commands {
             item(tr("E_nter Character…"), Action.ENTER_CHARACTER)
             item(more(model.newRecordLabel ?? tr("New")), Action.UDB_NEW)
             item(more(tr("_Open Folder…")), Action.OPEN)
+            item(more(tr("Extract Data from _CD…")), Action.EXTRACT_DATA)
                 .keyboardShortcut("o")
             Divider()
             item(more(tr("_Import…")), Action.IMPORT)
