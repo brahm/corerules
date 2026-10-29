@@ -4,6 +4,7 @@
 //! the GNOME and Windows apps take them directly. The bridge grows with
 //! each screen ported to the Mac; it holds no rule of its own.
 
+mod allowed;
 mod book;
 mod bundle;
 mod edit;
@@ -18,6 +19,7 @@ mod record;
 mod sheet;
 mod tables;
 mod treasure;
+mod treasure_tables;
 mod wizard;
 
 use std::sync::{Arc, Mutex, OnceLock};
@@ -1178,6 +1180,40 @@ impl Library {
     /// along; what to say.
     pub fn delete_record(&self, section: String, name: String) -> Result<String, CoreError> {
         cr_app::records::actions::delete(&self.install, &section, &name).map_err(CoreError::new)
+    }
+
+    /// Allowed Classes… on the race `name`, whose entry has `key`.
+    pub fn allowed_classes(
+        &self,
+        name: String,
+        key: String,
+    ) -> Result<Arc<RecordSession>, CoreError> {
+        let form = cr_app::records::allowed::AllowedForm::open(&self.install, &name)?;
+        Ok(RecordSession::new(
+            self.install.clone(),
+            record::Editor::Allowed(Box::new(form), key),
+        ))
+    }
+
+    /// Restore's question on a standard treasure table: its title and
+    /// text.
+    pub fn restore_table_question(&self) -> Vec<String> {
+        let (title, text) = cr_app::records::tables::restore_question();
+        vec![title, text]
+    }
+
+    /// Restores the standard treasure table `name` as shipped: the entry
+    /// to show, and what to say.
+    pub fn restore_table(&self, name: String) -> Result<RecordDone, CoreError> {
+        use cr_app::records::tables;
+        let said = tables::restore(&self.install, &name).map_err(CoreError::new)?;
+        Ok(RecordDone {
+            section: tables::SECTION.to_owned(),
+            key: tables::restored_key(&name),
+            name,
+            said,
+            told: None,
+        })
     }
 
     /// The databases changed: the rules read from them are read again

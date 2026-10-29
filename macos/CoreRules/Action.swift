@@ -37,6 +37,8 @@ struct Action: Hashable {
     static let UDB_DELETE = Action("UDB_DELETE")
     static let UDB_SUBRACE = Action("UDB_SUBRACE")
     static let UDB_SCHOOLS = Action("UDB_SCHOOLS")
+    static let UDB_ALLOWED = Action("UDB_ALLOWED")
+    static let UDB_RESTORE = Action("UDB_RESTORE")
     static let TRAP_EDIT = Action("TRAP_EDIT")
     static let TRAP_COPY = Action("TRAP_COPY")
     static let TRAP_DELETE = Action("TRAP_DELETE")
