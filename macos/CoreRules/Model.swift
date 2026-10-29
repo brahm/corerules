@@ -1,6 +1,6 @@
 // The main window's state: the installation opened, the section and entry
-// in view, and the sheets and alerts over it. Everything it shows comes
-// from the bridge; the views only draw it.
+// in view with the search and filters, and the sheets and alerts over it.
+// Everything it shows comes from the bridge; the views only draw it.
 
 import AppKit
 import SwiftUI
@@ -28,6 +28,12 @@ struct Notice: Identifiable {
     let text: String
 }
 
+/// A question asked before a change that cannot be undone.
+enum Confirm {
+    case delete(file: String, name: String)
+    case toNpc(file: String)
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     @Published private(set) var library: Library?
@@ -36,25 +42,46 @@ final class AppModel: ObservableObject {
         didSet {
             if section != oldValue {
                 entry = nil
-                refreshEntries()
+                filter.origins = 0
+                filter.partType = nil
+                filter.magicOnly = false
+                refreshFilters()
             }
         }
     }
-    @Published var search = "" {
-        didSet { refreshEntries() }
+    /// The search and the filters of the list.
+    @Published var filter: ListFilter = AppModel.noFilter {
+        didSet {
+            if filter != oldValue { refreshEntries() }
+        }
     }
+    @Published private(set) var filters: SectionFilters = AppModel.noFilters
     @Published private(set) var entries: [EntryRow] = []
     @Published var entry: UInt32? {
-        didSet { refreshDetails() }
+        didSet {
+            if entry != oldValue { refreshDetails() }
+        }
     }
     @Published private(set) var details: EntryDetails?
+    /// The picture shown, which Next Image changes, and its frame.
+    @Published private(set) var picture: Data?
+    private var frame: UInt32 = 0
+    @Published var fullScreen = false
     @Published var modal: Modal?
     @Published var notice: Notice?
-    /// The character Delete asks about: its file and name.
-    @Published var deleting: (file: String, name: String)?
+    @Published var confirm: Confirm?
 
-    /// Opens Settings; the main window's view sets it, as only a view can.
+    static let noFilter = ListFilter(
+        search: "", origins: 0, party: nil, partType: nil, magicOnly: false)
+    static let noFilters = SectionFilters(origins: false, parties: [], partTypes: [], magic: false)
+
+    /// The sheets open in their windows, by the id their window has.
+    private(set) var sheets: [UUID: SheetModel] = [:]
+
+    /// Opens Settings and a sheet's window; the main window's view sets
+    /// them, as only a view can.
     var openSettings: () -> Void = {}
+    var openSheet: (UUID) -> Void = { _ in }
 
     init() {
         if let folder = Prefs.folder, let library = try? Library.open(path: folder) {
@@ -72,7 +99,7 @@ final class AppModel: ObservableObject {
         if section == nil || !sections.contains(where: { $0.id == section }) {
             section = sections.first?.id
         }
-        refreshEntries()
+        refreshFilters()
     }
 
     /// Reads the installation again after a change, keeping the entry in
@@ -87,6 +114,20 @@ final class AppModel: ObservableObject {
             return
         }
         entry = entries.first { $0.key == key }?.index
+        refreshDetails()
+    }
+
+    private func refreshFilters() {
+        guard let library, let section else {
+            filters = AppModel.noFilters
+            refreshEntries()
+            return
+        }
+        filters = library.filters(section: section)
+        if !filters.parties.contains(where: { $0.value == filter.party }) {
+            filter.party = nil
+        }
+        refreshEntries()
     }
 
     private func refreshEntries() {
@@ -94,18 +135,26 @@ final class AppModel: ObservableObject {
             entries = []
             return
         }
-        entries = library.entries(section: section, search: search)
+        entries = library.entries(section: section, filter: filter)
         if let entry, !entries.contains(where: { $0.index == entry }) {
             self.entry = nil
         }
     }
 
     private func refreshDetails() {
+        fullScreen = false
+        frame = 0
         guard let library, let section, let entry else {
             details = nil
+            picture = nil
             return
         }
         details = library.details(section: section, index: entry)
+        picture = details?.picture
+    }
+
+    var currentSection: SectionInfo? {
+        sections.first { $0.id == section }
     }
 
     private var selectedRow: EntryRow? {
@@ -118,39 +167,59 @@ final class AppModel: ObservableObject {
         return selectedRow?.key
     }
 
-    var sheetExports: [SheetExport] {
-        library?.sheetExports() ?? []
+    var writable: Bool {
+        library?.isWritable() == true
+    }
+
+    /// Next Image: the monster type's next frame.
+    func nextImage() {
+        guard let library, let section, let entry,
+            let next = library.nextFrame(section: section, index: entry, at: frame)
+        else { return }
+        frame = next.at
+        picture = next.png
     }
 
     // MARK: Actions
 
-    /// Whether `action` can be done now.
-    func enabled(_ action: Action) -> Bool {
+    /// Whether `action` can be done now; `sheet` is the sheet's window in
+    /// front, when one is.
+    func enabled(_ action: Action, sheet: SheetModel? = nil) -> Bool {
         switch action {
         case Action.NEW_CHARACTER, Action.IMPORT:
-            return library?.isWritable() == true && modal == nil
-        case Action.SHEET_PRINT, Action.SHEET_PDF:
-            return character != nil
+            return writable && modal == nil
+        case Action.SHEET_PRINT:
+            if sheet != nil { return true }
+            guard let commands = details?.commands else { return false }
+            return commands.sheet || (commands.print && !commands.monster)
+        case Action.SHEET_PDF:
+            return sheet != nil || details?.commands.sheet == true
         case Action.SHEET_HTML, Action.SHEET_TXT, Action.SHEET_MD:
-            return character != nil && sheetExports.contains { Action.export($0) == action }
+            let exports = sheet?.exports ?? (character != nil ? sheetExports : [])
+            return exports.contains { Action.export($0) == action }
         default:
             return true
         }
     }
 
-    func perform(_ action: Action) {
-        guard enabled(action) else { return }
+    /// The files the sheets of this installation are exported to.
+    var sheetExports: [SheetExport] {
+        library?.sheetExports() ?? []
+    }
+
+    func perform(_ action: Action, sheet: SheetModel? = nil) {
+        guard enabled(action, sheet: sheet) else { return }
         switch action {
         case Action.PREFERENCES: openSettings()
         case Action.ABOUT: about()
         case Action.OPEN: chooseFolder()
         case Action.NEW_CHARACTER: newCharacter()
         case Action.IMPORT: chooseImport()
-        case Action.SHEET_PRINT: printSheet()
-        case Action.SHEET_PDF: saveSheetPdf()
-        case Action.SHEET_HTML: exportSheet(.html)
-        case Action.SHEET_TXT: exportSheet(.text)
-        case Action.SHEET_MD: exportSheet(.markdown)
+        case Action.SHEET_PRINT: (sheet ?? selectedSheet())?.print()
+        case Action.SHEET_PDF: (sheet ?? selectedSheet())?.savePdf()
+        case Action.SHEET_HTML: (sheet ?? selectedSheet())?.export(.html)
+        case Action.SHEET_TXT: (sheet ?? selectedSheet())?.export(.text)
+        case Action.SHEET_MD: (sheet ?? selectedSheet())?.export(.markdown)
         default: break
         }
     }
@@ -215,16 +284,39 @@ final class AppModel: ObservableObject {
 
     func askDelete() {
         guard let file = character, let details else { return }
-        deleting = (file, details.title)
+        confirm = .delete(file: file, name: details.title)
     }
 
-    func delete(_ file: String) {
-        guard let library else { return }
-        deleting = nil
+    func askToNpc() {
+        guard let file = character else { return }
+        confirm = .toNpc(file: file)
+    }
+
+    /// The question in view, answered.
+    func answer(_ yes: Bool) {
+        guard let asked = confirm else { return }
+        confirm = nil
+        guard yes, let library else { return }
         do {
-            _ = try library.deleteCharacter(file: file)
-            entry = nil
-            reload()
+            switch asked {
+            case .delete(let file, _):
+                _ = try library.deleteCharacter(file: file)
+                entry = nil
+                reload()
+            case .toNpc(let file):
+                let npc = try library.convertToNpc(file: file)
+                reload(select: npc)
+            }
+        } catch {
+            fail(tr("Not Saved"), error)
+        }
+    }
+
+    func toCharacter() {
+        guard let library, let file = character else { return }
+        do {
+            _ = try library.convertToCharacter(file: file)
+            reload(select: file)
         } catch {
             fail(tr("Not Saved"), error)
         }
@@ -258,60 +350,39 @@ final class AppModel: ObservableObject {
         reload()
     }
 
-    // MARK: The sheet
+    // MARK: The sheets
 
-    private var window: NSWindow? {
-        NSApp.keyWindow ?? NSApp.mainWindow
-    }
-
-    /// Letter where the system measures in inches, A4 elsewhere, as the
-    /// other apps choose.
-    private var letter: Bool {
-        Locale.current.measurementSystem == .us
-    }
-
-    private func printSheet() {
-        guard let library, let file = character else { return }
+    /// The sheet of the character in view, or the page of the entry in
+    /// view, made to print or save.
+    private func selectedSheet() -> SheetModel? {
+        guard let library, let row = selectedRow, let details else { return nil }
         do {
-            let data = try library.sheetPdf(file: file, letter: letter)
-            guard let document = PDFDocumentPrinter(data: data) else {
-                notice = Notice(title: tr("Could Not Print"), text: "")
-                return
-            }
-            document.print(in: window, letter: letter)
+            let session =
+                details.commands.sheet
+                ? try library.characterSheet(file: row.key)
+                : try library.page(key: row.key)
+            return SheetModel(session, app: self)
         } catch {
-            fail(tr("Could Not Print"), error)
+            fail(tr("Could Not Read"), error)
+            return nil
         }
     }
 
-    private func saveSheetPdf() {
-        guard let library, let file = character, let details else { return }
-        save(fileName(title: details.title, extension: "pdf"), [.pdf]) {
-            try library.sheetPdf(file: file, letter: self.letter)
-        }
+    /// Character Sheet, or View on a page: the sheet in a window of its
+    /// own.
+    func showSheet() {
+        guard let sheet = selectedSheet() else { return }
+        let id = UUID()
+        sheets[id] = sheet
+        openSheet(id)
     }
 
-    private func exportSheet(_ export: SheetExport) {
-        guard let library, let file = character, let details else { return }
-        let ext = exportExtension(export: export)
-        let type = UTType(filenameExtension: ext) ?? .plainText
-        save(fileName(title: details.title, extension: ext), [type]) {
-            try library.sheetExport(file: file, export: export)
-        }
+    func sheet(_ id: UUID) -> SheetModel? {
+        sheets[id]
     }
 
-    /// Asks where to save a file named `name` and writes what `data` makes.
-    private func save(_ name: String, _ types: [UTType], _ data: () throws -> Data) {
-        let panel = NSSavePanel()
-        panel.nameFieldStringValue = name
-        panel.allowedContentTypes = types
-        panel.canCreateDirectories = true
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        do {
-            try data().write(to: url, options: .atomic)
-        } catch {
-            fail(tr("Not Saved"), error)
-        }
+    func closeSheet(_ id: UUID) {
+        sheets[id] = nil
     }
 
     // MARK: Messages
@@ -323,12 +394,14 @@ final class AppModel: ObservableObject {
     }
 
     func fail(_ title: String, _ error: Error) {
-        let text: String
-        if let error = error as? CoreError, case .Failed(let message) = error {
-            text = message
-        } else {
-            text = error.localizedDescription
-        }
-        notice = Notice(title: title, text: text)
+        notice = Notice(title: title, text: message(error))
     }
+}
+
+/// What went wrong, as a sentence for the user.
+func message(_ error: Error) -> String {
+    if let error = error as? CoreError, case .Failed(let message) = error {
+        return message
+    }
+    return error.localizedDescription
 }

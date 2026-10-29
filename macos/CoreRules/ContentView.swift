@@ -1,22 +1,31 @@
 // The main window: the library's sections, the entries of the section
-// chosen, and the details of the entry chosen, in the three columns the
-// GNOME and Windows apps have.
+// chosen with the search and filters, and the details of the entry
+// chosen, in the three columns the GNOME and Windows apps have.
 
 import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         main
-            .frame(minWidth: 820, minHeight: 520)
-            .onAppear { model.openSettings = { openSettings() } }
+            .frame(minWidth: 900, minHeight: 560)
+            .onAppear {
+                model.openSettings = { openSettings() }
+                model.openSheet = { (id: UUID) in openWindow(id: "sheet", value: id) }
+            }
             .sheet(item: $model.modal) { modal in
                 ModalView(modal: modal)
+                    .environmentObject(model)
+            }
+            .sheet(isPresented: $model.fullScreen) {
+                FullScreenPicture()
+                    .environmentObject(model)
             }
             .modifier(NoticeAlert())
-            .modifier(DeleteAlert())
+            .modifier(ConfirmAlert())
     }
 
     @ViewBuilder
@@ -29,7 +38,7 @@ struct ContentView: View {
                     .navigationSplitViewColumnWidth(min: 180, ideal: 220)
             } content: {
                 EntryList()
-                    .navigationSplitViewColumnWidth(min: 220, ideal: 280)
+                    .navigationSplitViewColumnWidth(min: 240, ideal: 300)
             } detail: {
                 DetailView()
             }
@@ -61,7 +70,7 @@ struct SectionList: View {
             } icon: {
                 SectionIconView(section: section.id)
             }
-                .badge(Int(section.count))
+            .badge(Int(section.count))
         }
     }
 }
@@ -110,28 +119,49 @@ struct NoticeAlert: ViewModifier {
     }
 }
 
-/// Delete's confirmation.
-struct DeleteAlert: ViewModifier {
+/// The question asked before Delete or Convert to NPC.
+struct ConfirmAlert: ViewModifier {
     @EnvironmentObject var model: AppModel
 
     private var shown: Binding<Bool> {
         Binding<Bool>(
-            get: { model.deleting != nil },
-            set: { (on: Bool) in if !on { model.deleting = nil } })
+            get: { model.confirm != nil },
+            set: { (on: Bool) in if !on { model.confirm = nil } })
     }
 
     private var title: String {
-        tr("Delete {name}?", ["name": model.deleting?.name ?? ""])
+        switch model.confirm {
+        case .delete(_, let name): return tr("Delete {name}?", ["name": name])
+        case .toNpc: return tr("Convert to NPC?")
+        case nil: return ""
+        }
+    }
+
+    private var text: String {
+        switch model.confirm {
+        case .delete: return tr("The character leaves the character list and its file is removed.")
+        case .toNpc:
+            return tr("This will move the selected Player Character to the NPC List in the DM Toolkit.")
+        case nil: return ""
+        }
+    }
+
+    private var yes: String {
+        if case .toNpc = model.confirm { return tr("_Convert") }
+        return tr("_Delete")
+    }
+
+    private var destructive: Bool {
+        if case .delete = model.confirm { return true }
+        return false
     }
 
     func body(content: Content) -> some View {
         content.alert(title, isPresented: shown) {
-            Button(tr("_Delete"), role: .destructive) {
-                if let file = model.deleting?.file { model.delete(file) }
-            }
-            Button(tr("_Cancel"), role: .cancel) { model.deleting = nil }
+            Button(yes, role: destructive ? .destructive : nil) { model.answer(true) }
+            Button(tr("_Cancel"), role: .cancel) { model.answer(false) }
         } message: {
-            Text(tr("The character leaves the character list and its file is removed."))
+            Text(text)
         }
     }
 }
@@ -140,24 +170,123 @@ struct EntryList: View {
     @EnvironmentObject var model: AppModel
 
     var body: some View {
-        List(model.entries, id: \.index, selection: $model.entry) { (row: EntryRow) in
-            EntryRowView(row: row)
+        VStack(spacing: 0) {
+            if model.library?.isCore20() == true {
+                ReadOnlyBanner()
+            }
+            FilterBar()
+            List(model.entries, id: \.index, selection: $model.entry) { (row: EntryRow) in
+                EntryRowView(row: row)
+            }
+            .overlay { empty }
         }
-        .searchable(text: $model.search, placement: .sidebar, prompt: tr("Search"))
+        .searchable(text: $model.filter.search, placement: .sidebar, prompt: tr("Search"))
         .onDeleteCommand { model.askDelete() }
-        .overlay { noResults }
-        .navigationTitle(title)
-    }
-
-    private var title: String {
-        model.sections.first { $0.id == model.section }?.title ?? tr("Core Rules")
+        .navigationTitle(model.currentSection?.title ?? tr("Core Rules"))
     }
 
     @ViewBuilder
-    private var noResults: some View {
-        if model.entries.isEmpty && !model.search.isEmpty {
-            ContentUnavailableView.search(text: model.search)
+    private var empty: some View {
+        if let section = model.currentSection, model.entries.isEmpty {
+            if let error = section.error {
+                ContentUnavailableView(
+                    tr("Could Not Read"), systemImage: "exclamationmark.triangle",
+                    description: Text(error))
+            } else if section.count == 0 {
+                ContentUnavailableView(
+                    tr("No {section}", ["section": section.title]),
+                    systemImage: SectionIcon.name(section.id))
+            } else if !model.filter.search.isEmpty {
+                ContentUnavailableView.search(text: model.filter.search)
+            } else {
+                ContentUnavailableView(tr("No Results"), systemImage: "line.3.horizontal.decrease.circle")
+            }
         }
+    }
+}
+
+/// Core Rules 2.0 is only read, which the list says above it.
+struct ReadOnlyBanner: View {
+    var body: some View {
+        Label {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(tr("Core Rules 2.0 is read-only")).bold()
+                Text(
+                    tr(
+                        "Open an Expansion installation and import this content with Import Core Rules 2.0…"
+                    )
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        } icon: {
+            Image(systemName: "lock")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(.quaternary.opacity(0.5))
+    }
+}
+
+/// The filters the section offers: standard or custom records, a party,
+/// a part type, Magic Only.
+struct FilterBar: View {
+    @EnvironmentObject var model: AppModel
+
+    private var shown: Bool {
+        let f = model.filters
+        return f.origins || !f.parties.isEmpty || !f.partTypes.isEmpty || f.magic
+    }
+
+    var body: some View {
+        if shown {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    if model.filters.origins {
+                        origins
+                    }
+                    if !model.filters.parties.isEmpty {
+                        choices(tr("Show a Party"), model.filters.parties, $model.filter.party)
+                    }
+                    if !model.filters.partTypes.isEmpty {
+                        choices(tr("Show a Part Type"), model.filters.partTypes, $model.filter.partType)
+                    }
+                }
+                if model.filters.magic {
+                    Toggle(tr("Magic Only"), isOn: $model.filter.magicOnly)
+                        .toggleStyle(.checkbox)
+                }
+            }
+            .controlSize(.small)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Divider()
+        }
+    }
+
+    private var origins: some View {
+        Picker(tr("Show Standard or Custom Records"), selection: $model.filter.origins) {
+            ForEach(0..<originNames().count, id: \.self) { (index: Int) in
+                Text(originNames()[index]).tag(UInt32(index))
+            }
+        }
+        .labelsHidden()
+        .fixedSize()
+        .help(tr("Show Standard or Custom Records"))
+    }
+
+    private func choices(_ help: String, _ choices: [FilterChoice], _ value: Binding<String?>)
+        -> some View
+    {
+        Picker(help, selection: value) {
+            ForEach(choices, id: \.label) { (choice: FilterChoice) in
+                Text(choice.label).tag(choice.value)
+            }
+        }
+        .labelsHidden()
+        .fixedSize()
+        .help(help)
     }
 }
 
@@ -179,7 +308,7 @@ struct EntryRowView: View {
 
     @ViewBuilder
     private var menu: some View {
-        if row.character && model.library?.isWritable() == true {
+        if row.character && model.writable {
             Button(more(tr("Edit Character"))) {
                 model.entry = row.index
                 model.editCharacter()
@@ -201,9 +330,7 @@ struct DetailView: View {
                 EntryDetailsView(details: details)
             }
             .toolbar {
-                if details.character {
-                    CharacterTools(model: model)
-                }
+                EntryTools(model: model, commands: details.commands)
             }
         } else {
             ContentUnavailableView(tr("Nothing Selected"), systemImage: "doc.text.magnifyingglass")
@@ -212,16 +339,26 @@ struct DetailView: View {
 }
 
 struct EntryDetailsView: View {
+    @EnvironmentObject var model: AppModel
     let details: EntryDetails
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             header
+            if let picture = model.picture, let image = NSImage(data: picture) {
+                PictureView(image: image, monster: details.monsterPicture, frames: details.frames)
+            }
             ForEach(Array(details.groups.enumerated()), id: \.offset) { item in
-                GroupView(group: item.element)
+                if !item.element.rows.isEmpty {
+                    GroupView(group: item.element)
+                }
             }
             if !details.text.isEmpty {
-                Text(details.text).textSelection(.enabled)
+                GroupBox(tr("Description")) {
+                    Text(details.text)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
         }
         .padding(20)
@@ -229,12 +366,11 @@ struct EntryDetailsView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 16) {
-            if let path = details.picture, let image = NSImage(contentsOfFile: path) {
+        HStack(alignment: .center, spacing: 16) {
+            if let icon = details.icon, let image = NSImage(data: icon) {
                 Image(nsImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: 120, maxHeight: 160)
+                    .interpolation(.none)
+                    .accessibilityLabel(tr("Icon"))
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(details.title).font(.title.bold()).textSelection(.enabled)
@@ -246,7 +382,59 @@ struct EntryDetailsView: View {
     }
 }
 
-/// A titled group of an entry's details: its labels and values.
+/// An entry's picture; a monster's with Next Image and Full Screen.
+struct PictureView: View {
+    @EnvironmentObject var model: AppModel
+    let image: NSImage
+    let monster: Bool
+    let frames: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if monster {
+                HStack {
+                    if frames {
+                        Button { model.nextImage() } label: {
+                            Label(tr("Next Image"), systemImage: "arrow.right")
+                        }
+                    }
+                    Button { model.fullScreen = true } label: {
+                        Label(tr("Full Screen"), systemImage: "arrow.up.left.and.arrow.down.right")
+                    }
+                }
+                .controlSize(.small)
+            }
+            Image(nsImage: image)
+                .resizable()
+                .interpolation(.none)
+                .scaledToFit()
+                .frame(maxWidth: 360, maxHeight: 240, alignment: .leading)
+        }
+    }
+}
+
+/// Full Screen: a monster's picture as large as the window allows.
+struct FullScreenPicture: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        VStack {
+            if let picture = model.picture, let image = NSImage(data: picture) {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.none)
+                    .scaledToFit()
+            }
+        }
+        .frame(minWidth: 640, minHeight: 480)
+        .background(.black)
+        .onTapGesture { model.fullScreen = false }
+        .onExitCommand { model.fullScreen = false }
+    }
+}
+
+/// A titled group of an entry's details: its labels and values; a row
+/// without a value is a list item.
 struct GroupView: View {
     let group: Group
 
@@ -254,9 +442,17 @@ struct GroupView: View {
         GroupBox(group.title) {
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 6) {
                 ForEach(Array(group.rows.enumerated()), id: \.offset) { item in
-                    GridRow {
-                        Text(item.element.label).foregroundStyle(.secondary)
-                        Text(item.element.value).textSelection(.enabled)
+                    if item.element.value.isEmpty {
+                        GridRow {
+                            Text(item.element.label)
+                                .textSelection(.enabled)
+                                .gridCellColumns(2)
+                        }
+                    } else {
+                        GridRow {
+                            Text(item.element.label).foregroundStyle(.secondary)
+                            Text(item.element.value).textSelection(.enabled)
+                        }
                     }
                 }
             }
@@ -265,23 +461,51 @@ struct GroupView: View {
     }
 }
 
-/// The character's tools in the toolbar.
-struct CharacterTools: ToolbarContent {
+/// The commands of the entry in view, in the toolbar, as
+/// `cr_app::library` gives them.
+struct EntryTools: ToolbarContent {
     @ObservedObject var model: AppModel
+    let commands: EntryCommands
 
     var body: some ToolbarContent {
         ToolbarItemGroup {
-            Button { model.editCharacter() } label: {
-                Label(tr("Edit Character"), systemImage: "pencil")
+            if commands.sheet || (commands.view && !commands.monster) {
+                Button { model.showSheet() } label: {
+                    Label(
+                        commands.sheet ? tr("Character Sheet") : tr("View"),
+                        systemImage: "doc.richtext")
+                }
+                .help(commands.sheet ? tr("Character Sheet") : tr("View"))
             }
-            .disabled(model.library?.isWritable() != true)
-            Button { model.perform(Action.SHEET_PRINT) } label: {
-                Label(tr("_Print…"), systemImage: "printer")
+            if commands.edit && commands.sheet {
+                Button { model.editCharacter() } label: {
+                    Label(tr("Edit Character"), systemImage: "pencil")
+                }
+                .help(tr("Edit Character"))
             }
-            Button { model.askDelete() } label: {
-                Label(tr("_Delete"), systemImage: "trash")
+            if commands.sheet || (commands.print && !commands.monster) {
+                Button { model.perform(Action.SHEET_PRINT) } label: {
+                    Label(more(tr("_Print…")), systemImage: "printer")
+                }
+                .help(more(tr("_Print…")))
             }
-            .disabled(model.library?.isWritable() != true)
+            if commands.toCharacter || commands.toNpc || commands.delete {
+                Menu {
+                    if commands.toCharacter {
+                        Button(tr("Convert to Character")) { model.toCharacter() }
+                    }
+                    if commands.toNpc {
+                        Button(more(tr("Convert to NPC"))) { model.askToNpc() }
+                    }
+                    if commands.delete {
+                        Divider()
+                        Button(more(tr("Delete Character")), role: .destructive) { model.askDelete() }
+                    }
+                } label: {
+                    Label(tr("More"), systemImage: "ellipsis.circle")
+                }
+                .help(tr("More"))
+            }
         }
     }
 }

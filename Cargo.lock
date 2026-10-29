@@ -299,8 +299,10 @@ name = "cr-mac-ffi"
 version = "1.0.1"
 dependencies = [
  "cr-app",
+ "cr-formats",
  "cr-i18n",
  "cr-store",
+ "image",
  "thiserror",
  "uniffi",
 ]

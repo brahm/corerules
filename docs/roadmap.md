@@ -495,7 +495,7 @@ The phases run in order:
    CI builds and runs a Swift program that calls it. `NOT_YET_ON_MACOS`
    lists every action, and the parity test checks the Mac app's Swift
    sources, which refer to an action as `Action.NAME`.
-3. **Prototype (in progress)**, with the scope of the Windows one,
+3. **Prototype (done, PRs #119 and #120)**, with the scope of the Windows one,
    packaged as a `.dmg`, approved by Wagner Brahm after a run on a Mac.
    The SwiftUI app in `macos/CoreRules` shows the library in three
    columns with its search, the first page of New Character, the
@@ -509,8 +509,25 @@ The phases run in order:
    `macos/scripts/make-app.sh` builds `Core Rules.app` with `swiftc`
    (no Xcode project), signs it ad hoc and packs the `.dmg`, which CI
    uploads on every pull request.
-4. **Porting the screens**, in the stages of the Windows port, until
-   `NOT_YET_ON_MACOS` is empty.
+4. **Porting the screens (in progress)**, in the stages of the Windows
+   port, one pull request each, until `NOT_YET_ON_MACOS` is empty.
+   Wagner Brahm approved the prototype on a MacBook Pro M4 Pro on
+   2026-10-29; its test found Open Anyway not offered, so the `.dmg`'s
+   notes lead with removing the quarantine in Terminal, and the weapons
+   drawn with a hammer, now the sword of the other apps.
+   - **The library and the sheet (in progress).** `cr-mac-ffi` gained the
+     library's filters (origin, party, part type, Magic Only), the
+     commands an entry offers, the items' icons and the pictures (a
+     monster type's frames with Next Image, and Full Screen), and the
+     sheet as a session: a character's sheet or the page of an
+     encounter, table, template or treasure, its PDF, its exports and
+     Character Sheet Options. The Mac app filters the list, shows those
+     pictures, Read-only for Core Rules 2.0, and the sheet in a window of
+     its own as the PDF it prints, in PDFKit as Preview shows a
+     document, with Print, Save as PDF, Export and Character Sheet
+     Options; Print and Save in the menu bar act on the sheet's window in
+     front. Convert to Character and Convert to NPC are in the
+     character's More menu.
 5. **Beta and release** on the three systems with the same tag, with an
    install page on the website and in the README that shows the Open
    Anyway steps.

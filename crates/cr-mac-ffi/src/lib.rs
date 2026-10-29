@@ -7,18 +7,22 @@
 mod edit;
 mod import;
 mod prompt;
+mod sheet;
 mod wizard;
 
 use std::sync::Arc;
 
-use cr_app::library::Filter;
+use cr_app::library::{self, Commands, Filter};
 use cr_app::sheets::Export;
 use cr_store::Installation;
-use cr_store::catalog::Section;
+use cr_store::catalog::{Entry, Section};
+use cr_store::userdb::Filter as Origins;
+use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES};
 
 pub use edit::{EditDetails, EditSession, SaveState};
 pub use import::{ImportCategory, ImportItem, ImportReport, ImportSession};
 pub use prompt::{PromptInfo, PromptKind};
+pub use sheet::{SheetOptions, SheetSectionInfo, SheetSession};
 pub use wizard::{SettingInfo, WizardPage, WizardSession};
 
 uniffi::setup_scaffolding!();
@@ -169,6 +173,103 @@ pub struct Group {
     pub rows: Vec<Row>,
 }
 
+/// What the entry list shows of a section, as the other apps' search and
+/// filters choose it.
+#[derive(Debug, Clone, PartialEq, Eq, Default, uniffi::Record)]
+pub struct ListFilter {
+    pub search: String,
+    /// All, Standard or Custom records, by its place in
+    /// [`origin_names`].
+    pub origins: u32,
+    /// Every party (`None`), the characters in none (empty) or a party's.
+    pub party: Option<String>,
+    /// The type of the other parts shown, by its id, or every type.
+    pub part_type: Option<String>,
+    pub magic_only: bool,
+}
+
+/// A choice of a filter: what it shows, and its value.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct FilterChoice {
+    pub label: String,
+    pub value: Option<String>,
+}
+
+/// The filters a section offers beside the search.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct SectionFilters {
+    /// Standard or custom records, in the user databases' sections.
+    pub origins: bool,
+    /// The parties, when the characters are in more than one.
+    pub parties: Vec<FilterChoice>,
+    /// The part types, in Other Parts.
+    pub part_types: Vec<FilterChoice>,
+    /// Magic Only, in the sections of parts.
+    pub magic: bool,
+}
+
+/// The choices of the origin filter: All, Standard, Custom.
+#[uniffi::export]
+pub fn origin_names() -> Vec<String> {
+    Origins::NAMES
+        .iter()
+        .map(|n| cr_i18n::tr(n).to_owned())
+        .collect()
+}
+
+/// The commands an entry offers, as `cr_app::library` decides them.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct EntryCommands {
+    pub edit: bool,
+    pub copy: bool,
+    pub records: bool,
+    pub sheet: bool,
+    pub to_character: bool,
+    pub to_npc: bool,
+    pub delete: bool,
+    pub generate: bool,
+    pub view: bool,
+    pub monster: bool,
+    pub print: bool,
+    pub read: bool,
+}
+
+impl EntryCommands {
+    fn of(entry: &Entry, writable: bool) -> Self {
+        let c = Commands::of(entry, writable);
+        Self {
+            edit: c.edit,
+            copy: c.copy,
+            records: c.records,
+            sheet: c.sheet,
+            to_character: c.to_character,
+            to_npc: c.to_npc,
+            delete: c.delete,
+            generate: c.generate,
+            view: c.view,
+            monster: c.monster,
+            print: c.print,
+            read: c.read,
+        }
+    }
+}
+
+/// A picture of the original's as PNG.
+fn png(image: &cr_formats::bmp::Image) -> Option<Vec<u8>> {
+    let rgba = image::RgbaImage::from_raw(image.width, image.height, image.rgba.clone())?;
+    let mut png = std::io::Cursor::new(Vec::new());
+    rgba.write_to(&mut png, image::ImageFormat::Png).ok()?;
+    Some(png.into_inner())
+}
+
+/// A monster type's frame Next Image shows.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct FrameImage {
+    /// Its place among the type's frames, which the next Next Image takes.
+    pub at: u32,
+    pub png: Vec<u8>,
+}
+
 /// A file a character's sheet is exported to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
 pub enum SheetExport {
@@ -222,11 +323,17 @@ pub struct EntryDetails {
     pub groups: Vec<Group>,
     /// Long rules text, shown below the groups.
     pub text: String,
-    /// The path of its picture, when it has one.
-    pub picture: Option<String>,
-    /// A character of the list, which has a sheet and can be edited and
-    /// deleted.
+    /// An item's icon, as PNG.
+    pub icon: Option<Vec<u8>>,
+    /// Its picture, as PNG.
+    pub picture: Option<Vec<u8>>,
+    /// The picture is a monster's, with Full Screen.
+    pub monster_picture: bool,
+    /// A monster type with frames, which Next Image goes through.
+    pub frames: bool,
+    /// A character of the list.
     pub character: bool,
+    pub commands: EntryCommands,
 }
 
 /// A Core Rules installation or data package, and its catalog as it was
@@ -274,9 +381,54 @@ impl Library {
         self.install.root().display().to_string()
     }
 
-    /// Whether changes can be saved into it (a CD cannot take them).
+    /// Whether changes can be saved into it: a CD cannot take them, and
+    /// Core Rules 2.0 is only read.
     pub fn is_writable(&self) -> bool {
-        self.install.is_writable()
+        !self.install.is_core20() && self.install.is_writable()
+    }
+
+    /// Whether it is Core Rules 2.0, which is only read.
+    pub fn is_core20(&self) -> bool {
+        self.install.is_core20()
+    }
+
+    /// The filters section `section` offers.
+    pub fn filters(&self, section: String) -> SectionFilters {
+        let parties = if section == library::CHARACTERS {
+            let parties = library::parties(&self.sections);
+            if parties.len() > 1 {
+                parties
+                    .iter()
+                    .map(|p| FilterChoice {
+                        label: library::party_label(p.as_deref()).to_owned(),
+                        value: p.clone(),
+                    })
+                    .collect()
+            } else {
+                Vec::new()
+            }
+        } else {
+            Vec::new()
+        };
+        let part_types = if section == OTHER_SECTION {
+            std::iter::once(FilterChoice {
+                label: cr_i18n::tr("All Types").to_owned(),
+                value: None,
+            })
+            .chain(OTHER_TYPES.iter().map(|(id, _, name)| FilterChoice {
+                label: cr_i18n::tr(name).to_owned(),
+                value: Some((*id).to_owned()),
+            }))
+            .collect()
+        } else {
+            Vec::new()
+        };
+        SectionFilters {
+            origins: cr_app::records::has_origins(&section),
+            parties,
+            part_types,
+            magic: library::is_parts(&section),
+        }
     }
 
     /// The sections of the catalog, in the order the apps list them.
@@ -294,13 +446,21 @@ impl Library {
 
     /// The rows of section `section` that `search` matches, as the other
     /// apps' search box filters them.
-    pub fn entries(&self, section: String, search: String) -> Vec<EntryRow> {
+    pub fn entries(&self, section: String, filter: ListFilter) -> Vec<EntryRow> {
         let Some(section) = self.section(&section) else {
             return Vec::new();
         };
         let filter = Filter {
-            search,
-            ..Filter::default()
+            search: filter.search,
+            origins: Origins::of(filter.origins),
+            party: filter.party,
+            part_type: filter.part_type.and_then(|t| {
+                OTHER_TYPES
+                    .iter()
+                    .find(|(id, ..)| *id == t)
+                    .map(|(id, ..)| *id)
+            }),
+            magic_only: filter.magic_only,
         };
         filter
             .visible(section)
@@ -339,9 +499,37 @@ impl Library {
                         .collect(),
                 })
                 .collect(),
-            text: e.text.clone(),
-            picture: e.picture.as_ref().map(|p| p.display().to_string()),
+            text: library::clean_text(&e.text),
+            icon: e
+                .icon
+                .as_ref()
+                .and_then(cr_app::pictures::icon)
+                .and_then(|i| png(&i)),
+            picture: e.picture.as_deref().and_then(|path| {
+                if library::is_monster(&e.key) {
+                    cr_app::pictures::monster(path, e.frames.as_ref())
+                } else {
+                    cr_app::pictures::load(path)
+                }
+                .and_then(|i| png(&i))
+            }),
+            monster_picture: library::is_monster(&e.key) && e.picture.is_some(),
+            frames: library::is_monster(&e.key) && e.frames.is_some(),
             character: cr_app::library::is_character(&e.key),
+            commands: EntryCommands::of(e, self.is_writable()),
+        })
+    }
+
+    /// Next Image on entry `index` of section `section`, whose frame
+    /// shown is `at`: the next frame, back to the first after the last.
+    pub fn next_frame(&self, section: String, index: u32, at: u32) -> Option<FrameImage> {
+        let e = self.section(&section)?.entries.get(index as usize)?;
+        let frames = e.frames.as_ref()?;
+        let next = cr_app::pictures::next_frame(frames, at);
+        let image = cr_app::pictures::frame(&frames.page, frames.first + next)?;
+        Some(FrameImage {
+            at: next,
+            png: png(&image)?,
         })
     }
 
@@ -354,19 +542,13 @@ impl Library {
         Ok(deleted.name.trim().to_owned())
     }
 
-    /// The sheet of the character in `Chars/<file>` as a PDF, on Letter
-    /// paper or A4.
-    pub fn sheet_pdf(&self, file: String, letter: bool) -> Result<Vec<u8>, CoreError> {
-        let (sheet, _) = cr_app::sheets::character(&self.install, &file)?;
-        let paper = if letter {
-            cr_app::pdf::Paper::Letter
-        } else {
-            cr_app::pdf::Paper::A4
-        };
-        Ok(cr_app::pdf::sheet(&sheet, paper))
+    /// The sheet of the character in `Chars/<file>`.
+    pub fn character_sheet(&self, file: String) -> Result<Arc<SheetSession>, CoreError> {
+        SheetSession::character(self.install.clone(), &file, self.is_writable())
     }
 
-    /// The files a sheet is exported to in this installation.
+    /// The files a character's sheet is exported to in this
+    /// installation.
     pub fn sheet_exports(&self) -> Vec<SheetExport> {
         self.install
             .sheet_rules()
@@ -377,10 +559,23 @@ impl Library {
             .collect()
     }
 
-    /// The sheet of the character in `Chars/<file>` as `export` writes it.
-    pub fn sheet_export(&self, file: String, export: SheetExport) -> Result<Vec<u8>, CoreError> {
-        let (sheet, _) = cr_app::sheets::character(&self.install, &file)?;
-        Ok(export.export().write(&sheet))
+    /// The page that View shows of the entry with key `key`: an
+    /// encounter, encounter table, template, treasure table or saved
+    /// treasure.
+    pub fn page(&self, key: String) -> Result<Arc<SheetSession>, CoreError> {
+        SheetSession::page(self.install.clone(), &key)
+    }
+
+    /// Convert to Character, on a character the NPC generator made: what
+    /// the app says once it is done.
+    pub fn convert_to_character(&self, file: String) -> Result<String, CoreError> {
+        self.install.convert_to_character(&file)?;
+        Ok(cr_i18n::tr("Converted to a character").to_owned())
+    }
+
+    /// Convert to NPC, on a player character: the new file of the NPC.
+    pub fn convert_to_npc(&self, file: String) -> Result<String, CoreError> {
+        Ok(self.install.convert_to_npc(&file)?)
     }
 
     /// Import…: what the package in `path` would bring in.
