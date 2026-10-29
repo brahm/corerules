@@ -6,6 +6,7 @@
 
 mod book;
 mod edit;
+mod form;
 mod help;
 mod import;
 mod prompt;
@@ -23,11 +24,14 @@ use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES};
 
 pub use book::{BookHeading, BookPosted, BookSession};
 pub use edit::{EditDetails, EditSession, SaveState};
+pub use form::{
+    FormButton, FormDialog, FormGroup, FormNumber, FormOption, FormPage, FormRow, FormValue,
+};
 pub use help::{HelpBook, HelpLinked, HelpRow, HelpSession, HelpTopic};
 pub use import::{ImportCategory, ImportItem, ImportReport, ImportSession};
-pub use prompt::{PromptInfo, PromptKind};
+pub use prompt::{PromptGroup, PromptInfo, PromptKind};
 pub use sheet::{SheetOptions, SheetSectionInfo, SheetSession};
-pub use wizard::{SettingInfo, WizardPage, WizardSession};
+pub use wizard::WizardSession;
 
 uniffi::setup_scaffolding!();
 
@@ -391,6 +395,16 @@ impl Library {
 }
 
 /// What an entry's Help, or a monster's View and Print, show.
+/// A portrait Choose Portrait offers.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct PortraitChoice {
+    /// The heading of its group: the race's portraits, or the others.
+    pub group: String,
+    /// What the character keeps for it.
+    pub file: String,
+    pub path: String,
+}
+
 #[derive(uniffi::Enum)]
 pub enum EntryHelp {
     /// A topic of the help, by its spec for [`HelpSession::open`].
@@ -405,6 +419,12 @@ pub enum EntryHelp {
 
 /// The program help's topic of the library's section `section`, as Help
 /// on This Screen opens it.
+/// The section of the characters, which Create shows.
+#[uniffi::export]
+pub fn character_section() -> String {
+    library::CHARACTERS.to_owned()
+}
+
 #[uniffi::export]
 pub fn section_help(section: String) -> u32 {
     cr_store::help::topic::of_section(&section)
@@ -843,7 +863,54 @@ impl Library {
     /// the Expansion's Core Rules Vs Player's Option message is still
     /// shown.
     pub fn new_character(&self, core_vs_option: bool) -> Result<Arc<WizardSession>, CoreError> {
-        WizardSession::open(&self.install, core_vs_option)
+        WizardSession::open(self.install.clone(), false, core_vs_option)
+    }
+
+    /// The portraits Choose Portrait offers, those of `race` first.
+    pub fn portrait_choices(&self, race: String) -> Result<Vec<PortraitChoice>, CoreError> {
+        use cr_store::pictures::Kind;
+        let choices = self
+            .install
+            .picture_choices(Kind::Portrait, &race)
+            .map_err(|e| CoreError::new(e.to_string()))?;
+        let groups = if race.is_empty() {
+            [String::new(), cr_i18n::tr("Portraits").to_owned()]
+        } else {
+            [
+                cr_i18n::tr!("Portraits for {race}", race = race),
+                cr_i18n::tr("Other Portraits").to_owned(),
+            ]
+        };
+        Ok(choices
+            .into_iter()
+            .map(|c| PortraitChoice {
+                group: groups[usize::from(!c.first)].clone(),
+                file: c.file,
+                path: c.path.display().to_string(),
+            })
+            .collect())
+    }
+
+    /// Makes a portrait of the user's picture at `path` (BMP, JPEG, GIF
+    /// or PNG) and gives its file name, for the character to keep.
+    pub fn add_portrait(&self, path: String) -> Result<String, CoreError> {
+        let made = self
+            .install
+            .add_picture(
+                cr_store::pictures::Kind::Portrait,
+                std::path::Path::new(&path),
+            )
+            .map_err(|e| CoreError::new(e.to_string()))?;
+        Ok(made
+            .file_name()
+            .map(|f| f.to_string_lossy().into_owned())
+            .unwrap_or_default())
+    }
+
+    /// Enter Character: a character made in play, its scores and levels
+    /// typed in.
+    pub fn enter_character(&self) -> Result<Arc<WizardSession>, CoreError> {
+        WizardSession::open(self.install.clone(), true, false)
     }
 
     /// Edit Character on the character in `Chars/<file>`.

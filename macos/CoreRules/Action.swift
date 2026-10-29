@@ -16,6 +16,7 @@ struct Action: Hashable {
     static let PREFERENCES = Action("PREFERENCES")
     static let OPEN = Action("OPEN")
     static let NEW_CHARACTER = Action("NEW_CHARACTER")
+    static let ENTER_CHARACTER = Action("ENTER_CHARACTER")
     static let IMPORT = Action("IMPORT")
     static let ABOUT = Action("ABOUT")
     static let HELP = Action("HELP")

@@ -196,7 +196,7 @@ final class AppModel: ObservableObject {
     /// front, when one is.
     func enabled(_ action: Action, sheet: SheetModel? = nil) -> Bool {
         switch action {
-        case Action.NEW_CHARACTER, Action.IMPORT:
+        case Action.NEW_CHARACTER, Action.ENTER_CHARACTER, Action.IMPORT:
             return writable && modal == nil
         case Action.SHEET_PRINT:
             if sheet != nil { return true }
@@ -229,7 +229,8 @@ final class AppModel: ObservableObject {
         case Action.PREFERENCES: openSettings()
         case Action.ABOUT: openAbout()
         case Action.OPEN: chooseFolder()
-        case Action.NEW_CHARACTER: newCharacter()
+        case Action.NEW_CHARACTER: newCharacter(entering: false)
+        case Action.ENTER_CHARACTER: newCharacter(entering: true)
         case Action.IMPORT: chooseImport()
         case Action.SHEET_PRINT:
             if sheet == nil && details?.commands.monster == true {
@@ -265,11 +266,20 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func newCharacter() {
+    /// New Character, or Enter Character with `entering`.
+    private func newCharacter(entering: Bool) {
         guard let library else { return }
         do {
-            let session = try library.newCharacter(coreVsOption: Prefs.coreVsOptionShown)
-            modal = .wizard(WizardModel(session))
+            let session =
+                entering
+                ? try library.enterCharacter()
+                : try library.newCharacter(coreVsOption: Prefs.coreVsOptionShown)
+            let wizard = WizardModel(session)
+            wizard.created = { [weak self, weak wizard] (file: String) in
+                guard let self, let wizard else { return }
+                self.created(file, by: wizard)
+            }
+            modal = .wizard(wizard)
         } catch {
             fail(tr("Could Not Read"), error)
         }
@@ -281,6 +291,21 @@ final class AppModel: ObservableObject {
             Prefs.coreVsOptionShown = false
         }
         modal = nil
+    }
+
+    /// Create wrote the character to `file`: the wizard closes, and the
+    /// character shows in the library.
+    private func created(_ file: String, by wizard: WizardModel) {
+        guard case .wizard(let open) = modal, open === wizard else { return }
+        closeWizard(wizard)
+        if let characters = sections.first(where: { $0.id == characterSection() }) {
+            section = characters.id
+        }
+        reload(select: file)
+        // Enter Character's "Character Saved".
+        notice = Notice(
+            title: wizard.session.entering() ? tr("Character saved") : tr("Character created"),
+            text: "")
     }
 
     func editCharacter() {

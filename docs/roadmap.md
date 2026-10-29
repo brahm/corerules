@@ -539,13 +539,25 @@ The phases run in order:
      toolbar has Help, and View and Print for a monster. About is a
      window with What's New, Credits, Legal and Troubleshooting, as the
      other apps' About.
-   - **The books (in progress).** `cr-mac-ffi` reads a book as a session:
+   - **The books (done).** `cr-mac-ffi` reads a book as a session:
      its page (`cr_app::web::book`) written to a file, its contents,
      Find with its matches, zoom, and the reading position kept in the
      reader's state file in Application Support. The Mac app's Read Book
      opens each book in a window of its own, with the contents in the
      sidebar, Find (⌘F, ⌘G, ⇧⌘G) in a bar over the text, and Zoom In,
      Zoom Out and Reset Zoom in the View menu.
+   - **New Character and Enter Character (in progress).** `cr-mac-ffi`
+     describes each page of `cr_app::create` as a form (`form.rs`):
+     groups of rows (choices, radio groups, numbers, text, switches,
+     check boxes, lists with Add and Remove, the portrait), each control
+     doing an input of the wizard by its number, and Enter Character's
+     Levels as a dialog over the page. The Mac app draws any such form
+     with one SwiftUI view in a grouped Form, so the Swift side keeps no
+     rule and the editors of the next stages draw with it too. Every page
+     of the wizard, its questions (Add One Point, All Classes…), Choose
+     Portrait with the race's portraits first or a picture of the user's,
+     and Create, which writes the character and shows it in the library,
+     are on the Mac.
 5. **Beta and release** on the three systems with the same tag, with an
    install page on the website and in the README that shows the Open
    Anyway steps.

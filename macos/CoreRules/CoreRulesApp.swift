@@ -93,6 +93,7 @@ struct MenuCommands: Commands {
         CommandGroup(replacing: .newItem) {
             item(more(tr("New Character")), Action.NEW_CHARACTER)
                 .keyboardShortcut("n")
+            item(tr("E_nter Character…"), Action.ENTER_CHARACTER)
             item(more(tr("_Open Folder…")), Action.OPEN)
                 .keyboardShortcut("o")
             Divider()
