@@ -24,7 +24,9 @@ bindgen = ["uniffi/cli"]
 
 [dependencies]
 cr-app.workspace = true
+cr-formats.workspace = true
 cr-i18n.workspace = true
 cr-store.workspace = true
+image.workspace = true
 thiserror.workspace = true
 uniffi = "0.32"

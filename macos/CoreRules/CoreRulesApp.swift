@@ -24,6 +24,12 @@ struct CoreRulesApp: App {
                 .environmentObject(model)
         }
         .commands { MenuCommands(model: model) }
+        WindowGroup(id: "sheet", for: UUID.self) { $id in
+            if let id {
+                SheetWindow(id: id)
+                    .environmentObject(model)
+            }
+        }
         Settings {
             SettingsView()
                 .environmentObject(model)
@@ -51,6 +57,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 /// The menu bar's items for the app's actions.
 struct MenuCommands: Commands {
     @ObservedObject var model: AppModel
+    /// The sheet's window in front, which Print and Save act on.
+    @FocusedValue(\.sheet) private var sheet: SheetModel?
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
@@ -73,14 +81,14 @@ struct MenuCommands: Commands {
             item(more(tr("_Print…")), Action.SHEET_PRINT)
                 .keyboardShortcut("p")
             item(more(tr("Save as _PDF…")), Action.SHEET_PDF)
-            ForEach(model.sheetExports, id: \.self) { export in
-                item(more(exportLabel(export: export)), Action.export(export))
+            ForEach(sheet?.exports ?? model.sheetExports, id: \.self) { (export: SheetExport) in
+                item(more(plain(exportLabel(export: export))), Action.export(export))
             }
         }
     }
 
     private func item(_ title: String, _ action: Action) -> some View {
-        Button(title) { model.perform(action) }
-            .disabled(!model.enabled(action))
+        Button(title) { model.perform(action, sheet: sheet) }
+            .disabled(!model.enabled(action, sheet: sheet))
     }
 }
