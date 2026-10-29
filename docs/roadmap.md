@@ -528,7 +528,7 @@ The phases run in order:
      Options; Print and Save in the menu bar act on the sheet's window in
      front. Convert to Character and Convert to NPC are in the
      character's More menu.
-   - **Help and About (in progress).** `cr-mac-ffi` holds the help as a
+   - **Help and About (done).** `cr-mac-ffi` holds the help as a
      session (the book listed, its contents or what a search finds, the
      topic as the web page `cr-app` makes, its links and popups, Back),
      the help of an entry and of a monster, and About's texts. The Mac
