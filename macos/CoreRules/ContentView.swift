@@ -56,7 +56,11 @@ struct SectionList: View {
 
     var body: some View {
         List(model.sections, id: \.id, selection: $model.section) { (section: SectionInfo) in
-            Label(section.title, systemImage: SectionIcon.name(section.id))
+            Label {
+                Text(section.title)
+            } icon: {
+                SectionIconView(section: section.id)
+            }
                 .badge(Int(section.count))
         }
     }
