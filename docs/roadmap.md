@@ -546,7 +546,7 @@ The phases run in order:
      opens each book in a window of its own, with the contents in the
      sidebar, Find (⌘F, ⌘G, ⇧⌘G) in a bar over the text, and Zoom In,
      Zoom Out and Reset Zoom in the View menu.
-   - **New Character and Enter Character (in progress).** `cr-mac-ffi`
+   - **New Character and Enter Character (done, PR #124).** `cr-mac-ffi`
      describes each page of `cr_app::create` as a form (`form.rs`):
      groups of rows (choices, radio groups, numbers, text, switches,
      check boxes, lists with Add and Remove, the portrait), each control
@@ -558,6 +558,13 @@ The phases run in order:
      Portrait with the race's portraits first or a picture of the user's,
      and Create, which writes the character and shows it in the library,
      are on the Mac.
+   - **Edit Character (in progress).** Every page of `cr_app::editor`
+     (Details, Abilities, Combat, Proficiencies, Skills, Spells and
+     Equipment) is described as a form like the wizard's, chosen with a
+     segmented control above it; Levels… and Add… open as dialogs over
+     the page, the bundles show their items' icons, and Save's questions
+     come in the page's place. The Levels dialog, the experience fields,
+     the Skills form and the portrait row are those of the wizard.
 5. **Beta and release** on the three systems with the same tag, with an
    install page on the website and in the README that shows the Open
    Anyway steps.

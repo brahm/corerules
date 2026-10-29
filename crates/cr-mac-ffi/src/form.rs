@@ -8,6 +8,7 @@
 
 use cr_app::create::{Choice, List, ListKind, MOST_ITEMS, Unarmed};
 use cr_i18n::tr;
+use cr_store::Installation;
 use cr_store::create::UNARMED;
 
 /// A button beside a row's control or a group's heading.
@@ -104,12 +105,14 @@ pub enum FormRow {
         subtitle: String,
         button: FormButton,
     },
-    /// A row of a list, with its number and Remove when it has them.
+    /// A row of a list, with its number and Remove when it has them,
+    /// and an item's icon as PNG.
     Item {
         title: String,
         subtitle: String,
         number: Option<FormNumber>,
         remove: Option<u32>,
+        icon: Option<Vec<u8>>,
     },
     /// Add on a list: what may be added, each chosen adds itself.
     Add {
@@ -138,13 +141,15 @@ pub struct FormGroup {
     pub rows: Vec<FormRow>,
 }
 
-/// A dialog over the form, as Enter Character's Levels: its groups and
-/// the control that closes it.
+/// A dialog over the form, as Enter Character's Levels: its groups, the
+/// control that closes it, and the one that does what it is for, when it
+/// has one (Add Experience's Add), Close then cancelling.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct FormDialog {
     pub title: String,
     pub groups: Vec<FormGroup>,
     pub close: FormButton,
+    pub accept: Option<FormButton>,
 }
 
 /// A form's page: its groups, and the dialog over it.
@@ -426,6 +431,49 @@ impl<I: 'static> Builder<I> {
         })
     }
 
+    /// Turns the row last added, a number, on or off.
+    pub fn enabled(&mut self, on: bool) -> &mut Self {
+        if let Some(FormRow::Number { enabled, .. }) =
+            self.groups.last_mut().and_then(|g| g.rows.last_mut())
+        {
+            *enabled = on;
+        }
+        self
+    }
+
+    /// The character's portrait, `stored` as the character keeps it,
+    /// with Choose; the chooser shows `race`'s portraits first, and
+    /// `make` makes the input of the one chosen.
+    pub fn portrait(
+        &mut self,
+        install: &Installation,
+        stored: &[String; 2],
+        race: &str,
+        make: impl Fn([String; 2]) -> I + Send + Sync + 'static,
+    ) -> &mut Self {
+        let path = install
+            .portrait_path(stored)
+            .filter(|_| !stored[1].is_empty());
+        let subtitle = match stored[1].as_str() {
+            "" => tr("None").to_owned(),
+            file if path.is_none() => tr!("{file} (not in this installation)", file = file),
+            file => file.to_owned(),
+        };
+        let id = self.on_text(move |file| {
+            make(if file.is_empty() {
+                Default::default()
+            } else {
+                cr_store::pictures::stored_portrait(&file)
+            })
+        });
+        self.row(FormRow::Portrait {
+            id,
+            path: path.map(|p| p.display().to_string()),
+            subtitle,
+            race: race.to_owned(),
+        })
+    }
+
     pub fn text(
         &mut self,
         title: &str,
@@ -545,15 +593,29 @@ impl<I: Clone + Send + Sync + 'static> Builder<I> {
         details: &[String],
         inputs: ListInputs<I>,
     ) -> &mut Self {
-        if !list.shown {
-            return self;
-        }
-        self.group(&list.title, &list.description);
-        let (label, least, most) = if kind == ListKind::Items {
+        let number = if kind == ListKind::Items {
             (tr("Quantity"), 1, MOST_ITEMS)
         } else {
             (tr("Rank"), 1, 10)
         };
+        self.list_with(kind, list, details, number, &mut |_| None, inputs)
+    }
+
+    /// [`Self::list`] with the name and range of the rows' numbers, and
+    /// each row's icon by its title.
+    pub fn list_with(
+        &mut self,
+        kind: ListKind,
+        list: &List,
+        details: &[String],
+        (label, least, most): (&str, u32, u32),
+        icon: &mut dyn FnMut(&str) -> Option<Vec<u8>>,
+        inputs: ListInputs<I>,
+    ) -> &mut Self {
+        if !list.shown {
+            return self;
+        }
+        self.group(&list.title, &list.description);
         if list.rows.is_empty() {
             self.none();
         }
@@ -573,6 +635,7 @@ impl<I: Clone + Send + Sync + 'static> Builder<I> {
                 subtitle: subtitle.clone(),
                 number,
                 remove,
+                icon: icon(title),
             });
         }
         // Rows only rolled have nothing to add.

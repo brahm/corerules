@@ -99,8 +99,8 @@ struct FormRowView: View {
             } label: {
                 TwoLines(title: title, subtitle: subtitle)
             }
-        case .item(let title, let subtitle, let number, let remove):
-            ItemRow(title: title, subtitle: subtitle, number: number, remove: remove, act: act)
+        case .item(let title, let subtitle, let number, let remove, let icon):
+            ItemRow(title: title, subtitle: subtitle, number: number, remove: remove, icon: icon, act: act)
         case .add(let id, let label, let options):
             AddRow(id: id, label: label, options: options, act: act)
         case .portrait(let id, let path, let subtitle, let race):
@@ -283,7 +283,7 @@ struct NumberField: View {
             TextField(title, value: number, format: IntegerFormatStyle<Int64>())
                 .labelsHidden()
                 .multilineTextAlignment(.trailing)
-                .frame(width: 64)
+                .frame(width: max >= 100_000 ? 96 : 64)
             Stepper(title, value: number, in: min...Swift.max(min, max))
                 .labelsHidden()
         }
@@ -359,6 +359,7 @@ struct ItemRow: View {
     let subtitle: String
     let number: FormNumber?
     let remove: UInt32?
+    let icon: Data?
     let act: FormAct
 
     var body: some View {
@@ -382,7 +383,14 @@ struct ItemRow: View {
                 }
             }
         } label: {
-            TwoLines(title: title, subtitle: subtitle)
+            HStack {
+                if let icon, let image = NSImage(data: icon) {
+                    Image(nsImage: image)
+                        .interpolation(.none)
+                        .frame(width: 32, height: 32)
+                }
+                TwoLines(title: title, subtitle: subtitle)
+            }
         }
     }
 }
@@ -594,8 +602,16 @@ struct FormDialogView: View {
             Divider()
             HStack {
                 Spacer()
-                Button(plain(dialog.close.label)) { act(dialog.close.id, .press) }
-                    .keyboardShortcut(.defaultAction)
+                if let accept = dialog.accept {
+                    Button(plain(dialog.close.label)) { act(dialog.close.id, .press) }
+                        .keyboardShortcut(.cancelAction)
+                    Button(plain(accept.label)) { act(accept.id, .press) }
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(!accept.enabled)
+                } else {
+                    Button(plain(dialog.close.label)) { act(dialog.close.id, .press) }
+                        .keyboardShortcut(.defaultAction)
+                }
             }
             .padding()
         }

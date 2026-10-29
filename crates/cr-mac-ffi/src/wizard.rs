@@ -183,16 +183,6 @@ impl WizardSession {
         self.settle(&mut wizard);
     }
 
-    /// The character's portrait chosen, by its file name; empty for none.
-    pub fn choose_portrait(&self, file: String) {
-        let stored = if file.is_empty() {
-            Default::default()
-        } else {
-            cr_store::pictures::stored_portrait(&file)
-        };
-        self.input(Input::Portrait(stored));
-    }
-
     /// The file of the character Create wrote, once it has.
     pub fn created(&self) -> Option<String> {
         self.created
@@ -547,27 +537,7 @@ fn details(
             Vec::new(),
             Input::Gender,
         );
-    let path = install
-        .portrait_path(&page.portrait)
-        .filter(|_| !page.portrait[1].is_empty());
-    let subtitle = match page.portrait[1].as_str() {
-        "" => tr("None").to_owned(),
-        file if path.is_none() => tr!("{file} (not in this installation)", file = file),
-        file => file.to_owned(),
-    };
-    let id = form.on_text(|file| {
-        Input::Portrait(if file.is_empty() {
-            Default::default()
-        } else {
-            cr_store::pictures::stored_portrait(&file)
-        })
-    });
-    form.row(FormRow::Portrait {
-        id,
-        path: path.map(|p| p.display().to_string()),
-        subtitle,
-        race: race.to_owned(),
-    });
+    form.portrait(install, &page.portrait, race, Input::Portrait);
 
     let social_roll = form.roll(tr("Roll Social Class"), Input::RollSocialClass);
     form.group(tr("Background"), "")
@@ -745,6 +715,7 @@ fn entered_levels(form: &mut Builder<Input>, levels: &EnteredLevels) -> Option<F
         title: tr("Levels").to_owned(),
         groups,
         close,
+        accept: None,
     })
 }
 
@@ -1072,12 +1043,14 @@ impl<I> Clone for SkillsInputs<I> {
 impl<I> Copy for SkillsInputs<I> {}
 
 /// The Skills form: the rogue skills, the kit's bonuses and chosen
-/// skills, the psionics, the disciplines and powers, the wild talents,
-/// and the psionic attack and defense modes.
+/// skills, the psionics, the disciplines and powers, then what `wild`
+/// adds (Edit Character's Test and Roll) with the wild talents, and the
+/// psionic attack and defense modes.
 pub(crate) fn skills_form<I: Clone + Send + Sync + 'static>(
     form: &mut Builder<I>,
     skills: &SkillsForm,
     inputs: SkillsInputs<I>,
+    wild: impl FnOnce(&mut Builder<I>),
 ) {
     if let Some(group) = skills.rogue() {
         form.group(tr("Rogue Skills"), &group.description).value(
@@ -1134,10 +1107,11 @@ pub(crate) fn skills_form<I: Clone + Send + Sync + 'static>(
         ListKind::Disciplines,
         ListKind::Sciences,
         ListKind::Devotions,
-        ListKind::WildTalents,
-        ListKind::Attacks,
-        ListKind::Defenses,
     ] {
+        form.list(kind, &skills.list(kind), &[], inputs.lists);
+    }
+    wild(form);
+    for kind in [ListKind::WildTalents, ListKind::Attacks, ListKind::Defenses] {
         form.list(kind, &skills.list(kind), &[], inputs.lists);
     }
 }
@@ -1154,6 +1128,7 @@ fn skills(form: &mut Builder<Input>, skills: &SkillsForm) {
             primary: Input::Primary,
             lists: LISTS,
         },
+        |_| {},
     );
 }
 
