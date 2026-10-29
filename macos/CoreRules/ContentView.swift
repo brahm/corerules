@@ -18,6 +18,7 @@ struct ContentView: View {
                 model.openHelpWindow = { openWindow(id: "help") }
                 model.openBookWindow = { (id: UUID) in openWindow(id: "book", value: id) }
                 model.openAbout = { openWindow(id: "about") }
+                model.openTablesWindow = { openWindow(id: "tables") }
             }
             .sheet(item: $model.modal) { modal in
                 ModalView(modal: modal)
@@ -89,6 +90,8 @@ struct ModalView: View {
             WizardView(model: wizard, close: { model.closeWizard(wizard) })
         case .edit(let edit):
             EditView(model: edit, close: { (saved: Bool) in model.closeEdit(edit, saved: saved) })
+        case .npc(let npc):
+            NpcView(model: npc, close: { model.modal = nil })
         case .importing(let importing):
             ImportView(
                 model: importing,

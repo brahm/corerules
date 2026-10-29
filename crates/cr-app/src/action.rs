@@ -116,12 +116,9 @@ pub const NOT_YET_ON_WINDOWS: &[Action] = &[];
 /// empty.
 pub const NOT_YET_ON_MACOS: &[Action] = &[
     EXTRACT_DATA,
-    NEW_NPC,
-    NEW_NPC_GROUP,
     ROLL_TREASURE,
     NEW_ENCOUNTER,
     NEW_TABLE,
-    ROLL_TABLE,
     MANAGE_PARTIES,
     EXPORT,
     IMPORT_CORE20,

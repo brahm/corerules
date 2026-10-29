@@ -9,11 +9,13 @@ mod edit;
 mod form;
 mod help;
 mod import;
+mod npc;
 mod prompt;
 mod sheet;
+mod tables;
 mod wizard;
 
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use cr_app::library::{self, Commands, Filter};
 use cr_app::sheets::Export;
@@ -29,8 +31,10 @@ pub use form::{
 };
 pub use help::{HelpBook, HelpLinked, HelpRow, HelpSession, HelpTopic};
 pub use import::{ImportCategory, ImportItem, ImportReport, ImportSession};
+pub use npc::{NpcSession, NpcsCreated};
 pub use prompt::{PromptGroup, PromptInfo, PromptKind};
 pub use sheet::{SheetOptions, SheetSectionInfo, SheetSession};
+pub use tables::{TableBlock, TableOption, TableReference, TableResult, TableSession};
 pub use wizard::WizardSession;
 
 uniffi::setup_scaffolding!();
@@ -354,6 +358,11 @@ pub struct Library {
     help_files: OnceLock<Arc<cr_app::help::Files>>,
     /// The records' help, read once.
     items: OnceLock<Arc<cr_store::help::ItemHelp>>,
+    /// The NPC generator's rules and the tables, read once they are
+    /// first used.
+    npc_rules: Mutex<Option<Arc<cr_store::npc::NpcRules>>>,
+    table_rolls: Mutex<Option<Arc<cr_store::tables::TableRolls>>>,
+    generators: tables::Generators,
 }
 
 impl Library {
@@ -365,6 +374,9 @@ impl Library {
             sections,
             help_files: OnceLock::new(),
             items: OnceLock::new(),
+            npc_rules: Mutex::default(),
+            table_rolls: Mutex::default(),
+            generators: tables::Generators::default(),
         })
     }
 
@@ -917,6 +929,37 @@ impl Library {
     pub fn edit_character(&self, file: String) -> Result<Arc<EditSession>, CoreError> {
         EditSession::open(self.install.clone(), &file)
     }
+
+    /// New NPC, or with `group` New NPC Group.
+    pub fn new_npc(&self, group: bool) -> Result<Arc<NpcSession>, CoreError> {
+        let rules = cached(&self.npc_rules, || self.install.npc_rules())?;
+        Ok(NpcSession::open(
+            self.install.clone(),
+            rules,
+            group,
+            self.generators.rand.clone(),
+        ))
+    }
+
+    /// Roll on a Table, on the table last rolled on.
+    pub fn roll_table(&self) -> Result<Arc<TableSession>, CoreError> {
+        let rolls = cached(&self.table_rolls, || self.install.table_rolls())?;
+        Ok(TableSession::open(rolls, &self.generators))
+    }
+}
+
+/// What `cache` holds, or what `read` reads into it.
+fn cached<T>(
+    cache: &Mutex<Option<Arc<T>>>,
+    read: impl FnOnce() -> cr_store::Result<T>,
+) -> Result<Arc<T>, CoreError> {
+    let mut cache = cache.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(value) = &*cache {
+        return Ok(value.clone());
+    }
+    let value = Arc::new(read().map_err(|e| CoreError::new(e.to_string()))?);
+    *cache = Some(value.clone());
+    Ok(value)
 }
 
 #[cfg(test)]
