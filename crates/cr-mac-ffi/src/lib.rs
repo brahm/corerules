@@ -5,12 +5,13 @@
 //! each screen ported to the Mac; it holds no rule of its own.
 
 mod edit;
+mod help;
 mod import;
 mod prompt;
 mod sheet;
 mod wizard;
 
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use cr_app::library::{self, Commands, Filter};
 use cr_app::sheets::Export;
@@ -20,6 +21,7 @@ use cr_store::userdb::Filter as Origins;
 use cr_store::userdb::parts::{OTHER_SECTION, OTHER_TYPES};
 
 pub use edit::{EditDetails, EditSession, SaveState};
+pub use help::{HelpBook, HelpLinked, HelpRow, HelpSession, HelpTopic};
 pub use import::{ImportCategory, ImportItem, ImportReport, ImportSession};
 pub use prompt::{PromptInfo, PromptKind};
 pub use sheet::{SheetOptions, SheetSectionInfo, SheetSession};
@@ -342,18 +344,153 @@ pub struct EntryDetails {
 pub struct Library {
     install: Arc<Installation>,
     sections: Vec<Section>,
+    /// The help files, read as they are opened.
+    help_files: OnceLock<Arc<cr_app::help::Files>>,
+    /// The records' help, read once.
+    items: OnceLock<Arc<cr_store::help::ItemHelp>>,
 }
 
 impl Library {
     fn new(install: Installation) -> Arc<Self> {
         let install = Arc::new(install);
         let sections = install.catalog();
-        Arc::new(Self { install, sections })
+        Arc::new(Self {
+            install,
+            sections,
+            help_files: OnceLock::new(),
+            items: OnceLock::new(),
+        })
+    }
+
+    fn help_files(&self) -> Result<Arc<cr_app::help::Files>, CoreError> {
+        if let Some(files) = self.help_files.get() {
+            return Ok(files.clone());
+        }
+        let install = Installation::open(self.install.root())?;
+        Ok(self
+            .help_files
+            .get_or_init(|| Arc::new(cr_app::help::Files::new(install)))
+            .clone())
+    }
+
+    fn items(&self) -> Arc<cr_store::help::ItemHelp> {
+        self.items
+            .get_or_init(|| Arc::new(self.install.item_help()))
+            .clone()
+    }
+
+    fn entry(&self, section: &str, index: u32) -> Option<&Entry> {
+        self.section(section)?.entries.get(index as usize)
     }
 
     fn section(&self, id: &str) -> Option<&Section> {
         self.sections.iter().find(|s| s.id == id)
     }
+}
+
+/// What an entry's Help, or a monster's View and Print, show.
+#[derive(uniffi::Enum)]
+pub enum EntryHelp {
+    /// A topic of the help, by its spec for [`HelpSession::open`].
+    Open { spec: String },
+    /// A popup topic, a record's own help or a summary, as text.
+    Info { title: String, text: String },
+    /// A page shown as it prints.
+    Page { sheet: Arc<SheetSession> },
+    /// Nothing: what the app says.
+    Nothing { message: String },
+}
+
+/// The program help's topic of the library's section `section`, as Help
+/// on This Screen opens it.
+#[uniffi::export]
+pub fn section_help(section: String) -> u32 {
+    cr_store::help::topic::of_section(&section)
+}
+
+/// The program help's topics of the screens other than the library.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum HelpScreen {
+    MainMenu,
+    CharacterSheet,
+    Import,
+}
+
+#[uniffi::export]
+pub fn screen_help(screen: HelpScreen) -> u32 {
+    use cr_store::help::topic;
+    match screen {
+        HelpScreen::MainMenu => topic::MAIN_MENU,
+        HelpScreen::CharacterSheet => topic::CHARACTER_SHEET,
+        HelpScreen::Import => topic::IMPORT,
+    }
+}
+
+/// What About shows of the app.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct AboutInfo {
+    pub version: String,
+    /// The description, one paragraph each.
+    pub paragraphs: Vec<String>,
+    pub copyright: String,
+    pub website: String,
+    pub issues: String,
+    pub developer: String,
+    pub developer_url: String,
+    pub assistant: String,
+    pub assistant_url: String,
+    /// The catalog's translator credits, one per line.
+    pub translators: Option<String>,
+    /// What's New: a line for each paragraph, "• " before a list's item.
+    pub release_notes: Vec<String>,
+    /// The notice on the original's content.
+    pub legal: String,
+}
+
+#[uniffi::export]
+pub fn about() -> AboutInfo {
+    use cr_app::about;
+    AboutInfo {
+        version: about::VERSION.to_owned(),
+        paragraphs: about::description(about::System::MacOs)
+            .iter()
+            .map(|p| (*p).to_owned())
+            .collect(),
+        copyright: about::COPYRIGHT.to_owned(),
+        website: about::WEBSITE.to_owned(),
+        issues: about::ISSUES.to_owned(),
+        developer: about::DEVELOPER.to_owned(),
+        developer_url: about::DEVELOPER_URL.to_owned(),
+        assistant: about::ASSISTANT.to_owned(),
+        assistant_url: about::ASSISTANT_URL.to_owned(),
+        translators: about::translators().map(str::to_owned),
+        release_notes: about::release_notes_text(),
+        legal: about::legal().to_owned(),
+    }
+}
+
+/// The original program's About box and Credits window, as the
+/// installation has them.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct OriginalInfo {
+    /// The About box: the product, then what it says and its license.
+    pub about_title: Option<String>,
+    pub about_text: String,
+    /// The Credits window's title and lines.
+    pub credits_title: Option<String>,
+    pub credits: Vec<String>,
+}
+
+/// What a bug report needs: the versions, the language and the data
+/// opened, as the other apps give them.
+#[uniffi::export]
+pub fn debug_info(data: Option<String>, macos: String) -> String {
+    format!(
+        "Core Rules {}\nmacOS {macos}\nLanguage: {}\nData: {}\n",
+        cr_app::about::VERSION,
+        cr_i18n::language().code(),
+        data.unwrap_or_else(|| "none".to_owned()),
+    )
 }
 
 /// The data package Extract Data from CD… made, else an installation in
@@ -540,6 +677,99 @@ impl Library {
         self.install
             .forget_deleted(std::slice::from_ref(&deleted))?;
         Ok(deleted.name.trim().to_owned())
+    }
+
+    /// The original program's About box and Credits window.
+    pub fn original(&self) -> OriginalInfo {
+        let original = cr_app::about::Original::of(&self.install.original_about());
+        let (about_title, about_text) = match original.about {
+            Some(about) => (
+                Some(about.name),
+                [about.rest, about.license.unwrap_or_default()]
+                    .into_iter()
+                    .filter(|t| !t.is_empty())
+                    .collect::<Vec<_>>()
+                    .join("\n\n"),
+            ),
+            None => (None, String::new()),
+        };
+        let (credits_title, credits) = match original.credits {
+            Some((title, lines)) => (Some(title), lines),
+            None => (None, Vec::new()),
+        };
+        OriginalInfo {
+            about_title,
+            about_text,
+            credits_title,
+            credits,
+        }
+    }
+
+    /// The help, to open with [`HelpSession::open`].
+    pub fn help(&self) -> Result<Arc<HelpSession>, CoreError> {
+        Ok(HelpSession::new(self.help_files()?))
+    }
+
+    /// What a right-click on the row of entry `index` of section
+    /// `section` shows in the original.
+    pub fn entry_help(&self, section: String, index: u32) -> EntryHelp {
+        use cr_app::help::Found;
+        let Some(entry) = self.entry(&section, index) else {
+            return EntryHelp::Nothing {
+                message: String::new(),
+            };
+        };
+        let name = entry.title.trim().to_owned();
+        let none = || EntryHelp::Nothing {
+            message: cr_i18n::tr!("{name} has no help topic", name = name.clone()),
+        };
+        let screen = cr_store::help::topic::of_section(&section);
+        let controls = self.install.screen_help(screen);
+        let texts = [entry.title.trim(), entry.subtitle.as_str()];
+        match cr_app::help::context_help(&self.install, screen, &texts, &controls, || self.items())
+        {
+            Some(Found::Topic(found)) if found.popup => self
+                .help_files()
+                .ok()
+                .and_then(|files| help::popup_text(&files, found.file, found.number))
+                .map_or_else(none, |(title, text)| EntryHelp::Info { title, text }),
+            Some(Found::Topic(found)) => EntryHelp::Open {
+                spec: format!("{}#{}", found.file, found.number),
+            },
+            Some(Found::Custom { title, text } | Found::Text { title, text }) => {
+                EntryHelp::Info { title, text }
+            }
+            Some(Found::Page(sheet)) => EntryHelp::Page {
+                sheet: SheetSession::of(self.install.clone(), sheet),
+            },
+            None => none(),
+        }
+    }
+
+    /// The Monsters screen's View and Print on entry `index` of section
+    /// `section`: a shipped monster's help topic, a monster of the user
+    /// database as it prints.
+    pub fn monster_help(&self, section: String, index: u32) -> EntryHelp {
+        use cr_app::help::MonsterHelp;
+        let Some((name, custom)) = self
+            .entry(&section, index)
+            .and_then(|e| library::monster_key(&e.key))
+        else {
+            return EntryHelp::Nothing {
+                message: String::new(),
+            };
+        };
+        match cr_app::help::monster(&self.install, name, custom, || self.items()) {
+            MonsterHelp::Page(sheet) => EntryHelp::Page {
+                sheet: SheetSession::of(self.install.clone(), sheet),
+            },
+            MonsterHelp::Topic(found) => EntryHelp::Open {
+                spec: format!("{}#{}", found.file, found.number),
+            },
+            MonsterHelp::None => EntryHelp::Nothing {
+                message: cr_i18n::tr!("{name} has no help topic", name = name.to_owned()),
+            },
+        }
     }
 
     /// The sheet of the character in `Chars/<file>`.

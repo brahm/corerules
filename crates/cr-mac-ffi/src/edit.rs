@@ -97,6 +97,11 @@ impl EditSession {
 
 #[uniffi::export]
 impl EditSession {
+    /// The program help's topic of the tab in view.
+    pub fn help(&self) -> u32 {
+        self.editor().help()
+    }
+
     /// The character's name as it was read, for the window's title.
     pub fn title(&self) -> String {
         self.editor().character().data.name.trim().to_owned()

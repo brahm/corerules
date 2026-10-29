@@ -282,32 +282,36 @@ msgstr[1] "{n} Bilder der Add-ons wurden dorthin kopiert."
 msgid "If Core Rules is open, close it and open it again to see the add-ons."
 msgstr "Wenn Core Rules geöffnet ist, schließen Sie es und öffnen Sie es erneut, um die Add-ons zu sehen."
 
-#: crates/cr-app/src/about.rs:30
+#: crates/cr-app/src/about.rs:31
 msgid "Core Rules is a complete Linux version of AD&D Core Rules 2.0 and its Expansion (TSR/Evermore, 1998-1999), the character manager and Dungeon Master's toolkit for Advanced Dungeons & Dragons 2nd Edition. It is written in Rust with GTK 4 and libadwaita and runs natively, with no Wine and no Windows."
 msgstr "Core Rules ist eine vollständige Linux-Version von AD&D Core Rules 2.0 und seiner Expansion (TSR/Evermore, 1998–1999), dem Charakterverwalter und Werkzeugkasten für Spielleiter von Advanced Dungeons & Dragons 2. Edition. Es ist in Rust mit GTK 4 und libadwaita geschrieben und läuft nativ, ohne Wine und ohne Windows."
 
-#: crates/cr-app/src/about.rs:36
+#: crates/cr-app/src/about.rs:37
 msgid "Core Rules is a complete Windows 11 version of AD&D Core Rules 2.0 and its Expansion (TSR/Evermore, 1998-1999), the character manager and Dungeon Master's toolkit for Advanced Dungeons & Dragons 2nd Edition. It is written in Rust with WinUI 3 and shares its code with the Linux version."
 msgstr "Core Rules ist eine vollständige Windows-11-Version von AD&D Core Rules 2.0 und seiner Expansion (TSR/Evermore, 1998–1999), dem Charakterverwalter und Werkzeugkasten für Spielleiter von Advanced Dungeons & Dragons 2. Edition. Es ist in Rust mit WinUI 3 geschrieben und teilt seinen Code mit der Linux-Version."
 
 #: crates/cr-app/src/about.rs:43
+msgid "Core Rules is a complete macOS version of AD&D Core Rules 2.0 and its Expansion (TSR/Evermore, 1998-1999), the character manager and Dungeon Master's toolkit for Advanced Dungeons & Dragons 2nd Edition. Its interface is written in SwiftUI over the Rust code it shares with the Linux and Windows versions."
+msgstr "Core Rules ist eine vollständige macOS-Version von AD&D Core Rules 2.0 und seiner Expansion (TSR/Evermore, 1998–1999), dem Charakterverwalter und Werkzeugkasten für Spielleiter von Advanced Dungeons & Dragons 2. Edition. Seine Oberfläche ist in SwiftUI geschrieben, auf dem Rust-Code, den es mit der Linux- und der Windows-Version teilt."
+
+#: crates/cr-app/src/about.rs:50
 msgid "Every screen of the original program is here: the Character Generator with Create, Enter and Update Character, kits and Player's Option, the character sheet, parties, the NPC, treasure and encounter generators, Table Rolls, editors for every user database, DM Toolkit packages, the rule books and the help. The app reads and writes the original's own data files, so characters, monsters, encounters and packages made in either program open in the other."
 msgstr "Jeder Bildschirm des Originalprogramms ist hier: der Character Generator mit Create, Enter und Update Character, Kits und Player's Option, der Charakterbogen, Gruppen, die Generatoren für NSC, Schätze und Begegnungen, Table Rolls, Editoren für jede Benutzerdatenbank, DM-Toolkit-Pakete, die Regelbücher und die Hilfe. Die App liest und schreibt die eigenen Datendateien des Originals, sodass Charaktere, Monster, Begegnungen und Pakete, die in einem der beiden Programme erstellt wurden, sich im anderen öffnen."
 
-#: crates/cr-app/src/about.rs:51
+#: crates/cr-app/src/about.rs:58
 msgid "This project contains no TSR or Wizards of the Coast content. The rules, books, monsters, pictures and help all come from a copy of AD&D Core Rules 2.0 (and, for everything the app creates and edits, the Expansion) that you already own."
 msgstr "Dieses Projekt enthält keine Inhalte von TSR oder Wizards of the Coast. Die Regeln, Bücher, Monster, Bilder und die Hilfe stammen alle aus einer Kopie von AD&D Core Rules 2.0 (und, für alles, was die App erstellt und bearbeitet, der Expansion), die Sie bereits besitzen."
 
-#: crates/cr-app/src/about.rs:61
+#: crates/cr-app/src/about.rs:68
 msgid "AD&D, Advanced Dungeons & Dragons and Core Rules are trademarks of Wizards of the Coast. The rules, books, monsters, pictures and help of AD&D Core Rules 2.0 and its Expansion are copyrighted by Wizards of the Coast and are not covered by this app's license. This project is not affiliated with Wizards of the Coast and contains none of their content: it needs the original discs, or a copy of them, that you own."
 msgstr "AD&D, Advanced Dungeons & Dragons und Core Rules sind Marken von Wizards of the Coast. Die Regeln, Bücher, Monster, Bilder und die Hilfe von AD&D Core Rules 2.0 und seiner Expansion sind urheberrechtlich durch Wizards of the Coast geschützt und fallen nicht unter die Lizenz dieser App. Dieses Projekt ist nicht mit Wizards of the Coast verbunden und enthält keine ihrer Inhalte: Es benötigt die Originaldisks oder eine Kopie davon, die Sie besitzen."
 
-#: crates/cr-app/src/about.rs:73
+#: crates/cr-app/src/about.rs:80
 msgid "translator-credits"
 msgstr "Claude (Anthropic) https://www.anthropic.com/claude"
 
-#: crates/cr-app/src/about.rs:151
-#: crates/cr-app/src/about.rs:156
+#: crates/cr-app/src/about.rs:158
+#: crates/cr-app/src/about.rs:163
 msgid "{product} (original program)"
 msgstr "{product} (Originalprogramm)"
 
@@ -667,7 +671,7 @@ msgstr "Charakter eingeben"
 #: crates/cr-app/src/library.rs:157
 #: crates/cr-gtk/src/main.rs:1719
 #: crates/cr-win/src/app.rs:2984
-#: macos/CoreRules/CoreRulesApp.swift:72
+#: macos/CoreRules/CoreRulesApp.swift:86
 msgid "New Character"
 msgstr "Neuer Charakter"
 
@@ -2538,7 +2542,7 @@ msgstr "Wenn Sie diese Meldung ignorieren und den Charakter speichern, erscheint
 #: crates/cr-win/src/app/templates.rs:666
 #: crates/cr-win/src/app/templates.rs:980
 #: crates/cr-win/src/app/treasure_tables.rs:413
-#: macos/CoreRules/ContentView.swift:115
+#: macos/CoreRules/ContentView.swift:117
 msgid "_OK"
 msgstr "_OK"
 
@@ -2621,7 +2625,7 @@ msgstr "Standarddatensätze können nicht gelöscht werden"
 #: crates/cr-app/src/records/actions.rs:212
 #: crates/cr-gtk/src/userdb.rs:412
 #: crates/cr-win/src/app.rs:4631
-#: macos/CoreRules/ContentView.swift:134
+#: macos/CoreRules/ContentView.swift:136
 msgid "Delete {name}?"
 msgstr "{name} löschen?"
 
@@ -2679,8 +2683,8 @@ msgstr "Als Magierzauber"
 #: crates/cr-gtk/src/userdb.rs:1724
 #: crates/cr-gtk/src/userdb.rs:2568
 #: crates/cr-win/src/app/record.rs:304
-#: macos/CoreRules/Model.swift:311
-#: macos/CoreRules/Model.swift:321
+#: macos/CoreRules/Model.swift:323
+#: macos/CoreRules/Model.swift:333
 #: macos/CoreRules/Sheet.swift:69
 msgid "Not Saved"
 msgstr "Nicht gespeichert"
@@ -3281,7 +3285,7 @@ msgstr "Buch konnte nicht geöffnet werden"
 #: crates/cr-win/src/app/library.rs:406
 #: crates/cr-win/src/app/portrait.rs:411
 #: crates/cr-win/src/app/templates.rs:932
-#: macos/CoreRules/ContentView.swift:202
+#: macos/CoreRules/ContentView.swift:204
 msgid "No Results"
 msgstr "Keine Ergebnisse"
 
@@ -3392,7 +3396,7 @@ msgstr "Wie viele?"
 #: crates/cr-win/src/app/treasure_tables.rs:423
 #: crates/cr-win/src/app.rs:2372
 #: crates/cr-win/src/app.rs:4727
-#: macos/CoreRules/ContentView.swift:162
+#: macos/CoreRules/ContentView.swift:164
 #: macos/CoreRules/Edit.swift:94
 #: macos/CoreRules/Edit.swift:134
 #: macos/CoreRules/Import.swift:76
@@ -3432,7 +3436,8 @@ msgstr "Kategorie"
 #: crates/cr-win/src/app/portrait.rs:421
 #: crates/cr-win/src/app/templates.rs:968
 #: crates/cr-win/src/app/templates.rs:969
-#: macos/CoreRules/ContentView.swift:183
+#: macos/CoreRules/ContentView.swift:185
+#: macos/CoreRules/Help.swift:171
 msgid "Search"
 msgstr "Suchen"
 
@@ -3572,15 +3577,15 @@ msgstr "Die Knöpfe »Core Rules« und »Player's Option« des Originals"
 #: crates/cr-store/src/userdb/parts/pages.rs:427
 #: crates/cr-win/src/app/create.rs:244
 #: crates/cr-win/src/app/npc.rs:76
-#: macos/CoreRules/ContentView.swift:185
+#: macos/CoreRules/About.swift:47
+#: macos/CoreRules/ContentView.swift:187
 #: macos/CoreRules/CoreRulesApp.swift:22
-#: macos/CoreRules/Model.swift:229
 #: macos/CoreRules/Wizard.swift:151
 msgid "Core Rules"
 msgstr "Core Rules"
 
 #: crates/cr-gtk/src/create.rs:641
-#: crates/cr-mac-ffi/src/wizard.rs:109
+#: crates/cr-mac-ffi/src/wizard.rs:114
 #: crates/cr-win/src/app/create.rs:234
 msgid "Player's Handbook: proficiency slots"
 msgstr "Player's Handbook: Fertigkeitsplätze"
@@ -3592,7 +3597,7 @@ msgid "Player's Option"
 msgstr "Player's Option"
 
 #: crates/cr-gtk/src/create.rs:645
-#: crates/cr-mac-ffi/src/wizard.rs:104
+#: crates/cr-mac-ffi/src/wizard.rs:109
 #: crates/cr-win/src/app/create.rs:229
 msgid "Skills & Powers: subabilities, and character points for racial and class abilities, proficiencies and traits"
 msgstr "Skills & Powers: Unterattribute sowie Charakterpunkte für Volks- und Klassenfähigkeiten, Fertigkeiten und Eigenschaften"
@@ -4253,7 +4258,7 @@ msgstr "Begegnung"
 #: crates/cr-win/src/app/encounter.rs:700
 #: crates/cr-win/src/app/encounter.rs:702
 #: crates/cr-win/src/app/library.rs:774
-#: macos/CoreRules/ContentView.swift:357
+#: macos/CoreRules/ContentView.swift:359
 msgid "Description"
 msgstr "Beschreibung"
 
@@ -4294,9 +4299,11 @@ msgstr "_Speichern"
 #: crates/cr-win/src/app/encounter.rs:512
 #: crates/cr-win/src/app/help.rs:294
 #: crates/cr-win/src/app/treasure.rs:121
-#: macos/CoreRules/ContentView.swift:488
-#: macos/CoreRules/ContentView.swift:490
-#: macos/CoreRules/CoreRulesApp.swift:81
+#: macos/CoreRules/ContentView.swift:496
+#: macos/CoreRules/ContentView.swift:498
+#: macos/CoreRules/CoreRulesApp.swift:95
+#: macos/CoreRules/Help.swift:221
+#: macos/CoreRules/Help.swift:223
 #: macos/CoreRules/Sheet.swift:156
 #: macos/CoreRules/Sheet.swift:158
 msgid "_Print…"
@@ -4447,8 +4454,8 @@ msgstr "_Bearbeiten…"
 #: crates/cr-win/src/app.rs:4685
 #: crates/cr-win/src/app.rs:4690
 #: crates/cr-win/src/app.rs:4694
-#: macos/CoreRules/ContentView.swift:151
-#: macos/CoreRules/ContentView.swift:316
+#: macos/CoreRules/ContentView.swift:153
+#: macos/CoreRules/ContentView.swift:318
 msgid "_Delete"
 msgstr "_Löschen"
 
@@ -4789,10 +4796,24 @@ msgstr "Daten konnten nicht extrahiert werden"
 #: crates/cr-win/src/app/library.rs:665
 #: crates/cr-win/src/app/packages.rs:44
 #: crates/cr-win/src/app/record.rs:351
+#: macos/CoreRules/ContentView.swift:518
+#: macos/CoreRules/ContentView.swift:520
+#: macos/CoreRules/CoreRulesApp.swift:36
+#: macos/CoreRules/CoreRulesApp.swift:132
+#: macos/CoreRules/Help.swift:57
+#: macos/CoreRules/Help.swift:68
+#: macos/CoreRules/Help.swift:76
+#: macos/CoreRules/Help.swift:93
+#: macos/CoreRules/Help.swift:147
+#: macos/CoreRules/Model.swift:410
+#: macos/CoreRules/Model.swift:426
+#: macos/CoreRules/Model.swift:471
 msgid "Help"
 msgstr "Hilfe"
 
 #: crates/cr-gtk/src/help.rs:284
+#: crates/cr-mac-ffi/src/lib.rs:724
+#: crates/cr-mac-ffi/src/lib.rs:771
 #: crates/cr-win/src/app.rs:1834
 #: crates/cr-win/src/app.rs:1843
 #: crates/cr-win/src/app.rs:3522
@@ -4800,6 +4821,7 @@ msgid "{name} has no help topic"
 msgstr "{name} hat kein Hilfethema"
 
 #: crates/cr-gtk/src/help.rs:331
+#: crates/cr-mac-ffi/src/help.rs:171
 #: crates/cr-win/src/app/help.rs:153
 msgid "The help topic is not in {file}"
 msgstr "Das Hilfethema ist nicht in {file}"
@@ -4807,6 +4829,8 @@ msgstr "Das Hilfethema ist nicht in {file}"
 #: crates/cr-gtk/src/help.rs:374
 #: crates/cr-win/src/app/create.rs:76
 #: crates/cr-win/src/app/help.rs:285
+#: macos/CoreRules/Help.swift:213
+#: macos/CoreRules/Help.swift:215
 #: macos/CoreRules/Wizard.swift:89
 msgid "Back"
 msgstr "Zurück"
@@ -4822,6 +4846,8 @@ msgid "Choose a topic from the list."
 msgstr "Wähle ein Thema aus der Liste."
 
 #: crates/cr-gtk/src/help.rs:668
+#: crates/cr-mac-ffi/src/help.rs:118
+#: crates/cr-mac-ffi/src/help.rs:263
 #: crates/cr-win/src/app/help.rs:118
 #: crates/cr-win/src/app.rs:1809
 #: crates/cr-win/src/app.rs:3491
@@ -4830,11 +4856,13 @@ msgstr "Dieses Thema ist nicht in dieser Installation"
 
 #: crates/cr-gtk/src/help.rs:1209
 #: crates/cr-win/src/app/settings.rs:134
+#: macos/CoreRules/About.swift:96
 msgid "Assistant"
 msgstr "Assistent"
 
 #: crates/cr-gtk/src/help.rs:1213
 #: crates/cr-win/src/app/settings.rs:172
+#: macos/CoreRules/About.swift:121
 msgid "AD&D Core Rules"
 msgstr "AD&D Core Rules"
 
@@ -4873,8 +4901,8 @@ msgstr "Core-Rules-Ordner öffnen"
 #: crates/cr-win/src/app/library.rs:142
 #: crates/cr-win/src/app/library.rs:860
 #: crates/cr-win/src/app.rs:850
-#: macos/CoreRules/ContentView.swift:58
-#: macos/CoreRules/CoreRulesApp.swift:74
+#: macos/CoreRules/ContentView.swift:60
+#: macos/CoreRules/CoreRulesApp.swift:88
 #: macos/CoreRules/SettingsView.swift:69
 msgid "_Open Folder…"
 msgstr "Ordner ö_ffnen…"
@@ -4892,9 +4920,9 @@ msgstr "Daten von der _CD extrahieren…"
 #: crates/cr-win/src/app/settings.rs:29
 #: crates/cr-win/src/app.rs:2331
 #: crates/cr-win/src/app.rs:2635
-#: macos/CoreRules/ContentView.swift:54
-#: macos/CoreRules/Model.swift:246
-#: macos/CoreRules/Model.swift:336
+#: macos/CoreRules/ContentView.swift:56
+#: macos/CoreRules/Model.swift:258
+#: macos/CoreRules/Model.swift:348
 #: macos/CoreRules/SettingsView.swift:63
 msgid "No Core Rules Installation"
 msgstr "Keine Core-Rules-Installation"
@@ -4949,26 +4977,26 @@ msgid "Character created"
 msgstr "Charakter erstellt"
 
 #: crates/cr-gtk/src/main.rs:906
-#: crates/cr-mac-ffi/src/lib.rs:573
+#: crates/cr-mac-ffi/src/lib.rs:804
 #: crates/cr-win/src/app.rs:2763
 msgid "Converted to a character"
 msgstr "In einen Charakter umgewandelt"
 
 #: crates/cr-gtk/src/main.rs:916
 #: crates/cr-win/src/app.rs:4656
-#: macos/CoreRules/ContentView.swift:135
+#: macos/CoreRules/ContentView.swift:137
 msgid "Convert to NPC?"
 msgstr "In NSC umwandeln?"
 
 #: crates/cr-gtk/src/main.rs:917
 #: crates/cr-win/src/app.rs:4657
-#: macos/CoreRules/ContentView.swift:144
+#: macos/CoreRules/ContentView.swift:146
 msgid "This will move the selected Player Character to the NPC List in the DM Toolkit."
 msgstr "Der ausgewählte Spielercharakter wird in die NSC-Liste des DM-Toolkits verschoben."
 
 #: crates/cr-gtk/src/main.rs:923
 #: crates/cr-win/src/app.rs:4659
-#: macos/CoreRules/ContentView.swift:150
+#: macos/CoreRules/ContentView.swift:152
 msgid "_Convert"
 msgstr "_Umwandeln"
 
@@ -4979,6 +5007,8 @@ msgstr "In einen NSC umgewandelt"
 
 #: crates/cr-gtk/src/main.rs:1048
 #: crates/cr-win/src/app.rs:1776
+#: macos/CoreRules/Help.swift:131
+#: macos/CoreRules/Model.swift:410
 msgid "Open a Core Rules folder to read its help"
 msgstr "Öffne einen Core-Rules-Ordner, um seine Hilfe zu lesen"
 
@@ -5023,7 +5053,7 @@ msgstr "Auf einer Tabelle _würfeln…"
 
 #: crates/cr-gtk/src/main.rs:1314
 #: crates/cr-win/src/app/library.rs:133
-#: macos/CoreRules/CoreRulesApp.swift:77
+#: macos/CoreRules/CoreRulesApp.swift:91
 msgid "_Import…"
 msgstr "_Importieren…"
 
@@ -5074,33 +5104,34 @@ msgstr "_Buch der Hilfe"
 
 #: crates/cr-gtk/src/main.rs:1360
 #: crates/cr-win/src/app/settings.rs:68
-#: macos/CoreRules/CoreRulesApp.swift:65
+#: macos/CoreRules/CoreRulesApp.swift:41
+#: macos/CoreRules/CoreRulesApp.swift:79
 msgid "_About Core Rules"
 msgstr "_Über Core Rules"
 
 #: crates/cr-gtk/src/main.rs:1502
 #: crates/cr-win/src/app/library.rs:487
-#: macos/CoreRules/ContentView.swift:475
-#: macos/CoreRules/ContentView.swift:478
+#: macos/CoreRules/ContentView.swift:477
+#: macos/CoreRules/ContentView.swift:480
 msgid "Character Sheet"
 msgstr "Charakterbogen"
 
 #: crates/cr-gtk/src/main.rs:1507
 #: crates/cr-win/src/app/library.rs:638
-#: macos/CoreRules/ContentView.swift:495
+#: macos/CoreRules/ContentView.swift:503
 msgid "Convert to Character"
 msgstr "In Charakter umwandeln"
 
 #: crates/cr-gtk/src/main.rs:1512
 #: crates/cr-win/src/app/library.rs:647
-#: macos/CoreRules/ContentView.swift:498
+#: macos/CoreRules/ContentView.swift:506
 msgid "Convert to NPC"
 msgstr "In NSC umwandeln"
 
 #: crates/cr-gtk/src/main.rs:1517
 #: crates/cr-win/src/app/library.rs:656
 #: crates/cr-win/src/app.rs:2883
-#: macos/CoreRules/ContentView.swift:502
+#: macos/CoreRules/ContentView.swift:510
 msgid "Delete Character"
 msgstr "Charakter löschen"
 
@@ -5115,8 +5146,10 @@ msgstr "Kopieren"
 #: crates/cr-gtk/src/main.rs:1532
 #: crates/cr-win/src/app/library.rs:593
 #: crates/cr-win/src/app/library.rs:604
-#: macos/CoreRules/ContentView.swift:475
-#: macos/CoreRules/ContentView.swift:478
+#: macos/CoreRules/ContentView.swift:477
+#: macos/CoreRules/ContentView.swift:480
+#: macos/CoreRules/ContentView.swift:484
+#: macos/CoreRules/ContentView.swift:486
 msgid "View"
 msgstr "Anzeigen"
 
@@ -5132,51 +5165,52 @@ msgstr "Drucken"
 #: crates/cr-gtk/src/main.rs:1553
 #: crates/cr-gtk/src/main.rs:1827
 #: crates/cr-win/src/app/library.rs:264
-#: macos/CoreRules/ContentView.swift:336
+#: macos/CoreRules/ContentView.swift:338
+#: macos/CoreRules/Help.swift:202
 #: macos/CoreRules/Sheet.swift:106
 msgid "Nothing Selected"
 msgstr "Nichts ausgewählt"
 
 #: crates/cr-gtk/src/main.rs:1582
 #: crates/cr-win/src/app/library.rs:328
-#: macos/CoreRules/ContentView.swift:249
+#: macos/CoreRules/ContentView.swift:251
 msgid "Show a Party"
 msgstr "Eine Gruppe anzeigen"
 
 #: crates/cr-gtk/src/main.rs:1589
-#: crates/cr-mac-ffi/src/lib.rs:415
+#: crates/cr-mac-ffi/src/lib.rs:552
 #: crates/cr-win/src/app/library.rs:337
 msgid "All Types"
 msgstr "Alle Typen"
 
 #: crates/cr-gtk/src/main.rs:1593
 #: crates/cr-win/src/app/library.rs:346
-#: macos/CoreRules/ContentView.swift:252
+#: macos/CoreRules/ContentView.swift:254
 msgid "Show a Part Type"
 msgstr "Einen Bestandteiltyp anzeigen"
 
 #: crates/cr-gtk/src/main.rs:1599
 #: crates/cr-win/src/app/library.rs:354
-#: macos/CoreRules/ContentView.swift:256
+#: macos/CoreRules/ContentView.swift:258
 msgid "Magic Only"
 msgstr "Nur magische"
 
 #: crates/cr-gtk/src/main.rs:1692
 #: crates/cr-gtk/src/main.rs:1825
 #: crates/cr-win/src/app/library.rs:263
-#: macos/CoreRules/ContentView.swift:197
+#: macos/CoreRules/ContentView.swift:199
 msgid "No {section}"
 msgstr "Keine {section}"
 
 #: crates/cr-gtk/src/main.rs:1730
 #: crates/cr-win/src/app/library.rs:271
-#: macos/CoreRules/ContentView.swift:213
+#: macos/CoreRules/ContentView.swift:215
 msgid "Core Rules 2.0 is read-only"
 msgstr "Core Rules 2.0 ist schreibgeschützt"
 
 #: crates/cr-gtk/src/main.rs:1731
 #: crates/cr-win/src/app/library.rs:272
-#: macos/CoreRules/ContentView.swift:215
+#: macos/CoreRules/ContentView.swift:217
 msgid "Open an Expansion installation and import this content with Import Core Rules 2.0…"
 msgstr "Öffnen Sie eine Expansion-Installation und importieren Sie diese Inhalte mit Core Rules 2.0 importieren…"
 
@@ -5195,17 +5229,17 @@ msgstr "Einträge"
 #: crates/cr-win/src/app.rs:1332
 #: crates/cr-win/src/app.rs:1345
 #: crates/cr-win/src/app.rs:2909
-#: macos/CoreRules/ContentView.swift:193
-#: macos/CoreRules/Model.swift:113
-#: macos/CoreRules/Model.swift:256
-#: macos/CoreRules/Model.swift:273
-#: macos/CoreRules/Model.swift:366
+#: macos/CoreRules/ContentView.swift:195
+#: macos/CoreRules/Model.swift:120
+#: macos/CoreRules/Model.swift:268
+#: macos/CoreRules/Model.swift:285
+#: macos/CoreRules/Model.swift:378
 msgid "Could Not Read"
 msgstr "Konnte nicht gelesen werden"
 
 #: crates/cr-gtk/src/main.rs:2104
 #: crates/cr-win/src/app/library.rs:687
-#: macos/CoreRules/ContentView.swift:373
+#: macos/CoreRules/ContentView.swift:375
 msgid "Icon"
 msgstr "Symbol"
 
@@ -5224,9 +5258,9 @@ msgstr "Hintergrund"
 #: crates/cr-win/src/app/edit.rs:248
 #: crates/cr-win/src/app/library.rs:496
 #: crates/cr-win/src/app.rs:2715
-#: macos/CoreRules/ContentView.swift:312
-#: macos/CoreRules/ContentView.swift:482
-#: macos/CoreRules/ContentView.swift:484
+#: macos/CoreRules/ContentView.swift:314
+#: macos/CoreRules/ContentView.swift:490
+#: macos/CoreRules/ContentView.swift:492
 #: macos/CoreRules/Edit.swift:145
 msgid "Edit Character"
 msgstr "Charakter bearbeiten"
@@ -5836,7 +5870,7 @@ msgstr "Bild konnte nicht verwendet werden"
 
 #: crates/cr-gtk/src/picture.rs:674
 #: crates/cr-win/src/app/library.rs:705
-#: macos/CoreRules/ContentView.swift:398
+#: macos/CoreRules/ContentView.swift:400
 msgid "Next Image"
 msgstr "Nächstes Bild"
 
@@ -5844,7 +5878,7 @@ msgstr "Nächstes Bild"
 #: crates/cr-gtk/src/picture.rs:741
 #: crates/cr-win/src/app/library.rs:715
 #: crates/cr-win/src/app/library.rs:832
-#: macos/CoreRules/ContentView.swift:402
+#: macos/CoreRules/ContentView.swift:404
 msgid "Full Screen"
 msgstr "Vollbild"
 
@@ -5926,7 +5960,7 @@ msgstr "Drucken nicht möglich"
 #: crates/cr-win/src/app/library.rs:629
 #: crates/cr-win/src/app/sheet.rs:86
 #: crates/cr-win/src/app.rs:1690
-#: macos/CoreRules/CoreRulesApp.swift:83
+#: macos/CoreRules/CoreRulesApp.swift:97
 #: macos/CoreRules/Sheet.swift:152
 #: macos/CoreRules/Sheet.swift:154
 msgid "Save as _PDF…"
@@ -6051,6 +6085,8 @@ msgstr "Tabellen konnten nicht gelesen werden"
 #: crates/cr-store/src/books.rs:294
 #: crates/cr-win/src/app/tables.rs:187
 #: crates/cr-win/src/app/tables.rs:190
+#: macos/CoreRules/Help.swift:239
+#: macos/CoreRules/Help.swift:249
 msgid "Book"
 msgstr "Buch"
 
@@ -6224,9 +6260,9 @@ msgstr "Importieren"
 #: crates/cr-gtk/src/transfer.rs:636
 #: crates/cr-win/src/app.rs:3135
 #: crates/cr-win/src/app.rs:3177
-#: macos/CoreRules/ContentView.swift:96
+#: macos/CoreRules/ContentView.swift:98
 #: macos/CoreRules/Import.swift:48
-#: macos/CoreRules/Model.swift:342
+#: macos/CoreRules/Model.swift:354
 msgid "Import Failed"
 msgstr "Import fehlgeschlagen"
 
@@ -6641,8 +6677,8 @@ msgstr "Wähle eine Klasse zum Kopieren"
 #: crates/cr-gtk/src/userdb.rs:2499
 #: crates/cr-win/src/app/library.rs:310
 #: crates/cr-win/src/app/templates.rs:865
-#: macos/CoreRules/ContentView.swift:269
-#: macos/CoreRules/ContentView.swift:276
+#: macos/CoreRules/ContentView.swift:271
+#: macos/CoreRules/ContentView.swift:278
 msgid "Show Standard or Custom Records"
 msgstr "Standard- oder eigene Datensätze anzeigen"
 
@@ -9301,8 +9337,8 @@ msgid "Crossover Penalty"
 msgstr "Fremdklassenmalus"
 
 #: crates/cr-store/src/userdb/classes/pages.rs:97
-#: macos/CoreRules/ContentView.swift:505
-#: macos/CoreRules/ContentView.swift:507
+#: macos/CoreRules/ContentView.swift:513
+#: macos/CoreRules/ContentView.swift:515
 msgid "More"
 msgstr "Mehr"
 
@@ -11779,7 +11815,7 @@ msgid "Schools of Opposition to the current School"
 msgstr "Gegenschulen der aktuellen Schule"
 
 #: crates/cr-store/src/userdb/parts/pages.rs:1033
-#: macos/CoreRules/CoreRulesApp.swift:68
+#: macos/CoreRules/CoreRulesApp.swift:82
 msgid "Settings"
 msgstr "Kampagnenwelten"
 
@@ -12598,7 +12634,7 @@ msgstr[0] "{chosen} von {n} Element gewählt"
 msgstr[1] "{chosen} von {n} Elementen gewählt"
 
 #: crates/cr-win/src/app/library.rs:843
-#: macos/CoreRules/Model.swift:391
+#: macos/CoreRules/Model.swift:479
 msgid "Put the data package made by Extract Data from CD… in {folder}, or open the folder where AD&D Core Rules 2.0 is installed."
 msgstr "Legen Sie das mit „Daten von der CD extrahieren…“ erstellte Datenpaket in {folder} ab oder öffnen Sie den Ordner, in dem AD&D Core Rules 2.0 installiert ist."
 
@@ -12652,38 +12688,47 @@ msgid "Installation"
 msgstr "Installation"
 
 #: crates/cr-win/src/app/settings.rs:116
+#: macos/CoreRules/About.swift:74
 msgid "What's New in {version}"
 msgstr "Neu in Version {version}"
 
 #: crates/cr-win/src/app/settings.rs:127
+#: macos/CoreRules/About.swift:93
 msgid "Developer"
 msgstr "Entwickler"
 
 #: crates/cr-win/src/app/settings.rs:142
+#: macos/CoreRules/About.swift:100
 msgid "Translators"
 msgstr "Übersetzer"
 
 #: crates/cr-win/src/app/settings.rs:157
+#: macos/CoreRules/About.swift:92
 msgid "Credits"
 msgstr "Mitwirkende"
 
 #: crates/cr-win/src/app/settings.rs:213
+#: macos/CoreRules/About.swift:120
 msgid "Legal"
 msgstr "Rechtliches"
 
 #: crates/cr-win/src/app/settings.rs:221
+#: macos/CoreRules/About.swift:151
 msgid "A bug report helps most with these details and what you did when it happened."
 msgstr "Ein Fehlerbericht hilft am meisten mit diesen Angaben und mit dem, was Sie taten, als es passierte."
 
 #: crates/cr-win/src/app/settings.rs:231
+#: macos/CoreRules/About.swift:161
 msgid "Copy Details"
 msgstr "Angaben kopieren"
 
 #: crates/cr-win/src/app/settings.rs:232
+#: macos/CoreRules/About.swift:167
 msgid "Report an Issue"
 msgstr "Problem melden"
 
 #: crates/cr-win/src/app/settings.rs:237
+#: macos/CoreRules/About.swift:149
 msgid "Troubleshooting"
 msgstr "Fehlerbehebung"
 
@@ -12715,7 +12760,7 @@ msgid "WebView2 did not start ({reason})."
 msgstr "WebView2 ist nicht gestartet ({reason})."
 
 #: crates/cr-win/src/app.rs:4632
-#: macos/CoreRules/ContentView.swift:142
+#: macos/CoreRules/ContentView.swift:144
 msgid "The character leaves the character list and its file is removed."
 msgstr "Der Charakter wird aus der Charakterliste entfernt und seine Datei gelöscht."
 
@@ -12751,3 +12796,15 @@ msgstr "_ISO-Abbild…"
 #: crates/cr-win/src/app.rs:4716
 msgid "_Folder…"
 msgstr "_Ordner…"
+
+#: macos/CoreRules/About.swift:49
+msgid "Version {version}"
+msgstr "Version {version}"
+
+#: macos/CoreRules/CoreRulesApp.swift:118
+msgid "Core Rules Help"
+msgstr "Core Rules-Hilfe"
+
+#: macos/CoreRules/CoreRulesApp.swift:133
+msgid "Help on {name}"
+msgstr "Hilfe zu {name}"

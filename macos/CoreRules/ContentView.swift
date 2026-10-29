@@ -15,6 +15,8 @@ struct ContentView: View {
             .onAppear {
                 model.openSettings = { openSettings() }
                 model.openSheet = { (id: UUID) in openWindow(id: "sheet", value: id) }
+                model.openHelpWindow = { openWindow(id: "help") }
+                model.openAbout = { openWindow(id: "about") }
             }
             .sheet(item: $model.modal) { modal in
                 ModalView(modal: modal)
@@ -477,13 +479,19 @@ struct EntryTools: ToolbarContent {
                 }
                 .help(commands.sheet ? tr("Character Sheet") : tr("View"))
             }
+            if commands.view && commands.monster {
+                Button { model.monsterHelp(print: false) } label: {
+                    Label(tr("View"), systemImage: "doc.richtext")
+                }
+                .help(tr("View"))
+            }
             if commands.edit && commands.sheet {
                 Button { model.editCharacter() } label: {
                     Label(tr("Edit Character"), systemImage: "pencil")
                 }
                 .help(tr("Edit Character"))
             }
-            if commands.sheet || (commands.print && !commands.monster) {
+            if commands.sheet || commands.print {
                 Button { model.perform(Action.SHEET_PRINT) } label: {
                     Label(more(tr("_Print…")), systemImage: "printer")
                 }
@@ -506,6 +514,10 @@ struct EntryTools: ToolbarContent {
                 }
                 .help(tr("More"))
             }
+            Button { model.perform(Action.HELP_CONTROL) } label: {
+                Label(tr("Help"), systemImage: "questionmark.circle")
+            }
+            .help(tr("Help"))
         }
     }
 }

@@ -88,6 +88,11 @@ impl WizardSession {
 
 #[uniffi::export]
 impl WizardSession {
+    /// The program help's topic of the page in view.
+    pub fn help(&self) -> u32 {
+        self.wizard().help()
+    }
+
     /// The wizard's title: New Character.
     pub fn title(&self) -> String {
         self.wizard().title().to_owned()

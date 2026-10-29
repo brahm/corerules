@@ -29,6 +29,9 @@ printf 'APPL????' > "$app/Contents/PkgInfo"
 for language in en pt-BR es it fr de; do
     mkdir -p "$app/Contents/Resources/$language.lproj"
 done
+# The license of the Material Design Icons sword the sidebar draws,
+# which About shows.
+cp crates/cr-win/package/MaterialDesignIcons-LICENSE.txt "$app/Contents/Resources/"
 
 # The icon, from the GNOME app's.
 iconset="$out/CoreRules.iconset"
