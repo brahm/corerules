@@ -13,8 +13,20 @@ pub enum PromptKind {
     /// The Expansion's Core Rules Vs Player's Option window, with "Do not
     /// show this window again" ticked or not.
     CoreVsOption { off: bool },
-    /// A prompt the Mac app does not show yet.
-    Other,
+    /// "Add one point to any ability score": one button per ability, the
+    /// score beside it, and no Cancel.
+    RaiseOne { labels: Vec<String> },
+    /// Enter Character's All Classes…: one class of each group, or none.
+    AllClasses { groups: Vec<PromptGroup> },
+}
+
+/// A group of All Classes…: its classes, "None" first, and the one
+/// chosen.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct PromptGroup {
+    pub name: String,
+    pub classes: Vec<String>,
+    pub chosen: u32,
 }
 
 /// A question, warning or message in view.
@@ -34,8 +46,28 @@ impl PromptInfo {
             prompt::PromptKind::Question { yes_default } => PromptKind::Question {
                 yes_default: *yes_default,
             },
+            // OK refuses and Ignore allows, or No leaves the item out:
+            // the labels say which.
+            prompt::PromptKind::Ignorable | prompt::PromptKind::ItemError => {
+                PromptKind::Question { yes_default: false }
+            }
             prompt::PromptKind::CoreVsOption { off } => PromptKind::CoreVsOption { off: *off },
-            _ => PromptKind::Other,
+            prompt::PromptKind::RaiseOne { labels } => PromptKind::RaiseOne {
+                labels: labels.to_vec(),
+            },
+            prompt::PromptKind::AllClasses { groups, chosen } => PromptKind::AllClasses {
+                groups: groups
+                    .iter()
+                    .zip(chosen)
+                    .map(|((name, classes), &chosen)| PromptGroup {
+                        name: cr_i18n::tr(name).to_owned(),
+                        classes: std::iter::once(cr_i18n::tr("None").to_owned())
+                            .chain(classes.iter().cloned())
+                            .collect(),
+                        chosen: chosen as u32,
+                    })
+                    .collect(),
+            },
         };
         Self {
             kind,

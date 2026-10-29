@@ -116,7 +116,6 @@ pub const NOT_YET_ON_WINDOWS: &[Action] = &[];
 /// empty.
 pub const NOT_YET_ON_MACOS: &[Action] = &[
     EXTRACT_DATA,
-    ENTER_CHARACTER,
     NEW_NPC,
     NEW_NPC_GROUP,
     ROLL_TREASURE,
