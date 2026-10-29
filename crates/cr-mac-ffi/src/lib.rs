@@ -726,9 +726,8 @@ impl Library {
         let screen = cr_store::help::topic::of_section(&section);
         let controls = self.install.screen_help(screen);
         let texts = [entry.title.trim(), entry.subtitle.as_str()];
-        match cr_app::help::context_help(&self.install, screen, &texts, &controls, || {
-            self.items()
-        }) {
+        match cr_app::help::context_help(&self.install, screen, &texts, &controls, || self.items())
+        {
             Some(Found::Topic(found)) if found.popup => self
                 .help_files()
                 .ok()

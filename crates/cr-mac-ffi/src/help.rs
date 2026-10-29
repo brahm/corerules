@@ -72,11 +72,17 @@ pub enum HelpLinked {
     /// Another topic, now shown.
     Shown,
     /// A popup over the topic: the page shows this with `showPopup(html)`.
-    Popup { html: String },
+    Popup {
+        html: String,
+    },
     /// A web page, for the browser.
-    Web { uri: String },
+    Web {
+        uri: String,
+    },
     /// A topic that is not in this installation, as the app says it.
-    Missing { message: String },
+    Missing {
+        message: String,
+    },
     Nothing,
 }
 
