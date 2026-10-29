@@ -133,9 +133,12 @@ struct TableView: View {
         .frame(minWidth: 560, minHeight: 480)
         .navigationTitle(tr("Roll on a Table"))
         .toolbar {
-            TableTools(tables: tables) { (reference: TableReference) in
-                app.openBook(reference.book, find: reference.find)
-            }
+            TableTools(
+                tables: tables,
+                read: { (reference: TableReference) in
+                    app.openBook(reference.book, find: reference.find)
+                },
+                treasure: { app.perform(Action.ROLL_TREASURE) })
         }
     }
 }
@@ -213,6 +216,8 @@ struct TableTools: ToolbarContent {
     @ObservedObject var tables: TableModel
     /// Opens the table's book at the table.
     let read: (TableReference) -> Void
+    /// Opens Roll Treasure, where the roll says to.
+    let treasure: () -> Void
 
     var body: some ToolbarContent {
         ToolbarItemGroup {
@@ -246,6 +251,15 @@ struct TableTools: ToolbarContent {
                     Label(tr("Read in _Book"), systemImage: "book")
                 }
                 .help(tr("Read in _Book"))
+            }
+            if tables.result?.treasure == true {
+                Button {
+                    tables.session.close()
+                    treasure()
+                } label: {
+                    Label(tr("Open _Treasure Generator"), systemImage: "dollarsign.circle")
+                }
+                .help(tr("Open _Treasure Generator"))
             }
         }
     }

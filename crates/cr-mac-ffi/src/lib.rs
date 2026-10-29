@@ -5,6 +5,7 @@
 //! each screen ported to the Mac; it holds no rule of its own.
 
 mod book;
+mod bundle;
 mod edit;
 mod form;
 mod help;
@@ -13,6 +14,7 @@ mod npc;
 mod prompt;
 mod sheet;
 mod tables;
+mod treasure;
 mod wizard;
 
 use std::sync::{Arc, Mutex, OnceLock};
@@ -35,6 +37,7 @@ pub use npc::{NpcSession, NpcsCreated};
 pub use prompt::{PromptGroup, PromptInfo, PromptKind};
 pub use sheet::{SheetOptions, SheetSectionInfo, SheetSession};
 pub use tables::{TableBlock, TableOption, TableReference, TableResult, TableSession};
+pub use treasure::{TreasureSaved, TreasureSession};
 pub use wizard::WizardSession;
 
 uniffi::setup_scaffolding!();
@@ -362,6 +365,7 @@ pub struct Library {
     /// first used.
     npc_rules: Mutex<Option<Arc<cr_store::npc::NpcRules>>>,
     table_rolls: Mutex<Option<Arc<cr_store::tables::TableRolls>>>,
+    treasure_rules: Mutex<Option<Arc<cr_store::treasure::TreasureRules>>>,
     generators: tables::Generators,
 }
 
@@ -376,6 +380,7 @@ impl Library {
             items: OnceLock::new(),
             npc_rules: Mutex::default(),
             table_rolls: Mutex::default(),
+            treasure_rules: Mutex::default(),
             generators: tables::Generators::default(),
         })
     }
@@ -748,6 +753,15 @@ impl Library {
         library::book_name(&entry.key).map(str::to_owned)
     }
 
+    /// The name of the saved treasure in view, for Edit and Copy.
+    pub fn entry_treasure(&self, section: String, index: u32) -> Option<String> {
+        let entry = self.entry(&section, index)?;
+        entry
+            .key
+            .strip_prefix(cr_store::catalog::TREASURE_KEY)
+            .map(str::to_owned)
+    }
+
     /// Reads the book `name` for its window; `state` is the reader's
     /// state file, and `find` starts Find with a text.
     pub fn open_book(
@@ -945,6 +959,23 @@ impl Library {
     pub fn roll_table(&self) -> Result<Arc<TableSession>, CoreError> {
         let rolls = cached(&self.table_rolls, || self.install.table_rolls())?;
         Ok(TableSession::open(rolls, &self.generators))
+    }
+
+    /// Roll Treasure, on the saved treasure `saved` if given; with
+    /// `copy`, on its items under no name, for Save to add a new one.
+    pub fn roll_treasure(
+        &self,
+        saved: Option<String>,
+        copy: bool,
+    ) -> Result<Arc<TreasureSession>, CoreError> {
+        let rules = cached(&self.treasure_rules, || self.install.treasure_rules())?;
+        TreasureSession::open(
+            self.install.clone(),
+            rules,
+            saved,
+            copy,
+            self.generators.rand.clone(),
+        )
     }
 }
 

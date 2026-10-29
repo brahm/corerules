@@ -569,9 +569,12 @@ The phases run in order:
      NPC and New NPC Group, as forms in a sheet whose Create makes and
      saves the NPCs off the main thread, and Roll on a Table in a window
      of its own, with Roll, Roll Again, Copy Results and Read in Book;
-     they are in a Tools menu, as in the GNOME app's main menu. Then Roll
-     Treasure and the saved treasure, then the encounters, encounter
-     tables, parties and traps.
+     they are in a Tools menu, as in the GNOME app's main menu (PR
+     #126). Then Roll Treasure in a window of its own, its treasure
+     drawn as a tree with each item's edits and the bundle editor's
+     dialogs, Save, Print, Save as PDF and Delete Saved Treasure, and Edit
+     and Copy on a saved treasure in the library. Then the encounters,
+     encounter tables, parties and traps.
 5. **Beta and release** on the three systems with the same tag, with an
    install page on the website and in the README that shows the Open
    Anyway steps.

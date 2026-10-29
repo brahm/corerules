@@ -19,6 +19,7 @@ struct ContentView: View {
                 model.openBookWindow = { (id: UUID) in openWindow(id: "book", value: id) }
                 model.openAbout = { openWindow(id: "about") }
                 model.openTablesWindow = { openWindow(id: "tables") }
+                model.openTreasureWindow = { openWindow(id: "treasure") }
             }
             .sheet(item: $model.modal) { modal in
                 ModalView(modal: modal)
@@ -500,6 +501,18 @@ struct EntryTools: ToolbarContent {
                     Label(tr("Edit Character"), systemImage: "pencil")
                 }
                 .help(tr("Edit Character"))
+            }
+            if commands.edit, let name = model.treasureName {
+                Button { model.rollTreasure(saved: name) } label: {
+                    Label(tr("Edit"), systemImage: "pencil")
+                }
+                .help(tr("Edit"))
+                if commands.copy {
+                    Button { model.rollTreasure(saved: name, copy: true) } label: {
+                        Label(tr("Copy"), systemImage: "doc.on.doc")
+                    }
+                    .help(tr("Copy"))
+                }
             }
             if commands.sheet || commands.print {
                 Button { model.perform(Action.SHEET_PRINT) } label: {

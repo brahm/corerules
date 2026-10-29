@@ -85,6 +85,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var help: HelpModel?
     /// Roll on a Table, while its window is open.
     @Published private(set) var tables: TableModel?
+    /// Roll Treasure, while its window is open.
+    @Published private(set) var treasure: TreasureModel?
 
     /// Opens Settings, a sheet's window, the help's and About; the main
     /// window's view sets them, as only a view can.
@@ -94,6 +96,7 @@ final class AppModel: ObservableObject {
     var openBookWindow: (UUID) -> Void = { _ in }
     var openAbout: () -> Void = {}
     var openTablesWindow: () -> Void = {}
+    var openTreasureWindow: () -> Void = {}
 
     init() {
         if let folder = Prefs.folder, let library = try? Library.open(path: folder) {
@@ -109,6 +112,7 @@ final class AppModel: ObservableObject {
         if library !== self.library {
             help = nil
             tables = nil
+            treasure = nil
         }
         self.library = library
         sections = library?.sections() ?? []
@@ -207,6 +211,8 @@ final class AppModel: ObservableObject {
             return writable && modal == nil
         case Action.ROLL_TABLE:
             return library != nil
+        case Action.ROLL_TREASURE:
+            return writable
         case Action.SHEET_PRINT:
             if sheet != nil { return true }
             guard let commands = details?.commands else { return false }
@@ -244,6 +250,7 @@ final class AppModel: ObservableObject {
         case Action.NEW_NPC: newNpc(group: false)
         case Action.NEW_NPC_GROUP: newNpc(group: true)
         case Action.ROLL_TABLE: rollTable()
+        case Action.ROLL_TREASURE: rollTreasure()
         case Action.SHEET_PRINT:
             if sheet == nil && details?.commands.monster == true {
                 monsterHelp(print: true)
@@ -377,6 +384,49 @@ final class AppModel: ObservableObject {
             }
         }
         openTablesWindow()
+    }
+
+    /// The saved treasure in view, which Edit and Copy open.
+    var treasureName: String? {
+        guard let library, let section, let entry else { return nil }
+        return library.entryTreasure(section: section, index: entry)
+    }
+
+    /// Roll Treasure in its window, on the saved treasure `saved` if
+    /// given; with `copy`, on its items under no name.
+    func rollTreasure(saved: String? = nil, copy: Bool = false) {
+        guard let library else { return }
+        do {
+            let treasure = TreasureModel(try library.rollTreasure(saved: saved, copy: copy))
+            treasure.saved = { [weak self] (said: TreasureSaved) in
+                switch said {
+                case .saved:
+                    self?.notice = Notice(title: tr("Treasure saved"), text: "")
+                    self?.reload()
+                case .failed(let error):
+                    self?.notice = Notice(title: tr("Save Treasure"), text: error)
+                }
+            }
+            treasure.deleted = { [weak self] (error: Error?) in
+                guard let self else { return }
+                if let error {
+                    self.fail(plain(tr("_Delete Saved Treasure")), error)
+                } else {
+                    self.treasure?.close()
+                    self.notice = Notice(title: tr("Saved treasure deleted"), text: "")
+                    self.reload()
+                }
+            }
+            self.treasure = treasure
+            openTreasureWindow()
+        } catch {
+            fail(tr("Roll Treasure"), error)
+        }
+    }
+
+    /// Roll Treasure's window closed.
+    func closeTreasure() {
+        treasure = nil
     }
 
     /// Roll on a Table's window closed.

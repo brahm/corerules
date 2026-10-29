@@ -114,6 +114,16 @@ pub enum FormRow {
         remove: Option<u32>,
         icon: Option<Vec<u8>>,
     },
+    /// A line of a tree, as a treasure's items: indented `depth` steps
+    /// under the line that holds it, dimmed for a line that is not an
+    /// item, with its buttons.
+    Tree {
+        title: String,
+        subtitle: String,
+        depth: u32,
+        dimmed: bool,
+        buttons: Vec<FormButton>,
+    },
     /// Add on a list: what may be added, each chosen adds itself.
     Add {
         id: u32,

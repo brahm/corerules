@@ -101,6 +101,18 @@ struct FormRowView: View {
             }
         case .item(let title, let subtitle, let number, let remove, let icon):
             ItemRow(title: title, subtitle: subtitle, number: number, remove: remove, icon: icon, act: act)
+        case .tree(let title, let subtitle, let depth, let dimmed, let buttons):
+            LabeledContent {
+                HStack {
+                    FormButtons(buttons: buttons, act: act)
+                }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.borderless)
+            } label: {
+                TwoLines(title: title, subtitle: subtitle)
+                    .padding(.leading, CGFloat(depth) * 20)
+                    .opacity(dimmed ? 0.6 : 1)
+            }
         case .add(let id, let label, let options):
             AddRow(id: id, label: label, options: options, act: act)
         case .portrait(let id, let path, let subtitle, let race):

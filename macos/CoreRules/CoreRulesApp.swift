@@ -47,6 +47,11 @@ struct CoreRulesApp: App {
                 .environmentObject(model)
         }
         .defaultSize(width: 760, height: 720)
+        Window(tr("Roll Treasure"), id: "treasure") {
+            TreasureWindow()
+                .environmentObject(model)
+        }
+        .defaultSize(width: 720, height: 760)
         Window(tr("Help"), id: "help") {
             HelpWindow()
                 .environmentObject(model)
@@ -133,6 +138,7 @@ struct ToolsCommands: Commands {
                 .keyboardShortcut("n", modifiers: [.command, .shift])
             item(more(tr("New NPC _Group…")), Action.NEW_NPC_GROUP)
             Divider()
+            item(more(tr("_Roll Treasure…")), Action.ROLL_TREASURE)
             item(more(tr("Roll on a _Table…")), Action.ROLL_TABLE)
         }
     }
@@ -150,6 +156,7 @@ struct HelpCommands: Commands {
     @FocusedValue(\.sheet) private var sheet: SheetModel?
     @FocusedValue(\.book) private var book: BookModel?
     @FocusedValue(\.tables) private var tables: TableModel?
+    @FocusedValue(\.treasure) private var treasure: TreasureModel?
 
     var body: some Commands {
         CommandGroup(replacing: .help) {
@@ -158,6 +165,8 @@ struct HelpCommands: Commands {
                     model.booksHelp()
                 } else if let tables {
                     model.openHelp(programHelp(number: tables.session.help()))
+                } else if let treasure {
+                    model.openHelp(programHelp(number: treasure.session.help()))
                 } else {
                     model.perform(Action.HELP_HERE, sheet: sheet)
                 }
