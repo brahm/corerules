@@ -116,7 +116,6 @@ pub const NOT_YET_ON_WINDOWS: &[Action] = &[];
 /// empty.
 pub const NOT_YET_ON_MACOS: &[Action] = &[
     EXTRACT_DATA,
-    ROLL_TREASURE,
     NEW_ENCOUNTER,
     NEW_TABLE,
     MANAGE_PARTIES,
@@ -132,10 +131,6 @@ pub const NOT_YET_ON_MACOS: &[Action] = &[
     UDB_SCHOOLS,
     UDB_ALLOWED,
     UDB_RESTORE,
-    TREASURE_SAVE,
-    TREASURE_PRINT,
-    TREASURE_PDF,
-    TREASURE_DELETE,
     ENCOUNTER_PRINT,
     ENCOUNTER_PDF,
     ENCOUNTER_DELETE,
