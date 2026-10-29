@@ -43,6 +43,8 @@ enum Confirm {
     /// Delete on a record of the user databases, with the question its
     /// kind asks.
     case deleteRecord(section: String, name: String, title: String, text: String)
+    /// Restore on a shipped treasure table.
+    case restoreTable(name: String, title: String, text: String)
 }
 
 @MainActor
@@ -239,6 +241,11 @@ final class AppModel: ObservableObject {
         case Action.UDB_COPY, Action.UDB_EDIT, Action.UDB_DELETE, Action.UDB_SUBRACE,
             Action.UDB_SCHOOLS:
             return writable && modal == nil && recordEntry != nil
+        case Action.UDB_ALLOWED:
+            return writable && modal == nil && recordEntry?.section == "races"
+        case Action.UDB_RESTORE:
+            guard let record = recordEntry else { return false }
+            return writable && modal == nil && record.section == "treasure-tables" && !record.custom
         case Action.TRAP_EDIT, Action.TRAP_COPY, Action.TRAP_DELETE:
             return writable && modal == nil && pendingTrap != nil
         case Action.HELP, Action.HELP_HERE:
@@ -284,6 +291,8 @@ final class AppModel: ObservableObject {
         case Action.UDB_DELETE: actOnRecord(.delete)
         case Action.UDB_SUBRACE: actOnRecord(.newSubrace)
         case Action.UDB_SCHOOLS: actOnRecord(.schools)
+        case Action.UDB_ALLOWED: allowedClasses()
+        case Action.UDB_RESTORE: askRestore()
         case Action.TRAP_EDIT: actOnTrap(.edit)
         case Action.TRAP_COPY: actOnTrap(.copy)
         case Action.TRAP_DELETE: actOnTrap(.delete)
@@ -661,6 +670,29 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Allowed Classes… on the race in view, in the record's sheet.
+    private func allowedClasses() {
+        guard let library, let record = recordEntry, record.section == "races" else { return }
+        do {
+            let session = try library.allowedClasses(name: record.name, key: record.key)
+            let allowed = RecordModel(session)
+            allowed.done = { [weak self] (done: RecordDone) in
+                self?.recordSaved(done, then: nil)
+            }
+            modal = .record(allowed)
+        } catch {
+            fail(plain(tr("_Allowed Classes…")), error)
+        }
+    }
+
+    /// Restore on the shipped treasure table in view, asked first.
+    private func askRestore() {
+        guard let library, let record = recordEntry else { return }
+        let asked = library.restoreTableQuestion()
+        guard asked.count == 2 else { return }
+        confirm = .restoreTable(name: record.name, title: asked[0], text: asked[1])
+    }
+
     /// New in the other parts' section, on the part type chosen.
     func newPart(_ type: PartType) {
         modal = nil
@@ -838,6 +870,11 @@ final class AppModel: ObservableObject {
                 reload(select: npc)
             case .deleteRecord(let section, let name, _, _):
                 deleteRecord(section: section, name: name)
+            case .restoreTable(let name, _, _):
+                let done = try library.restoreTable(name: name)
+                library.forgetRules()
+                reload(select: done.key)
+                notice = Notice(title: done.said, text: "")
             }
         } catch {
             fail(tr("Not Saved"), error)

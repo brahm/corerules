@@ -120,8 +120,6 @@ pub const NOT_YET_ON_MACOS: &[Action] = &[
     IMPORT_CORE20,
     NEW_PACKAGE,
     EDIT_PACKAGE,
-    UDB_ALLOWED,
-    UDB_RESTORE,
 ];
 
 #[cfg(test)]

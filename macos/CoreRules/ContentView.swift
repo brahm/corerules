@@ -151,6 +151,7 @@ struct ConfirmAlert: ViewModifier {
         case .delete(_, let name): return tr("Delete {name}?", ["name": name])
         case .toNpc: return tr("Convert to NPC?")
         case .deleteRecord(_, _, let title, _): return title
+        case .restoreTable(_, let title, _): return title
         case nil: return ""
         }
     }
@@ -161,18 +162,20 @@ struct ConfirmAlert: ViewModifier {
         case .toNpc:
             return tr("This will move the selected Player Character to the NPC List in the DM Toolkit.")
         case .deleteRecord(_, _, _, let text): return text
+        case .restoreTable(_, _, let text): return text
         case nil: return ""
         }
     }
 
     private var yes: String {
         if case .toNpc = model.confirm { return tr("_Convert") }
+        if case .restoreTable = model.confirm { return tr("_Restore") }
         return tr("_Delete")
     }
 
     private var destructive: Bool {
         switch model.confirm {
-        case .delete, .deleteRecord: return true
+        case .delete, .deleteRecord, .restoreTable: return true
         default: return false
         }
     }
@@ -605,8 +608,9 @@ struct EntryTools: ToolbarContent {
     }
 }
 
-/// The extras of a record of the user databases: New Subrace on a race,
-/// Schools on a spell, and Delete on the user's.
+/// The extras of a record of the user databases: New Subrace and Allowed
+/// Classes on a race, Schools on a spell, Restore on a shipped treasure
+/// table, and Delete on the user's.
 struct RecordMenu: View {
     @ObservedObject var model: AppModel
     let record: RecordEntry
@@ -615,11 +619,19 @@ struct RecordMenu: View {
         record.section == "wizard-spells" || record.section == "priest-spells"
     }
 
+    private var restore: Bool {
+        record.section == "treasure-tables" && !record.custom
+    }
+
     var body: some View {
-        if record.section == "races" || spell || record.custom {
+        if record.section == "races" || spell || restore || record.custom {
             Menu {
                 if record.section == "races" {
                     Button(more(tr("New _Subrace…"))) { model.perform(Action.UDB_SUBRACE) }
+                    Button(more(tr("_Allowed Classes…"))) { model.perform(Action.UDB_ALLOWED) }
+                }
+                if restore {
+                    Button(more(tr("_Restore"))) { model.perform(Action.UDB_RESTORE) }
                 }
                 if spell {
                     Button(more(tr("_Schools…"))) { model.perform(Action.UDB_SCHOOLS) }

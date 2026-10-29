@@ -11,8 +11,10 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use cr_app::bundle::BundleInput;
 use cr_app::prompt::Answer;
 use cr_app::records::actions::{self, Act, Opened};
+use cr_app::records::allowed::{self, AllowedEffect, AllowedForm, AllowedInput};
 use cr_app::records::dialogs::{self, AttackInput, Dialog, DialogInput, FreeSpellsEdit};
 use cr_app::records::form::{Field, GRID_ROWS, RecordEffect, RecordForm, RecordInput};
+use cr_app::records::tables::{self, TableEffect, TableForm, TableInput};
 use cr_i18n::tr;
 use cr_store::Installation;
 use cr_store::pictures::Kind;
@@ -28,10 +30,20 @@ use crate::{CoreError, png};
 
 /// A control of the editor.
 #[derive(Clone)]
-enum In {
+pub(crate) enum In {
     Record(RecordInput),
     /// Choose… on the picture or icon field with this index.
     Picture(usize),
+    Table(TableInput),
+    Allowed(AllowedInput),
+}
+
+/// What the sheet edits: a record, a treasure table, or a race's
+/// Allowed Classes, with the key of the race.
+pub(crate) enum Editor {
+    Record(Box<RecordForm>),
+    Table(Box<TableForm>),
+    Allowed(Box<AllowedForm>, String),
 }
 
 fn rec(input: RecordInput) -> In {
@@ -78,7 +90,7 @@ pub struct PictureChoice {
 #[derive(uniffi::Object)]
 pub struct RecordSession {
     install: Arc<Installation>,
-    form: Mutex<RecordForm>,
+    editor: Mutex<Editor>,
     acts: Mutex<Acts<In>>,
     /// The field Choose… asked a picture for, until the app takes it.
     picking: Mutex<Option<u32>>,
@@ -86,22 +98,82 @@ pub struct RecordSession {
 }
 
 impl RecordSession {
-    pub(crate) fn new(install: Arc<Installation>, form: RecordForm) -> Arc<Self> {
+    pub(crate) fn new(install: Arc<Installation>, editor: Editor) -> Arc<Self> {
         Arc::new(Self {
             install,
-            form: Mutex::new(form),
+            editor: Mutex::new(editor),
             acts: Mutex::default(),
             picking: Mutex::default(),
             done: Mutex::default(),
         })
     }
 
-    fn form(&self) -> MutexGuard<'_, RecordForm> {
-        self.form.lock().unwrap_or_else(|e| e.into_inner())
+    fn editor(&self) -> MutexGuard<'_, Editor> {
+        self.editor.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    fn done(&self, done: RecordDone) {
+        *self.done.lock().unwrap_or_else(|e| e.into_inner()) = Some(done);
     }
 
     /// Does what the editor asks: saves, and keeps what saving did.
-    fn effects(&self, form: &mut RecordForm) {
+    fn effects(&self, editor: &mut Editor) {
+        match editor {
+            Editor::Record(form) => self.record_effects(form),
+            Editor::Table(form) => self.table_effects(form),
+            Editor::Allowed(form, key) => self.allowed_effects(form, key),
+        }
+    }
+
+    fn table_effects(&self, form: &mut TableForm) {
+        loop {
+            let effects = form.take_effects();
+            if effects.is_empty() {
+                return;
+            }
+            for effect in effects {
+                match effect {
+                    TableEffect::Save { editing, table } => {
+                        let saved = tables::save(&self.install, editing, *table);
+                        form.saved(saved);
+                    }
+                    TableEffect::Done { key, said } => self.done(RecordDone {
+                        section: tables::SECTION.to_owned(),
+                        key,
+                        name: form.table.name.clone(),
+                        said,
+                        told: None,
+                    }),
+                }
+            }
+        }
+    }
+
+    fn allowed_effects(&self, form: &mut AllowedForm, key: &str) {
+        loop {
+            let effects = form.take_effects();
+            if effects.is_empty() {
+                return;
+            }
+            for effect in effects {
+                match effect {
+                    AllowedEffect::Save { race, entries } => {
+                        let saved = allowed::save(&self.install, &race, &entries);
+                        form.saved(saved);
+                    }
+                    AllowedEffect::Done { said } => self.done(RecordDone {
+                        section: "races".to_owned(),
+                        key: key.to_owned(),
+                        name: form.race.clone(),
+                        said,
+                        told: None,
+                    }),
+                }
+            }
+        }
+    }
+
+    fn record_effects(&self, form: &mut RecordForm) {
         loop {
             let effects = form.take_effects();
             if effects.is_empty() {
@@ -119,30 +191,37 @@ impl RecordSession {
                         name,
                         said,
                         told,
-                    } => {
-                        *self.done.lock().unwrap_or_else(|e| e.into_inner()) = Some(RecordDone {
-                            section: section.to_owned(),
-                            key,
-                            name,
-                            said,
-                            told: told.map(|(title, text)| vec![title, text]),
-                        });
-                    }
+                    } => self.done(RecordDone {
+                        section: section.to_owned(),
+                        key,
+                        name,
+                        said,
+                        told: told.map(|(title, text)| vec![title, text]),
+                    }),
                 }
             }
         }
     }
 
     fn input(&self, input: In) {
-        match input {
-            In::Record(input) => {
-                let mut form = self.form();
-                form.input(input);
-                self.effects(&mut form);
-            }
-            In::Picture(field) => {
+        let mut editor = self.editor();
+        match (&mut *editor, input) {
+            (Editor::Record(form), In::Record(input)) => form.input(input),
+            (Editor::Record(_), In::Picture(field)) => {
                 *self.picking.lock().unwrap_or_else(|e| e.into_inner()) = Some(field as u32);
             }
+            (Editor::Table(form), In::Table(input)) => form.input(input),
+            (Editor::Allowed(form, _), In::Allowed(input)) => form.input(input),
+            _ => return,
+        }
+        self.effects(&mut editor);
+    }
+
+    /// The kind of field `field` of the record edited.
+    fn field_kind(&self, field: u32) -> Option<FieldKind> {
+        match &*self.editor() {
+            Editor::Record(form) => Some(form.field(field as usize).kind),
+            _ => None,
         }
     }
 
@@ -158,18 +237,28 @@ impl RecordSession {
 impl RecordSession {
     /// The record's name, or what is being made.
     pub fn title(&self) -> String {
-        self.form().title().to_owned()
+        match &*self.editor() {
+            Editor::Record(form) => form.title().to_owned(),
+            Editor::Table(form) => form.title().to_owned(),
+            Editor::Allowed(form, _) => form.title(),
+        }
     }
 
     /// The program help's topic.
     pub fn help(&self) -> u32 {
-        self.form().help()
+        match &*self.editor() {
+            Editor::Record(form) => form.help(),
+            Editor::Table(form) => form.help(),
+            Editor::Allowed(form, _) => form.help(),
+        }
     }
 
     /// The pages to choose from.
     pub fn tabs(&self) -> Vec<String> {
-        let form = self.form();
-        Self::shown(&form)
+        let Editor::Record(form) = &*self.editor() else {
+            return Vec::new();
+        };
+        Self::shown(form)
             .into_iter()
             .map(|p| tr(form.pages()[p].name).to_owned())
             .collect()
@@ -177,15 +266,20 @@ impl RecordSession {
 
     /// The page shown, by its place among [`Self::tabs`].
     pub fn tab(&self) -> u32 {
-        let form = self.form();
-        Self::shown(&form)
+        let Editor::Record(form) = &*self.editor() else {
+            return 0;
+        };
+        Self::shown(form)
             .iter()
             .position(|&p| p == form.page)
             .unwrap_or(0) as u32
     }
 
     pub fn set_tab(&self, index: u32) {
-        let page = Self::shown(&self.form()).get(index as usize).copied();
+        let page = match &*self.editor() {
+            Editor::Record(form) => Self::shown(form).get(index as usize).copied(),
+            _ => None,
+        };
         if let Some(page) = page {
             self.input(rec(RecordInput::Page(page)));
         }
@@ -193,18 +287,27 @@ impl RecordSession {
 
     /// The page shown as a form, with the dialog over it.
     pub fn form_page(&self) -> FormPage {
-        let form = self.form();
+        let editor = self.editor();
         let mut builder = Builder::new();
-        describe(&mut builder, &form, &self.install);
-        let dialog = match (&form.dialog, &form.items) {
-            (Some(dialog), _) => Some(dialog_of(&mut builder, &form, dialog)),
-            (None, Some(items)) => crate::bundle::dialog(
-                &mut builder,
-                items,
-                |i| rec(RecordInput::Items(i)),
-                |serial, yes| rec(RecordInput::ItemsAnswer(serial, yes)),
-            ),
-            (None, None) => None,
+        let dialog = match &*editor {
+            Editor::Record(form) => {
+                describe(&mut builder, form, &self.install);
+                match (&form.dialog, &form.items) {
+                    (Some(dialog), _) => Some(dialog_of(&mut builder, form, dialog)),
+                    (None, Some(items)) => crate::bundle::dialog(
+                        &mut builder,
+                        items,
+                        |i| rec(RecordInput::Items(i)),
+                        |serial, yes| rec(RecordInput::ItemsAnswer(serial, yes)),
+                    ),
+                    (None, None) => None,
+                }
+            }
+            Editor::Table(form) => crate::treasure_tables::describe(&mut builder, form),
+            Editor::Allowed(form, _) => {
+                crate::allowed::describe(&mut builder, form);
+                None
+            }
         };
         let (groups, acts) = builder.finish();
         *self.acts.lock().unwrap_or_else(|e| e.into_inner()) = acts;
@@ -225,36 +328,66 @@ impl RecordSession {
 
     /// The question or message the editor waits on.
     pub fn prompt(&self) -> Option<PromptInfo> {
-        self.form().prompt().map(PromptInfo::of)
+        match &*self.editor() {
+            Editor::Record(form) => form.prompt().map(PromptInfo::of),
+            Editor::Table(form) => form.prompt().map(PromptInfo::of),
+            Editor::Allowed(form, _) => form.prompt().map(PromptInfo::of),
+        }
     }
 
     pub fn answer(&self, yes: bool) {
-        let mut form = self.form();
-        form.answer(if yes { Answer::Yes } else { Answer::No });
-        self.effects(&mut form);
+        let answer = if yes { Answer::Yes } else { Answer::No };
+        let mut editor = self.editor();
+        match &mut *editor {
+            Editor::Record(form) => form.answer(answer),
+            Editor::Table(form) => form.answer(answer),
+            Editor::Allowed(form, _) => form.answer(answer),
+        }
+        self.effects(&mut editor);
     }
 
     /// Why the record could not be saved.
     pub fn error(&self) -> Option<String> {
-        self.form().error.clone()
+        match &*self.editor() {
+            Editor::Record(form) => form.error.clone(),
+            Editor::Table(form) => form.error.clone(),
+            Editor::Allowed(form, _) => form.error.clone(),
+        }
     }
 
     pub fn can_save(&self) -> bool {
-        self.form().can_save()
+        match &*self.editor() {
+            Editor::Record(form) => form.can_save(),
+            Editor::Table(form) => form.can_save(),
+            Editor::Allowed(form, _) => form.can_save(),
+        }
     }
 
     pub fn saving(&self) -> bool {
-        self.form().saving
+        match &*self.editor() {
+            Editor::Record(form) => form.saving,
+            Editor::Table(form) => form.saving,
+            Editor::Allowed(form, _) => form.saving,
+        }
     }
 
     /// Whether anything was changed.
     pub fn changed(&self) -> bool {
-        self.form().changed()
+        match &*self.editor() {
+            Editor::Record(form) => form.changed(),
+            Editor::Table(form) => form.changed(),
+            Editor::Allowed(form, _) => form.changed(),
+        }
     }
 
     /// Save: writes the record, or asks first.
     pub fn save(&self) {
-        self.input(rec(RecordInput::Save));
+        let save = match &*self.editor() {
+            Editor::Record(_) => rec(RecordInput::Save),
+            Editor::Table(_) => In::Table(TableInput::Save),
+            Editor::Allowed(..) => In::Allowed(AllowedInput::Save),
+        };
+        self.input(save);
     }
 
     /// The record saved, once.
@@ -272,9 +405,9 @@ impl RecordSession {
 
     /// The pictures, or the icons, field `field` may have.
     pub fn picture_choices(&self, field: u32) -> Result<Vec<PictureChoice>, CoreError> {
-        match self.form().field(field as usize).kind {
-            FieldKind::Icon => icons(&self.install),
-            FieldKind::Picture(kind) => pictures(&self.install, kind),
+        match self.field_kind(field) {
+            Some(FieldKind::Icon) => icons(&self.install),
+            Some(FieldKind::Picture(kind)) => pictures(&self.install, kind),
             _ => Ok(Vec::new()),
         }
     }
@@ -282,11 +415,10 @@ impl RecordSession {
     /// Makes a picture for field `field` from the user's picture at
     /// `path`, and keeps it in the record.
     pub fn add_picture(&self, field: u32, path: String) -> Result<(), CoreError> {
-        let kind = self.form().field(field as usize).kind;
         let path = std::path::Path::new(&path);
-        let stored = match kind {
-            FieldKind::Icon => self.install.add_icon(path)?,
-            FieldKind::Picture(kind) => {
+        let stored = match self.field_kind(field) {
+            Some(FieldKind::Icon) => self.install.add_icon(path)?,
+            Some(FieldKind::Picture(kind)) => {
                 let made = self.install.add_picture(kind, path)?;
                 cr_store::pictures::stored_path(self.install.root(), &made).unwrap_or_default()
             }
@@ -650,7 +782,7 @@ fn field(form: &mut Builder<In>, f: &RecordForm, index: usize, install: &Install
 }
 
 /// Three numbers for dice: count, sides and bonus.
-fn dice(
+pub(crate) fn dice(
     form: &mut Builder<In>,
     label: &str,
     values: [i64; 3],
@@ -1287,7 +1419,10 @@ pub(crate) fn act_on(
         actions::open(install, section, origin, name, act.of(), shown).map_err(CoreError::new)?;
     Ok(match opened {
         Opened::Form(form) => RecordOpened::Editor {
-            session: RecordSession::new(install.clone(), *form),
+            session: RecordSession::new(install.clone(), Editor::Record(form)),
+        },
+        Opened::Table(form) => RecordOpened::Editor {
+            session: RecordSession::new(install.clone(), Editor::Table(form)),
         },
         Opened::Refused(message) => RecordOpened::Refused { message },
         Opened::Delete(Some((title, text))) => RecordOpened::AskDelete { title, text },
@@ -1302,8 +1437,8 @@ pub(crate) fn act_on(
                 .collect(),
             chosen: chosen as u32,
         },
-        // The treasure tables' and templates' editors come next.
-        Opened::Table(_) | Opened::Template(_) | Opened::Nothing => RecordOpened::Nothing,
+        // The templates' editor comes next.
+        Opened::Template(_) | Opened::Nothing => RecordOpened::Nothing,
     })
 }
 
@@ -1311,6 +1446,6 @@ pub(crate) fn act_on(
 pub(crate) fn edited_here(section: &str) -> bool {
     !matches!(
         cr_app::records::kind_of(section),
-        None | Some(cr_app::records::Kind::Tables | cr_app::records::Kind::Templates)
+        None | Some(cr_app::records::Kind::Templates)
     )
 }

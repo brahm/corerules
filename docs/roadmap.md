@@ -602,8 +602,10 @@ The phases run in order:
      Save; New in the list's toolbar and the File menu, Edit, Copy, New
      Subrace, Schools… and Delete on a record, New Part asking for the
      type, and New Trap, New Monster and the traps' Edit, Copy and
-     Delete in the encounter's Add Trap and Add Monster. Then Allowed
-     Classes, Restore and the treasure table editor, then the encounter
+     Delete in the encounter's Add Trap and Add Monster (#130). Then
+     Allowed Classes on a race, Restore on a shipped treasure table, and
+     the treasure table editor in the same sheet, with an entry's details
+     and "How many to remove?" in a dialog over it. Then the encounter
      template editor.
 5. **Beta and release** on the three systems with the same tag, with an
    install page on the website and in the README that shows the Open
