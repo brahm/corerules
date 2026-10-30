@@ -67,7 +67,21 @@ backend and the same data files. It is a native Mac app in SwiftUI: the
 sections, the entries and the details in three columns, every action in
 the menu bar, Settings, and the sheets, the help, the books and the
 generators in their own windows. It runs on Apple Silicon Macs with
-macOS 14 or newer ([installing](#macos)).
+macOS 14 or newer ([installing](#macos)). These pictures show it in
+Portuguese.
+
+<p align="center">
+  <img src="docs/screenshots/macos/character.png" width="49%" alt="A module character with his portrait on macOS">
+  <img src="docs/screenshots/macos/import-addons.png" width="49%" alt="Import Add-ons listing the Community Add-ons Collection on macOS">
+</p>
+<p align="center">
+  <img src="docs/screenshots/macos/new-character.png" width="49%" alt="New Character on macOS">
+  <img src="docs/screenshots/macos/sheet.png" width="49%" alt="Jarlaxle's character sheet on macOS">
+</p>
+<p align="center">
+  <img src="docs/screenshots/macos/monster.png" width="49%" alt="The red dragon's picture in the library on macOS">
+  <img src="docs/screenshots/macos/encounter.png" width="49%" alt="An orc lair encounter template on macOS">
+</p>
 
 ## You need the original discs
 
