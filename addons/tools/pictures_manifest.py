@@ -3,7 +3,9 @@
 usage: pictures_manifest.py EXTRAS_DIR REFS.tsv ITEMS.tsv CD_BITMAPS_DIR OUT_DIR
 
 EXTRAS_DIR      the unzipped Comunidade-extras.zip
-REFS.tsv        `cargo run -p cr-addons --example pictures -- Comunidade.xpx`
+REFS.tsv        the picture paths the records of Comunidade.xpx name (written by
+                the cr-addons `pictures` example, removed with the Linux
+                installer; see the git history)
 ITEMS.tsv       order, package, category, name, hash of every add-on item
 CD_BITMAPS_DIR  the CD's BITMAPS folder, whose pictures are never replaced
 """

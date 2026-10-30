@@ -1,20 +1,14 @@
 #!/bin/sh
 # Builds dist/CoreRules-VERSION-ARCH.AppImage from target/release with
 # linuxdeploy and its GTK plugin, which bundle GTK 4, libadwaita and their
-# data from the system it runs on. `build.sh VERSION addons` builds the
-# Community Add-ons Collection instead,
-# dist/CoreRules-Community-Addons-VERSION-ARCH.AppImage.
+# data from the system it runs on.
 # Releases run it inside the GNOME 51 SDK (build-in-sdk.sh), so the
 # AppImage carries that platform's libraries and runs on systems with the
 # SDK's glibc or newer.
 set -eu
 version=$1
 arch=$(uname -m)
-case ${2:-app} in
-    app) app=io.github.brahm.CoreRules exe=corerules name=CoreRules ;;
-    addons) app=io.github.brahm.CoreRules.Addons exe=corerules-community-addons name=CoreRules-Community-Addons ;;
-    *) echo "$0: unknown target $2" >&2; exit 2 ;;
-esac
+app=io.github.brahm.CoreRules exe=corerules name=CoreRules
 tools=${TOOLS_DIR:-$PWD/target/appimage-tools}
 appdir=$PWD/target/AppDir
 mkdir -p "$tools"
@@ -33,16 +27,7 @@ grep -q 'pixbuf loaders, if any' "$plugin" || sed -i \
     -e 's|^echo "Copying more libraries"$|fi\n&|' "$plugin"
 
 rm -rf "$appdir"
-if [ "$exe" = corerules ]; then
-    packaging/install.sh "$appdir" /usr
-else
-    install -Dm755 "target/release/$exe" "$appdir/usr/bin/$exe"
-    install -Dm644 "data/addons/$app.desktop" "$appdir/usr/share/applications/$app.desktop"
-    for icon in data/addons/icons/hicolor/*/apps/$app.png; do
-        size=$(basename "$(dirname "$(dirname "$icon")")")
-        install -Dm644 "$icon" "$appdir/usr/share/icons/hicolor/$size/apps/$app.png"
-    done
-fi
+packaging/install.sh "$appdir" /usr
 # The GTK plugin reads the version to bundle from DEPLOY_GTK_VERSION.
 export DEPLOY_GTK_VERSION=4 APPIMAGE_EXTRACT_AND_RUN=1 NO_STRIP=1
 PATH="$tools:$PATH" linuxdeploy --appdir "$appdir" \

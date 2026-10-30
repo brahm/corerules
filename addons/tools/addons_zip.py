@@ -1,17 +1,17 @@
 """Builds the add-ons' zip, CoreRules-Community-Addons-VERSION.zip: the
-same validated add-ons the installer carries, as files that Core Rules'
-Import Add-ons reads from a folder.
+validated add-ons as files that Core Rules' Import Add-ons reads from a
+folder.
 
 usage: addons_zip.py VERSION OUT_DIR
 
 Reads addons/Comunidade.xpx.xz and addons/Comunidade-extras.xz (see
-crates/cr-addons/src/extras.rs for the extras' format) and writes, under
+extras_bundle.py for the extras' format) and writes, under
 one folder, CoreRules-Community-Addons-VERSION/:
     Comunidade.xpx      the consolidated add-ons, in the Expansion's format
     pictures/...        the pictures, in their add-on folders
     pictures.tsv        picture<TAB>place in the installation, one per line
     texts/...           the authors' texts, as plain text
-    addons.tsv          what each add-on folder brought (extras.rs)
+    addons.tsv          what each add-on folder brought
     README.txt, LEIA-ME.txt
 """
 import lzma, os, sys, zipfile

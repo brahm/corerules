@@ -201,12 +201,9 @@
         <li><span class="system">Any distribution (glibc 2.43+)</span><span class="kind">AppImage</span>
           <a class="file" href="https://github.com/brahm/corerules/releases/download/v1.1.0/CoreRules-1.1.0-x86_64.AppImage">CoreRules-1.1.0-x86_64.AppImage</a>
           <code>chmod +x CoreRules-1.1.0-x86_64.AppImage</code></li>
-        <li><span class="system">Community Add-ons, for any of the above</span><span class="kind">Installer</span>
-          <a class="file" href="https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage">CoreRules-Community-Addons-x86_64.AppImage</a>
-          <code>chmod +x CoreRules-Community-Addons-x86_64.AppImage</code></li>
         <li><span class="system">Community Add-ons, for Linux, Windows and macOS</span><span class="kind">.zip</span>
           <a class="file" href="https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons.zip">CoreRules-Community-Addons.zip</a>
-          <span class="file-note">In Core Rules, choose Import Add-ons… and pick the folder that holds the zip.</span></li>
+          <span class="file-note">In Core Rules, choose Import Add-ons… and pick the folder that holds the zip (<a href="#addons">how</a>).</span></li>
         <li><span class="system">Windows 11</span><span class="kind">Microsoft Store</span>
           <a class="file" href="https://apps.microsoft.com/detail/9nr2cgp649jm">Core Rules on the Microsoft Store</a>
           <span class="file-note">Free; the Store installs it with the Windows App Runtime it needs and brings every update.</span></li>
@@ -282,10 +279,10 @@
       <p class="eyebrow">Twenty-five years of homebrew</p>
       <h2>Community Add-ons Collection</h2>
       <p>The add-ons that the Core Rules community made for Core Rules 2.0 and its Expansion,
-      gathered into one package and installed with one click. 672 add-on packages became
-      36,525 items, in the Expansion's own format, so they open in the app and in the original
-      program alike. The 668 pictures that came with them are installed too, and the texts their
-      authors wrote can be read in the installer.</p>
+      gathered into one package that the app imports in one go, on Linux, Windows 11 and macOS.
+      672 add-on packages became 36,525 items, in the Expansion's own format, so they open in the
+      app and in the original program alike. The 668 pictures that came with them come along, and
+      so do the texts their authors wrote.</p>
       <dl class="stats">
         <div><dt>7,479</dt><dd>wizard spells</dd></div>
         <div><dt>3,514</dt><dd>priest spells</dd></div>
@@ -294,33 +291,39 @@
         <div><dt>1,547</dt><dd>races, classes and kits</dd></div>
         <div><dt>584</dt><dd>encounters and templates</dd></div>
         <div><dt>48</dt><dd>characters from the published modules</dd></div>
-        <div><dt>6</dt><dd>languages in the installer</dd></div>
+        <div><dt>668</dt><dd>pictures of monsters, races and characters</dd></div>
       </dl>
-      <p class="version">Version 1.0.0 · one self-installing AppImage</p>
-      <p class="small">Needs Linux x86-64 (glibc 2.43 or newer), Core Rules 0.7.2 or newer and your
-      Expansion data in the app. The installer backs up your <code>UserDbas</code> and <code>Chars</code>
-      folders first. It leaves out Evermore's monthly goodies; the add-ons belong to their authors in
-      the Core Rules community.</p>
+      <p class="version">One .zip · for Linux, Windows 11 and macOS</p>
       <div class="actions left">
-        <a class="btn primary" href="https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage">Download the add-ons installer</a>
-        <a class="btn" href="https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons.zip">Download the add-ons as a .zip</a>
+        <a class="btn primary" href="https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons.zip">Download the add-ons (.zip)</a>
         <a class="btn" href="https://github.com/brahm/corerules/tree/main/addons">What's inside</a>
       </div>
-      <p class="small">On Windows, macOS or any Linux, the <a href="https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons.zip">.zip</a>
-      holds the same validated add-ons, pictures and texts: in Core Rules, choose
-      <strong>Import Add-ons…</strong> and pick the folder that holds the zip, with no need to extract it.
-      The original Expansion program imports its <code>Comunidade.xpx</code> too.</p>
-      <p class="small">The link always gives the newest build. The same file, version by version:
-      <a href="https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-1.0.0-x86_64.AppImage">CoreRules-Community-Addons-1.0.0-x86_64.AppImage</a>
-      on the <a href="https://github.com/brahm/corerules/releases/tag/addons">addons release</a>, and on
-      <a href="https://github.com/brahm/corerules/packages/3339900">GitHub Packages</a> as the AppImage file itself.</p>
+      <h3>Importing the add-ons</h3>
+      <ol>
+        <li>Download <a href="https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons.zip">CoreRules-Community-Addons.zip</a>
+        and put it in a folder of its own. There is no need to extract it.</li>
+        <li>In Core Rules, choose <strong>Import Add-ons…</strong>: in the main menu on Linux, the
+        <strong>More</strong> menu on Windows and the <strong>File</strong> menu on the Mac.</li>
+        <li>Pick the folder that holds the zip. The app reads it, with its subfolders and the zips
+        in it, and lists what comes in, what was found twice and what cannot be imported, with why.</li>
+        <li>Press <strong>Import</strong>. The whole collection comes in in about a minute, with
+        its pictures, and the module characters join the character list.</li>
+      </ol>
+      <p class="small">Needs Core Rules 1.2.0 or newer and your Expansion data in the app. Import
+      backs up your <code>UserDbas</code> and <code>Chars</code> folders first and writes a log;
+      importing again does not duplicate the characters. The same command imports any other folder
+      of add-ons, loose or zipped. The original Expansion program imports the zip's
+      <code>Comunidade.xpx</code> too. The link always gives the newest build; the
+      <a href="https://github.com/brahm/corerules/releases/tag/addons">addons release</a> keeps each
+      version. The collection leaves out Evermore's monthly goodies; the add-ons belong to their
+      authors in the Core Rules community.</p>
     </div>
   </div>
   <div class="wrap">
     <div class="gallery three">
-      <figure><a href="addons/installer.png"><img src="addons/installer.png" alt="The add-ons installer finding copies of Core Rules" loading="lazy"></a><figcaption>The installer finds every copy of Core Rules</figcaption></figure>
-      <figure><a href="addons/class.png"><img src="addons/class.png" alt="The Anti-Paladin, an add-on class" loading="lazy"></a><figcaption>584 classes after the install</figcaption></figure>
-      <figure><a href="addons/installed.png"><img src="addons/installed.png" alt="The add-ons installed in two folders" loading="lazy"></a><figcaption>Installed in under a minute</figcaption></figure>
+      <figure><a href="addons/class.png"><img src="addons/class.png" alt="The Anti-Paladin, an add-on class" loading="lazy"></a><figcaption>584 classes after the import</figcaption></figure>
+      <figure><a href="addons/picture.png"><img src="addons/picture.png" alt="The Achaierai, a monster type with its picture" loading="lazy"></a><figcaption>Monster types with their pictures</figcaption></figure>
+      <figure><a href="addons/portrait.png"><img src="addons/portrait.png" alt="Gerard Renier, a module character with his portrait" loading="lazy"></a><figcaption>The module characters, with portraits</figcaption></figure>
     </div>
   </div>
 </section>

@@ -426,9 +426,12 @@ when and why each was decided.
   (many community add-ons were); the app reads both.
 - **Large packages import in the background**, and the Import dialog folds
   a category of more than 200 items into one row.
+- **Import Add-ons…** brings in every add-on in a folder, its subfolders
+  and its ZIP archives at once, with their pictures; the original imports
+  one package at a time.
 - **The Core Rules Community Add-ons Collection** (see
   [Community add-ons](#community-add-ons)), 672 community add-ons converted
-  to the Expansion's format, with their own installer.
+  to the Expansion's format, as one `.zip` for Import Add-ons….
 
 ### Behavior that differs
 
@@ -510,7 +513,7 @@ the latest release; Windows 11 comes from the
 | Arch Linux, CachyOS, Omarchy | [`corerules-1.1.0-1-x86_64.pkg.tar.zst`](https://github.com/brahm/corerules/releases/download/v1.1.0/corerules-1.1.0-1-x86_64.pkg.tar.zst) | `sudo pacman -U ./corerules-1.1.0-1-x86_64.pkg.tar.zst` |
 | Any distribution with Flatpak, such as Bazzite | [`io.github.brahm.CoreRules.flatpakref`](https://brahm.github.io/corerules/io.github.brahm.CoreRules.flatpakref), from the [Flatpak repository](#the-flatpak-repository) | `flatpak install --user https://brahm.github.io/corerules/io.github.brahm.CoreRules.flatpakref` |
 | Any distribution (glibc 2.43+) | [`CoreRules-1.1.0-x86_64.AppImage`](https://github.com/brahm/corerules/releases/download/v1.1.0/CoreRules-1.1.0-x86_64.AppImage) | `chmod +x CoreRules-1.1.0-x86_64.AppImage`, then run it |
-| Community add-ons (installer) | [`CoreRules-Community-Addons-x86_64.AppImage`](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage) | `chmod +x CoreRules-Community-Addons-x86_64.AppImage`, then run it |
+| Community add-ons, for every system above | [`CoreRules-Community-Addons.zip`](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons.zip) | In Core Rules, Import Add-ons…, then pick the folder that holds the zip ([how](#community-add-ons)) |
 
 The release also has the
 [`CoreRules-1.1.0.flatpak`](https://github.com/brahm/corerules/releases/download/v1.1.0/CoreRules-1.1.0.flatpak)
@@ -663,25 +666,24 @@ add-ons the community made for Core Rules 2.0 and the Expansion (races,
 classes, kits, spells, monsters, modules and the AD&D Core Rules User
 Database), converted to the Expansion's format and consolidated into
 36,525 items, with the 668 pictures that came with them. Monster types,
-monsters, races and characters show those pictures in the app. It ships as its own self-installing AppImage
-(`crates/cr-addons`, GTK 4 and libadwaita), version 1.0.0 with the app:
+monsters, races and characters show those pictures in the app. It comes as
+one `.zip`, on every system the app runs on:
 
-**[Download CoreRules-Community-Addons-x86_64.AppImage](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage)**
+**[Download CoreRules-Community-Addons.zip](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons.zip)**
 
 This link always gives the newest build; the
 [addons release](https://github.com/brahm/corerules/releases/tag/addons)
-also keeps each version, such as
-[`CoreRules-Community-Addons-1.0.0-x86_64.AppImage`](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-1.0.0-x86_64.AppImage).
-The same AppImage is on [GitHub Packages](https://github.com/brahm/corerules/packages)
-twice: as the file itself in the Maven package
-[`io.github.brahm.corerules-community-addons`](https://github.com/brahm/corerules/packages/3339900), whose page lists
-`corerules-community-addons-1.0.0-x86_64.AppImage` for download, and as the
-OCI artifact
-[`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons)
-(`oras pull ghcr.io/brahm/corerules-community-addons:latest`). It needs the app 0.7.2 or newer. The installer finds the app on its own,
-whether it came as the Flatpak, the .deb, .rpm or pacman package or an AppImage,
-and speaks the app's six languages. Its [README](addons/README.md) says
-what is inside, how it was built and how to install it.
+also keeps each version. To import it:
+
+1. Put the zip in a folder of its own. There is no need to extract it.
+2. In Core Rules, choose **Import Add-ons…** (the main menu on Linux, the
+   More menu on Windows, the File menu on the Mac) and pick that folder.
+3. Check the list of what comes in and press **Import**. The whole
+   collection takes about a minute.
+
+The collection's [README](addons/README.md) says what is inside, how it was
+built and how to undo an import. A Linux installer (an AppImage) carried the
+add-ons until 1.1.0; Import Add-ons… replaces it.
 
 **Import Add-ons…**, in the main menu on Linux, the More menu on Windows
 and the File menu on the Mac, brings in every add-on in a folder at once.
@@ -725,7 +727,6 @@ CORERULES_DIR="$HOME/.wine/drive_c/Program Files/AD&D Core Rules 2.0" cargo test
 | `cr-i18n` | Translations of the interface (`po/*.po`, built into the program) |
 | `cr-app` | What both apps share above the backend, with no GTK and no Windows: the names of their actions, the library's search, filters and commands, the pictures, the help and About, the book reader's zoom, Find and reading positions, the sheet's options and exports, the sheet laid out on printed pages and the sheet as a PDF |
 | `cr-gtk` | The GNOME app |
-| `cr-addons` | Core Rules Community Add-ons Collection, the add-ons and their installer |
 | `cr-win` | The Windows 11 app (WinUI 3 with windows-reactor), with every screen of the GNOME app |
 
 The backend crates and `cr-app` have no GTK dependency, and CI builds and

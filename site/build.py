@@ -131,10 +131,9 @@ def main():
     icons = out / "icons"
     icons.mkdir()
     app = "data/icons/hicolor/{}/apps/io.github.brahm.CoreRules.png"
-    addons = "data/addons/icons/hicolor/{}/apps/io.github.brahm.CoreRules.Addons.png"
     shutil.copy(ROOT / app.format("512x512"), icons / "corerules.png")
     shutil.copy(ROOT / app.format("64x64"), icons / "favicon.png")
-    shutil.copy(ROOT / addons.format("256x256"), icons / "addons.png")
+    shutil.copy(ROOT / "addons" / "icon.png", icons / "addons.png")
     (out / ".nojekyll").touch()
 
     page = (SITE / "index.html").read_text()

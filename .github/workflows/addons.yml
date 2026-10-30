@@ -1,122 +1,28 @@
 name: Addons package
 
-# Builds Core Rules Community Add-ons Collection, one self-installing
-# AppImage with the add-ons inside (crates/cr-addons), and, on main or by
-# hand, publishes it on GitHub Packages as the OCI artifact
-# ghcr.io/<owner>/corerules-community-addons, tagged with the app version
-# and latest, and as the file itself in the Maven registry of GitHub
-# Packages, and on the release "addons", whose tag follows main: there
-# CoreRules-Community-Addons-x86_64.AppImage is always the newest, for a
-# download link that does not change. The zip job puts the same add-ons
-# there as CoreRules-Community-Addons.zip, for Import Add-ons… in the app.
+# Builds the Core Rules Community Add-ons Collection as one .zip
+# (addons/tools/addons_zip.py) for Import Add-ons… in the app, on Linux,
+# Windows and macOS: Comunidade.xpx with the pictures, pictures.tsv and the
+# texts. On main or by hand it publishes the zip on the release "addons",
+# whose tag follows main: there CoreRules-Community-Addons.zip is always the
+# newest, for a download link that does not change.
 on:
   push:
     branches: [main]
     paths:
       - 'addons/**'
-      - 'crates/cr-addons/**'
-      - 'data/addons/**'
-      - 'packaging/appimage/**'
       - '.github/workflows/addons.yml'
   pull_request:
     paths:
       - 'addons/**'
-      - 'crates/cr-addons/**'
-      - 'data/addons/**'
-      - 'packaging/appimage/**'
       - '.github/workflows/addons.yml'
   workflow_dispatch:
 
 permissions:
   contents: write
-  packages: write
 
 jobs:
-  package:
-    runs-on: ubuntu-24.04
-    container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
-      options: --privileged
-    steps:
-      - uses: actions/checkout@v4
-      # The checkout belongs to the runner's user; root inside the SDK
-      # sandbox has no capabilities to write there.
-      - run: chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"
-      - id: v
-        run: echo "version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)" >> "$GITHUB_OUTPUT"
-      - run: packaging/appimage/build-in-sdk.sh ${{ steps.v.outputs.version }} addons
-      - name: Check the AppImage
-        run: |
-          cd target/AppDir
-          test -x usr/bin/corerules-community-addons
-          test -f usr/share/icons/hicolor/256x256/apps/io.github.brahm.CoreRules.Addons.png
-          ls -l "$GITHUB_WORKSPACE"/dist/CoreRules-Community-Addons-*.AppImage
-      - if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: addons-appimage
-          path: dist/CoreRules-Community-Addons-${{ steps.v.outputs.version }}-x86_64.AppImage
-      - if: github.event_name != 'pull_request'
-        uses: oras-project/setup-oras@v1
-      - if: github.event_name != 'pull_request'
-        name: Publish on GitHub Packages
-        run: |
-          version=${{ steps.v.outputs.version }}
-          owner=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
-          echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
-          cd dist
-          oras push "ghcr.io/$owner/corerules-community-addons:$version,latest" \
-            --artifact-type application/vnd.corerules.addons \
-            --annotation "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
-            --annotation "org.opencontainers.image.description=Core Rules Community Add-ons Collection: 672 community add-ons for AD&D Core Rules 2.0 Expansion, in one self-installing AppImage. Download it from https://github.com/${GITHUB_REPOSITORY}/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage or with: oras pull ghcr.io/$owner/corerules-community-addons:latest" \
-            --annotation "org.opencontainers.image.version=$version" \
-            "CoreRules-Community-Addons-$version-x86_64.AppImage:application/vnd.appimage"
-      - if: github.event_name != 'pull_request'
-        name: Move the addons tag to this commit
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const ref = { owner: context.repo.owner, repo: context.repo.repo };
-            try {
-              await github.rest.git.updateRef({ ...ref, ref: 'tags/addons', sha: context.sha, force: true });
-            } catch (e) {
-              if (e.status !== 422 && e.status !== 404) throw e;
-              await github.rest.git.createRef({ ...ref, ref: 'refs/tags/addons', sha: context.sha });
-            }
-      - if: github.event_name != 'pull_request'
-        run: cp dist/CoreRules-Community-Addons-${{ steps.v.outputs.version }}-x86_64.AppImage dist/CoreRules-Community-Addons-x86_64.AppImage
-      - if: github.event_name != 'pull_request'
-        name: Publish on the addons release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: addons
-          name: Core Rules Community Add-ons Collection
-          make_latest: false
-          body: |
-            The self-installing AppImage of the [Core Rules Community Add-ons Collection](https://github.com/brahm/corerules/blob/main/addons/README.md), built with Core Rules ${{ steps.v.outputs.version }}.
-
-            Download **CoreRules-Community-Addons-x86_64.AppImage** (always the newest; the file with a version in its name is the same build), then:
-
-            ```sh
-            chmod +x CoreRules-Community-Addons-x86_64.AppImage
-            ./CoreRules-Community-Addons-x86_64.AppImage
-            ```
-
-            On Windows, macOS or any Linux, download **CoreRules-Community-Addons.zip**, the same add-ons with their pictures and texts. In Core Rules, choose **Import Add-ons…** and pick the folder that holds the zip; there is no need to extract it. The original Expansion program can import its `Comunidade.xpx` too.
-
-            Direct link: https://github.com/${{ github.repository }}/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage
-
-            The same file is on GitHub Packages twice: as a file, `corerules-community-addons-${{ steps.v.outputs.version }}-x86_64.AppImage`, in the Maven package `io.github.brahm.corerules-community-addons` ([the project's packages](https://github.com/${{ github.repository_owner }}?tab=packages&repo_name=${{ github.event.repository.name }})), and in the OCI package [`corerules-community-addons`](https://github.com/${{ github.repository }}/pkgs/container/corerules-community-addons): `oras pull ghcr.io/${{ github.repository_owner }}/corerules-community-addons:latest`. The app itself is on the [Core Rules releases](https://github.com/${{ github.repository }}/releases).
-          files: |
-            dist/CoreRules-Community-Addons-x86_64.AppImage
-            dist/CoreRules-Community-Addons-${{ steps.v.outputs.version }}-x86_64.AppImage
-
-  # The same add-ons as one .zip for Import Add-ons… in the app, on Linux,
-  # Windows and macOS: Comunidade.xpx with the pictures, pictures.tsv and
-  # the texts (addons/tools/addons_zip.py). On the addons release,
-  # CoreRules-Community-Addons.zip is always the newest.
   zip:
-    needs: package
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -136,76 +42,38 @@ jobs:
           name: addons-zip
           path: dist/CoreRules-Community-Addons-${{ steps.v.outputs.version }}.zip
       - if: github.event_name != 'pull_request'
+        name: Move the addons tag to this commit
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ref = { owner: context.repo.owner, repo: context.repo.repo };
+            try {
+              await github.rest.git.updateRef({ ...ref, ref: 'tags/addons', sha: context.sha, force: true });
+            } catch (e) {
+              if (e.status !== 422 && e.status !== 404) throw e;
+              await github.rest.git.createRef({ ...ref, ref: 'refs/tags/addons', sha: context.sha });
+            }
+      - if: github.event_name != 'pull_request'
         name: Publish on the addons release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: addons
+          name: Core Rules Community Add-ons Collection
           make_latest: false
+          body: |
+            The [Core Rules Community Add-ons Collection](https://github.com/brahm/corerules/blob/main/addons/README.md) as one .zip, built with Core Rules ${{ steps.v.outputs.version }}: 672 community add-ons in 36,525 items, with their 668 pictures and their authors' texts.
+
+            Download **CoreRules-Community-Addons.zip** (always the newest; the file with a version in its name is the same build), then, on Linux, Windows or macOS:
+
+            1. Put the zip in a folder of its own. There is no need to extract it.
+            2. In Core Rules, choose **Import Add-ons…** (the main menu on Linux, the More menu on Windows, the File menu on the Mac) and pick that folder.
+            3. Check the list of what comes in and press **Import**. The app backs up `UserDbas` and `Chars` first.
+
+            The original Expansion program can import its `Comunidade.xpx` too.
+
+            Direct link: https://github.com/${{ github.repository }}/releases/download/addons/CoreRules-Community-Addons.zip
+
+            The app itself is on the [Core Rules releases](https://github.com/${{ github.repository }}/releases).
           files: |
             dist/CoreRules-Community-Addons.zip
             dist/CoreRules-Community-Addons-${{ steps.v.outputs.version }}.zip
-
-  # GitHub Packages has no registry for plain files, and its container
-  # registry shows the AppImage as an OCI artifact. Its Maven registry keeps
-  # any file as it is, with its name and extension, and the package page
-  # lists it under Assets for download, so the AppImage goes there too, as
-  # io.github.brahm:corerules-community-addons:VERSION:x86_64@AppImage. A
-  # version is published once, since Maven versions cannot be replaced; a
-  # later build of the same version only replaces the other two copies.
-  maven:
-    needs: package
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      packages: write
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      REGISTRY: https://maven.pkg.github.com/${{ github.repository }}
-      ARTIFACT: io/github/brahm/corerules-community-addons
-    steps:
-      - uses: actions/checkout@v4
-      - id: v
-        run: echo "version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)" >> "$GITHUB_OUTPUT"
-      - uses: actions/download-artifact@v4
-        with:
-          name: addons-appimage
-          path: dist
-      # Writes ~/.m2/settings.xml with the server "github", which logs in
-      # as GITHUB_ACTOR with GITHUB_TOKEN.
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-          server-id: github
-      - id: exists
-        name: Look for this version on GitHub Packages
-        run: |
-          version=${{ steps.v.outputs.version }}
-          code=$(curl -s -o /dev/null -w '%{http_code}' -u "$GITHUB_ACTOR:$GITHUB_TOKEN" \
-              "$REGISTRY/$ARTIFACT/$version/corerules-community-addons-$version.pom")
-          echo "HTTP $code"
-          if [ "$code" = 200 ]; then
-            echo "::notice::corerules-community-addons $version is already in the Maven registry; it keeps its first build"
-            echo "found=true" >> "$GITHUB_OUTPUT"
-          fi
-      - if: steps.exists.outputs.found != 'true'
-        name: Publish the AppImage on GitHub Packages (Maven)
-        run: |
-          version=${{ steps.v.outputs.version }}
-          mvn -B --no-transfer-progress deploy:deploy-file \
-              -Durl="$REGISTRY" -DrepositoryId=github \
-              -Dfile="dist/CoreRules-Community-Addons-$version-x86_64.AppImage" \
-              -DgroupId=io.github.brahm -DartifactId=corerules-community-addons \
-              -Dversion="$version" -Dclassifier=x86_64 -Dpackaging=AppImage \
-              -DgeneratePom=true \
-              -DgeneratePom.description="Core Rules Community Add-ons Collection: 672 community add-ons for AD&D Core Rules 2.0 Expansion, in one self-installing AppImage"
-      - name: Check the published AppImage
-        run: |
-          version=${{ steps.v.outputs.version }}
-          curl -sSfL -u "$GITHUB_ACTOR:$GITHUB_TOKEN" -o published.AppImage \
-              "$REGISTRY/$ARTIFACT/$version/corerules-community-addons-$version-x86_64.AppImage"
-          sha256sum published.AppImage "dist/CoreRules-Community-Addons-$version-x86_64.AppImage"
-          if [ "${{ steps.exists.outputs.found }}" != true ]; then
-            cmp published.AppImage "dist/CoreRules-Community-Addons-$version-x86_64.AppImage"
-          fi
