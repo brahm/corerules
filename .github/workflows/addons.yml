@@ -7,7 +7,8 @@ name: Addons package
 # and latest, and as the file itself in the Maven registry of GitHub
 # Packages, and on the release "addons", whose tag follows main: there
 # CoreRules-Community-Addons-x86_64.AppImage is always the newest, for a
-# download link that does not change.
+# download link that does not change. The zip job puts the same add-ons
+# there as CoreRules-Community-Addons.zip, for Import Add-ons… in the app.
 on:
   push:
     branches: [main]
@@ -101,12 +102,48 @@ jobs:
             ./CoreRules-Community-Addons-x86_64.AppImage
             ```
 
+            On Windows, macOS or any Linux, download **CoreRules-Community-Addons.zip**, the same add-ons with their pictures and texts. In Core Rules, choose **Import Add-ons…** and pick the folder that holds the zip; there is no need to extract it. The original Expansion program can import its `Comunidade.xpx` too.
+
             Direct link: https://github.com/${{ github.repository }}/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage
 
             The same file is on GitHub Packages twice: as a file, `corerules-community-addons-${{ steps.v.outputs.version }}-x86_64.AppImage`, in the Maven package `io.github.brahm.corerules-community-addons` ([the project's packages](https://github.com/${{ github.repository_owner }}?tab=packages&repo_name=${{ github.event.repository.name }})), and in the OCI package [`corerules-community-addons`](https://github.com/${{ github.repository }}/pkgs/container/corerules-community-addons): `oras pull ghcr.io/${{ github.repository_owner }}/corerules-community-addons:latest`. The app itself is on the [Core Rules releases](https://github.com/${{ github.repository }}/releases).
           files: |
             dist/CoreRules-Community-Addons-x86_64.AppImage
             dist/CoreRules-Community-Addons-${{ steps.v.outputs.version }}-x86_64.AppImage
+
+  # The same add-ons as one .zip for Import Add-ons… in the app, on Linux,
+  # Windows and macOS: Comunidade.xpx with the pictures, pictures.tsv and
+  # the texts (addons/tools/addons_zip.py). On the addons release,
+  # CoreRules-Community-Addons.zip is always the newest.
+  zip:
+    needs: package
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: echo "version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)" >> "$GITHUB_OUTPUT"
+      - run: python3 -I addons/tools/addons_zip.py ${{ steps.v.outputs.version }} dist
+      - name: Check the zip
+        run: |
+          zip=dist/CoreRules-Community-Addons-${{ steps.v.outputs.version }}.zip
+          unzip -tq "$zip"
+          unzip -l "$zip" | grep -q 'Comunidade.xpx$'
+          test "$(unzip -l "$zip" | grep -ci '\.bmp$')" -ge 600
+          cp "$zip" dist/CoreRules-Community-Addons.zip
+          (cd dist && sha256sum *.zip)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: addons-zip
+          path: dist/CoreRules-Community-Addons-${{ steps.v.outputs.version }}.zip
+      - if: github.event_name != 'pull_request'
+        name: Publish on the addons release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: addons
+          make_latest: false
+          files: |
+            dist/CoreRules-Community-Addons.zip
+            dist/CoreRules-Community-Addons-${{ steps.v.outputs.version }}.zip
 
   # GitHub Packages has no registry for plain files, and its container
   # registry shows the AppImage as an OCI artifact. Its Maven registry keeps

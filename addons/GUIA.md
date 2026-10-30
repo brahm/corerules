@@ -42,6 +42,23 @@ curl -L -H "Authorization: Bearer $token" -o CoreRules-Community-Addons-x86_64.A
 
 Além de `latest`, cada versão do app tem a sua tag, como `1.0.0`.
 
+## O pacote .zip, para Windows, macOS e qualquer Linux
+
+Os mesmos addons validados também saem num zip, **[CoreRules-Community-Addons.zip](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons.zip)**, na mesma [release addons](https://github.com/brahm/corerules/releases/tag/addons), com uma cópia de nome `CoreRules-Community-Addons-VERSÃO.zip` para cada versão. Ele serve para o comando **Importar add-ons…** do app, no Linux, no Windows e no macOS: escolha no menu a pasta onde está o zip, sem precisar extraí-lo, e o app lê todos os arquivos de uma vez, valida, importa os itens e copia as imagens para onde os registros as procuram, sem sobrescrever nenhum arquivo.
+
+Dentro dele há uma pasta, `CoreRules-Community-Addons-VERSÃO`, com:
+
+| Arquivo | Conteúdo |
+| --- | --- |
+| `Comunidade.xpx` | Os addons consolidados, no formato de exportação da Expansion; o Import do programa original também o lê |
+| `pictures/` | As 668 imagens (BMP de 8 bits), nas pastas dos seus addons |
+| `pictures.tsv` | Onde cada imagem vai na pasta de dados: a imagem, uma tabulação e o lugar |
+| `texts/` | Os 309 textos dos autores, em texto simples |
+| `addons.tsv` | O que cada pasta de addon trouxe para a coleção |
+| `README.txt`, `LEIA-ME.txt` | Como instalar, em inglês e em português |
+
+O zip é gerado a partir dos mesmos `Comunidade.xpx.xz` e `Comunidade-extras.xz` que vão dentro do instalador, por `tools/addons_zip.py VERSÃO PASTA`, no job `zip` do workflow `Addons package`.
+
 ## Instalação
 
 1. Torne o arquivo executável e abra-o:

@@ -1,0 +1,39 @@
+Core Rules Community Add-ons Collection VERSION
+===============================================
+
+The add-ons that the AD&D Core Rules community made for AD&D Core Rules 2.0
+and its Expansion, tested one by one and consolidated into one package:
+672 add-on packages, 36,525 items (races, classes, kits, spells, monsters,
+equipment, encounters, the characters of the published modules and the
+AD&D Core Rules User Database), with their 668 pictures and their authors'
+texts.
+
+Installing
+----------
+
+1. Open Core Rules (https://github.com/brahm/corerules) with your Expansion
+   data. If it is not there yet, use Extract Data from CD... first.
+2. Choose Import Add-ons... in the menu and pick the folder that holds
+   this zip; there is no need to extract it. Core Rules reads every file
+   in the folder and in the zip at once, checks each add-on, imports them
+   and copies the pictures where the records look for them, never over a
+   file that is already there. The extracted folder,
+   CoreRules-Community-Addons-VERSION, works the same way.
+
+The original Expansion program can import Comunidade.xpx too, with its
+own Import command.
+
+What's in the folder
+--------------------
+
+Comunidade.xpx   The consolidated add-ons, in the Expansion's export format
+pictures/        The pictures (8-bit BMP), in their add-on folders
+pictures.tsv     Where each picture goes in the data folder, one per line:
+                 the picture, a tab, its place (Bitmaps/Monsters/...,
+                 Bitmaps/Portrait/..., UserBMP/...)
+texts/           The texts the authors wrote, as plain text
+addons.tsv       What each add-on folder brought into the collection
+
+The add-ons belong to their authors in the Core Rules community. Where a
+name appeared in more than one add-on, the newest version stayed; the full
+report is at https://github.com/brahm/corerules/tree/main/addons
