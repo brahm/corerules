@@ -1200,7 +1200,7 @@ final class AppModel: ObservableObject {
         case .wizard(let wizard): return wizard.session.help()
         case .edit(let edit): return edit.session.help()
         case .npc(let npc): return npc.session.help()
-        case .importing: return screenHelp(screen: .`import`)
+        case .importing, .addons: return screenHelp(screen: .`import`)
         case .export, .package: return screenHelp(screen: .export)
         case .parties(let parties): return parties.session.help()
         case .record(let record): return record.session.help()
