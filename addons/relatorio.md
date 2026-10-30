@@ -2,13 +2,13 @@
 
 O `addons.zip` (50.842.950 bytes) traz 686 pacotes: 492 `.xpx` da Expansion e 194 `.xpt` do Core Rules 2.0, contando a User Database e os dois arquivos que precisaram de conserto. Todos foram consolidados num único pacote, `Comunidade.xpx`, no formato que o `TSRP3.EXE` do CD da Expansion lê. Os 14 goodies mensais da Evermore Entertainment ficaram de fora depois, como explica a seção [Goodies da Evermore](#goodies-da-evermore): o pacote tem 36.525 itens de 672 addons.
 
-O instalador, que leva o `Comunidade.xpx` dentro dele, e como usá-lo estão no [GUIA.md](GUIA.md). Junto deste relatório:
+O zip com o `Comunidade.xpx`, e como importá-lo no app com **Importar addons…**, estão no [GUIA.md](GUIA.md). O instalador AppImage para Linux, citado abaixo como foi testado, foi abandonado na versão 1.2.0 do app em favor do zip. Junto deste relatório:
 
 | arquivo | conteúdo |
 |---|---|
 | `compatibilidade.csv` | uma linha por addon, com a situação, o número de itens e as observações |
 | `conflitos.csv` | os nomes que aparecem em mais de um addon e qual versão ficou |
-| `Comunidade-extras.xz` | as imagens e os textos dos addons, embutidos no instalador |
+| `Comunidade-extras.xz` | as imagens e os textos dos addons, que vão no zip |
 
 ## Situação dos addons
 
@@ -89,10 +89,10 @@ O pacote foi conferido de novo com o app 1.0.0-rc1, que corrigiu o travamento ao
 
 ## Imagens e textos
 
-Os addons trouxeram 685 imagens BMP e 321 textos. Sem os da Evermore, ficam 668 imagens e 309 textos, embutidos no instalador em `Comunidade-extras.xz`.
+Os addons trouxeram 685 imagens BMP e 321 textos. Sem os da Evermore, ficam 668 imagens e 309 textos, guardados em `Comunidade-extras.xz` e levados para o zip.
 
 * **Para onde vai cada imagem.** Os registros guardam o caminho do Windows que a imagem tinha no computador do autor, como `C:\Program Files\AD&D Core Rules 2.0\Bitmaps\Monsters\Achaierai.BMP` ou `C:\AD&D Pics\troll.bmp`. Um caminho dentro de uma instalação do Core Rules, em qualquer drive, vira o mesmo caminho dentro da pasta de dados (`Bitmaps/Monsters/Achaierai.BMP`). Um caminho para o `Bitmaps` do CD fica em `Bitmaps`. Os outros vão para `UserBMP`, sem o drive (`UserBMP/AD&D Pics/troll.bmp`). No Wine, estes últimos também vão para o drive C:, onde o original os procura.
 * **Escolha da imagem.** 528 imagens são citadas pelos registros e vão para 536 lugares. Quando dois addons trazem imagens com o mesmo nome, vale a do addon de onde veio o registro. Nenhum lugar recebe duas imagens diferentes. As 4 citações a imagens do próprio CD ficam com as do CD. Todas as 668 imagens também vão para `UserBMP/`, na pasta do seu addon, que é onde o diálogo de imagens do original abre.
 * **Nada é sobrescrito.** Um arquivo que já existe fica como está, e o registro da instalação lista cada imagem gravada.
 * **No app.** Tipos de monstro, monstros (pela imagem do seu tipo), raças e personagens mostram a imagem quando o arquivo está na pasta de dados. As imagens são lidas pelo próprio app, sem depender dos leitores de imagem do sistema. 3.800 citações apontam para imagens que nenhum addon trouxe, quase todas as do CD (`6.bmp`, `NA.bmp`), que **Extrair dados do CD…** copia do CD desde a versão 1.0.0-rc1.
-* **Textos.** Os leia-me em texto, HTML, RTF, Word e PDF foram convertidos para texto simples. O botão **Detalhes dos addons…** do instalador mostra, para cada pasta de addons, os pacotes, o que cada um trouxe para a coleção e esses textos.
+* **Textos.** Os leia-me em texto, HTML, RTF, Word e PDF foram convertidos para texto simples. O zip leva esses textos em `texts/` e, em `addons.tsv`, o que cada pasta de addons trouxe para a coleção.

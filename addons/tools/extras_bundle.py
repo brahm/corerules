@@ -1,5 +1,5 @@
 """Builds addons/Comunidade-extras.xz: the add-ons' pictures and texts,
-and what the installer's details list shows.
+and what each add-on folder brought.
 
 usage: extras_bundle.py EXTRAS_DIR MANIFEST_DIR ITEMS.tsv FINAL_ITEMS.tsv COMPAT.csv WORK_DIR OUT
 

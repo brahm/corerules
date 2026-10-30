@@ -1,25 +1,22 @@
 <p align="center">
-  <img src="../data/addons/icons/hicolor/256x256/apps/io.github.brahm.CoreRules.Addons.png" width="128" height="128" alt="Core Rules Community Add-ons Collection icon">
+  <img src="icon.png" width="128" height="128" alt="Core Rules Community Add-ons Collection icon">
 </p>
 
 # Core Rules Community Add-ons Collection
 
 The add-ons that the AD&D Core Rules community made for **AD&D Core Rules 2.0** and its **Expansion**, gathered into one
-package and installed with one click into [Core Rules](../README.md), the
-Linux replica of the original program. 672 add-on packages became 36,525
+package that [Core Rules](../README.md), the replica of the original
+program for Linux, Windows 11 and macOS, imports in one go. 672 add-on packages became 36,525
 items: new races and classes, kits, thousands of spells and monsters,
 equipment, encounters, the characters of the published modules and the
-AD&D Core Rules User Database. The 668 pictures that came with them are
-installed too, and the texts their authors wrote can be read in the
-installer.
+AD&D Core Rules User Database. The 668 pictures that came with them come
+along, and so do the texts their authors wrote.
 
 > The collection holds what the community wrote and shared as add-ons. It
 > leaves out the monthly goodies that Evermore Entertainment, the company
 > that made Core Rules 2.0, published in 1998–2000, and the copies of them
 > in the User Database. The rules data still comes from a Core Rules
 > installation you already own.
-
-![The installer finds three copies of Core Rules and the two data folders they read](screenshots/installer.png)
 
 ## What's inside
 
@@ -51,7 +48,7 @@ the original program alike.
 | Characters from the modules | 48 |
 | Other parts | 157 |
 
-Once installed, the add-ons sit in the user databases next to your own
+Once imported, the add-ons sit in the user databases next to your own
 records, and the module characters join the character list. Monster types,
 races and characters show the picture their author drew or scanned, in the
 app and in the original program.
@@ -68,90 +65,50 @@ app and in the original program.
 
 ![A character from the modules, the Avatar of Bahgtru](screenshots/character.png)
 
-## Installing
+## Importing
 
-On Windows, macOS or any Linux, download
-[`CoreRules-Community-Addons.zip`](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons.zip)
-from the [addons release](https://github.com/brahm/corerules/releases/tag/addons).
-It holds the same validated add-ons, as `Comunidade.xpx`, with the pictures,
-`pictures.tsv` (where each picture goes) and the texts. In Core Rules,
-choose **Import Add-ons…** and pick the folder that holds the zip; there is
-no need to extract it. The original Expansion program imports
-`Comunidade.xpx` too. `tools/addons_zip.py VERSION DIR` builds the zip from
-the files below.
+You need [Core Rules](https://github.com/brahm/corerules/releases) 1.2.0
+or newer, on Linux, Windows 11 or macOS, with your Expansion data in it;
+if it is not there yet, open Core Rules and use **Extract Data from CD…**.
 
-On Linux there is also the installer.
+1. Download
+   [`CoreRules-Community-Addons.zip`](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons.zip)
+   (the link always gives the newest build; the
+   [addons release](https://github.com/brahm/corerules/releases/tag/addons)
+   also keeps each version) and put it in a folder of its own. There is no
+   need to extract it.
+2. In Core Rules, choose **Import Add-ons…**: in the main menu on Linux,
+   the More menu on Windows and the File menu on the Mac.
+3. Pick the folder that holds the zip. The app reads the folder, its
+   subfolders and the ZIP archives in it (also ZIPs inside ZIPs), and tells
+   each `.xpx` and `.xpt` package apart by what it holds.
+4. Check the list: what comes in, by category, what was found twice and
+   what cannot be imported, with why. Nothing is written before you
+   confirm.
+5. Press **Import**. The whole collection takes about a minute.
 
-The collection is a single AppImage, `CoreRules-Community-Addons-VERSION-x86_64.AppImage`,
-that carries the add-ons inside and installs them itself. It needs:
+Import first copies `UserDbas` and `Chars` to a backup beside the data
+folder (`data-before-addons-TIME`). It imports the packages from the
+oldest file to the newest, so the newer one wins on a name clash, leaves
+out the characters already in the list, so a second run does not duplicate
+them, and copies the pictures to the places `pictures.tsv` gives (in
+`Bitmaps/Monsters`, `Bitmaps/Portrait` and `UserBMP`), never over a file
+that is already there. A log of everything it did is written beside the
+data folder (`data-addons-TIME.log`). The same command imports any other
+folder of add-ons, loose or zipped, as the community shared them.
 
-* Linux x86-64 with glibc 2.43 or newer (Fedora 44, Ubuntu 26.04 or newer)
-* [Core Rules](https://github.com/brahm/corerules/releases) 0.7.2 or newer,
-  as the Flatpak, the .deb or .rpm package or the AppImage
-* Your Expansion data in the app; if it is not there yet, open Core Rules
-  and use **Extract Data from CD…**
+The zip holds one folder, `CoreRules-Community-Addons-VERSION`, with:
 
-**[Download the installer](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage)**
-(the link always gives the newest build; the
-[addons release](https://github.com/brahm/corerules/releases/tag/addons)
-also keeps each version), then:
-
-```sh
-chmod +x CoreRules-Community-Addons-x86_64.AppImage
-./CoreRules-Community-Addons-x86_64.AppImage
-```
-
-The same file is published on
-[GitHub Packages](https://github.com/brahm?tab=packages&repo_name=corerules)
-in two forms. GitHub Packages has no registry for plain files, so:
-
-* **As the AppImage file**, in the Maven package
-  `io.github.brahm.corerules-community-addons`. Its page lists
-  `corerules-community-addons-VERSION-x86_64.AppImage` under Assets, to
-  download from the browser. Command-line downloads from that registry
-  need a GitHub token, even for a public package.
-* **As an OCI artifact**,
-  [`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons),
-  tagged with each version and `latest`, which downloads with no account.
-  It holds the AppImage as its one file rather than a container image, so
-  the `docker pull` that page shows does not apply. Download it with
-  [ORAS](https://oras.land):
-
-  ```sh
-  oras pull ghcr.io/brahm/corerules-community-addons:latest
-  ```
-
-The [Portuguese guide](GUIA.md) also shows how to download it with
-`curl` alone, and how to undo an install.
-
-The window looks for Core Rules on its own and lists every copy it finds
-with the data folder that copy reads:
-
-| How the app was installed | Data folder |
+| File | Contents |
 | --- | --- |
-| Flatpak | `~/.var/app/io.github.brahm.CoreRules/data/corerules/data` |
-| .deb or .rpm package | `~/.local/share/corerules/data` |
-| AppImage in Downloads, Applications, Desktop, `~/.local/bin`, `/opt` or the home folder | `~/.local/share/corerules/data` |
+| `Comunidade.xpx` | The consolidated add-ons, in the Expansion's export format; the original program's Import reads it too |
+| `pictures/` | The 668 pictures (8-bit BMP), in their add-on folders |
+| `pictures.tsv` | Where each picture goes in the data folder: picture, a tab, place |
+| `texts/` | The authors' 309 texts, as plain text |
+| `addons.tsv` | What each add-on folder brought into the collection |
+| `README.txt`, `LEIA-ME.txt` | How to import it, in English and Portuguese |
 
-Without that folder, a copy falls back to the original program in the Wine
-prefix, as the app does. **Install** copies `UserDbas` and `Chars` to a
-backup beside each folder, then imports the add-ons, in under a minute per
-folder. It also copies the pictures to where the records look for them
-(`Bitmaps/Monsters`, `Bitmaps/Portrait` and `UserBMP` in the data folder,
-and the folders on drive C: that the records name, inside Wine), never over
-a file that is already there. **Other Folder…** is there for an
-installation it does not find, and **Add-on Details…** lists every add-on
-folder with what it brought into the collection and its authors' texts.
-
-<img src="screenshots/details.png" width="49%" alt="Add-on Details, the add-on folders with their items and texts">
-
-![The add-ons installed in both folders](screenshots/installed.png)
-
-The installer speaks the app's six languages (English, Português (Brasil),
-Español, Italiano, Français and Deutsch) and follows the one chosen in
-Core Rules' Preferences, or the system's.
-
-<img src="screenshots/portuguese.png" width="49%" alt="The installer in Brazilian Portuguese">
+The [Portuguese guide](GUIA.md) also shows how to undo an import.
 
 ## How it was built
 
@@ -178,39 +135,37 @@ as one file, `Comunidade.xpx`. Where a name appears in more than one
 add-on, the newest version wins, as in the original Import; the
 [report](relatorio.md) lists every conflict and every package's status.
 
-**Checking in the app.** After an install, every add-on record was opened,
+**Checking in the app.** After an import, every add-on record was opened,
 edited and saved with the app's own editors and read back, and none
 failed.
 
-**Packaging.** The consolidated file is compressed with xz and built into
-the installer, `crates/cr-addons`, a Rust program with GTK 4 and
-libadwaita that imports it through the same code as the app's Import
-(`cr-store`), so installing and importing `Comunidade.xpx` in the app leave
-the same databases.
+**Packaging.** The consolidated file is kept compressed with xz, and
+`tools/addons_zip.py VERSION DIR` builds the zip from it and from the
+extras below. The `Addons package` workflow (`.github/workflows/addons.yml`)
+builds the zip and publishes it on the addons release on every change to
+`main`. A Linux installer (an AppImage) carried the add-ons until the app's
+1.1.0; Import Add-ons… replaced it in 1.2.0.
 
 **Pictures and texts.** The 668 pictures (8-bit BMP files) and 309 texts
-that came with the add-ons, again without Evermore's, are built into the
-installer as `Comunidade-extras.xz`. Each picture goes to the place the
+that came with the add-ons, again without Evermore's, are kept in
+`Comunidade-extras.xz`. Each picture goes to the place the
 records name: a record stores the Windows path the picture had on its
 author's computer (`C:\Program Files\AD&D Core Rules 2.0\Bitmaps\Monsters\
 Achaierai.BMP`, `C:\AD&D Pics\troll.bmp`), and the app maps that path into
 the data folder the same way (`cr-store`'s `pictures` module). The texts,
 readme files in plain text, HTML, RTF, Word and PDF, were converted to plain
-text. `packaging/appimage/build-in-sdk.sh VERSION addons` builds the
-AppImage in the GNOME 51 SDK, and the `Addons package` workflow
-(`.github/workflows/addons.yml`) publishes it on GitHub Packages on every
-change to `main`.
+text.
 
 ## Files
 
 | File | Contents |
 | --- | --- |
-| `Comunidade.xpx.xz` | The consolidated add-ons, as built into the installer |
+| `Comunidade.xpx.xz` | The consolidated add-ons, as they go into the zip |
 | `Comunidade-extras.xz` | The add-ons' pictures and texts, and where each picture goes |
 | `tools/` | The scripts that chose each picture's place, built `Comunidade-extras.xz` and build the add-ons' zip |
 | [`relatorio.md`](relatorio.md) | The report, in Portuguese: what was converted, repaired or left out |
 | [`compatibilidade.csv`](compatibilidade.csv) | One line per add-on package, with its status and item count |
 | [`conflitos.csv`](conflitos.csv) | The names found in more than one package, and which version stayed |
-| [`GUIA.md`](GUIA.md) | The install guide, in Portuguese |
+| [`GUIA.md`](GUIA.md) | The import guide, in Portuguese |
 
 The add-ons belong to their authors in the Core Rules community.

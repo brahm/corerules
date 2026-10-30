@@ -25,9 +25,6 @@ flatpak run --share=network --filesystem=host --cwd="$PWD" --command=sh \
     "org.gnome.Sdk//$gnome" -c '
         set -eu
         export PATH=/usr/lib/sdk/rust-stable/bin:$PATH CARGO_HOME=$PWD/target/cargo-home
-        case $2 in
-            addons) cargo build --release --locked -p cr-addons ;;
-            *) cargo build --release --locked ;;
-        esac
-        packaging/appimage/build.sh "$1" "$2"
-    ' sh "$version" "${2:-app}"
+        cargo build --release --locked
+        packaging/appimage/build.sh "$1"
+    ' sh "$version"

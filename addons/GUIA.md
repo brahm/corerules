@@ -1,50 +1,17 @@
-# Core Rules Community Add-ons Collection: guia de instalação
+# Core Rules Community Add-ons Collection: guia de importação
 
-Este pacote junta 672 addons feitos pela comunidade para o AD&D Core Rules 2.0 e a Expansion: raças, classes, kits, magias, monstros, equipamentos, encontros, módulos com personagens e a AD&D Core Rules User Database. Todos foram testados, convertidos para o formato da Expansion e consolidados num único arquivo, `Comunidade.xpx`, com 36.525 itens. As 668 imagens que vieram com eles também são instaladas. Os goodies mensais da Evermore Entertainment ficaram de fora. O [README](README.md) apresenta a coleção, em inglês, e o [relatorio.md](relatorio.md) conta o que foi convertido, reparado ou deixado de fora.
+Este pacote junta 672 addons feitos pela comunidade para o AD&D Core Rules 2.0 e a Expansion: raças, classes, kits, magias, monstros, equipamentos, encontros, módulos com personagens e a AD&D Core Rules User Database. Todos foram testados, convertidos para o formato da Expansion e consolidados num único arquivo, `Comunidade.xpx`, com 36.525 itens. As 668 imagens que vieram com eles também vêm junto. Os goodies mensais da Evermore Entertainment ficaram de fora. O [README](README.md) apresenta a coleção, em inglês, e o [relatorio.md](relatorio.md) conta o que foi convertido, reparado ou deixado de fora.
 
 Mapas do Map Maker II e desenhos do Campaign Mapper não fazem parte do pacote, porque o app não trata desses programas.
 
-## O instalador
-
-Os addons são distribuídos num único arquivo, `CoreRules-Community-Addons-VERSÃO-x86_64.AppImage`. Ele é um programa com janela que leva os addons dentro dele e os instala no Core Rules, sem script nem outros arquivos.
-
 O que é preciso:
 
-* Linux x86-64 com glibc 2.43 ou mais nova (Fedora 44, Ubuntu 26.04 ou mais novos).
-* O app Core Rules 0.7.2 ou mais novo, da [página de releases](https://github.com/brahm/corerules/releases). Até a versão 0.7.1 o app não lia parte destes addons: classes com habilidades por nível (`CClassFreeSpellsOb`) e o que a Expansion com patch grava.
+* O app Core Rules 1.2.0 ou mais novo, no Linux, no Windows 11 ou no macOS, da [página de releases](https://github.com/brahm/corerules/releases) ou da Microsoft Store.
 * Os dados da sua Expansion no app. Se ainda não tiver, abra o Core Rules e use **Extrair dados do CD…** no menu.
 
 ## Onde baixar
 
-**[Baixe o instalador aqui](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons-x86_64.AppImage).** O link sempre traz a versão mais nova. A [release addons](https://github.com/brahm/corerules/releases/tag/addons) também guarda cada versão.
-
-O mesmo arquivo é publicado no [GitHub Packages](https://github.com/brahm?tab=packages&repo_name=corerules) do projeto, de duas formas, porque o GitHub Packages não tem um registro para arquivos soltos:
-
-* **Como o arquivo AppImage**, no pacote Maven `io.github.brahm.corerules-community-addons`. A página dele lista `corerules-community-addons-VERSÃO-x86_64.AppImage` em Assets, para baixar pelo navegador. Baixar desse registro pela linha de comando pede um token do GitHub, mesmo com o pacote público.
-* **Como artefato OCI**, [`corerules-community-addons`](https://github.com/brahm/corerules/pkgs/container/corerules-community-addons), que baixa sem conta nenhuma. Ele guarda a AppImage como seu único arquivo, e não uma imagem de contêiner: o `docker pull` que a página do GitHub mostra não serve. Para baixar de lá, use o [ORAS](https://oras.land):
-
-```sh
-oras pull ghcr.io/brahm/corerules-community-addons:latest
-```
-
-Ou só com `curl`:
-
-```sh
-repo=brahm/corerules-community-addons
-token=$(curl -s "https://ghcr.io/token?scope=repository:$repo:pull" | sed 's/.*"token":"\([^"]*\)".*/\1/')
-layer=$(curl -s -H "Authorization: Bearer $token" \
-    -H "Accept: application/vnd.oci.image.manifest.v1+json" \
-    "https://ghcr.io/v2/$repo/manifests/latest" |
-    grep -o '"digest":"sha256:[0-9a-f]*"' | tail -n 1 | cut -d'"' -f4)
-curl -L -H "Authorization: Bearer $token" -o CoreRules-Community-Addons-x86_64.AppImage \
-    "https://ghcr.io/v2/$repo/blobs/$layer"
-```
-
-Além de `latest`, cada versão do app tem a sua tag, como `1.0.0`.
-
-## O pacote .zip, para Windows, macOS e qualquer Linux
-
-Os mesmos addons validados também saem num zip, **[CoreRules-Community-Addons.zip](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons.zip)**, na mesma [release addons](https://github.com/brahm/corerules/releases/tag/addons), com uma cópia de nome `CoreRules-Community-Addons-VERSÃO.zip` para cada versão. Ele serve para o comando **Importar add-ons…** do app, no Linux, no Windows e no macOS: escolha no menu a pasta onde está o zip, sem precisar extraí-lo, e o app lê todos os arquivos de uma vez, valida, importa os itens e copia as imagens para onde os registros as procuram, sem sobrescrever nenhum arquivo.
+Os addons saem num zip, **[CoreRules-Community-Addons.zip](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons.zip)**, na [release addons](https://github.com/brahm/corerules/releases/tag/addons), com uma cópia de nome `CoreRules-Community-Addons-VERSÃO.zip` para cada versão. Ele serve para o comando **Importar add-ons…** do app, no Linux, no Windows e no macOS: escolha no menu a pasta onde está o zip, sem precisar extraí-lo, e o app lê todos os arquivos de uma vez, valida, importa os itens e copia as imagens para onde os registros as procuram, sem sobrescrever nenhum arquivo.
 
 Dentro dele há uma pasta, `CoreRules-Community-Addons-VERSÃO`, com:
 
@@ -57,52 +24,32 @@ Dentro dele há uma pasta, `CoreRules-Community-Addons-VERSÃO`, com:
 | `addons.tsv` | O que cada pasta de addon trouxe para a coleção |
 | `README.txt`, `LEIA-ME.txt` | Como instalar, em inglês e em português |
 
-O zip é gerado a partir dos mesmos `Comunidade.xpx.xz` e `Comunidade-extras.xz` que vão dentro do instalador, por `tools/addons_zip.py VERSÃO PASTA`, no job `zip` do workflow `Addons package`.
+## Como importar
 
-## Instalação
+1. Baixe o `CoreRules-Community-Addons.zip` e ponha numa pasta só dele, por exemplo `Downloads/addons`. Não precisa extrair.
+2. No Core Rules, escolha **Importar addons…**: no menu principal no Linux, no menu **Mais** no Windows e no menu **Arquivo** no Mac.
+3. Escolha a pasta onde está o zip. O app procura nela, nas subpastas e dentro dos zips (até zips dentro de zips) todos os pacotes `.xpx` e `.xpt`, as imagens `.bmp` e o `pictures.tsv`.
+4. Confira a lista: o que vai entrar, por categoria, o que foi achado duas vezes e o que não pode ser importado, com o motivo. Nada é gravado antes de você confirmar.
+5. Clique em **Importar**. O `Comunidade.xpx` inteiro leva cerca de um minuto, com uma barra de progresso.
+6. No fim, o relatório diz quantos itens, personagens e imagens entraram, e onde ficaram a cópia de segurança e o registro.
 
-1. Torne o arquivo executável e abra-o:
+Os addons aparecem nos bancos de dados do usuário (Raças, Classes, Magias, Monstros e o resto) e os personagens dos módulos na lista de personagens. Tipos de monstro, monstros, raças e personagens mostram a imagem que veio com o addon. Os addons em si e os textos dos autores estão em inglês.
 
-   ```sh
-   chmod +x CoreRules-Community-Addons*x86_64.AppImage
-   ./CoreRules-Community-Addons*x86_64.AppImage
-   ```
+O mesmo comando serve para qualquer outra pasta de addons, soltos ou em zips, como a comunidade os compartilhou.
 
-   Sem FUSE, rode com `APPIMAGE_EXTRACT_AND_RUN=1`.
+## O que a importação faz
 
-2. A janela procura o Core Rules sozinha e mostra cada cópia que achou, com a pasta de dados que ela lê:
+1. Copia `UserDbas/` e `Chars/` para uma pasta ao lado da pasta de dados, por exemplo `data-before-addons-2026-10-29-232615/`.
+2. Importa os pacotes do arquivo mais antigo para o mais novo, de modo que, num nome repetido, o mais novo vence, como no Import do programa original. Um registro do usuário com o mesmo nome de um addon é substituído pelo do addon. As classes passam uma segunda vez, para que uma combinação raça/classe que cita duas classes novas entre.
+3. Deixa de fora os personagens que já estão na lista, então importar de novo não os duplica.
+4. Copia as imagens para onde os registros as procuram, ou para o lugar que o `pictures.tsv` indica. Um arquivo que já existe não é substituído.
+5. Grava um registro de tudo ao lado da pasta de dados, como `data-addons-2026-10-29-232615.log`.
 
-   | Como o app foi instalado | Pasta de dados |
-   | --- | --- |
-   | Flatpak | `~/.var/app/io.github.brahm.CoreRules/data/corerules/data` |
-   | Pacote .deb ou .rpm | `~/.local/share/corerules/data` |
-   | AppImage (em Downloads, Aplicativos, Área de Trabalho, `~/.local/bin`, `/opt` ou a pasta pessoal) | `~/.local/share/corerules/data` |
-
-   O botão **Detalhes dos addons…** mostra, quando você quiser, cada pasta de addons com o que ela trouxe para a coleção e os textos que os autores escreveram.
-
-   Sem essa pasta, cada cópia usa a instalação do programa original no Wine, em `~/.wine/drive_c/Program Files/AD&D Core Rules 2.0`, como o próprio app faz. Se a cópia ainda não tem os dados do jogo, o botão **Abrir o Core Rules** a abre para você usar **Extrair dados do CD…**; depois clique em ↻ para procurar de novo. Para instalar numa pasta que o instalador não achou, use **Outra pasta…** e indique a pasta que tem `Database`.
-
-3. Clique em **Instalar**. A importação leva menos de um minuto.
-
-4. Abra o Core Rules, pelo botão **Abrir o Core Rules** ou como de costume. Os addons aparecem nos bancos de dados do usuário (Raças, Classes, Magias, Monstros e o resto) e os personagens dos módulos na lista de personagens. Tipos de monstro, monstros, raças e personagens mostram a imagem que veio com o addon. Se o app já estava aberto, feche e abra de novo.
-
-A janela fala os mesmos idiomas do app (português, inglês, espanhol, italiano, francês e alemão) e segue o que foi escolhido nas Preferências do Core Rules; sem escolha, segue o idioma do sistema. Os addons em si e os textos dos autores estão em inglês.
-
-## O que o instalador faz
-
-1. Confere se cada pasta é uma instalação da Expansion. Quando duas cópias do app leem a mesma pasta, ela recebe os addons uma vez só.
-2. Copia `UserDbas/` e `Chars/` para uma pasta ao lado, por exemplo `data-before-addons-20261019-010700/`.
-3. Importa o `Comunidade.xpx`. Um registro do usuário com o mesmo nome de um addon é substituído pelo do addon, como no Import do programa original.
-4. Importa de novo só as classes. Uma combinação raça/classe que cita duas classes novas só entra quando as duas já existem.
-5. Copia as imagens para onde os registros as procuram (`Bitmaps/Monsters`, `Bitmaps/Portrait` e `UserBMP`, e no Wine também as pastas do drive C: que os registros citam). Um arquivo que já existe não é substituído.
-
-O registro da importação fica ao lado da pasta, como `data-addons-20261019-010700.log`, e o botão **Abrir o registro** o mostra no fim.
-
-Instalar de novo não duplica os personagens. Se a pasta estiver dentro de um prefixo do Wine, o instalador pede confirmação antes de mexer. O programa original do CD também lê os addons, mas o Import dele leva cerca de 35 minutos.
+Pacotes da Expansion não entram numa instalação do Core Rules 2.0, e arquivos danificados ou vazios são recusados; a lista antes da importação já mostra isso. O programa original do CD também importa o `Comunidade.xpx`, mas leva cerca de 35 minutos.
 
 ## Como desfazer
 
-Troque `UserDbas/` e `Chars/` pela cópia de segurança, pondo no lugar de `DATA` a data da cópia que quer usar. As imagens gravadas estão listadas no registro da instalação e podem ficar, já que nada as usa sem os addons:
+Troque `UserDbas/` e `Chars/` pela cópia de segurança, pondo no lugar de `DATA` a data da cópia que quer usar. As imagens gravadas estão listadas no registro da importação e podem ficar, já que nada as usa sem os addons:
 
 ```sh
 cd ~/.local/share/corerules
@@ -112,6 +59,6 @@ cp -r data-before-addons-DATA/UserDbas data-before-addons-DATA/Chars data/
 
 No Flatpak, a pasta é `~/.var/app/io.github.brahm.CoreRules/data/corerules`.
 
-## Como o instalador é gerado
+## Como o zip é gerado
 
-O instalador é o crate `crates/cr-addons`, em Rust com GTK 4 e libadwaita. Ele embute `addons/Comunidade.xpx.xz` e `addons/Comunidade-extras.xz` (imagens e textos) e importa pelo mesmo código do app (`cr-store`). `packaging/appimage/build-in-sdk.sh VERSÃO addons` gera a AppImage no SDK do GNOME 51, e o workflow `Addons package` (`.github/workflows/addons.yml`) a publica no GitHub Packages a cada mudança na main.
+O zip sai dos arquivos `addons/Comunidade.xpx.xz` e `addons/Comunidade-extras.xz` (imagens e textos) por `tools/addons_zip.py VERSÃO PASTA`, no workflow `Addons package` (`.github/workflows/addons.yml`), que o publica na release addons a cada mudança na main. O resultado é sempre o mesmo para a mesma entrada.
