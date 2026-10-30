@@ -12,6 +12,7 @@ enum Modal: Identifiable {
     case edit(EditModel)
     case npc(NpcModel)
     case importing(ImportModel)
+    case addons(AddonsModel)
     case export(ExportModel)
     case package(PackageModel)
     case parties(PartiesModel)
@@ -24,6 +25,7 @@ enum Modal: Identifiable {
         case .edit(let m): return ObjectIdentifier(m)
         case .npc(let m): return ObjectIdentifier(m)
         case .importing(let m): return ObjectIdentifier(m)
+        case .addons(let m): return ObjectIdentifier(m)
         case .export(let m): return ObjectIdentifier(m)
         case .package(let m): return ObjectIdentifier(m)
         case .parties(let m): return ObjectIdentifier(m)
@@ -240,6 +242,8 @@ final class AppModel: ObservableObject {
             Action.EXPORT, Action.NEW_PACKAGE, Action.EDIT_PACKAGE, Action.NEW_NPC,
             Action.NEW_NPC_GROUP, Action.MANAGE_PARTIES:
             return writable && modal == nil
+        case Action.IMPORT_ADDONS:
+            return writable && modal == nil && working == nil
         case Action.ROLL_TABLE:
             return library != nil
         case Action.EXTRACT_DATA:
@@ -294,6 +298,7 @@ final class AppModel: ObservableObject {
         case Action.ENTER_CHARACTER: newCharacter(entering: true)
         case Action.IMPORT: chooseImport()
         case Action.IMPORT_CORE20: chooseCore20()
+        case Action.IMPORT_ADDONS: chooseAddons()
         case Action.EXPORT: export()
         case Action.NEW_PACKAGE: newPackage()
         case Action.EDIT_PACKAGE: chooseEditPackage()
@@ -1015,6 +1020,31 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Import Add-ons…: a folder, whose add-ons (in its subfolders and
+    /// ZIP archives too) are read, shown and imported all at once.
+    private func chooseAddons() {
+        guard let library else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.message = tr("Choose the Folder with the Add-ons")
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        working = tr("Reading the add-ons…")
+        let folder = url.path
+        Task { [weak self] in
+            let result = await Task.detached {
+                Result { try library.readAddons(folder: folder) }
+            }.value
+            guard let self else { return }
+            self.working = nil
+            switch result {
+            case .success(let session): self.modal = .addons(AddonsModel(session))
+            case .failure(let error): self.fail(tr("Cannot Import"), error)
+            }
+        }
+    }
+
     /// Export…: the user's records and characters, to take into a new
     /// package.
     private func export() {
@@ -1170,7 +1200,7 @@ final class AppModel: ObservableObject {
         case .wizard(let wizard): return wizard.session.help()
         case .edit(let edit): return edit.session.help()
         case .npc(let npc): return npc.session.help()
-        case .importing: return screenHelp(screen: .`import`)
+        case .importing, .addons: return screenHelp(screen: .`import`)
         case .export, .package: return screenHelp(screen: .export)
         case .parties(let parties): return parties.session.help()
         case .record(let record): return record.session.help()

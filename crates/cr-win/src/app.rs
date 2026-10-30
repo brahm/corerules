@@ -35,6 +35,7 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex, OnceLock};
 
 use cr_app::action::{self, Action};
+use cr_app::addons::{self, AddonFolder, Imported};
 use cr_app::create::{Answer, Effect, Input, ListKind, Needs, Page as CreatePage, Wizard};
 use cr_app::editor::{EditEffect, EditInput, EditNeeds, Editor, Tab as EditTab};
 use cr_app::encounter::{
@@ -144,6 +145,8 @@ pub struct Shell {
     history: Vec<Page>,
     notice: Option<Notice>,
     confirm: Option<Confirm>,
+    /// The folder Import Add-ons… read, while it asks to import it.
+    addons: Option<Arc<AddonFolder>>,
     pane_open: bool,
     /// The window's width, once Reactor has said it; 0 before.
     width: f64,
@@ -370,6 +373,11 @@ pub enum Confirm {
     /// Restore on a standard treasure table.
     RestoreTable {
         name: String,
+    },
+    /// Import Add-ons…: what the folder holds, to import.
+    ImportAddons {
+        title: String,
+        text: String,
     },
     /// Extract Data from CD…: from an ISO image or a folder.
     ExtractSource,
@@ -655,6 +663,10 @@ pub enum Message {
     /// What a Core Rules 2.0 installation hands over, none when it has
     /// nothing, or why it cannot.
     Core20Read(Result<Option<Option<Box<import::ImportPage>>>, String>),
+    /// What the folder chosen for Import Add-ons… holds.
+    AddonsRead(Result<Option<Arc<AddonFolder>>, String>),
+    /// Import Add-ons… finished.
+    AddonsImported(Result<Arc<Imported>, String>),
     /// What Export or Add Items offers, and whether it adds to the
     /// package editor.
     ExportOffered(Result<Vec<Exportable>, String>, bool),
@@ -946,6 +958,26 @@ impl Shell {
                         }
                     },
                     Message::Core20Read,
+                );
+            }
+            action::IMPORT_ADDONS => {
+                let Some(install) = self.install.clone() else {
+                    return;
+                };
+                let expansion = !install.is_core20();
+                self.dialog(
+                    context,
+                    move |owner| {
+                        let title = tr("Choose the Folder with the Add-ons");
+                        match native::dialogs::open_folder(owner, title) {
+                            Ok(Some(path)) => {
+                                addons::scan(&path, expansion).map(|f| Some(Arc::new(f)))
+                            }
+                            Ok(None) => Ok(None),
+                            Err(e) => Err(e.message()),
+                        }
+                    },
+                    Message::AddonsRead,
                 );
             }
             action::EXPORT => self.offer_exports(false, context),
@@ -2457,6 +2489,7 @@ impl Component for Shell {
             history: Vec::new(),
             notice: None,
             confirm: None,
+            addons: None,
             pane_open: true,
             width: 0.0,
             busy: false,
@@ -2790,6 +2823,21 @@ impl Component for Shell {
                                 .map_err(|e| e.to_string()),
                         )
                     });
+                }
+                (Some(Confirm::ImportAddons { .. }), ContentDialogResult::Primary) => {
+                    if let Some(found) = self.addons.take() {
+                        self.busy = true;
+                        self.notice = Some(Notice::new(
+                            InfoBarSeverity::Informational,
+                            tr("Importing the add-ons…"),
+                            "",
+                        ));
+                        self.with_install(context, move |install| {
+                            Message::AddonsImported(
+                                found.import(install, &|_, _, _| {}).map(Arc::new),
+                            )
+                        });
+                    }
                 }
                 (Some(Confirm::ExtractSource), ContentDialogResult::Primary) => self.dialog(
                     context,
@@ -3172,6 +3220,40 @@ impl Component for Shell {
                         self.history.clear();
                         self.page = Page::Library;
                         self.notice = Some(import::report(&report));
+                        self.load(None, context);
+                    }
+                    Err(e) => self.show_error(tr("Import Failed"), e),
+                }
+            }
+            Message::AddonsRead(read) => {
+                self.busy = false;
+                match read {
+                    Ok(Some(found)) => {
+                        let (title, text) = found.summary();
+                        if found.can_import() {
+                            self.addons = Some(found);
+                            self.confirm = Some(Confirm::ImportAddons { title, text });
+                        } else {
+                            self.confirm = Some(Confirm::Info { title, text });
+                        }
+                    }
+                    Ok(None) => {}
+                    Err(e) => self.show_error(tr("Cannot Import"), e),
+                }
+            }
+            Message::AddonsImported(done) => {
+                self.busy = false;
+                self.notice = None;
+                match done {
+                    Ok(done) => {
+                        // As after Import…: the races and classes change
+                        // what the NPC generator offers, the items the
+                        // treasure.
+                        self.forget_rules();
+                        self.history.clear();
+                        self.page = Page::Library;
+                        let (title, text) = done.report();
+                        self.confirm = Some(Confirm::Info { title, text });
                         self.load(None, context);
                     }
                     Err(e) => self.show_error(tr("Import Failed"), e),
@@ -4690,6 +4772,9 @@ impl Shell {
                 plain(tr("_Delete")),
             ),
             Some(Confirm::Info { title, text }) => (title.clone(), text.clone(), String::new()),
+            Some(Confirm::ImportAddons { title, text }) => {
+                (title.clone(), text.clone(), plain(tr("_Import")))
+            }
             Some(Confirm::DeleteRecord { title, text, .. }) => {
                 (title.clone(), text.clone(), plain(tr("_Delete")))
             }

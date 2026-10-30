@@ -12,4 +12,5 @@ cr-formats.workspace = true
 cr-i18n.workspace = true
 cr-store.workspace = true
 flate2 = "1"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 image.workspace = true

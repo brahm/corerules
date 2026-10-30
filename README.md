@@ -683,6 +683,18 @@ whether it came as the Flatpak, the .deb, .rpm or pacman package or an AppImage,
 and speaks the app's six languages. Its [README](addons/README.md) says
 what is inside, how it was built and how to install it.
 
+**Import Add-ons…**, in the main menu on Linux, the More menu on Windows
+and the File menu on the Mac, brings in every add-on in a folder at once.
+The folder is searched with its subfolders and the ZIP archives in it (as
+the add-ons were shared), each `.xpx` and `.xpt` package is read and told
+apart by what it holds, and the list shows what comes in, what is found
+twice and what cannot be imported, with why, before anything is written.
+Import then copies the user databases and characters to a backup beside the
+data folder, imports the packages from the oldest file to the newest
+(characters already in the list are left out), copies the `.bmp` pictures
+to where the imported records look for them (or where a `pictures.tsv`
+beside them says), and writes a log of everything it did.
+
 ## Reporting problems
 
 Please [open an issue](https://github.com/brahm/corerules/issues) for anything
