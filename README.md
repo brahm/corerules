@@ -48,16 +48,16 @@ discs open in the app's own Help page, since Windows 11 no longer has a
 WinHelp reader.
 
 <p align="center">
-  <img src="docs/screenshots/windows/character.png" width="49%" alt="The character list on Windows 11">
-  <img src="docs/screenshots/windows/monster.png" width="49%" alt="A red dragon's page in the library on Windows 11">
-</p>
-<p align="center">
-  <img src="docs/screenshots/windows/encounter.png" width="49%" alt="An orc lair encounter on Windows 11">
-  <img src="docs/screenshots/windows/sheet.png" width="49%" alt="A character sheet on Windows 11">
+  <img src="docs/screenshots/windows/character.png" width="49%" alt="A module character with his portrait on Windows 11">
+  <img src="docs/screenshots/windows/import-addons.png" width="49%" alt="Import Add-ons listing the Community Add-ons Collection on Windows 11">
 </p>
 <p align="center">
   <img src="docs/screenshots/windows/new-character.png" width="49%" alt="Rolling ability scores in New Character on Windows 11">
-  <img src="docs/screenshots/windows/help.png" width="49%" alt="The Tome of Help on Windows 11">
+  <img src="docs/screenshots/windows/sheet.png" width="49%" alt="Jarlaxle's character sheet on Windows 11">
+</p>
+<p align="center">
+  <img src="docs/screenshots/windows/monster.png" width="49%" alt="The red dragon's picture in the library on Windows 11">
+  <img src="docs/screenshots/windows/encounter.png" width="49%" alt="An orc lair encounter on Windows 11">
 </p>
 
 ### On macOS
