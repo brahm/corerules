@@ -1,23 +1,32 @@
-**Core Rules 1.1.0: now on macOS.** Core Rules now runs on Linux,
-Windows 11 and macOS, with the same features on all three, the same
-backend and the same data files. The Mac version is native. It looks and
-works like a Mac app: the sections, the entries and the details in three
-columns, every action in the menu bar, and the sheets, the help and the
-generators in their own windows. It went through a beta (1.1.0-beta1) on
-an Apple Silicon Mac, where it worked as it should. Nothing changes in
-what the Linux and Windows 11 versions do. More of their code is now
-shared by the three versions. Characters and user databases work on all
-three systems and in the original programs.
+**Core Rules 1.2.0: Import Add-ons.** A new command, **Import Add-ons…**
+(the main menu on Linux, the More menu on Windows, the File menu on the
+Mac), imports every add-on in a folder at once. It reads the folder, its
+subfolders and its ZIP archives (also ZIPs inside ZIPs, as the community
+shared them), tells each `.xpx` and `.xpt` package apart by what it holds,
+and lists what comes in, what was found twice and what cannot be imported,
+with why, before anything is written. Then it backs up the user databases
+and characters, imports from the oldest file to the newest, leaves out the
+characters already in the list, copies the add-ons' pictures to where
+their records look for them and writes a log.
+
+**The Community Add-ons Collection as a .zip.** The 672 community add-ons
+(36,525 items, 668 pictures and the authors' texts) now come as one file,
+[`CoreRules-Community-Addons.zip`](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons.zip),
+on the [addons release](https://github.com/brahm/corerules/releases/tag/addons).
+Put it in a folder of its own, choose Import Add-ons… and pick that folder;
+there is no need to extract it. The whole collection comes in in about a
+minute, on Linux, Windows 11 and macOS. The Linux add-ons installer (an
+AppImage) is no longer published: the zip and Import Add-ons replace it.
 
 | System | File | Install |
 | --- | --- | --- |
-| macOS 14 or newer, Apple Silicon (M1 or newer) | `CoreRules-1.1.0-arm64.dmg` | Open it and drag Core Rules to Applications, then see below |
+| macOS 14 or newer, Apple Silicon (M1 or newer) | `CoreRules-1.2.0-arm64.dmg` | Open it and drag Core Rules to Applications, then see below |
 | Windows 11 | [Microsoft Store](https://apps.microsoft.com/detail/9nr2cgp649jm) | Get it from the Store page |
-| Fedora 44 or newer | `corerules-1.1.0-1.fc44.x86_64.rpm` | `sudo dnf install ./corerules-1.1.0-1.fc44.x86_64.rpm` |
-| Ubuntu 26.04 or newer | `corerules_1.1.0_amd64.deb` | `sudo apt install ./corerules_1.1.0_amd64.deb` |
-| Arch Linux, CachyOS, Omarchy | `corerules-1.1.0-1-x86_64.pkg.tar.zst` | `sudo pacman -U ./corerules-1.1.0-1-x86_64.pkg.tar.zst` |
+| Fedora 44 or newer | `corerules-1.2.0-1.fc44.x86_64.rpm` | `sudo dnf install ./corerules-1.2.0-1.fc44.x86_64.rpm` |
+| Ubuntu 26.04 or newer | `corerules_1.2.0_amd64.deb` | `sudo apt install ./corerules_1.2.0_amd64.deb` |
+| Arch Linux, CachyOS, Omarchy | `corerules-1.2.0-1-x86_64.pkg.tar.zst` | `sudo pacman -U ./corerules-1.2.0-1-x86_64.pkg.tar.zst` |
 | Any distribution with Flatpak, such as Bazzite | The [Flatpak repository](https://brahm.github.io/corerules/io.github.brahm.CoreRules.flatpakref) | `flatpak install --user https://brahm.github.io/corerules/io.github.brahm.CoreRules.flatpakref` |
-| Any distribution (glibc 2.43+) | `CoreRules-1.1.0-x86_64.AppImage` | `chmod +x CoreRules-1.1.0-x86_64.AppImage`, then run it |
+| Any distribution (glibc 2.43+) | `CoreRules-1.2.0-x86_64.AppImage` | `chmod +x CoreRules-1.2.0-x86_64.AppImage`, then run it |
 
 **Opening it on a Mac the first time.** The Mac app is signed without a
 certificate from Apple and is not notarized, because the project has no

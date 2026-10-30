@@ -4,15 +4,16 @@
 
 # Core Rules
 
-**Core Rules** is a complete Linux and Windows 11 version of **AD&D Core
-Rules 2.0** and its **Expansion** (TSR/Evermore, 1998-1999), the character
-manager and Dungeon Master's toolkit for Advanced Dungeons & Dragons 2nd
-Edition. It is written in Rust and runs natively: with GTK 4 and libadwaita
-on Linux, with no Wine, and with WinUI 3 on Windows 11. On Linux it comes as
-a `.deb` for Ubuntu, an `.rpm` for Fedora, a pacman package for Arch Linux
-(and CachyOS and Omarchy), a Flatpak and an AppImage; on Windows 11 it comes
-from the [Microsoft Store](https://apps.microsoft.com/detail/9nr2cgp649jm). Both versions are
-final releases. See
+**Core Rules** is a complete Linux, Windows 11 and macOS version of **AD&D
+Core Rules 2.0** and its **Expansion** (TSR/Evermore, 1998-1999), the
+character manager and Dungeon Master's toolkit for Advanced Dungeons &
+Dragons 2nd Edition. It is written in Rust and runs natively: with GTK 4 and
+libadwaita on Linux, with no Wine, with WinUI 3 on Windows 11 and with
+SwiftUI on the Mac. On Linux it comes as a `.deb` for Ubuntu, an `.rpm` for
+Fedora, a pacman package for Arch Linux (and CachyOS and Omarchy), a Flatpak
+and an AppImage; on Windows 11 it comes from the
+[Microsoft Store](https://apps.microsoft.com/detail/9nr2cgp649jm), and on
+Apple Silicon Macs as a `.dmg`. All three are final releases. See
 [Installing](#installing).
 
 Every screen of the original program is here: the Character Generator with
@@ -23,7 +24,10 @@ the help. The app reads and writes the original's own data files, so
 characters, monsters, encounters and packages made in either program open
 in the other.
 
-> **Version 1.1.0, ready on Linux, Windows 11 and macOS.** Every feature
+> **Version 1.2.0, on Linux, Windows 11 and macOS.** New in 1.2.0:
+> **Import Add-ons…** brings in every add-on in a folder at once, and the
+> [Community Add-ons Collection](#community-add-ons) comes as one `.zip`
+> for it, on all three systems. Every feature
 > was checked against the original programs and went through a full round
 > of manual tests. Players and Dungeon Masters ran 1.0 on Fedora 45 beta,
 > Ubuntu 26.10, Bazzite, Arch Linux and CachyOS, and the Windows 11 and
@@ -32,7 +36,7 @@ in the other.
 > it from the [Microsoft Store](https://apps.microsoft.com/detail/9nr2cgp649jm),
 > or visit the [website](https://brahm.github.io/corerules/).
 
-![The character list with a character made in the original program](docs/screenshots/character.png)
+![A module character with his portrait, from the Community Add-ons](docs/screenshots/character.png)
 
 ### On Windows 11
 
@@ -104,9 +108,10 @@ preserved by the Internet Archive:
    this repository over the same backend, distributed as a `.dmg`. After a
    beta it was released as 1.1.0 on the three systems, and from now on
    every feature ships on all three together.
-5. **New features.** From then on the app improves on the original and
-   moves away from it, step by step, until it no longer needs the original
-   program's files to work.
+5. **New features (in progress).** From then on the app improves on the
+   original and moves away from it, step by step, until it no longer needs
+   the original program's files to work. 1.2.0 brings the first:
+   Import Add-ons… and the Community Add-ons Collection as a `.zip`.
 
 The [roadmap](docs/roadmap.md) has the plan, what is done and what each
 step needs; the [decision log](docs/decisions.md) records every decision
@@ -267,7 +272,7 @@ the original programs wrote.
 
 <p>
   <img src="docs/screenshots/new-character.png" width="49%" alt="The New Character wizard rolling ability scores">
-  <img src="docs/screenshots/sheet.png" width="49%" alt="The character sheet of a character">
+  <img src="docs/screenshots/sheet.png" width="49%" alt="Jarlaxle's character sheet">
 </p>
 
 ### DM Toolkit
@@ -330,20 +335,19 @@ the original programs wrote.
   Conflict asks for another name when a part has that one too; as in the
   Expansion, opening the folder renames the kits, nonweapon proficiencies,
   schools and magical items of yours that a standard one's name hides
+- **Import Add-ons…** imports every add-on in a folder at once: the
+  folder, its subfolders and its ZIP archives (also ZIPs inside ZIPs) are
+  read, each `.xpx` and `.xpt` package is told apart by what it holds, and
+  the list shows what comes in, what was found twice and what cannot be
+  imported before anything is written. It backs up the user databases and
+  characters first, imports from the oldest file to the newest, leaves out
+  the characters already in the list, copies the add-ons' pictures where
+  their records look for them and writes a log (see
+  [Community add-ons](#community-add-ons))
 
 <p>
-  <img src="docs/screenshots/npc.png" width="49%" alt="The New NPC dialog">
-  <img src="docs/screenshots/encounter.png" width="49%" alt="An orc lair encounter generated from its template">
-</p>
-
-<p>
-  <img src="docs/screenshots/treasure.png" width="49%" alt="Treasure rolled for treasure types A and H">
-  <img src="docs/screenshots/editor.png" width="49%" alt="The editor for a new wizard spell">
-</p>
-
-<p>
-  <img src="docs/screenshots/package.png" width="49%" alt="A new package with two characters and an encounter">
-  <img src="docs/screenshots/monster.png" width="49%" alt="A monster's page in the library">
+  <img src="docs/screenshots/encounter.png" width="49%" alt="An orc encounter generated from its template">
+  <img src="docs/screenshots/monster.png" width="49%" alt="The red dragon's picture in the library">
 </p>
 
 ### Core Rules 2.0 and the Expansion
@@ -501,28 +505,28 @@ same:
 Every [release](https://github.com/brahm/corerules/releases) has
 packages for x86-64 Linux and a `.dmg` for Apple Silicon Macs. These are
 the files of
-[Core Rules 1.1.0](https://github.com/brahm/corerules/releases/tag/v1.1.0),
+[Core Rules 1.2.0](https://github.com/brahm/corerules/releases/tag/v1.2.0),
 the latest release; Windows 11 comes from the
 [Microsoft Store](#windows-11):
 
 | System | Download | Install |
 | --- | --- | --- |
-| macOS 14 or newer, Apple Silicon | [`CoreRules-1.1.0-arm64.dmg`](https://github.com/brahm/corerules/releases/download/v1.1.0/CoreRules-1.1.0-arm64.dmg) | Open it, drag Core Rules to Applications, then [allow it to open](#macos) |
-| Fedora 44 or newer | [`corerules-1.1.0-1.fc44.x86_64.rpm`](https://github.com/brahm/corerules/releases/download/v1.1.0/corerules-1.1.0-1.fc44.x86_64.rpm) | `sudo dnf install ./corerules-1.1.0-1.fc44.x86_64.rpm` |
-| Ubuntu 26.04 or newer | [`corerules_1.1.0_amd64.deb`](https://github.com/brahm/corerules/releases/download/v1.1.0/corerules_1.1.0_amd64.deb) | `sudo apt install ./corerules_1.1.0_amd64.deb` |
-| Arch Linux, CachyOS, Omarchy | [`corerules-1.1.0-1-x86_64.pkg.tar.zst`](https://github.com/brahm/corerules/releases/download/v1.1.0/corerules-1.1.0-1-x86_64.pkg.tar.zst) | `sudo pacman -U ./corerules-1.1.0-1-x86_64.pkg.tar.zst` |
+| macOS 14 or newer, Apple Silicon | [`CoreRules-1.2.0-arm64.dmg`](https://github.com/brahm/corerules/releases/download/v1.2.0/CoreRules-1.2.0-arm64.dmg) | Open it, drag Core Rules to Applications, then [allow it to open](#macos) |
+| Fedora 44 or newer | [`corerules-1.2.0-1.fc44.x86_64.rpm`](https://github.com/brahm/corerules/releases/download/v1.2.0/corerules-1.2.0-1.fc44.x86_64.rpm) | `sudo dnf install ./corerules-1.2.0-1.fc44.x86_64.rpm` |
+| Ubuntu 26.04 or newer | [`corerules_1.2.0_amd64.deb`](https://github.com/brahm/corerules/releases/download/v1.2.0/corerules_1.2.0_amd64.deb) | `sudo apt install ./corerules_1.2.0_amd64.deb` |
+| Arch Linux, CachyOS, Omarchy | [`corerules-1.2.0-1-x86_64.pkg.tar.zst`](https://github.com/brahm/corerules/releases/download/v1.2.0/corerules-1.2.0-1-x86_64.pkg.tar.zst) | `sudo pacman -U ./corerules-1.2.0-1-x86_64.pkg.tar.zst` |
 | Any distribution with Flatpak, such as Bazzite | [`io.github.brahm.CoreRules.flatpakref`](https://brahm.github.io/corerules/io.github.brahm.CoreRules.flatpakref), from the [Flatpak repository](#the-flatpak-repository) | `flatpak install --user https://brahm.github.io/corerules/io.github.brahm.CoreRules.flatpakref` |
-| Any distribution (glibc 2.43+) | [`CoreRules-1.1.0-x86_64.AppImage`](https://github.com/brahm/corerules/releases/download/v1.1.0/CoreRules-1.1.0-x86_64.AppImage) | `chmod +x CoreRules-1.1.0-x86_64.AppImage`, then run it |
+| Any distribution (glibc 2.43+) | [`CoreRules-1.2.0-x86_64.AppImage`](https://github.com/brahm/corerules/releases/download/v1.2.0/CoreRules-1.2.0-x86_64.AppImage) | `chmod +x CoreRules-1.2.0-x86_64.AppImage`, then run it |
 | Community add-ons, for every system above | [`CoreRules-Community-Addons.zip`](https://github.com/brahm/corerules/releases/download/addons/CoreRules-Community-Addons.zip) | In Core Rules, Import Add-ons…, then pick the folder that holds the zip ([how](#community-add-ons)) |
 
 The release also has the
-[`CoreRules-1.1.0.flatpak`](https://github.com/brahm/corerules/releases/download/v1.1.0/CoreRules-1.1.0.flatpak)
+[`CoreRules-1.2.0.flatpak`](https://github.com/brahm/corerules/releases/download/v1.2.0/CoreRules-1.2.0.flatpak)
 file, the
-[`PKGBUILD`](https://github.com/brahm/corerules/releases/download/v1.1.0/PKGBUILD)
+[`PKGBUILD`](https://github.com/brahm/corerules/releases/download/v1.2.0/PKGBUILD)
 of the pacman package and
-[`SHA256SUMS`](https://github.com/brahm/corerules/releases/download/v1.1.0/SHA256SUMS),
+[`SHA256SUMS`](https://github.com/brahm/corerules/releases/download/v1.2.0/SHA256SUMS),
 the checksums of every file. Before 1.0 there were betas (0.x) and release
-candidates (`-rc`), marked as pre-releases on the releases page; the 1.1.0
+candidates (`-rc`), marked as pre-releases on the releases page; the 1.2.0
 packages replace 1.0.0 or a release candidate on update.
 
 Users ran 1.0 on Fedora 45 beta (the `.rpm`), Ubuntu 26.10 (the `.deb`),
@@ -567,7 +571,7 @@ opens an installation of the original program on the same computer.
 
 The Mac version is for Apple Silicon Macs (M1 or newer) with macOS 14 or
 newer. Download
-[`CoreRules-1.1.0-arm64.dmg`](https://github.com/brahm/corerules/releases/download/v1.1.0/CoreRules-1.1.0-arm64.dmg),
+[`CoreRules-1.2.0-arm64.dmg`](https://github.com/brahm/corerules/releases/download/v1.2.0/CoreRules-1.2.0-arm64.dmg),
 open it and drag Core Rules to Applications.
 
 The app is signed without a certificate from Apple and is not notarized,
@@ -673,7 +677,7 @@ one `.zip`, on every system the app runs on:
 
 This link always gives the newest build; the
 [addons release](https://github.com/brahm/corerules/releases/tag/addons)
-also keeps each version. To import it:
+also keeps each version. To import it (Core Rules 1.2.0 or newer):
 
 1. Put the zip in a folder of its own. There is no need to extract it.
 2. In Core Rules, choose **Import Add-ons…** (the main menu on Linux, the
@@ -684,6 +688,8 @@ also keeps each version. To import it:
 The collection's [README](addons/README.md) says what is inside, how it was
 built and how to undo an import. A Linux installer (an AppImage) carried the
 add-ons until 1.1.0; Import Add-ons… replaces it.
+
+![Import Add-ons… listing the Community Add-ons Collection before importing it](docs/screenshots/import-addons.png)
 
 **Import Add-ons…**, in the main menu on Linux, the More menu on Windows
 and the File menu on the Mac, brings in every add-on in a folder at once.

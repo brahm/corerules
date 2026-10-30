@@ -86,6 +86,11 @@
     <color type="primary" scheme_preference="dark">#77101b</color>
   </branding>
   <releases>
+    <release version="1.2.0" date="2026-10-30" type="stable">
+      <description>
+        <p>Import Add-ons… imports every add-on in a folder at once, from its subfolders and ZIP archives too, after listing what comes in and what cannot. It backs up the user databases and characters first, copies the add-ons' pictures and writes a log. The Community Add-ons Collection now comes as one .zip for it, which replaces the add-ons installer.</p>
+      </description>
+    </release>
     <release version="1.1.0" date="2026-10-29" type="stable">
       <description>
         <p>Core Rules is now on macOS too, for Apple Silicon Macs with macOS 14 or newer, with every screen of the Linux and Windows 11 versions over the same backend. On Linux nothing changes in what the app does: more of its workings are now shared by the three versions.</p>

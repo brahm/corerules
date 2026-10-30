@@ -6,7 +6,11 @@ what comes after 1.0. The decisions that shaped it are in the
 
 ## Where we are
 
-**1.1.0, published on 2026-10-29, ready on Linux, Windows 11 and macOS.**
+**1.2.0, published on 2026-10-30, on Linux, Windows 11 and macOS**, is
+the first release of step 4: Import Add-ons… imports every add-on in a
+folder at once, and the Community Add-ons Collection comes as one `.zip`
+for it, replacing the Linux add-ons installer (decision P31).
+**1.1.0, published on 2026-10-29, was ready on Linux, Windows 11 and macOS.**
 The macOS version went through a beta (1.1.0-beta1) on Wagner Brahm's
 Mac, where it worked as it should, and ships with the other two as 1.1.0
 (decision P30). 1.0.1, published on 2026-10-27, brought the Windows 11
@@ -90,6 +94,7 @@ taken out of scope.
 | 1.0.0 | 2026-10-24 | First stable release, the About window, the website |
 | 1.0.1 | 2026-10-27 | Windows 11 on the Microsoft Store, the Flatpak repository, small fixes |
 | 1.1.0 | 2026-10-29 | macOS, as a `.dmg` for Apple Silicon |
+| 1.2.0 | 2026-10-30 | Import Add-ons…, the Community Add-ons Collection as a `.zip` |
 
 ## After 1.0
 
@@ -643,7 +648,7 @@ The phases run in order:
 
 Done on 2026-10-29 with 1.1.0.
 
-### Step 4: new features, and independence from the original
+### Step 4: new features, and independence from the original (in progress)
 
 From 1.0 on, the app improves on the original and moves away from it step
 by step, until it no longer needs the original's files to work
@@ -668,6 +673,13 @@ starts, from Wagner Brahm's ideas and the users' requests; this is the direction
 
 Needs Wagner Brahm: the list of features for each release, and how far
 independence goes (step 4.3).
+
+Released so far:
+
+- **1.2.0** (2026-10-30): Import Add-ons… imports a folder of add-ons, with
+  its subfolders and ZIP archives, in one go, with a backup, the pictures
+  and a log; the Community Add-ons Collection ships as a `.zip` for it, and
+  the Linux add-ons installer is gone (decision P31).
 
 ## Decisions pending
 
